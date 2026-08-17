@@ -668,6 +668,10 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                     } catch(e) {
                       displayName = file.download_url.split('/').pop() || 'Instalador.msi'
                     }
+                    
+                    if (file.version) {
+                      displayName = displayName.replace('0.1.0', file.version)
+                    }
                   } else {
                     displayName = 'Instalador.msi'
                   }

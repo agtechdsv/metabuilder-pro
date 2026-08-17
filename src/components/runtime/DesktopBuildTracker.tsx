@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, CheckCircle2, X, Download, Cloud, Package, Terminal, Archive, UploadCloud } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface BuildJob {
   jobId: string
@@ -12,10 +13,11 @@ interface BuildJob {
 }
 
 export function DesktopBuildTracker() {
+  const { t } = useI18n()
   const [job, setJob] = useState<BuildJob | null>(null)
   const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending')
   const [isVisible, setIsVisible] = useState(false)
-  const [stepMessage, setStepMessage] = useState('Iniciando infraestrutura na Nuvem...')
+  const [stepMessage, setStepMessage] = useState(t('client_views.desktop_tracker.step0', 'Iniciando infraestrutura na Nuvem...'))
   const [stepIndex, setStepIndex] = useState(0)
   const [progress, setProgress] = useState(15)
   const supabase = createClient()
@@ -26,13 +28,15 @@ export function DesktopBuildTracker() {
       setJob(e.detail)
       setStatus('pending')
       setIsVisible(true)
+      setStepMessage(t('client_views.desktop_tracker.step0', 'Iniciando infraestrutura na Nuvem...'))
+      setStepIndex(0)
     }
 
     window.addEventListener('START_DESKTOP_BUILD_TRACKER', handleStartEvent as EventListener)
     return () => {
       window.removeEventListener('START_DESKTOP_BUILD_TRACKER', handleStartEvent as EventListener)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (!job || status !== 'pending') return
@@ -60,19 +64,19 @@ export function DesktopBuildTracker() {
       timeElapsed += 5; // runs every 5 seconds
       
       if (timeElapsed >= 180) { // 3 minutos
-        setStepMessage('Finalizando e transferindo o arquivo...')
+        setStepMessage(t('client_views.desktop_tracker.step4', 'Finalizando e transferindo o arquivo...'))
         setStepIndex(4)
         setProgress(95)
       } else if (timeElapsed >= 120) { // 2 minutos
-        setStepMessage('Empacotando instalador nativo (.msi)...')
+        setStepMessage(t('client_views.desktop_tracker.step3', 'Empacotando instalador nativo (.msi)...'))
         setStepIndex(3)
         setProgress(85)
       } else if (timeElapsed >= 45) { // 45 segundos
-        setStepMessage('Compilando motor Rust e Webviews...')
+        setStepMessage(t('client_views.desktop_tracker.step2', 'Compilando motor Rust e Webviews...'))
         setStepIndex(2)
         setProgress(65)
       } else if (timeElapsed >= 15) { // 15 segundos
-        setStepMessage('Instalando dependências e SDKs...')
+        setStepMessage(t('client_views.desktop_tracker.step1', 'Instalando dependências e SDKs...'))
         setStepIndex(1)
         setProgress(35)
       }
@@ -82,7 +86,7 @@ export function DesktopBuildTracker() {
       clearInterval(interval)
       clearInterval(progressInterval)
     }
-  }, [job, status, supabase])
+  }, [job, status, supabase, t])
 
   const handleDownloadClick = () => {
     setIsVisible(false)
@@ -119,9 +123,9 @@ export function DesktopBuildTracker() {
                  )}
               </div>
               <div>
-                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  {status === 'success' ? 'Instalador Pronto!' :
-                   status === 'error' ? 'Erro na Geração' :
+                <h4 className="font-bold text-neutral-900 dark:text-white mb-1 leading-none">
+                  {status === 'success' ? t('client_views.desktop_tracker.success_title', 'Instalador Pronto!') : 
+                   status === 'error' ? t('client_views.desktop_tracker.error_title', 'Erro na Geração') : 
                    stepMessage}
                 </h4>
                 <p className="text-xs text-neutral-500 max-w-[200px] truncate">
@@ -149,13 +153,15 @@ export function DesktopBuildTracker() {
           )}
 
           {status === 'success' && (
-            <button
-              onClick={handleDownloadClick}
-              className="mt-2 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Acessar Central de Downloads
-            </button>
+            <div className="pt-2">
+              <button
+                onClick={handleDownloadClick}
+                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                {t('client_views.desktop_tracker.access_downloads', 'Acessar Central de Downloads')}
+              </button>
+            </div>
           )}
         </motion.div>
       )}
