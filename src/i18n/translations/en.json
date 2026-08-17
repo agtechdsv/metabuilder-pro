@@ -2845,6 +2845,12 @@
     }
   },
   "client_views": {
+    "desktop_tracker": {
+      "step1": "Installing dependencies and SDKs...",
+      "step2": "Compiling Rust engine and Webviews...",
+      "step3": "Packaging native installer (.msi)...",
+      "step4": "Finalizing and transferring file..."
+    },
     "subscription": {
       "verifying_realtime": "Checking payments and billing in real-time...",
       "pending_invoice_title": "Pending Charge Found",

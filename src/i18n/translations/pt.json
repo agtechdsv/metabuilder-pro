@@ -2846,6 +2846,12 @@
     }
   },
   "client_views": {
+    "desktop_tracker": {
+      "step1": "Instalando dependências e SDKs...",
+      "step2": "Compilando motor Rust e Webviews...",
+      "step3": "Empacotando instalador nativo (.msi)...",
+      "step4": "Finalizando e transferindo o arquivo..."
+    },
     "subscription": {
       "verifying_realtime": "Verificando pagamentos e faturamento em tempo real...",
       "pending_invoice_title": "Cobrança Pendente Encontrada",
