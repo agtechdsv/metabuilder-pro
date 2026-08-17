@@ -818,6 +818,7 @@
     },
     "record_drawer": {
       "new_item": "Novo Item",
+      "edit_item": "Editar Item",
       "record_id": "Registro #{id}",
       "input_placeholder": "Digite o valor para {field}..."
     },
@@ -825,10 +826,24 @@
       "main_data": "Dados Principais"
     },
     "back_to_list": "Voltar para Lista",
+    "back_level": "Voltar Nível",
     "create_success": "Registro criado com sucesso!",
     "update_success": "Registro atualizado com sucesso!",
     "delete_success": "Registro excluído com sucesso!",
-    "delete_fk_error": "Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira)."
+    "delete_fk_error": "Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).",
+    "delete_fk_error_with_table": "Não é possível excluir este registro pois ele possui relacionamentos ativos com a tabela {table}.",
+    "type_here": "Digite aqui...",
+    "more": "Mais",
+    "load_more_dynamic": "Carregar mais {count} registros...",
+    "load_more": "Carregar Mais",
+    "record_saved_success": "Registro salvo com sucesso!",
+    "record_deleted_success": "Registro excluído com sucesso!",
+    "record_created_success": "Registro criado com sucesso!",
+    "record_updated_success": "Registro atualizado com sucesso!",
+    "scale_small": "Pequeno",
+    "scale_normal": "Normal",
+    "scale_large": "Grande",
+    "scale_xl": "Extra Grande"
   },
   "marketing_v2": {
     "navbar": {
@@ -3600,19 +3615,6 @@
     "table_prefix": "Tabela",
     "free_value": "VALOR LIVRE",
     "free_value_placeholder": "Ex: 100 ou Cancelado"
-  },
-  "runtime": {
-    "search": "Pesquisar",
-    "clear": "Limpar",
-    "view": "Visualizar",
-    "new_record": "Novo Registro",
-    "edit": "Editar",
-    "delete": "Excluir",
-    "export": "Exportar Dados",
-    "scale_small": "Pequeno",
-    "scale_normal": "Normal",
-    "scale_large": "Grande",
-    "scale_xl": "Extra Grande"
   },
   "progate": {
     "desktop_exclusive": "Exclusivo da IDE Desktop",

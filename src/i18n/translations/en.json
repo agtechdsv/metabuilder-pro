@@ -818,6 +818,7 @@
     },
     "record_drawer": {
       "new_item": "New Item",
+      "edit_item": "Edit Item",
       "record_id": "Record #{id}",
       "input_placeholder": "Enter value for {field}..."
     },
@@ -825,10 +826,24 @@
       "main_data": "Main Data"
     },
     "back_to_list": "Back to List",
+    "back_level": "Back Level",
     "create_success": "Record created successfully!",
     "update_success": "Record updated successfully!",
     "delete_success": "Record deleted successfully!",
-    "delete_fk_error": "Cannot delete this record because it has active relationships (foreign key constraint)."
+    "delete_fk_error": "Cannot delete this record because it has active relationships (foreign key constraint).",
+    "delete_fk_error_with_table": "Cannot delete this record because it has active relationships with table {table}.",
+    "type_here": "Type here...",
+    "more": "More",
+    "load_more_dynamic": "Load {count} more records...",
+    "load_more": "Load More",
+    "record_saved_success": "Record saved successfully!",
+    "record_deleted_success": "Record deleted successfully!",
+    "record_created_success": "Record created successfully!",
+    "record_updated_success": "Record updated successfully!",
+    "scale_small": "Small",
+    "scale_normal": "Normal",
+    "scale_large": "Large",
+    "scale_xl": "Extra Large"
   },
   "marketing_v2": {
     "navbar": {
@@ -3599,19 +3614,6 @@
     "table_prefix": "Table",
     "free_value": "FREE VALUE",
     "free_value_placeholder": "Ex: 100 or Cancelled"
-  },
-  "runtime": {
-    "search": "Search",
-    "clear": "Clear",
-    "view": "View",
-    "new_record": "New Record",
-    "edit": "Edit",
-    "delete": "Delete",
-    "export": "Export Data",
-    "scale_small": "Small",
-    "scale_normal": "Normal",
-    "scale_large": "Large",
-    "scale_xl": "Extra Large"
   },
   "progate": {
     "desktop_exclusive": "Desktop IDE Exclusive",

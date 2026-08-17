@@ -891,18 +891,33 @@
       "delete_record_desc": "Estás a punto de eliminar {name}."
     },
     "record_drawer": {
-      "new_item": "Nuevo Item",
+      "new_item": "Nuevo Ítem",
+      "edit_item": "Editar Ítem",
       "record_id": "Registro #{id}",
       "input_placeholder": "Ingrese el valor para {field}..."
     },
     "master_details": {
-      "main_data": "Datos Principais"
+      "main_data": "Datos Principales"
     },
-    "back_to_list": "Voltar a la Lista",
+    "back_to_list": "Volver a la Lista",
+    "back_level": "Volver Nivel",
     "create_success": "¡Registro creado con éxito!",
     "update_success": "¡Registro actualizado con éxito!",
     "delete_success": "¡Registro eliminado con éxito!",
-    "delete_fk_error": "No se puede eliminar este registro porque tiene relaciones activas (restricción de clave extranjera)."
+    "delete_fk_error": "No se puede eliminar este registro porque tiene relaciones activas (restricción de clave extranjera).",
+    "delete_fk_error_with_table": "No se puede eliminar este registro porque tiene relaciones activas con la tabla {table}.",
+    "type_here": "Escriba aquí...",
+    "more": "Más",
+    "load_more_dynamic": "Cargar más {count} registros...",
+    "load_more": "Cargar Más",
+    "record_saved_success": "¡Registro guardado con éxito!",
+    "record_deleted_success": "¡Registro eliminado con éxito!",
+    "record_created_success": "¡Registro creado con éxito!",
+    "record_updated_success": "¡Registro actualizado con éxito!",
+    "scale_small": "Pequeño",
+    "scale_normal": "Normal",
+    "scale_large": "Grande",
+    "scale_xl": "Extra Grande"
   },
   "marketing_v2": {
     "navbar": {
@@ -3670,19 +3685,6 @@
     "table_prefix": "Tabla",
     "free_value": "VALOR LIBRE",
     "free_value_placeholder": "Ej: 100 o Cancelado"
-  },
-  "runtime": {
-    "search": "Buscar",
-    "clear": "Limpiar",
-    "view": "Ver",
-    "new_record": "Nuevo Registro",
-    "edit": "Editar",
-    "delete": "Eliminar",
-    "export": "Exportar Datos",
-    "scale_small": "Pequeño",
-    "scale_normal": "Normal",
-    "scale_large": "Grande",
-    "scale_xl": "Extra Grande"
   },
   "progate": {
     "desktop_exclusive": "Exclusivo de la IDE Desktop",
