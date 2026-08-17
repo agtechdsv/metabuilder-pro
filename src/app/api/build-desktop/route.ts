@@ -170,8 +170,6 @@ export async function POST(req: Request) {
           contextType,
           contextId,
           version: version || '1.0.0',
-          userId: user.id,
-          releaseNotes: releaseNotes || '',
           ...schemaPayload
         }
       })
