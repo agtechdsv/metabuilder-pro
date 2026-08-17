@@ -1,14 +1,17 @@
 {
-  "v1.0.1": {
+  "v1.0.2": {
     "date": "2026-08-17",
     "pt": [
-      "Atualização de versão e melhorias gerais."
+      "Suporte multi-idioma: agora a plataforma conta com suporte inicial para Português e Inglês, oferecendo uma experiência personalizada e acessível.",
+      "Melhorias contínuas de estabilidade, sincronização e desempenho da plataforma com a versão 1.0.2."
     ],
     "en": [
-      "Version update and general improvements."
+      "Multi-language support: the platform now features initial localization for English and Portuguese, delivering a seamless and accessible experience.",
+      "Continuous platform stability, synchronization, and performance improvements with version 1.0.2."
     ],
     "es": [
-      "Actualización de versión y mejoras generales."
+      "Soporte multiidioma: la plataforma ahora cuenta con soporte inicial para portugués e inglés, brindando una experiencia accesible y personalizada.",
+      "Mejoras continuas de estabilidad, sincronización y rendimiento de la plataforma con la versión 1.0.2."
     ]
   },
   "v1.0.0": {
