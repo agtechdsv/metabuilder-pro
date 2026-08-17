@@ -110,7 +110,7 @@ export function ReleaseNotes({
 
   const effectiveTitle = contextType === 'ide'
     ? t('release_notes.title', 'Histórico de Atualizações')
-    : `${resolvedAppName || initialAppName || 'Aplicativo'} — Histórico de Versões`
+    : `${resolvedAppName || initialAppName || 'Aplicativo'} — Histórico de Versões${localVersion ? ` (${localVersion})` : ''}`
 
   const effectiveSubtitle = contextType === 'ide'
     ? t('release_notes.subtitle', 'Acompanhe as novidades do MetaBuilder PRO')
