@@ -169,7 +169,8 @@ export function ReleaseNotes({
                     (() => {
                       const installed = rawVersion  // pure "1.0.0" — null if ACL blocked
                       const latest = releaseNotesList[0]?.version?.replace(/^v/, '')?.trim()
-                      const isOutdated = latest && (installed === null || installed !== latest)
+                      // Only show update button when we KNOW the installed version and it differs from latest
+                      const isOutdated = rawVersion !== null && latest && rawVersion !== latest
 
                       if (isOutdated) {
                         return (
@@ -256,7 +257,7 @@ export function ReleaseNotes({
                                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                                   {t('release_notes.current_version', 'Versão Atual')}
                                 </span>
-                              ) : isLatest ? (
+                              ) : isLatest && rawVersion !== null && rawVersion !== releaseVer ? (
                                 <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider">
                                   {t('release_notes.new_version', 'Nova Versão')}
                                 </span>
