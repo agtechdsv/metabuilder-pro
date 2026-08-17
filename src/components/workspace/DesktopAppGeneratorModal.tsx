@@ -32,6 +32,7 @@ export function DesktopAppGeneratorModal({
   const [releaseNotes, setReleaseNotes] = useState('')
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -108,6 +109,12 @@ export function DesktopAppGeneratorModal({
   }
 
   const handleGenerate = async () => {
+    setErrorMsg(null)
+    if (!appName.trim() || !contextId) {
+      setErrorMsg(t('ide.desktop_gen.fill_fields', 'Por favor, preencha o nome do aplicativo e certifique-se de que o contexto é válido.'))
+      return
+    }
+
     try {
       setIsGenerating(true)
       // Call the API endpoint
@@ -155,7 +162,7 @@ export function DesktopAppGeneratorModal({
       onClose()
     } catch (error) {
       console.error(error)
-      alert('Erro ao gerar aplicativo: ' + (error as Error).message)
+      setErrorMsg('Erro ao gerar aplicativo: ' + (error as Error).message)
     } finally {
       setIsGenerating(false)
     }
@@ -334,7 +341,13 @@ export function DesktopAppGeneratorModal({
             </div>
 
             {/* Footer */}
-              <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex items-center justify-end gap-3">
+              <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex flex-col gap-3">
+                {errorMsg && (
+                  <div className="p-3 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-500/10 text-sm text-red-600 dark:text-red-400">
+                    {errorMsg}
+                  </div>
+                )}
+                <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={onClose}
                   disabled={isGenerating}
@@ -360,6 +373,7 @@ export function DesktopAppGeneratorModal({
                   )}
                 </button>
               </div>
+            </div>
           </motion.div>
         </div>
       )}

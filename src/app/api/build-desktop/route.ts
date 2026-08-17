@@ -171,6 +171,7 @@ export async function POST(req: Request) {
           contextId,
           version: version || '1.0.0',
           userId: user.id,
+          releaseNotes: releaseNotes || '',
           ...schemaPayload
         }
       })
@@ -179,7 +180,10 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Falha ao disparar GitHub Action:', errorText)
-      return NextResponse.json({ error: 'Falha na comunicação com o servidor de Build.' }, { status: 502 })
+      return NextResponse.json({ 
+        error: 'Falha na comunicação com o servidor de Build.',
+        details: errorText
+      }, { status: 502 })
     }
 
     return NextResponse.json({

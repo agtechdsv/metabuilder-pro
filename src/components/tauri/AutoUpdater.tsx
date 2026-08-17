@@ -16,6 +16,7 @@ export function AutoUpdater() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [progress, setProgress] = useState({ downloaded: 0, total: 0 })
   const [isOpen, setIsOpen] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   
   const [shownPostLogin, setShownPostLogin] = useState(false)
 
@@ -91,7 +92,7 @@ export function AutoUpdater() {
       })
     } catch (error: any) {
       console.error('Erro durante a atualização:', error)
-      alert(`Erro na atualização: ${error?.message || String(error)}`)
+      setErrorMsg(`Erro na atualização: ${error?.message || String(error)}`)
       setIsDownloading(false)
     }
   }
@@ -166,20 +167,28 @@ export function AutoUpdater() {
                 </p>
               </div>
             ) : (
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col gap-3 pt-2">
                 <button
                   onClick={() => setIsOpen(false)}
                   className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                 >
                   Lembrar mais tarde
                 </button>
-                <button
-                  onClick={handleUpdate}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 transition-colors shadow-sm"
-                >
-                  <Download className="w-4 h-4" />
-                  Instalar e Reiniciar
-                </button>
+                {!isDownloading && !errorMsg && (
+                  <button
+                    onClick={handleUpdate}
+                    className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>Baixar e Instalar</span>
+                  </button>
+                )}
+                
+                {errorMsg && (
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm border border-red-200 dark:border-red-900/50">
+                    {errorMsg}
+                  </div>
+                )}
               </div>
             )}
           </div>
