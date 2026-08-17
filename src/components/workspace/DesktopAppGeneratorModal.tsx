@@ -29,6 +29,7 @@ export function DesktopAppGeneratorModal({
   const [dbConnectionString, setDbConnectionString] = useState('')
   const [tunnelUrl, setTunnelUrl] = useState(defaultTunnelUrl || '')
   const [version, setVersion] = useState('1.0.0')
+  const [releaseNotes, setReleaseNotes] = useState('')
 
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -40,6 +41,7 @@ export function DesktopAppGeneratorModal({
       setTunnelUrl(defaultTunnelUrl || '')
       setIconBase64(null)
       setDbConnectionString('')
+      setReleaseNotes('')
       
       // Fetch last version to suggest next
       const fetchLastVersion = async () => {
@@ -120,7 +122,8 @@ export function DesktopAppGeneratorModal({
           iconBase64,
           dbConnectionString,
           tunnelUrl,
-          version
+          version,
+          releaseNotes
         })
       })
 
@@ -307,6 +310,24 @@ export function DesktopAppGeneratorModal({
                         </p>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Release Notes Input */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center justify-between">
+                      <span>O que há de novo nesta versão? (Release Notes)</span>
+                      <span className="text-[10px] font-normal text-neutral-400">Opcional</span>
+                    </label>
+                    <textarea
+                      value={releaseNotes}
+                      onChange={e => setReleaseNotes(e.target.value)}
+                      placeholder="Ex: Novo módulo de relatórios, correções no financeiro e melhorias de desempenho..."
+                      rows={3}
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none custom-scrollbar"
+                    />
+                    <p className="text-[10px] text-neutral-500 mt-1">
+                      Estas notas serão exibidas no histórico de atualizações para os usuários do aplicativo.
+                    </p>
                   </div>
                 </div>
             </div>

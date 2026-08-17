@@ -13,6 +13,10 @@ interface HeaderActionsProps {
   hideUser?: boolean
   hideTheme?: boolean
   hideReleaseNotes?: boolean
+  contextType?: 'project' | 'workspace' | 'ide'
+  contextId?: string
+  appName?: string
+  icon?: string | null
 }
 
 export function HeaderActions({ 
@@ -20,7 +24,11 @@ export function HeaderActions({
   profile: initialProfile, 
   hideUser = false,
   hideTheme = false,
-  hideReleaseNotes = false
+  hideReleaseNotes = false,
+  contextType = 'ide',
+  contextId,
+  appName,
+  icon
 }: HeaderActionsProps) {
   const [user, setUser] = useState(initialUser)
   const [profile, setProfile] = useState(initialProfile)
@@ -47,7 +55,14 @@ export function HeaderActions({
   return (
     <div className="flex items-center gap-3 md:gap-4">
       <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
-        {!hideReleaseNotes && <ReleaseNotes />}
+        {!hideReleaseNotes && (
+          <ReleaseNotes 
+            contextType={contextType}
+            contextId={contextId}
+            appName={appName}
+            icon={icon}
+          />
+        )}
         {!hideTheme && <ThemeToggle />}
         <LanguageSelector />
       </div>

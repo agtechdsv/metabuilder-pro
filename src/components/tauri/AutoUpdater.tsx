@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { check, Update } from '@tauri-apps/plugin-updater'
-import { getVersion } from '@tauri-apps/api/app'
+import { getVersion, getName } from '@tauri-apps/api/app'
 import { isTauri } from '@/utils/tauriUtils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, Rocket, X, RefreshCw } from 'lucide-react'
@@ -12,6 +12,7 @@ export function AutoUpdater() {
   const pathname = usePathname()
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null)
   const [currentVersion, setCurrentVersion] = useState('')
+  const [appName, setAppName] = useState('MetaBuilder PRO')
   const [isDownloading, setIsDownloading] = useState(false)
   const [progress, setProgress] = useState({ downloaded: 0, total: 0 })
   const [isOpen, setIsOpen] = useState(false)
@@ -30,6 +31,11 @@ export function AutoUpdater() {
       try {
         const appVersion = await getVersion()
         setCurrentVersion(appVersion)
+
+        try {
+          const name = await getName()
+          if (name) setAppName(name)
+        } catch {}
 
         const update = await check()
         if (update && update.available) {
@@ -67,8 +73,8 @@ export function AutoUpdater() {
 
     try {
       await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
-                                    await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
-                                    await updateInfo.downloadAndInstall((event) => {
+      await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
+      await updateInfo.downloadAndInstall((event) => {
         switch (event.event) {
           case 'Started':
             contentLength = event.data.contentLength || 0
@@ -117,7 +123,7 @@ export function AutoUpdater() {
             </div>
             <h2 className="text-2xl font-bold">Nova Versão Disponível!</h2>
             <p className="text-indigo-100 mt-2">
-              MetaBuilder PRO {updateInfo.version} já está pronta para uso.
+              {appName} {updateInfo.version} já está pronta para uso.
             </p>
           </div>
 

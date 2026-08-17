@@ -272,7 +272,13 @@ export function LoginPortalClient({
         <div className={`min-h-screen flex transition-colors duration-500 bg-neutral-50 dark:bg-[#050505] relative ${hasBanner ? 'flex-row' : 'flex-col'}`}>
           {/* Header Actions - Always visible, absolute positioned */}
           <div className="absolute top-6 right-6 z-[100]">
-            <HeaderActions hideUser />
+            <HeaderActions 
+              hideUser 
+              contextType="project"
+              contextId={project.id}
+              appName={project.name}
+              icon={project.icon}
+            />
           </div>
 
           {/* Left side (Form) */}
@@ -465,7 +471,14 @@ export function LoginPortalClient({
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-[10s] hover:scale-105"
               />
               <div className="absolute top-6 right-6 z-20">
-                <HeaderActions hideUser hideTheme={theme !== 'auto'} />
+                <HeaderActions 
+                  hideUser 
+                  hideTheme={theme !== 'auto'} 
+                  contextType="project"
+                  contextId={project.id}
+                  appName={project.name}
+                  icon={project.icon}
+                />
               </div>
               <div className="absolute bottom-12 left-12 right-12 z-20 text-white">
                  <h3 className="text-4xl font-bold mb-4 text-white shadow-black drop-shadow-xl">{project.name}</h3>

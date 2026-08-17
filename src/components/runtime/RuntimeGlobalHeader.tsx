@@ -125,7 +125,7 @@ export function RuntimeGlobalHeader({
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
-        <RuntimeHeaderActions projectId={project.id} />
+        <RuntimeHeaderActions projectId={project.id} project={project} />
       </div>
     </header>
   )

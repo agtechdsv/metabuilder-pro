@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       iconBase64,
       dbConnectionString,
       tunnelUrl,
-      version
+      version,
+      releaseNotes
     } = body
 
     if (!appName || !contextId) {
@@ -70,7 +71,8 @@ export async function POST(req: Request) {
         context_id: contextId,
         status: 'pending',
         expires_at: expiresAt.toISOString(),
-        version: version || '1.0.0'
+        version: version || '1.0.0',
+        release_notes: releaseNotes || null
       })
       .select('id')
       .single()

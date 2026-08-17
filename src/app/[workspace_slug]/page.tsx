@@ -70,7 +70,13 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
       {/* Top Right Actions */}
       <div className="absolute top-6 right-6 z-50">
-        <HeaderActions hideUser={true} />
+        <HeaderActions 
+          hideUser={true} 
+          contextType="workspace"
+          contextId={workspace.id}
+          appName={workspace.name}
+          icon={portalLogo || null}
+        />
       </div>
 
       {/* Header */}

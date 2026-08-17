@@ -8,7 +8,23 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useI18n } from '@/i18n/I18nContext'
 
-export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pill' }) {
+import DynamicIcon from '@/components/runtime/DynamicIcon'
+
+interface ReleaseNotesProps {
+  variant?: 'header' | 'pill'
+  contextType?: 'project' | 'workspace' | 'ide'
+  contextId?: string
+  appName?: string
+  icon?: string | null
+}
+
+export function ReleaseNotes({ 
+  variant = 'header',
+  contextType = 'ide',
+  contextId,
+  appName: initialAppName,
+  icon: initialIcon
+}: ReleaseNotesProps) {
   const { language, t } = useI18n()
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
@@ -17,6 +33,8 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
   const [isUpdating, setIsUpdating] = useState(false)
   const [localVersion, setLocalVersion] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [resolvedAppName, setResolvedAppName] = useState(initialAppName || '')
+  const [resolvedIcon, setResolvedIcon] = useState<string | null>(initialIcon || null)
 
   useEffect(() => {
     setMounted(true)
@@ -32,53 +50,76 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
       try {
         const { getVersion } = await import('@tauri-apps/api/app')
         const v = await getVersion()
-        setLocalVersion(`IDE Engine v${v}`)
+        setLocalVersion(contextType === 'ide' ? `IDE Engine v${v}` : `v${v}`)
       } catch (e: any) {
         console.error('Failed to get Tauri version', e)
         setLocalVersion(`Erro: ${e.message || String(e)}`)
       }
     }
     checkVersion()
-  }, [])
+  }, [contextType])
 
   useEffect(() => {
     if (showReleaseNotes) {
       setIsFetchingNotes(true)
-      fetch(`/changelog.json?t=${Date.now()}`, { cache: 'no-store' })
-        .then(res => res.json())
-        .then(data => {
-          if (data && typeof data === 'object' && !Array.isArray(data)) {
-            const mappedReleases = Object.entries(data)
-              .map(([version, info]: [string, any]) => {
-                const lines = info[language] || info.en || info.pt || []
-                const body = lines.map((l: string) => {
-                  const trimmed = l.trim()
-                  if (trimmed.startsWith('#') || trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed === '') {
-                    return l
+
+      if (contextType === 'project' || contextType === 'workspace') {
+        fetch(`/api/releases/context?contextType=${contextType}&contextId=${contextId || ''}&t=${Date.now()}`, { cache: 'no-store' })
+          .then(res => res.json())
+          .then(data => {
+            if (data?.appName) setResolvedAppName(data.appName)
+            if (data?.appIcon) setResolvedIcon(data.appIcon)
+            setReleaseNotesList(data?.releases || [])
+          })
+          .catch(err => {
+            console.error('Failed to fetch context release notes:', err)
+            setReleaseNotesList([])
+          })
+          .finally(() => setIsFetchingNotes(false))
+      } else {
+        fetch(`/changelog.json?t=${Date.now()}`, { cache: 'no-store' })
+          .then(res => res.json())
+          .then(data => {
+            if (data && typeof data === 'object' && !Array.isArray(data)) {
+              const mappedReleases = Object.entries(data)
+                .map(([version, info]: [string, any]) => {
+                  const lines = info[language] || info.en || info.pt || []
+                  const body = lines.map((l: string) => {
+                    const trimmed = l.trim()
+                    if (trimmed.startsWith('#') || trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed === '') {
+                      return l
+                    }
+                    return `- ${l}`
+                  }).join('\n')
+                  return {
+                    version,
+                    published_at: info.date,
+                    body
                   }
-                  return `- ${l}`
-                }).join('\n')
-                return {
-                  version,
-                  published_at: info.date,
-                  body
-                }
-              })
-              .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
-            setReleaseNotesList(mappedReleases)
-          } else if (Array.isArray(data)) {
-            // Fallback for old array format just in case
-            setReleaseNotesList(data)
-          }
-        })
-        .finally(() => setIsFetchingNotes(false))
+                })
+                .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())
+              setReleaseNotesList(mappedReleases)
+            } else if (Array.isArray(data)) {
+              setReleaseNotesList(data)
+            }
+          })
+          .finally(() => setIsFetchingNotes(false))
+      }
     }
-  }, [showReleaseNotes, language])
+  }, [showReleaseNotes, language, contextType, contextId])
+
+  const effectiveTitle = contextType === 'ide'
+    ? t('release_notes.title', 'Histórico de Atualizações')
+    : `${resolvedAppName || initialAppName || 'Aplicativo'} — Histórico de Versões`
+
+  const effectiveSubtitle = contextType === 'ide'
+    ? t('release_notes.subtitle', 'Acompanhe as novidades do MetaBuilder PRO')
+    : `Acompanhe as novidades e atualizações de ${resolvedAppName || initialAppName || 'este aplicativo'}`
 
   const modalContent = (
     <AnimatePresence>
       {showReleaseNotes && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -87,12 +128,22 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
           >
             <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden">
-                  <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden shrink-0">
+                  {contextType === 'ide' ? (
+                    <img src="/icon-desktop-square.png" alt="MetaBuilder PRO" className="w-8 h-8 object-contain" />
+                  ) : resolvedIcon || initialIcon ? (
+                    (resolvedIcon || initialIcon)!.startsWith('data:image/') || (resolvedIcon || initialIcon)!.startsWith('http') || (resolvedIcon || initialIcon)!.startsWith('/') ? (
+                      <img src={(resolvedIcon || initialIcon)!} alt="App" className="w-8 h-8 object-contain" />
+                    ) : (
+                      <DynamicIcon icon={(resolvedIcon || initialIcon)!} size={22} className="text-indigo-600 dark:text-indigo-400" />
+                    )
+                  ) : (
+                    <History className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">{t('release_notes.title', 'Histórico de Atualizações')}</h3>
-                  <p className="text-xs text-neutral-500">{t('release_notes.subtitle', 'Acompanhe as novidades do MetaBuilder PRO')}</p>
+                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{effectiveTitle}</h3>
+                  <p className="text-xs text-neutral-500">{effectiveSubtitle}</p>
                 </div>
               </div>
               <button
@@ -113,9 +164,10 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                 <>
                   {releaseNotesList.length > 0 && localVersion && (
                     (() => {
-                      const installed = localVersion.replace('IDE Engine v', '').trim()
-                      const latest = releaseNotesList[0].version.replace('v', '')
-                      const isOutdated = localVersion.startsWith('IDE Engine') && installed !== latest && installed !== 'Erro:' && !localVersion.includes('Erro')
+                      const installed = localVersion.replace('IDE Engine v', '').replace('v', '').trim()
+                      const latest = releaseNotesList[0]?.version?.replace('v', '')?.trim()
+                      const isTauriDesktop = localVersion && !localVersion.includes('Web App') && !localVersion.includes('Erro')
+                      const isOutdated = isTauriDesktop && latest && installed !== latest
 
                       if (isOutdated) {
                         return (
@@ -124,12 +176,16 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                               onClick={async () => {
                                 try {
                                   setIsUpdating(true)
-                                  const { check } = await import('@tauri-apps/plugin-updater')
-                                  const update = await check()
-                                  if (update) {
-                                    await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
-                                    await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
-                                    await update.downloadAndInstall()
+                                  if (contextType === 'ide') {
+                                    const { check } = await import('@tauri-apps/plugin-updater')
+                                    const update = await check()
+                                    if (update) {
+                                      await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
+                                      await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
+                                      await update.downloadAndInstall()
+                                    }
+                                  } else if (releaseNotesList[0]?.download_url) {
+                                    window.open(releaseNotesList[0].download_url, '_blank')
                                   }
                                 } catch (e) {
                                   console.error('Update failed', e)
@@ -148,7 +204,7 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                               ) : (
                                 <>
                                   <Download className="w-4 h-4" />
-                                  {t('release_notes.update_to_version', 'Atualizar para a versão {version}').replace('{version}', latest)}
+                                  {t('release_notes.update_to_version', 'Atualizar para a versão {version}').replace('{version}', latest || '')}
                                 </>
                               )}
                             </button>
@@ -157,6 +213,14 @@ export function ReleaseNotes({ variant = 'header' }: { variant?: 'header' | 'pil
                       }
                       return null
                     })()
+                  )}
+
+                  {releaseNotesList.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-neutral-400">
+                      <History className="w-10 h-10 mb-3 opacity-30" />
+                      <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">Nenhum histórico registrado</p>
+                      <p className="text-xs text-neutral-400 mt-1">Gere novos instaladores para registrar versões e notas de lançamento deste aplicativo.</p>
+                    </div>
                   )}
 
                   <div className="space-y-8 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-neutral-200 dark:before:via-neutral-800 before:to-transparent">
