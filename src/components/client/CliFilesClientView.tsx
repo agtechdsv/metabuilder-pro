@@ -97,8 +97,36 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
       .not('download_url', 'is', null)
       .order('created_at', { ascending: false })
       
-    if (!buildsError && buildsData) {
-      setDesktopBuilds(buildsData)
+    if (!buildsError && buildsData && buildsData.length > 0) {
+      // Manual join to fetch context names and descriptions
+      const projectIds = buildsData.filter(b => b.context_type === 'project').map(b => b.context_id)
+      const workspaceIds = buildsData.filter(b => b.context_type === 'workspace').map(b => b.context_id)
+      
+      const projectsMap: Record<string, string> = {}
+      const workspacesMap: Record<string, string> = {}
+      
+      if (projectIds.length > 0) {
+        const { data: projData } = await supabase.from('projects').select('id, name, description').in('id', projectIds)
+        if (projData) {
+          projData.forEach(p => projectsMap[p.id] = p.description || p.name || 'Sem descrição')
+        }
+      }
+      
+      if (workspaceIds.length > 0) {
+        const { data: workData } = await supabase.from('workspaces').select('id, name').in('id', workspaceIds)
+        if (workData) {
+          workData.forEach(w => workspacesMap[w.id] = w.name)
+        }
+      }
+      
+      const enrichedBuilds = buildsData.map(b => ({
+        ...b,
+        fetched_context_name: b.context_type === 'project' ? projectsMap[b.context_id] : workspacesMap[b.context_id]
+      }))
+      
+      setDesktopBuilds(enrichedBuilds)
+    } else {
+      setDesktopBuilds([])
     }
 
     setIsLoading(false)
@@ -610,6 +638,9 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
             <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_file_name', 'Nome do Arquivo')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_category', 'Categoria')}</th>
+              {mainTab === 'workspaces' && (
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_context', 'Contexto')}</th>
+              )}
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('client_views.downloads.th_size', 'Tamanho')}</th>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">
                 {mainTab === 'workspaces' ? t('client_views.downloads.table_actions', 'Ações') : t('client_views.downloads.th_download', 'Download')}
@@ -619,18 +650,30 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {isLoading ? (
               <tr>
-                <td colSpan={4} className="p-12 text-center">
+                <td colSpan={mainTab === 'workspaces' ? 5 : 4} className="p-12 text-center">
                   <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto" />
                 </td>
               </tr>
             ) : finalFilteredFiles.length > 0 ? (
               finalFilteredFiles.map(file => {
                 const isWorkspaceTab = mainTab === 'workspaces';
-                const displayName = isWorkspaceTab
-                  ? (file.context_type === 'project' 
-                      ? file.project?.name || projects.find(p => p.id === file.context_id)?.name || t('client_views.downloads.unknown_project', 'Projeto Desconhecido')
-                      : file.workspace?.name || t('client_views.downloads.workspace_app', 'Workspace App'))
-                  : file.name;
+                
+                let displayName = file.name;
+                let displayContext = '';
+                
+                if (isWorkspaceTab) {
+                  if (file.download_url) {
+                    try {
+                      displayName = new URL(file.download_url).pathname.split('/').pop() || 'Instalador.msi'
+                    } catch(e) {
+                      displayName = file.download_url.split('/').pop() || 'Instalador.msi'
+                    }
+                  } else {
+                    displayName = 'Instalador.msi'
+                  }
+                  
+                  displayContext = file.fetched_context_name || projects.find(p => p.id === file.context_id)?.name || 'Projeto Desconhecido';
+                }
                   
                 const displayVersion = isWorkspaceTab
                   ? new Date(file.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
@@ -656,11 +699,18 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300">
                         {displayCategory}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                    {isWorkspaceTab && (
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
+                          {displayContext}
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 text-sm text-neutral-500 dark:text-neutral-400 font-mono">
                       {displaySize}
                     </td>
                     <td className="px-6 py-4 text-right">
