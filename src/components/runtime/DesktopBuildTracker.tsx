@@ -336,13 +336,6 @@ export function DesktopBuildTracker() {
                     {t('client_views.desktop_tracker.download_now', 'Baixar Instalador Agora')}
                   </button>
                 )}
-                <Link
-                  href="/client/dashboard?tab=downloads&subtab=workspaces"
-                  onClick={() => setIsVisible(false)}
-                  className="w-full py-2 px-4 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
-                >
-                  {t('client_views.desktop_tracker.access_downloads', 'Acessar Central de Downloads')}
-                </Link>
               </div>
             )}
           </motion.div>
