@@ -16,11 +16,12 @@ interface Project {
 
 interface CliFilesClientViewProps {
   projects?: Project[]
+  workspaces?: { id: string, name: string }[]
   devOnly?: boolean // When true (dev user), only the IDE sub-tab is shown
   isPopout?: boolean
 }
 
-export function CliFilesClientView({ projects = [], devOnly = false, isPopout = false }: CliFilesClientViewProps) {
+export function CliFilesClientView({ projects = [], workspaces = [], devOnly = false, isPopout = false }: CliFilesClientViewProps) {
   const { t } = useI18n()
   const [files, setFiles] = useState<any[]>([])
   const [desktopBuilds, setDesktopBuilds] = useState<any[]>([])
@@ -90,11 +91,23 @@ export function CliFilesClientView({ projects = [], devOnly = false, isPopout = 
     }
     
     // Fetch desktop builds (Workspaces & Projects)
+    const allowedContextIds = [
+      ...projects.map(p => p.id),
+      ...workspaces.map(w => w.id)
+    ]
+
+    if (allowedContextIds.length === 0) {
+      setDesktopBuilds([])
+      setIsLoading(false)
+      return
+    }
+
     const { data: buildsData, error: buildsError } = await supabase
       .from('desktop_builds')
       .select('*')
       .eq('status', 'success')
       .not('download_url', 'is', null)
+      .in('context_id', allowedContextIds)
       .order('created_at', { ascending: false })
       
     if (!buildsError && buildsData && buildsData.length > 0) {

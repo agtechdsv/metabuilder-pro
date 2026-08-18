@@ -497,7 +497,7 @@ export default function ClientDashboardClient({
 
           {/* ── TAB: Central de Downloads ─────────────────────────────────────── */}
           {activeTab === 'downloads' && (
-            <CliFilesClientView projects={projects} devOnly={isGuest} />
+            <CliFilesClientView projects={projects} workspaces={workspaces} devOnly={isGuest} />
           )}
 
           {/* ── TAB: White Label ─────────────────────────────────────── */}
