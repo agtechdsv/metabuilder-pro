@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, CheckCircle2, X, Download, Cloud, Package, Terminal, Archive, UploadCloud } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
 
 interface BuildJob {
@@ -30,6 +31,7 @@ export function DesktopBuildTracker() {
       setIsVisible(true)
       setStepMessage(t('client_views.desktop_tracker.step0', 'Iniciando infraestrutura na Nuvem...'))
       setStepIndex(0)
+      setProgress(15)
     }
 
     window.addEventListener('START_DESKTOP_BUILD_TRACKER', handleStartEvent as EventListener)
@@ -154,13 +156,14 @@ export function DesktopBuildTracker() {
 
           {status === 'success' && (
             <div className="pt-2">
-              <button
-                onClick={handleDownloadClick}
+              <Link
+                href="/client/dashboard?tab=downloads&subtab=workspaces"
+                onClick={() => setIsVisible(false)}
                 className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 {t('client_views.desktop_tracker.access_downloads', 'Acessar Central de Downloads')}
-              </button>
+              </Link>
             </div>
           )}
         </motion.div>
