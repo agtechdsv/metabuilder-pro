@@ -2847,10 +2847,15 @@
   },
   "client_views": {
     "desktop_tracker": {
+      "step0": "Iniciando infraestrutura na Nuvem...",
       "step1": "Instalando dependências e SDKs...",
       "step2": "Compilando motor Rust e Webviews...",
       "step3": "Empacotando instalador nativo (.msi)...",
-      "step4": "Finalizando e transferindo o arquivo..."
+      "step4": "Finalizando e transferindo o arquivo...",
+      "success_title": "Instalador Pronto!",
+      "error_title": "Erro na Geração",
+      "cancel_build": "Cancelar Geração",
+      "access_downloads": "Acessar Central de Downloads"
     },
     "subscription": {
       "verifying_realtime": "Verificando pagamentos e faturamento em tempo real...",

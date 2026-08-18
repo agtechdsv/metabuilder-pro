@@ -2846,10 +2846,15 @@
   },
   "client_views": {
     "desktop_tracker": {
+      "step0": "Initializing Cloud Infrastructure...",
       "step1": "Installing dependencies and SDKs...",
       "step2": "Compiling Rust engine and Webviews...",
       "step3": "Packaging native installer (.msi)...",
-      "step4": "Finalizing and transferring file..."
+      "step4": "Finalizing and transferring file...",
+      "success_title": "Installer Ready!",
+      "error_title": "Build Error",
+      "cancel_build": "Cancel Build",
+      "access_downloads": "Access Download Center"
     },
     "subscription": {
       "verifying_realtime": "Checking payments and billing in real-time...",
