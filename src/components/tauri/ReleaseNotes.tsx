@@ -7,6 +7,7 @@ import { History, X, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useI18n } from '@/i18n/I18nContext'
+import { isTauri } from '@/utils/tauriUtils'
 
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 
@@ -188,7 +189,12 @@ export function ReleaseNotes({
                                       await update.downloadAndInstall()
                                     }
                                   } else if (releaseNotesList[0]?.download_url) {
-                                    window.open(releaseNotesList[0].download_url, '_blank')
+                                    if (isTauri()) {
+                                      const { open } = await import('@tauri-apps/plugin-shell')
+                                      await open(releaseNotesList[0].download_url)
+                                    } else {
+                                      window.open(releaseNotesList[0].download_url, '_blank')
+                                    }
                                   }
                                 } catch (e) {
                                   console.error('Update failed', e)
