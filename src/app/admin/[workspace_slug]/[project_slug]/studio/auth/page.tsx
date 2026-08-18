@@ -1708,6 +1708,7 @@ export default function AuthSettingsPage() {
                             </td>
                           </tr>
                         ))
+                        })()
                       ) : (
                         <tr>
                           <td colSpan={4} className="p-12 text-center">
