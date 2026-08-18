@@ -205,8 +205,8 @@ function CallbackHandler() {
         {status === ('redirecting' as any) && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
             <Loader2 className="w-12 h-12 text-emerald-600 dark:text-emerald-500 animate-spin mb-6" />
-            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">Redirecionando...</h2>
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm">Preparando seu ambiente de trabalho.</p>
+            <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.redirecting', 'Redirecionando...')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('auth.callback.preparing_env', 'Preparando seu ambiente de trabalho.')}</p>
           </div>
         )}
 

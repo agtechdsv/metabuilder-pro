@@ -1657,30 +1657,33 @@ export default function AuthSettingsPage() {
                       {isLoadingUsers ? (
                         <tr><td colSpan={4} className="p-8 text-center"><div className="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto" /></td></tr>
                       ) : legacyUsers.length > 0 ? (
-                        legacyUsers.map((u, i) => (
-                          <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 font-bold uppercase">
-                                  {(u[authConfig.db_email_column] || 'US').substring(0, 2)}
+                        (() => {
+                          const legacyUserModel = models.find(m => m.db_table_name === authConfig.db_table_name)
+                          const legacyPkField = legacyUserModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+                          return legacyUsers.map((u, i) => (
+                            <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 font-bold uppercase">
+                                    {(u[authConfig.db_email_column] || 'US').substring(0, 2)}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+                                      {u.full_name || u.nome || u.name || (u[authConfig.db_email_column] ? u[authConfig.db_email_column].split('@')[0] : 'Usuário ' + u[legacyPkField])}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-500">ID Local: {u[legacyPkField] || '-'}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">
-                                    {u.full_name || u.nome || u.name || (u[authConfig.db_email_column] ? u[authConfig.db_email_column].split('@')[0] : 'Usuário ' + u.id)}
-                                  </p>
-                                  <p className="text-[10px] text-neutral-500">ID Local: {u.id || '-'}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                              {u[authConfig.db_email_column]}
-                            </td>
-                            <td className="px-6 py-4">
-                              <select 
-                                value={userRoles.find(ur => ur.external_user_id === u.id?.toString())?.role_id || ''}
-                                onChange={(e) => handleAssignRole(u.id, e.target.value)}
-                                className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 outline-none w-36"
-                              >
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                                {u[authConfig.db_email_column]}
+                              </td>
+                              <td className="px-6 py-4">
+                                <select 
+                                  value={userRoles.find(ur => ur.external_user_id === u[legacyPkField]?.toString())?.role_id || ''}
+                                  onChange={(e) => handleAssignRole(u[legacyPkField], e.target.value)}
+                                  className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 outline-none w-36"
+                                >
                                 <option value="" disabled>Selecione um grupo</option>
                                 {roles.map(r => (
                                   <option key={r.id} value={r.id}>{r.name}</option>
