@@ -52,7 +52,15 @@ export function LoginPortalClient({
   const [isStandalone, setIsStandalone] = useState(initialIsStandalone || false)
 
   useEffect(() => {
-    const isParam = searchParams?.get('standalone') === 'true' || searchParams?.get('mode') === 'standalone'
+    let isParam = searchParams?.get('standalone') === 'true' || searchParams?.get('mode') === 'standalone'
+
+    if (!isParam && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('standalone') === 'true' || urlParams.get('mode') === 'standalone') {
+        isParam = true
+      }
+    }
+
     if (isParam) {
       setIsStandalone(true)
       try {
@@ -62,6 +70,25 @@ export function LoginPortalClient({
       try {
         if (sessionStorage.getItem(`standalone_${project.id}`) === 'true') {
           setIsStandalone(true)
+        } else {
+          // Failsafe para Apps Desktop gerados que perderam o param na URL
+          const checkTauri = async () => {
+            try {
+              const { isTauri } = await import('@tauri-apps/api/core')
+              const inTauri = isTauri()
+              // Se estamos no Tauri E não viemos de uma navegação interna do portal (referrer vazio ou próprio login)
+              // Significa que o App foi aberto DIRETAMENTE neste projeto (App Standalone)
+              if (inTauri) {
+                const ref = document.referrer || ''
+                const isInternalNav = ref.includes('/dashboard') || ref.includes('/admin')
+                if (!isInternalNav) {
+                  setIsStandalone(true)
+                  sessionStorage.setItem(`standalone_${project.id}`, 'true')
+                }
+              }
+            } catch (e) {}
+          }
+          checkTauri()
         }
       } catch {}
     }
