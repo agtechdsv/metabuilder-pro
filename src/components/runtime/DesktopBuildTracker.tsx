@@ -21,6 +21,7 @@ export function DesktopBuildTracker() {
   const [stepMessage, setStepMessage] = useState(t('client_views.desktop_tracker.step0', 'Iniciando infraestrutura na Nuvem...'))
   const [stepIndex, setStepIndex] = useState(0)
   const [progress, setProgress] = useState(15)
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -54,6 +55,7 @@ export function DesktopBuildTracker() {
       if (!error && data) {
         if (data.status === 'success' && data.download_url) {
           setStatus('success')
+          setDownloadUrl(data.download_url)
         } else if (data.status === 'error') {
           setStatus('error')
         }
@@ -178,13 +180,22 @@ export function DesktopBuildTracker() {
           )}
 
           {status === 'success' && (
-            <div className="pt-2">
+            <div className="pt-2 flex flex-col gap-2">
+              {downloadUrl && (
+                <a
+                  href={downloadUrl}
+                  onClick={() => setIsVisible(false)}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  {t('client_views.desktop_tracker.download_now', 'Baixar Instalador Agora')}
+                </a>
+              )}
               <Link
                 href="/client/dashboard?tab=downloads&subtab=workspaces"
                 onClick={() => setIsVisible(false)}
-                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2 px-4 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
               >
-                <Download className="w-4 h-4" />
                 {t('client_views.desktop_tracker.access_downloads', 'Acessar Central de Downloads')}
               </Link>
             </div>
