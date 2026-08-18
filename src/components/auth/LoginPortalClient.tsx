@@ -251,9 +251,9 @@ export function LoginPortalClient({
       user.__display_name = user[authConfig.db_display_name_column]
     }
 
-    // Salva o cookie de sessão para o projeto
+    // Salva o cookie de sessão para o projeto (sem max-age para expirar ao fechar o app/navegador)
     const cookieName = `client_session_${project.id}`
-    document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=86400; SameSite=Lax`
+    document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Lax`
     
     // Redireciona para o portal principal
     const appendStandalone = isStandalone ? '?standalone=true' : ''
