@@ -6,8 +6,9 @@ import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 
-export default async function LoginPage({ params }: any) {
+export default async function LoginPage({ params, searchParams }: any) {
   const { workspace_slug, project_slug } = await params
+  const resolvedSearchParams = await searchParams
   const locale = await getLocale()
   const t = await getTranslations(locale)
   
@@ -118,6 +119,7 @@ export default async function LoginPage({ params }: any) {
       schemaName={schemaName}
       isCustomDomain={isCustomDomain}
       customDomainType={customDomainType || undefined}
+      initialIsStandalone={resolvedSearchParams?.standalone === 'true'}
     />
   )
 }

@@ -21,6 +21,7 @@ interface LoginPortalClientProps {
   schemaName?: string
   isCustomDomain?: boolean
   customDomainType?: string
+  initialIsStandalone?: boolean
 }
 
 export function LoginPortalClient({
@@ -32,7 +33,8 @@ export function LoginPortalClient({
   projectSlug,
   schemaName,
   isCustomDomain,
-  customDomainType
+  customDomainType,
+  initialIsStandalone
 }: LoginPortalClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -47,7 +49,7 @@ export function LoginPortalClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showMfaModal, setShowMfaModal] = useState(false)
   const [pendingMfaUser, setPendingMfaUser] = useState<any>(null)
-  const [isStandalone, setIsStandalone] = useState(false)
+  const [isStandalone, setIsStandalone] = useState(initialIsStandalone || false)
 
   useEffect(() => {
     const isParam = searchParams?.get('standalone') === 'true' || searchParams?.get('mode') === 'standalone'

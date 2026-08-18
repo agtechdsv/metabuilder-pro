@@ -10,6 +10,7 @@ interface WorkspacePageProps {
     project_slug: string
     folder_id?: string[]
   }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 const getAllViewIds = (items: any[], slugToIdMap: Map<string, string>): string[] => {
@@ -31,8 +32,13 @@ const getAllViewIds = (items: any[], slugToIdMap: Map<string, string>): string[]
   return ids
 }
 
-export default async function WorkspacePage({ params }: WorkspacePageProps) {
+export default async function WorkspacePage({ params, searchParams }: WorkspacePageProps) {
   const { workspace_slug, project_slug, folder_id } = await params
+  const resolvedSearchParams = await searchParams
+  
+  const isStandalone = resolvedSearchParams?.standalone === 'true'
+  const appendParams = isStandalone ? '?standalone=true' : ''
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -51,14 +57,12 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     .eq('slug', workspace_slug)
     .single()
 
-  if (!workspace) notFound()
-
-  // 2. Resolve Project
+  // 1. Resolve Project
   const { data: project } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, workspaces!inner(*)')
     .eq('slug', project_slug)
-    .eq('workspace_id', workspace.id)
+    .eq('workspaces.slug', workspace_slug)
     .single()
 
   if (!project) notFound()
@@ -79,14 +83,14 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   }
 
   // 4. Resolve project_auth_config
-  const rawAuthConfig = await supabase
+  const { data: config } = await supabase
     .from('project_auth_config')
     .select('*')
     .eq('project_id', project.id)
     .maybeSingle()
-    .then(res => res.data)
 
-  const uiConfig = rawAuthConfig?.ui_config as any || {}
+  const uiConfig = config?.ui_config as any || {}
+  const rawAuthConfig = config as any || null
   const authConfig = {
     ...(rawAuthConfig as any || {}),
     sync_legacy_groups: uiConfig.sync_legacy_groups || false,
@@ -99,7 +103,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
   const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
 
   if (!sessionCookie && !isNoAuth) {
-    redirect(`/${workspace_slug}/${project_slug}/login`)
+    redirect(`/${workspace_slug}/${project_slug}/login${appendParams}`)
   }
 
   let allowedViewIds: string[] | null = null
