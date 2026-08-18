@@ -95,6 +95,19 @@ export function DesktopBuildTracker() {
     router.push('/client/dashboard?tab=downloads&subtab=workspaces')
   }
 
+  const handleCancelBuild = async () => {
+    if (!job) return
+    setIsVisible(false)
+    try {
+      await supabase
+        .from('desktop_builds')
+        .delete()
+        .eq('id', job.jobId)
+    } catch (e) {
+      console.error('Falha ao cancelar build:', e)
+    }
+  }
+
   return (
     <AnimatePresence>
       {isVisible && job && (
@@ -144,14 +157,24 @@ export function DesktopBuildTracker() {
           </div>
 
           {status === 'pending' && (
-            <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1">
-              <div 
-                className="h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
-                style={{ width: `${progress}%` }}
-              >
-                <div className="absolute top-0 left-0 w-full h-full bg-white/20 animate-pulse" />
+            <>
+              <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden mt-1">
+                <div 
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
+                  style={{ width: `${progress}%` }}
+                >
+                  <div className="absolute top-0 left-0 w-full h-full bg-white/20 animate-pulse" />
+                </div>
               </div>
-            </div>
+              <div className="pt-2">
+                <button
+                  onClick={handleCancelBuild}
+                  className="w-full py-2 px-4 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold rounded-xl transition-colors"
+                >
+                  {t('client_views.desktop_tracker.cancel_build', 'Cancelar Geração')}
+                </button>
+              </div>
+            </>
           )}
 
           {status === 'success' && (
