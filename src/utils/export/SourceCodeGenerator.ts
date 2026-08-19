@@ -124,7 +124,7 @@ export class SourceCodeGenerator {
       const legacyHeaderActionsPath = path.join(cwd, 'src/components/layout/HeaderActions.tsx')
       if (fs.existsSync(legacyHeaderActionsPath)) {
         let content = fs.readFileSync(legacyHeaderActionsPath, 'utf8')
-        content = content.replace(/import \{ ReleaseNotes \} from '@\/components\/tauri\/ReleaseNotes'/g, '')
+        content = content.replace(/import\s+\{\s*ReleaseNotes\s*\}\s+from\s+['"]@\/components\/tauri\/ReleaseNotes['"];?/g, '')
         content = content.replace(/<ReleaseNotes[\s\S]*?\/>/g, '')
         content = content.replace(/\{!hideReleaseNotes && <ReleaseNotes \/>\}/g, '')
         componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
@@ -134,8 +134,8 @@ export class SourceCodeGenerator {
       const headerActionsPath = path.join(cwd, 'src/components/runtime/RuntimeHeaderActions.tsx')
       if (fs.existsSync(headerActionsPath)) {
         let content = fs.readFileSync(headerActionsPath, 'utf8')
-        content = content.replace(/import \{ ReleaseNotes \} from '@\/components\/tauri\/ReleaseNotes'/g, '')
-        content = content.replace(/import \{ ContextAutoUpdater \} from '@\/components\/tauri\/ContextAutoUpdater'/g, '')
+        content = content.replace(/import\s+\{\s*ReleaseNotes\s*\}\s+from\s+['"]@\/components\/tauri\/ReleaseNotes['"];?/g, '')
+        content = content.replace(/import\s+\{\s*ContextAutoUpdater\s*\}\s+from\s+['"]@\/components\/tauri\/ContextAutoUpdater['"];?/g, '')
         content = content.replace(/<ContextAutoUpdater[\s\S]*?\/>/g, '')
         content = content.replace(/<ReleaseNotes[\s\S]*?\/>/g, '')
         componentsFolder.folder('runtime')?.file('RuntimeHeaderActions.tsx', content)
