@@ -130,12 +130,18 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
           pkField = authModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
         }
 
+        let actualPkKey = pkField
+        if (clientUser) {
+          const foundKey = Object.keys(clientUser).find(k => k.toLowerCase() === pkField.toLowerCase())
+          if (foundKey) actualPkKey = foundKey
+        }
+
         // Busca o papel do usuário no projeto
         const { data: userRole } = await supabase
           .from('project_user_roles')
           .select('role_id')
           .eq('project_id', project.id)
-          .eq('external_user_id', clientUser[pkField]?.toString())
+          .eq('external_user_id', clientUser[actualPkKey]?.toString())
           .maybeSingle()
         roleId = userRole?.role_id
       }

@@ -81,7 +81,13 @@ export default async function DownloadsPage({ params }: PageProps) {
     pkField = authModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
   }
 
-  let userId = clientUser ? clientUser[pkField]?.toString() : null
+  let userId = null
+  if (clientUser) {
+    const actualPk = Object.keys(clientUser).find(k => k.toLowerCase() === pkField.toLowerCase())
+    if (actualPk) {
+      userId = clientUser[actualPk]?.toString()
+    }
+  }
 
   if (!userId) {
     // Fallback: verifica se há sessão administrativa/dev do Supabase
