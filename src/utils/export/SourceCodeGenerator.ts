@@ -173,6 +173,9 @@ export class SourceCodeGenerator {
       if (fs.existsSync(loginPortalPath)) {
         let content = fs.readFileSync(loginPortalPath, 'utf8')
         
+        // Remove dynamic Tauri import
+        content = content.replace(/const \{ isTauri \} = await import\('@tauri-apps\/api\/core'\)/g, 'const isTauri = () => false;')
+
         if (this.authStrategy === 'managed') {
           // Convert handleSubmit to use Supabase Auth
           content = content.replace(
