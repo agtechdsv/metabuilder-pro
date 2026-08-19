@@ -58,17 +58,6 @@ export default async function DownloadsPage({ params }: PageProps) {
     }
   }
 
-  let userId = clientUser?.id ? clientUser.id.toString() : null
-
-  if (!userId) {
-    // Fallback: verifica se há sessão administrativa/dev do Supabase
-    const supabaseServer = await createServerClient()
-    const { data: { user } } = await supabaseServer.auth.getUser()
-    if (user) {
-      userId = user.id
-    }
-  }
-
   const rawAuthConfig = await supabase
     .from('project_auth_config')
     .select('*')
@@ -84,6 +73,24 @@ export default async function DownloadsPage({ params }: PageProps) {
   }
 
   const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
+
+  let pkField = 'id'
+  if (!isNoAuth && authConfig.db_table_name) {
+    const { data: models } = await supabase.from('models').select('db_table_name, fields').eq('project_id', project.id)
+    const authModel = models?.find(m => m.db_table_name === authConfig.db_table_name)
+    pkField = authModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+  }
+
+  let userId = clientUser ? clientUser[pkField]?.toString() : null
+
+  if (!userId) {
+    // Fallback: verifica se há sessão administrativa/dev do Supabase
+    const supabaseServer = await createServerClient()
+    const { data: { user } } = await supabaseServer.auth.getUser()
+    if (user) {
+      userId = user.id
+    }
+  }
 
   // 4. Se não estiver autenticado de nenhuma forma, renderiza "Acesso Restrito"
   if (!userId && !isNoAuth) {

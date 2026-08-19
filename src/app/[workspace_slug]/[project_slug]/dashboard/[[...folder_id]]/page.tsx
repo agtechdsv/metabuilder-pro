@@ -120,12 +120,19 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
       }
       
       if (!roleId) {
+        let pkField = 'id'
+        if (authConfig.db_table_name) {
+          const { data: models } = await supabase.from('models').select('db_table_name, fields').eq('project_id', project.id)
+          const authModel = models?.find(m => m.db_table_name === authConfig.db_table_name)
+          pkField = authModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
+        }
+
         // Busca o papel do usuário no projeto
         const { data: userRole } = await supabase
           .from('project_user_roles')
           .select('role_id')
           .eq('project_id', project.id)
-          .eq('external_user_id', clientUser.id?.toString())
+          .eq('external_user_id', clientUser[pkField]?.toString())
           .maybeSingle()
         roleId = userRole?.role_id
       }
