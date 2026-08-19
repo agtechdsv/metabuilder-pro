@@ -11,20 +11,7 @@
   },
   "app": {
     "windows": [
-      {
-        "label": "splashscreen",
-        "title": "MetaBuilder PRO - Iniciando...",
-        "url": "/splash",
-        "width": 600,
-        "height": 400,
-        "decorations": false,
-        "transparent": true,
-        "resizable": false,
-        "fullscreen": false,
-        "center": true,
-        "alwaysOnTop": true,
-        "skipTaskbar": true
-      },
+
       {
         "label": "main",
         "title": "MetaBuilder PRO - IDE",
