@@ -120,6 +120,16 @@ export class SourceCodeGenerator {
       }
 
       
+      // Cleanup HeaderActions to remove Tauri specific ReleaseNotes
+      const legacyHeaderActionsPath = path.join(cwd, 'src/components/layout/HeaderActions.tsx')
+      if (fs.existsSync(legacyHeaderActionsPath)) {
+        let content = fs.readFileSync(legacyHeaderActionsPath, 'utf8')
+        content = content.replace(/import \{ ReleaseNotes \} from '@\/components\/tauri\/ReleaseNotes'/g, '')
+        content = content.replace(/<ReleaseNotes[\s\S]*?\/>/g, '')
+        content = content.replace(/\{!hideReleaseNotes && <ReleaseNotes \/>\}/g, '')
+        componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
+      }
+
       // Cleanup RuntimeHeaderActions to remove Tauri specific ReleaseNotes and ContextAutoUpdater
       const headerActionsPath = path.join(cwd, 'src/components/runtime/RuntimeHeaderActions.tsx')
       if (fs.existsSync(headerActionsPath)) {
