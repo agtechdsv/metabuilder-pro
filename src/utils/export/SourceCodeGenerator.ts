@@ -120,13 +120,15 @@ export class SourceCodeGenerator {
       }
 
       
-      // Cleanup HeaderActions to remove Tauri specific ReleaseNotes
-      const headerActionsPath = path.join(cwd, 'src/components/layout/HeaderActions.tsx')
+      // Cleanup RuntimeHeaderActions to remove Tauri specific ReleaseNotes and ContextAutoUpdater
+      const headerActionsPath = path.join(cwd, 'src/components/runtime/RuntimeHeaderActions.tsx')
       if (fs.existsSync(headerActionsPath)) {
         let content = fs.readFileSync(headerActionsPath, 'utf8')
         content = content.replace(/import \{ ReleaseNotes \} from '@\/components\/tauri\/ReleaseNotes'/g, '')
-        content = content.replace(/\{!hideReleaseNotes && <ReleaseNotes \/>\}/g, '')
-        componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
+        content = content.replace(/import \{ ContextAutoUpdater \} from '@\/components\/tauri\/ContextAutoUpdater'/g, '')
+        content = content.replace(/<ContextAutoUpdater[\s\S]*?\/>/g, '')
+        content = content.replace(/<ReleaseNotes[\s\S]*?\/>/g, '')
+        componentsFolder.folder('runtime')?.file('RuntimeHeaderActions.tsx', content)
       }
 
       // Cleanup Tauri dependencies from Navbar.tsx
