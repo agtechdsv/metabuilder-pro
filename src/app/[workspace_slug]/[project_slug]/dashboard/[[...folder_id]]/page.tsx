@@ -116,7 +116,10 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
       let roleId = null
       if (authConfig?.sync_legacy_groups) {
         const roleKey = authConfig.db_user_role_column || 'role_id'
-        roleId = clientUser[roleKey]
+        const actualKey = Object.keys(clientUser).find(k => k.toLowerCase() === roleKey.toLowerCase())
+        if (actualKey) {
+          roleId = clientUser[actualKey]
+        }
       }
       
       if (!roleId) {
