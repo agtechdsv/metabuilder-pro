@@ -125,8 +125,8 @@ export class SourceCodeGenerator {
       if (fs.existsSync(legacyHeaderActionsPath)) {
         let content = fs.readFileSync(legacyHeaderActionsPath, 'utf8')
         content = content.replace(/import\s+\{\s*ReleaseNotes\s*\}\s+from\s+['"]@\/components\/tauri\/ReleaseNotes['"];?/g, '')
+        content = content.replace(/\{!hideReleaseNotes\s*&&\s*\([\s\S]*?<ReleaseNotes[\s\S]*?\/>\s*\)\}/g, '')
         content = content.replace(/<ReleaseNotes[\s\S]*?\/>/g, '')
-        content = content.replace(/\{!hideReleaseNotes && <ReleaseNotes \/>\}/g, '')
         componentsFolder.folder('layout')?.file('HeaderActions.tsx', content)
       }
 
