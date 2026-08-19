@@ -310,13 +310,25 @@ export function createClient() {
         signInWithPassword: async () => ({ data: null, error: new Error("Supabase is not configured.") }),
         signOut: async () => ({ error: null }),
       },
-      from: () => ({
-        select: () => ({ eq: () => ({ single: async () => ({ data: null }), limit: () => ({ single: async () => ({ data: null }) }) }) })
-      }),
-      channel: () => ({ on: () => ({ subscribe: () => {} }), unsubscribe: () => {} }),
-      removeChannel: () => {}
-    } as any;
-  }
+        from: () => ({
+          select: () => ({ eq: () => ({ single: async () => ({ data: null }), limit: () => ({ single: async () => ({ data: null }) }) }) })
+        }),
+        channel: () => {
+          const mockChannel = {
+            on: function() { return this; },
+            subscribe: function(callback?: any) { 
+              if (typeof callback === 'function') {
+                callback('SUBSCRIBED');
+              }
+              return this; 
+            },
+            unsubscribe: function() {}
+          };
+          return mockChannel;
+        },
+        removeChannel: () => {}
+      } as any;
+    }
   
   return createBrowserClient(url, key)
 }`
