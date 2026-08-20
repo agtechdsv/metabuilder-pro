@@ -273,10 +273,7 @@ LDAP_BIND_PASSWORD=admin_password
 LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
 `
 
-  const envFileName = dbConfig ? '.env.local' : '.env.example'
+  const envFileName = '.env.local'
   zip.file(envFileName, envContent)
-  
-  if (envFileName !== '.env.example') {
-    zip.file('.env.example', envExample)
-  }
+  zip.file('.env.example', envExample)
 }
