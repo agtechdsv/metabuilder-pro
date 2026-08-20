@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     // Então, nós trocamos o 'react' local por um CDN global (esm.sh) que fornece o React no formato ESM.
     compiledCode = compiledCode.replace(
       /from\s*["']react["']/g,
-      "from 'https://esm.sh/react@19.2.4'"
+      "from 'https://esm.sh/react@18.2.0'"
     )
     
     compiledCode = compiledCode.replace(
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     // Suporte para o jsx-runtime (que é adicionado pelo jsx: 'automatic' do esbuild)
     compiledCode = compiledCode.replace(
       /from\s*["']react\/jsx-runtime["']/g,
-      "from 'https://esm.sh/react@19.2.4/jsx-runtime'"
+      "from 'https://esm.sh/react@18.2.0/jsx-runtime'"
     )
 
     return NextResponse.json({ compiled_code: compiledCode })
