@@ -70,6 +70,7 @@
     "write-pty",
     "resize-pty",
     "update-tray-menu",
-    "open-devtools"
+    "open-devtools",
+    "open_in_explorer"
   ]
 }

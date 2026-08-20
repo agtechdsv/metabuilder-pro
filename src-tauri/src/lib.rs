@@ -46,6 +46,26 @@ struct PtyState {
 }
 
 #[command]
+fn open_in_explorer(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(path.replace("/", "\\"))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let cmd = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+        std::process::Command::new(cmd)
+            .arg(path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[command]
 fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>, config_path: Option<String>) -> Result<String, String> {
     let mut child_guard = state.child.lock().unwrap();
     if child_guard.is_some() {
@@ -716,7 +736,8 @@ pub fn run() {
             write_pty,
             resize_pty,
             update_tray_menu,
-            open_devtools
+            open_devtools,
+            open_in_explorer
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

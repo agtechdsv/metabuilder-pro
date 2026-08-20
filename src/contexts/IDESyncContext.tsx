@@ -1801,8 +1801,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       const home = await homeDir()
                       const targetPath = ctxMenu.node.isDirectory ? ctxMenu.node.path : ctxMenu.node.path.substring(0, ctxMenu.node.path.lastIndexOf('/'))
                       const absolutePath = `${home.replace(/\\/g, '/')}/${targetPath}`
-                      const { openPath } = await import('@tauri-apps/plugin-opener')
-                      await openPath(absolutePath)
+                      await invoke('open_in_explorer', { path: absolutePath })
                       setCtxMenu(null)
                     } catch (e: any) {
                       toast('Erro ao abrir no explorer: ' + (e?.message || String(e)), 'error')
