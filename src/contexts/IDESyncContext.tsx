@@ -1801,11 +1801,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       const home = await homeDir()
                       const targetPath = ctxMenu.node.isDirectory ? ctxMenu.node.path : ctxMenu.node.path.substring(0, ctxMenu.node.path.lastIndexOf('/'))
                       const absolutePath = `${home.replace(/\\/g, '/')}/${targetPath}`
-                      const { open } = await import('@tauri-apps/plugin-shell')
-                      await open(absolutePath)
+                      const { openPath } = await import('@tauri-apps/plugin-opener')
+                      await openPath(absolutePath)
                       setCtxMenu(null)
                     } catch (e: any) {
-                      toast('Erro ao abrir no explorer: ' + e.message, 'error')
+                      toast('Erro ao abrir no explorer: ' + (e?.message || String(e)), 'error')
                     }
                   }}>
                     <Folder className="w-3.5 h-3.5 text-blue-400" /> {t('workspace_components.ide_local.open_explorer', 'Abrir no Explorer')}
