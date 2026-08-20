@@ -851,7 +851,7 @@ export function PermissionGuard({ children }: { viewSlug: string, children: Reac
     // 2. Setup src/app structure and default pages
     const actualAdapterName = this.dataMode === 'legacy' ? this.legacyDriver : this.dataMode;
     generateAppRouter(this.zip, { ...this.project, db_type: actualAdapterName }, this.models, this.uiViews, this.authStrategy, this.projectRelations)
-    generateFeatures(this.zip, this.models, this.uiViews, actualAdapterName)
+    generateFeatures(this.zip, this.models, this.uiViews, actualAdapterName, this.customComponents)
     generateBYOC(this.zip, this.customComponents)
 
     // Prevent Next.js favicon 404 in console

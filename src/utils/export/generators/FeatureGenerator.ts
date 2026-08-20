@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 
-export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase') {
+export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbType: string = 'supabase', customComponents: any[] = []) {
   const configFolder = zip.folder('src/config/views')
   const appFolder = zip.folder('src/app')
   if (!configFolder || !appFolder) return
@@ -26,6 +26,12 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           const gridMeta = layoutConfig.fields_metadata?.[`grid-${fieldIdOrName}`] || {}
           const baseMeta = layoutConfig.fields_metadata?.[fieldIdOrName] || {}
           const meta = { ...baseMeta, ...gridMeta }
+          if (isByoc) {
+            const comp = customComponents.find((c: any) => c.name === byocName)
+            if (comp && comp.compiled_code) {
+              meta.compiled_code = comp.compiled_code
+            }
+          }
           
           let virtualModelId: any = null;
           let virtualModelName = '';
@@ -65,6 +71,12 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
           const formMeta = layoutConfig.fields_metadata?.[`form-${fieldIdOrName}`] || {}
           const baseMeta = layoutConfig.fields_metadata?.[fieldIdOrName] || {}
           const meta = { ...baseMeta, ...formMeta }
+          if (isByoc) {
+            const comp = customComponents.find((c: any) => c.name === byocName)
+            if (comp && comp.compiled_code) {
+              meta.compiled_code = comp.compiled_code
+            }
+          }
           
           let virtualModelId: any = null;
           let virtualModelName = '';
@@ -139,6 +151,13 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
         const baseMeta = layoutConfig.fields_metadata?.[f.id] || {}
         const specificMeta = layoutConfig.fields_metadata?.[`filter-${f.id}`] || {}
         const mergedMeta = { ...baseMeta, ...specificMeta }
+        if (f.field_type === 'byoc') {
+          const byocName = f.id.replace(/^byoc[-_]/, '')
+          const comp = customComponents.find((c: any) => c.name === byocName)
+          if (comp && comp.compiled_code) {
+            mergedMeta.compiled_code = comp.compiled_code
+          }
+        }
         return {
           id: f.id || f.column_name,
           db_column_name: f.column_name,
