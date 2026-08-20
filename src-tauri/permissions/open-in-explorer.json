@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "open-in-explorer",
+      "description": "allow open-in-explorer",
+      "commands": {
+        "allow": ["open_in_explorer"],
+        "deny": []
+      }
+    }
+  ]
+}
