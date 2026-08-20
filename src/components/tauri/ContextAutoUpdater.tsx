@@ -31,6 +31,7 @@ export function ContextAutoUpdater({ contextType, contextId, appName }: ContextA
 
   useEffect(() => {
     if (!isTauri()) return
+    if (typeof window !== 'undefined' && window.self !== window.top) return
     const getInstalledVersion = async () => {
       try {
         const { getVersion } = await import('@tauri-apps/api/app')
@@ -45,6 +46,7 @@ export function ContextAutoUpdater({ contextType, contextId, appName }: ContextA
 
   useEffect(() => {
     if (!isTauri() || !contextId) return
+    if (typeof window !== 'undefined' && window.self !== window.top) return
 
     const check = async () => {
       try {

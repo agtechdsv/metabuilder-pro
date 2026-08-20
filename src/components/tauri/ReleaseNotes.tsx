@@ -43,8 +43,9 @@ export function ReleaseNotes({
     const checkVersion = async () => {
       const { isTauri } = await import('@tauri-apps/api/core')
       const isTauriEnv = isTauri()
+      const isIframe = typeof window !== 'undefined' && window.self !== window.top
 
-      if (!isTauriEnv) {
+      if (!isTauriEnv || isIframe) {
         setLocalVersion('Web App Edition')
         return
       }
