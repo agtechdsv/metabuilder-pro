@@ -71,6 +71,6 @@
     "resize-pty",
     "update-tray-menu",
     "open-devtools",
-    "open_in_explorer"
+    "open-in-explorer"
   ]
 }
