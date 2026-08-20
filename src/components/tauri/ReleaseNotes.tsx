@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useI18n } from '@/i18n/I18nContext'
 import { isTauri } from '@/utils/tauriUtils'
+import { useToast } from '@/components/ui/Toast'
 
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 
@@ -27,6 +28,7 @@ export function ReleaseNotes({
   icon: initialIcon
 }: ReleaseNotesProps) {
   const { language, t } = useI18n()
+  const { toast } = useToast()
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [releaseNotesList, setReleaseNotesList] = useState<any[]>([])
@@ -188,6 +190,8 @@ export function ReleaseNotes({
                                       await import('@tauri-apps/api/core').then(m => m.invoke('stopcli')).catch(() => {});
                                       await new Promise(r => setTimeout(r, 1500)); // Aguarda o SO liberar o arquivo
                                       await update.downloadAndInstall()
+                                    } else {
+                                      toast('Os binários da atualização não foram encontrados no servidor.', 'error')
                                     }
                                   } else if (releaseNotesList[0]?.download_url) {
                                     if (isTauri()) {
@@ -197,8 +201,9 @@ export function ReleaseNotes({
                                       window.open(releaseNotesList[0].download_url, '_blank')
                                     }
                                   }
-                                } catch (e) {
+                                } catch (e: any) {
                                   console.error('Update failed', e)
+                                  toast('Erro ao atualizar: ' + (e?.message || String(e)), 'error')
                                 } finally {
                                   setIsUpdating(false)
                                 }
