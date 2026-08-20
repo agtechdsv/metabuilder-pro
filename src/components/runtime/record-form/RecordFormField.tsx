@@ -1,10 +1,37 @@
 import React, { useMemo, Suspense } from 'react'
 
+import * as jsxRuntime from 'react/jsx-runtime'
+import * as LucideReact from 'lucide-react'
+
 const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compiledCode: string, fieldName: string, componentProps?: any }) => {
   const DynamicComponent = useMemo(() => {
     try {
-      const dataUri = "data:text/javascript;charset=utf-8," + encodeURIComponent(compiledCode);
-      return React.lazy(() => import(/* webpackIgnore: true */ dataUri));
+      // Verifica se o código usa ESM (export default ou import) ou CJS (module.exports)
+      const isEsm = compiledCode.includes('export default') || compiledCode.includes('export {') || compiledCode.includes('import ');
+
+      if (isEsm) {
+        // Fallback para ESM (antigo método com CDN)
+        const dataUri = "data:text/javascript;charset=utf-8," + encodeURIComponent(compiledCode);
+        return React.lazy(() => import(/* webpackIgnore: true */ dataUri));
+      }
+
+      // Novo método (CJS via new Function) - resolve #525 (Mismatch de instâncias React)
+      const exports: any = {};
+      const module = { exports };
+      
+      const mockedRequire = (name: string) => {
+        if (name === 'react') return React;
+        if (name === 'react/jsx-runtime') return jsxRuntime;
+        if (name === 'lucide-react') return LucideReact;
+        console.warn(`[BYOC] Modulo '${name}' não encontrado no require mockado.`);
+        return {};
+      };
+      
+      // Avalia o código CJS compilado pelo esbuild
+      const fn = new Function('require', 'module', 'exports', 'React', compiledCode);
+      fn(mockedRequire, module, exports, React);
+      
+      return module.exports.default || module.exports;
     } catch (e) {
       console.error('Failed to load BYOC Component', e);
       return null;
