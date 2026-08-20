@@ -1,4 +1,25 @@
 {
+  "v1.0.1": {
+    "date": "2026-08-20",
+    "pt": [
+      "Nova ação 'Abrir no Explorador': Acesse arquivos e pastas do seu projeto diretamente no gerenciador de arquivos nativo do seu sistema operacional com apenas um clique.",
+      "Espaço de Trabalho Otimizado: Correção de sobreposições entre o editor de código e o console, além de interações aprimoradas nos menus de contexto para uma navegação mais fluida.",
+      "Pré-visualizações sem Distrações: Ambiente de preview aprimorado com a remoção de notificações de atualização intrusivas nas visualizações incorporadas.",
+      "Maior Estabilidade: Melhorias na inicialização do projeto e na geração automática de arquivos de configuração de ambiente."
+    ],
+    "en": [
+      "New 'Open in Explorer' Feature: Seamlessly reveal and manage project files and folders directly within your operating system's native file manager.",
+      "Polished IDE Workspace: Resolved layout overlaps between the editor and console, alongside smoother context menu interactions for an enhanced coding experience.",
+      "Distraction-Free Previews: Cleaner in-app preview environments by eliminating unnecessary update prompts in embedded viewports.",
+      "Enhanced Setup Reliability: Improved stability during environment file generation and project initialization."
+    ],
+    "es": [
+      "Nueva función 'Abrir en el Explorador': Accede y gestiona los archivos y carpetas de tu proyecto directamente en el explorador de archivos nativo de tu sistema.",
+      "Espacio de Trabajo Optimizado: Corrección de superposiciones entre el editor y la consola, con una interacción más fluida en los menús contextuales.",
+      "Vistas Previas sin Distracciones: Entorno de previsualización más limpio al desactivar alertas de actualización innecesarias dentro de las vistas integradas.",
+      "Mayor Estabilidad: Mejoras en la confiabilidad al generar archivos de configuración de entorno e inicializar proyectos."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
