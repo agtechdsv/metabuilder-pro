@@ -1343,7 +1343,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           </button>
                         )}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-h-0 relative">
                         {isSyncing ? (
                           <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
                             <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
@@ -1732,9 +1732,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       {/* ──────────────── File Explorer: Context Menu ──────────────────────────────────────────────────────────── */}
       {ctxMenu && (
         <>
-          <div className="fixed inset-0 z-[99990]" onClick={() => setCtxMenu(null)} />
+          <div className="fixed inset-0 z-[100000]" onClick={() => setCtxMenu(null)} />
           <div
-            className="fixed z-[99999] bg-[#1e1e1e] border border-neutral-700 rounded-xl shadow-2xl py-1.5 w-52 text-sm"
+            className="fixed z-[100001] bg-[#1e1e1e] border border-neutral-700 rounded-xl shadow-2xl py-1.5 w-52 text-sm"
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
           >
             {(() => {
@@ -1796,6 +1796,20 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     <Scissors className="w-3.5 h-3.5 text-orange-400" /> {t('workspace_components.ide_local.cut', 'Recortar')} {selectedNodes.length > 1 ? `(${selectedNodes.length})` : ''}
                   </button>
                   <div className="border-t border-neutral-700 my-1" />
+                  <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors" onClick={async () => {
+                    try {
+                      const home = await homeDir()
+                      const targetPath = ctxMenu.node.isDirectory ? ctxMenu.node.path : ctxMenu.node.path.substring(0, ctxMenu.node.path.lastIndexOf('/'))
+                      const absolutePath = `${home.replace(/\\/g, '/')}/${targetPath}`
+                      const { open } = await import('@tauri-apps/plugin-shell')
+                      await open(absolutePath)
+                      setCtxMenu(null)
+                    } catch (e: any) {
+                      toast('Erro ao abrir no explorer: ' + e.message, 'error')
+                    }
+                  }}>
+                    <Folder className="w-3.5 h-3.5 text-blue-400" /> {t('workspace_components.ide_local.open_explorer', 'Abrir no Explorer')}
+                  </button>
                   <button className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-red-900/40 text-red-400 transition-colors" onClick={() => { setDeleteConfirm({ mode: 'trash', nodes: selectedNodes }); setCtxMenu(null) }}>
                     <Trash2 className="w-3.5 h-3.5" /> {t('workspace_components.ide_local.delete', 'Deletar')} {selectedNodes.length > 1 ? `(${selectedNodes.length} itens)` : ctxMenu.node.isDirectory ? 'Pasta' : 'Arquivo'}
                   </button>
