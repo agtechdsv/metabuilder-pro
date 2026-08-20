@@ -6,8 +6,14 @@ import * as LucideReact from 'lucide-react'
 const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compiledCode: string, fieldName: string, componentProps?: any }) => {
   const DynamicComponent = useMemo(() => {
     try {
-      // Verifica se o código usa ESM (export default ou import) ou CJS (module.exports)
-      const isEsm = compiledCode.includes('export default') || compiledCode.includes('export {') || compiledCode.includes('import ');
+      // Verifica se o código usa ESM (export default ou import minificado) ou CJS (module.exports)
+      // O código antigo usava https://esm.sh/ para os imports.
+      const isEsm = compiledCode.includes('export default') || 
+                    compiledCode.includes('export {') || 
+                    compiledCode.includes('export{') || 
+                    compiledCode.includes('import ') || 
+                    compiledCode.includes('import{') || 
+                    compiledCode.includes('https://esm.sh/');
 
       if (isEsm) {
         // Fallback para ESM (antigo método com CDN)
