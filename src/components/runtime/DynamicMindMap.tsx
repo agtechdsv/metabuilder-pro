@@ -325,6 +325,10 @@ export default function DynamicMindMap({
 
       const handleResult = (res: any) => {
         if (res.payload?.queryId === queryId) {
+          console.log("[MetaBuilder:MindMap] 📡 fetchChildren response:", res.payload);
+          if (!res.payload?.success) {
+            console.error("[MetaBuilder:MindMap] ❌ fetchChildren Query Failed:", res.payload?.error);
+          }
           const childrenData = res.payload.data;
           const uniqueChildren = new Map();
           (childrenData || []).forEach((item: any, idx: number) => {
@@ -368,6 +372,7 @@ export default function DynamicMindMap({
 
       if (tunnelChannel && isTunnelReady) {
         tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
+        tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult);
         tunnelChannel.send({
           type: 'broadcast',
           event: 'sql_query',
@@ -387,6 +392,7 @@ export default function DynamicMindMap({
         const channelName = `tunnel:${project?.id}`;
         const channel = supabase.channel(channelName);
         channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
+        channel.on('broadcast', { event: 'sql_result' }, handleResult);
         channel.subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
             channel.send({
