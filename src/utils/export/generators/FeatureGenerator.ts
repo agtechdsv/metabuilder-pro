@@ -180,6 +180,8 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       schedulerConfig: layoutConfig.scheduler_config || layoutConfig.schedulerConfig,
       galleryConfig: layoutConfig.gallery_config || layoutConfig.galleryConfig,
       mapConfig: layoutConfig.map_config || layoutConfig.mapConfig,
+      mindmapLevels: layoutConfig.mindmap_levels || layoutConfig.mindmapLevels,
+      mindmapCentralField: layoutConfig.mindmap_central_field || layoutConfig.mindmapCentralField,
       blueprintConfig: layoutConfig.blueprint_config || layoutConfig.blueprintConfig,
       kanbanGroupField: layoutConfig.kanban_group_field || layoutConfig.kanbanGroupField,
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
