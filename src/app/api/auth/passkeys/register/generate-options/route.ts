@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       .select('credential_id')
       .eq('user_id', user.id)
 
-    const excludeCredentials = (credentials || []).map(cred => ({
+    const excludeCredentials = (credentials || []).map((cred: any) => ({
       id: cred.credential_id, // string base64url
       type: 'public-key' as const,
     }))
