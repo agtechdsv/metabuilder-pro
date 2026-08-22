@@ -112,10 +112,10 @@ function CallbackHandler() {
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
       
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
           // Apenas mostra erro se realmente falhou a primeira vez e não temos sessão ativa
-          supabase.auth.getSession().then(({ data: currentData }) => {
+          supabase.auth.getSession().then(({ data: currentData }: any) => {
             if (currentData.session) {
               notifyAndClose(currentData.session)
             } else {
@@ -141,7 +141,7 @@ function CallbackHandler() {
         // Limpa o hash da URL por segurança
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
         
-        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }: any) => {
           if (error) {
             setErrorMessage(error.message)
             setStatus('error')
