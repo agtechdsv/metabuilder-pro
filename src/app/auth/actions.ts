@@ -73,7 +73,7 @@ export async function verifyMfaPolicy() {
 
   // 3. Se não está AAL2, verificar se já tem o app configurado
   const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors()
-  const totpFactor = factors?.totp?.find(f => f.status === 'verified')
+  const totpFactor = factors?.totp?.find((f: any) => f.status === 'verified')
 
   if (totpFactor) {
     return { mfaChallengeRequired: true, factorId: totpFactor.id }
