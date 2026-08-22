@@ -112,10 +112,10 @@ function CallbackHandler() {
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
       
-      supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+      supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
           // Apenas mostra erro se realmente falhou a primeira vez e não temos sessão ativa
-          supabase.auth.getSession().then(({ data: currentData }) => {
+          supabase.auth.getSession().then(({ data: currentData }: any) => {
             if (currentData.session) {
               notifyAndClose(currentData.session)
             } else {
@@ -141,7 +141,7 @@ function CallbackHandler() {
         // Limpa o hash da URL por segurança
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
         
-        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }: any) => {
           if (error) {
             setErrorMessage(error.message)
             setStatus('error')
@@ -154,14 +154,14 @@ function CallbackHandler() {
     }
 
     // Ouve o evento de SIGNED_IN que acontece após a troca do code (PKCE) no client side ou parse automático
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
         notifyAndClose(session)
       }
     })
 
     // Caso a sessão já tenha sido trocada antes do listener ativar
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }: any) => {
       if (error) {
         setErrorMessage(error.message)
         setStatus('error')
