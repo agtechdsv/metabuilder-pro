@@ -66,8 +66,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   
   const [syncManager, setSyncManager] = useState<LocalSyncManager | null>(null)
   const [fileTree, setFileTree] = useState<FileNode[]>([])
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [fileContent, setFileContent] = useState<string>('')
+  const [openFiles, setOpenFiles] = useState<string[]>([])
+  const [fileContents, setFileContents] = useState<Record<string, string>>({})
+  const [activeFile, setActiveFile] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDiscarding, setIsDiscarding] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
@@ -262,8 +263,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setIsMinimized(false)
     setTarget(null)
     setFileTree([])
-    setSelectedFile(null)
-    setFileContent('')
+    setOpenFiles([])
+    setFileContents({})
+    setActiveFile(null)
     setSandboxMode(false)
   }
 
@@ -471,25 +473,48 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const handleCloseFile = (e: React.MouseEvent, path: string) => {
+    e.stopPropagation()
+    setOpenFiles(prev => {
+      const newFiles = prev.filter(p => p !== path)
+      setActiveFile(curr => {
+        if (curr === path) {
+          const idx = prev.indexOf(path)
+          return newFiles.length > 0 ? newFiles[Math.min(idx, newFiles.length - 1)] : null
+        }
+        return curr
+      })
+      return newFiles
+    })
+    setFileContents(prev => {
+      const newContents = { ...prev }
+      delete newContents[path]
+      return newContents
+    })
+  }
+
   const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
     setCtxMenu(null) // Fecha o menu de contexto ao abrir um arquivo
     handleSelection(path, modifier)
     if (modifier === 'shift' || modifier === 'ctrl') return // Don't open file in editor for multi-select clicks
     
-    setSelectedFile(path)
-    try {
-      const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
-      setFileContent(content)
-    } catch (err) {
-      toast('Erro ao ler arquivo', 'error')
+    setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
+    setActiveFile(path)
+    if (fileContents[path] === undefined) {
+      try {
+        const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
+        setFileContents(prev => ({ ...prev, [path]: content }))
+      } catch (err) {
+        toast('Erro ao ler arquivo', 'error')
+      }
     }
   }
 
   const handleSaveFile = async (value: string | undefined) => {
-    if (!selectedFile || value === undefined) return
+    if (!activeFile || value === undefined) return
     try {
-      await tauriFs.writeTextFile(selectedFile, value, { baseDir: BaseDirectory.Home })
-      setFileContent(value)
+      await tauriFs.writeTextFile(activeFile, value, { baseDir: BaseDirectory.Home })
+      setFileContents(prev => ({ ...prev, [activeFile]: value }))
       toast('Salvo localmente!', 'success')
     } catch (err) {
       toast('Erro ao salvar', 'error')
@@ -583,8 +608,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       await syncManager.abortSync()
       setSandboxMode(false)
       await loadFileTree()
-      setFileContent('')
-      setSelectedFile(null)
+      setFileContents({})
+      setOpenFiles([])
+      setActiveFile(null)
       setShowDiscardConfirm(false)
       toast('Sincronização Descartada', 'info')
     } catch (err: any) {
@@ -600,8 +626,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     try {
       await syncManager.revertToCommit(revertConfirmOid)
       await loadFileTree()
-      setFileContent('')
-      setSelectedFile(null)
+      setFileContents({})
+      setOpenFiles([])
+      setActiveFile(null)
       setIsLogModalOpen(false)
       setRevertConfirmOid(null)
       toast('Código revertido com sucesso!', 'success')
@@ -765,8 +792,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       } else {
         await syncManager.checkoutBranch(branchName)
         await loadFileTree()
-        setFileContent('')
-        setSelectedFile(null)
+        setFileContents({})
+        setOpenFiles([])
+        setActiveFile(null)
       }
     } catch (err: any) {
       toast(`Erro ao trocar branch: ${err.message}`, 'error')
@@ -851,10 +879,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setUndoStack(prev => [...prev, { type: 'delete', originalPaths: moved }])
       
       for (const node of nodesToDelete) {
-        if (selectedFile === node.path || (selectedFile && selectedFile.startsWith(node.path + '/'))) {
-          setSelectedFile(null)
-          setFileContent('')
-        }
+        setOpenFiles(prev => {
+          const newFiles = prev.filter(p => p !== node.path && !p.startsWith(node.path + '/'))
+          setActiveFile(curr => (curr === node.path || (curr && curr.startsWith(node.path + '/'))) ? (newFiles.length > 0 ? newFiles[newFiles.length - 1] : null) : curr)
+          return newFiles
+        })
       }
       setSelectedPaths(new Set())
       await loadFileTree()
@@ -877,9 +906,16 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       
       setUndoStack(prev => [...prev, { type: 'rename', oldPath: node.path, newPath }])
       
-      if (selectedFile === node.path) {
-        setSelectedFile(newPath)
-      }
+      setOpenFiles(prev => prev.map(p => p === node.path ? newPath : p))
+      setFileContents(prev => {
+        if (prev[node.path] !== undefined) {
+          const newContents = { ...prev, [newPath]: prev[node.path] }
+          delete newContents[node.path]
+          return newContents
+        }
+        return prev
+      })
+      setActiveFile(curr => curr === node.path ? newPath : curr)
       
       const newSel = new Set(selectedPaths)
       if (newSel.has(node.path)) {
@@ -1327,21 +1363,32 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     )}
 
                     {/* Editor */}
-                    <div className="flex-1 flex flex-col min-w-0">
-                      <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center justify-between px-4 text-sm text-neutral-400">
-                        <span>{selectedFile ? selectedFile.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : t('workspace_components.ide_local.no_file_selected', 'Nenhum arquivo selecionado')}</span>
-                        {selectedFile && (
-                          <button
-                            onClick={() => {
-                              setSelectedFile(null)
-                              setFileContent('')
-                            }}
-                            className="p-1 hover:bg-neutral-800 rounded text-neutral-500 hover:text-white transition-colors"
-                            title={t('workspace_components.ide_local.close_file', 'Fechar arquivo')}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                      <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center overflow-x-auto whitespace-nowrap scrollbar-hide text-sm text-neutral-400 flex-shrink-0">
+                        {openFiles.length === 0 && (
+                          <span className="px-4 opacity-50">{t('workspace_components.ide_local.no_file_selected', 'Nenhum arquivo selecionado')}</span>
                         )}
+                        {openFiles.map(path => {
+                          const isActive = path === activeFile;
+                          return (
+                            <div 
+                              key={path}
+                              onClick={() => setActiveFile(path)}
+                              onMouseUp={(e) => { if (e.button === 1) handleCloseFile(e, path) }}
+                              className={`h-full flex items-center px-4 border-r border-neutral-800 cursor-pointer select-none transition-colors group ${isActive ? 'bg-[#252526] text-white border-t-2 border-t-indigo-500' : 'bg-[#2d2d2d] hover:bg-[#252526]'}`}
+                            >
+                              <span className="mr-2 truncate max-w-[200px]" title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}>
+                                {path.split('/').pop()}
+                              </span>
+                              <button
+                                onClick={(e) => handleCloseFile(e, path)}
+                                className={`p-0.5 rounded transition-colors ${isActive ? 'text-neutral-400 hover:bg-neutral-700 hover:text-white' : 'opacity-0 group-hover:opacity-100 text-neutral-500 hover:bg-neutral-700 hover:text-white'}`}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="flex-1 min-h-0 relative">
                         {isSyncing ? (
@@ -1354,12 +1401,16 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
                             <span className="text-sm font-medium animate-pulse text-indigo-400">{ideLoadingState.message}</span>
                           </div>
-                        ) : selectedFile ? (
+                        ) : activeFile ? (
                           <MonacoEditor
-                            language={selectedFile.endsWith('.tsx') || selectedFile.endsWith('.ts') ? 'typescript' : selectedFile.endsWith('.json') ? 'json' : 'javascript'}
+                            language={activeFile.endsWith('.tsx') || activeFile.endsWith('.ts') ? 'typescript' : activeFile.endsWith('.json') ? 'json' : 'javascript'}
                             theme="vs-dark"
-                            value={fileContent}
-                            onChange={val => setFileContent(val || '')}
+                            value={fileContents[activeFile] || ''}
+                            onChange={val => {
+                              if (activeFile) {
+                                setFileContents(prev => ({ ...prev, [activeFile]: val || '' }))
+                              }
+                            }}
                             options={{
                               minimap: { enabled: false },
                               fontSize: 13,
