@@ -24,6 +24,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '@/i18n'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
+const MonacoDiffEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.DiffEditor), { ssr: false })
 
 export interface IDETarget {
   type: 'project' | 'workspace'
@@ -89,6 +90,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false)
   const [commitMessage, setCommitMessage] = useState('')
   const [isCommitting, setIsCommitting] = useState(false)
+  
+  // Advanced Commit Modal state
+  const [changedFiles, setChangedFiles] = useState<{filepath: string, status: 'added'|'modified'|'deleted'}[]>([])
+  const [selectedCommitFiles, setSelectedCommitFiles] = useState<Set<string>>(new Set())
+  const [diffActiveFile, setDiffActiveFile] = useState<string | null>(null)
+  const [diffOriginalContent, setDiffOriginalContent] = useState<string>('')
+  const [isCommitLoading, setIsCommitLoading] = useState(false)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -878,18 +886,67 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleCommit = async () => {
+  const handleOpenCommitModal = async () => {
+    if (!syncManager) return;
+    setIsCommitLoading(true);
+    try {
+      const files = await syncManager.getChangedFiles();
+      if (files.length === 0) {
+        toast('Nenhuma alteração local pendente para commit.', 'info');
+        return;
+      }
+      
+      setChangedFiles(files);
+      const allPaths = new Set(files.map(f => f.filepath));
+      setSelectedCommitFiles(allPaths);
+      
+      // Auto-select the first file for the diff view
+      if (files.length > 0) {
+        const firstFile = files[0].filepath;
+        setDiffActiveFile(firstFile);
+        const originalContent = await syncManager.getFileHeadContent(firstFile);
+        setDiffOriginalContent(originalContent);
+      }
+      
+      setIsCommitModalOpen(true);
+    } catch (err: any) {
+      toast(`Erro ao buscar alterações: ${err.message}`, 'error');
+    } finally {
+      setIsCommitLoading(false);
+    }
+  }
+
+  const handleSelectDiffFile = async (filepath: string) => {
+    if (!syncManager) return;
+    setDiffActiveFile(filepath);
+    try {
+      const originalContent = await syncManager.getFileHeadContent(filepath);
+      setDiffOriginalContent(originalContent);
+    } catch (err) {
+      setDiffOriginalContent('');
+    }
+  }
+
+  const handleCommitAdvanced = async () => {
     if (!syncManager || !target) return;
     if (!commitMessage.trim()) {
       toast('Digite uma mensagem de commit', 'error');
       return;
     }
+    if (selectedCommitFiles.size === 0) {
+      toast('Selecione pelo menos um arquivo para commitar', 'error');
+      return;
+    }
+
     setIsCommitting(true);
     try {
-      await syncManager.commitAll(commitMessage);
+      const filesToCommit = Array.from(selectedCommitFiles);
+      await syncManager.commitSelected(commitMessage, filesToCommit);
       toast('Commit realizado com sucesso!', 'success');
       setIsCommitModalOpen(false);
       setCommitMessage('');
+      setDiffActiveFile(null);
+      setDiffOriginalContent('');
       
       // Update local tree states
       await loadFileTree();
@@ -898,7 +955,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setOriginalFileContents(prev => {
         const next = { ...prev };
         Object.keys(next).forEach(path => {
-          if (fileContents[path] !== undefined) {
+          if (fileContents[path] !== undefined && selectedCommitFiles.has(path)) {
             next[path] = fileContents[path];
           }
         });
@@ -1278,12 +1335,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       </div>
 
                         <button 
-                          onClick={() => setIsCommitModalOpen(true)}
-                          disabled={isCommitting}
+                          onClick={handleOpenCommitModal}
+                          disabled={isCommitLoading || isCommitting}
                           className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                           title="Commit Local"
                         >
-                          <Save className="w-3.5 h-3.5" /> Commit
+                          {isCommitLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Commit
                         </button>
 
                         <button 
@@ -1718,41 +1775,133 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="bg-[#0f0f0f] border border-neutral-800 rounded-xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden"
+                className="bg-[#0f0f0f] border border-neutral-800 rounded-xl shadow-2xl relative overflow-hidden w-[90vw] h-[90vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
               >
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-indigo-500" />
-                <button
-                  onClick={() => setIsCommitModalOpen(false)}
-                  disabled={isCommitting}
-                  className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-white mb-2">Realizar Commit</h2>
-                  <p className="text-sm text-neutral-400">
-                    Isso adicionará e commitará todos os arquivos alterados na branch local.
-                  </p>
+                
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <h2 className="text-xl font-bold text-white">Realizar Commit</h2>
+                  </div>
+                  <button onClick={() => setIsCommitModalOpen(false)} disabled={isCommitting} className="text-neutral-500 hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
-                      Mensagem do Commit
-                    </label>
-                    <textarea
-                      value={commitMessage}
-                      onChange={e => setCommitMessage(e.target.value)}
-                      placeholder="Ex: Atualizacao de variaveis de ambiente..."
-                      className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
-                      autoFocus
-                    />
+                {/* Body - Split Pane */}
+                <div className="flex-1 flex min-h-0">
+                  {/* Left Sidebar */}
+                  <div className="w-[350px] shrink-0 border-r border-neutral-800 flex flex-col bg-[#141414]">
+                    {/* Commit Message */}
+                    <div className="p-4 border-b border-neutral-800 shrink-0">
+                      <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
+                        Mensagem do Commit
+                      </label>
+                      <textarea
+                        value={commitMessage}
+                        onChange={e => setCommitMessage(e.target.value)}
+                        placeholder="Ex: Atualizacao de variaveis de ambiente..."
+                        className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
+                        autoFocus
+                      />
+                    </div>
+                    
+                    {/* File List */}
+                    <div className="flex-1 overflow-y-auto p-2">
+                      <div className="flex items-center justify-between px-2 mb-2">
+                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Arquivos Alterados ({changedFiles.length})</span>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setSelectedCommitFiles(new Set(changedFiles.map(f => f.filepath)))}
+                            className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
+                          >
+                            All
+                          </button>
+                          <button 
+                            onClick={() => setSelectedCommitFiles(new Set())}
+                            className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
+                          >
+                            None
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        {changedFiles.map(file => (
+                          <div 
+                            key={file.filepath}
+                            onClick={() => handleSelectDiffFile(file.filepath)}
+                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${diffActiveFile === file.filepath ? 'bg-indigo-500/20 border border-indigo-500/30' : 'hover:bg-neutral-800/50 border border-transparent'}`}
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={selectedCommitFiles.has(file.filepath)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const newSet = new Set(selectedCommitFiles);
+                                if (e.target.checked) newSet.add(file.filepath);
+                                else newSet.delete(file.filepath);
+                                setSelectedCommitFiles(newSet);
+                              }}
+                              className="w-4 h-4 rounded border-neutral-700 text-emerald-500 focus:ring-emerald-500/20 bg-neutral-900 cursor-pointer"
+                            />
+                            <div className="flex items-center justify-center w-5 h-5 rounded bg-neutral-800 shrink-0">
+                              {file.status === 'added' && <Plus className="w-3 h-3 text-emerald-500" />}
+                              {file.status === 'modified' && <Pencil className="w-3 h-3 text-amber-500" />}
+                              {file.status === 'deleted' && <Trash2 className="w-3 h-3 text-red-500" />}
+                            </div>
+                            <span className="text-sm text-neutral-300 truncate select-none">
+                              {file.filepath}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Content - Diff Editor */}
+                  <div className="flex-1 bg-[#1e1e1e] flex flex-col min-w-0">
+                    {diffActiveFile ? (
+                      <>
+                        <div className="p-3 border-b border-neutral-800 bg-[#181818] shrink-0 flex items-center justify-between">
+                          <span className="text-sm font-medium text-neutral-300">
+                            {diffActiveFile}
+                          </span>
+                          <span className="text-xs text-neutral-500">
+                            Original (HEAD) ↔ Local
+                          </span>
+                        </div>
+                        <div className="flex-1 min-h-0 relative">
+                          <MonacoDiffEditor
+                            original={diffOriginalContent}
+                            modified={fileContents[diffActiveFile] !== undefined ? fileContents[diffActiveFile] : (diffOriginalContent || '')}
+                            language={diffActiveFile.split('.').pop() === 'tsx' || diffActiveFile.split('.').pop() === 'ts' ? 'typescript' : diffActiveFile.split('.').pop() === 'css' ? 'css' : 'javascript'}
+                            theme="vs-dark"
+                            options={{
+                              readOnly: true,
+                              renderSideBySide: true,
+                              minimap: { enabled: false },
+                              scrollBeyondLastLine: false,
+                              fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
+                              fontSize: 13,
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-neutral-500">
+                        <FileCode2 className="w-16 h-16 mb-4 opacity-20" />
+                        <p>Selecione um arquivo para ver as alterações</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex gap-3 justify-end mt-2">
+                {/* Footer Controls */}
+                <div className="p-4 border-t border-neutral-800 flex justify-end gap-3 shrink-0 bg-[#0f0f0f]">
                   <button
                     onClick={() => setIsCommitModalOpen(false)}
                     disabled={isCommitting}
@@ -1761,8 +1910,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     Cancelar
                   </button>
                   <button
-                    onClick={handleCommit}
-                    disabled={isCommitting || !commitMessage.trim()}
+                    onClick={handleCommitAdvanced}
+                    disabled={isCommitting || !commitMessage.trim() || selectedCommitFiles.size === 0}
                     className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                   >
                     {isCommitting ? (
@@ -1773,7 +1922,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Confirmar Commit
+                        Confirmar Commit ({selectedCommitFiles.size})
                       </>
                     )}
                   </button>

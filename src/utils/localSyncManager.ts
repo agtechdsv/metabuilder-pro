@@ -466,6 +466,59 @@ export class LocalSyncManager {
       });
     }
 
+    public async getChangedFiles(): Promise<{filepath: string, status: 'added'|'modified'|'deleted'}[]> {
+      if (!isTauri()) return [];
+      const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
+      const changedFiles: {filepath: string, status: 'added'|'modified'|'deleted'}[] = [];
+      
+      for (const [filepath, headStatus, workdirStatus, stageStatus] of allFiles) {
+        if (workdirStatus !== headStatus) {
+          let status: 'added' | 'modified' | 'deleted' = 'modified';
+          if (headStatus === 0 && workdirStatus === 2) status = 'added';
+          else if (headStatus === 1 && workdirStatus === 0) status = 'deleted';
+          else if (headStatus === 1 && workdirStatus === 2) status = 'modified';
+          
+          changedFiles.push({ filepath, status });
+        }
+      }
+      return changedFiles;
+    }
+
+    public async getFileHeadContent(filepath: string): Promise<string> {
+      if (!isTauri()) return '';
+      try {
+        const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid: 'HEAD', filepath });
+        return new TextDecoder().decode(blob);
+      } catch (err) {
+        // If file doesn't exist in HEAD (e.g. newly added)
+        return '';
+      }
+    }
+
+    public async commitSelected(message: string, selectedFiles: string[]) {
+      if (!isTauri() || selectedFiles.length === 0) return;
+      
+      const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
+      const selectedSet = new Set(selectedFiles);
+      
+      for (const [filepath, headStatus, workdirStatus, stageStatus] of allFiles) {
+        if (selectedSet.has(filepath) && workdirStatus !== headStatus) {
+          if (workdirStatus === 0) {
+            await git.remove({ fs: tauriFsAdapter, dir: this.projectDir, filepath });
+          } else {
+            await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath });
+          }
+        }
+      }
+
+      await git.commit({
+        fs: tauriFsAdapter,
+        dir: this.projectDir,
+        message,
+        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+      });
+    }
+
     /**
      * Pushes the current branch to a remote repository
      */
