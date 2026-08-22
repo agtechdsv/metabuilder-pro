@@ -1197,10 +1197,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     <IDESyncContext.Provider value={{ openIDE }}>
       {children}
       {mounted && createPortal(
-        <AnimatePresence>
-          {isOpen && target && (
-            <>
-              <motion.div 
+        <>
+          <AnimatePresence>
+            {isOpen && target && (
+              <>
+                <motion.div 
                 initial={{ opacity: 0, y: 20, scale: 0.98 }}
                 animate={{ 
                   opacity: isMinimized ? 0 : 1, 
@@ -1701,9 +1702,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               </AnimatePresence>
             </>
           )}
-        </AnimatePresence>,
-        document.body
-      )}
+        </AnimatePresence>
 
         {/* Commit Modal */}
         <AnimatePresence>
@@ -2173,6 +2172,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+      </>,
+      document.body
+    )}
 
       <IDEGitSettingsModal 
         isOpen={showGitSettings} 
