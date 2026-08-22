@@ -1,4 +1,4 @@
-{
+﻿{
   "agtech": {
     "title": "The engineering behind MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -3700,5 +3700,24 @@
     "unknown_error": "Unknown error",
     "parse_failed_warning": "⚠️ **Warning:** An error occurred while parsing the AI-generated code (the format returned corrupted or incomplete). You can try copying the code manually from the response above, or ask the AI to generate again by typing \"Try again\".",
     "error_communication": "Error communicating with AI"
+  }
+  ,"ide_commit_local": {
+    "title": "Commit Changes",
+    "desc": "This will add and commit all selected files.",
+    "message_label": "Commit Message",
+    "message_placeholder": "Ex: Update environment variables...",
+    "changed_files": "Changed Files",
+    "all": "All",
+    "none": "None",
+    "head_vs_local": "Original (HEAD) ↔ Local",
+    "select_file": "Select a file to view changes",
+    "cancel": "Cancel",
+    "committing": "Committing...",
+    "confirm_commit": "Confirm Commit",
+    "revert": "Revert File",
+    "revert_confirm_title": "Confirm Revert",
+    "revert_confirm_desc": "Are you sure you want to revert changes in {filepath}? All uncommitted local changes will be lost. This action cannot be undone.",
+    "revert_success": "File reverted successfully",
+    "revert_error": "Error reverting file"
   }
 }

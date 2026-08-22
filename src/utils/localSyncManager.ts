@@ -490,7 +490,7 @@ export class LocalSyncManager {
         const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid: 'HEAD', filepath });
         return new TextDecoder().decode(blob);
       } catch (err) {
-        // If file doesn't exist in HEAD (e.g. newly added)
+        console.error("Error in getFileHeadContent:", err);
         return '';
       }
     }
@@ -499,8 +499,9 @@ export class LocalSyncManager {
       if (!isTauri()) return '';
       try {
         const fullPath = await join(this.projectDir, filepath);
-        return await tauriFs.readTextFile(fullPath);
+        return await tauriFsAdapter.promises.readFile(fullPath, 'utf8') as string;
       } catch (err) {
+        console.error("Error in getFileLocalContent:", err);
         return '';
       }
     }
@@ -516,7 +517,7 @@ export class LocalSyncManager {
         if (headStatus === 0) {
           // File was added locally, revert means delete
           const fullPath = await join(this.projectDir, filepath);
-          await tauriFs.remove(fullPath);
+          await tauriFsAdapter.promises.unlink(fullPath);
         } else {
           // File was modified or deleted, restore from HEAD
           await git.checkout({

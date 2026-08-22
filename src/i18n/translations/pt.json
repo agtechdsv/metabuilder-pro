@@ -1,4 +1,4 @@
-{
+﻿{
   "agtech": {
     "title": "A engenharia por trás do MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
@@ -3701,5 +3701,24 @@
     "unknown_error": "Erro desconhecido",
     "parse_failed_warning": "⚠️ **Aviso:** Ocorreu um erro ao interpretar o código gerado pela IA (o formato retornou corrompido ou incompleto). Você pode tentar copiar o código manualmente da resposta acima, ou pedir para a IA gerar novamente com a mensagem \"Tente novamente\".",
     "error_communication": "Erro ao comunicar com a IA"
+  }
+  ,"ide_commit_local": {
+    "title": "Realizar Commit",
+    "desc": "Isso adicionará e commitará todos os arquivos selecionados.",
+    "message_label": "Mensagem do Commit",
+    "message_placeholder": "Ex: Atualização de variáveis de ambiente...",
+    "changed_files": "Arquivos Alterados",
+    "all": "All",
+    "none": "None",
+    "head_vs_local": "Original (HEAD) ↔ Local",
+    "select_file": "Selecione um arquivo para ver as alterações",
+    "cancel": "Cancelar",
+    "committing": "Commitando...",
+    "confirm_commit": "Confirmar Commit",
+    "revert": "Reverter Arquivo",
+    "revert_confirm_title": "Confirmar Reversão",
+    "revert_confirm_desc": "Tem certeza que deseja reverter as modificações no arquivo {filepath}? Todas as alterações locais não commitadas serão perdidas. Esta ação não pode ser desfeita.",
+    "revert_success": "Arquivo revertido com sucesso",
+    "revert_error": "Erro ao reverter arquivo"
   }
 }

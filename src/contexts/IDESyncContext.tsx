@@ -99,6 +99,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [diffLocalContent, setDiffLocalContent] = useState<string>('')
   const [isCommitLoading, setIsCommitLoading] = useState(false)
   const [commitMenu, setCommitMenu] = useState<{ x: number; y: number; filepath: string } | null>(null)
+  const [revertLocalConfirm, setRevertLocalConfirm] = useState<string | null>(null)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -946,9 +947,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleRevertFile = async (filepath: string) => {
-    if (!syncManager) return;
-    if (!window.confirm(`Tem certeza que deseja reverter as modificações no arquivo ${filepath}?`)) return;
+  const handleRevertFile = (filepath: string) => {
+    setRevertLocalConfirm(filepath);
+    setCommitMenu(null);
+  }
+
+  const confirmRevertFile = async () => {
+    if (!syncManager || !revertLocalConfirm) return;
+    const filepath = revertLocalConfirm;
     
     setIsCommitLoading(true);
     try {
@@ -975,13 +981,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setDiffOriginalContent('');
         setDiffLocalContent('');
       }
-      toast('Arquivo revertido com sucesso.', 'success');
+      toast(t('ide_commit_local.revert_success', 'Arquivo revertido com sucesso.'), 'success');
       await loadFileTree(); // reload tree to fix icons
     } catch (err: any) {
-      toast(`Erro ao reverter: ${err.message}`, 'error');
+      toast(`${t('ide_commit_local.revert_error', 'Erro ao reverter:')} ${err.message}`, 'error');
     } finally {
       setIsCommitLoading(false);
-      setCommitMenu(null);
+      setRevertLocalConfirm(null);
     }
   }
 
@@ -1828,6 +1834,32 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4"
             >
+              {revertLocalConfirm && (
+                <div className="fixed inset-0 z-[100001] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                    <h3 className="text-lg font-bold text-white mb-2">{t('ide_commit_local.revert_confirm_title', 'Confirmar Reversão')}</h3>
+                    <p className="text-sm text-neutral-400 mb-6">{t('ide_commit_local.revert_confirm_desc', 'Tem certeza que deseja reverter as modificações no arquivo {filepath}?').replace('{filepath}', revertLocalConfirm)}</p>
+                    <div className="flex justify-end gap-3">
+                      <button 
+                        onClick={() => setRevertLocalConfirm(null)}
+                        className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
+                        disabled={isCommitLoading}
+                      >
+                        {t('ide_commit_local.cancel', 'Cancelar')}
+                      </button>
+                      <button 
+                        onClick={confirmRevertFile}
+                        className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors flex items-center gap-2"
+                        disabled={isCommitLoading}
+                      >
+                        {isCommitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        {t('ide_commit_local.revert', 'Reverter Arquivo')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {commitMenu && (
                 <div 
                   className="fixed inset-0 z-[100000]"
@@ -1843,7 +1875,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors"
                       onClick={() => handleRevertFile(commitMenu.filepath)}
                     >
-                      <Undo2 className="w-3.5 h-3.5 text-blue-400" /> {t('IDE.CommitLocal.Revert') || 'Reverter Arquivo'}
+                      <Undo2 className="w-3.5 h-3.5 text-blue-400" /> {t('ide_commit_local.revert', 'Reverter Arquivo')}
                     </button>
                   </div>
                 </div>
@@ -1862,7 +1894,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h2 className="text-xl font-bold text-white">{t('IDE.CommitLocal.Title') || 'Realizar Commit'}</h2>
+                    <h2 className="text-xl font-bold text-white">{t('ide_commit_local.title', 'Realizar Commit')}</h2>
                   </div>
                   <button onClick={() => setIsCommitModalOpen(false)} disabled={isCommitting} className="text-neutral-500 hover:text-white transition-colors">
                     <X className="w-5 h-5" />
@@ -1876,12 +1908,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {/* Commit Message */}
                     <div className="p-4 border-b border-neutral-800 shrink-0">
                       <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
-                        {t('IDE.CommitLocal.MessageLabel') || 'Mensagem do Commit'}
+                        {t('ide_commit_local.message_label', 'Mensagem do Commit')}
                       </label>
                       <textarea
                         value={commitMessage}
                         onChange={e => setCommitMessage(e.target.value)}
-                        placeholder={t('IDE.CommitLocal.MessagePlaceholder') || 'Ex: Atualizacao de variaveis de ambiente...'}
+                        placeholder={t('ide_commit_local.message_placeholder', 'Ex: Atualização de variáveis de ambiente...')}
                         className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
                         autoFocus
                       />
@@ -1890,19 +1922,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {/* File List */}
                     <div className="flex-1 overflow-y-auto p-2">
                       <div className="flex items-center justify-between px-2 mb-2">
-                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('IDE.CommitLocal.ChangedFiles') || 'Arquivos Alterados'} ({changedFiles.length})</span>
+                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('ide_commit_local.changed_files', 'Arquivos Alterados')} ({changedFiles.length})</span>
                         <div className="flex gap-2">
                           <button 
                             onClick={() => setSelectedCommitFiles(new Set(changedFiles.map(f => f.filepath)))}
                             className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
                           >
-                            {t('IDE.CommitLocal.All') || 'All'}
+                            {t('ide_commit_local.all', 'All')}
                           </button>
                           <button 
                             onClick={() => setSelectedCommitFiles(new Set())}
                             className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
                           >
-                            {t('IDE.CommitLocal.None') || 'None'}
+                            {t('ide_commit_local.none', 'None')}
                           </button>
                         </div>
                       </div>
@@ -1954,7 +1986,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             {diffActiveFile}
                           </span>
                           <span className="text-xs text-neutral-500">
-                            {t('IDE.CommitLocal.HeadVsLocal') || 'Original (HEAD) ↔ Local'}
+                            {t('ide_commit_local.head_vs_local', 'Original (HEAD) ↔ Local')}
                           </span>
                         </div>
                         <div className="flex-1 min-h-0 relative">
@@ -1977,7 +2009,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-neutral-500">
                         <FileCode2 className="w-16 h-16 mb-4 opacity-20" />
-                        <p>{t('IDE.CommitLocal.SelectFile') || 'Selecione um arquivo para ver as alterações'}</p>
+                        <p>{t('ide_commit_local.select_file', 'Selecione um arquivo para ver as alterações')}</p>
                       </div>
                     )}
                   </div>
@@ -1990,7 +2022,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     disabled={isCommitting}
                     className="px-4 py-2 bg-transparent hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg text-sm font-semibold transition-colors"
                   >
-                    {t('IDE.CommitLocal.Cancel') || 'Cancelar'}
+                    {t('ide_commit_local.cancel', 'Cancelar')}
                   </button>
                   <button
                     onClick={handleCommitAdvanced}
@@ -2000,12 +2032,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {isCommitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('IDE.CommitLocal.Committing') || 'Commitando...'}
+                        {t('ide_commit_local.committing', 'Commitando...')}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        {t('IDE.CommitLocal.ConfirmCommit') || 'Confirmar Commit'} ({selectedCommitFiles.size})
+                        {t('ide_commit_local.confirm_commit', 'Confirmar Commit')} ({selectedCommitFiles.size})
                       </>
                     )}
                   </button>
