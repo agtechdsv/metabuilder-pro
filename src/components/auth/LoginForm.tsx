@@ -200,7 +200,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
     // Verifica imediatamente se já tem sessão VÁLIDA (ex: refresh na página)
     if (!disableAutoRedirectOnMount) {
-      supabase.auth.getUser().then(({ data: { user } }) => {
+      supabase.auth.getUser().then(({ data: { user } }: any) => {
         if (user) {
           let isInviteOrRecovery = false
           if (typeof window !== 'undefined') {
