@@ -435,6 +435,38 @@ export class LocalSyncManager {
     }
 
     /**
+     * Commits all changes in the working directory
+     */
+    public async commitAll(message: string) {
+      if (!isTauri()) return;
+      
+      // Get all files in the working directory
+      const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
+      
+      // Staged files are those that have modifications (not identical to HEAD)
+      for (const [filepath, headStatus, workdirStatus, stageStatus] of allFiles) {
+        // workdirStatus === 0 means deleted
+        // workdirStatus === 1 means unmodified (if headStatus is 1)
+        // workdirStatus === 2 means modified or added
+        if (workdirStatus !== headStatus) {
+          if (workdirStatus === 0) {
+            await git.remove({ fs: tauriFsAdapter, dir: this.projectDir, filepath });
+          } else {
+            await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath });
+          }
+        }
+      }
+
+      // Commit the staged changes
+      await git.commit({
+        fs: tauriFsAdapter,
+        dir: this.projectDir,
+        message,
+        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+      });
+    }
+
+    /**
      * Pushes the current branch to a remote repository
      */
     public async pushToRemote(remoteUrl: string, token: string, branchName: string) {

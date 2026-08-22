@@ -7,7 +7,7 @@ import {
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
   CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
   Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical,
-  FilePlus, FolderPlus, Pencil, Copy, Scissors, ClipboardPaste, MoreVertical, Undo2, Undo
+  FilePlus, FolderPlus, Pencil, Copy, Scissors, ClipboardPaste, MoreVertical, Undo2, Undo, Save, CopyCheck
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
@@ -68,6 +68,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [openFiles, setOpenFiles] = useState<string[]>([])
   const [fileContents, setFileContents] = useState<Record<string, string>>({})
+  const [originalFileContents, setOriginalFileContents] = useState<Record<string, string>>({})
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isDiscarding, setIsDiscarding] = useState(false)
@@ -85,6 +86,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [showGitSettings, setShowGitSettings] = useState(false)
   const [isPushing, setIsPushing] = useState(false)
   const [isPulling, setIsPulling] = useState(false)
+  const [isCommitModalOpen, setIsCommitModalOpen] = useState(false)
+  const [commitMessage, setCommitMessage] = useState('')
+  const [isCommitting, setIsCommitting] = useState(false)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -265,6 +269,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setFileTree([])
     setOpenFiles([])
     setFileContents({})
+    setOriginalFileContents({})
     setActiveFile(null)
     setSandboxMode(false)
   }
@@ -491,6 +496,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       delete newContents[path]
       return newContents
     })
+    setOriginalFileContents(prev => {
+      const newContents = { ...prev }
+      delete newContents[path]
+      return newContents
+    })
   }
 
   const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
@@ -504,20 +514,44 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       try {
         const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
         setFileContents(prev => ({ ...prev, [path]: content }))
+        setOriginalFileContents(prev => ({ ...prev, [path]: content }))
       } catch (err) {
         toast('Erro ao ler arquivo', 'error')
       }
     }
   }
 
-  const handleSaveFile = async (value: string | undefined) => {
-    if (!activeFile || value === undefined) return
+  const isDirty = (path: string) => fileContents[path] !== originalFileContents[path];
+
+  const handleSaveFile = async (value: string | undefined, specificPath?: string) => {
+    const targetPath = specificPath || activeFile;
+    if (!targetPath || value === undefined) return
     try {
-      await tauriFs.writeTextFile(activeFile, value, { baseDir: BaseDirectory.Home })
-      setFileContents(prev => ({ ...prev, [activeFile]: value }))
+      await tauriFs.writeTextFile(targetPath, value, { baseDir: BaseDirectory.Home })
+      setFileContents(prev => ({ ...prev, [targetPath]: value }))
+      setOriginalFileContents(prev => ({ ...prev, [targetPath]: value }))
       toast('Salvo localmente!', 'success')
     } catch (err) {
       toast('Erro ao salvar', 'error')
+    }
+  }
+
+  const handleSaveAll = async () => {
+    let savedCount = 0;
+    for (const path of openFiles) {
+      if (isDirty(path)) {
+        try {
+          const value = fileContents[path];
+          await tauriFs.writeTextFile(path, value, { baseDir: BaseDirectory.Home });
+          setOriginalFileContents(prev => ({ ...prev, [path]: value }));
+          savedCount++;
+        } catch (err) {
+          toast(`Erro ao salvar ${path}`, 'error');
+        }
+      }
+    }
+    if (savedCount > 0) {
+      toast(`${savedCount} arquivo(s) salvo(s) com sucesso!`, 'success');
     }
   }
 
@@ -609,6 +643,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setSandboxMode(false)
       await loadFileTree()
       setFileContents({})
+      setOriginalFileContents({})
       setOpenFiles([])
       setActiveFile(null)
       setShowDiscardConfirm(false)
@@ -627,6 +662,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       await syncManager.revertToCommit(revertConfirmOid)
       await loadFileTree()
       setFileContents({})
+      setOriginalFileContents({})
       setOpenFiles([])
       setActiveFile(null)
       setIsLogModalOpen(false)
@@ -793,6 +829,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         await syncManager.checkoutBranch(branchName)
         await loadFileTree()
         setFileContents({})
+        setOriginalFileContents({})
         setOpenFiles([])
         setActiveFile(null)
       }
@@ -838,6 +875,39 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       toast(`Erro no Push: ${err.message}`, 'error')
     } finally {
       setIsPushing(false)
+    }
+  }
+
+  const handleCommit = async () => {
+    if (!syncManager || !target) return;
+    if (!commitMessage.trim()) {
+      toast('Digite uma mensagem de commit', 'error');
+      return;
+    }
+    setIsCommitting(true);
+    try {
+      await syncManager.commitAll(commitMessage);
+      toast('Commit realizado com sucesso!', 'success');
+      setIsCommitModalOpen(false);
+      setCommitMessage('');
+      
+      // Update local tree states
+      await loadFileTree();
+      
+      // Reset original contents for open files so they don't appear dirty
+      setOriginalFileContents(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(path => {
+          if (fileContents[path] !== undefined) {
+            next[path] = fileContents[path];
+          }
+        });
+        return next;
+      });
+    } catch (err: any) {
+      toast(`Erro ao commitar: ${err.message}`, 'error');
+    } finally {
+      setIsCommitting(false);
     }
   }
 
@@ -908,6 +978,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       
       setOpenFiles(prev => prev.map(p => p === node.path ? newPath : p))
       setFileContents(prev => {
+        if (prev[node.path] !== undefined) {
+          const newContents = { ...prev, [newPath]: prev[node.path] }
+          delete newContents[node.path]
+          return newContents
+        }
+        return prev
+      })
+      setOriginalFileContents(prev => {
         if (prev[node.path] !== undefined) {
           const newContents = { ...prev, [newPath]: prev[node.path] }
           delete newContents[node.path]
@@ -1198,9 +1276,18 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         </select>
                       </div>
 
-                      <button 
-                        onClick={handlePushToRemote}
-                        disabled={isPushing}
+                        <button 
+                          onClick={() => setIsCommitModalOpen(true)}
+                          disabled={isCommitting}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                          title="Commit Local"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Commit
+                        </button>
+
+                        <button 
+                          onClick={handlePushToRemote}
+                          disabled={isPushing}
                         className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                         title={t('workspace_components.ide_local.push_tooltip', 'Push para Remoto (GitHub)')}
                       >
@@ -1377,9 +1464,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               onMouseUp={(e) => { if (e.button === 1) handleCloseFile(e, path) }}
                               className={`h-full flex items-center px-4 border-r border-neutral-800 cursor-pointer select-none transition-colors group ${isActive ? 'bg-[#252526] text-white border-t-2 border-t-indigo-500' : 'bg-[#2d2d2d] hover:bg-[#252526]'}`}
                             >
-                              <span className="mr-2 truncate max-w-[200px]" title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}>
+                              <span className={`mr-2 truncate max-w-[200px] ${isDirty(path) ? 'italic text-amber-200' : ''}`} title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}>
                                 {path.split('/').pop()}
                               </span>
+                              {isDirty(path) && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-2 flex-shrink-0" title="Unsaved changes" />
+                              )}
                               <button
                                 onClick={(e) => handleCloseFile(e, path)}
                                 className={`p-0.5 rounded transition-colors ${isActive ? 'text-neutral-400 hover:bg-neutral-700 hover:text-white' : 'opacity-0 group-hover:opacity-100 text-neutral-500 hover:bg-neutral-700 hover:text-white'}`}
@@ -1389,6 +1479,26 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             </div>
                           );
                         })}
+                      {openFiles.length > 0 && (
+                        <div className="flex items-center gap-1 px-2 border-l border-neutral-800 h-full flex-shrink-0 bg-[#1e1e1e]">
+                          <button
+                            onClick={() => activeFile && handleSaveFile(fileContents[activeFile], activeFile)}
+                            disabled={!activeFile || !isDirty(activeFile)}
+                            title={t('workspace_components.ide_local.save', 'Salvar (Ctrl+S)')}
+                            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors disabled:opacity-30"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleSaveAll}
+                            disabled={!openFiles.some(isDirty)}
+                            title={t('workspace_components.ide_local.save_all', 'Salvar Todos')}
+                            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors disabled:opacity-30"
+                          >
+                            <CopyCheck className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                       </div>
                       <div className="flex-1 min-h-0 relative">
                         {isSyncing ? (
@@ -1594,6 +1704,85 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         </AnimatePresence>,
         document.body
       )}
+
+        {/* Commit Modal */}
+        <AnimatePresence>
+          {isCommitModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => !isCommitting && setIsCommitModalOpen(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-[#0f0f0f] border border-neutral-800 rounded-xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-indigo-500" />
+                <button
+                  onClick={() => setIsCommitModalOpen(false)}
+                  disabled={isCommitting}
+                  className="absolute top-4 right-4 text-neutral-500 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-white mb-2">Realizar Commit</h2>
+                  <p className="text-sm text-neutral-400">
+                    Isso adicionará e commitará todos os arquivos alterados na branch local.
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
+                      Mensagem do Commit
+                    </label>
+                    <textarea
+                      value={commitMessage}
+                      onChange={e => setCommitMessage(e.target.value)}
+                      placeholder="Ex: Atualizacao de variaveis de ambiente..."
+                      className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 justify-end mt-2">
+                  <button
+                    onClick={() => setIsCommitModalOpen(false)}
+                    disabled={isCommitting}
+                    className="px-4 py-2 bg-transparent hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCommit}
+                    disabled={isCommitting || !commitMessage.trim()}
+                    className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    {isCommitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Commitando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Confirmar Commit
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       {/* Git Log Modal */}
       {isLogModalOpen && isOpen && (
