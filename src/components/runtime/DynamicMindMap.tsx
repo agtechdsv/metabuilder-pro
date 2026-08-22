@@ -373,6 +373,24 @@ export default function DynamicMindMap({
         }
       };
 
+      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true';
+
+      if (isEjectedApp) {
+        try {
+          const res = await fetch(`/api/${tableName}?filter_${nextLevelConfig.foreign_key}=${encodeURIComponent(parentId)}&limit=1000`);
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Erro na API Local');
+          }
+          const resData = await res.json();
+          const apiData = Array.isArray(resData) ? resData : (resData.data || []);
+          handleResult({ payload: { success: true, data: apiData } });
+        } catch (err: any) {
+          handleResult({ payload: { success: false, error: err.message } });
+        }
+        return;
+      }
+
       if (tunnelChannel && isTunnelReady) {
         tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
         tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult);

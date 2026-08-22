@@ -171,6 +171,9 @@ export function generateEnv(zip: JSZip, project: any, dataMode: string = 'supaba
 NEXT_PUBLIC_SUPABASE_URL=${supaUrl}
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${supaAnon}
 
+# Export Flag
+NEXT_PUBLIC_IS_EJECTED_APP=true
+
 # Project Token
 META_PROJECT_TOKEN=${project.secret_token || 'your_project_token'}
 `
