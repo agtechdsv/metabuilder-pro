@@ -487,7 +487,8 @@ export class LocalSyncManager {
     public async getFileHeadContent(filepath: string): Promise<string> {
       if (!isTauri()) return '';
       try {
-        const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid: 'HEAD', filepath });
+        const oid = await git.resolveRef({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'HEAD' });
+        const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid, filepath });
         return new TextDecoder().decode(blob);
       } catch (err) {
         console.error("Error in getFileHeadContent:", err);
