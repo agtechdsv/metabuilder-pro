@@ -495,6 +495,43 @@ export class LocalSyncManager {
       }
     }
 
+    public async getFileLocalContent(filepath: string): Promise<string> {
+      if (!isTauri()) return '';
+      try {
+        const fullPath = await join(this.projectDir, filepath);
+        return await tauriFs.readTextFile(fullPath);
+      } catch (err) {
+        return '';
+      }
+    }
+
+    public async revertFile(filepath: string): Promise<void> {
+      if (!isTauri()) return;
+      try {
+        const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
+        const fileStatus = allFiles.find(f => f[0] === filepath);
+        if (!fileStatus) return;
+        
+        const headStatus = fileStatus[1];
+        if (headStatus === 0) {
+          // File was added locally, revert means delete
+          const fullPath = await join(this.projectDir, filepath);
+          await tauriFs.remove(fullPath);
+        } else {
+          // File was modified or deleted, restore from HEAD
+          await git.checkout({
+            fs: tauriFsAdapter,
+            dir: this.projectDir,
+            filepaths: [filepath],
+            force: true
+          });
+        }
+      } catch (err) {
+        console.error("Failed to revert file:", err);
+        throw err;
+      }
+    }
+
     public async commitSelected(message: string, selectedFiles: string[]) {
       if (!isTauri() || selectedFiles.length === 0) return;
       

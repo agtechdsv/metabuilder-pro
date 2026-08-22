@@ -96,7 +96,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [selectedCommitFiles, setSelectedCommitFiles] = useState<Set<string>>(new Set())
   const [diffActiveFile, setDiffActiveFile] = useState<string | null>(null)
   const [diffOriginalContent, setDiffOriginalContent] = useState<string>('')
+  const [diffLocalContent, setDiffLocalContent] = useState<string>('')
   const [isCommitLoading, setIsCommitLoading] = useState(false)
+  const [commitMenu, setCommitMenu] = useState<{ x: number; y: number; filepath: string } | null>(null)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -906,6 +908,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setDiffActiveFile(firstFile);
         const originalContent = await syncManager.getFileHeadContent(firstFile);
         setDiffOriginalContent(originalContent);
+        
+        let localContent = '';
+        if (fileContents[firstFile] !== undefined) {
+          localContent = fileContents[firstFile];
+        } else {
+          localContent = await syncManager.getFileLocalContent(firstFile);
+        }
+        setDiffLocalContent(localContent);
       }
       
       setIsCommitModalOpen(true);
@@ -922,8 +932,56 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     try {
       const originalContent = await syncManager.getFileHeadContent(filepath);
       setDiffOriginalContent(originalContent);
+      
+      let localContent = '';
+      if (fileContents[filepath] !== undefined) {
+        localContent = fileContents[filepath];
+      } else {
+        localContent = await syncManager.getFileLocalContent(filepath);
+      }
+      setDiffLocalContent(localContent);
     } catch (err) {
       setDiffOriginalContent('');
+      setDiffLocalContent('');
+    }
+  }
+
+  const handleRevertFile = async (filepath: string) => {
+    if (!syncManager) return;
+    if (!window.confirm(`Tem certeza que deseja reverter as modificações no arquivo ${filepath}?`)) return;
+    
+    setIsCommitLoading(true);
+    try {
+      await syncManager.revertFile(filepath);
+      const newFiles = await syncManager.getChangedFiles();
+      setChangedFiles(newFiles);
+      
+      // se tava selecionado pro commit, removemos
+      setSelectedCommitFiles(prev => {
+        const next = new Set(prev);
+        next.delete(filepath);
+        return next;
+      });
+
+      // update file contents se aberto
+      const originalContent = await syncManager.getFileHeadContent(filepath);
+      if (fileContents[filepath] !== undefined) {
+        setFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+        setOriginalFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+      }
+      
+      if (diffActiveFile === filepath) {
+        setDiffActiveFile(null);
+        setDiffOriginalContent('');
+        setDiffLocalContent('');
+      }
+      toast('Arquivo revertido com sucesso.', 'success');
+      await loadFileTree(); // reload tree to fix icons
+    } catch (err: any) {
+      toast(`Erro ao reverter: ${err.message}`, 'error');
+    } finally {
+      setIsCommitLoading(false);
+      setCommitMenu(null);
     }
   }
 
@@ -1769,8 +1827,28 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4"
-              onClick={() => !isCommitting && setIsCommitModalOpen(false)}
             >
+              {commitMenu && (
+                <div 
+                  className="fixed inset-0 z-[100000]"
+                  onClick={() => setCommitMenu(null)}
+                  onContextMenu={(e) => { e.preventDefault(); setCommitMenu(null); }}
+                >
+                  <div
+                    className="absolute bg-[#1e1e1e] border border-neutral-700 rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden"
+                    style={{ top: commitMenu.y, left: commitMenu.x }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <button 
+                      className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors"
+                      onClick={() => handleRevertFile(commitMenu.filepath)}
+                    >
+                      <Undo2 className="w-3.5 h-3.5 text-blue-400" /> {t('IDE.CommitLocal.Revert') || 'Reverter Arquivo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1784,7 +1862,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h2 className="text-xl font-bold text-white">Realizar Commit</h2>
+                    <h2 className="text-xl font-bold text-white">{t('IDE.CommitLocal.Title') || 'Realizar Commit'}</h2>
                   </div>
                   <button onClick={() => setIsCommitModalOpen(false)} disabled={isCommitting} className="text-neutral-500 hover:text-white transition-colors">
                     <X className="w-5 h-5" />
@@ -1798,12 +1876,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {/* Commit Message */}
                     <div className="p-4 border-b border-neutral-800 shrink-0">
                       <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
-                        Mensagem do Commit
+                        {t('IDE.CommitLocal.MessageLabel') || 'Mensagem do Commit'}
                       </label>
                       <textarea
                         value={commitMessage}
                         onChange={e => setCommitMessage(e.target.value)}
-                        placeholder="Ex: Atualizacao de variaveis de ambiente..."
+                        placeholder={t('IDE.CommitLocal.MessagePlaceholder') || 'Ex: Atualizacao de variaveis de ambiente...'}
                         className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
                         autoFocus
                       />
@@ -1812,19 +1890,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {/* File List */}
                     <div className="flex-1 overflow-y-auto p-2">
                       <div className="flex items-center justify-between px-2 mb-2">
-                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Arquivos Alterados ({changedFiles.length})</span>
+                        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('IDE.CommitLocal.ChangedFiles') || 'Arquivos Alterados'} ({changedFiles.length})</span>
                         <div className="flex gap-2">
                           <button 
                             onClick={() => setSelectedCommitFiles(new Set(changedFiles.map(f => f.filepath)))}
                             className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
                           >
-                            All
+                            {t('IDE.CommitLocal.All') || 'All'}
                           </button>
                           <button 
                             onClick={() => setSelectedCommitFiles(new Set())}
                             className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded"
                           >
-                            None
+                            {t('IDE.CommitLocal.None') || 'None'}
                           </button>
                         </div>
                       </div>
@@ -1834,6 +1912,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           <div 
                             key={file.filepath}
                             onClick={() => handleSelectDiffFile(file.filepath)}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCommitMenu({ x: e.clientX, y: e.clientY, filepath: file.filepath });
+                            }}
                             className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${diffActiveFile === file.filepath ? 'bg-indigo-500/20 border border-indigo-500/30' : 'hover:bg-neutral-800/50 border border-transparent'}`}
                           >
                             <input 
@@ -1871,13 +1954,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             {diffActiveFile}
                           </span>
                           <span className="text-xs text-neutral-500">
-                            Original (HEAD) ↔ Local
+                            {t('IDE.CommitLocal.HeadVsLocal') || 'Original (HEAD) ↔ Local'}
                           </span>
                         </div>
                         <div className="flex-1 min-h-0 relative">
                           <MonacoDiffEditor
                             original={diffOriginalContent}
-                            modified={fileContents[diffActiveFile] !== undefined ? fileContents[diffActiveFile] : (diffOriginalContent || '')}
+                            modified={diffLocalContent}
                             language={diffActiveFile.split('.').pop() === 'tsx' || diffActiveFile.split('.').pop() === 'ts' ? 'typescript' : diffActiveFile.split('.').pop() === 'css' ? 'css' : 'javascript'}
                             theme="vs-dark"
                             options={{
@@ -1894,7 +1977,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-neutral-500">
                         <FileCode2 className="w-16 h-16 mb-4 opacity-20" />
-                        <p>Selecione um arquivo para ver as alterações</p>
+                        <p>{t('IDE.CommitLocal.SelectFile') || 'Selecione um arquivo para ver as alterações'}</p>
                       </div>
                     )}
                   </div>
@@ -1907,7 +1990,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     disabled={isCommitting}
                     className="px-4 py-2 bg-transparent hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg text-sm font-semibold transition-colors"
                   >
-                    Cancelar
+                    {t('IDE.CommitLocal.Cancel') || 'Cancelar'}
                   </button>
                   <button
                     onClick={handleCommitAdvanced}
@@ -1917,12 +2000,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {isCommitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Commitando...
+                        {t('IDE.CommitLocal.Committing') || 'Commitando...'}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Confirmar Commit ({selectedCommitFiles.size})
+                        {t('IDE.CommitLocal.ConfirmCommit') || 'Confirmar Commit'} ({selectedCommitFiles.size})
                       </>
                     )}
                   </button>
