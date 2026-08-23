@@ -111,6 +111,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [ideLoadingState, setIdeLoadingState] = useState<{isLoading: boolean, message: string}>({ isLoading: false, message: '' })
   const [isStoppingServer, setIsStoppingServer] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const [unsavedFilesPrompt, setUnsavedFilesPrompt] = useState<{ pathsToClose: string[]; dirtyPaths: string[]; } | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState<{ x: number, y: number, path: string } | null>(null);
   
   // Console panel state
   const [consoleLogs, setConsoleLogs] = useState<Array<{ts: string, text: string, type: 'info'|'error'|'warn'|'stdout'}>>([])
@@ -167,6 +169,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setDeleteConfirm(null)
         setFileActionModal(null)
         setShowDiscardConfirm(false)
+        setUnsavedFilesPrompt(null)
+        setTabContextMenu(null)
       } else if (e.key === 'Enter') {
         if (deleteConfirm) {
           e.preventDefault()
@@ -493,29 +497,42 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const requestCloseFiles = (pathsToClose: string[]) => {
+    const dirtyPaths = pathsToClose.filter(p => isDirty(p));
+    if (dirtyPaths.length > 0) {
+      setUnsavedFilesPrompt({ pathsToClose, dirtyPaths });
+    } else {
+      executeCloseFiles(pathsToClose);
+    }
+  }
+
+  const executeCloseFiles = (pathsToClose: string[]) => {
+    setOpenFiles(prev => {
+      const newFiles = prev.filter(p => !pathsToClose.includes(p));
+      setActiveFile(curr => {
+        if (curr && pathsToClose.includes(curr)) {
+          const remaining = prev.filter(p => !pathsToClose.includes(p));
+          return remaining.length > 0 ? remaining[Math.min(prev.indexOf(curr), remaining.length - 1)] : null;
+        }
+        return curr;
+      });
+      return newFiles;
+    });
+    setFileContents(prev => {
+      const next = { ...prev };
+      pathsToClose.forEach(p => delete next[p]);
+      return next;
+    });
+    setOriginalFileContents(prev => {
+      const next = { ...prev };
+      pathsToClose.forEach(p => delete next[p]);
+      return next;
+    });
+  }
+
   const handleCloseFile = (e: React.MouseEvent, path: string) => {
     e.stopPropagation()
-    setOpenFiles(prev => {
-      const newFiles = prev.filter(p => p !== path)
-      setActiveFile(curr => {
-        if (curr === path) {
-          const idx = prev.indexOf(path)
-          return newFiles.length > 0 ? newFiles[Math.min(idx, newFiles.length - 1)] : null
-        }
-        return curr
-      })
-      return newFiles
-    })
-    setFileContents(prev => {
-      const newContents = { ...prev }
-      delete newContents[path]
-      return newContents
-    })
-    setOriginalFileContents(prev => {
-      const newContents = { ...prev }
-      delete newContents[path]
-      return newContents
-    })
+    requestCloseFiles([path])
   }
 
   const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
@@ -1599,6 +1616,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               key={path}
                               onClick={() => setActiveFile(path)}
                               onMouseUp={(e) => { if (e.button === 1) handleCloseFile(e, path) }}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setTabContextMenu({ x: e.clientX, y: e.clientY, path });
+                              }}
                               className={`h-full flex items-center px-4 border-r border-neutral-800 cursor-pointer select-none transition-colors group ${isActive ? 'bg-[#252526] text-white border-t-2 border-t-indigo-500' : 'bg-[#2d2d2d] hover:bg-[#252526]'}`}
                             >
                               <span className={`mr-2 truncate max-w-[200px] ${isDirty(path) ? 'italic text-amber-200' : ''}`} title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}>
@@ -1652,7 +1673,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           <MonacoEditor
                             language={activeFile.endsWith('.tsx') || activeFile.endsWith('.ts') ? 'typescript' : activeFile.endsWith('.json') ? 'json' : 'javascript'}
                             theme="vs-dark"
-                            value={fileContents[activeFile] || ''}
+                            path={activeFile}
+                            defaultValue={fileContents[activeFile] || ''}
                             onChange={val => {
                               if (activeFile) {
                                 setFileContents(prev => ({ ...prev, [activeFile]: val || '' }))
@@ -1836,6 +1858,103 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   </motion.div>
                 )}
               </AnimatePresence>
+              
+              {unsavedFilesPrompt && (
+                <div className="fixed inset-0 z-[100001] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl p-6 max-w-sm w-full">
+                    <h3 className="text-lg font-bold text-white mb-2">Salvar alterações?</h3>
+                    <p className="text-sm text-neutral-400 mb-6">
+                      Você tem {unsavedFilesPrompt.dirtyPaths.length} arquivo(s) com alterações não salvas. Deseja salvar antes de fechar?
+                    </p>
+                    <div className="flex justify-end gap-3">
+                      <button 
+                        onClick={() => setUnsavedFilesPrompt(null)}
+                        className="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={() => {
+                          executeCloseFiles(unsavedFilesPrompt.pathsToClose);
+                          setUnsavedFilesPrompt(null);
+                        }}
+                        className="px-4 py-2 text-sm bg-neutral-700 hover:bg-neutral-600 text-white rounded-lg transition-colors"
+                      >
+                        Descartar
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          for (const p of unsavedFilesPrompt.dirtyPaths) {
+                            await handleSaveFile(fileContents[p], p);
+                          }
+                          executeCloseFiles(unsavedFilesPrompt.pathsToClose);
+                          setUnsavedFilesPrompt(null);
+                        }}
+                        className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tabContextMenu && (
+                <div 
+                  className="fixed inset-0 z-[100000]"
+                  onClick={() => setTabContextMenu(null)}
+                  onContextMenu={(e) => { e.preventDefault(); setTabContextMenu(null); }}
+                >
+                  <div
+                    className="absolute bg-[#1e1e1e] border border-neutral-700 rounded-lg shadow-2xl py-1 min-w-[160px] overflow-hidden"
+                    style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => { requestCloseFiles([tabContextMenu.path]); setTabContextMenu(null) }}
+                    >
+                      Fechar
+                    </button>
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => { requestCloseFiles(openFiles); setTabContextMenu(null) }}
+                    >
+                      Fechar Todos
+                    </button>
+                    <div className="border-t border-neutral-700 my-1" />
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => {
+                        const idx = openFiles.indexOf(tabContextMenu.path);
+                        requestCloseFiles(openFiles.slice(idx + 1));
+                        setTabContextMenu(null);
+                      }}
+                    >
+                      Fechar Todos à Direita
+                    </button>
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => {
+                        const idx = openFiles.indexOf(tabContextMenu.path);
+                        requestCloseFiles(openFiles.slice(0, idx));
+                        setTabContextMenu(null);
+                      }}
+                    >
+                      Fechar Todos à Esquerda
+                    </button>
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => {
+                        requestCloseFiles(openFiles.filter(p => p !== tabContextMenu.path));
+                        setTabContextMenu(null);
+                      }}
+                    >
+                      Fechar Outros
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </AnimatePresence>
@@ -2055,6 +2174,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                   diffSaveTimeoutRef.current = setTimeout(async () => {
                                     try {
                                       await syncManager?.saveFileLocalContent(currentFile, val);
+                                      setFileContents(prev => {
+                                        if (prev[currentFile] !== undefined) {
+                                          return { ...prev, [currentFile]: val }
+                                        }
+                                        return prev;
+                                      });
                                     } catch (err) {
                                       console.error("Error saving partial revert:", err);
                                     }
