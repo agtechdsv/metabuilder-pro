@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronLeft, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
   Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical,
   FilePlus, FolderPlus, Pencil, Copy, Scissors, ClipboardPaste, MoreVertical, Undo2, Undo, Save, CopyCheck
 } from 'lucide-react'
@@ -105,6 +105,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const diffRequestRef = useRef<string | null>(null)
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const monacoRef = useRef<any>(null)
+  const tabsContainerRef = useRef<HTMLDivElement>(null)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -1617,8 +1618,26 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
                     {/* Editor */}
                     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                      <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center overflow-x-auto whitespace-nowrap scrollbar-hide text-sm text-neutral-400 flex-shrink-0">
-                        {openFiles.length === 0 && (
+                      <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center text-sm text-neutral-400 flex-shrink-0 w-full relative">
+                        <div className="flex-1 flex items-center h-full overflow-hidden relative group/tabs">
+                          {openFiles.length > 0 && (
+                            <div className="absolute left-0 top-0 bottom-0 flex items-center bg-gradient-to-r from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8 opacity-0 group-hover/tabs:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => {
+                                  if (tabsContainerRef.current) tabsContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' })
+                                }}
+                                className="p-1 text-neutral-400 hover:text-white transition-colors"
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+
+                          <div 
+                            ref={tabsContainerRef}
+                            className="flex-1 h-full flex items-center overflow-x-auto whitespace-nowrap scrollbar-hide scroll-smooth"
+                          >
+                            {openFiles.length === 0 && (
                           <span className="px-4 opacity-50">{t('workspace_components.ide_local.no_file_selected', 'Nenhum arquivo selecionado')}</span>
                         )}
                         {openFiles.map(path => {
@@ -1632,7 +1651,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                 e.preventDefault();
                                 setTabContextMenu({ x: e.clientX, y: e.clientY, path });
                               }}
-                              className={`h-full flex items-center px-4 border-r border-neutral-800 cursor-pointer select-none transition-colors group ${isActive ? 'bg-[#252526] text-white border-t-2 border-t-indigo-500' : 'bg-[#2d2d2d] hover:bg-[#252526]'}`}
+                              className={`h-full flex items-center px-4 border-r border-neutral-800 cursor-pointer select-none transition-colors group/tab ${isActive ? 'bg-[#252526] text-white border-t-2 border-t-indigo-500' : 'bg-[#2d2d2d] hover:bg-[#252526]'}`}
                             >
                               <span className={`mr-2 truncate max-w-[200px] ${isDirty(path) ? 'italic text-amber-200' : ''}`} title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}>
                                 {path.split('/').pop()}
@@ -1642,13 +1661,28 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               )}
                               <button
                                 onClick={(e) => handleCloseFile(e, path)}
-                                className={`p-0.5 rounded transition-colors ${isActive ? 'text-neutral-400 hover:bg-neutral-700 hover:text-white' : 'opacity-0 group-hover:opacity-100 text-neutral-500 hover:bg-neutral-700 hover:text-white'}`}
+                                className={`p-0.5 rounded transition-colors ${isActive ? 'text-neutral-400 hover:bg-neutral-700 hover:text-white' : 'opacity-0 group-hover/tab:opacity-100 text-neutral-500 hover:bg-neutral-700 hover:text-white'}`}
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           );
                         })}
+                          </div>
+                          
+                          {openFiles.length > 0 && (
+                            <div className="absolute right-0 top-0 bottom-0 flex items-center bg-gradient-to-l from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8 justify-end opacity-0 group-hover/tabs:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => {
+                                  if (tabsContainerRef.current) tabsContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' })
+                                }}
+                                className="p-1 text-neutral-400 hover:text-white transition-colors"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       {openFiles.length > 0 && (
                         <div className="flex items-center gap-1 px-2 border-l border-neutral-800 h-full flex-shrink-0 bg-[#1e1e1e]">
                           <button
