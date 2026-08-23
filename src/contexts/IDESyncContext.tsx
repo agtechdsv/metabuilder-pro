@@ -106,7 +106,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const monacoRef = useRef<any>(null)
   const tabsContainerRef = useRef<HTMLDivElement>(null)
+  const activeFileRef = useRef<string | null>(null)
   
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
@@ -569,18 +574,26 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const isDirty = (path: string) => fileContents[path] !== originalFileContents[path];
+  const isDirty = (path: string) => fileContents[path] !== originalFileContents[path]
 
   const handleSaveFile = async (value: string | undefined, specificPath?: string) => {
-    const targetPath = specificPath || activeFile;
+    const targetPath = specificPath || activeFileRef.current;
     if (!targetPath || value === undefined) return
     try {
       await tauriFs.writeTextFile(targetPath, value, { baseDir: BaseDirectory.Home })
       setFileContents(prev => ({ ...prev, [targetPath]: value }))
       setOriginalFileContents(prev => ({ ...prev, [targetPath]: value }))
-      toast('Salvo localmente!', 'success')
+      
+      // Update local content in diff if this file is open in diff viewer
+      setDiffActiveFile(curr => {
+        if (curr === targetPath) {
+          setDiffLocalContent(value);
+        }
+        return curr;
+      });
+      toast('Salvo com sucesso', 'success')
     } catch (err) {
-      toast('Erro ao salvar', 'error')
+      toast('Erro ao salvar arquivo', 'error')
     }
   }
 
@@ -1016,13 +1029,24 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         if (fileContents[filepath] !== undefined) {
           setFileContents(prev => ({ ...prev, [filepath]: originalContent }));
           setOriginalFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+          if (monacoRef.current) {
+            const models = monacoRef.current.editor.getModels();
+            for (const m of models) {
+              if (m.uri.toString().includes(filepath) || m.uri.path === filepath) {
+                m.setValue(originalContent);
+              }
+            }
+          }
         }
         
-        if (diffActiveFile === filepath) {
-          setDiffActiveFile(null);
-          setDiffOriginalContent('');
-          setDiffLocalContent('');
-        }
+        setDiffActiveFile(curr => {
+          if (curr === filepath) {
+            setDiffOriginalContent('');
+            setDiffLocalContent('');
+            return null;
+          }
+          return curr;
+        });
       }
       
       const newFiles = await syncManager.getChangedFiles();
@@ -1738,7 +1762,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             onMount={(editor, monaco) => {
                               monacoRef.current = monaco;
                               editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                                handleSaveFile(editor.getValue(), activeFile)
+                                handleSaveFile(editor.getValue(), activeFileRef.current || undefined)
                               })
                             }}
                           />
