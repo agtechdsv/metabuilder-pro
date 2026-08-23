@@ -98,8 +98,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [diffOriginalContent, setDiffOriginalContent] = useState<string>('')
   const [diffLocalContent, setDiffLocalContent] = useState<string>('')
   const [isCommitLoading, setIsCommitLoading] = useState(false)
-  const [commitMenu, setCommitMenu] = useState<{ x: number; y: number; filepath: string } | null>(null)
-  const [revertLocalConfirm, setRevertLocalConfirm] = useState<string | null>(null)
+  const [commitMenu, setCommitMenu] = useState<{ x: number; y: number } | null>(null)
+  const [revertLocalConfirm, setRevertLocalConfirm] = useState<string[] | null>(null)
+  const [selectedListFiles, setSelectedListFiles] = useState<Set<string>>(new Set())
+  const lastSelectedFileRef = useRef<string | null>(null)
   const diffRequestRef = useRef<string | null>(null)
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -955,41 +957,46 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleRevertFile = (filepath: string) => {
-    setRevertLocalConfirm(filepath);
+  const handleRevertFile = () => {
+    setRevertLocalConfirm(Array.from(selectedListFiles));
     setCommitMenu(null);
   }
 
   const confirmRevertFile = async () => {
-    if (!syncManager || !revertLocalConfirm) return;
-    const filepath = revertLocalConfirm;
+    if (!syncManager || !revertLocalConfirm || revertLocalConfirm.length === 0) return;
+    const filepaths = revertLocalConfirm;
     
     setIsCommitLoading(true);
     try {
-      await syncManager.revertFile(filepath);
+      for (const filepath of filepaths) {
+        await syncManager.revertFile(filepath);
+        
+        // se tava selecionado pro commit, removemos
+        setSelectedCommitFiles(prev => {
+          const next = new Set(prev);
+          next.delete(filepath);
+          return next;
+        });
+
+        // update file contents se aberto
+        const originalContent = await syncManager.getFileHeadContent(filepath);
+        if (fileContents[filepath] !== undefined) {
+          setFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+          setOriginalFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+        }
+        
+        if (diffActiveFile === filepath) {
+          setDiffActiveFile(null);
+          setDiffOriginalContent('');
+          setDiffLocalContent('');
+        }
+      }
+      
       const newFiles = await syncManager.getChangedFiles();
       setChangedFiles(newFiles);
-      
-      // se tava selecionado pro commit, removemos
-      setSelectedCommitFiles(prev => {
-        const next = new Set(prev);
-        next.delete(filepath);
-        return next;
-      });
-
-      // update file contents se aberto
-      const originalContent = await syncManager.getFileHeadContent(filepath);
-      if (fileContents[filepath] !== undefined) {
-        setFileContents(prev => ({ ...prev, [filepath]: originalContent }));
-        setOriginalFileContents(prev => ({ ...prev, [filepath]: originalContent }));
-      }
-      
-      if (diffActiveFile === filepath) {
-        setDiffActiveFile(null);
-        setDiffOriginalContent('');
-        setDiffLocalContent('');
-      }
-      toast(t('ide_commit_local.revert_success', 'Arquivo revertido com sucesso.'), 'success');
+      setSelectedListFiles(new Set());
+      lastSelectedFileRef.current = null;
+      toast(t('ide_commit_local.revert_success', 'Arquivo(s) revertido(s) com sucesso.'), 'success');
       await loadFileTree(); // reload tree to fix icons
     } catch (err: any) {
       toast(`${t('ide_commit_local.revert_error', 'Erro ao reverter:')} ${err.message}`, 'error');
@@ -1846,7 +1853,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 <div className="fixed inset-0 z-[100001] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl p-6 max-w-sm w-full">
                     <h3 className="text-lg font-bold text-white mb-2">{t('ide_commit_local.revert_confirm_title', 'Confirmar Reversão')}</h3>
-                    <p className="text-sm text-neutral-400 mb-6">{t('ide_commit_local.revert_confirm_desc', 'Tem certeza que deseja reverter as modificações no arquivo {filepath}?').replace('{filepath}', revertLocalConfirm)}</p>
+                    <p className="text-sm text-neutral-400 mb-6">{t('ide_commit_local.revert_confirm_desc', 'Tem certeza que deseja reverter as modificações no arquivo {filepath}?').replace('{filepath}', revertLocalConfirm.length > 1 ? `${revertLocalConfirm.length} arquivos` : revertLocalConfirm[0])}</p>
                     <div className="flex justify-end gap-3">
                       <button 
                         onClick={() => setRevertLocalConfirm(null)}
@@ -1861,7 +1868,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         disabled={isCommitLoading}
                       >
                         {isCommitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                        {t('ide_commit_local.revert', 'Reverter Arquivo')}
+                        {t('ide_commit_local.revert', 'Reverter Arquivo(s)')}
                       </button>
                     </div>
                   </div>
@@ -1881,9 +1888,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   >
                     <button 
                       className="flex items-center gap-2.5 w-full px-3 py-1.5 hover:bg-neutral-700/60 text-neutral-200 transition-colors"
-                      onClick={() => handleRevertFile(commitMenu.filepath)}
+                      onClick={() => handleRevertFile()}
                     >
-                      <Undo2 className="w-3.5 h-3.5 text-blue-400" /> {t('ide_commit_local.revert', 'Reverter Arquivo')}
+                      <Undo2 className="w-3.5 h-3.5 text-blue-400" /> {t('ide_commit_local.revert', 'Reverter')} {selectedListFiles.size > 1 ? `(${selectedListFiles.size})` : ''}
                     </button>
                   </div>
                 </div>
@@ -1951,13 +1958,38 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         {changedFiles.map(file => (
                           <div 
                             key={file.filepath}
-                            onClick={() => handleSelectDiffFile(file.filepath)}
+                            onClick={(e) => {
+                              const newSet = new Set(selectedListFiles);
+                              if (e.ctrlKey || e.metaKey) {
+                                if (newSet.has(file.filepath)) newSet.delete(file.filepath);
+                                else newSet.add(file.filepath);
+                                setSelectedListFiles(newSet);
+                                lastSelectedFileRef.current = file.filepath;
+                              } else if (e.shiftKey && lastSelectedFileRef.current) {
+                                const files = changedFiles.map(f => f.filepath);
+                                const startIdx = files.indexOf(lastSelectedFileRef.current);
+                                const endIdx = files.indexOf(file.filepath);
+                                const minIdx = Math.min(startIdx, endIdx);
+                                const maxIdx = Math.max(startIdx, endIdx);
+                                for (let i = minIdx; i <= maxIdx; i++) {
+                                  newSet.add(files[i]);
+                                }
+                                setSelectedListFiles(newSet);
+                              } else {
+                                setSelectedListFiles(new Set([file.filepath]));
+                                lastSelectedFileRef.current = file.filepath;
+                                handleSelectDiffFile(file.filepath);
+                              }
+                            }}
                             onContextMenu={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setCommitMenu({ x: e.clientX, y: e.clientY, filepath: file.filepath });
+                              if (!selectedListFiles.has(file.filepath)) {
+                                setSelectedListFiles(new Set([file.filepath]));
+                              }
+                              setCommitMenu({ x: e.clientX, y: e.clientY });
                             }}
-                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${diffActiveFile === file.filepath ? 'bg-indigo-500/20 border border-indigo-500/30' : 'hover:bg-neutral-800/50 border border-transparent'}`}
+                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${selectedListFiles.has(file.filepath) ? 'bg-indigo-500/20 border border-indigo-500/30' : 'hover:bg-neutral-800/50 border border-transparent'}`}
                           >
                             <input 
                               type="checkbox"
