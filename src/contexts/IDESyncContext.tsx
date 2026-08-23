@@ -549,20 +549,23 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
-    setCtxMenu(null) // Fecha o menu de contexto ao abrir um arquivo
+    setCtxMenu(null)
     handleSelection(path, modifier)
-    if (modifier === 'shift' || modifier === 'ctrl') return // Don't open file in editor for multi-select clicks
+    if (modifier === 'shift' || modifier === 'ctrl') return
     
-    setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
-    setActiveFile(path)
     if (fileContents[path] === undefined) {
       try {
         const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
         setFileContents(prev => ({ ...prev, [path]: content }))
         setOriginalFileContents(prev => ({ ...prev, [path]: content }))
+        setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
+        setActiveFile(path)
       } catch (err) {
         toast('Erro ao ler arquivo', 'error')
       }
+    } else {
+      setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
+      setActiveFile(path)
     }
   }
 
