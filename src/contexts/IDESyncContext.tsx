@@ -104,6 +104,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const lastSelectedFileRef = useRef<string | null>(null)
   const diffRequestRef = useRef<string | null>(null)
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const monacoRef = useRef<any>(null)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -507,6 +508,17 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const executeCloseFiles = (pathsToClose: string[]) => {
+    if (monacoRef.current) {
+      const monaco = monacoRef.current;
+      pathsToClose.forEach(p => {
+        const models = monaco.editor.getModels();
+        for (const m of models) {
+          if (m.uri.toString().includes(p) || m.uri.path === p) {
+            m.dispose();
+          }
+        }
+      });
+    }
     setOpenFiles(prev => {
       const newFiles = prev.filter(p => !pathsToClose.includes(p));
       setActiveFile(curr => {
@@ -1687,8 +1699,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               padding: { top: 16 }
                             }}
                             onMount={(editor, monaco) => {
+                              monacoRef.current = monaco;
                               editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                                handleSaveFile(editor.getValue())
+                                handleSaveFile(editor.getValue(), activeFile)
                               })
                             }}
                           />
@@ -2163,7 +2176,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
                               fontSize: 13,
                             }}
-                            onMount={(editor) => {
+                            onMount={(editor, monaco) => {
+                              monacoRef.current = monaco;
                               const modifiedEditor = editor.getModifiedEditor();
                               modifiedEditor.onDidChangeModelContent((e: any) => {
                                 if (e.isFlush) return; // Ignore programmatic setValue updates
