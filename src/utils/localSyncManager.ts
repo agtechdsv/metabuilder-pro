@@ -507,6 +507,17 @@ export class LocalSyncManager {
       }
     }
 
+    public async saveFileLocalContent(filepath: string, content: string): Promise<void> {
+      if (!isTauri()) return;
+      try {
+        const fullPath = await join(this.projectDir, filepath);
+        await tauriFsAdapter.promises.writeFile(fullPath, content, 'utf8');
+      } catch (err) {
+        console.error("Error in saveFileLocalContent:", err);
+        throw err;
+      }
+    }
+
     public async revertFile(filepath: string): Promise<void> {
       if (!isTauri()) return;
       try {

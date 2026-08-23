@@ -100,6 +100,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [isCommitLoading, setIsCommitLoading] = useState(false)
   const [commitMenu, setCommitMenu] = useState<{ x: number; y: number; filepath: string } | null>(null)
   const [revertLocalConfirm, setRevertLocalConfirm] = useState<string | null>(null)
+  const diffRequestRef = useRef<string | null>(null)
+  const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const [showNewBranchModal, setShowNewBranchModal] = useState(false)
   const [newBranchName, setNewBranchName] = useState('')
@@ -930,8 +932,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleSelectDiffFile = async (filepath: string) => {
     if (!syncManager) return;
     setDiffActiveFile(filepath);
+    diffRequestRef.current = filepath;
+    
     try {
       const originalContent = await syncManager.getFileHeadContent(filepath);
+      if (diffRequestRef.current !== filepath) return;
       setDiffOriginalContent(originalContent);
       
       let localContent = '';
@@ -940,8 +945,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       } else {
         localContent = await syncManager.getFileLocalContent(filepath);
       }
+      
+      if (diffRequestRef.current !== filepath) return;
       setDiffLocalContent(localContent);
     } catch (err) {
+      if (diffRequestRef.current !== filepath) return;
       setDiffOriginalContent('');
       setDiffLocalContent('');
     }
@@ -1996,12 +2004,31 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             language={diffActiveFile.split('.').pop() === 'tsx' || diffActiveFile.split('.').pop() === 'ts' ? 'typescript' : diffActiveFile.split('.').pop() === 'css' ? 'css' : 'javascript'}
                             theme="vs-dark"
                             options={{
-                              readOnly: true,
+                              readOnly: false,
+                              originalEditable: false,
                               renderSideBySide: true,
                               minimap: { enabled: false },
                               scrollBeyondLastLine: false,
                               fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
                               fontSize: 13,
+                            }}
+                            onMount={(editor) => {
+                              const modifiedEditor = editor.getModifiedEditor();
+                              modifiedEditor.onDidChangeModelContent((e: any) => {
+                                if (e.isFlush) return; // Ignore programmatic setValue updates
+                                const val = modifiedEditor.getValue();
+                                const currentFile = diffRequestRef.current;
+                                if (currentFile) {
+                                  if (diffSaveTimeoutRef.current) clearTimeout(diffSaveTimeoutRef.current);
+                                  diffSaveTimeoutRef.current = setTimeout(async () => {
+                                    try {
+                                      await syncManager?.saveFileLocalContent(currentFile, val);
+                                    } catch (err) {
+                                      console.error("Error saving partial revert:", err);
+                                    }
+                                  }, 500);
+                                }
+                              });
                             }}
                           />
                         </div>
