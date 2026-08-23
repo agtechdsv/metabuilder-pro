@@ -1621,7 +1621,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center text-sm text-neutral-400 flex-shrink-0 w-full relative">
                         <div className="flex-1 flex items-center h-full overflow-hidden relative group/tabs">
                           {openFiles.length > 0 && (
-                            <div className="absolute left-0 top-0 bottom-0 flex items-center bg-gradient-to-r from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8 opacity-0 group-hover/tabs:opacity-100 transition-opacity">
+                            <div className="absolute left-0 top-0 bottom-0 flex items-center bg-gradient-to-r from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8">
                               <button 
                                 onClick={() => {
                                   if (tabsContainerRef.current) tabsContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' })
@@ -1635,7 +1635,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
                           <div 
                             ref={tabsContainerRef}
-                            className="flex-1 h-full flex items-center overflow-x-auto whitespace-nowrap scrollbar-hide scroll-smooth"
+                            className="flex-1 h-full flex items-center overflow-x-auto whitespace-nowrap scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                           >
                             {openFiles.length === 0 && (
                           <span className="px-4 opacity-50">{t('workspace_components.ide_local.no_file_selected', 'Nenhum arquivo selecionado')}</span>
@@ -1671,7 +1671,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           </div>
                           
                           {openFiles.length > 0 && (
-                            <div className="absolute right-0 top-0 bottom-0 flex items-center bg-gradient-to-l from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8 justify-end opacity-0 group-hover/tabs:opacity-100 transition-opacity">
+                            <div className="absolute right-0 top-0 bottom-0 flex items-center bg-gradient-to-l from-[#1e1e1e] via-[#1e1e1e] to-transparent z-10 w-8 justify-end">
                               <button 
                                 onClick={() => {
                                   if (tabsContainerRef.current) tabsContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' })
