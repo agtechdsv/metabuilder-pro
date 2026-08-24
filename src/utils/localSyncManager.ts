@@ -470,33 +470,20 @@ export class LocalSyncManager {
       if (!isTauri()) return [];
       
       const { local } = await this.getConfiguredBranches();
-      const trees = [git.TREE({ ref: local }), git.WORKDIR()];
+      const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir, ref: local });
       
       const changes: {filepath: string, status: 'added'|'modified'|'deleted'}[] = [];
       
-      await git.walk({
-        fs: tauriFsAdapter,
-        dir: this.projectDir,
-        trees,
-        map: async function(filepath, [localNode, workdirNode]) {
-          if (filepath === '.' || filepath === '.git' || filepath.startsWith('.git/')) return;
-          if (filepath === 'node_modules' || filepath.startsWith('node_modules/')) return;
-          if (filepath === '.next' || filepath.startsWith('.next/')) return;
+      for (const [filepath, headStatus, workdirStatus, stageStatus] of allFiles) {
+        if (workdirStatus !== headStatus) {
+          let status: 'added' | 'modified' | 'deleted' = 'modified';
+          if (headStatus === 0 && workdirStatus === 2) status = 'added';
+          else if (headStatus === 1 && workdirStatus === 0) status = 'deleted';
+          else if (headStatus === 1 && workdirStatus === 2) status = 'modified';
           
-          const type = await (workdirNode || localNode)?.type();
-          if (type === 'tree') return;
-          
-          let localOid = await localNode?.oid();
-          let workdirOid = await workdirNode?.oid();
-          
-          if (localOid !== workdirOid) {
-            if (!localNode) changes.push({ filepath, status: 'added' });
-            else if (!workdirNode) changes.push({ filepath, status: 'deleted' });
-            else changes.push({ filepath, status: 'modified' });
-          }
+          changes.push({ filepath, status });
         }
-      });
-      
+      }
       return changes;
     }
 
