@@ -373,7 +373,10 @@ export default function DynamicMindMap({
         }
       };
 
-      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true';
+      // Detect ejected mode: either via env var OR when tunnelChannel is not a real Supabase channel.
+      // In the ejected app the tunnel object may exist but won't have .on, causing "tunnelChannel.on is not a function".
+      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
+        || typeof tunnelChannel?.on !== 'function';
 
       if (isEjectedApp) {
         try {
