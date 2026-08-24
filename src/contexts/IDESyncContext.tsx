@@ -1032,6 +1032,25 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setCommitMenu(null);
   }
 
+  const handleMonacoBeforeMount = (monaco: any) => {
+    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+      target: monaco.languages.typescript.ScriptTarget.Latest,
+      allowNonTsExtensions: true,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      module: monaco.languages.typescript.ModuleKind.CommonJS,
+      noEmit: true,
+      esModuleInterop: true,
+      jsx: monaco.languages.typescript.JsxEmit.Preserve,
+      reactNamespace: 'React',
+      allowJs: true,
+    });
+    
+    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+      noSemanticValidation: true,
+      noSyntaxValidation: false,
+    });
+  }
+
   const handleNextDiff = () => {
     if (!diffEditorRef.current) return;
     const changes = diffEditorRef.current.getLineChanges();
@@ -1816,6 +1835,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           <MonacoEditor
                             language={activeFile.endsWith('.tsx') || activeFile.endsWith('.ts') ? 'typescript' : activeFile.endsWith('.json') ? 'json' : 'javascript'}
                             theme="vs-dark"
+                            beforeMount={handleMonacoBeforeMount}
                             path={activeFile}
                             defaultValue={fileContents[activeFile] || ''}
                             onChange={val => {
@@ -2323,6 +2343,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             modified={diffLocalContent}
                             language={diffActiveFile.split('.').pop() === 'tsx' || diffActiveFile.split('.').pop() === 'ts' ? 'typescript' : diffActiveFile.split('.').pop() === 'css' ? 'css' : 'javascript'}
                             theme="vs-dark"
+                            beforeMount={handleMonacoBeforeMount}
                             options={{
                               readOnly: false,
                               originalEditable: false,
