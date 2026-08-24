@@ -384,9 +384,9 @@ export default function DynamicMindMap({
           }
           const resData = await res.json();
           const apiData = Array.isArray(resData) ? resData : (resData.data || []);
-          handleResult({ payload: { success: true, data: apiData } });
+          handleResult({ payload: { success: true, data: apiData, queryId } });
         } catch (err: any) {
-          handleResult({ payload: { success: false, error: err.message } });
+          handleResult({ payload: { success: false, error: err.message, queryId } });
         }
         return;
       }
