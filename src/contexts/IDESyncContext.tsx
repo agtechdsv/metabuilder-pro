@@ -88,6 +88,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [isPushing, setIsPushing] = useState(false)
   const [isPulling, setIsPulling] = useState(false)
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'commit' | 'merge'>('commit')
   const [commitMessage, setCommitMessage] = useState('')
   const [isCommitting, setIsCommitting] = useState(false)
   
@@ -696,15 +697,17 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   const handleConfirmSync = async () => {
     if (!syncManager) return
-    setIsConfirming(true)
+    setIsCommitting(true)
     try {
       await syncManager.confirmSync()
       setSandboxMode(false)
+      setIsCommitModalOpen(false)
+      await loadFileTree()
       toast('Sincronização Efetivada', 'success')
     } catch (err: any) {
       toast(`Erro: ${err.message}`, 'error')
     } finally {
-      setIsConfirming(false)
+      setIsCommitting(false)
     }
   }
 
@@ -951,44 +954,45 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleOpenCommitModal = async () => {
-    if (!syncManager) return;
-    setIsCommitLoading(true);
-    try {
-      const files = await syncManager.getChangedFiles();
-      if (files.length === 0) {
-        toast('Nenhuma alteração local pendente para commit.', 'info');
-        return;
-      }
-      
-      setChangedFiles(files);
-      const allPaths = new Set(files.map(f => f.filepath));
-      setSelectedCommitFiles(allPaths);
-      
-      // Auto-select the first file for the diff view
-      if (files.length > 0) {
-        const firstFile = files[0].filepath;
-        setDiffActiveFile(firstFile);
-        const originalContent = await syncManager.getFileHeadContent(firstFile);
-        setDiffOriginalContent(originalContent);
-        
-        let localContent = '';
-        const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${firstFile}` : firstFile;
-        if (fileContents[fullPath] !== undefined) {
-          localContent = fileContents[fullPath];
-        } else {
-          localContent = await syncManager.getFileLocalContent(firstFile);
+  const handleOpenCommitModal = async (mode: 'commit' | 'merge' = 'commit') => {
+      if (!syncManager) return;
+      setIsCommitLoading(true);
+      try {
+        const files = await syncManager.getChangedFiles();
+        if (files.length === 0) {
+          toast(mode === 'commit' ? 'Nenhuma alteração local pendente.' : 'Nenhuma alteração para o merge.', 'info');
+          return;
         }
-        setDiffLocalContent(localContent);
+        
+        setChangedFiles(files);
+        const allPaths = new Set(files.map(f => f.filepath));
+        setSelectedCommitFiles(allPaths);
+        setModalMode(mode);
+        
+        // Auto-select the first file for the diff view
+        if (files.length > 0) {
+          const firstFile = files[0].filepath;
+          setDiffActiveFile(firstFile);
+          const originalContent = await syncManager.getFileHeadContent(firstFile);
+          setDiffOriginalContent(originalContent);
+          
+          let localContent = '';
+          const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${firstFile}` : firstFile;
+          if (fileContents[fullPath] !== undefined) {
+            localContent = fileContents[fullPath];
+          } else {
+            localContent = await syncManager.getFileLocalContent(firstFile);
+          }
+          setDiffLocalContent(localContent);
+        }
+        
+        setIsCommitModalOpen(true);
+      } catch (err: any) {
+        toast(`Erro ao buscar alterações: ${err.message}`, 'error');
+      } finally {
+        setIsCommitLoading(false);
       }
-      
-      setIsCommitModalOpen(true);
-    } catch (err: any) {
-      toast(`Erro ao buscar alterações: ${err.message}`, 'error');
-    } finally {
-      setIsCommitLoading(false);
     }
-  }
 
   const handleSelectDiffFile = async (filepath: string) => {
     if (!syncManager) return;
@@ -1446,7 +1450,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             <XCircle className="w-3.5 h-3.5 text-red-400" /> {isDiscarding ? t('workspace_components.ide_local.discarding', 'Descartando...') : t('workspace_components.ide_local.discard', 'Descartar')}
                           </button>
                           <button 
-                            onClick={handleConfirmSync}
+                            onClick={() => handleOpenCommitModal('merge')}
                             disabled={isDiscarding || isConfirming}
                             className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                           >
@@ -1487,7 +1491,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                       </div>
 
                         <button 
-                          onClick={handleOpenCommitModal}
+                          onClick={() => handleOpenCommitModal('commit')}
                           disabled={isCommitLoading || isCommitting}
                           className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                           title="Commit Local"
@@ -2118,7 +2122,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h2 className="text-xl font-bold text-white">{t('ide_commit_local.title', 'Realizar Commit')}</h2>
+                    <h2 className="text-xl font-bold text-white">{modalMode === 'commit' ? t('ide_commit_local.title', 'Realizar Commit') : 'Revisar e Confirmar Merge'}</h2>
                   </div>
                   <button onClick={() => setIsCommitModalOpen(false)} disabled={isCommitting} className="text-neutral-500 hover:text-white transition-colors">
                     <X className="w-5 h-5" />
@@ -2131,17 +2135,22 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                   <div className="w-[350px] shrink-0 border-r border-neutral-800 flex flex-col bg-[#141414]">
                     {/* Commit Message */}
                     <div className="p-4 border-b border-neutral-800 shrink-0">
-                      <label className="block text-xs font-semibold text-neutral-400 mb-1.5 uppercase tracking-wider">
-                        {t('ide_commit_local.message_label', 'Mensagem do Commit')}
-                      </label>
-                      <textarea
-                        value={commitMessage}
-                        onChange={e => setCommitMessage(e.target.value)}
-                        placeholder={t('ide_commit_local.message_placeholder', 'Ex: Atualização de variáveis de ambiente...')}
-                        className="w-full bg-[#1a1a1a] border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none h-24"
-                        autoFocus
-                      />
-                    </div>
+                        {modalMode === 'commit' ? (
+                          <>
+                            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block mb-2">{t('ide_commit_local.commit_message', 'Mensagem do Commit')}</span>
+                            <textarea 
+                              value={commitMessage}
+                              onChange={e => setCommitMessage(e.target.value)}
+                              placeholder={t('ide_commit_local.commit_message_placeholder', 'Ex. Atualização de variáveis de ambiente...')}
+                              className="w-full bg-[#1e1e1e] border border-neutral-700 rounded-lg p-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-indigo-500/50 resize-none h-[100px]"
+                            ></textarea>
+                          </>
+                        ) : (
+                          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm text-indigo-200">
+                            Revise as alterações geradas pelo Studio antes de efetivar o merge na sua branch local. Você pode reverter arquivos inteiros ou descartar trechos usando o visualizador de Diff ao lado.
+                          </div>
+                        )}
+                      </div>
                     
                     {/* File List */}
                     <div className="flex-1 overflow-y-auto p-2">
@@ -2302,19 +2311,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {t('ide_commit_local.cancel', 'Cancelar')}
                   </button>
                   <button
-                    onClick={handleCommitAdvanced}
-                    disabled={isCommitting || !commitMessage.trim() || selectedCommitFiles.size === 0}
+                    onClick={modalMode === 'commit' ? handleCommitAdvanced : handleConfirmSync}
+                    disabled={isCommitting || (modalMode === 'commit' && selectedCommitFiles.size === 0)}
                     className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                   >
                     {isCommitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('ide_commit_local.committing', 'Commitando...')}
+                        {modalMode === 'commit' ? t('ide_commit_local.committing', 'Commitando...') : 'Processando...'}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        {t('ide_commit_local.confirm_commit', 'Confirmar Commit')} ({selectedCommitFiles.size})
+                        {modalMode === 'commit' ? `${t('ide_commit_local.confirm_commit', 'Confirmar Commit')} (${selectedCommitFiles.size})` : 'Efetivar Merge'}
                       </>
                     )}
                   </button>

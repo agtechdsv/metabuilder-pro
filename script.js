@@ -2,146 +2,121 @@
 const file = 'c:/AgTech/Apps/metabuilder-pro/src/contexts/IDESyncContext.tsx';
 let content = fs.readFileSync(file, 'utf8');
 
-// 1. Fix executeCloseFiles cleanup
+// 1. Add modalMode state
 content = content.replace(
-  /const executeCloseFiles = \(pathsToClose: string\[\]\) => \{([\s\S]*?)setOpenFiles\(prev => \{/g,
-  \const executeCloseFiles = (pathsToClose: string[]) => {
-    if (monacoRef.current) {
-      const monaco = monacoRef.current;
-      pathsToClose.forEach(p => {
-        const models = monaco.editor.getModels();
-        for (const m of models) {
-          if (m.uri.toString().toLowerCase().includes(p.toLowerCase())) {
-            m.dispose();
-          }
+  /const \[isCommitModalOpen, setIsCommitModalOpen\] = useState\(false\)/,
+  \const [isCommitModalOpen, setIsCommitModalOpen] = useState(false)
+    const [modalMode, setModalMode] = useState<'commit' | 'merge'>('commit')\
+);
+
+// 2. Modify handleOpenCommitModal signature and modalMode
+content = content.replace(
+  /const handleOpenCommitModal = async \(\) => \{([\s\S]*?)setIsCommitModalOpen\(true\);/m,
+  \const handleOpenCommitModal = async (mode: 'commit' | 'merge' = 'commit') => {
+      if (!syncManager) return;
+      setIsCommitLoading(true);
+      try {
+        const files = await syncManager.getChangedFiles();
+        if (files.length === 0) {
+          toast(mode === 'commit' ? 'Nenhuma alteração local pendente.' : 'Nenhuma alteração para o merge.', 'info');
+          return;
         }
-      });
-    }
-    setFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
-    });
-    setOriginalFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
-    });
-    setOpenFiles(prev => {\
-);
-
-// 2. Add padding to MonacoDiffEditor
-content = content.replace(
-  /fontSize: 13,?\s*\}\}\s*onMount=/g,
-  \ontSize: 13,
-                              padding: { top: 16 }
-                            }}
-                            onMount=\
-);
-
-// 3. Fix fullPath in Commit Modal
-
-// a) openCommitModal
-content = content.replace(
-  /let localContent = '';\s*if \(fileContents\[firstFile\] !== undefined\) \{\s*localContent = fileContents\[firstFile\];\s*\} else \{\s*localContent = await syncManager\.getFileLocalContent\(firstFile\);\s*\}/g,
-  \let localContent = '';
-        const fullPath = target ? \\\AGTech/MetaBuilderPRO/\/\\\\ : firstFile;
-        if (fileContents[fullPath] !== undefined) {
-          localContent = fileContents[fullPath];
-        } else {
-          localContent = await syncManager.getFileLocalContent(firstFile);
-        }\
-);
-
-// b) handleSelectDiffFile
-content = content.replace(
-  /let localContent = '';\s*if \(fileContents\[filepath\] !== undefined\) \{\s*localContent = fileContents\[filepath\];\s*\} else \{\s*localContent = await syncManager\.getFileLocalContent\(filepath\);\s*\}/g,
-  \let localContent = '';
-      const fullPath = target ? \\\AGTech/MetaBuilderPRO/\/\\\\ : filepath;
-      if (fileContents[fullPath] !== undefined) {
-        localContent = fileContents[fullPath];
-      } else {
-        localContent = await syncManager.getFileLocalContent(filepath);
-      }\
-);
-
-// c) confirmRevertFile
-content = content.replace(
-  /const originalContent = await syncManager\.getFileHeadContent\(filepath\);\s*if \(fileContents\[filepath\] !== undefined\) \{\s*setFileContents\(prev => \(\{ \.\.\.prev, \[filepath\]: originalContent \}\)\);\s*setOriginalFileContents\(prev => \(\{ \.\.\.prev, \[filepath\]: originalContent \}\)\);\s*if \(monacoRef\.current\) \{\s*const models = monacoRef\.current\.editor\.getModels\(\);\s*for \(const m of models\) \{\s*if \(m\.uri\.toString\(\)\.includes\(filepath\) \|\| m\.uri\.path === filepath\) \{\s*m\.setValue\(originalContent\);\s*\}\s*\}\s*\}\s*\}/g,
-  \const originalContent = await syncManager.getFileHeadContent(filepath);
-        const fullPath = target ? \\\AGTech/MetaBuilderPRO/\/\\\\ : filepath;
-        if (fileContents[fullPath] !== undefined) {
-          setFileContents(prev => ({ ...prev, [fullPath]: originalContent }));
-          setOriginalFileContents(prev => ({ ...prev, [fullPath]: originalContent }));
-          if (monacoRef.current) {
-            const models = monacoRef.current.editor.getModels();
-            for (const m of models) {
-              if (m.uri.toString().toLowerCase().includes(fullPath.toLowerCase())) {
-                m.setValue(originalContent);
-              }
-            }
+        
+        setChangedFiles(files);
+        const allPaths = new Set(files.map(f => f.filepath));
+        setSelectedCommitFiles(allPaths);
+        
+        // Auto-select the first file for the diff view
+        if (files.length > 0) {
+          const firstFile = files[0].filepath;
+          setDiffActiveFile(firstFile);
+          const originalContent = await syncManager.getFileHeadContent(firstFile);
+          setDiffOriginalContent(originalContent);
+          
+          let localContent = '';
+          const fullPath = target ? \\\AGTech/MetaBuilderPRO/\/\\\\ : firstFile;
+          if (fileContents[fullPath] !== undefined) {
+            localContent = fileContents[fullPath];
+          } else {
+            localContent = await syncManager.getFileLocalContent(firstFile);
           }
-        }\
+          setDiffLocalContent(localContent);
+        }
+        
+        setModalMode(mode);
+        setIsCommitModalOpen(true);\
 );
 
-// d) handleCommitAdvanced reset state
+// 3. Update handleConfirmSync to close modal and refresh tree
 content = content.replace(
-  /setOriginalFileContents\(prev => \{\s*const next = \{ \.\.\.prev \};\s*Object\.keys\(next\)\.forEach\(path => \{\s*if \(fileContents\[path\] !== undefined && selectedCommitFiles\.has\(path\)\) \{\s*next\[path\] = fileContents\[path\];\s*\}\s*\}\);\s*return next;\s*\}\);/g,
-  \setOriginalFileContents(prev => {
-        const next = { ...prev };
-        Object.keys(next).forEach(path => {
-          const relPath = target ? path.replace(\\\AGTech/MetaBuilderPRO/\/\\\, '') : path;
-          if (fileContents[path] !== undefined && selectedCommitFiles.has(relPath)) {
-            next[path] = fileContents[path];
-          }
-        });
-        return next;
-      });\
+  /const handleConfirmSync = async \(\) => \{([\s\S]*?)toast\('Sincronizaçǜo Efetivada', 'success'\)/,
+  \const handleConfirmSync = async () => {
+      if (!syncManager) return
+      setIsCommitting(true)
+      try {
+        await syncManager.confirmSync()
+        setSandboxMode(false)
+        setIsCommitModalOpen(false)
+        await loadFileTree()
+        toast('Sincronização Efetivada', 'success')\
+);
+// replace also the Finally block of handleConfirmSync to set isCommitting to false instead of isConfirming? Wait, handleConfirmSync uses setIsConfirming. Let's let it be. But we use isCommitting for the modal button disable state. Let's just set both.
+content = content.replace(
+  /setIsConfirming\(false\)/,
+  \setIsConfirming(false)
+        setIsCommitting(false)\
 );
 
-// e) MonacoDiffEditor onChange save
+// 4. Update the sidebar button
 content = content.replace(
-  /diffSaveTimeoutRef\.current = setTimeout\(async \(\) => \{\s*try \{\s*await syncManager\?\.saveFileLocalContent\(currentFile, val\);\s*setFileContents\(prev => \(\{ \.\.\.prev, \[currentFile\]: val \}\)\);\s*\} catch \(err\) \{\s*console\.error\(err\);\s*\}\s*\}, 500\);/g,
-  \diffSaveTimeoutRef.current = setTimeout(async () => {
-                                    try {
-                                      await syncManager?.saveFileLocalContent(currentFile, val);
-                                      const fullPath = target ? \\\AGTech/MetaBuilderPRO/\/\\\\ : currentFile;
-                                      setFileContents(prev => {
-                                        if (prev[fullPath] !== undefined) {
-                                          return { ...prev, [fullPath]: val }
-                                        }
-                                        return prev;
-                                      });
-                                    } catch (err) {
-                                      console.error("Error saving partial revert:", err);
-                                    }
-                                  }, 500);\
+  /onClick=\{handleConfirmSync\}/,
+  \onClick={() => handleOpenCommitModal('merge')}\
 );
 
-// 4. Tab auto-scroll
+// 5. Update the Modal JSX
 content = content.replace(
-  /const collapseAll = \(\) => \{\s*setExpandedFolders\(new Set\(\)\)\s*\}/g,
-  \const collapseAll = () => {
-    setExpandedFolders(new Set())
-  }
-
-  useEffect(() => {
-    if (activeFile && tabsContainerRef.current) {
-      const activeTab = tabsContainerRef.current.querySelector(\\\[data-path="\"]\\\);
-      if (activeTab) {
-        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
-      }
-    }
-  }, [activeFile, openFiles]);\
+  /<h2 className="text-xl font-bold text-white">\{t\('ide_commit_local\.title', 'Realizar Commit'\)\}<\/h2>/,
+  \<h2 className="text-xl font-bold text-white">{modalMode === 'commit' ? t('ide_commit_local.title', 'Realizar Commit') : 'Revisar e Confirmar Merge'}</h2>\
 );
 
 content = content.replace(
-  /return \(\s*<div\s*key=\{path\}\s*onClick=\{\(\) => setActiveFile\(path\)\}/g,
-  \eturn (
-                            <div 
-                              key={path}
-                              data-path={path}
-                              onClick={() => setActiveFile(path)}\
+  /\{modalMode === 'commit' \? t\('ide_commit_local\.title', 'Realizar Commit'\) : 'Revisar e Confirmar Merge'\}/,
+  \{modalMode === 'commit' ? t('ide_commit_local.title', 'Realizar Commit') : 'Revisar e Confirmar Merge'}\
+);
+
+// Hide commit message in merge mode
+content = content.replace(
+  /<div className="p-4 border-b border-neutral-800 shrink-0">([\s\S]*?)<\/textarea>\s*<\/div>/,
+  \<div className="p-4 border-b border-neutral-800 shrink-0">
+                      {modalMode === 'commit' ? (
+                        <>
+                          <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block mb-2">{t('ide_commit_local.commit_message', 'Mensagem do Commit')}</span>
+                          <textarea 
+                            value={commitMessage}
+                            onChange={e => setCommitMessage(e.target.value)}
+                            placeholder={t('ide_commit_local.commit_message_placeholder', 'Ex. Atualização de variáveis de ambiente...')}
+                            className="w-full bg-[#1e1e1e] border border-neutral-700 rounded-lg p-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-indigo-500/50 resize-none h-[100px]"
+                          ></textarea>
+                        </>
+                      ) : (
+                        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm text-indigo-200">
+                          Revise as alterações geradas pelo Studio antes de efetivar o merge na sua branch local. Você pode reverter arquivos inteiros ou descartar trechos usando o visualizador de Diff.
+                        </div>
+                      )}
+                    </div>\
+);
+
+// Update confirm button in modal
+content = content.replace(
+  /<button\s*onClick=\{handleCommitAdvanced\}\s*disabled=\{isCommitting \|\| selectedCommitFiles\.size === 0\}\s*className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500\/20"\s*>\s*\{isCommitting \? <Loader2 className="w-4 h-4 animate-spin" \/> : <CheckCircle2 className="w-4 h-4" \/>\}\s*\{t\('ide_commit_local\.confirm_commit', 'Confirmar Commit'\)\} \(\{selectedCommitFiles\.size\}\)\s*<\/button>/,
+  \<button
+                      onClick={modalMode === 'commit' ? handleCommitAdvanced : handleConfirmSync}
+                      disabled={isCommitting || (modalMode === 'commit' && selectedCommitFiles.size === 0)}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                      {isCommitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {modalMode === 'commit' ? \\ (\)\ : 'Efetivar Merge'}
+                    </button>\
 );
 
 fs.writeFileSync(file, content);
