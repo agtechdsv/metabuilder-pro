@@ -519,12 +519,22 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       pathsToClose.forEach(p => {
         const models = monaco.editor.getModels();
         for (const m of models) {
-          if (m.uri.toString().includes(p) || m.uri.path === p) {
+          if (m.uri.toString().toLowerCase().includes(p.toLowerCase())) {
             m.dispose();
           }
         }
       });
     }
+    setFileContents(prev => {
+      const next = { ...prev };
+      pathsToClose.forEach(p => delete next[p]);
+      return next;
+    });
+    setOriginalFileContents(prev => {
+      const next = { ...prev };
+      pathsToClose.forEach(p => delete next[p]);
+      return next;
+    });
     setOpenFiles(prev => {
       const newFiles = prev.filter(p => !pathsToClose.includes(p));
       setActiveFile(curr => {
@@ -535,16 +545,6 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         return curr;
       });
       return newFiles;
-    });
-    setFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
-    });
-    setOriginalFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
     });
   }
 
@@ -563,7 +563,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
         setFileContents(prev => ({ ...prev, [path]: content }))
         setOriginalFileContents(prev => ({ ...prev, [path]: content }))
-        setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
+        setOpenFiles(prev => {
+          const exists = prev.includes(path)
+          const newList = exists ? prev : [...prev, path]
+          setTimeout(() => {
+            const el = document.querySelector(`[title="${path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 0);
+          return newList
+        })
         setActiveFile(path)
       } catch (err) {
         toast('Erro ao ler arquivo', 'error')
@@ -571,6 +579,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     } else {
       setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
       setActiveFile(path)
+      setTimeout(() => {
+        const el = document.querySelector(`[title="${path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 0);
     }
   }
 
@@ -961,8 +973,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setDiffOriginalContent(originalContent);
         
         let localContent = '';
-        if (fileContents[firstFile] !== undefined) {
-          localContent = fileContents[firstFile];
+        const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${firstFile}` : firstFile;
+        if (fileContents[fullPath] !== undefined) {
+          localContent = fileContents[fullPath];
         } else {
           localContent = await syncManager.getFileLocalContent(firstFile);
         }
@@ -988,8 +1001,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setDiffOriginalContent(originalContent);
       
       let localContent = '';
-      if (fileContents[filepath] !== undefined) {
-        localContent = fileContents[filepath];
+      const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${filepath}` : filepath;
+      if (fileContents[fullPath] !== undefined) {
+        localContent = fileContents[fullPath];
       } else {
         localContent = await syncManager.getFileLocalContent(filepath);
       }
@@ -1026,13 +1040,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
         // update file contents se aberto
         const originalContent = await syncManager.getFileHeadContent(filepath);
-        if (fileContents[filepath] !== undefined) {
-          setFileContents(prev => ({ ...prev, [filepath]: originalContent }));
-          setOriginalFileContents(prev => ({ ...prev, [filepath]: originalContent }));
+        const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${filepath}` : filepath;
+        if (fileContents[fullPath] !== undefined) {
+          setFileContents(prev => ({ ...prev, [fullPath]: originalContent }));
+          setOriginalFileContents(prev => ({ ...prev, [fullPath]: originalContent }));
           if (monacoRef.current) {
             const models = monacoRef.current.editor.getModels();
             for (const m of models) {
-              if (m.uri.toString().includes(filepath) || m.uri.path === filepath) {
+              if (m.uri.toString().toLowerCase().includes(fullPath.toLowerCase())) {
                 m.setValue(originalContent);
               }
             }
@@ -1091,7 +1106,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setOriginalFileContents(prev => {
         const next = { ...prev };
         Object.keys(next).forEach(path => {
-          if (fileContents[path] !== undefined && selectedCommitFiles.has(path)) {
+          const relPath = target ? path.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : path;
+          if (fileContents[path] !== undefined && selectedCommitFiles.has(relPath)) {
             next[path] = fileContents[path];
           }
         });
@@ -1672,7 +1688,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           return (
                             <div 
                               key={path}
-                              onClick={() => setActiveFile(path)}
+                              onClick={() => { setActiveFile(path); activeFileRef.current = path; }}
                               onMouseUp={(e) => { if (e.button === 1) handleCloseFile(e, path) }}
                               onContextMenu={(e) => {
                                 e.preventDefault();
@@ -2040,7 +2056,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center z-[99999] p-4"
             >
               {revertLocalConfirm && (
                 <div className="fixed inset-0 z-[100001] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2236,6 +2252,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                               scrollBeyondLastLine: false,
                               fontFamily: "'Fira Code', 'JetBrains Mono', Consolas, monospace",
                               fontSize: 13,
+                              padding: { top: 16 }
                             }}
                             onMount={(editor, monaco) => {
                               monacoRef.current = monaco;
@@ -2249,9 +2266,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                   diffSaveTimeoutRef.current = setTimeout(async () => {
                                     try {
                                       await syncManager?.saveFileLocalContent(currentFile, val);
+                                      const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${currentFile}` : currentFile;
                                       setFileContents(prev => {
-                                        if (prev[currentFile] !== undefined) {
-                                          return { ...prev, [currentFile]: val }
+                                        if (prev[fullPath] !== undefined) {
+                                          return { ...prev, [fullPath]: val }
                                         }
                                         return prev;
                                       });
