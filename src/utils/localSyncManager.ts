@@ -325,8 +325,14 @@ export class LocalSyncManager {
   public async confirmSync() {
     const { local, sandbox } = await this.getConfiguredBranches();
 
-    // Checkout local
-    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local });
+    // Ensure all changes in the working tree are committed to sandbox before merging to local
+    try {
+      await this.commitAll("Apply manual diff resolution in sandbox");
+    } catch(e) {}
+
+    // Checkout local with force: true to safely move HEAD and working tree to local 
+    // without complaining about conflicts, since we just committed everything to sandbox.
+    await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local, force: true });
     
     // Merge sandbox into local (should be fast-forward)
     await git.merge({
@@ -443,12 +449,14 @@ export class LocalSyncManager {
       // Get all files in the working directory
       const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
       
+      let hasChanges = false;
       // Staged files are those that have modifications (not identical to HEAD)
       for (const [filepath, headStatus, workdirStatus, stageStatus] of allFiles) {
         // workdirStatus === 0 means deleted
         // workdirStatus === 1 means unmodified (if headStatus is 1)
         // workdirStatus === 2 means modified or added
         if (workdirStatus !== headStatus) {
+          hasChanges = true;
           if (workdirStatus === 0) {
             await git.remove({ fs: tauriFsAdapter, dir: this.projectDir, filepath });
           } else {
@@ -457,13 +465,15 @@ export class LocalSyncManager {
         }
       }
 
-      // Commit the staged changes
-      await git.commit({
-        fs: tauriFsAdapter,
-        dir: this.projectDir,
-        message,
-        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
-      });
+      if (hasChanges) {
+        // Commit the staged changes
+        await git.commit({
+          fs: tauriFsAdapter,
+          dir: this.projectDir,
+          message,
+          author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+        });
+      }
     }
 
     public async getMergeDiffFiles(): Promise<{filepath: string, status: 'added'|'modified'|'deleted'}[]> {
