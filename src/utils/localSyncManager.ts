@@ -479,9 +479,12 @@ export class LocalSyncManager {
         dir: this.projectDir,
         trees,
         map: async function(filepath, [localNode, workdirNode]) {
-          if (filepath === '.' || filepath === '.git') return;
+          if (filepath === '.' || filepath === '.git' || filepath.startsWith('.git/')) return;
           if (filepath === 'node_modules' || filepath.startsWith('node_modules/')) return;
           if (filepath === '.next' || filepath.startsWith('.next/')) return;
+          
+          const type = await (workdirNode || localNode)?.type();
+          if (type === 'tree') return;
           
           let localOid = await localNode?.oid();
           let workdirOid = await workdirNode?.oid();
