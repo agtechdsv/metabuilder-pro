@@ -111,16 +111,16 @@ export default function GitArchitectureFeaturePage() {
         <div className="order-2 lg:order-1 relative">
           <div className="absolute inset-0 bg-emerald-500/10 blur-3xl rounded-full"></div>
           <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-br from-emerald-500/20 to-teal-500/10 dark:from-emerald-900/40 dark:to-teal-900/20 border border-emerald-500/20 shadow-2xl space-y-6 overflow-hidden">
-             <img src="/ide-editor-demo.png" alt="Demonstração do Editor de Código da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
+            <img src="/ide-editor-demo.png" alt="Demonstração do Editor de Código da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
           </div>
         </div>
-        
+
         <div className="order-1 lg:order-2 space-y-8">
           <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
             <Code2 className="w-8 h-8" />
           </div>
           <h2 className="text-4xl md:text-5xl font-black tracking-tighter dark:text-white leading-[1.1]">
-            {t('marketing_v2.features.git_architecture.pro_code_title_part1', 'Por que Triangulação?')} <br/>
+            {t('marketing_v2.features.git_architecture.pro_code_title_part1', 'Por que Triangulação?')} <br />
             {t('marketing_v2.features.git_architecture.pro_code_title_part2', 'Porque somos Pro-Code (High-Code).')}
           </h2>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
@@ -142,14 +142,14 @@ export default function GitArchitectureFeaturePage() {
             {t('marketing_v2.features.git_architecture.diff_title', 'Revisão Visual Lado a Lado')}
           </h2>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            {t('marketing_v2.features.git_architecture.diff_desc', 'Antes de confirmar qualquer fusão, você tem acesso a um Diff Viewer nativo (Monaco Editor). Navegue inteligentemente entre as alterações usando setas direcionais e entenda exatamente o que a IA e o Studio Web modificaram no seu código.')}
+            {t('marketing_v2.features.git_architecture.diff_desc', 'Antes de confirmar qualquer fusão, você tem acesso a um Diff Viewer nativo. Navegue inteligentemente entre as alterações usando setas direcionais e entenda exatamente o que a IA e o Studio Web modificaram no seu código.')}
           </p>
         </div>
         <div className="relative">
           <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full"></div>
           <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 shadow-2xl space-y-6 overflow-hidden">
-             {/* Using existing placeholder until real screenshot is captured */}
-             <img src="/ide-editor-demo.png" alt="Demonstração do Visualizador de Diff da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
+            {/* Using existing placeholder until real screenshot is captured */}
+            <img src="/ide-editor-demo.png" alt="Demonstração do Visualizador de Diff da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
           </div>
         </div>
       </section>

@@ -367,17 +367,13 @@
         "secret_token_copied": "¡Token Secreto copiado!",
         "no_token_available": "Ningún token disponible.",
         "use_cases": "Casos de Uso",
-        "fields_count": "campos configurados",
+        "fields_count": "campos",
         "sidebar": {
-          "dashboard": "Dashboard",
-          "data": "Datos & Esquemas",
-          "auth": "Autenticación",
-          "byoc": "BYOC",
-          "settings": "Configuración",
-          "tunnel_db_config": "Configuración de Bases (JSON)",
-          "terminal": "Terminal (PTY)",
-          "logs": "Registros del Sistema",
-          "sql_studio": "SQL Studio"
+          "dashboard": "Panel de Control",
+          "data": "Estructura de Datos",
+          "auth": "Seguridad",
+          "settings": "Configuraciones",
+          "tunnel": "Conexión y Túnel"
         },
         "filters": {
           "sistema": "Sistema",
@@ -462,7 +458,6 @@
         "access_bpm": "Acceder a BPM",
         "access_downloads": "Acceder a Descargas",
         "access_use_case": "Acceder a Caso de Uso",
-        "add_to_menu": "Agregar al Menú",
         "bpm_modal": {
           "title": "Configuraciones del Módulo BPM",
           "log_retention": "Retención de Logs (Días)",
@@ -650,7 +645,6 @@
           "default_email_placeholder": "ejemplo@empresa.com"
         },
         "data_structure": "Estructura de Datos",
-        "fields_count": "campos",
         "open_app": "Ver App",
         "config": {
           "title": "Configurador de Pantalla",
@@ -676,13 +670,6 @@
           "add_virtual_field_desc": "Crie botões de ação ou campos calculados.",
           "primary_key": "CLAVE PRIMARIA",
           "loading_studio": "Cargando Studio..."
-        },
-        "sidebar": {
-          "dashboard": "Panel de Control",
-          "data": "Estructura de Datos",
-          "auth": "Seguridad",
-          "settings": "Configuraciones",
-          "tunnel": "Conexión y Túnel"
         },
         "login": {
           "title": "Portal de Login",
@@ -1256,11 +1243,15 @@
         "control_desc": "Tras la fusión en Sandbox, tienes el poder absoluto sobre el destino de tu código. Prueba localmente, edita archivos y valida los cambios. Al terminar, tienes dos botones:",
         "confirm_merge_title": "Confirmar Merge",
         "confirm_merge_desc": "¡Todo funciona! El IDE traslada el código del Sandbox permanentemente a tu Puerto Seguro (local).",
-        "discard_title": "Descartar",
-        "discard_desc": "¿La fusión se rompió o no te gustó el resultado? Haz clic en descartar. El Sandbox se esfuma al instante y tu código vuelve a ser el de antes.",
+        "discard_title": "Descartar Todo",
+        "discard_desc": "¿Toda la fusión se rompió? ¿No te gustó el resultado general? Haz clic en descartar. El Sandbox se evapora instantáneamente y tu proyecto vuelve a como estaba antes.",
         "revert_title": "Revertir Commit (Máquina del Tiempo)",
         "revert_desc": "¿Hiciste cambios en el Sandbox y te arrepentiste? Vuelve a cualquier estado anterior en milisegundos con un solo clic.",
-        "terminal_title": "Terminal Oculto del IDE"
+        "terminal_title": "Terminal Oculto del IDE",
+        "diff_title": "Revisión Visual Lado a Lado",
+        "diff_desc": "Antes de confirmar cualquier fusión, tienes acceso a un Diff Viewer nativo. Navega de forma inteligente entre los cambios usando flechas direccionales y entiende exactamente qué modificó la IA y Web Studio en tu código.",
+        "revert_file_title": "Reversión Quirúrgica de Archivos",
+        "revert_file_desc": "¿El Merge vino con errores en un solo archivo? Compara las diferencias lado a lado (Nube ↔ Local) con el Diff Viewer y descarta quirúrgicamente solo este archivo, preservando el resto de la Sincronización."
       },
       "ide": {
         "badge": "MetaBuilder IDE Pro",
@@ -1283,7 +1274,11 @@
         "terminal_integrated": "Terminal Integrado",
         "terminal_byoc_init": "Iniciando compilación del componente BYOC...",
         "terminal_swc_compile": "Compilando dependencias locales con SWC",
-        "terminal_build_complete": "✓ Compilación completada en 2.4s"
+        "terminal_build_complete": "✓ Compilación completada en 2.4s",
+        "intellisense_title": "IntelliSense y TypeScript",
+        "intellisense_desc": "El motor de Editor preserva la sintaxis React/JSX de forma nativa, brindando autocompletado inteligente, formato y alertas de error en tiempo real sin demoras.",
+        "tabs_title": "Gestión de Merges y Pestañas",
+        "tabs_desc": "Control supremo de tu flujo de trabajo: botones 'Cerrar Guardados', navegación automática a través de fragmentos modificados (Flechas Diff) y reversión quirúrgica de archivos durante el proceso de Merge."
       }
     },
     "use_cases_page": {
@@ -2179,7 +2174,6 @@
       "custom_actions": "Acciones Personalizadas",
       "add_action": "Agregar Acción",
       "no_custom_actions": "Ninguna acción personalizada configurada",
-      "button_properties": "Propiedades del Botón",
       "multiple_selection": "selección múltiple",
       "sql_procedure": "SQL / Procedimiento",
       "select_usecase": "Seleccione un caso de uso...",

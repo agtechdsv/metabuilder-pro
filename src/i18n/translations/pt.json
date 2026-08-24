@@ -289,7 +289,7 @@
         "secret_token_copied": "Token Secreto copiado!",
         "no_token_available": "Nenhum token disponível.",
         "use_cases": "Casos de Uso",
-        "fields_count": "campos configurados",
+        "fields_count": "campos",
         "sidebar": {
           "dashboard": "Dashboard",
           "data": "Dados & Schemas",
@@ -384,7 +384,6 @@
         "access_bpm": "Acessar BPM",
         "access_downloads": "Acessar Downloads",
         "access_use_case": "Acessar Caso de Uso",
-        "add_to_menu": "Adicionar ao Menu",
         "bpm_modal": {
           "title": "Configurações do Módulo BPM",
           "log_retention": "Retenção de Logs (Dias)",
@@ -572,7 +571,6 @@
           "default_email_placeholder": "exemplo@empresa.com"
         },
         "data_structure": "Estrutura de Dados",
-        "fields_count": "campos",
         "open_app": "Ver App",
         "config": {
           "title": "Configurador de Tela",
@@ -598,17 +596,6 @@
           "add_virtual_field_desc": "Crie botões de ação ou campos calculados.",
           "primary_key": "CHAVE PRIMÁRIA",
           "loading_studio": "Carregando Studio..."
-        },
-        "sidebar": {
-          "dashboard": "Dashboard",
-          "data": "Dados & Schemas",
-          "auth": "Autenticação",
-          "byoc": "BYOC",
-          "settings": "Configurações",
-          "tunnel_db_config": "Configurações de Bancos (JSON)",
-          "terminal": "Terminal (PTY)",
-          "logs": "Logs do Sistema",
-          "sql_studio": "SQL Studio"
         },
         "login": {
           "title": "Portal de Login",
@@ -1182,11 +1169,15 @@
         "control_desc": "Após a fusão na Sandbox, você tem o poder absoluto sobre o destino do seu código. Teste no navegador local, modifique arquivos e valide as alterações. Quando terminar, você tem dois botões:",
         "confirm_merge_title": "Confirmar Merge",
         "confirm_merge_desc": "Tudo funciona! A IDE transporta o código da Sandbox permanentemente para o seu Porto Seguro (local).",
-        "discard_title": "Descartar",
-        "discard_desc": "A fusão quebrou? Você não gostou do resultado? Clique em descartar. A Sandbox é evaporada instantaneamente e seu código volta a ser o que era antes.",
+        "discard_title": "Descartar Tudo",
+        "discard_desc": "A fusão inteira quebrou? Você não gostou do resultado global? Clique em descartar. A Sandbox é evaporada instantaneamente e seu projeto volta a ser o que era antes.",
         "revert_title": "Reverter Commit (Máquina do Tempo)",
         "revert_desc": "Fez alterações dentro da Sandbox e se arrependeu? Volte para qualquer estado anterior em milissegundos com um clique.",
-        "terminal_title": "Terminal Oculto da IDE"
+        "terminal_title": "Terminal Oculto da IDE",
+        "diff_title": "Revisão Visual Lado a Lado",
+        "diff_desc": "Antes de confirmar qualquer fusão, você tem acesso a um Diff Viewer nativo. Navegue inteligentemente entre as alterações usando setas direcionais e entenda exatamente o que a IA e o Studio Web modificaram no seu código.",
+        "revert_file_title": "Reversão Cirúrgica por Arquivo",
+        "revert_file_desc": "O Merge veio com erros num único arquivo? Compare as diferenças lado a lado (Nuvem ↔ Local) com o Diff Viewer e descarte cirurgicamente apenas este arquivo, preservando todo o resto da Sincronização."
       },
       "ide": {
         "badge": "MetaBuilder IDE Pro",
@@ -1209,7 +1200,11 @@
         "terminal_integrated": "Terminal Integrado",
         "terminal_byoc_init": "Iniciando compilação do componente BYOC...",
         "terminal_swc_compile": "Compilando dependências locais com SWC",
-        "terminal_build_complete": "✓ Build completada em 2.4s"
+        "terminal_build_complete": "✓ Build completada em 2.4s",
+        "intellisense_title": "IntelliSense e TypeScript",
+        "intellisense_desc": "O motor do Editor preserva a sintaxe React/JSX nativamente, fornecendo autocompletar inteligente, formatação e alertas de erros em tempo real sem lentidão, focando apenas no que importa.",
+        "tabs_title": "Gestão de Merges e Abas",
+        "tabs_desc": "Controle supremo do seu fluxo de trabalho: botões 'Fechar Salvos', navegação automática por trechos modificados (Diff Arrows) e reversão cirúrgica de arquivos durante o processo de Merge."
       }
     },
     "use_cases_page": {
@@ -2109,7 +2104,6 @@
       "custom_actions": "Ações Customizadas",
       "add_action": "Adicionar Ação",
       "no_custom_actions": "Nenhuma ação customizada configurada",
-      "button_properties": "Propriedades do Botão",
       "multiple_selection": "múltipla seleção",
       "sql_procedure": "SQL / Procedure",
       "select_usecase": "Selecione um caso de uso...",

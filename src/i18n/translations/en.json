@@ -289,14 +289,14 @@
         "secret_token_copied": "Secret Token copied!",
         "no_token_available": "No token available.",
         "use_cases": "Use Cases",
-        "fields_count": "configured fields",
+        "fields_count": "fields",
         "sidebar": {
           "dashboard": "Dashboard",
           "data": "Data & Schemas",
           "auth": "Authentication",
           "byoc": "BYOC",
           "settings": "Settings",
-          "tunnel_db_config": "Database Configurations (JSON)",
+          "tunnel_db_config": "Database Settings (JSON)",
           "terminal": "Terminal (PTY)",
           "logs": "System Logs",
           "sql_studio": "SQL Studio"
@@ -384,7 +384,6 @@
         "access_bpm": "Access BPM",
         "access_downloads": "Access Downloads",
         "access_use_case": "Access Use Case",
-        "add_to_menu": "Add to Menu",
         "bpm_modal": {
           "title": "BPM Module Configurations",
           "log_retention": "Log Retention (Days)",
@@ -572,7 +571,6 @@
           "default_email_placeholder": "example@company.com"
         },
         "data_structure": "Data Structure",
-        "fields_count": "fields",
         "open_app": "Open App",
         "config": {
           "title": "Screen Configurator",
@@ -598,17 +596,6 @@
           "add_virtual_field_desc": "Create action buttons or calculated fields.",
           "primary_key": "PRIMARY KEY",
           "loading_studio": "Loading Studio..."
-        },
-        "sidebar": {
-          "dashboard": "Dashboard",
-          "data": "Data & Schemas",
-          "auth": "Authentication",
-          "byoc": "BYOC",
-          "settings": "Settings",
-          "tunnel_db_config": "Database Settings (JSON)",
-          "terminal": "Terminal (PTY)",
-          "logs": "System Logs",
-          "sql_studio": "SQL Studio"
         },
         "login": {
           "title": "Login Portal",
@@ -1182,8 +1169,12 @@
         "control_desc": "After merging in the Sandbox, you have absolute control over your code's destiny. Test locally, edit files, and validate changes. When finished, you have options:",
         "confirm_merge_title": "Confirm Merge",
         "confirm_merge_desc": "Everything works! The IDE moves Sandbox code permanently into your Safe Harbor (local).",
-        "discard_title": "Discard",
-        "discard_desc": "Did the merge break or you dislike the result? Click discard. The Sandbox is wiped instantly and your code reverts to exactly how it was.",
+        "diff_title": "Side-by-Side Visual Review",
+        "diff_desc": "Before confirming any merge, you have access to a native Diff Viewer. Navigate intelligently between changes using directional arrows and understand exactly what AI and Web Studio modified in your code.",
+        "revert_file_title": "Surgical File Reversion",
+        "revert_file_desc": "Did the Merge come with errors in a single file? Compare the differences side-by-side (Cloud ↔ Local) with the Diff Viewer and surgically discard only this file, preserving the rest of the Synchronization.",
+        "discard_title": "Discard All",
+        "discard_desc": "Did the entire merge break? Didn't like the overall result? Click discard. The Sandbox evaporates instantly and your project reverts to how it was before.",
         "revert_title": "Revert Commit (Time Machine)",
         "revert_desc": "Made changes inside Sandbox and changed your mind? Roll back to any previous state in milliseconds with one click.",
         "terminal_title": "IDE Hidden Terminal"
@@ -1204,6 +1195,10 @@
         "sql_desc": "Native console to run raw queries (DDL & DML) against your local database with 0ms network latency. No proxies and no cloud limitations.",
         "eject_title": "Source Code Ejection",
         "eject_desc": "Zero vendor lock-in. Generate and download full source code (Next.js / Node.js) for your application ready to deploy anywhere.",
+        "intellisense_title": "IntelliSense and TypeScript",
+        "intellisense_desc": "The Editor engine preserves React/JSX syntax natively, providing intelligent autocomplete, formatting, and real-time error alerts with zero delay.",
+        "tabs_title": "Merge and Tab Management",
+        "tabs_desc": "Supreme control of your workflow: 'Close Saved' buttons, automatic navigation through modified snippets (Diff Arrows), and surgical file reversion during the Merge process.",
         "infra_title": "Connectivity & Security",
         "infra_desc": "Enterprise features embedded into your development environment.",
         "terminal_integrated": "Integrated Terminal",
@@ -2109,7 +2104,6 @@
       "custom_actions": "Custom Actions",
       "add_action": "Add Action",
       "no_custom_actions": "No custom actions configured",
-      "button_properties": "Button Properties",
       "multiple_selection": "multiple selection",
       "sql_procedure": "SQL / Procedure",
       "select_usecase": "Select a use case...",
