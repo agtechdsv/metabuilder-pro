@@ -265,6 +265,7 @@ export default function DynamicMindMap({
     
     const nextLevelConfig = mindmapLevels[nextLevelIndex];
     if (!nextLevelConfig.model_id) return;
+    console.log('[MetaBuilder:MindMap] 🔍 nextLevelConfig:', JSON.stringify(nextLevelConfig));
     if (nextLevelConfig.relation_type === 'indirect') {
       if (!nextLevelConfig.through_table || !nextLevelConfig.through_local_fk || !nextLevelConfig.through_target_fk) return;
     } else if (nextLevelConfig.relation_type === 'multilevel') {
@@ -272,6 +273,7 @@ export default function DynamicMindMap({
     } else {
       if (!nextLevelConfig.foreign_key) return;
     }
+
 
     const pathStr = path.join('-');
     setLoadingPath(pathStr);
