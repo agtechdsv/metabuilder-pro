@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FolderGit2, Play, DownloadCloud, AlertTriangle, 
-  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronLeft, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
+  CheckCircle2, XCircle, FileCode2, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, Folder, History, X, Minimize2, AppWindow, LayoutDashboard, Loader2, Settings, Plus, Network, UploadCloud, Download, GitBranch,
   Package, Square, Trash2, PanelBottomOpen, PanelLeftOpen, UnfoldVertical, FoldVertical,
   FilePlus, FolderPlus, Pencil, Copy, Scissors, ClipboardPaste, MoreVertical, Undo2, Undo, Save, CopyCheck
 } from 'lucide-react'
@@ -106,6 +106,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const diffRequestRef = useRef<string | null>(null)
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const monacoRef = useRef<any>(null)
+  const diffEditorRef = useRef<any>(null)
   const tabsContainerRef = useRef<HTMLDivElement>(null)
   const activeFileRef = useRef<string | null>(null)
   
@@ -1029,6 +1030,45 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleRevertFile = () => {
     setRevertLocalConfirm(Array.from(selectedListFiles));
     setCommitMenu(null);
+  }
+
+  const handleNextDiff = () => {
+    if (!diffEditorRef.current) return;
+    const changes = diffEditorRef.current.getLineChanges();
+    if (!changes || changes.length === 0) return;
+    
+    const modifiedEditor = diffEditorRef.current.getModifiedEditor();
+    const currentLine = modifiedEditor.getPosition()?.lineNumber || 1;
+    
+    const nextChange = changes.find((c: any) => c.modifiedStartLineNumber > currentLine);
+    
+    if (nextChange) {
+      modifiedEditor.setPosition({ lineNumber: nextChange.modifiedStartLineNumber, column: 1 });
+      modifiedEditor.revealLineInCenter(nextChange.modifiedStartLineNumber);
+    } else {
+      modifiedEditor.setPosition({ lineNumber: changes[0].modifiedStartLineNumber, column: 1 });
+      modifiedEditor.revealLineInCenter(changes[0].modifiedStartLineNumber);
+    }
+  }
+
+  const handlePrevDiff = () => {
+    if (!diffEditorRef.current) return;
+    const changes = diffEditorRef.current.getLineChanges();
+    if (!changes || changes.length === 0) return;
+    
+    const modifiedEditor = diffEditorRef.current.getModifiedEditor();
+    const currentLine = modifiedEditor.getPosition()?.lineNumber || 1;
+    
+    const prevChange = [...changes].reverse().find((c: any) => c.modifiedStartLineNumber < currentLine);
+    
+    if (prevChange) {
+      modifiedEditor.setPosition({ lineNumber: prevChange.modifiedStartLineNumber, column: 1 });
+      modifiedEditor.revealLineInCenter(prevChange.modifiedStartLineNumber);
+    } else {
+      const last = changes[changes.length - 1];
+      modifiedEditor.setPosition({ lineNumber: last.modifiedStartLineNumber, column: 1 });
+      modifiedEditor.revealLineInCenter(last.modifiedStartLineNumber);
+    }
   }
 
   const confirmRevertFile = async () => {
@@ -2026,6 +2066,16 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     >
                       Fechar Todos
                     </button>
+                    <button 
+                      className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
+                      onClick={() => { 
+                        const savedFiles = openFiles.filter(p => !isDirty(p));
+                        requestCloseFiles(savedFiles);
+                        setTabContextMenu(null);
+                      }}
+                    >
+                      Fechar Salvos
+                    </button>
                     <div className="border-t border-neutral-700 my-1" />
                     <button 
                       className="flex items-center w-full px-4 py-2 hover:bg-neutral-700/60 text-neutral-200 transition-colors text-sm text-left"
@@ -2253,9 +2303,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           <span className="text-sm font-medium text-neutral-300">
                             {diffActiveFile}
                           </span>
-                          <span className="text-xs text-neutral-500">
-                            {t('ide_commit_local.head_vs_local', 'Original (HEAD) ↔ Local')}
-                          </span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1 border border-neutral-800 rounded bg-neutral-900/50 p-0.5">
+                              <button onClick={handlePrevDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title="Alteração Anterior">
+                                <ChevronUp className="w-4 h-4" />
+                              </button>
+                              <button onClick={handleNextDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title="Próxima Alteração">
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <span className="text-xs text-neutral-500">
+                              {t('ide_commit_local.head_vs_local', 'Original (HEAD) ↔ Local')}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex-1 min-h-0 relative">
                           <MonacoDiffEditor
@@ -2275,6 +2335,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             }}
                             onMount={(editor, monaco) => {
                               monacoRef.current = monaco;
+                              diffEditorRef.current = editor;
                               const modifiedEditor = editor.getModifiedEditor();
                               modifiedEditor.onDidChangeModelContent((e: any) => {
                                 if (e.isFlush) return; // Ignore programmatic setValue updates
