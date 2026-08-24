@@ -132,6 +132,28 @@ export default function GitArchitectureFeaturePage() {
         </div>
       </section>
 
+      {/* Diff Viewer / Revisão Visual */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+        <div className="space-y-8">
+          <div className="w-16 h-16 rounded-3xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
+            <GitMerge className="w-8 h-8" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-black tracking-tighter dark:text-white leading-[1.1]">
+            {t('marketing_v2.features.git_architecture.diff_title', 'Revisão Visual Lado a Lado')}
+          </h2>
+          <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            {t('marketing_v2.features.git_architecture.diff_desc', 'Antes de confirmar qualquer fusão, você tem acesso a um Diff Viewer nativo (Monaco Editor). Navegue inteligentemente entre as alterações usando setas direcionais e entenda exatamente o que a IA e o Studio Web modificaram no seu código.')}
+          </p>
+        </div>
+        <div className="relative">
+          <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full"></div>
+          <div className="relative p-2 rounded-[2.5rem] bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 shadow-2xl space-y-6 overflow-hidden">
+             {/* Using existing placeholder until real screenshot is captured */}
+             <img src="/ide-editor-demo.png" alt="Demonstração do Visualizador de Diff da IDE" className="w-full h-auto rounded-[2rem] shadow-inner" />
+          </div>
+        </div>
+      </section>
+
       {/* Action Flow */}
       <section className="bg-neutral-50 dark:bg-neutral-900/30 rounded-3xl p-8 md:p-12 border border-neutral-200 dark:border-neutral-800">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -149,10 +171,17 @@ export default function GitArchitectureFeaturePage() {
                 </div>
               </li>
               <li className="flex items-start gap-3">
+                <Sparkles className="w-6 h-6 text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.revert_file_title', 'Reversão Cirúrgica por Arquivo')}</strong>
+                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.revert_file_desc', 'O Merge veio com erros num único arquivo? Compare as diferenças lado a lado (Nuvem ↔ Local) com o Diff Viewer e descarte cirurgicamente apenas este arquivo, preservando todo o resto da Sincronização.')}</span>
+                </div>
+              </li>
+              <li className="flex items-start gap-3">
                 <ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.discard_title', 'Descartar')}</strong>
-                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.discard_desc', 'A fusão quebrou? Você não gostou do resultado? Clique em descartar. A Sandbox é evaporada instantaneamente e seu código volta a ser o que era antes.')}</span>
+                  <strong className="dark:text-white block">{t('marketing_v2.features.git_architecture.discard_title', 'Descartar Tudo')}</strong>
+                  <span className="text-sm text-neutral-500">{t('marketing_v2.features.git_architecture.discard_desc', 'A fusão inteira quebrou? Você não gostou do resultado global? Clique em descartar. A Sandbox é evaporada instantaneamente e seu projeto volta a ser o que era antes.')}</span>
                 </div>
               </li>
               <li className="flex items-start gap-3">

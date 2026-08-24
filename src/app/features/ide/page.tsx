@@ -36,6 +36,20 @@ export default function IDEFeaturePage() {
       icon: <Download className="w-8 h-8 text-purple-500" />,
       color: "from-purple-500/20 to-pink-500/5",
       borderColor: "border-purple-500/20"
+    },
+    {
+      title: t('marketing_v2.features.ide.intellisense_title', 'IntelliSense e TypeScript'),
+      desc: t('marketing_v2.features.ide.intellisense_desc', 'O motor do Monaco Editor preserva a sintaxe React/JSX nativamente, fornecendo autocompletar inteligente, formatação e alertas de erros em tempo real sem lentidão, focando apenas no que importa.'),
+      icon: <Zap className="w-8 h-8 text-amber-500" />,
+      color: "from-amber-500/20 to-yellow-500/5",
+      borderColor: "border-amber-500/20"
+    },
+    {
+      title: t('marketing_v2.features.ide.tabs_title', 'Gestão de Merges e Abas'),
+      desc: t('marketing_v2.features.ide.tabs_desc', 'Controle supremo do seu fluxo de trabalho: botões "Fechar Salvos", navegação automática por trechos modificados (Diff Arrows) e reversão cirúrgica de arquivos durante o processo de Merge.'),
+      icon: <Lock className="w-8 h-8 text-red-500" />,
+      color: "from-red-500/20 to-orange-500/5",
+      borderColor: "border-red-500/20"
     }
   ]
 
@@ -104,7 +118,7 @@ export default function IDEFeaturePage() {
             <p className="text-neutral-500 text-lg">{t('marketing_v2.features.ide.pro_desc', 'Controle absoluto sobre o seu código e infraestrutura.')}</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {proFeatures.map((feature, idx) => (
               <div 
                 key={idx} 
