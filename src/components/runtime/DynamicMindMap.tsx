@@ -380,13 +380,41 @@ export default function DynamicMindMap({
 
       if (isEjectedApp) {
         try {
-          const res = await fetch(`/api/${tableName}?filter_${nextLevelConfig.foreign_key}=${encodeURIComponent(parentId)}&limit=1000`);
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || 'Erro na API Local');
+          let apiData: any[] = [];
+
+          if (nextLevelConfig.relation_type === 'indirect' && nextLevelConfig.through_table) {
+            // Step 1: fetch junction/through table records
+            const junctionRes = await fetch(`/api/${nextLevelConfig.through_table}?filter_${nextLevelConfig.through_local_fk}=${encodeURIComponent(parentId)}&limit=1000`);
+            if (!junctionRes.ok) {
+              const err = await junctionRes.json().catch(() => ({}));
+              throw new Error(err.error || 'Erro ao buscar tabela intermediária');
+            }
+            const junctionRaw = await junctionRes.json();
+            const junctionRecords: any[] = Array.isArray(junctionRaw) ? junctionRaw : (junctionRaw.data || []);
+            const targetIds = [...new Set(junctionRecords.map((r: any) => r[nextLevelConfig.through_target_fk!]).filter(Boolean))];
+
+            if (targetIds.length === 0) {
+              apiData = [];
+            } else {
+              // Step 2: fetch target records — batch into individual calls if needed
+              const targetFetches = await Promise.all(
+                targetIds.map((id: any) =>
+                  fetch(`/api/${tableName}?filter_id=${encodeURIComponent(id)}&limit=1`).then(r => r.json()).catch(() => null)
+                )
+              );
+              apiData = targetFetches.flatMap((r: any) => Array.isArray(r) ? r : (r?.data || [])).filter(Boolean);
+            }
+          } else {
+            // Direct relation: use foreign_key filter
+            const res = await fetch(`/api/${tableName}?filter_${nextLevelConfig.foreign_key}=${encodeURIComponent(parentId)}&limit=1000`);
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || 'Erro na API Local');
+            }
+            const resData = await res.json();
+            apiData = Array.isArray(resData) ? resData : (resData.data || []);
           }
-          const resData = await res.json();
-          const apiData = Array.isArray(resData) ? resData : (resData.data || []);
+
           handleResult({ payload: { success: true, data: apiData, queryId } });
         } catch (err: any) {
           handleResult({ payload: { success: false, error: err.message, queryId } });
