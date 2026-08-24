@@ -958,7 +958,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       if (!syncManager) return;
       setIsCommitLoading(true);
       try {
-        const files = await syncManager.getChangedFiles();
+        const files = mode === 'commit' 
+          ? await syncManager.getChangedFiles()
+          : await syncManager.getMergeDiffFiles();
+          
         if (files.length === 0) {
           toast(mode === 'commit' ? 'Nenhuma alteração local pendente.' : 'Nenhuma alteração para o merge.', 'info');
           return;
@@ -973,7 +976,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         if (files.length > 0) {
           const firstFile = files[0].filepath;
           setDiffActiveFile(firstFile);
-          const originalContent = await syncManager.getFileHeadContent(firstFile);
+          const targetRef = mode === 'merge' ? 'local' : 'HEAD';
+          const originalContent = await syncManager.getFileHeadContent(firstFile, targetRef);
           setDiffOriginalContent(originalContent);
           
           let localContent = '';
@@ -1000,7 +1004,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     diffRequestRef.current = filepath;
     
     try {
-      const originalContent = await syncManager.getFileHeadContent(filepath);
+      const targetRef = modalMode === 'merge' ? 'local' : 'HEAD';
+      const originalContent = await syncManager.getFileHeadContent(filepath, targetRef);
       if (diffRequestRef.current !== filepath) return;
       setDiffOriginalContent(originalContent);
       
@@ -1032,8 +1037,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     
     setIsCommitLoading(true);
     try {
+      const targetRef = modalMode === 'merge' ? 'local' : 'HEAD';
+      
       for (const filepath of filepaths) {
-        await syncManager.revertFile(filepath);
+        await syncManager.revertFile(filepath, targetRef);
         
         // se tava selecionado pro commit, removemos
         setSelectedCommitFiles(prev => {
@@ -1043,7 +1050,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         });
 
         // update file contents se aberto
-        const originalContent = await syncManager.getFileHeadContent(filepath);
+        const originalContent = await syncManager.getFileHeadContent(filepath, targetRef);
         const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${filepath}` : filepath;
         if (fileContents[fullPath] !== undefined) {
           setFileContents(prev => ({ ...prev, [fullPath]: originalContent }));
@@ -1068,7 +1075,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      const newFiles = await syncManager.getChangedFiles();
+      const newFiles = modalMode === 'commit' 
+        ? await syncManager.getChangedFiles()
+        : await syncManager.getMergeDiffFiles();
+        
       setChangedFiles(newFiles);
       setSelectedListFiles(new Set());
       lastSelectedFileRef.current = null;

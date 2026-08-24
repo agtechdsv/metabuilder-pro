@@ -466,6 +466,37 @@ export class LocalSyncManager {
       });
     }
 
+    public async getMergeDiffFiles(): Promise<{filepath: string, status: 'added'|'modified'|'deleted'}[]> {
+      if (!isTauri()) return [];
+      
+      const { local } = await this.getConfiguredBranches();
+      const trees = [git.TREE({ ref: local }), git.WORKDIR()];
+      
+      const changes: {filepath: string, status: 'added'|'modified'|'deleted'}[] = [];
+      
+      await git.walk({
+        fs: tauriFsAdapter,
+        dir: this.projectDir,
+        trees,
+        map: async function(filepath, [localNode, workdirNode]) {
+          if (filepath === '.' || filepath === '.git') return;
+          if (filepath === 'node_modules' || filepath.startsWith('node_modules/')) return;
+          if (filepath === '.next' || filepath.startsWith('.next/')) return;
+          
+          let localOid = await localNode?.oid();
+          let workdirOid = await workdirNode?.oid();
+          
+          if (localOid !== workdirOid) {
+            if (!localNode) changes.push({ filepath, status: 'added' });
+            else if (!workdirNode) changes.push({ filepath, status: 'deleted' });
+            else changes.push({ filepath, status: 'modified' });
+          }
+        }
+      });
+      
+      return changes;
+    }
+
     public async getChangedFiles(): Promise<{filepath: string, status: 'added'|'modified'|'deleted'}[]> {
       if (!isTauri()) return [];
       const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
@@ -484,10 +515,10 @@ export class LocalSyncManager {
       return changedFiles;
     }
 
-    public async getFileHeadContent(filepath: string): Promise<string> {
+    public async getFileHeadContent(filepath: string, targetRef: string = 'HEAD'): Promise<string> {
       if (!isTauri()) return '';
       try {
-        const oid = await git.resolveRef({ fs: tauriFsAdapter, dir: this.projectDir, ref: 'HEAD' });
+        const oid = await git.resolveRef({ fs: tauriFsAdapter, dir: this.projectDir, ref: targetRef });
         const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid, filepath });
         return new TextDecoder().decode(blob);
       } catch (err) {
@@ -518,23 +549,26 @@ export class LocalSyncManager {
       }
     }
 
-    public async revertFile(filepath: string): Promise<void> {
+    public async revertFile(filepath: string, targetRef: string = 'HEAD'): Promise<void> {
       if (!isTauri()) return;
       try {
-        const allFiles = await git.statusMatrix({ fs: tauriFsAdapter, dir: this.projectDir });
-        const fileStatus = allFiles.find(f => f[0] === filepath);
-        if (!fileStatus) return;
+        let existsInRef = false;
+        try {
+          const oid = await git.resolveRef({ fs: tauriFsAdapter, dir: this.projectDir, ref: targetRef });
+          const { blob } = await git.readBlob({ fs: tauriFsAdapter, dir: this.projectDir, oid, filepath });
+          existsInRef = !!blob;
+        } catch(e) {}
         
-        const headStatus = fileStatus[1];
-        if (headStatus === 0) {
+        if (!existsInRef) {
           // File was added locally, revert means delete
           const fullPath = await join(this.projectDir, filepath);
-          await tauriFsAdapter.promises.unlink(fullPath);
+          try { await tauriFsAdapter.promises.unlink(fullPath); } catch (e) {}
         } else {
-          // File was modified or deleted, restore from HEAD
+          // File was modified or deleted, restore from targetRef
           await git.checkout({
             fs: tauriFsAdapter,
             dir: this.projectDir,
+            ref: targetRef,
             filepaths: [filepath],
             force: true
           });

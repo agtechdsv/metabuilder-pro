@@ -2488,7 +2488,9 @@
       "close_window": "Close Window",
       "auth_error_title": "Authentication Error",
       "auth_error_desc": "Could not complete login.",
-      "close_try_again": "Close and Try Again"
+      "close_try_again": "Close and Try Again",
+      "redirecting": "Redirecting...",
+      "preparing_env": "Preparing your work environment."
     },
     "mfa": {
       "challenge_title": "2-Factor Authentication",
@@ -3700,8 +3702,8 @@
     "unknown_error": "Unknown error",
     "parse_failed_warning": "⚠️ **Warning:** An error occurred while parsing the AI-generated code (the format returned corrupted or incomplete). You can try copying the code manually from the response above, or ask the AI to generate again by typing \"Try again\".",
     "error_communication": "Error communicating with AI"
-  }
-  ,"ide_commit_local": {
+  },
+  "ide_commit_local": {
     "title": "Commit Changes",
     "desc": "This will add and commit all selected files.",
     "message_label": "Commit Message",

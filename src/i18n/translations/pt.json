@@ -2489,7 +2489,9 @@
       "close_window": "Fechar Janela",
       "auth_error_title": "Erro na Autenticação",
       "auth_error_desc": "Não foi possível concluir o login.",
-      "close_try_again": "Fechar e Tentar Novamente"
+      "close_try_again": "Fechar e Tentar Novamente",
+      "preparing_env": "Preparando seu ambiente de trabalho.",
+      "redirecting": "Redirecionando..."
     },
     "mfa": {
       "challenge_title": "Verificação de 2 Fatores",
@@ -3701,8 +3703,8 @@
     "unknown_error": "Erro desconhecido",
     "parse_failed_warning": "⚠️ **Aviso:** Ocorreu um erro ao interpretar o código gerado pela IA (o formato retornou corrompido ou incompleto). Você pode tentar copiar o código manualmente da resposta acima, ou pedir para a IA gerar novamente com a mensagem \"Tente novamente\".",
     "error_communication": "Erro ao comunicar com a IA"
-  }
-  ,"ide_commit_local": {
+  },
+  "ide_commit_local": {
     "title": "Realizar Commit",
     "desc": "Isso adicionará e commitará todos os arquivos selecionados.",
     "message_label": "Mensagem do Commit",

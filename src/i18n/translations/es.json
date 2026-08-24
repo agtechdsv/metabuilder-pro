@@ -2559,7 +2559,9 @@
       "close_window": "Cerrar Ventana",
       "auth_error_title": "Error de Autenticación",
       "auth_error_desc": "No se pudo completar el inicio de sesión.",
-      "close_try_again": "Cerrar y Intentar de Nuevo"
+      "close_try_again": "Cerrar y Intentar de Nuevo",
+      "redirecting": "Redirigiendo...",
+      "preparing_env": "Preparando su ambiente de trabajo."
     },
     "mfa": {
       "challenge_title": "Autenticación de 2 Factores",
@@ -3760,8 +3762,8 @@
     "unknown_error": "Error desconocido",
     "parse_failed_warning": "⚠️ **Aviso:** Se produjo un error al interpretar el código generado por la IA (el formato regresó corrupto o incompleto). Puede intentar copiar el código manualmente de la respuesta anterior o pedir a la IA que genere nuevamente con el mensaje \"Intente nuevamente\".",
     "error_communication": "Error al comunicarse con la IA"
-  }
-  ,"ide_commit_local": {
+  },
+  "ide_commit_local": {
     "title": "Realizar Commit",
     "desc": "Esto agregará y confirmará todos los archivos seleccionados.",
     "message_label": "Mensaje del Commit",
