@@ -406,6 +406,32 @@ export default function DynamicMindMap({
               );
               apiData = targetFetches.flatMap((r: any) => Array.isArray(r) ? r : (r?.data || [])).filter(Boolean);
             }
+          } else if (nextLevelConfig.relation_type === 'multilevel' && nextLevelConfig.relation_path?.length) {
+            // Multi-hop fetch: traverse each hop in relation_path
+            // Example: funcionarios → pedidos (via funcionario_id) → clientes (via cliente_id)
+            const hop = nextLevelConfig.relation_path[0];
+            // Step 1: fetch the hop table records where hop.to_field = parentId
+            const hopRes = await fetch(`/api/${hop.table}?filter_${hop.to_field}=${encodeURIComponent(parentId)}&limit=1000`);
+            if (!hopRes.ok) {
+              const err = await hopRes.json().catch(() => ({}));
+              throw new Error(err.error || `Erro ao buscar tabela intermediária ${hop.table}`);
+            }
+            const hopRaw = await hopRes.json();
+            const hopRecords: any[] = Array.isArray(hopRaw) ? hopRaw : (hopRaw.data || []);
+            // Step 2: extract unique target IDs from hop records using target_from_field
+            const targetIds = [...new Set(hopRecords.map((r: any) => r[hop.target_from_field]).filter(Boolean))];
+
+            if (targetIds.length === 0) {
+              apiData = [];
+            } else {
+              // Step 3: fetch target records by target_to_field (usually 'id')
+              const targetFetches = await Promise.all(
+                targetIds.map((id: any) =>
+                  fetch(`/api/${tableName}?filter_${hop.target_to_field}=${encodeURIComponent(id)}&limit=1`).then(r => r.json()).catch(() => null)
+                )
+              );
+              apiData = targetFetches.flatMap((r: any) => Array.isArray(r) ? r : (r?.data || [])).filter(Boolean);
+            }
           } else {
             // Direct relation: use foreign_key filter
             const res = await fetch(`/api/${tableName}?filter_${nextLevelConfig.foreign_key}=${encodeURIComponent(parentId)}&limit=1000`);
