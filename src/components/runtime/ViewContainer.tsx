@@ -612,7 +612,7 @@ export default function ViewContainer({
             isTunnelReady={isTunnelReady}
             customActions={customActions}
             onCustomAction={handleCustomAction}
-            refreshTrigger={refreshTrigger}
+            refreshTrigger={refreshTrigger + (externalRefreshTrigger || 0)}
           />
         </div>
       ) : viewMode === 'galeria' ? (

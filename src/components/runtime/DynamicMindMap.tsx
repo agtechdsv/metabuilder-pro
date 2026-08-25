@@ -235,13 +235,11 @@ export default function DynamicMindMap({
     });
     
     if (prevRootIdsRef.current !== newRootIdsSorted) {
-      if (newTree.length === 1) {
+      if (newTree.length === 1 && currentPath.length === 0) {
         setCurrentPath([0]);
         if (newTree[0].children === undefined) {
           setTimeout(() => fetchChildren([0], newTree[0]), 50);
         }
-      } else {
-        setCurrentPath([]);
       }
       prevRootIdsRef.current = newRootIdsSorted;
     }
@@ -252,10 +250,32 @@ export default function DynamicMindMap({
   const currentNode = useMemo(() => {
     let current = { children: treeData, id: 'virtual-root', name: 'Virtual Root', count: 0, level: -1 } as MindMapNode
     for (const index of currentPath) {
-      if (current.children && current.children[index]) current = current.children[index]
+      if (current.children && current.children[index]) {
+        current = current.children[index]
+      } else {
+        break
+      }
     }
     return current
   }, [treeData, currentPath])
+
+  // Validar currentPath contra treeData para evitar caminhos inválidos
+  useEffect(() => {
+    let current: any = { children: treeData };
+    let validLength = 0;
+    for (let i = 0; i < currentPath.length; i++) {
+      const idx = currentPath[i];
+      if (current.children && current.children[idx]) {
+        current = current.children[idx];
+        validLength++;
+      } else {
+        break;
+      }
+    }
+    if (validLength < currentPath.length) {
+      setCurrentPath(currentPath.slice(0, validLength));
+    }
+  }, [treeData, currentPath]);
 
   const prevRefreshTriggerRef = useRef(refreshTrigger || 0);
   useEffect(() => {
