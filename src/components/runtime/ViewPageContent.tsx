@@ -516,8 +516,10 @@ const isModal = actionInterfaceType === 'modal'
       const isPage = levelConfig.edit_usecase_open_mode === 'page';
 
       // In ejected apps, routes are /{slug} without workspace/project prefix.
-      // Detect by env var or by absence of workspace slug.
-      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !workspace?.slug;
+      // The most reliable way to detect this on the client is checking the current URL structure.
+      const isNestedRoute = typeof window !== 'undefined' && window.location.pathname.startsWith(`/${workspace?.slug}/${project?.slug}`);
+      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !isNestedRoute;
+      
       const finalUrl = isEjectedApp
         ? `/${targetSlug}?${params}`
         : `/${workspace.slug}/${project.slug}/${targetSlug}?${params}`;
