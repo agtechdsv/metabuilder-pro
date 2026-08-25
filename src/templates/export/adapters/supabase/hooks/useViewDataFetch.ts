@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 
@@ -21,12 +21,13 @@ export function useViewDataFetch({
   const [error, setError] = useState<string | null>(null)
   const [totalServerRows, setTotalServerRows] = useState<number>(0)
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false)
+  const hasFetchedRef = useRef(false)
   const handleMove = useCallback(async (recordId: string, newValue: any) => {}, [])
 
   const fetchData = useCallback(async (filters?: any, forceRefresh?: boolean, append?: boolean) => {
-    if (data.length > 0 && !forceRefresh && !append) {
+    if (hasFetchedRef.current && !forceRefresh && !append) {
       setIsFetchingBackground(true)
-    } else if (data.length > 0 && forceRefresh) {
+    } else if (hasFetchedRef.current && forceRefresh) {
       setIsFetchingBackground(true)
     } else {
       setIsLoading(true)
@@ -55,6 +56,8 @@ export function useViewDataFetch({
 
       setData(resultData || [])
       setTotalServerRows(count || 0)
+      hasFetchedRef.current = true
+      setHasFetchedInitial(true)
     } catch (err: any) {
       setError(err.message)
       toast(err.message, 'error')
