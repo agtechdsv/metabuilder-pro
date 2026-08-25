@@ -36,6 +36,13 @@ export function useTunnelConnection({
   const [isTunnelReady, setIsTunnelReady] = useState(false)
 
   useEffect(() => {
+    // Em apps ejected, não precisamos do WebSocket tunnel — a API REST local é suficiente.
+    // Marcamos isTunnelReady=true imediatamente para que o ViewContainer possa buscar dados.
+    if (isEjectedAppProp) {
+      setIsTunnelReady(true)
+      return
+    }
+
     if (!project?.id) return
 
     const channelName = `tunnel:${project.id}`
@@ -86,11 +93,13 @@ export function useTunnelConnection({
       setTunnelChannel(null)
       setIsTunnelReady(false)
     }
-  }, [project?.id, modelName, primaryKeyName, setRefreshKey, setRelationalRefreshKey, setDetailRefreshKey, setSelectedRow])
+  }, [isEjectedAppProp, project?.id, modelName, primaryKeyName, setRefreshKey, setRelationalRefreshKey, setDetailRefreshKey, setSelectedRow])
 
   // Modo "Apenas Cadastro" com ID passado por parâmetro: busca o registro e abre em edição
   useEffect(() => {
-    const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || typeof tunnelChannel?.on !== 'function'
+    // isEjectedAppProp é a fonte autoritativa (calculado por ViewPageContent via estrutura de URL).
+    // O fallback para typeof tunnelChannel?.on garante compatibilidade em contextos sem prop.
+    const isEjectedApp = isEjectedAppProp || process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || typeof tunnelChannel?.on !== 'function'
     
     if (!isCadastroOnly || !initialEditId) return
     if (!isEjectedApp && (!isTunnelReady || !tunnelChannel)) return
