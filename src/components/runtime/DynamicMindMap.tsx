@@ -181,7 +181,7 @@ export default function DynamicMindMap({
       const desc = rawDesc ? formatValue(rawDesc, rootLevel.desc_field || '', rootLevel.model_id) : undefined;
       
       const pk = primaryKeyName || 'id';
-      const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
+      const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : (item.ID !== undefined ? item.ID : (item.uuid !== undefined ? item.uuid : item.UUID))));
       const key = rowId !== undefined ? rowId : `root-${idx}`;
       
       if (!uniqueMap.has(key)) {
@@ -244,6 +244,8 @@ export default function DynamicMindMap({
 
   // Validar currentPath contra treeData para evitar caminhos inválidos
   useEffect(() => {
+    if (!treeData || treeData.length === 0) return;
+    
     let current: any = { children: treeData };
     let validLength = 0;
     for (let i = 0; i < currentPath.length; i++) {
@@ -375,7 +377,7 @@ export default function DynamicMindMap({
                 childPkName = pkField.db_column_name;
               }
             }
-            const rowId = item[childPkName] !== undefined ? item[childPkName] : (item[childPkName.toUpperCase()] !== undefined ? item[childPkName.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
+            const rowId = item[childPkName] !== undefined ? item[childPkName] : (item[childPkName.toUpperCase()] !== undefined ? item[childPkName.toUpperCase()] : (item.id !== undefined ? item.id : (item.ID !== undefined ? item.ID : (item.uuid !== undefined ? item.uuid : item.UUID))));
             const key = rowId !== undefined ? rowId : `${node.id}-child-${idx}`;
             
             if (!uniqueChildren.has(key)) {

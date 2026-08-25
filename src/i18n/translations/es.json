@@ -3657,7 +3657,18 @@
       "collapse_all": "Contraer todo",
       "no_file_selected": "Ningún archivo seleccionado",
       "close_file": "Cerrar archivo",
-      "select_file_hint": "Seleccione un archivo en el árbol lateral"
+      "select_file_hint": "Seleccione un archivo en el árbol lateral",
+      "sync_discarded": "Sincronización Descartada",
+      "starting_npm_install": "Iniciando npm install...",
+      "starting_next_server": "Iniciando servidor Next.js...",
+      "server_stopped": "Servidor detenido.",
+      "syncing_cloud": "Sincronizando archivos con la nube...",
+      "stopping": "Deteniendo...",
+      "stop": "Detener",
+      "discard_sync_title": "¿Descartar Sincronización?",
+      "discard_sync_desc1": "Esto cancelará el proceso de fusión y revertirá su proyecto local exactamente al estado antes de la sincronización. Ninguno de los cambios remotos se aplicará a su entorno local.",
+      "discard_sync_desc2": "¿Está seguro de que desea continuar? Esta acción no se puede deshacer.",
+      "yes_discard_all": "Sí, Descartar Todo"
     }
   },
   "formula_builder": {

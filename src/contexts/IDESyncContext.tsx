@@ -724,7 +724,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       setOpenFiles([])
       setActiveFile(null)
       setShowDiscardConfirm(false)
-      toast('Sincronização Descartada', 'info')
+      toast(t('workspace_components.ide_local.sync_discarded', 'Sincronização Descartada'), 'info')
     } catch (err: any) {
       toast(`Erro: ${err.message}`, 'error')
     } finally {
@@ -761,7 +761,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     if (!target || isInstalling || devProcess) return
     setIsInstalling(true)
     setShowConsole(true)
-    addConsoleLog('▶ Iniciando npm install...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_npm_install', 'Iniciando npm install...')}`, 'info')
     try {
       const projectPath = await getProjectPath()
       const { listen } = await import('@tauri-apps/api/event')
@@ -791,7 +791,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleStart = async () => {
     if (!target || devProcess || isInstalling) return
     setShowConsole(true)
-    addConsoleLog('▶ Iniciando servidor Next.js...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_next_server', 'Iniciando servidor Next.js...')}`, 'info')
     try {
       const projectPath = await getProjectPath()
       await invoke('start_nextjs_server', { projectPath })
@@ -833,7 +833,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         if (text.includes('Encerrado com código')) {
           setDevProcess(null)
           setIsStoppingServer(false)
-          addConsoleLog('■ Servidor encerrado.', 'info')
+          addConsoleLog(`■ ${t('workspace_components.ide_local.server_stopped', 'Servidor encerrado.')}`, 'info')
           unlisten()
         }
       })
@@ -1925,7 +1925,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                 {isStoppingServer
                                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
-                                <span className="hidden sm:inline">{isStoppingServer ? 'Parando...' : 'Stop'}</span>
+                                <span className="hidden sm:inline">{isStoppingServer ? t('workspace_components.ide_local.stopping', 'Parando...') : t('workspace_components.ide_local.stop', 'Stop')}</span>
                               </button>
                             )}
 
@@ -2494,12 +2494,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
             <div className="p-6">
-              <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center mb-4">
-                <XCircle className="w-6 h-6 text-red-500" />
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">Descartar Sincronização?</h2>
-              <p className="text-sm text-neutral-400">
-                Tem certeza que deseja descartar esta sincronização? Todas as alterações não confirmadas serão perdidas e seus arquivos voltarão ao estado anterior. Esta ação não pode ser desfeita.
+              <h3 className="text-xl font-black text-white mb-2">{t('workspace_components.ide_local.discard_sync_title', 'Descartar Sincronização?')}</h3>
+              <p className="text-neutral-400 text-sm">
+                {t('workspace_components.ide_local.discard_sync_desc1', 'Isso irá cancelar o processo de merge e reverter seu projeto local exatamente para o estado antes da sincronização. Nenhuma das alterações remotas será aplicada no seu ambiente local.')}
+              </p>
+              <p className="text-rose-400 text-sm mt-3 font-semibold">
+                {t('workspace_components.ide_local.discard_sync_desc2', 'Tem certeza que deseja prosseguir? Esta ação não pode ser desfeita.')}
               </p>
             </div>
             <div className="bg-neutral-900/50 p-4 border-t border-neutral-800 flex justify-end gap-3">
@@ -2508,14 +2508,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 disabled={isDiscarding}
                 className="px-4 py-2 text-sm font-semibold text-neutral-300 hover:text-white transition-colors disabled:opacity-50"
               >
-                Cancelar
+                {t('workspace_components.ide_local.cancel', 'Cancelar')}
               </button>
               <button 
                 onClick={handleAbortSync}
                 disabled={isDiscarding}
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold transition-colors shadow-lg shadow-red-500/20 disabled:opacity-50"
               >
-                {isDiscarding ? 'Descartando...' : 'Sim, Descartar Tudo'}
+                {isDiscarding ? t('workspace_components.ide_local.discarding', 'Descartando...') : t('workspace_components.ide_local.yes_discard_all', 'Sim, Descartar Tudo')}
               </button>
             </div>
           </div>

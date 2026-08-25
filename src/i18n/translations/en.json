@@ -3597,7 +3597,18 @@
       "collapse_all": "Collapse All",
       "no_file_selected": "No file selected",
       "close_file": "Close file",
-      "select_file_hint": "Select a file from the tree on the left"
+      "select_file_hint": "Select a file from the tree on the left",
+      "sync_discarded": "Sync Discarded",
+      "starting_npm_install": "Starting npm install...",
+      "starting_next_server": "Starting Next.js server...",
+      "server_stopped": "Server stopped.",
+      "syncing_cloud": "Syncing files with the cloud...",
+      "stopping": "Stopping...",
+      "stop": "Stop",
+      "discard_sync_title": "Discard Synchronization?",
+      "discard_sync_desc1": "This will cancel the merge process and revert your local project exactly to the state before synchronization. None of the remote changes will be applied to your local environment.",
+      "discard_sync_desc2": "Are you sure you want to proceed? This action cannot be undone.",
+      "yes_discard_all": "Yes, Discard All"
     }
   },
   "formula_builder": {

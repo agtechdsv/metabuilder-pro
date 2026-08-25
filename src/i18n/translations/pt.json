@@ -3598,7 +3598,18 @@
       "collapse_all": "Retrair tudo",
       "no_file_selected": "Nenhum arquivo selecionado",
       "close_file": "Fechar arquivo",
-      "select_file_hint": "Selecione um arquivo na árvore ao lado"
+      "select_file_hint": "Selecione um arquivo da árvore à esquerda",
+      "sync_discarded": "Sincronização Descartada",
+      "starting_npm_install": "Iniciando npm install...",
+      "starting_next_server": "Iniciando servidor Next.js...",
+      "server_stopped": "Servidor encerrado.",
+      "syncing_cloud": "Sincronizando arquivos com a nuvem...",
+      "stopping": "Parando...",
+      "stop": "Stop",
+      "discard_sync_title": "Descartar Sincronização?",
+      "discard_sync_desc1": "Isso irá cancelar o processo de merge e reverter seu projeto local exatamente para o estado antes da sincronização. Nenhuma das alterações remotas será aplicada no seu ambiente local.",
+      "discard_sync_desc2": "Tem certeza que deseja prosseguir? Esta ação não pode ser desfeita.",
+      "yes_discard_all": "Sim, Descartar Tudo"
     }
   },
   "formula_builder": {
