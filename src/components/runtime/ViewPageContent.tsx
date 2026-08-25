@@ -515,7 +515,12 @@ const isModal = actionInterfaceType === 'modal'
       const isDrawer = levelConfig.edit_usecase_open_mode === 'drawer';
       const isPage = levelConfig.edit_usecase_open_mode === 'page';
 
-      const finalUrl = `/${workspace.slug}/${project.slug}/${targetSlug}?${params}`;
+      // In ejected apps, routes are /{slug} without workspace/project prefix.
+      // Detect by env var or by absence of workspace slug.
+      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !workspace?.slug;
+      const finalUrl = isEjectedApp
+        ? `/${targetSlug}?${params}`
+        : `/${workspace.slug}/${project.slug}/${targetSlug}?${params}`;
 
       if (isPage) {
         window.location.href = finalUrl;
