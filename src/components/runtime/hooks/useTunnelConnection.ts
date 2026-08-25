@@ -88,10 +88,39 @@ export function useTunnelConnection({
 
   // Modo "Apenas Cadastro" com ID passado por parâmetro: busca o registro e abre em edição
   useEffect(() => {
-    if (!isCadastroOnly || !initialEditId || !isTunnelReady || !tunnelChannel) return
+    const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || typeof tunnelChannel?.on !== 'function'
+    
+    if (!isCadastroOnly || !initialEditId) return
+    if (!isEjectedApp && (!isTunnelReady || !tunnelChannel)) return
+
+    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
+
+    if (isEjectedApp) {
+      console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Ejected via API Local`)
+      fetch(`/api/${modelName}?filter_${cleanPk}=${encodeURIComponent(initialEditId)}&limit=1`)
+        .then(r => r.json())
+        .then(res => {
+          const data = Array.isArray(res) ? res : (res.data || [])
+          if (data.length > 0) {
+            const record = { ...data[0] }
+            // Espelhamento em lowercase
+            for (const key in data[0]) {
+              const lowerKey = key.toLowerCase()
+              if (record[lowerKey] === undefined) {
+                record[lowerKey] = data[0][key]
+              }
+            }
+            setSelectedRow(record)
+            setDrawerMode('edit')
+            setIsPageVisible(true)
+            console.log(`[MetaBuilder] ✅ Registro encontrado via API:`, record)
+          }
+        })
+        .catch(err => console.error(`[MetaBuilder] ❌ Erro ao buscar via API:`, err))
+      return
+    }
 
     const queryId = crypto.randomUUID()
-    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
     const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
     const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
     const dbType = (project?.db_type || 'postgres').toLowerCase();
