@@ -326,6 +326,37 @@ export default function ViewPageContent({
     isEjectedApp
   });
 
+  // Em apps ejected, o useTunnelConnection é substituído por um mock vazio pelo SourceCodeGenerator.
+  // Por isso, precisamos buscar o registro aqui diretamente via REST API quando edit_id está na URL.
+  useEffect(() => {
+    if (!isEjectedApp) return
+    if (!initialEditId || !isCadastroOnly) return
+
+    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
+
+    console.log(`[MetaBuilder] 🔍 [Ejected] Buscando registro para edição via API: /${modelName}?filter_${cleanPk}=${initialEditId}`)
+
+    fetch(`/api/${modelName}?filter_${cleanPk}=${encodeURIComponent(initialEditId)}&limit=1`)
+      .then(r => r.json())
+      .then(res => {
+        const records = Array.isArray(res) ? res : (res.data || [])
+        if (records.length > 0) {
+          const raw = records[0]
+          const record: any = { ...raw }
+          // Espelha chaves em lowercase para compatibilidade com drivers que retornam UPPERCASE (ex: Oracle)
+          for (const key in raw) {
+            const lowerKey = key.toLowerCase()
+            if (record[lowerKey] === undefined) record[lowerKey] = raw[key]
+          }
+          setSelectedRow(record)
+          setDrawerMode('edit')
+          setIsPageVisible(true)
+          console.log(`[MetaBuilder] ✅ [Ejected] Registro encontrado para edição:`, record)
+        }
+      })
+      .catch(err => console.error(`[MetaBuilder] ❌ [Ejected] Erro ao buscar registro:`, err))
+  }, [isEjectedApp, initialEditId, isCadastroOnly, modelName, primaryKeyName])
+
   const {
     fetchDetails,
     isDetailModalOpen, setIsDetailModalOpen,
@@ -509,8 +540,22 @@ const isModal = actionInterfaceType === 'modal'
     const levelConfig = mindmapLevels?.[levelIndex];
     if (levelConfig && levelConfig.edit_usecase_slug) {
       const targetSlug = levelConfig.edit_usecase_slug;
-      const pk = primaryKeyName || 'id';
-      const rowId = row[pk] !== undefined ? row[pk] : (row[pk.toUpperCase()] !== undefined ? row[pk.toUpperCase()] : (row.id !== undefined ? row.id : row.ID));
+      
+      // Look up the correct primary key name for this level's model
+      let levelPkName = 'id';
+      if (levelConfig.model_id && project?.models) {
+        const levelModel = project.models.find((m: any) => String(m.id) === String(levelConfig.model_id));
+        if (levelModel && levelModel.fields) {
+          const pkField = levelModel.fields.find((f: any) => f.is_primary_key);
+          if (pkField && pkField.db_column_name) {
+            levelPkName = pkField.db_column_name;
+          }
+        }
+      } else {
+        levelPkName = primaryKeyName || 'id';
+      }
+
+      const rowId = row[levelPkName] !== undefined ? row[levelPkName] : (row[levelPkName.toUpperCase()] !== undefined ? row[levelPkName.toUpperCase()] : (row.id !== undefined ? row.id : row.ID));
       let params = `edit_id=${rowId}`;
       if (typeof window !== 'undefined' && window.location.search.includes('preview=')) {
         const previewParam = new URLSearchParams(window.location.search).get('preview');

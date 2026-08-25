@@ -296,8 +296,20 @@ export default function DynamicMindMap({
       const tableName = String(modelData.db_table_name);
       const schemaName = modelData.db_schema_name || project?.slug || 'public';
       
-      const pk = primaryKeyName || 'id';
-      const rawDataId = node.rawData ? (node.rawData[pk] !== undefined ? node.rawData[pk] : (node.rawData[pk.toUpperCase()] !== undefined ? node.rawData[pk.toUpperCase()] : (node.rawData.id !== undefined ? node.rawData.id : node.rawData.ID))) : undefined;
+      let currentLevelPkName = primaryKeyName || 'id';
+      if (node.level >= 0) {
+        const currentLevelConfig = mindmapLevels[node.level];
+        if (currentLevelConfig && currentLevelConfig.model_id) {
+          const currentModel = models.find(m => m.id === currentLevelConfig.model_id);
+          if (currentModel && currentModel.fields) {
+            const pkField = currentModel.fields.find((f: any) => f.is_primary_key);
+            if (pkField && pkField.db_column_name) {
+              currentLevelPkName = pkField.db_column_name;
+            }
+          }
+        }
+      }
+      const rawDataId = node.rawData ? (node.rawData[currentLevelPkName] !== undefined ? node.rawData[currentLevelPkName] : (node.rawData[currentLevelPkName.toUpperCase()] !== undefined ? node.rawData[currentLevelPkName.toUpperCase()] : (node.rawData.id !== undefined ? node.rawData.id : node.rawData.ID))) : undefined;
       const parentId = String(rawDataId !== undefined ? rawDataId : node.id).replace(/'/g, "''");
       
       let rawQuery = '';
@@ -353,8 +365,14 @@ export default function DynamicMindMap({
             const rawDesc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
             const desc = rawDesc ? formatValue(rawDesc, nextLevelConfig.desc_field || '', nextLevelConfig.model_id) : undefined;
             
-            const pk = primaryKeyName || 'id';
-            const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
+            let childPkName = 'id';
+            if (modelData && modelData.fields) {
+              const pkField = modelData.fields.find((f: any) => f.is_primary_key);
+              if (pkField && pkField.db_column_name) {
+                childPkName = pkField.db_column_name;
+              }
+            }
+            const rowId = item[childPkName] !== undefined ? item[childPkName] : (item[childPkName.toUpperCase()] !== undefined ? item[childPkName.toUpperCase()] : (item.id !== undefined ? item.id : item.ID));
             const key = rowId !== undefined ? rowId : `${node.id}-child-${idx}`;
             
             if (!uniqueChildren.has(key)) {

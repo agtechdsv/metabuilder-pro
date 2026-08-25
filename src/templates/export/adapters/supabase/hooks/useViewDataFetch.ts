@@ -24,7 +24,13 @@ export function useViewDataFetch({
   const handleMove = useCallback(async (recordId: string, newValue: any) => {}, [])
 
   const fetchData = useCallback(async (filters?: any, forceRefresh?: boolean, append?: boolean) => {
-    setIsLoading(true)
+    if (data.length > 0 && !forceRefresh && !append) {
+      setIsFetchingBackground(true)
+    } else if (data.length > 0 && forceRefresh) {
+      setIsFetchingBackground(true)
+    } else {
+      setIsLoading(true)
+    }
     setError(null)
     try {
       let query = supabase.from(modelName).select('*', { count: 'exact' })
