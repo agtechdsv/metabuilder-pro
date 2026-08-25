@@ -197,33 +197,44 @@ export default function DynamicMindMap({
       }
     });
     const newTree = Array.from(uniqueMap.values());
-    const newRootIds = newTree.map(n => n.id).join(',');
+    const newRootIdsSorted = newTree.map(n => n.id).sort().join(',');
     
     setRelationalTree(prevTree => {
-      if (prevTree.length > 0 && prevTree.map(n => n.id).join(',') === newRootIds) {
-        const updateNames = (nodes: any[]): any[] => {
+      const prevRootIdsSorted = prevTree.map(n => n.id).sort().join(',');
+      
+      if (prevTree.length > 0 && prevRootIdsSorted === newRootIdsSorted) {
+        const newTreeMap = new Map(newTree.map(n => [n.id, n]));
+        
+        const updateNodes = (nodes: any[]): any[] => {
           return nodes.map(n => {
+            const freshNode = n.level === 0 ? newTreeMap.get(n.id) : n;
+            const rawDataToUse = freshNode ? freshNode.rawData : n.rawData;
+            
             const modelId = mindmapLevels[n.level]?.model_id;
             const titleField = mindmapLevels[n.level]?.title_field;
             const descField = mindmapLevels[n.level]?.desc_field;
-            const rawName = titleField ? n.rawData[titleField] : (n.rawData.name || n.rawData.nome || n.rawData.title || n.rawData.titulo || n.rawData.id);
+            
+            const rawName = titleField ? rawDataToUse[titleField] : (rawDataToUse.name || rawDataToUse.nome || rawDataToUse.title || rawDataToUse.titulo || rawDataToUse.id);
             const name = formatValue(rawName, titleField || '', modelId);
-            const rawDesc = descField ? n.rawData[descField] : undefined;
+            
+            const rawDesc = descField ? rawDataToUse[descField] : undefined;
             const desc = rawDesc ? formatValue(rawDesc, descField || '', modelId) : undefined;
+            
             return {
               ...n,
+              rawData: rawDataToUse,
               name: String(name || 'Sem Título'),
               desc: desc ? String(desc) : undefined,
-              children: n.children ? updateNames(n.children) : undefined
+              children: n.children ? updateNodes(n.children) : undefined
             };
           });
         };
-        return updateNames(prevTree);
+        return updateNodes(prevTree);
       }
       return newTree;
     });
     
-    if (prevRootIdsRef.current !== newRootIds) {
+    if (prevRootIdsRef.current !== newRootIdsSorted) {
       if (newTree.length === 1) {
         setCurrentPath([0]);
         if (newTree[0].children === undefined) {
@@ -232,7 +243,7 @@ export default function DynamicMindMap({
       } else {
         setCurrentPath([]);
       }
-      prevRootIdsRef.current = newRootIds;
+      prevRootIdsRef.current = newRootIdsSorted;
     }
   }, [data, isRelational, mindmapLevels, isTunnelReady, localeStr])
 

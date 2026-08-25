@@ -14,6 +14,7 @@ interface UseTunnelConnectionProps {
   setSelectedRow: React.Dispatch<React.SetStateAction<any>>
   setDrawerMode: React.Dispatch<React.SetStateAction<'create' | 'edit' | 'view'>>
   setIsPageVisible: React.Dispatch<React.SetStateAction<boolean>>
+  isEjectedApp?: boolean
 }
 
 export function useTunnelConnection({
@@ -27,7 +28,8 @@ export function useTunnelConnection({
   setDetailRefreshKey,
   setSelectedRow,
   setDrawerMode,
-  setIsPageVisible
+  setIsPageVisible,
+  isEjectedApp: isEjectedAppProp
 }: UseTunnelConnectionProps) {
   const supabase = createClient()
   const [tunnelChannel, setTunnelChannel] = useState<any>(null)

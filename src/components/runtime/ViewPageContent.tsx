@@ -307,6 +307,10 @@ export default function ViewPageContent({
   const [isIframeModalOpen, setIsIframeModalOpen] = useState(false)
   const [isIframeDrawerOpen, setIsIframeDrawerOpen] = useState(false)
 
+  // Detect if we are in an ejected app by checking if the URL does NOT have the workspace/project nested structure
+  const isNestedRoute = typeof window !== 'undefined' && window.location.pathname.startsWith(`/${workspace?.slug}/${project?.slug}`);
+  const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !isNestedRoute;
+
   const { tunnelChannel, isTunnelReady, supabase } = useTunnelConnection({
     project,
     modelName,
@@ -318,7 +322,8 @@ export default function ViewPageContent({
     setDetailRefreshKey,
     setSelectedRow,
     setDrawerMode,
-    setIsPageVisible
+    setIsPageVisible,
+    isEjectedApp
   });
 
   const {
@@ -517,9 +522,6 @@ const isModal = actionInterfaceType === 'modal'
 
       // In ejected apps, routes are /{slug} without workspace/project prefix.
       // The most reliable way to detect this on the client is checking the current URL structure.
-      const isNestedRoute = typeof window !== 'undefined' && window.location.pathname.startsWith(`/${workspace?.slug}/${project?.slug}`);
-      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !isNestedRoute;
-      
       const finalUrl = isEjectedApp
         ? `/${targetSlug}?${params}`
         : `/${workspace.slug}/${project.slug}/${targetSlug}?${params}`;
