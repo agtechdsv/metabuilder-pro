@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
+import { parseWorkspaceJSON } from '@/lib/generator/parser'
+import { generateWorkspaceProject } from '@/lib/generator/emitter'
+import { DbType } from '@/lib/generator/ast'
 import JSZip from 'jszip'
 
+/**
+ * POST /api/export-workspace
+ *
+ * Gera um único projeto Next.js (portal + N sub-rotas) para download em ZIP.
+ * Chamado pelo botão "Export Source Code (Next.js)" no WorkspaceManager.
+ */
 export async function POST(request: Request) {
   try {
-    const { workspaceId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase' } = await request.json()
+    const { workspaceId, dbStack = 'postgres' } = await request.json()
     const supabase = await createClient()
 
-    // 1. Authenticate
+    // 1. Autenticação
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -18,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID do workspace obrigatório' }, { status: 400 })
     }
 
-    // 2. Fetch Workspace Config
+    // 2. Buscar Workspace
     const { data: workspace, error: wsError } = await supabase
       .from('workspaces')
       .select('*')
@@ -29,134 +37,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Workspace não encontrado' }, { status: 404 })
     }
 
-    // 3. Fetch all projects in the workspace
-    const { data: projects, error: projError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('workspace_id', workspaceId)
+    // 3. Buscar todos os projetos com seus dados
+    const rawProjects = await fetchWorkspaceProjects(supabase, workspaceId)
 
-    if (projError || !projects || projects.length === 0) {
+    if (rawProjects.length === 0) {
       return NextResponse.json({ error: 'Nenhum projeto encontrado neste workspace' }, { status: 404 })
     }
 
-    // Create a Master Zip
-    const masterZip = new JSZip()
+    // 4. Parser → AST
+    const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType)
 
-    // Process each project
-    for (const project of projects) {
-      const projectId = project.id;
-      
-      // Fetch Models
-      const { data: models } = await supabase
-        .from('models')
-        .select('*, fields(*), ui_views(*)')
-        .eq('project_id', projectId)
-        
-      // Fetch BYOC (Custom Components)
-      const { data: customComponents } = await supabase
-        .from('ui_custom_components')
-        .select('*')
-        .eq('project_id', projectId)
+    // 5. Emitter → File Map
+    const fileMap = generateWorkspaceProject(ast)
 
-      // Fetch all UI Views
-      const { data: uiViews } = await supabase
-        .from('ui_views')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('status', 'published')
-        .order('created_at', { ascending: true })
-
-      let finalUiViews = uiViews
-      if (!finalUiViews || finalUiViews.length === 0) {
-        const { data: allViews } = await supabase
-          .from('ui_views')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: true })
-        finalUiViews = allViews
-      }
-
-      const mappedModels = (models || []).map((m: any) => {
-        const mappedFields = (m.fields || []).map((f: any) => ({
-          id: f.id,
-          column_name: f.db_column_name,
-          label: f.display_name,
-          field_type: f.data_type,
-          list_visible: f.is_visible_in_list !== false,
-          form_visible: f.is_visible_in_form !== false,
-          required: !f.is_nullable,
-          config: f.config || {}
-        }))
-
-        return {
-          ...m,
-          table_name: m.db_table_name,
-          db_table_name: m.db_table_name,
-          name: m.display_name,
-          ui_fields: mappedFields,
-          ui_views: m.ui_views || []
-        }
-      })
-
-      // Fetch Roles and Permissions
-      const { data: projectRoles } = await supabase
-        .from('project_roles')
-        .select('*')
-        .eq('project_id', projectId)
-
-      let rolePermissions: any[] = []
-      if (projectRoles && projectRoles.length > 0) {
-        const { data: perms } = await supabase
-          .from('project_role_permissions')
-          .select('*')
-          .in('role_id', projectRoles.map((r: any) => r.id))
-        if (perms) rolePermissions = perms
-      }
-
-      // Fetch Enumerations
-      const { data: enumerations } = await supabase
-        .from('project_enumerations')
-        .select('*')
-        .eq('project_id', projectId)
-
-      // Fetch Relations
-      const { data: rawProjectRelations } = await supabase
-        .from('relations')
-        .select('*')
-        .eq('project_id', projectId)
-
-      // Generate the Source Code (ZIP) for THIS project
-      const generator = new SourceCodeGenerator(
-        project, 
-        mappedModels, 
-        finalUiViews || [], 
-        customComponents || [], 
-        dataMode, 
-        authStrategy, 
-        legacyDriver, 
-        null, 
-        projectRoles || [], 
-        rolePermissions, 
-        enumerations || [], 
-        rawProjectRelations || []
-      )
-      
-      const projectZipBuffer = await generator.generate()
-      
-      // Add project zip to master zip
-      const fileName = `${project.slug || 'project'}-source-code.zip`
-      masterZip.file(fileName, projectZipBuffer)
+    // 6. Compactar em ZIP
+    const zip = new JSZip()
+    for (const [filePath, content] of fileMap) {
+      zip.file(filePath, content)
     }
+    const zipBuffer = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 9 }
+    })
 
-    // Generate Master Zip
-    const masterZipBuffer = await masterZip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 9 } })
-
-    // Return as a downloadable stream
-    return new NextResponse(masterZipBuffer as any, {
+    // 7. Retornar o ZIP
+    return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${workspace.slug || 'workspace'}-full-source.zip"`,
-        'Content-Length': masterZipBuffer.length.toString()
+        'Content-Disposition': `attachment; filename="${workspace.slug || 'workspace'}-native-source.zip"`,
+        'Content-Length': zipBuffer.length.toString()
       }
     })
 
@@ -164,4 +74,44 @@ export async function POST(request: Request) {
     console.error('[ExportWorkspace] Error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno ao gerar código' }, { status: 500 })
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: busca projetos completos (models + views + fields)
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+
+  if (!projects || projects.length === 0) return []
+
+  const enriched = await Promise.all(projects.map(async (project: any) => {
+    const projectId = project.id
+
+    const [{ data: models }, { data: uiViewsPublished }, { data: relations }] = await Promise.all([
+      supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
+      supabase.from('ui_views').select('*').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
+      supabase.from('relations').select('*').eq('project_id', projectId),
+    ])
+
+    // Fallback: se não há views publicadas, pega todas
+    let finalViews = uiViewsPublished
+    if (!finalViews || finalViews.length === 0) {
+      const { data: allViews } = await supabase
+        .from('ui_views').select('*').eq('project_id', projectId).order('created_at', { ascending: true })
+      finalViews = allViews
+    }
+
+    return {
+      ...project,
+      models: models || [],
+      views: finalViews || [],
+      fields: (models || []).flatMap((m: any) => m.fields || []),
+      relations: relations || [],
+    }
+  }))
+
+  return enriched
 }

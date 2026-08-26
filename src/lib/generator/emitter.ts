@@ -1,7 +1,8 @@
-import { AppAST } from './ast'
+import { AppAST, WorkspaceAST } from './ast'
 import { generateRoutes } from './layers/routes'
 import { generateActions } from './layers/actions'
 import { generateComponents } from './layers/components'
+import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss, generateProjectLayout } from './layers/portal'
 
 /**
  * emitter.ts
@@ -176,4 +177,96 @@ export default function Home() {
   )
 }
 `)
+}
+
+/**
+ * generateWorkspaceProject
+ *
+ * Recebe uma WorkspaceAST e produz um único projeto Next.js com:
+ *  - Portal de entrada (/) com cards de todos os projetos
+ *  - Sub-rotas por projeto (/[slug]/...)
+ *  - Server Actions e componentes isolados por projeto
+ */
+export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string> {
+  const files = new Map<string, string>()
+
+  // 1. Arquivos raiz do workspace (layout, globals, portal page)
+  files.set('app/layout.tsx', generateWorkspaceLayout(ast))
+  files.set('app/globals.css', generateWorkspaceGlobalCss())
+  files.set('app/page.tsx', generatePortalPage(ast))
+
+  // 2. package.json unificado (dependências de todos os projetos)
+  const allDeps: Record<string, string> = {
+    'next': '^14.2.0',
+    'react': '^18.3.0',
+    'react-dom': '^18.3.0',
+    'lucide-react': '^0.360.0',
+    'clsx': '^2.1.0',
+    'tailwind-merge': '^2.2.0',
+  }
+  if (ast.projects.some(p => p.app.dbStack === 'supabase')) {
+    allDeps['@supabase/ssr'] = '^0.3.0'
+    allDeps['@supabase/supabase-js'] = '^2.40.0'
+  }
+  if (ast.projects.some(p => p.app.dbStack === 'postgres'))   allDeps['pg'] = '^8.11.0'
+  if (ast.projects.some(p => p.app.dbStack === 'mysql'))      allDeps['mysql2'] = '^3.9.0'
+  if (ast.projects.some(p => p.app.dbStack === 'sqlserver'))  allDeps['mssql'] = '^10.0.0'
+  if (ast.projects.some(p => p.app.dbStack === 'oracle'))     allDeps['oracledb'] = '^6.5.0'
+
+  files.set('package.json', JSON.stringify({
+    name: ast.workspaceSlug,
+    version: '1.0.0',
+    private: true,
+    scripts: { dev: 'next dev', build: 'next build', start: 'next start' },
+    dependencies: allDeps,
+    devDependencies: {
+      typescript: '^5.0.0',
+      '@types/node': '^20',
+      '@types/react': '^18',
+      '@types/react-dom': '^18',
+      tailwindcss: '^3.4.0',
+      postcss: '^8.4.0',
+    },
+  }, null, 2))
+
+  // 3. .env.local com credenciais do workspace
+  if (ast.dbStack === 'supabase') {
+    files.set('.env.local', `NEXT_PUBLIC_SUPABASE_URL="${ast.supabaseUrl || ''}"\nNEXT_PUBLIC_SUPABASE_ANON_KEY="${ast.supabaseAnonKey || ''}"`)
+  } else {
+    files.set('.env.local', `DATABASE_URL="${ast.dbConnectionString || ''}"`)
+  }
+
+  // .gitignore
+  files.set('.gitignore', `/node_modules\n/.next\n/out\n.DS_Store\n.env*.local\n.env\n`)
+
+  // tailwind.config.ts
+  files.set('tailwind.config.ts', `import type { Config } from 'tailwindcss';\nconst config: Config = {\n  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],\n  theme: { extend: {} },\n  plugins: [],\n};\nexport default config;\n`)
+
+  // 4. Por projeto: layout + rotas + actions + components
+  for (const project of ast.projects) {
+    const pSlug = project.slug
+    const pApp = project.app
+
+    // Layout do projeto (sidebar com as rotas dele)
+    const routeNav = pApp.routes.map(r => ({ path: r.path, title: r.title }))
+    files.set(`app/${pSlug}/layout.tsx`, generateProjectLayout(project.name, pSlug, routeNav))
+
+    // Página índice do projeto (redirect para primeira view)
+    const firstRoute = pApp.routes[0]?.path || '/'
+    files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation';\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}');\n}\n`)
+
+    // Rotas, Actions e Components — com prefix do projeto
+    const projectFiles = new Map<string, string>()
+    generateRoutes(pApp, projectFiles)
+    generateActions(pApp, projectFiles)
+    generateComponents(pApp, projectFiles)
+
+    // Reprefixa todos os arquivos para ficarem dentro de app/[slug]/
+    for (const [path, content] of projectFiles) {
+      const newPath = path.replace(/^app\//, `app/${pSlug}/`)
+      files.set(newPath, content)
+    }
+  }
+
+  return files
 }

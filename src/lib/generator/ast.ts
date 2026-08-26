@@ -70,6 +70,7 @@ export interface ActionNode {
 
 export interface AppAST {
   projectName: string
+  projectSlug: string // ex: 'crm' — usado como sub-rota no workspace
   dbStack: DbType
   dbConnectionString?: string
   supabaseUrl?: string
@@ -77,4 +78,37 @@ export interface AppAST {
   models: ModelNode[]
   routes: RouteNode[]
   actions: ActionNode[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workspace AST (multi-projeto)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Representa um projeto dentro de um export de Workspace.
+ * Cada projeto vira uma sub-rota do app Next.js gerado.
+ */
+export interface WorkspaceProjectNode {
+  slug: string        // ex: 'crm'  → acessado em /{workspace}/{crm}
+  name: string        // ex: 'CRM Completo'
+  description?: string
+  app: AppAST         // AST completa do projeto
+}
+
+/**
+ * AST raiz de um export de Workspace.
+ * Gera um único projeto Next.js com portal de entrada + N projetos como sub-rotas.
+ *
+ * @v2 authScope: 'per-project' | 'workspace'
+ *   Futuramente o dev poderá escolher se o login será compartilhado
+ *   em nível de workspace ou individual por projeto.
+ */
+export interface WorkspaceAST {
+  workspaceName: string   // ex: 'AGTech Projetos'
+  workspaceSlug: string   // ex: 'agtechtrade'
+  dbStack: DbType
+  dbConnectionString?: string
+  supabaseUrl?: string
+  supabaseAnonKey?: string
+  projects: WorkspaceProjectNode[]
 }

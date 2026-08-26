@@ -1,4 +1,4 @@
-import { AppAST, DbType, ModelNode, RouteNode, ActionNode, FieldNode, UIComponentNode } from './ast'
+import { AppAST, DbType, WorkspaceAST, WorkspaceProjectNode, ModelNode, RouteNode, ActionNode, FieldNode, UIComponentNode } from './ast'
 
 /**
  * parser.ts
@@ -79,7 +79,8 @@ export function parseMetaBuilderJSON(
   }
 
   return {
-    projectName: rawJson.project?.name || 'MetabuilderExport',
+    projectName: rawJson.project?.name || rawJson.name || 'MetabuilderExport',
+    projectSlug: rawJson.project?.slug || rawJson.slug || 'app',
     dbStack,
     dbConnectionString: options?.dbConnectionString,
     supabaseUrl: options?.supabaseUrl,
@@ -87,6 +88,41 @@ export function parseMetaBuilderJSON(
     models,
     routes,
     actions
+  }
+}
+
+/**
+ * parseWorkspaceJSON
+ *
+ * Monta uma WorkspaceAST completa a partir de um workspace e N projetos.
+ * Cada projeto é convertido individualmente via parseMetaBuilderJSON.
+ *
+ * @param rawWorkspace  Linha da tabela `workspaces` do MetaBuilder
+ * @param rawProjects   Array de projetos com seus modelos, views e campos já incluídos
+ * @param dbStack       Banco de dados alvo
+ * @param options       Credenciais de conexão
+ */
+export function parseWorkspaceJSON(
+  rawWorkspace: any,
+  rawProjects: any[],
+  dbStack: DbType,
+  options?: { dbConnectionString?: string; supabaseUrl?: string; supabaseAnonKey?: string }
+): WorkspaceAST {
+  const projects: WorkspaceProjectNode[] = rawProjects.map(p => ({
+    slug: p.slug || p.id,
+    name: p.display_name || p.name || p.slug,
+    description: p.description || '',
+    app: parseMetaBuilderJSON(p, dbStack, options)
+  }))
+
+  return {
+    workspaceName: rawWorkspace.name || rawWorkspace.slug,
+    workspaceSlug: rawWorkspace.slug,
+    dbStack,
+    dbConnectionString: options?.dbConnectionString,
+    supabaseUrl: options?.supabaseUrl,
+    supabaseAnonKey: options?.supabaseAnonKey,
+    projects
   }
 }
 

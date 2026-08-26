@@ -35,6 +35,7 @@ import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
+import { WorkspaceExportModal } from '@/components/workspace/WorkspaceExportModal'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
@@ -118,7 +119,7 @@ export function WorkspaceManager({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
-  const [exportingWorkspaceId, setExportingWorkspaceId] = useState<string | null>(null)
+  const [selectedExportWorkspace, setSelectedExportWorkspace] = useState<Workspace | null>(null)
   const { openPreview } = usePreview()
   const { openIDE } = useIDE()
 
@@ -264,41 +265,7 @@ export function WorkspaceManager({
     }
   }
 
-  const handleExportWorkspace = async (e: React.MouseEvent, workspace: Workspace) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setExportingWorkspaceId(workspace.id)
-    
-    try {
-      const response = await fetch('/api/export-workspace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: workspace.id })
-      })
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}))
-        throw new Error(errData.error || 'Erro ao exportar workspace')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${workspace.slug || 'workspace'}-full-source.zip`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-      toast(t('workspace_components.workspace_exported', 'Workspace exportado com sucesso!'), 'success')
-    } catch (err: any) {
-      console.error(err)
-      toast(err.message || t('workspace_components.workspace_export_error', 'Erro ao exportar workspace'), 'error')
-    } finally {
-      setExportingWorkspaceId(null)
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -543,12 +510,15 @@ export function WorkspaceManager({
                             {/* 4. Exportar Código Fonte */}
                             <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}>
                               <button
-                                onClick={(e) => handleExportWorkspace(e, workspace)}
-                                disabled={exportingWorkspaceId === workspace.id}
-                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 disabled:opacity-50 cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setSelectedExportWorkspace(workspace)
+                                }}
+                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 cursor-pointer"
                                 title={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}
                               >
-                                {exportingWorkspaceId === workspace.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                <Download className="w-4 h-4" />
                               </button>
                             </ProGate>
                             {/* 5. Editar Workspace */}
@@ -774,6 +744,15 @@ export function WorkspaceManager({
           )}
         </div>
       </Modal>
+
+      {/* Modal Export Workspace */}
+      <WorkspaceExportModal
+        isOpen={!!selectedExportWorkspace}
+        onClose={() => setSelectedExportWorkspace(null)}
+        workspaceSlug={selectedExportWorkspace?.slug || ''}
+        workspaceId={selectedExportWorkspace?.id || ''}
+        projectCount={selectedExportWorkspace?.projects ? (Array.isArray(selectedExportWorkspace.projects) ? selectedExportWorkspace.projects.length : (selectedExportWorkspace.projects as any).count || 0) : 0}
+      />
     </div>
   )
 }

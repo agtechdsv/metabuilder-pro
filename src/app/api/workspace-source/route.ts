@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
+import { parseWorkspaceJSON } from '@/lib/generator/parser'
+import { generateWorkspaceProject } from '@/lib/generator/emitter'
+import { DbType } from '@/lib/generator/ast'
 
+/**
+ * POST /api/workspace-source
+ *
+ * Retorna o mapa de arquivos do workspace como JSON (path → content).
+ * Chamado pela IDE Local (useIDEGit.ts → syncManager.syncFromWeb)
+ * quando target.type === 'workspace'.
+ *
+ * O syncManager recebe o mapa e escreve os arquivos no repositório local via Git.
+ */
 export async function POST(request: Request) {
   try {
-    const { workspaceId, dataMode = 'supabase', authStrategy = 'managed', legacyDriver = 'supabase' } = await request.json()
+    const { workspaceId, dbStack = 'postgres', dbConfig, legacyDriver } = await request.json()
     const supabase = await createClient()
 
-    // 1. Authenticate
+    // 1. Autenticação
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -17,7 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID do workspace obrigatório' }, { status: 400 })
     }
 
-    // 2. Fetch Workspace Config
+    // 2. Buscar Workspace
     const { data: workspace, error: wsError } = await supabase
       .from('workspaces')
       .select('*')
@@ -28,132 +39,75 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Workspace não encontrado' }, { status: 404 })
     }
 
-    // 3. Fetch all projects in the workspace
-    const { data: projects, error: projError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('workspace_id', workspaceId)
+    // 3. Buscar projetos completos
+    const rawProjects = await fetchWorkspaceProjects(supabase, workspaceId)
 
-    if (projError || !projects || projects.length === 0) {
+    if (rawProjects.length === 0) {
       return NextResponse.json({ error: 'Nenhum projeto encontrado neste workspace' }, { status: 404 })
     }
 
-    // Master File Map
-    const masterFileMap: Record<string, string> = {}
+    // 4. Resolver credenciais de conexão
+    // A IDE Local pode enviar dbConfig com a connection string já configurada
+    const resolvedStack: DbType = (legacyDriver as DbType) || (dbStack as DbType) || 'postgres'
+    const options = dbConfig?.url
+      ? { dbConnectionString: dbConfig.url }
+      : {}
 
-    // Process each project
-    for (const project of projects) {
-      const projectId = project.id;
-      
-      // Fetch Models
-      const { data: models } = await supabase
-        .from('models')
-        .select('*, fields(*), ui_views(*)')
-        .eq('project_id', projectId)
-        
-      // Fetch BYOC (Custom Components)
-      const { data: customComponents } = await supabase
-        .from('ui_custom_components')
-        .select('*')
-        .eq('project_id', projectId)
+    // 5. Parser → AST
+    const ast = parseWorkspaceJSON(workspace, rawProjects, resolvedStack, options)
 
-      // Fetch all UI Views
-      const { data: uiViews } = await supabase
-        .from('ui_views')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('status', 'published')
-        .order('created_at', { ascending: true })
+    // 6. Emitter → File Map
+    const fileMap = generateWorkspaceProject(ast)
 
-      let finalUiViews = uiViews
-      if (!finalUiViews || finalUiViews.length === 0) {
-        const { data: allViews } = await supabase
-          .from('ui_views')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: true })
-        finalUiViews = allViews
-      }
-
-      const mappedModels = (models || []).map((m: any) => {
-        const mappedFields = (m.fields || []).map((f: any) => ({
-          id: f.id,
-          column_name: f.db_column_name,
-          label: f.display_name,
-          field_type: f.data_type,
-          list_visible: f.is_visible_in_list !== false,
-          form_visible: f.is_visible_in_form !== false,
-          required: !f.is_nullable,
-          config: f.config || {}
-        }))
-
-        return {
-          ...m,
-          table_name: m.db_table_name,
-          db_table_name: m.db_table_name,
-          name: m.display_name,
-          ui_fields: mappedFields,
-          ui_views: m.ui_views || []
-        }
-      })
-
-      // Fetch Roles and Permissions
-      const { data: projectRoles } = await supabase
-        .from('project_roles')
-        .select('*')
-        .eq('project_id', projectId)
-
-      let rolePermissions: any[] = []
-      if (projectRoles && projectRoles.length > 0) {
-        const { data: perms } = await supabase
-          .from('project_role_permissions')
-          .select('*')
-          .in('role_id', projectRoles.map((r: any) => r.id))
-        if (perms) rolePermissions = perms
-      }
-
-      // Fetch Enumerations
-      const { data: enumerations } = await supabase
-        .from('project_enumerations')
-        .select('*')
-        .eq('project_id', projectId)
-
-      // Fetch Relations
-      const { data: rawProjectRelations } = await supabase
-        .from('relations')
-        .select('*')
-        .eq('project_id', projectId)
-
-      // Generate the Source Code map for THIS project
-      const generator = new SourceCodeGenerator(
-        project, 
-        mappedModels, 
-        finalUiViews || [], 
-        customComponents || [], 
-        dataMode, 
-        authStrategy, 
-        legacyDriver, 
-        null, 
-        projectRoles || [], 
-        rolePermissions, 
-        enumerations || [], 
-        rawProjectRelations || []
-      )
-      
-      const projectFileMap = await generator.generateFileMap()
-      
-      // Add project files to master map, prefixed with project slug
-      const projectPrefix = project.slug || 'project'
-      for (const [path, content] of Object.entries(projectFileMap)) {
-        masterFileMap[`${projectPrefix}/${path}`] = content
-      }
+    // 7. Retornar como JSON { path: content } — formato esperado pelo syncManager
+    const jsonMap: Record<string, string> = {}
+    for (const [path, content] of fileMap) {
+      jsonMap[path] = content
     }
 
-    // Return as JSON map
-    return NextResponse.json(masterFileMap)
+    return NextResponse.json(jsonMap)
 
   } catch (err: any) {
     console.error('[WorkspaceSource] Error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno ao gerar código' }, { status: 500 })
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: busca projetos completos (models + views + fields)
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+
+  if (!projects || projects.length === 0) return []
+
+  const enriched = await Promise.all(projects.map(async (project: any) => {
+    const projectId = project.id
+
+    const [{ data: models }, { data: uiViewsPublished }, { data: relations }] = await Promise.all([
+      supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
+      supabase.from('ui_views').select('*').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
+      supabase.from('relations').select('*').eq('project_id', projectId),
+    ])
+
+    let finalViews = uiViewsPublished
+    if (!finalViews || finalViews.length === 0) {
+      const { data: allViews } = await supabase
+        .from('ui_views').select('*').eq('project_id', projectId).order('created_at', { ascending: true })
+      finalViews = allViews
+    }
+
+    return {
+      ...project,
+      models: models || [],
+      views: finalViews || [],
+      fields: (models || []).flatMap((m: any) => m.fields || []),
+      relations: relations || [],
+    }
+  }))
+
+  return enriched
 }
