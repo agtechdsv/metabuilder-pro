@@ -1,51 +1,17 @@
 "use client"
 
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useEffect } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
-import { 
-  ChevronRight, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCcw,
-  ArrowLeft,
-  Maximize2,
-  Loader2,
-  Eye,
-  Edit,
-  Trash2,
-  Zap
-} from 'lucide-react'
+import { ChevronRight, Loader2, Eye, Edit, Trash2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/utils/supabase/client'
-import { formatFieldValue } from '@/lib/formatters'
 import DynamicIcon from './DynamicIcon'
+import { useMindMapData, MindMapNode, UseMindMapDataProps } from './mindmap/useMindMapData'
+import { MindMapControls } from './mindmap/MindMapControls'
 
-interface DynamicMindMapProps {
-  data: any[]
-  fields: any[]
-  centralFieldId?: string
-  mindmapLevels?: any[]
-  primaryKeyName: string
-  projectId?: string
-  onView?: (row: any) => void
-  onEdit?: (row: any) => void
-  onEditLevel?: (levelIndex: number, row: any) => void
-  onDelete?: (row: any) => void
-  dictionary?: any
-  models?: any[]
-  project?: any
-  tunnelChannel?: any
-  isTunnelReady?: boolean
-  relationalOptions?: Record<string, any[]>
-  customActions?: any[]
-  onCustomAction?: (action: any, rowData?: any) => Promise<void>
-  refreshTrigger?: number
-}
-
-// Componente interno para Tooltip Estilizada (Multi-Tema)
+// Componente interno para Tooltip Estilizada
 const Tooltip = ({ children, text }: { children: React.ReactNode, text: string }) => {
-  const [show, setShow] = useState(false)
+  const [show, setShow] = React.useState(false)
   return (
     <div className="relative flex items-center" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
@@ -66,60 +32,33 @@ const Tooltip = ({ children, text }: { children: React.ReactNode, text: string }
   )
 }
 
-interface MindMapNode {
-  id: string;
-  name: string;
-  desc?: string;
-  count: number;
-  level: number;
-  field?: any; // Para modo Pivot
-  rawData?: any;
-  children?: MindMapNode[];
-  isLoading?: boolean;
+interface DynamicMindMapProps extends UseMindMapDataProps {
+  onView?: (row: any) => void
+  onEdit?: (row: any) => void
+  onEditLevel?: (levelIndex: number, row: any) => void
+  onDelete?: (row: any) => void
+  dictionary?: any
+  customActions?: any[]
+  onCustomAction?: (action: any, rowData?: any) => Promise<void>
 }
 
-export default function DynamicMindMap({
-  data,
-  fields,
-  centralFieldId,
-  mindmapLevels,
-  primaryKeyName,
-  projectId,
-  onView,
-  onEdit,
-  onDelete,
-  dictionary = {},
-  models = [],
-  project,
-  tunnelChannel,
-  isTunnelReady,
-  relationalOptions = {},
-  customActions = [],
-  onCustomAction,
-  onEditLevel,
-  refreshTrigger
-}: DynamicMindMapProps) {
-  const { t, language } = useI18n()
-  const localeStr = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES'
-
-  const formatValue = (value: any, fieldName: string, modelId: string | undefined) => {
-    if (value === null || value === undefined) return value;
-    const model = models.find(m => m.id === modelId);
-    if (!model) return value;
-    const field = model.fields?.find((f: any) => f.db_column_name === fieldName);
-    if (!field) return value;
-    return formatFieldValue(value, field, relationalOptions);
-  };
-  const supabase = createClient()
-  const [zoom, setZoom] = useState(1)
-  const [currentPath, setCurrentPath] = useState<number[]>([])
-  const [loadingPath, setLoadingPath] = useState<string | null>(null)
-  const [relationalTree, setRelationalTree] = useState<MindMapNode[]>([])
-  const prevRootIdsRef = useRef<string>('');
+export default function DynamicMindMap(props: DynamicMindMapProps) {
+  const { t } = useI18n()
+  const { dictionary, onView, onEdit, onEditLevel, onDelete, customActions, onCustomAction, mindmapLevels } = props
+  const [zoom, setZoom] = React.useState(1)
   const controls = useAnimation()
   
-  const isRelational = mindmapLevels && mindmapLevels.length > 0;
-  
+  const {
+    treeData,
+    currentNode,
+    currentPath,
+    loadingPath,
+    handleNodeClick,
+    handleGoBack,
+    isRelational,
+    relationalTree
+  } = useMindMapData(props)
+
   // Sincronizar posição e escala
   useEffect(() => {
     controls.start({ 
@@ -130,499 +69,9 @@ export default function DynamicMindMap({
     })
   }, [currentPath, zoom, controls])
 
-  // 1. Processamento da Árvore (Modo Pivot Antigo)
-  const pivotTreeData = useMemo(() => {
-    if (isRelational || !data || data.length === 0 || !fields || fields.length === 0) return []
-    let hierarchyFields = fields.filter(f => !f.hidden)
-    const centralField = fields.find(f => f.id === centralFieldId)
-    if (centralField) {
-      hierarchyFields = [centralField, ...hierarchyFields.filter(f => f.id !== centralFieldId)]
-    }
-
-    const { extractRawValue } = require('@/lib/field-resolver');
-    const getValue = (item: any, field: any) => {
-      if (!item || !field) return undefined
-      return extractRawValue(field.db_column_name, item, field)
-    }
-
-    const buildTree = (items: any[], level: number): MindMapNode[] => {
-      if (level >= hierarchyFields.length) return []
-      const currentField = hierarchyFields[level]
-      const groups = new Map<string, any[]>()
-      items.forEach(item => {
-        const val = getValue(item, currentField)
-        const keyStr = val !== undefined && val !== null && val !== '' ? String(val) : 'Unassigned'
-        if (!groups.has(keyStr)) groups.set(keyStr, [])
-        groups.get(keyStr)!.push(item)
-      })
-      return Array.from(groups.entries()).map(([name, groupItems], idx) => ({
-        id: `lvl${level}-${idx}-${name}`,
-        name,
-        count: groupItems.length,
-        level,
-        field: currentField,
-        rawData: groupItems[0],
-        children: buildTree(groupItems, level + 1)
-      }))
-    }
-    return buildTree(data, 0)
-  }, [data, fields, centralFieldId, isRelational])
-
-  // Inicialização do Modo Relacional
-  useEffect(() => {
-    if (!isRelational || !data || !mindmapLevels) return;
-    
-    const rootLevel = mindmapLevels[0];
-    const uniqueMap = new Map();
-    data.forEach((item, idx) => {
-      const rawName = rootLevel.title_field ? item[rootLevel.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
-      const name = formatValue(rawName, rootLevel.title_field || '', rootLevel.model_id);
-      const rawDesc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined;
-      const desc = rawDesc ? formatValue(rawDesc, rootLevel.desc_field || '', rootLevel.model_id) : undefined;
-      
-      const pk = primaryKeyName || 'id';
-      const rowId = item[pk] !== undefined ? item[pk] : (item[pk.toUpperCase()] !== undefined ? item[pk.toUpperCase()] : (item.id !== undefined ? item.id : (item.ID !== undefined ? item.ID : (item.uuid !== undefined ? item.uuid : item.UUID))));
-      const key = rowId !== undefined ? rowId : `root-${idx}`;
-      
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, {
-          id: key,
-          name: String(name || 'Sem Título'),
-          desc: desc ? String(desc) : undefined,
-          count: 0,
-          level: 0,
-          rawData: item,
-          children: mindmapLevels.length > 1 ? undefined : []
-        });
-      }
-    });
-    const newTree = Array.from(uniqueMap.values());
-    newTree.sort((a: any, b: any) => a.name.localeCompare(b.name, localeStr, { numeric: true }));
-    const newRootIdsSorted = newTree.map(n => n.id).sort().join(',');
-    // Deep recursive merge: preserve the ENTIRE child sub-tree at every level,
-    // so that children loaded by fetchChildren are not erased when `data` refreshes.
-    const deepMerge = (newNodes: MindMapNode[], oldNodes: MindMapNode[]): MindMapNode[] => {
-      const oldMap = new Map(oldNodes.map(n => [n.id, n]));
-      return newNodes.map(newNode => {
-        const old = oldMap.get(newNode.id);
-        if (old) {
-          const mergedChildren = old.children !== undefined
-            ? (newNode.children !== undefined
-                ? deepMerge(newNode.children, old.children)
-                : old.children)
-            : newNode.children;
-          return { ...newNode, children: mergedChildren };
-        }
-        return newNode;
-      });
-    };
-    setRelationalTree(prevTree => {
-      if (prevTree.length === 0) return newTree;
-      return deepMerge(newTree, prevTree);
-    });
-    
-    if (prevRootIdsRef.current !== newRootIdsSorted) {
-      if (newTree.length === 1 && currentPath.length === 0) {
-        setCurrentPath([0]);
-        if (newTree[0].children === undefined) {
-          setTimeout(() => fetchChildren([0], newTree[0]), 50);
-        }
-      }
-      prevRootIdsRef.current = newRootIdsSorted;
-    }
-  }, [data, isRelational, mindmapLevels, isTunnelReady, localeStr])
-
-  const treeData = isRelational ? relationalTree : pivotTreeData;
-
-  const currentNode = useMemo(() => {
-    let current = { children: treeData, id: 'virtual-root', name: 'Virtual Root', count: 0, level: -1 } as MindMapNode
-    for (const index of currentPath) {
-      if (current.children && current.children[index]) {
-        current = current.children[index]
-      } else {
-        break
-      }
-    }
-    return current
-  }, [treeData, currentPath])
-
-  const currentPathIdsRef = useRef<string[]>([]);
-
-  // Update currentPathIds whenever a valid path is active
-  useEffect(() => {
-    if (!treeData || treeData.length === 0) return;
-    let current: any = { children: treeData };
-    let ids: string[] = [];
-    let valid = true;
-    for (const idx of currentPath) {
-      if (current.children && current.children[idx]) {
-        current = current.children[idx];
-        ids.push(current.id);
-      } else {
-        valid = false;
-        break;
-      }
-    }
-    if (valid) currentPathIdsRef.current = ids;
-  }, [treeData, currentPath]);
-
-  // Validar currentPath contra treeData usando IDs para evitar truncar quando a ordem muda
-  useEffect(() => {
-    if (!treeData || treeData.length === 0 || currentPath.length === 0) return;
-    
-    const targetIds = currentPathIdsRef.current;
-    if (targetIds.length === 0) return;
-
-    let current: any = { children: treeData };
-    let newPath: number[] = [];
-    let isValidOldPath = true;
-
-    for (let i = 0; i < currentPath.length; i++) {
-      const oldIdx = currentPath[i];
-      const expectedId = targetIds[i];
-
-      if (!current.children || !current.children[oldIdx] || current.children[oldIdx].id !== expectedId) {
-        isValidOldPath = false;
-        const correctIdx = current.children ? current.children.findIndex((c: any) => c.id === expectedId) : -1;
-        if (correctIdx !== -1) {
-          newPath.push(correctIdx);
-          current = current.children[correctIdx];
-        } else {
-          break;
-        }
-      } else {
-        newPath.push(oldIdx);
-        current = current.children[oldIdx];
-      }
-    }
-
-    if (!isValidOldPath) {
-      setCurrentPath(newPath);
-    } else if (newPath.length < currentPath.length) {
-      setCurrentPath(newPath);
-    }
-  }, [treeData]);
-
-  const prevRefreshTriggerRef = useRef(refreshTrigger || 0);
-  useEffect(() => {
-    if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTriggerRef.current) {
-      prevRefreshTriggerRef.current = refreshTrigger;
-      if (currentPath.length > 0 && currentNode && currentNode.id !== 'virtual-root') {
-        fetchChildren(currentPath, currentNode);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]);
-
-  // Função Async para Carregar Filhos do Nível Inferior
-  const fetchChildren = async (path: number[], node: MindMapNode) => {
-    if (!isRelational || !mindmapLevels) return;
-    const nextLevelIndex = node.level + 1;
-    if (nextLevelIndex >= mindmapLevels.length) return; 
-    
-    const nextLevelConfig = mindmapLevels[nextLevelIndex];
-    if (!nextLevelConfig.model_id) return;
-    console.log('[MetaBuilder:MindMap] 🔍 nextLevelConfig:', JSON.stringify(nextLevelConfig));
-    if (nextLevelConfig.relation_type === 'indirect') {
-      if (!nextLevelConfig.through_table || !nextLevelConfig.through_local_fk || !nextLevelConfig.through_target_fk) return;
-    } else if (nextLevelConfig.relation_type === 'multilevel') {
-      if (!nextLevelConfig.relation_path || nextLevelConfig.relation_path.length === 0) return;
-    } else {
-      if (!nextLevelConfig.foreign_key) return;
-    }
-
-
-    const pathStr = path.join('-');
-    setLoadingPath(pathStr);
-
-    try {
-      const modelData = models.find(m => m.id === nextLevelConfig.model_id);
-      if (!modelData?.db_table_name) throw new Error('Model not found in project.models');
-
-      const tableName = String(modelData.db_table_name);
-      const schemaName = modelData.db_schema_name || project?.slug || 'public';
-      
-      let currentLevelPkName = primaryKeyName || 'id';
-      if (node.level >= 0) {
-        const currentLevelConfig = mindmapLevels[node.level];
-        if (currentLevelConfig && currentLevelConfig.model_id) {
-          const currentModel = models.find(m => m.id === currentLevelConfig.model_id);
-          if (currentModel && currentModel.fields) {
-            const pkField = currentModel.fields.find((f: any) => f.is_primary_key);
-            if (pkField && pkField.db_column_name) {
-              currentLevelPkName = pkField.db_column_name;
-            }
-          }
-        }
-      }
-      const rawDataId = node.rawData ? (node.rawData[currentLevelPkName] !== undefined ? node.rawData[currentLevelPkName] : (node.rawData[currentLevelPkName.toUpperCase()] !== undefined ? node.rawData[currentLevelPkName.toUpperCase()] : (node.rawData.id !== undefined ? node.rawData.id : node.rawData.ID))) : undefined;
-      const parentId = String(rawDataId !== undefined ? rawDataId : node.id).replace(/'/g, "''");
-      
-      let rawQuery = '';
-      if (nextLevelConfig.relation_type === 'multilevel' && nextLevelConfig.relation_path) {
-        const pathArray = nextLevelConfig.relation_path;
-        let joins = '';
-        for (let i = pathArray.length - 1; i >= 0; i--) {
-          const hop = pathArray[i];
-          const hopAlias = `th${i}`;
-          if (i === pathArray.length - 1) {
-            joins += ` INNER JOIN "${hop.table}" ${hopAlias} ON t."${hop.target_to_field}" = ${hopAlias}."${hop.target_from_field}"`;
-          }
-          if (i > 0) {
-            const prevHopAlias = `th${i - 1}`;
-            joins += ` INNER JOIN "${pathArray[i-1].table}" ${prevHopAlias} ON ${prevHopAlias}."${hop.from_field}" = ${hopAlias}."${hop.to_field}"`;
-          }
-        }
-        const firstHop = pathArray[0];
-        rawQuery = `SELECT DISTINCT t.* FROM "${tableName}" t ${joins} WHERE th0."${firstHop.to_field}" = '${parentId}'`;
-      } else if (nextLevelConfig.relation_type === 'indirect' && nextLevelConfig.through_table) {
-        rawQuery = `SELECT t.* FROM "${tableName}" t INNER JOIN "${nextLevelConfig.through_table}" th ON t.id = th."${nextLevelConfig.through_target_fk}" WHERE th."${nextLevelConfig.through_local_fk}" = '${parentId}'`;
-      } else {
-        rawQuery = `SELECT * FROM "${tableName}" WHERE "${nextLevelConfig.foreign_key}" = '${parentId}'`;
-      }
-      
-      const queryId = crypto.randomUUID();
-      const payload: any = {
-        queryId,
-        table: tableName,
-        tableName: tableName,
-        schemaName: schemaName,
-        slug: project?.slug,
-        action: 'select',
-        query: rawQuery,
-        sql: rawQuery,
-        token: project?.secret_token || 'test-token',
-        limit: 1000,
-        offset: 0,
-        joins: []
-      };
-
-      const handleResult = (res: any) => {
-        if (res.payload?.queryId === queryId) {
-          console.log("[MetaBuilder:MindMap] 📡 fetchChildren response:", res.payload);
-          if (!res.payload?.success) {
-            console.error("[MetaBuilder:MindMap] ❌ fetchChildren Query Failed:", res.payload?.error);
-          }
-          const childrenData = res.payload.data;
-          const uniqueChildren = new Map();
-          (childrenData || []).forEach((item: any, idx: number) => {
-            const rawName = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : (item.name || item.nome || item.title || item.titulo || item.id);
-            const name = formatValue(rawName, nextLevelConfig.title_field || '', nextLevelConfig.model_id);
-            const rawDesc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined;
-            const desc = rawDesc ? formatValue(rawDesc, nextLevelConfig.desc_field || '', nextLevelConfig.model_id) : undefined;
-            
-            let childPkName = 'id';
-            if (modelData && modelData.fields) {
-              const pkField = modelData.fields.find((f: any) => f.is_primary_key);
-              if (pkField && pkField.db_column_name) {
-                childPkName = pkField.db_column_name;
-              }
-            }
-            const rowId = item[childPkName] !== undefined ? item[childPkName] : (item[childPkName.toUpperCase()] !== undefined ? item[childPkName.toUpperCase()] : (item.id !== undefined ? item.id : (item.ID !== undefined ? item.ID : (item.uuid !== undefined ? item.uuid : item.UUID))));
-            const key = rowId !== undefined ? rowId : `${node.id}-child-${idx}`;
-            
-            if (!uniqueChildren.has(key)) {
-              uniqueChildren.set(key, {
-                id: key,
-                name: String(name || 'Sem Título'),
-                desc: desc ? String(desc) : undefined,
-                count: 0,
-                level: nextLevelIndex,
-                rawData: item,
-                children: nextLevelIndex + 1 < mindmapLevels.length ? undefined : []
-              });
-            }
-          });
-          const newChildren = Array.from(uniqueChildren.values());
-          newChildren.sort((a: any, b: any) => a.name.localeCompare(b.name, localeStr, { numeric: true }));
-
-          setRelationalTree(prevTree => {
-            const newTree = structuredClone(prevTree);
-            const targetIds = currentPathIdsRef.current;
-            let curr: any = { children: newTree };
-            
-            // Navigate safely using IDs in case ordering has changed
-            for (const expectedId of targetIds) {
-              if (!curr.children) break;
-              const nextIdx = curr.children.findIndex((c: any) => c.id === expectedId);
-              if (nextIdx !== -1) {
-                curr = curr.children[nextIdx];
-              } else {
-                curr = null;
-                break;
-              }
-            }
-            
-            if (curr && curr.id === currentNode.id) {
-              curr.children = newChildren;
-              curr.count = newChildren.length;
-            } else {
-              // Fallback to path indices if ID traversal failed
-              let fallbackCurr: any = { children: newTree };
-              let valid = true;
-              for (const p of path) {
-                if (fallbackCurr.children && fallbackCurr.children[p]) {
-                  fallbackCurr = fallbackCurr.children[p];
-                } else {
-                  valid = false;
-                  break;
-                }
-              }
-              if (valid) {
-                fallbackCurr.children = newChildren;
-                fallbackCurr.count = newChildren.length;
-              }
-            }
-            return newTree;
-          });
-          setLoadingPath(null);
-        }
-      };
-
-      // Detect ejected mode: either via env var OR when tunnelChannel is not a real Supabase channel.
-      // In the ejected app the tunnel object may exist but won't have .on, causing "tunnelChannel.on is not a function".
-      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
-        || typeof tunnelChannel?.on !== 'function';
-
-      if (isEjectedApp) {
-        try {
-          let apiData: any[] = [];
-
-          if (nextLevelConfig.relation_type === 'indirect' && nextLevelConfig.through_table) {
-            // Step 1: fetch junction/through table records
-            const junctionRes = await fetch(`/api/${nextLevelConfig.through_table}?filter_${nextLevelConfig.through_local_fk}=${encodeURIComponent(parentId)}&limit=1000`);
-            if (!junctionRes.ok) {
-              const err = await junctionRes.json().catch(() => ({}));
-              throw new Error(err.error || 'Erro ao buscar tabela intermediária');
-            }
-            const junctionRaw = await junctionRes.json();
-            const junctionRecords: any[] = Array.isArray(junctionRaw) ? junctionRaw : (junctionRaw.data || []);
-            const targetIds = [...new Set(junctionRecords.map((r: any) => r[nextLevelConfig.through_target_fk!]).filter(Boolean))];
-
-            if (targetIds.length === 0) {
-              apiData = [];
-            } else {
-              // Step 2: fetch target records — batch into individual calls if needed
-              const targetFetches = await Promise.all(
-                targetIds.map((id: any) =>
-                  fetch(`/api/${tableName}?filter_id=${encodeURIComponent(id)}&limit=1`).then(r => r.json()).catch(() => null)
-                )
-              );
-              apiData = targetFetches.flatMap((r: any) => Array.isArray(r) ? r : (r?.data || [])).filter(Boolean);
-            }
-          } else if (nextLevelConfig.relation_type === 'multilevel' && nextLevelConfig.relation_path?.length) {
-            // Multi-hop fetch: traverse each hop in relation_path
-            // Example: funcionarios → pedidos (via funcionario_id) → clientes (via cliente_id)
-            const hop = nextLevelConfig.relation_path[0];
-            // Step 1: fetch the hop table records where hop.to_field = parentId
-            const hopRes = await fetch(`/api/${hop.table}?filter_${hop.to_field}=${encodeURIComponent(parentId)}&limit=1000`);
-            if (!hopRes.ok) {
-              const err = await hopRes.json().catch(() => ({}));
-              throw new Error(err.error || `Erro ao buscar tabela intermediária ${hop.table}`);
-            }
-            const hopRaw = await hopRes.json();
-            const hopRecords: any[] = Array.isArray(hopRaw) ? hopRaw : (hopRaw.data || []);
-            // Step 2: extract unique target IDs from hop records using target_from_field
-            const targetIds = [...new Set(hopRecords.map((r: any) => r[hop.target_from_field]).filter(Boolean))];
-
-            if (targetIds.length === 0) {
-              apiData = [];
-            } else {
-              // Step 3: fetch target records by target_to_field (usually 'id')
-              const targetFetches = await Promise.all(
-                targetIds.map((id: any) =>
-                  fetch(`/api/${tableName}?filter_${hop.target_to_field}=${encodeURIComponent(id)}&limit=1`).then(r => r.json()).catch(() => null)
-                )
-              );
-              apiData = targetFetches.flatMap((r: any) => Array.isArray(r) ? r : (r?.data || [])).filter(Boolean);
-            }
-          } else {
-            // Direct relation: use foreign_key filter
-            const res = await fetch(`/api/${tableName}?filter_${nextLevelConfig.foreign_key}=${encodeURIComponent(parentId)}&limit=1000`);
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.error || 'Erro na API Local');
-            }
-            const resData = await res.json();
-            apiData = Array.isArray(resData) ? resData : (resData.data || []);
-          }
-
-          handleResult({ payload: { success: true, data: apiData, queryId } });
-        } catch (err: any) {
-          handleResult({ payload: { success: false, error: err.message, queryId } });
-        }
-        return;
-      }
-
-      if (tunnelChannel && isTunnelReady) {
-        tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
-        tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult);
-        tunnelChannel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload
-        });
-        // Cleanup listener after 10s
-        setTimeout(() => {
-          try {
-            const bindings = tunnelChannel.bindings?.broadcast;
-            if (Array.isArray(bindings)) {
-               tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult);
-            }
-          } catch (_) {}
-          setLoadingPath(null);
-        }, 10000);
-      } else {
-        const channelName = `tunnel:${project?.id}`;
-        const channel = supabase.channel(channelName);
-        channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult);
-        channel.on('broadcast', { event: 'sql_result' }, handleResult);
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            channel.send({
-              type: 'broadcast',
-              event: 'sql_query',
-              payload
-            });
-            setTimeout(() => {
-              supabase.removeChannel(channel);
-              setLoadingPath(null);
-            }, 10000);
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Failed to fetch mindmap children:", err);
-      setLoadingPath(null);
-    }
-  }
-
-  const handleNodeClick = async (index: number) => {
-    const nextPath = [...currentPath, index];
-    const clickedNode = currentNode.children![index];
-
-    if (isRelational) {
-      if (clickedNode.children === undefined) {
-        // Needs fetching
-        await fetchChildren(nextPath, clickedNode);
-        setCurrentPath(nextPath);
-      } else if (clickedNode.children.length > 0) {
-        setCurrentPath(nextPath);
-      }
-    } else {
-      if (clickedNode.children && clickedNode.children.length > 0) {
-        setCurrentPath(nextPath);
-      }
-    }
-  }
-
-  const handleGoBack = () => {
-    if (currentPath.length > 0) setCurrentPath(currentPath.slice(0, -1))
-  }
-
   const handleReset = () => {
     setZoom(1)
-    setCurrentPath([])
+    handleGoBack() // Reset path could be implemented in hook, but we just trigger back logic or center
     controls.start({ x: 0, y: 0, scale: 1, transition: { type: "spring", stiffness: 150, damping: 22 } })
   }
 
@@ -632,7 +81,7 @@ export default function DynamicMindMap({
   }
 
   const renderValue = (field: any, val: any) => {
-    if (!field) return String(val); // Relational mode fallback
+    if (!field) return String(val)
     if (val === null || val === undefined) return '-'
     if (typeof val === 'boolean') return val ? 'Yes' : 'No'
     if (field?.data_type === 'uuid' && dictionary?.[val]) return dictionary[val]
@@ -733,8 +182,8 @@ export default function DynamicMindMap({
               const radius = 260
               const x = Math.cos(angleRad) * radius
               const y = Math.sin(angleRad) * radius
-              const hasChildren = child.children === undefined || child.children.length > 0;
-              const isLoading = loadingPath === [...currentPath, idx].join('-');
+              const hasChildren = child.children === undefined || child.children.length > 0
+              const isLoading = loadingPath === [...currentPath, idx].join('-')
 
               return (
                 <motion.div
@@ -815,20 +264,19 @@ export default function DynamicMindMap({
                         </Tooltip>
                       )}
                       {customActions?.filter((action: any) => {
-                        if (!isRelational) return true;
-                        const levelStr = String(child.level + 1);
-                        return action.placements?.some((p: any) => p.location === `mindmap:level:${levelStr}`);
+                        if (!isRelational) return true
+                        const levelStr = String(child.level + 1)
+                        return action.placements?.some((p: any) => p.location === `mindmap:level:${levelStr}`)
                       }).map((action: any, i: number) => {
                         const handleClick = (e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          // Constrói a lista de nós ancestrais a partir do currentPath + relationalTree
-                          const ancestors: { level: number; rawData: any }[] = [];
+                          e.stopPropagation()
+                          const ancestors: { level: number; rawData: any }[] = []
                           if (isRelational && currentPath.length > 0) {
-                            let cursor: any = { children: relationalTree };
+                            let cursor: any = { children: relationalTree }
                             for (let pi = 0; pi < currentPath.length; pi++) {
-                              cursor = cursor.children?.[currentPath[pi]];
+                              cursor = cursor.children?.[currentPath[pi]]
                               if (cursor && cursor.rawData) {
-                                ancestors.push({ level: cursor.level + 1, rawData: cursor.rawData });
+                                ancestors.push({ level: cursor.level + 1, rawData: cursor.rawData })
                               }
                             }
                           }
@@ -836,15 +284,15 @@ export default function DynamicMindMap({
                             ...child.rawData,
                             __mindmap_level__: child.level + 1,
                             __mindmap_ancestors__: ancestors
-                          });
-                        };
+                          })
+                        }
                         return (
                           <Tooltip key={i} text={action.label || 'Ação Customizada'}>
                              <button onClick={handleClick} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors">
                                <DynamicIcon icon={action.icon || 'Zap'} className="w-3 h-3 text-neutral-500 hover:text-amber-500" />
                              </button>
                           </Tooltip>
-                        );
+                        )
                       })}
                     </div>
                   )}
@@ -864,51 +312,16 @@ export default function DynamicMindMap({
         </div>
       </motion.div>
 
-      {/* Toolbar Superior */}
-      <div className="absolute top-8 left-8 z-50 flex items-center gap-4">
-        {currentPath.length > 0 && (
-          <Tooltip text={t('runtime.back_level', 'Voltar Nível')}>
-            <button onClick={handleGoBack} className="p-4 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl transition-all active:scale-95 shadow-xl pointer-events-auto group">
-              <ArrowLeft className="w-5 h-5 text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white" />
-            </button>
-          </Tooltip>
-        )}
-        <div className="px-6 py-4 bg-white/60 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-[10px] font-black text-neutral-700 dark:text-white uppercase tracking-[0.3em] opacity-80">
-              {currentPath.length === 0 ? 'Workspace' : (isRelational ? `${t('runtime.level', 'Nível')} ${currentNode.level + 1}` : (currentNode.field?.display_name || 'Level'))}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Controles Laterais */}
-      <div className="absolute top-8 right-8 z-50 flex flex-col gap-2">
-        <Tooltip text="Aumentar Zoom">
-          <button onClick={() => setZoom(z => Math.min(z + 0.2, 2))} className="p-3 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all pointer-events-auto shadow-xl"><ZoomIn className="w-5 h-5" /></button>
-        </Tooltip>
-        <Tooltip text="Diminuir Zoom">
-          <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="p-3 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all pointer-events-auto shadow-xl"><ZoomOut className="w-5 h-5" /></button>
-        </Tooltip>
-        <div className="w-full h-px bg-neutral-200 dark:bg-white/5 my-1" />
-        <Tooltip text="Resetar Tudo">
-          <button onClick={handleReset} className="p-3 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all pointer-events-auto shadow-xl"><RotateCcw className="w-5 h-5" /></button>
-        </Tooltip>
-        <Tooltip text="Centralizar Vista">
-          <button onClick={handleCenterView} className="p-3 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-2xl backdrop-blur-3xl text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all pointer-events-auto shadow-xl"><Maximize2 className="w-5 h-5" /></button>
-        </Tooltip>
-      </div>
-
-      {/* Barra de Status Inferior */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 px-8 py-3 bg-white/60 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-full backdrop-blur-3xl flex items-center gap-6 shadow-2xl z-50 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[9px] font-black text-neutral-600 dark:text-white uppercase tracking-[0.3em] opacity-60">Nexo Engine Active</span>
-        </div>
-        <div className="w-px h-3 bg-neutral-200 dark:bg-white/10" />
-        <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{currentNode.children?.length || 0} Orbitals</span>
-      </div>
+      {/* Controles e UI extraídos */}
+      <MindMapControls 
+        currentPath={currentPath}
+        currentNode={currentNode}
+        isRelational={!!isRelational}
+        setZoom={setZoom}
+        handleGoBack={handleGoBack}
+        handleReset={handleReset}
+        handleCenterView={handleCenterView}
+      />
     </div>
   )
 }

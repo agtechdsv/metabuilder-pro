@@ -22,6 +22,11 @@ import { createClient } from '@/utils/supabase/client'
 import { usePreview } from './PreviewContext'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from '@/i18n'
+import { useIDEConsole } from './ide/useIDEConsole'
+import { useIDETabs } from './ide/useIDETabs'
+import { useIDEFileSystem } from './ide/useIDEFileSystem'
+import { useIDEGit } from './ide/useIDEGit'
+
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 const MonacoDiffEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.DiffEditor), { ssr: false })
@@ -66,100 +71,62 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<IDETarget | null>(null)
   
   const [syncManager, setSyncManager] = useState<LocalSyncManager | null>(null)
-  const [fileTree, setFileTree] = useState<FileNode[]>([])
-  const [openFiles, setOpenFiles] = useState<string[]>([])
-  const [fileContents, setFileContents] = useState<Record<string, string>>({})
-  const [originalFileContents, setOriginalFileContents] = useState<Record<string, string>>({})
-  const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [isDiscarding, setIsDiscarding] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [sandboxMode, setSandboxMode] = useState(false)
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+
+  // --- Injected Hooks ---
+  const { consoleLogs, showConsole, setShowConsole, consoleEndRef, addConsoleLog, clearConsole } = useIDEConsole()
+  const { 
+    fileTree, setFileTree, loadFileTree, expandedFolders, setExpandedFolders, selectedPaths, setSelectedPaths,
+    lastSelectedPath, setLastSelectedPath, ctxMenu, setCtxMenu, fileActionModal, setFileActionModal,
+    fileActionInput, setFileActionInput, fileActionLoading, setFileActionLoading, deleteConfirm,
+    setDeleteConfirm, clipboard, setClipboard, explorerWidth, setExplorerWidth, explorerActiveTab,
+    setExplorerActiveTab, undoStack, setUndoStack, getNodesFromPaths, getVisibleNodes, handleSelection,
+    toggleFolder, moveToTrash, handleUndo, handleEmptyTrash, handlePermanentDelete, handleRestoreFromTrash, resetFileSystem
+  } = useIDEFileSystem({ targetSlug: target?.slug })
+  const monacoRef = useRef<any>(null)
+  const {
+    openFiles, setOpenFiles, fileContents, setFileContents, originalFileContents, setOriginalFileContents,
+    activeFile, setActiveFile, activeFileRef, isDirty, requestCloseFiles, executeCloseFiles,
+    handleCloseFile, handleSelectFile, handleSaveFile, handleSaveAll, resetTabs, unsavedFilesPrompt,
+    setUnsavedFilesPrompt, tabContextMenu, setTabContextMenu, diffActiveFile, setDiffActiveFile, diffLocalContent, setDiffLocalContent, diffOriginalContent, setDiffOriginalContent
+  } = useIDETabs({ targetSlug: target?.slug, monacoRef })
+  const {
+    isSyncing, isDiscarding, isConfirming, sandboxMode, setSandboxMode, gitLogs, setGitLogs, branches, setBranches,
+    selectedBranch, setSelectedBranch, isLogModalOpen, setIsLogModalOpen, showDiscardConfirm, setShowDiscardConfirm,
+    revertConfirmOid, setRevertConfirmOid, isReverting, setIsReverting, showGitSettings, setShowGitSettings,
+    isPushing, setIsPushing, isPulling, setIsPulling, isCommitModalOpen, setIsCommitModalOpen, modalMode, setModalMode,
+    commitMessage, setCommitMessage, isCommitting, setIsCommitting, changedFiles, setChangedFiles, selectedCommitFiles,
+    setSelectedCommitFiles, isCommitLoading, setIsCommitLoading, commitMenu, setCommitMenu, revertLocalConfirm,
+    setRevertLocalConfirm, selectedListFiles, setSelectedListFiles, showNewBranchModal, setShowNewBranchModal,
+    newBranchName, setNewBranchName, isCreatingBranch, setIsCreatingBranch, handleSyncFromWeb, handleConfirmSync, handleAbortSync, handleRevertCommit, resetGit
+  } = useIDEGit({ target, syncManager, loadFileTree, resetTabs })
+  // ----------------------
+
   const [devProcess, setDevProcess] = useState<any>(null)
-  const [gitLogs, setGitLogs] = useState<any[]>([])
-  const [branches, setBranches] = useState<string[]>([])
-  const [selectedBranch, setSelectedBranch] = useState<string>('local')
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
-  const [revertConfirmOid, setRevertConfirmOid] = useState<string | null>(null)
-  const [isReverting, setIsReverting] = useState(false)
-  const [showGitSettings, setShowGitSettings] = useState(false)
-  const [isPushing, setIsPushing] = useState(false)
-  const [isPulling, setIsPulling] = useState(false)
-  const [isCommitModalOpen, setIsCommitModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'commit' | 'merge'>('commit')
-  const [commitMessage, setCommitMessage] = useState('')
-  const [isCommitting, setIsCommitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [consoleHeight, setConsoleHeight] = useState(200)
   
   // Advanced Commit Modal state
-  const [changedFiles, setChangedFiles] = useState<{filepath: string, status: 'added'|'modified'|'deleted'}[]>([])
-  const [selectedCommitFiles, setSelectedCommitFiles] = useState<Set<string>>(new Set())
-  const [diffActiveFile, setDiffActiveFile] = useState<string | null>(null)
-  const [diffOriginalContent, setDiffOriginalContent] = useState<string>('')
-  const [diffLocalContent, setDiffLocalContent] = useState<string>('')
-  const [isCommitLoading, setIsCommitLoading] = useState(false)
-  const [commitMenu, setCommitMenu] = useState<{ x: number; y: number } | null>(null)
-  const [revertLocalConfirm, setRevertLocalConfirm] = useState<string[] | null>(null)
-  const [selectedListFiles, setSelectedListFiles] = useState<Set<string>>(new Set())
   const lastSelectedFileRef = useRef<string | null>(null)
   const diffRequestRef = useRef<string | null>(null)
   const diffSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const monacoRef = useRef<any>(null)
   const diffEditorRef = useRef<any>(null)
   const tabsContainerRef = useRef<HTMLDivElement>(null)
-  const activeFileRef = useRef<string | null>(null)
-  
-  useEffect(() => {
-    activeFileRef.current = activeFile;
-  }, [activeFile]);
 
-  const [showNewBranchModal, setShowNewBranchModal] = useState(false)
-  const [newBranchName, setNewBranchName] = useState('')
-  const [isCreatingBranch, setIsCreatingBranch] = useState(false)
   const [ideLoadingState, setIdeLoadingState] = useState<{isLoading: boolean, message: string}>({ isLoading: false, message: '' })
   const [isStoppingServer, setIsStoppingServer] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
-  const [unsavedFilesPrompt, setUnsavedFilesPrompt] = useState<{ pathsToClose: string[]; dirtyPaths: string[]; } | null>(null);
-  const [tabContextMenu, setTabContextMenu] = useState<{ x: number, y: number, path: string } | null>(null);
   
   // Console panel state
-  const [consoleLogs, setConsoleLogs] = useState<Array<{ts: string, text: string, type: 'info'|'error'|'warn'|'stdout'}>>([])
-  const [showConsole, setShowConsole] = useState(true) // open by default
   const [showSidebar, setShowSidebar] = useState(true) // open by default
-  const consoleEndRef = useRef<HTMLDivElement>(null)
 
   // File explorer context menu state
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null)
-  const [fileActionModal, setFileActionModal] = useState<{ type: 'rename' | 'new-file' | 'new-folder' | 'copy' | 'move'; node?: FileNode; destPath?: string } | null>(null)
-  const [fileActionInput, setFileActionInput] = useState('')
-  const [fileActionLoading, setFileActionLoading] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState<{ mode: 'trash' | 'permanent' | 'empty', nodes?: FileNode[] } | null>(null)
-  const [clipboard, setClipboard] = useState<{ nodes: FileNode[]; op: 'copy' | 'cut' } | null>(null)
   
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set())
-  const [lastSelectedPath, setLastSelectedPath] = useState<string | null>(null)
-  const [undoStack, setUndoStack] = useState<UndoAction[]>([])
   
-  const [explorerWidth, setExplorerWidth] = useState(256)
-  const [consoleHeight, setConsoleHeight] = useState(200)
-  const [explorerActiveTab, setExplorerActiveTab] = useState<'explorer' | 'trash'>('explorer')
   const isResizingExplorer = useRef(false)
   const isResizingConsole = useRef(false)
 
-  const getNodesFromPaths = (paths: string[]): FileNode[] => {
-    const nodes: FileNode[] = []
-    const findNodes = (treeNodes: FileNode[]) => {
-      for (const node of treeNodes) {
-        if (paths.includes(node.path)) nodes.push(node)
-        if (node.children) findNodes(node.children)
-      }
-    }
-    findNodes(fileTree)
-    return nodes
-  }
+
   
-  const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
   const { openPreview } = usePreview()
   const supabase = createClient()
@@ -237,18 +204,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }, [undoStack, fileActionLoading, selectedPaths, deleteConfirm, fileActionModal, explorerActiveTab, fileTree, showDiscardConfirm])
 
   // Helper to append a line to the console
-  const addConsoleLog = (text: string, type: 'info'|'error'|'warn'|'stdout' = 'stdout') => {
-    setConsoleLogs(prev => [...prev, {
-      ts: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      text,
-      type
-    }])
-  }
 
   // Auto-scroll console to bottom on new logs
-  useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [consoleLogs])
 
   useEffect(() => {
     if (isOpen && target && isTauri()) {
@@ -302,455 +259,23 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setSandboxMode(false)
   }
 
-  const loadFileTree = async () => {
-    if (!target) return
-    try {
-      const basePath = `AGTech/MetaBuilderPRO/${target.slug}`
-      
-      const buildTree = async (dirPath: string): Promise<FileNode[]> => {
-        const entries = await tauriFs.readDir(dirPath, { baseDir: BaseDirectory.Home })
-        const nodes: FileNode[] = []
-        
-        for (const entry of entries) {
-          if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.next') continue
-          
-          const fullPath = `${dirPath}/${entry.name}`
-          const isDir = entry.isDirectory
-          
-          nodes.push({
-            name: entry.name,
-            path: fullPath,
-            isDirectory: isDir,
-            children: isDir ? await buildTree(fullPath) : undefined
-          })
-        }
-        
-        return nodes.sort((a, b) => {
-          if (a.name === '.trash') return 1
-          if (b.name === '.trash') return -1
-          if (a.isDirectory && !b.isDirectory) return -1
-          if (!a.isDirectory && b.isDirectory) return 1
-          return a.name.localeCompare(b.name)
-        })
-      }
-      
-      const tree = await buildTree(basePath)
-      setFileTree(tree)
-    } catch (err) {
-      console.error("Error reading file tree", err)
-    }
-  }
 
-  const getTrashDir = () => `AGTech/MetaBuilderPRO/${target?.slug}/.trash`
 
-  const moveToTrash = async (nodes: FileNode[]): Promise<{ path: string, trashPath: string, isDirectory: boolean }[]> => {
-    const trashDir = getTrashDir()
-    await tauriFs.mkdir(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
-    const timestamp = Date.now()
-    const movedFiles = []
-    
-    const projectRoot = trashDir.replace('/.trash', '')
-    for (const node of nodes) {
-      const relPath = node.path.substring(projectRoot.length + 1)
-      const encodedName = relPath.replace(/\//g, '___')
-      const trashPath = `${trashDir}/${timestamp}_${encodedName}`
-      await tauriFs.rename(node.path, trashPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-      movedFiles.push({ path: node.path, trashPath, isDirectory: node.isDirectory })
-    }
-    return movedFiles
-  }
 
-  const handleUndo = async () => {
-    if (undoStack.length === 0) return
-    const action = undoStack[undoStack.length - 1]
-    const newStack = undoStack.slice(0, -1)
-    setUndoStack(newStack)
-    try {
-      setFileActionLoading(true)
-      if (action.type === 'delete') {
-        for (const f of action.originalPaths) {
-          if (!(await tauriFs.exists(f.trashPath, { baseDir: BaseDirectory.Home }))) continue
-          const parentDir = f.path.substring(0, f.path.lastIndexOf('/'))
-          await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
-          await tauriFs.rename(f.trashPath, f.path, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-        }
-      } else if (action.type === 'rename') {
-        if (await tauriFs.exists(action.newPath, { baseDir: BaseDirectory.Home })) {
-          await tauriFs.rename(action.newPath, action.oldPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-        }
-      } else if (action.type === 'new' || action.type === 'copy') {
-        const trashDir = getTrashDir()
-        await tauriFs.mkdir(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
-        const timestamp = Date.now()
-        const pathsToDelete = action.type === 'new' ? [action.path] : action.destPaths
-        for (const p of pathsToDelete) {
-          if (!(await tauriFs.exists(p, { baseDir: BaseDirectory.Home }))) continue
-          const name = p.split('/').pop()
-          await tauriFs.rename(p, `${trashDir}/${timestamp}_undo_${name}`, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-        }
-      } else if (action.type === 'move') {
-        for (const m of action.moves) {
-          if (!(await tauriFs.exists(m.newPath, { baseDir: BaseDirectory.Home }))) continue
-          const parentDir = m.originalPath.substring(0, m.originalPath.lastIndexOf('/'))
-          await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
-          await tauriFs.rename(m.newPath, m.originalPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-        }
-      }
-      
-      await loadFileTree()
-      toast('Ação desfeita com sucesso!', 'success')
-    } catch (e: any) {
-      toast(`Erro ao desfazer: ${e?.message || e || 'Erro desconhecido'}`, 'error')
-    } finally {
-      setFileActionLoading(false)
-    }
-  }
 
-  const getVisibleNodes = (nodes: FileNode[]): string[] => {
-    let result: string[] = []
-    for (const node of nodes) {
-      result.push(node.path)
-      if (node.isDirectory && expandedFolders.has(node.path) && node.children) {
-        result = result.concat(getVisibleNodes(node.children))
-      }
-    }
-    return result
-  }
 
-  const handleSelection = (path: string, modifier?: 'ctrl' | 'shift') => {
-    if (modifier === 'ctrl') {
-      const newSel = new Set(selectedPaths)
-      if (newSel.has(path)) newSel.delete(path)
-      else newSel.add(path)
-      setSelectedPaths(newSel)
-      setLastSelectedPath(path)
-    } else if (modifier === 'shift' && lastSelectedPath) {
-      let rootNodes = fileTree
-      if (explorerActiveTab === 'trash') {
-        const trashNode = fileTree.find(n => n.name === '.trash')
-        rootNodes = trashNode?.children || []
-      } else {
-        rootNodes = fileTree.filter(n => n.name !== '.trash')
-      }
-      const visible = getVisibleNodes(rootNodes)
-      const idx1 = visible.indexOf(lastSelectedPath)
-      const idx2 = visible.indexOf(path)
-      if (idx1 !== -1 && idx2 !== -1) {
-        const start = Math.min(idx1, idx2)
-        const end = Math.max(idx1, idx2)
-        const newSel = new Set(selectedPaths)
-        for (let i = start; i <= end; i++) {
-          newSel.add(visible[i])
-        }
-        setSelectedPaths(newSel)
-      }
-    } else {
-      setSelectedPaths(new Set([path]))
-      setLastSelectedPath(path)
-    }
-  }
-  const handleEmptyTrash = async () => {
-    const trashDir = getTrashDir()
-    try {
-      setFileActionLoading(true)
-      await tauriFs.remove(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
-      await tauriFs.mkdir(trashDir, { baseDir: BaseDirectory.Home, recursive: true })
-      await loadFileTree()
-      toast('Lixeira esvaziada.', 'success')
-    } catch (e: any) {
-      toast('Erro ao esvaziar lixeira: ' + e.message, 'error')
-    } finally {
-      setFileActionLoading(false)
-    }
-  }
 
-  const handlePermanentDelete = async (nodes: FileNode[]) => {
-    try {
-      setFileActionLoading(true)
-      for (const node of nodes) {
-        await tauriFs.remove(node.path, { baseDir: BaseDirectory.Home, recursive: node.isDirectory })
-      }
-      setSelectedPaths(new Set())
-      await loadFileTree()
-      toast(`${nodes.length} item(s) deletado(s) permanentemente.`, 'success')
-    } catch (e: any) {
-      toast('Erro ao deletar: ' + e.message, 'error')
-    } finally {
-      setFileActionLoading(false)
-    }
-  }
 
-  const handleRestoreFromTrash = async (nodes: FileNode[]) => {
-    try {
-      setFileActionLoading(true)
-      const projectRoot = getTrashDir().replace('/.trash', '')
-      for (const node of nodes) {
-        const parts = node.name.split('_')
-        if (parts.length > 1) {
-          parts.shift() // remove timestamp
-        }
-        const originalName = parts.join('_').replace(/___/g, '/')
-        const newPath = `${projectRoot}/${originalName}`
-        
-        const parentDir = newPath.substring(0, newPath.lastIndexOf('/'))
-        await tauriFs.mkdir(parentDir, { baseDir: BaseDirectory.Home, recursive: true })
-        await tauriFs.rename(node.path, newPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home })
-      }
-      setSelectedPaths(new Set())
-      await loadFileTree()
-      toast(`${nodes.length} item(s) restaurado(s).`, 'success')
-    } catch (e: any) {
-      toast('Erro ao restaurar: ' + e.message, 'error')
-    } finally {
-      setFileActionLoading(false)
-    }
-  }
 
-  const requestCloseFiles = (pathsToClose: string[]) => {
-    const dirtyPaths = pathsToClose.filter(p => isDirty(p));
-    if (dirtyPaths.length > 0) {
-      setUnsavedFilesPrompt({ pathsToClose, dirtyPaths });
-    } else {
-      executeCloseFiles(pathsToClose);
-    }
-  }
 
-  const executeCloseFiles = (pathsToClose: string[]) => {
-    if (monacoRef.current) {
-      const monaco = monacoRef.current;
-      pathsToClose.forEach(p => {
-        const models = monaco.editor.getModels();
-        for (const m of models) {
-          if (m.uri.toString().toLowerCase().includes(p.toLowerCase())) {
-            m.dispose();
-          }
-        }
-      });
-    }
-    setFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
-    });
-    setOriginalFileContents(prev => {
-      const next = { ...prev };
-      pathsToClose.forEach(p => delete next[p]);
-      return next;
-    });
-    setOpenFiles(prev => {
-      const newFiles = prev.filter(p => !pathsToClose.includes(p));
-      setActiveFile(curr => {
-        if (curr && pathsToClose.includes(curr)) {
-          const remaining = prev.filter(p => !pathsToClose.includes(p));
-          return remaining.length > 0 ? remaining[Math.min(prev.indexOf(curr), remaining.length - 1)] : null;
-        }
-        return curr;
-      });
-      return newFiles;
-    });
-  }
 
-  const handleCloseFile = (e: React.MouseEvent, path: string) => {
-    e.stopPropagation()
-    requestCloseFiles([path])
-  }
 
-  const handleSelectFile = async (path: string, modifier?: 'ctrl' | 'shift') => {
-    setCtxMenu(null)
-    handleSelection(path, modifier)
-    if (modifier === 'shift' || modifier === 'ctrl') return
-    
-    if (fileContents[path] === undefined) {
-      try {
-        const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
-        setFileContents(prev => ({ ...prev, [path]: content }))
-        setOriginalFileContents(prev => ({ ...prev, [path]: content }))
-        setOpenFiles(prev => {
-          const exists = prev.includes(path)
-          const newList = exists ? prev : [...prev, path]
-          setTimeout(() => {
-            const el = document.querySelector(`[title="${path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}"]`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }, 0);
-          return newList
-        })
-        setActiveFile(path)
-      } catch (err) {
-        toast('Erro ao ler arquivo', 'error')
-      }
-    } else {
-      setOpenFiles(prev => prev.includes(path) ? prev : [...prev, path])
-      setActiveFile(path)
-      setTimeout(() => {
-        const el = document.querySelector(`[title="${path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}"]`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 0);
-    }
-  }
 
-  const isDirty = (path: string) => fileContents[path] !== originalFileContents[path]
 
-  const handleSaveFile = async (value: string | undefined, specificPath?: string) => {
-    const targetPath = specificPath || activeFileRef.current;
-    if (!targetPath || value === undefined) return
-    try {
-      await tauriFs.writeTextFile(targetPath, value, { baseDir: BaseDirectory.Home })
-      setFileContents(prev => ({ ...prev, [targetPath]: value }))
-      setOriginalFileContents(prev => ({ ...prev, [targetPath]: value }))
-      
-      // Update local content in diff if this file is open in diff viewer
-      setDiffActiveFile(curr => {
-        if (curr === targetPath) {
-          setDiffLocalContent(value);
-        }
-        return curr;
-      });
-      toast('Salvo com sucesso', 'success')
-    } catch (err) {
-      toast('Erro ao salvar arquivo', 'error')
-    }
-  }
 
-  const handleSaveAll = async () => {
-    let savedCount = 0;
-    for (const path of openFiles) {
-      if (isDirty(path)) {
-        try {
-          const value = fileContents[path];
-          await tauriFs.writeTextFile(path, value, { baseDir: BaseDirectory.Home });
-          setOriginalFileContents(prev => ({ ...prev, [path]: value }));
-          savedCount++;
-        } catch (err) {
-          toast(`Erro ao salvar ${path}`, 'error');
-        }
-      }
-    }
-    if (savedCount > 0) {
-      toast(`${savedCount} arquivo(s) salvo(s) com sucesso!`, 'success');
-    }
-  }
 
-  const toggleFolder = (path: string, modifier?: 'ctrl' | 'shift') => {
-    setCtxMenu(null) // Fecha o menu de contexto ao abrir/fechar pasta
-    if (modifier) {
-      handleSelection(path, modifier)
-      return
-    }
-    handleSelection(path)
-    const newExpanded = new Set(expandedFolders)
-    if (newExpanded.has(path)) {
-      newExpanded.delete(path)
-    } else {
-      newExpanded.add(path)
-    }
-    setExpandedFolders(newExpanded)
-  }
 
-  const handleSyncFromWeb = async () => {
-    if (!syncManager || !target) return
-    setIsSyncing(true)
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token || ''
-      
-      const apiRoute = target.type === 'project' ? '/api/project-source' : '/api/workspace-source'
-      let payload: any = target.type === 'project' ? { projectId: target.id } : { workspaceId: target.id }
-      
-      // Lógica de injeção da configuração local de Banco de Dados (Tunnel)
-      try {
-        const configStr = await tauriFs.readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData })
-        if (configStr) {
-          const tunnelConfig = JSON.parse(configStr)
-          const projectConn = tunnelConfig?.connections?.find((c: any) => c.projectId === target.id)
-          if (projectConn && projectConn.connectionsString && projectConn.connectionsString.length > 0) {
-            const primaryConn = projectConn.connectionsString[0]
-            
-            payload.legacyDriver = primaryConn.type || 'postgres'
-            payload.dbConfig = {
-              url: primaryConn.connectionString
-            }
-            payload.dataMode = 'legacy'
-            payload.authStrategy = 'legacy' // Adicionado para garantir que o LoginPortalClient use o BD local
-          }
-        }
-      } catch (e) {
-        // Arquivo pode não existir na primeira execução, ignoramos silenciosamente.
-      }
 
-      await syncManager.syncFromWeb(apiRoute, `Bearer ${token}`, payload)
-      
-      const mergeResult = await syncManager.startSyncSandbox()
-      setSandboxMode(true)
-      await loadFileTree()
-      
-      if (mergeResult.oid) {
-        toast('Merge limpo! Nenhum conflito encontrado.', 'success')
-      } else {
-        toast('Atenção: Conflitos encontrados. Resolva no editor antes de confirmar.', 'info')
-      }
-    } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message;
-      toast(`Erro ao sincronizar: ${msg}`, 'error')
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const handleConfirmSync = async () => {
-    if (!syncManager) return
-    setIsCommitting(true)
-    try {
-      await syncManager.confirmSync()
-      setSandboxMode(false)
-      setIsCommitModalOpen(false)
-      await loadFileTree()
-      toast('Sincronização Efetivada', 'success')
-    } catch (err: any) {
-      toast(`Erro: ${err.message}`, 'error')
-    } finally {
-      setIsCommitting(false)
-    }
-  }
-
-  const handleAbortSync = async () => {
-    if (!syncManager) return
-    setIsDiscarding(true)
-    try {
-      await syncManager.abortSync()
-      setSandboxMode(false)
-      await loadFileTree()
-      setFileContents({})
-      setOriginalFileContents({})
-      setOpenFiles([])
-      setActiveFile(null)
-      setShowDiscardConfirm(false)
-      toast(t('workspace_components.ide_local.sync_discarded', 'Sincronização Descartada'), 'info')
-    } catch (err: any) {
-      toast(`Erro: ${err.message}`, 'error')
-    } finally {
-      setIsDiscarding(false)
-    }
-  }
-
-  const handleRevertCommit = async () => {
-    if (!syncManager || !revertConfirmOid) return
-    setIsReverting(true)
-    try {
-      await syncManager.revertToCommit(revertConfirmOid)
-      await loadFileTree()
-      setFileContents({})
-      setOriginalFileContents({})
-      setOpenFiles([])
-      setActiveFile(null)
-      setIsLogModalOpen(false)
-      setRevertConfirmOid(null)
-      toast('Código revertido com sucesso!', 'success')
-    } catch (err: any) {
-      toast(`Erro ao reverter: ${err.message}`, 'error')
-    } finally {
-      setIsReverting(false)
-    }
-  }
 
   const getProjectPath = async () => {
     const home = await homeDir()
@@ -1944,7 +1469,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           <div className="flex items-center gap-1">
                             {/* Clear */}
                             <button
-                              onClick={() => setConsoleLogs([])}
+                              onClick={() => clearConsole()}
                               title="Limpar Console"
                               className="flex items-center justify-center w-6 h-6 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white transition-colors"
                             >

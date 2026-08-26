@@ -102,6 +102,9 @@ interface ViewPageContentProps {
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 import { useTunnelConnection } from './hooks/useTunnelConnection'
 import { useCustomActionsRuntime } from './hooks/useCustomActionsRuntime'
+import { useViewConfigParams } from './hooks/useViewConfigParams'
+import { ViewPageHeader } from './view-orchestrator/ViewPageHeader'
+import { ViewActionModals } from './view-orchestrator/ViewActionModals'
 import { useAnalyticsRuntime } from './hooks/useAnalyticsRuntime'
 import { useMasterData } from './hooks/useMasterData'
 import { useDetailData } from './hooks/useDetailData'
@@ -195,58 +198,19 @@ export default function ViewPageContent({
     return styles
   }
 
-  // Garante que todas as listas de campos sejam únicas por ID
-  const cleanDisplayFields = useMemo(() => {
-    const seen = new Set()
-    return displayFields.filter(f => {
-      if (!f?.id || seen.has(f.id)) return false
-      seen.add(f.id)
-      return true
-    })
-  }, [displayFields])
-
-  const cleanFilterFields = useMemo(() => {
-    const seen = new Set()
-    return filterFields.filter(f => {
-      if (!f?.id || seen.has(f.id)) return false
-      seen.add(f.id)
-      return true
-    })
-  }, [filterFields])
-
-  const cleanFormFields = useMemo(() => {
-    const seen = new Set()
-    const filtered = formFields.filter(f => {
-      if (!f?.id || seen.has(f.id)) return false
-      seen.add(f.id)
-      return true
-    })
-    
-    // Se a lista de campos do formulário estiver vazia (como no Kanban sem Zona 3
-    // ou no modo Fallback/Model direto), caímos de volta para os campos de exibição (grid/list)
-    // para garantir que a janela modal/drawer exiba os campos e funcione corretamente.
-    if (filtered.length === 0) {
-      return cleanDisplayFields.map(f => ({
-        ...f,
-        zone: 3
-      }))
-    }
-    return filtered
-  }, [formFields, cleanDisplayFields])
-
-  const detailFields = useMemo(() => 
-    cleanFormFields.filter(f => f.model_id && String(f.model_id) !== String(masterModelId)),
-  [cleanFormFields, masterModelId])
-
-  const activeRelations = useMemo(() => {
-    if (!projectRelations) return []
-    const activeModelIds = new Set<string>()
-    if (masterModelId) activeModelIds.add(String(masterModelId))
-    cleanFormFields.forEach(f => {
-      if (f.model_id) activeModelIds.add(String(f.model_id))
-    })
-    return projectRelations.filter(r => activeModelIds.has(String(r.detail_model_id)))
-  }, [projectRelations, cleanFormFields, masterModelId])
+  const {
+    cleanDisplayFields,
+    cleanFilterFields,
+    cleanFormFields,
+    detailFields,
+    activeRelations
+  } = useViewConfigParams({
+    displayFields,
+    filterFields,
+    formFields,
+    masterModelId,
+    projectRelations
+  })
 
   const [internalIsCadastroOnly, setInternalIsCadastroOnly] = useState(logicType === 'cadastro')
   const isCadastroOnly = internalIsCadastroOnly
@@ -597,55 +561,34 @@ const isModal = actionInterfaceType === 'modal'
   return (
     <div className="space-y-6">
       {/* Header com Branding Dinâmico */}
-      <RuntimeHeader 
+      <ViewPageHeader
         viewName={viewName}
-        subtitle={description}
+        description={description}
         icon={icon}
-        actions={(
-          <div className="flex items-center gap-3">
-            {isAutomationsEnabled && (
-              <button
-                onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95"
-                title={t('runtime.automations')}
-              >
-                <Workflow className="w-4 h-4 text-indigo-500" />
-                <span className="hidden sm:inline">{t('runtime.automations')}</span>
-              </button>
-            )}
-            {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (
-                <ExportDropdown 
-                  projectId={project.id}
-                  workspaceSlug={workspace.slug}
-                  projectSlug={project.slug}
-                  viewName={viewName}
-                  modelName={modelName}
-                  displayFields={cleanDisplayFields}
-                  joins={joins}
-                  filters={globalFilterValues}
-                  exportFormats={exportFormats}
-                  selectedRecord={(isPageVisible || isModalOpen || isDrawerOpen) ? selectedRow : null}
-                  projectRelations={activeRelations}
-                  masterModelId={masterModelId}
-                  dictionary={tableDictionary}
-                  primaryKeyName={primaryKeyName}
-                />
-            )}
-            {canAdd && (
-              <button 
-                onClick={handleOpenAdd}
-                style={getButtonStyles(btnAdd)}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full transition-all font-bold text-xs shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-95",
-                  (btnAdd?.custom_label !== undefined && btnAdd.custom_label !== '') ? "" : "capitalize tracking-wider"
-                )}
-              >
-                <Plus className="w-4 h-4" />
-                {labelAdd}
-              </button>
-            )}
-          </div>
-        )}
+        workspace={workspace}
+        project={project}
+        isAutomationsEnabled={isAutomationsEnabled}
+        viewId={viewId}
+        logicType={logicType}
+        canExport={canExport}
+        exportFormats={exportFormats}
+        modelName={modelName}
+        cleanDisplayFields={cleanDisplayFields}
+        joins={joins}
+        globalFilterValues={globalFilterValues}
+        isPageVisible={isPageVisible}
+        isModalOpen={isModalOpen}
+        isDrawerOpen={isDrawerOpen}
+        selectedRow={selectedRow}
+        activeRelations={activeRelations}
+        masterModelId={masterModelId}
+        tableDictionary={tableDictionary}
+        primaryKeyName={primaryKeyName}
+        canAdd={canAdd}
+        btnAdd={btnAdd}
+        labelAdd={labelAdd}
+        handleOpenAdd={handleOpenAdd}
+        getButtonStyles={getButtonStyles}
       />
 
       <main className="px-10 py-6 pb-8 space-y-8">
@@ -816,88 +759,56 @@ const isModal = actionInterfaceType === 'modal'
         )}
       </main>
 
-      {isModal ? (
-        <RecordModal 
-          key={`master-modal-${selectedRow?.id ?? 'new'}`}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          zIndex={200}
-          mode={drawerMode}
-          fields={cleanFormFields}
-          initialData={selectedRow}
-          onSave={handleSave}
-          isLoading={isProcessing}
-          logicType={logicType}
-          masterModelId={masterModelId}
-          masterModelName={modelName}
-          masterTabTitle={masterTabTitle}
-          detailsTabTitles={detailsTabTitles}
-          detailsItemTitles={detailsItemTitles}
-          tabsStyleConfig={tabsStyleConfig}
-          detailsDisplayMode={detailsDisplayMode}
-          onEditDetail={handleEditDetail}
-          onDeleteDetail={handleDeleteDetail}
-          onAddDetail={handleOpenAddDetail}
-          joins={joins}
-          dictionary={dictionary}
-          detailsInlineTypes={detailsInlineTypes}
-          initialTab={activeTabForMaster}
-          onTabChange={setActiveTabForMaster}
-          projectId={project.id}
-          secretToken={project.secret_token}
-          tunnelChannel={tunnelChannel}
-          isTunnelReady={isTunnelReady}
-          project={project}
-          customActions={customActions}
-          onCustomAction={handleCustomAction}
-          refreshTrigger={refreshKey}
-          customSlots={customSlots}
-        />
-      ) : (
-        <RecordDrawer 
-          key={`master-drawer-${selectedRow?.id ?? 'new'}`}
-          isOpen={isDrawerOpen}
-          onClose={() => setIsDrawerOpen(false)}
-          zIndex={200}
-          mode={drawerMode}
-          fields={cleanFormFields}
-          initialData={selectedRow}
-          onSave={handleSave}
-          isLoading={isProcessing}
-          logicType={logicType}
-          masterModelId={masterModelId}
-          masterModelName={modelName}
-          masterTabTitle={masterTabTitle}
-          detailsTabTitles={detailsTabTitles}
-          detailsItemTitles={detailsItemTitles}
-          tabsStyleConfig={tabsStyleConfig}
-          detailsDisplayMode={detailsDisplayMode}
-          onEditDetail={handleEditDetail}
-          onDeleteDetail={handleDeleteDetail}
-          onAddDetail={handleOpenAddDetail}
-          joins={joins}
-          dictionary={dictionary}
-          detailsInlineTypes={detailsInlineTypes}
-          initialTab={activeTabForMaster}
-          onTabChange={setActiveTabForMaster}
-          projectId={project.id}
-          secretToken={project.secret_token}
-          tunnelChannel={tunnelChannel}
-          isTunnelReady={isTunnelReady}
-          project={project}
-          customActions={customActions}
-          onCustomAction={handleCustomAction}
-          refreshTrigger={refreshKey}
-          customSlots={customSlots}
-        />
-      )}
-
-      <DeleteConfirmModal 
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        isLoading={isProcessing}
-        recordName={selectedRow?.name || selectedRow?.titulo || selectedRow?.id}
+      <ViewActionModals
+        isDrawerOpen={isDrawerOpen && !isModal}
+        isModalOpen={isModalOpen && isModal}
+        isDeleteModalOpen={isDeleteModalOpen}
+        isIframeModalOpen={isIframeModalOpen}
+        isIframeDrawerOpen={isIframeDrawerOpen}
+        isWidgetModalOpen={isWidgetModalOpen}
+        setOpen={setOpen}
+        setIsDeleteModalOpen={setIsDeleteModalOpen}
+        setIsIframeModalOpen={setIsIframeModalOpen}
+        setIsIframeDrawerOpen={setIsIframeDrawerOpen}
+        setIsWidgetModalOpen={setIsWidgetModalOpen}
+        setEditingWidget={setEditingWidget}
+        drawerMode={drawerMode}
+        selectedRow={selectedRow}
+        iframeTitle={iframeTitle}
+        iframeUrl={iframeUrl}
+        editingWidget={editingWidget}
+        handleSave={handleSave}
+        handleDelete={handleDelete}
+        handleSaveWidgetRuntime={handleSaveWidgetRuntime}
+        cleanFormFields={cleanFormFields}
+        modelName={modelName}
+        project={project}
+        dictionary={dictionary}
+        detailsDisplayMode={detailsDisplayMode}
+        detailsInterfaceTypes={detailsInterfaceTypes}
+        detailsInlineTypes={detailsInlineTypes}
+        detailsModalSizes={detailsModalSizes}
+        detailsModalWidths={detailsModalWidths}
+        detailsModalHeights={detailsModalHeights}
+        masterTabTitle={masterTabTitle}
+        detailsTabTitles={detailsTabTitles}
+        detailsItemTitles={detailsItemTitles}
+        tabsStyleConfig={tabsStyleConfig}
+        logicType={logicType}
+        isTunnelReady={isTunnelReady}
+        tunnelChannel={tunnelChannel}
+        isProcessing={isProcessing}
+        masterModelId={masterModelId}
+        handleEditDetail={handleEditDetail}
+        handleDeleteDetail={handleDeleteDetail}
+        handleOpenAddDetail={handleOpenAddDetail}
+        joins={joins}
+        activeTabForMaster={activeTabForMaster}
+        setActiveTabForMaster={setActiveTabForMaster}
+        customActions={customActions}
+        handleCustomAction={handleCustomAction}
+        refreshKey={refreshKey}
+        customSlots={customSlots}
       />
 
       {/* Renderização de níveis anteriores do histórico */}
@@ -1037,65 +948,7 @@ const isModal = actionInterfaceType === 'modal'
         recordName={itemToDelete?.name || itemToDelete?.id}
       />
 
-      {/* Widget Editor Modal - Runtime */}
-      <Modal
-        isOpen={isWidgetModalOpen}
-        onClose={() => setIsWidgetModalOpen(false)}
-        title="Configurar Indicador"
-      >
-        <div className="space-y-6">
-          <BIWidgetConfigEditor 
-            editingWidget={editingWidget}
-            setEditingWidget={setEditingWidget}
-            models={project.models}
-            joins={joins || []}
-            t={t}
-          />
-
-
-          <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-             <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] capitalize tracking-wider transition-all">Cancelar</button>
-             <button onClick={() => handleSaveWidgetRuntime(editingWidget)} className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] capitalize tracking-wider hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95">Salvar Dashboard</button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal / Drawer for UseCase Actions */}
-      <Modal 
-        isOpen={isIframeModalOpen} 
-        onClose={() => {
-          setIsIframeModalOpen(false)
-          setIframeUrl('')
-          setRefreshKey(prev => prev + 1)
-          setRelationalRefreshKey(prev => prev + 1)
-        }} 
-        title={iframeTitle}
-        size="4xl"
-        hideHeader={true}
-        zIndex={9999}
-        className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
-      >
-        <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
-          {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
-        </div>
-      </Modal>
-
-      <Drawer
-        isOpen={isIframeDrawerOpen}
-        onClose={() => {
-          setIsIframeDrawerOpen(false)
-          setIframeUrl('')
-          setRefreshKey(prev => prev + 1)
-          setRelationalRefreshKey(prev => prev + 1)
-        }}
-        title={iframeTitle}
-        hideHeader={true}
-        zIndex={9999}
-      >
-        <div className="w-full h-full bg-white dark:bg-neutral-950">
-          {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
-        </div>
-      </Drawer>
+      {/* Fim dos modais (widget config e iframe isolados no ViewActionModals) */}
 
     </div>
   )
