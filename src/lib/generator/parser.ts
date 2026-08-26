@@ -49,13 +49,16 @@ export function parseMetaBuilderJSON(
   for (const rv of rawViews) {
     const vComps = rawComponents.filter((c: any) => c.view_id === rv.id)
     
-    const components: UIComponentNode[] = vComps.map((c: any) => ({
-      type: c.component_type || 'text',
-      field: c.field_id,
-      label: c.label || c.name,
-      isVisible: c.is_visible !== false,
-      config: c.config || {}
-    }))
+    const components: UIComponentNode[] = vComps.map((c: any) => {
+      const fieldDef = rawFields.find((f: any) => f.id === c.field_id)
+      return {
+        type: c.component_type || 'text',
+        field: fieldDef ? fieldDef.db_column_name : c.field_id,
+        label: c.label || c.name || fieldDef?.display_name || 'Campo',
+        isVisible: c.is_visible !== false,
+        config: c.config || {}
+      }
+    })
 
     routes.push({
       path: `/${rv.slug || rv.name.toLowerCase()}`,
