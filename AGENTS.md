@@ -8,3 +8,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - NEVER automatically route, cascade, or upgrade any sub-task to Gemini Pro without manual user confirmation.
 - Only run operations compatible with the current active chat model window.
 - Não crie planos de implementação para tarefas simples, como criação de páginas estáticas ou de marketing, pequenos ajustes visuais ou adição de links de navegação. Apenas crie planos para alterações estruturais no banco de dados ou fluxos complexos de autenticação.
+- Para LEITURA de arquivos, SEMPRE use as ferramentas nativas `view_file` e `grep_search`. NUNCA use `run_command` com `Get-Content` ou `cat` apenas para ler arquivos — isso exige aprovação desnecessária do usuário. Reserve `run_command` exclusivamente para operações que realmente modificam o sistema (build, install, start de servidores, git, etc.).
