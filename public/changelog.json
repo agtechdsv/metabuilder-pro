@@ -1,4 +1,25 @@
 {
+  "v1.0.1": {
+    "date": "2026-08-26",
+    "pt": [
+      "Novo Visualizador Dinâmico de Blueprints: visualize a arquitetura e os componentes do seu projeto em tempo real com máxima clareza.",
+      "Editor Avançado de Ações Customizadas: configure etapas, automações e fluxos de trabalho personalizados através de uma interface intuitiva.",
+      "Gerador Automático de Projetos Next.js: transforme suas especificações e designs diretamente em aplicações Next.js completas e prontas para produção.",
+      "Novo Mecanismo de Conversão Inteligente: exportação e processamento de estruturas otimizados para garantir precisão e agilidade na criação de código."
+    ],
+    "en": [
+      "New Dynamic Blueprint Visualizer: view your project architecture and components in real time with high clarity and detail.",
+      "Advanced Custom Actions Editor: easily configure custom steps, automations, and workflows using an intuitive interface.",
+      "Automated Next.js Project Generator: turn your designs and blueprints directly into production-ready Next.js applications in seconds.",
+      "Intelligent Schema Conversion Engine: optimized project parsing and data processing for seamless and accurate code generation."
+    ],
+    "es": [
+      "Nuevo Visualizador Dinámico de Blueprints: visualice la arquitectura y los componentes de su proyecto en tiempo real con total claridad.",
+      "Editor Avanzado de Acciones Personalizadas: configure pasos, automatizaciones y flujos de trabajo personalizados mediante una interfaz intuitiva.",
+      "Generador Automático de Proyectos Next.js: convierta sus especificaciones y diseños directamente en aplicaciones Next.js completas listas para producción.",
+      "Motor Inteligente de Conversión de Estructuras: procesamiento optimizado de proyectos para una generación de código rápida, precisa y sin complicaciones."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
