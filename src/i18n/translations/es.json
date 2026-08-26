@@ -3668,7 +3668,11 @@
       "discard_sync_title": "¿Descartar Sincronización?",
       "discard_sync_desc1": "Esto cancelará el proceso de fusión y revertirá su proyecto local exactamente al estado antes de la sincronización. Ninguno de los cambios remotos se aplicará a su entorno local.",
       "discard_sync_desc2": "¿Está seguro de que desea continuar? Esta acción no se puede deshacer.",
-      "yes_discard_all": "Sí, Descartar Todo"
+      "yes_discard_all": "Sí, Descartar Todo",
+      "deps_installed_success": "¡Dependencias instaladas exitosamente!",
+      "compiling_app": "Compilando la aplicación... Esperando la primera respuesta.",
+      "app_ready": "Aplicación lista en localhost:3000",
+      "server_ready_toast": "¡Servidor listo!"
     }
   },
   "formula_builder": {

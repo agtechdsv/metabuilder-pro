@@ -3608,7 +3608,11 @@
       "discard_sync_title": "Discard Synchronization?",
       "discard_sync_desc1": "This will cancel the merge process and revert your local project exactly to the state before synchronization. None of the remote changes will be applied to your local environment.",
       "discard_sync_desc2": "Are you sure you want to proceed? This action cannot be undone.",
-      "yes_discard_all": "Yes, Discard All"
+      "yes_discard_all": "Yes, Discard All",
+      "deps_installed_success": "Dependencies installed successfully!",
+      "compiling_app": "Compiling application... Waiting for first response.",
+      "app_ready": "Application ready at localhost:3000",
+      "server_ready_toast": "Server ready!"
     }
   },
   "formula_builder": {

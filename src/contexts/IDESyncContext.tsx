@@ -779,7 +779,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         }
       })
 
-      addConsoleLog('✓ Dependências instaladas com sucesso!', 'info')
+      addConsoleLog(`✓ ${t('workspace_components.ide_local.deps_installed_success', 'Dependências instaladas com sucesso!')}`, 'info')
     } catch (err: any) {
       addConsoleLog(`✗ Erro no build: ${err?.message || err}`, 'error')
       toast('Erro ao instalar dependências', 'error')
@@ -806,7 +806,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
         if (!serverReady && lower.includes('ready in')) {
           serverReady = true
-          addConsoleLog('⚙ Compilando a aplicação... Aguardando primeira resposta.', 'info')
+          addConsoleLog(`⚙ ${t('workspace_components.ide_local.compiling_app', 'Compilando a aplicação... Aguardando primeira resposta.')}`, 'info')
 
           // Warm-up: wait for first successful HTTP response before enabling open-in-browser
           const warmUp = async () => {
@@ -819,8 +819,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 })
                 // mode: 'no-cors' returns an opaque response with status 0, which means the server responded!
                 if (res.status === 0 || res.status < 500) {
-                  addConsoleLog('✓ Aplicação pronta em localhost:3000', 'info')
-                  toast('Servidor pronto!', 'success')
+                  addConsoleLog(`✓ ${t('workspace_components.ide_local.app_ready', 'Aplicação pronta em localhost:3000')}`, 'info')
+                  toast(t('workspace_components.ide_local.server_ready_toast', 'Servidor pronto!'), 'success')
                   return
                 }
               } catch (_) {}

@@ -199,22 +199,26 @@ export default function DynamicMindMap({
     const newTree = Array.from(uniqueMap.values());
     newTree.sort((a: any, b: any) => a.name.localeCompare(b.name, localeStr, { numeric: true }));
     const newRootIdsSorted = newTree.map(n => n.id).sort().join(',');
-    setRelationalTree(prevTree => {
-      if (prevTree.length === 0) return newTree;
-      
-      const prevTreeMap = new Map(prevTree.map(n => [n.id, n]));
-      
-      return newTree.map(newNode => {
-        const oldNode = prevTreeMap.get(newNode.id);
-        if (oldNode) {
-          // Preserve children for matching root nodes
-          return {
-            ...newNode,
-            children: oldNode.children
-          };
+    // Deep recursive merge: preserve the ENTIRE child sub-tree at every level,
+    // so that children loaded by fetchChildren are not erased when `data` refreshes.
+    const deepMerge = (newNodes: MindMapNode[], oldNodes: MindMapNode[]): MindMapNode[] => {
+      const oldMap = new Map(oldNodes.map(n => [n.id, n]));
+      return newNodes.map(newNode => {
+        const old = oldMap.get(newNode.id);
+        if (old) {
+          const mergedChildren = old.children !== undefined
+            ? (newNode.children !== undefined
+                ? deepMerge(newNode.children, old.children)
+                : old.children)
+            : newNode.children;
+          return { ...newNode, children: mergedChildren };
         }
         return newNode;
       });
+    };
+    setRelationalTree(prevTree => {
+      if (prevTree.length === 0) return newTree;
+      return deepMerge(newTree, prevTree);
     });
     
     if (prevRootIdsRef.current !== newRootIdsSorted) {
@@ -263,15 +267,22 @@ export default function DynamicMindMap({
   }, [treeData, currentPath]);
 
   const prevRefreshTriggerRef = useRef(refreshTrigger || 0);
+  // Snapshot the path at the time the refresh was triggered so we can restore it
+  // after fetchChildren completes (prevents the path-validation effect from truncating it).
+  const savedPathRef = useRef<number[]>([]);
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTriggerRef.current) {
       prevRefreshTriggerRef.current = refreshTrigger;
       if (currentPath.length > 0 && currentNode && currentNode.id !== 'virtual-root') {
-        // Se estamos visualizando um nó filho, disparamos o recarregamento dos dados dele
-        fetchChildren(currentPath, currentNode);
+        savedPathRef.current = [...currentPath];
+        // Reload the current node's children, then restore path
+        fetchChildren(currentPath, currentNode).then(() => {
+          setCurrentPath(savedPathRef.current);
+        });
       }
     }
-  }, [refreshTrigger, currentPath, currentNode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   // Função Async para Carregar Filhos do Nível Inferior
   const fetchChildren = async (path: number[], node: MindMapNode) => {

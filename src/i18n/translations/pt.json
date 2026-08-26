@@ -3609,7 +3609,11 @@
       "discard_sync_title": "Descartar Sincronização?",
       "discard_sync_desc1": "Isso irá cancelar o processo de merge e reverter seu projeto local exatamente para o estado antes da sincronização. Nenhuma das alterações remotas será aplicada no seu ambiente local.",
       "discard_sync_desc2": "Tem certeza que deseja prosseguir? Esta ação não pode ser desfeita.",
-      "yes_discard_all": "Sim, Descartar Tudo"
+      "yes_discard_all": "Sim, Descartar Tudo",
+      "deps_installed_success": "Dependências instaladas com sucesso!",
+      "compiling_app": "Compilando a aplicação... Aguardando primeira resposta.",
+      "app_ready": "Aplicação pronta em localhost:3000",
+      "server_ready_toast": "Servidor pronto!"
     }
   },
   "formula_builder": {
