@@ -129,7 +129,7 @@ export function CustomActionsEditor({
                   <div>
                     <h4 className="font-bold text-sm text-neutral-900 dark:text-white">{action.label}</h4>
                     <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
-                      {action.trigger_type} â€¢ {(() => {
+                      {action.trigger_type} • {(() => {
                         const activeContexts: string[] = action.contexts
                           ? (Array.isArray(action.contexts) ? action.contexts : [action.contexts])
                           : (action.context ? [action.context] : ['row']);

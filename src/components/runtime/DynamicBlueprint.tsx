@@ -412,7 +412,12 @@ function DynamicBlueprintContent({
   React.useEffect(() => {
     setNodes(initialNodes)
     setEdges(initialEdges)
-  }, [initialNodes, initialEdges, setNodes, setEdges])
+    // Delay fitView para garantir que a modal (se houver) já terminou de abrir e tem largura > 0
+    const t = setTimeout(() => {
+      fitView({ padding: 0.2, duration: 800 })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [initialNodes, initialEdges, setNodes, setEdges, fitView])
 
   const onConnect = useCallback((connection: Connection) => {
     if (connection.source && connection.target) {
