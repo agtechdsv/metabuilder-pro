@@ -22,7 +22,102 @@ export function generateNativeProject(ast: AppAST): Map<string, string> {
   generateActions(ast, files)
   generateComponents(ast, files)
 
+  // 3. Página de Login
+  generateLoginPage(ast, files)
+
   return files
+}
+
+function generateLoginPage(ast: AppAST, files: Map<string, string>) {
+  files.set('app/login/page.tsx', `import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Login — ${ast.projectName}',
+}
+
+export default function LoginPage() {
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-[var(--background)] p-4">
+      <div className="w-full max-w-md">
+        {/* Card */}
+        <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-2xl p-8 shadow-2xl shadow-black/40">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-white text-center mb-1">Bem-vindo de volta!</h1>
+          <p className="text-[var(--muted)] text-sm text-center mb-8">Entre com suas credenciais para acessar o sistema.</p>
+
+          {/* Biometria */}
+          <button
+            type="button"
+            className="w-full flex items-center justify-center gap-2 border border-[var(--card-border)] hover:border-indigo-500 text-[var(--foreground)] rounded-xl py-2.5 px-4 text-sm font-medium transition-all mb-6 bg-white/5 hover:bg-white/10"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10"/>
+              <path d="M12 8v4l3 3"/>
+            </svg>
+            ENTRAR COM BIOMETRIA
+          </button>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-[var(--card-border)]"></div>
+            <span className="text-xs text-[var(--muted)]">ou</span>
+            <div className="flex-1 h-px bg-[var(--card-border)]"></div>
+          </div>
+
+          {/* Form */}
+          <form action="/" method="get" className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">E-mail</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="exemplo@empresa.com"
+                className="w-full bg-[var(--background)] border border-[var(--card-border)] focus:border-indigo-500 text-[var(--foreground)] placeholder:text-[var(--muted)] rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Senha</label>
+                <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Esqueci minha senha</a>
+              </div>
+              <input
+                id="password"
+                type="password"
+                placeholder="Sua senha secreta"
+                className="w-full bg-[var(--background)] border border-[var(--card-border)] focus:border-indigo-500 text-[var(--foreground)] placeholder:text-[var(--muted)] rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-3 px-4 text-sm transition-colors shadow-lg shadow-indigo-600/25 mt-2"
+            >
+              ENTRAR NO SISTEMA
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <a href="/" className="text-xs text-[var(--muted)] hover:text-white transition-colors">
+              ← Voltar ao Dashboard
+            </a>
+          </div>
+
+          <p className="text-center text-[10px] text-[var(--muted)] mt-6 tracking-widest uppercase">Powered by MetaBuilder PRO</p>
+        </div>
+      </div>
+    </main>
+  )
+}
+`)
 }
 
 function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
@@ -100,6 +195,29 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
 .env*.local
 .env
 `)
+
+  // tsconfig.json — essencial para o alias @/ funcionar
+  files.set('tsconfig.json', JSON.stringify({
+    compilerOptions: {
+      target: "ES2017",
+      lib: ["dom", "dom.iterable", "esnext"],
+      allowJs: true,
+      skipLibCheck: true,
+      strict: true,
+      noEmit: true,
+      esModuleInterop: true,
+      module: "esnext",
+      moduleResolution: "bundler",
+      resolveJsonModule: true,
+      isolatedModules: true,
+      jsx: "preserve",
+      incremental: true,
+      plugins: [{ name: "next" }],
+      paths: { "@/*": ["./*"] }
+    },
+    include: ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+    exclude: ["node_modules"]
+  }, null, 2))
 
   // next.config.js (Next.js 14 não suporta .ts aqui)
   files.set('next.config.js', `/** @type {import('next').NextConfig} */
