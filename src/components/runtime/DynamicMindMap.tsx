@@ -246,39 +246,69 @@ export default function DynamicMindMap({
     return current
   }, [treeData, currentPath])
 
-  // Validar currentPath contra treeData para evitar caminhos inválidos
+  const currentPathIdsRef = useRef<string[]>([]);
+
+  // Update currentPathIds whenever a valid path is active
   useEffect(() => {
     if (!treeData || treeData.length === 0) return;
-    
     let current: any = { children: treeData };
-    let validLength = 0;
-    for (let i = 0; i < currentPath.length; i++) {
-      const idx = currentPath[i];
+    let ids: string[] = [];
+    let valid = true;
+    for (const idx of currentPath) {
       if (current.children && current.children[idx]) {
         current = current.children[idx];
-        validLength++;
+        ids.push(current.id);
       } else {
+        valid = false;
         break;
       }
     }
-    if (validLength < currentPath.length) {
-      setCurrentPath(currentPath.slice(0, validLength));
-    }
+    if (valid) currentPathIdsRef.current = ids;
   }, [treeData, currentPath]);
 
+  // Validar currentPath contra treeData usando IDs para evitar truncar quando a ordem muda
+  useEffect(() => {
+    if (!treeData || treeData.length === 0 || currentPath.length === 0) return;
+    
+    const targetIds = currentPathIdsRef.current;
+    if (targetIds.length === 0) return;
+
+    let current: any = { children: treeData };
+    let newPath: number[] = [];
+    let isValidOldPath = true;
+
+    for (let i = 0; i < currentPath.length; i++) {
+      const oldIdx = currentPath[i];
+      const expectedId = targetIds[i];
+
+      if (!current.children || !current.children[oldIdx] || current.children[oldIdx].id !== expectedId) {
+        isValidOldPath = false;
+        const correctIdx = current.children ? current.children.findIndex((c: any) => c.id === expectedId) : -1;
+        if (correctIdx !== -1) {
+          newPath.push(correctIdx);
+          current = current.children[correctIdx];
+        } else {
+          break;
+        }
+      } else {
+        newPath.push(oldIdx);
+        current = current.children[oldIdx];
+      }
+    }
+
+    if (!isValidOldPath) {
+      setCurrentPath(newPath);
+    } else if (newPath.length < currentPath.length) {
+      setCurrentPath(newPath);
+    }
+  }, [treeData]);
+
   const prevRefreshTriggerRef = useRef(refreshTrigger || 0);
-  // Snapshot the path at the time the refresh was triggered so we can restore it
-  // after fetchChildren completes (prevents the path-validation effect from truncating it).
-  const savedPathRef = useRef<number[]>([]);
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTriggerRef.current) {
       prevRefreshTriggerRef.current = refreshTrigger;
       if (currentPath.length > 0 && currentNode && currentNode.id !== 'virtual-root') {
-        savedPathRef.current = [...currentPath];
-        // Reload the current node's children, then restore path
-        fetchChildren(currentPath, currentNode).then(() => {
-          setCurrentPath(savedPathRef.current);
-        });
+        fetchChildren(currentPath, currentNode);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -408,12 +438,41 @@ export default function DynamicMindMap({
 
           setRelationalTree(prevTree => {
             const newTree = JSON.parse(JSON.stringify(prevTree)); 
+            const targetIds = currentPathIdsRef.current;
             let curr: any = { children: newTree };
-            for (const p of path) {
-              curr = curr.children[p];
+            
+            // Navigate safely using IDs in case ordering has changed
+            for (const expectedId of targetIds) {
+              if (!curr.children) break;
+              const nextIdx = curr.children.findIndex((c: any) => c.id === expectedId);
+              if (nextIdx !== -1) {
+                curr = curr.children[nextIdx];
+              } else {
+                curr = null;
+                break;
+              }
             }
-            curr.children = newChildren;
-            curr.count = newChildren.length;
+            
+            if (curr && curr.id === currentNode.id) {
+              curr.children = newChildren;
+              curr.count = newChildren.length;
+            } else {
+              // Fallback to path indices if ID traversal failed
+              let fallbackCurr: any = { children: newTree };
+              let valid = true;
+              for (const p of path) {
+                if (fallbackCurr.children && fallbackCurr.children[p]) {
+                  fallbackCurr = fallbackCurr.children[p];
+                } else {
+                  valid = false;
+                  break;
+                }
+              }
+              if (valid) {
+                fallbackCurr.children = newChildren;
+                fallbackCurr.count = newChildren.length;
+              }
+            }
             return newTree;
           });
           setLoadingPath(null);
