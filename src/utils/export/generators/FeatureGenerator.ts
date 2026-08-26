@@ -246,6 +246,115 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
     }
   })
 
+  // Generate API Routes for Supabase for ALL models (server-side, using SSR client)
+  // This ensures ALL data access goes through the server — no direct browser calls to Supabase.
+  if (dbType === 'supabase') {
+    models.forEach(model => {
+      if (!model.table_name) return
+      const modelName = model.table_name
+      const apiFolder = appFolder.folder('api')?.folder(modelName)
+      if (apiFolder) {
+        apiFolder.file('route.ts', `import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+
+export async function GET(request: Request) {
+  const supabase = createClient()
+  const { searchParams } = new URL(request.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '50')
+  const from = (page - 1) * limit
+  const to = from + limit - 1
+
+  // Parse optional JOIN definitions: [{ from, localKey, to, foreignKey }]
+  let joinsParam: Array<{ from: string; localKey: string; to: string; foreignKey: string }> = []
+  try {
+    const raw = searchParams.get('joins')
+    if (raw) joinsParam = JSON.parse(raw)
+  } catch (_) {}
+
+  // Build select string: main table + nested joined tables for detailsItemTitles
+  const nestedSelects = joinsParam
+    .filter(j => j.from?.toLowerCase() === '${modelName}'.toLowerCase())
+    .map(j => \`\${j.to}!inner(\${j.foreignKey})\`)
+
+  const selectStr = nestedSelects.length > 0
+    ? \`*, \${nestedSelects.join(', ')}\`
+    : '*'
+
+  let query = supabase
+    .from('${modelName}')
+    .select(selectStr, { count: 'exact' })
+    .range(from, to)
+    .order('id', { ascending: false })
+
+  // Apply equality filters from query params (filter_<column>=<value>)
+  searchParams.forEach((value, key) => {
+    if (key.startsWith('filter_')) {
+      const col = key.replace('filter_', '')
+      query = query.eq(col, value)
+    }
+  })
+
+  const { data, count, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ data: data || [], count: count || 0 })
+}
+
+export async function POST(request: Request) {
+  const supabase = createClient()
+  try {
+    const data = await request.json()
+    const { data: inserted, error } = await supabase
+      .from('${modelName}')
+      .insert([data])
+      .select()
+      .single()
+    if (error) throw error
+    return NextResponse.json(inserted)
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+export async function PUT(request: Request) {
+  const supabase = createClient()
+  try {
+    const { pkValue, data } = await request.json()
+    const { data: updated, error } = await supabase
+      .from('${modelName}')
+      .update(data)
+      .eq('id', pkValue)
+      .select()
+      .single()
+    if (error) throw error
+    return NextResponse.json(updated)
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const supabase = createClient()
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+  try {
+    const { error } = await supabase
+      .from('${modelName}')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+`)
+      }
+    })
+  }
+
   // Generate API Routes for Postgres for ALL models (not just ones with views)
   if (dbType === 'postgres') {
     models.forEach(model => {

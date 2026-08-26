@@ -6,28 +6,24 @@ interface UseMasterDataProps {
   primaryKeyName?: string;
   drawerMode?: string;
   selectedRow?: any;
-  supabase?: any;
   t?: any;
   setIsProcessing?: any;
   setRefreshKey?: any;
   setOpen?: (val: boolean) => void;
   setIsPageVisible?: any;
+  isPage?: boolean;
+  setSelectedRow?: any;
+  setDrawerMode?: any;
+  fetchDetails?: any;
   [key: string]: any;
 }
 
-export function useMasterData({
-  project,
-  modelName,
-  primaryKeyName = 'id',
-  drawerMode,
-  selectedRow,
-  supabase,
-  t,
-  setIsProcessing,
-  setRefreshKey,
-  setOpen,
-  setIsPageVisible
-}: UseMasterDataProps) {
+export function useMasterData(props: UseMasterDataProps) {
+  const {
+    project, modelName, primaryKeyName = 'id', drawerMode, selectedRow, t,
+    setIsProcessing, setRefreshKey, setOpen, setIsPageVisible,
+    isPage, setSelectedRow, setDrawerMode, fetchDetails
+  } = props
   const { toast } = useToast()
 
   const handleSave = async (formData: any) => {
@@ -37,7 +33,6 @@ export function useMasterData({
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
       const pkValue = formData[primaryKeyName] ?? formData[cleanPkName] ?? formData.id
 
-      // Sanitize data (remove internal fields)
       const sanitizedData: any = {}
       for (const [k, v] of Object.entries(formData)) {
         if (k.startsWith('_') || k.includes('.') || v === undefined || typeof v === 'object') continue
@@ -45,18 +40,22 @@ export function useMasterData({
         sanitizedData[k] = (v === '' ? null : v)
       }
 
+      const method = action === 'insert' ? 'POST' : 'PUT'
+      const res = await fetch(`/api/${modelName}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action === 'insert' ? sanitizedData : { pkValue, data: sanitizedData })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erro na operação')
+      }
+
+      const savedData = await res.json().catch(() => ({}))
       let masterId = pkValue
-      if (action === 'insert') {
-        const { data, error } = await supabase.from(modelName).insert([sanitizedData]).select()
-        if (error) throw error
-        if (data && data.length > 0) {
-          masterId = data[0][cleanPkName] || data[0].id || pkValue
-        }
-        toast(t('runtime.record_created_success', 'Registro criado'), 'success')
-      } else {
-        const { error } = await supabase.from(modelName).update(sanitizedData).eq(cleanPkName, pkValue)
-        if (error) throw error
-        toast(t('runtime.record_updated_success', 'Registro atualizado'), 'success')
+      if (action === 'insert' && savedData) {
+        masterId = savedData[cleanPkName] || savedData.id || pkValue
       }
 
       // --- SALVAR DETALHES INLINE ---
@@ -66,12 +65,12 @@ export function useMasterData({
           if (!rowTable) continue
 
           const isNew = row._isNew
-          const rowPkName = 'id' // Fallback
+          const rowPkName = 'id'
           const rowPkVal = row[rowPkName] ?? row.ID
 
           const SKIP = new Set(['_details', 'model_name', 'display_model_name', '_isNew'])
           const childSanitized: any = {}
-          
+
           for (const [k, v] of Object.entries(row)) {
             const lk = k.toLowerCase()
             if (SKIP.has(lk) || k.startsWith('_') || k.startsWith('virt_') || k.includes('.') || lk === rowPkName.toLowerCase() || lk === 'created_at' || lk === 'updated_at' || v === undefined || typeof v === 'object') continue
@@ -92,13 +91,18 @@ export function useMasterData({
 
           let childPkToPass = rowPkVal
           if (Object.keys(childSanitized).length > 0 || !isNew) {
-            if (isNew) {
-              const { data, error } = await supabase.from(rowTable).insert([childSanitized]).select()
-              if (!error && data && data.length > 0) {
-                childPkToPass = data[0][rowPkName] || data[0].id || rowPkVal
+            const childMethod = isNew ? 'POST' : 'PUT'
+            const childRes = await fetch(`/api/${rowTable}`, {
+              method: childMethod,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(isNew ? childSanitized : { pkValue: rowPkVal, data: childSanitized })
+            }).catch(e => console.error('Erro ao salvar detalhe:', e))
+
+            if (childRes && childRes.ok && isNew) {
+              const childSavedData = await childRes.json().catch(() => ({}))
+              if (childSavedData) {
+                childPkToPass = childSavedData[rowPkName] || childSavedData.id || rowPkVal
               }
-            } else {
-              await supabase.from(rowTable).update(childSanitized).eq(rowPkName, rowPkVal)
             }
           }
 
@@ -113,9 +117,22 @@ export function useMasterData({
       }
       // --------------------------------
 
-      setRefreshKey?.((prev: number) => prev + 1)
-      setOpen?.(false)
-      setIsPageVisible?.(false)
+      toast(t('runtime.record_saved_success', 'Registro salvo com sucesso'), 'success')
+
+      if (isPage) {
+        const updatedRow = { ...(selectedRow || {}), ...formData, [cleanPkName]: masterId }
+        if (fetchDetails) {
+          const freshDetails = await fetchDetails(updatedRow, modelName)
+          updatedRow._details = freshDetails
+        }
+        setSelectedRow?.(updatedRow)
+        setDrawerMode?.('edit')
+        setRefreshKey?.((prev: number) => prev + 1)
+      } else {
+        setRefreshKey?.((prev: number) => prev + 1)
+        setOpen?.(false)
+        setIsPageVisible?.(false)
+      }
     } catch (err: any) {
       toast(err.message, 'error')
     } finally {
@@ -129,8 +146,13 @@ export function useMasterData({
     try {
       const cleanPkName = primaryKeyName.split('.').pop() || 'id'
       const pkValue = selectedRow[primaryKeyName] ?? selectedRow[cleanPkName] ?? selectedRow.id
-      const { error } = await supabase.from(modelName).delete().eq(cleanPkName, pkValue)
-      if (error) throw error
+
+      const res = await fetch(`/api/${modelName}?id=${pkValue}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erro ao excluir')
+      }
+
       toast(t('runtime.record_deleted_success', 'Registro excluído'), 'success')
       setRefreshKey?.((prev: number) => prev + 1)
       setOpen?.(false)
@@ -142,7 +164,7 @@ export function useMasterData({
     }
   }
 
-  const getFkErrorMessage = (errorMsg: string, fallbackMsg: string) => {
+  const getFkErrorMessage = (_errorMsg: string, fallbackMsg: string) => {
     return fallbackMsg
   }
 
