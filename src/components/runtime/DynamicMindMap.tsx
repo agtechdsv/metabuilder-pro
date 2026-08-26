@@ -437,7 +437,7 @@ export default function DynamicMindMap({
           newChildren.sort((a: any, b: any) => a.name.localeCompare(b.name, localeStr, { numeric: true }));
 
           setRelationalTree(prevTree => {
-            const newTree = JSON.parse(JSON.stringify(prevTree)); 
+            const newTree = structuredClone(prevTree);
             const targetIds = currentPathIdsRef.current;
             let curr: any = { children: newTree };
             

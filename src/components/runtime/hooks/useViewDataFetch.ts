@@ -63,9 +63,12 @@ export function useViewDataFetch({
   const hasAutoOpenedEditRef = useRef<boolean>(false)
   const fetchDataRef = useRef<any>(null)
 
+  // Keep currentFiltersRef in sync without serializing on every render
+  const filterValuesRef = useRef(filterValues)
+  filterValuesRef.current = filterValues
   useEffect(() => {
-    currentFiltersRef.current = filterValues
-  }, [JSON.stringify(filterValues)])
+    currentFiltersRef.current = filterValuesRef.current
+  })
 
   useEffect(() => {
     const cached = getCachedData(`${projectId}:${modelName}`)
@@ -428,7 +431,7 @@ export function useViewDataFetch({
       const safeAddSelectExpr = (col: any) => {
         if (!col) return;
         const f = resolveDynamicFieldDef(col, allFieldsForResolve, modelName);
-        console.log('[DEBUG-FETCH] safeAddSelectExpr chamado para:', col, 'resolvido para:', f?.db_column_name || 'NULL');
+        // Debug: console.log('[DEBUG-FETCH] safeAddSelectExpr chamado para:', col, 'resolvido para:', f?.db_column_name || 'NULL');
         if (f) {
           addSelectExpr(f.sql_expression || f.db_column_name);
         } else {
@@ -440,7 +443,7 @@ export function useViewDataFetch({
         }
       };
 
-      console.log('[DEBUG-FETCH] kanbanGroup:', kanbanGroupField, 'kanbanCards:', kanbanCardFields, 'timeline:', timelineConfig);
+      // Debug: console.log('[DEBUG-FETCH] kanbanGroup:', kanbanGroupField, 'kanbanCards:', kanbanCardFields, 'timeline:', timelineConfig);
 
       if (kanbanGroupField) {
         safeAddSelectExpr(kanbanGroupField);

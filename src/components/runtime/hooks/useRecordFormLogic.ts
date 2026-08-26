@@ -81,7 +81,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         // Query via the secure data tunnel
         const queryId = crypto.randomUUID()
 
-        console.log(`[MetaBuilder] RecordForm fetching sub-details from ${join.to} via tunnel where ${join.foreignKey} = ${pkValue}`)
+        // console.log(`[MetaBuilder] RecordForm fetching sub-details from ${join.to} via tunnel where ${join.foreignKey} = ${pkValue}`)
 
         try {
           data = await new Promise<any[]>((resolve, reject) => {
@@ -226,7 +226,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 });
              }
 
-             console.log(`[DEBUG RecordFormLogic] Fetching sub-details for ${join.to} uniqueJoins:`, uniqueJoins)
+             // console.log(`[DEBUG RecordFormLogic] Fetching sub-details for ${join.to} uniqueJoins:`, uniqueJoins)
 
           if (project?.db_type === 'postgres') {
              const url = new URL(`${window.location.origin}/api/${join.to}`)
@@ -277,7 +277,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       const newOptions: Record<string, any[]> = {}
 
       const fieldsToFetch = [...fields]
-      console.log(`[MetaBuilder:RecordForm] detailsItemTitles:`, detailsItemTitles);
+      // console.log(`[MetaBuilder:RecordForm] detailsItemTitles:`, detailsItemTitles);
       if (detailsItemTitles && project?.models) {
         Object.entries(detailsItemTitles).forEach(([mId, fieldConfig]) => {
           const model = project.models.find((m: any) => String(m.id) === String(mId))
@@ -319,7 +319,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                                   type: 'select',
                                   options_type: 'relational'
                               };
-                              console.log(`[MetaBuilder:RecordForm] Injected relation into field ${field.id}: ${targetModel.db_table_name} (${cleanVal}, ${cleanLbl})`);
+                              // console.log(`[MetaBuilder:RecordForm] Injected relation into field ${field.id}: ${targetModel.db_table_name} (${cleanVal}, ${cleanLbl})`);
                           }
                       }
                   }
@@ -335,7 +335,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         })
       }
 
-      console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
+      // console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
 
       for (const field of fieldsToFetch) {
         const comp = field._injected_rel || field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
@@ -353,8 +353,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               const rawQuery = `SELECT ${colsToSelect} FROM ${comp.rel_table}`
 
               const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
-              console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
-              console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
+              // console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
+              // console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
 
               const data = await new Promise<any[]>((resolve, reject) => {
                 const isTemporary = !tunnelChannel || !isTunnelReady
@@ -385,7 +385,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                   if (payload.payload?.queryId === queryId) {
                     resolved = true
                     cleanup()
-                    console.log(`[MetaBuilder:RecordForm] Relational options for ${comp.rel_table} returned:`, payload.payload)
+                    // console.log(`[MetaBuilder:RecordForm] Relational options for ${comp.rel_table} returned:`, payload.payload)
                     if (payload.payload.success) resolve(payload.payload.data || [])
                     else reject(new Error(payload.payload.error || 'Error fetching relational options'))
                   }
@@ -431,7 +431,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
               // Guard: only store if we actually got data (timeout resolves with [])
               if (data && data.length > 0) {
-                console.log(`[MetaBuilder:RecordForm] Raw data from tunnel for ${comp.rel_table}:`, data[0])
+                // console.log(`[MetaBuilder:RecordForm] Raw data from tunnel for ${comp.rel_table}:`, data[0])
                 newOptions[field.id] = data.map(item => {
                   const getVal = (key: string) => {
                      if (!key) return undefined;
@@ -446,7 +446,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     ...item
                   }
                 })
-                console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
+                // console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
               }
             } else {
               // Direct query or Postgres API fallback
@@ -717,14 +717,14 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       }
     })
 
-    console.log('[RecordForm] handleSubmit - payload keys:', Object.keys(payloadToSave), '| payload:', JSON.stringify(payloadToSave).slice(0, 500))
+    // console.log('[RecordForm] handleSubmit - payload keys:', Object.keys(payloadToSave), '| payload:', JSON.stringify(payloadToSave).slice(0, 500))
     onSave(payloadToSave)
   }
 
   useEffect(() => {
     const data = { ...(initialData || {}) }
     
-    console.log('[RecordForm Debug] useEffect initialData trigger.', { mode, initialDetailsLength: data._details?.length, detailTables })
+    // console.log('[RecordForm Debug] useEffect initialData trigger.', { mode, initialDetailsLength: data._details?.length, detailTables })
     
     // Inject empty details for master_detail or cadastro if not provided
     if (mode === 'create' && (!data._details || data._details.length === 0)) {
@@ -742,7 +742,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         newExpandedState[`detail-${tableName}-${newId}`] = true
       })
       
-      console.log('[RecordForm Debug] Injecting empty details!', { dDetails })
+      // console.log('[RecordForm Debug] Injecting empty details!', { dDetails })
       data._details = dDetails
       
       // Expande automaticamente as abas recém injetadas

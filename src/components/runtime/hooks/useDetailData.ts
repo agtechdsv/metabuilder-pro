@@ -63,22 +63,22 @@ export function useDetailData({
   const fetchDetails = async (parentRow: any, parentModel: string) => {
     let effectiveJoins = joins || []
     
-    // ── DIAGNOSTIC ──────────────────────────────────────────────────────────────
-    console.log('[🔍 fetchDetails] START')
-    console.log('[🔍 fetchDetails] parentModel:', parentModel, '| db_type:', project?.db_type)
-    console.log('[🔍 fetchDetails] parentRow keys:', Object.keys(parentRow || {}))
-    console.log('[🔍 fetchDetails] parentRow (first 300):', JSON.stringify(parentRow).slice(0, 300))
-    console.log('[🔍 fetchDetails] joins prop:', JSON.stringify(joins))
-    console.log('[🔍 fetchDetails] projectRelations count:', projectRelations?.length)
+    // ── DIAGNOSTIC (comentado para produção) ────────────────────────────────────
+    // console.log('[🔍 fetchDetails] START')
+    // console.log('[🔍 fetchDetails] parentModel:', parentModel, '| db_type:', project?.db_type)
+    // console.log('[🔍 fetchDetails] parentRow keys:', Object.keys(parentRow || {}))
+    // console.log('[🔍 fetchDetails] parentRow (first 300):', JSON.stringify(parentRow).slice(0, 300))
+    // console.log('[🔍 fetchDetails] joins prop:', JSON.stringify(joins))
+    // console.log('[🔍 fetchDetails] projectRelations count:', projectRelations?.length)
     // ────────────────────────────────────────────────────────────────────────────
 
     // 1. Fallback via Santo Graal (Banco de Dados)
     if (effectiveJoins.length === 0 && projectRelations && project.models) {
       const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
-      console.log('[🔍 fetchDetails] Santo Graal - parentModelDef found:', !!parentModelDef, 'projectRelations count:', projectRelations.length)
+      // console.log('[🔍 fetchDetails] Santo Graal - parentModelDef found:', !!parentModelDef, 'projectRelations count:', projectRelations.length)
       if (parentModelDef) {
         const related = projectRelations.filter((rel: any) => rel.to_model_id === parentModelDef.id || rel.master_model_id === parentModelDef.id)
-        console.log('[🔍 fetchDetails] Santo Graal - related relations:', related.length)
+        // console.log('[🔍 fetchDetails] Santo Graal - related relations:', related.length)
         const auto = related.map((rel: any) => {
           const fromModelId = rel.from_model_id || rel.detail_model_id
           const toModelId = rel.to_model_id || rel.master_model_id
@@ -90,7 +90,7 @@ export function useDetailData({
           const parentField = parentModelDef.fields?.find((f: any) => f.id === toFieldId)
           
           if (!childModel || !childField || !parentField) {
-            console.log(`[🔍 fetchDetails] Santo Graal - missing mapping for rel ${rel.id}:`, { childModel: !!childModel, childField: !!childField, parentField: !!parentField })
+            // console.log(`[🔍 fetchDetails] Santo Graal - missing mapping for rel ${rel.id}:`, { childModel: !!childModel, childField: !!childField, parentField: !!parentField })
           }
           if (childModel && childField && parentField) {
             return {
@@ -105,7 +105,7 @@ export function useDetailData({
         if (auto.length > 0) effectiveJoins = auto
       }
     }
-    console.log('[🔍 fetchDetails] effectiveJoins after Santo Graal:', JSON.stringify(effectiveJoins))
+    // console.log('[🔍 fetchDetails] effectiveJoins after Santo Graal:', JSON.stringify(effectiveJoins))
 
     // 2. Fallback via Heurística (Nomenclatura)
     if (effectiveJoins.length === 0 && project.models) {
@@ -125,7 +125,7 @@ export function useDetailData({
             
             // Log if we suspect this might be the field
             if (fName.includes('id') && childModel.db_table_name.toLowerCase() === 'produtos') {
-               console.log(`[🔍 fetchDetails] Heuristic candidate - child: ${childModel.db_table_name}, field: ${fName}, fTbl: ${fTbl}, pName: ${pName}. Matches:`, { isFkTblMatch, isFNameExact, isFNameS, isFNameEs })
+               // console.log(`[🔍 fetchDetails] Heuristic candidate - child: ${childModel.db_table_name}, field: ${fName}, fTbl: ${fTbl}, pName: ${pName}. Matches:`, { isFkTblMatch, isFNameExact, isFNameS, isFNameEs })
             }
 
             return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
@@ -140,13 +140,13 @@ export function useDetailData({
             })
           }
         }
-        console.log('[🔍 fetchDetails] Heuristic joins found:', heuristicJoins.length)
+        // console.log('[🔍 fetchDetails] Heuristic joins found:', heuristicJoins.length)
         if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins
       }
     }
 
     if (!effectiveJoins || effectiveJoins.length === 0) {
-       console.log('[🔍 fetchDetails] NO JOINS RESOLVED! effectiveJoins is empty. Returning [] early.')
+       // console.log('[🔍 fetchDetails] NO JOINS RESOLVED! effectiveJoins is empty. Returning [] early.')
        return []
     }
 
@@ -158,8 +158,8 @@ export function useDetailData({
       if (isMatch) {
         const localValue = parentRow[join.localKey] || parentRow[join.localKey.toUpperCase()] || parentRow.id || parentRow.ID
         
-        console.log('[🔍 fetchDetails] ▶ join:', JSON.stringify(join))
-        console.log('[🔍 fetchDetails]   localKey:', join.localKey, '→ raw:', parentRow[join.localKey], '| UC:', parentRow[join.localKey?.toUpperCase?.()], '| resolved:', localValue)
+        // console.log('[🔍 fetchDetails] ▶ join:', JSON.stringify(join))
+        // console.log('[🔍 fetchDetails]   localKey:', join.localKey, '→ raw:', parentRow[join.localKey], '| UC:', parentRow[join.localKey?.toUpperCase?.()], '| resolved:', localValue)
 
         if (localValue === undefined || localValue === null) {
           console.warn('[🔍 fetchDetails] ⚠️ localValue is NULL — skipping join! This is likely the bug.')
@@ -243,7 +243,7 @@ export function useDetailData({
                 resolved = true
                 cleanup()
                 if (payload.payload.success) {
-                  console.log('[🔍 fetchDetails] ✅ Tunnel response. Rows:', (payload.payload.data || []).length)
+                  // console.log('[🔍 fetchDetails] ✅ Tunnel response. Rows:', (payload.payload.data || []).length)
                   resolve(payload.payload.data || [])
                 } else {
                   console.error('[🔍 fetchDetails] ❌ Tunnel error:', payload.payload.error)
@@ -293,12 +293,7 @@ export function useDetailData({
               }
             }
 
-            console.log('[🔍 fetchDetails] 📡 Sending tunnel payload:', JSON.stringify({
-              table: join.to,
-              filter: { [join.foreignKey]: String(localValue) },
-              schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
-              joins: titleJoins
-            }))
+            // console.log('[🔍 fetchDetails] 📡 Sending tunnel payload for:', join.to)
 
             if (isTemporary) {
               channel.subscribe((status: string) => {
@@ -328,7 +323,7 @@ export function useDetailData({
              const uniqueJoins = Array.from(new Set(allJoins.map((j: any) => j.to))).map(to => allJoins.find((j: any) => j.to === to));
              
              
-             console.log('[DEBUG useDetailData] Fetching sub-details for', join.to, 'uniqueJoins:', uniqueJoins);
+             // Debug: console.log('[DEBUG useDetailData] Fetching sub-details for', join.to, 'uniqueJoins:', uniqueJoins);
              
              if (project?.db_type === 'postgres') {
                const url = new URL(`${window.location.origin}/api/${join.to}`)

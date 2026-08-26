@@ -48,11 +48,11 @@ export function useTunnelConnection({
     const channelName = `tunnel:${project.id}`
     const channel = wrapChannelWithChunking(supabase.channel(channelName))
     
-    console.log(`[MetaBuilder] 📡 Abrindo Túnel Centralizado: ${channelName}`)
+    // console.log(`[MetaBuilder] 📡 Abrindo Túnel Centralizado: ${channelName}`)
     
     channel.subscribe((status: string) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`[MetaBuilder] ✅ Túnel Centralizado PRONTO.`)
+        // console.log(`[MetaBuilder] ✅ Túnel Centralizado PRONTO.`)
         setTunnelChannel(channel)
         setIsTunnelReady(true)
       }
@@ -85,7 +85,7 @@ export function useTunnelConnection({
     })
 
     return () => {
-      console.log(`[MetaBuilder] 🔌 Fechando Túnel Centralizado.`)
+      // console.log(`[MetaBuilder] 🔌 Fechando Túnel Centralizado.`)
       try {
         channel.unsubscribe()
         supabase.removeChannel(channel._channel || channel)
@@ -107,7 +107,7 @@ export function useTunnelConnection({
     const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
 
     if (isEjectedApp) {
-      console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Ejected via API Local`)
+      // console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Ejected via API Local`)
       fetch(`/api/${modelName}?filter_${cleanPk}=${encodeURIComponent(initialEditId)}&limit=1`)
         .then(r => r.json())
         .then(res => {
@@ -124,7 +124,7 @@ export function useTunnelConnection({
             setSelectedRow(record)
             setDrawerMode('edit')
             setIsPageVisible(true)
-            console.log(`[MetaBuilder] ✅ Registro encontrado via API:`, record)
+            // console.log(`[MetaBuilder] ✅ Registro encontrado via API:`, record)
           }
         })
         .catch(err => console.error(`[MetaBuilder] ❌ Erro ao buscar via API:`, err))
@@ -140,7 +140,7 @@ export function useTunnelConnection({
     const tPk = isOracle ? `"${cleanPk.toUpperCase()}"` : `"${cleanPk}"`;
     const rawQuery = `SELECT * FROM ${tModel} WHERE ${tPk} = '${String(initialEditId).replace(/'/g, "''")}'`
 
-    console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Cadastro: ${rawQuery}`)
+    // console.log(`[MetaBuilder] 🔍 Buscando registro para edição no modo Cadastro: ${rawQuery}`)
 
     const handleResult = (payload: any) => {
       if (payload.payload?.queryId !== queryId) return
@@ -158,7 +158,7 @@ export function useTunnelConnection({
         setSelectedRow(record)
         setDrawerMode('edit')
         setIsPageVisible(true)
-        console.log(`[MetaBuilder] ✅ Registro encontrado para edição:`, record)
+        // console.log(`[MetaBuilder] ✅ Registro encontrado para edição:`, record)
       }
       // Limpa o listener após receber
       const cleanup = () => {
