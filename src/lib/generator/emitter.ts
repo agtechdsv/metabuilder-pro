@@ -73,7 +73,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form action="/" method="get" className="space-y-4">
+          <form action="/api/login" method="post" className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">E-mail</label>
               <input
@@ -116,6 +116,73 @@ export default function LoginPage() {
       </div>
     </main>
   )
+}
+`)
+
+  // app/api/login/route.ts — define o cookie de sessão
+  files.set('app/api/login/route.ts', `import { NextResponse } from 'next/server'
+
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
+  // Validação simples — substitua por sua lógica real de auth
+  if (!email || !password) {
+    return NextResponse.redirect(new URL('/login?error=credentials', request.url))
+  }
+
+  const response = NextResponse.redirect(new URL(redirect, request.url))
+  response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7, // 7 dias
+    path: '/',
+  })
+  return response
+}
+`)
+
+  // app/api/logout/route.ts — limpa o cookie de sessão
+  files.set('app/api/logout/route.ts', `import { NextResponse } from 'next/server'
+
+export async function GET(request: Request) {
+  const response = NextResponse.redirect(new URL('/login', request.url))
+  response.cookies.delete('mb_session')
+  return response
+}
+`)
+
+  // middleware.ts — intercepta toda requisição e redireciona para /login se não autenticado
+  files.set('middleware.ts', `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+const PUBLIC_PATHS = ['/login', '/api/login']
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  if (
+    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon')
+  ) {
+    return NextResponse.next()
+  }
+
+  const session = request.cookies.get('mb_session')?.value
+  if (!session) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
 `)
 }
@@ -471,7 +538,10 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
 
     // Página índice do projeto (redirect para primeira view)
     const firstRoute = pApp.routes[0]?.path || '/'
-    files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation';\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}');\n}\n`)
+    files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation'\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}')\n}\n`)
+
+    // Middleware de autenticação
+    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃO exigem autenticação\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas públicas e arquivos estáticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessão\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estáticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
 
     // Rotas, Actions e Components — com prefix do projeto
     const projectFiles = new Map<string, string>()
