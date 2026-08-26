@@ -100,12 +100,11 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
 .env
 `)
 
-  // next.config.ts
-  files.set('next.config.ts', `import type { NextConfig } from "next";
+  // next.config.js (Next.js 14 não suporta .ts aqui)
+  files.set('next.config.js', `/** @type {import('next').NextConfig} */
+const nextConfig = {};
 
-const nextConfig: NextConfig = {};
-
-export default nextConfig;
+module.exports = nextConfig;
 `)
 
   // postcss.config.js
