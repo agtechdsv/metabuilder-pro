@@ -65,7 +65,8 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@types/react": "^18",
       "@types/react-dom": "^18",
       "tailwindcss": "^3.4.0",
-      "postcss": "^8.4.0"
+      "postcss": "^8.4.0",
+      "autoprefixer": "^10.4.19"
     }
   }, null, 2))
 
