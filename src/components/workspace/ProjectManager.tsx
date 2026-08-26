@@ -187,10 +187,35 @@ export function ProjectManager({
     })
 
     try {
-      const res = await fetch('/api/export-source', {
+      // Mapeia o dataMode do modal para o dbStack do CleanCodeGenerator
+      const dbStackMap: Record<string, string> = {
+        'supabase': 'supabase',
+        'postgres': 'postgres',
+        'oracle': 'oracle',
+        'mysql': 'mysql',
+        'sqlserver': 'sqlserver',
+        'metabuilder': 'postgres' // Fallback: MetaBuilder Tunnel usa Postgres internamente
+      }
+      const dbStack = dbStackMap[dataMode] || 'postgres'
+
+      // Monta as credenciais já no formato do AST para gerar o .env.local pré-preenchido
+      const dbConnectionString = dbConfig?.connectionString
+        || (dataMode === 'postgres' && dbConfig
+          ? `postgres://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`
+          : undefined)
+
+      const res = await fetch('/api/export-native', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, dataMode, authStrategy, legacyDriver, dbConfig, authConfig })
+        body: JSON.stringify({
+          projectId,
+          dbStack,
+          dbConnectionString,
+          supabaseUrl: dbConfig?.supabaseUrl,
+          supabaseAnonKey: dbConfig?.supabaseAnonKey,
+          authStrategy,
+          authConfig
+        })
       })
       if (!res.ok) {
         const err = await res.json()

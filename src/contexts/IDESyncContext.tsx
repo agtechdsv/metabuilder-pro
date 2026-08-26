@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic'
 import { isTauri } from '@/utils/tauriUtils'
 import { LocalSyncManager } from '@/utils/localSyncManager'
 import { IDEGitSettingsModal } from '@/components/ide/IDEGitSettingsModal'
+import { NativeExportModal } from '@/components/ide/NativeExportModal'
 import { GitConfigManager } from '@/utils/gitConfigManager'
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
@@ -104,6 +105,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [devProcess, setDevProcess] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
   const [consoleHeight, setConsoleHeight] = useState(200)
+  const [showNativeExport, setShowNativeExport] = useState(false)
   
   // Advanced Commit Modal state
   const lastSelectedFileRef = useRef<string | null>(null)
@@ -1125,6 +1127,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         title={t('workspace_components.ide_local.git_settings_tooltip', 'Configurações Git (Remote & Pipeline)')}
                       >
                         <Settings className="w-4 h-4" />
+                      </button>
+
+                      <button 
+                        onClick={() => setShowNativeExport(true)}
+                        className="flex items-center justify-center gap-1.5 px-2.5 h-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-xs font-bold border border-indigo-500"
+                        title="Ejetar código-fonte nativo (Next.js puro)"
+                      >
+                        <Package className="w-3.5 h-3.5" />
+                        Ejetar
                       </button>
 
                       {/* Console toggle button */}
@@ -2347,6 +2358,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         isOpen={showGitSettings} 
         onClose={() => setShowGitSettings(false)} 
         projectSlug={target?.slug || ''} 
+      />
+
+      <NativeExportModal
+        isOpen={showNativeExport}
+        onClose={() => setShowNativeExport(false)}
+        projectSlug={target?.slug || ''}
+        projectId={target?.id || ''}
       />
     </IDESyncContext.Provider>
   )
