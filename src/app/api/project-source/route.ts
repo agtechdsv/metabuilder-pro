@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { SourceCodeGenerator } from '@/utils/export/SourceCodeGenerator'
-
+import { parseMetaBuilderJSON } from '@/lib/generator/parser'
+import { generateNativeProject } from '@/lib/generator/emitter'
+import { DbType } from '@/lib/generator/ast'
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
     const projectId = payload.projectId
     const dataMode = payload.dataMode
-    let authStrategy = payload.authStrategy // Será resolvido após carregar o projeto
     const legacyDriver = payload.legacyDriver
     const dbConfig = payload.dbConfig
-    const authConfig = payload.authConfig
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -30,141 +29,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
     }
 
-    if (authConfig) {
-      project.auth_config = { ...(project.auth_config || {}), ...authConfig }
-    } else {
-      // Busca as configurações de autenticação salvas no banco (colunas diretas da tabela)
-      const { data: dbAuthConfig } = await supabase
-        .from('project_auth_config')
-        .select('db_table_name, db_email_column, db_password_column, db_password_hash_type, ldap_server_url, ldap_base_dn, ui_config, auth_type')
-        .eq('project_id', projectId)
-        .single()
-      
-      if (dbAuthConfig) {
-        // Mapeia as colunas da tabela para o formato esperado pelo SourceCodeGenerator
-        project.auth_config = {
-          ...(project.auth_config || {}),
-          db_table_name: dbAuthConfig.db_table_name,
-          db_email_column: dbAuthConfig.db_email_column,
-          db_password_column: dbAuthConfig.db_password_column,
-          db_password_hash_type: dbAuthConfig.db_password_hash_type,
-          ldap_server_url: dbAuthConfig.ldap_server_url,
-          ldap_base_dn: dbAuthConfig.ldap_base_dn,
-          ...(dbAuthConfig.ui_config || {}),
-        }
-        // Garante que o project.auth_strategy reflita o auth_type salvo na config (será usado em finalAuthStrategy abaixo)
-        if (dbAuthConfig.auth_type) {
-          project.auth_strategy = dbAuthConfig.auth_type
-        }
-      }
-    }
-
-    // 3. Fetch Models to generate Features (including fields and views)
+    // 3. Fetch Models & Fields
     const { data: models } = await supabase
       .from('models')
-      .select('*, fields(*), ui_views(*)')
-      .eq('project_id', projectId)
-      
-    // 3.5 Fetch BYOC (Custom Components)
-    const { data: customComponents } = await supabase
-      .from('ui_custom_components')
-      .select('*')
+      .select('*, fields(*)')
       .eq('project_id', projectId)
 
-    // 3.6 Fetch all UI Views independently to drive the export logic
-    const { data: uiViews } = await supabase
+    // 4. Fetch Views & Components
+    const { data: views } = await supabase
       .from('ui_views')
-      .select('*')
+      .select('*, ui_components(*)')
       .eq('project_id', projectId)
-      .eq('status', 'published') // Somente views publicadas
-      .order('created_at', { ascending: true })
+      .eq('status', 'published')
 
-    // Se não tiver views publicadas, pega todas (fallback temporário)
-    let finalUiViews = uiViews
-    if (!finalUiViews || finalUiViews.length === 0) {
+    let finalViews = views
+    if (!finalViews || finalViews.length === 0) {
       const { data: allViews } = await supabase
         .from('ui_views')
-        .select('*')
+        .select('*, ui_components(*)')
         .eq('project_id', projectId)
-        .order('created_at', { ascending: true })
-      finalUiViews = allViews
+      finalViews = allViews
     }
 
-    // Mapear os modelos do banco de dados (models e fields) para o formato esperado pelo exportador
-    const mappedModels = (models || []).map((m: any) => {
-      const mappedFields = (m.fields || []).map((f: any) => ({
-        id: f.id,
-        column_name: f.db_column_name,
-        label: f.display_name,
-        field_type: f.data_type,
-        list_visible: f.is_visible_in_list !== false,
-        form_visible: f.is_visible_in_form !== false,
-        required: !f.is_nullable,
-        config: f.config || {}
-      }))
+    // Flatten UI Components
+    const components = finalViews?.flatMap(v => v.ui_components || []) || []
+    const flatFields = models?.flatMap(m => m.fields || []) || []
 
-      return {
-        ...m,
-        table_name: m.db_table_name,
-        db_table_name: m.db_table_name,  // keep both so runtime lookups work
-        name: m.display_name,
-        ui_fields: mappedFields,
-        ui_views: m.ui_views || []
-      }
-    })
-
-    // 3.7 Fetch Roles and Permissions
-    const { data: projectRoles } = await supabase
-      .from('project_roles')
-      .select('*')
-      .eq('project_id', projectId)
-
-    let rolePermissions: any[] = []
-    if (projectRoles && projectRoles.length > 0) {
-      const { data: perms } = await supabase
-        .from('project_role_permissions')
-        .select('*')
-        .in('role_id', projectRoles.map((r: any) => r.id))
-      if (perms) rolePermissions = perms
+    // 5. Constroi o JSON bruto simulando a exportação padrão
+    const rawJson = {
+      project,
+      models: models || [],
+      fields: flatFields,
+      views: finalViews || [],
+      components
     }
 
-    // 3.8 Fetch Enumerations
-    const { data: enumerations } = await supabase
-      .from('project_enumerations')
-      .select('*')
-      .eq('project_id', projectId)
+    // Resolver credenciais de conexão
+    const resolvedStack: DbType = (legacyDriver as DbType) || (dataMode as DbType) || 'postgres'
+    const options = dbConfig?.url
+      ? { dbConnectionString: dbConfig.url }
+      : {}
 
-    // 3.9 Fetch Relations
-    const { data: rawProjectRelations } = await supabase
-      .from('relations')
-      .select('*')
-      .eq('project_id', projectId)
+    // --- CLEAN CODE GENERATOR ---
+    const ast = parseMetaBuilderJSON(rawJson, resolvedStack, options)
+    const generatedFiles = generateNativeProject(ast)
 
-    const finalDataMode = dataMode || project.data_mode || 'supabase'
-    const finalLegacyDriver = legacyDriver || project.legacy_db_driver || 'supabase'
-    // auth_strategy: payload tem prioridade, depois auth_config.auth_type (da tabela project_auth_config), depois project.auth_strategy, depois managed
-    const finalAuthStrategy = authStrategy || project.auth_config?.auth_type || project.auth_strategy || 'managed'
-    let finalDbConfig = dbConfig
-      
-    // Se dbConfig não foi fornecido via API (ex: Sincronização automática via IDE), 
-    // monta o dbConfig lendo as configurações salvas no banco de dados do projeto.
-    if (!finalDbConfig && project.legacy_db_driver) {
-      finalDbConfig = {
-        host: project.legacy_db_host,
-        port: project.legacy_db_port,
-        user: project.legacy_db_user,
-        password: project.legacy_db_password,
-        database: project.legacy_db_name,
-        url: project.legacy_db_url
-      }
+    // Return as JSON { path: content }
+    const jsonMap: Record<string, string> = {}
+    for (const [path, content] of generatedFiles) {
+      jsonMap[path] = content
     }
 
-    // 4. Generate the Source Code (File Map)
-    const generator = new SourceCodeGenerator(project, mappedModels, finalUiViews || [], customComponents || [], finalDataMode, finalAuthStrategy, finalLegacyDriver, finalDbConfig, projectRoles || [], rolePermissions, enumerations || [], rawProjectRelations || [])
-    const fileMap = await generator.generateFileMap()
-
-    // 5. Return as JSON
-    return NextResponse.json(fileMap)
+    return NextResponse.json(jsonMap)
 
   } catch (err: any) {
     console.error('[ExportSource] Error:', err)
