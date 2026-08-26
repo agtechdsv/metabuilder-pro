@@ -42,6 +42,12 @@ export async function POST(request: Request) {
       .eq('project_id', projectId)
       .eq('status', 'published')
 
+    // 4.5 Fetch Relations
+    const { data: relations } = await supabase
+      .from('relations')
+      .select('*')
+      .eq('project_id', projectId)
+
     let finalViews = views
     if (!finalViews || finalViews.length === 0) {
       const { data: allViews } = await supabase
@@ -61,7 +67,8 @@ export async function POST(request: Request) {
       models: models || [],
       fields: flatFields,
       views: finalViews || [],
-      components
+      components,
+      relations: relations || []
     }
 
     // Resolver credenciais de conexão

@@ -43,6 +43,12 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "lucide-react": "^0.360.0",
       "clsx": "^2.1.0",
       "tailwind-merge": "^2.2.0",
+      "react-hook-form": "^7.51.0",
+      "@hookform/resolvers": "^3.3.4",
+      "zod": "^3.22.4",
+      "@radix-ui/react-label": "^2.0.2",
+      "@radix-ui/react-slot": "^1.0.2",
+      "@radix-ui/react-tabs": "^1.0.4",
       ...(ast.dbStack === 'supabase' 
           ? { "@supabase/ssr": "^0.3.0", "@supabase/supabase-js": "^2.40.0" }
           : ast.dbStack === 'oracle'

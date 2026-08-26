@@ -11,6 +11,12 @@ export function parseMetaBuilderJSON(
   dbStack: DbType, 
   options?: { dbConnectionString?: string, supabaseUrl?: string, supabaseAnonKey?: string }
 ): AppAST {
+  const toPascalCase = (str: string) => {
+    return (str || '')
+      .replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase())
+      .replace(/^[a-z]/, (m) => m.toUpperCase())
+  }
+
   const models: ModelNode[] = []
   const routes: RouteNode[] = []
   const actions: ActionNode[] = []
@@ -38,7 +44,7 @@ export function parseMetaBuilderJSON(
 
     models.push({
       id: rm.id,
-      name: rm.display_name || rm.db_table_name,
+      name: toPascalCase(rm.db_table_name),
       dbTable: rm.db_table_name,
       dbSchema: rm.db_schema_name || 'public',
       fields
@@ -48,7 +54,9 @@ export function parseMetaBuilderJSON(
   // 2. Build Routes from Views
   for (const rv of rawViews) {
     const vComps = rawComponents.filter((c: any) => c.view_id === rv.id)
-    
+    const rawRelations = rawJson.relations || []
+    const viewRelations = rawRelations.filter((r: any) => r.source_model_id === rv.model_id)
+
     const components: UIComponentNode[] = vComps.map((c: any) => {
       const fieldDef = rawFields.find((f: any) => f.id === c.field_id)
       return {
@@ -68,7 +76,11 @@ export function parseMetaBuilderJSON(
       layout: rv.layout_config?.default_view || 'list',
       components,
       actions: [],
-      relations: []
+      relations: viewRelations.map((r: any) => ({
+        modelId: r.target_model_id,
+        type: r.relation_type,
+        displayMode: r.display_mode || 'tab'
+      }))
     })
   }
 
