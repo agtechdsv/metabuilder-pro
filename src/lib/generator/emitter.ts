@@ -37,30 +37,30 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden">
+    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#4f46e5]/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-[#4f46e5]/10 rounded-full blur-[120px] pointer-events-none"></div>
       
       <div className="w-full max-w-[380px] relative z-10">
         {/* Card */}
-        <div className="bg-[#09090b]/80 backdrop-blur-xl border border-[#27272a]/50 rounded-3xl p-8 sm:p-10 shadow-2xl">
+        <div className="bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl border border-slate-200 dark:border-[#27272a]/50 rounded-3xl p-8 sm:p-10 shadow-xl dark:shadow-2xl transition-colors duration-300">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-[#18181b] border border-[#27272a] flex items-center justify-center shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center shadow-inner transition-colors duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-600 dark:text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
                 <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
               </svg>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white text-center mb-2 tracking-tight">Bem-vindo de volta!</h1>
-          <p className="text-[#a1a1aa] text-[13px] text-center mb-8 leading-relaxed px-4">Entre com suas credenciais para acessar o portal.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2 tracking-tight transition-colors duration-300">Bem-vindo de volta!</h1>
+          <p className="text-slate-500 dark:text-[#a1a1aa] text-[13px] text-center mb-8 leading-relaxed px-4 transition-colors duration-300">Entre com suas credenciais para acessar o portal.</p>
 
           {/* Biometria */}
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-2 border border-[#27272a]/80 text-[#818cf8] rounded-xl py-3 px-4 text-xs font-bold tracking-wide transition-all mb-8 bg-[#18181b]/50 hover:bg-[#27272a]/50 uppercase"
+            className="w-full flex items-center justify-center gap-2 border border-slate-200 dark:border-[#27272a]/80 text-indigo-600 dark:text-[#818cf8] rounded-xl py-3 px-4 text-xs font-bold tracking-wide transition-all mb-8 bg-slate-50 hover:bg-slate-100 dark:bg-[#18181b]/50 dark:hover:bg-[#27272a]/50 uppercase"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10A10 10 0 0 0 12 2Z"/>
@@ -71,28 +71,28 @@ export default function LoginPage() {
           </button>
 
           <div className="flex items-center gap-4 mb-8">
-            <div className="flex-1 h-[1px] bg-[#27272a]/80"></div>
-            <span className="text-[10px] text-[#52525b] uppercase tracking-widest font-semibold">ou</span>
-            <div className="flex-1 h-[1px] bg-[#27272a]/80"></div>
+            <div className="flex-1 h-[1px] bg-slate-200 dark:bg-[#27272a]/80 transition-colors duration-300"></div>
+            <span className="text-[10px] text-slate-400 dark:text-[#52525b] uppercase tracking-widest font-semibold transition-colors duration-300">ou</span>
+            <div className="flex-1 h-[1px] bg-slate-200 dark:bg-[#27272a]/80 transition-colors duration-300"></div>
           </div>
 
           {/* Form */}
           <form action="/api/login" method="post" className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-widest">E-mail</label>
+              <label htmlFor="email" className="text-[10px] font-bold text-slate-500 dark:text-[#a1a1aa] uppercase tracking-widest transition-colors duration-300">E-mail</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 placeholder="exemplo@empresa.com"
-                className="w-full bg-[#18181b] border-none text-[#d4d4d8] placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+                className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-widest">Senha</label>
-                <a href="#" className="text-[10px] text-[#4f46e5] hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">Esqueci minha senha?</a>
+                <label htmlFor="password" className="text-[10px] font-bold text-slate-500 dark:text-[#a1a1aa] uppercase tracking-widest transition-colors duration-300">Senha</label>
+                <a href="#" className="text-[10px] text-indigo-600 dark:text-[#4f46e5] hover:text-indigo-700 dark:hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">Esqueci minha senha?</a>
               </div>
               <div className="relative">
                 <input
@@ -100,9 +100,9 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   placeholder="Sua senha secreta"
-                  className="w-full bg-[#18181b] border-none text-[#d4d4d8] placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner pr-12"
+                  className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner pr-12"
                 />
-                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#52525b] hover:text-[#a1a1aa] transition-colors">
+                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#52525b] hover:text-slate-600 dark:hover:text-[#a1a1aa] transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>
                   </svg>
@@ -112,22 +112,22 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-[#4f46e5] hover:bg-[#6366f1] text-white font-bold rounded-xl py-3.5 px-4 text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 mt-6 uppercase"
+              className="w-full bg-indigo-600 dark:bg-[#4f46e5] hover:bg-indigo-700 dark:hover:bg-[#6366f1] text-white font-bold rounded-xl py-3.5 px-4 text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 mt-6 uppercase"
             >
               ENTRAR NO SISTEMA
             </button>
           </form>
 
           <div className="mt-8 text-center">
-            <a href="/" className="text-[10px] text-[#71717a] hover:text-[#a1a1aa] transition-colors font-bold uppercase tracking-widest">
+            <a href="/" className="text-[10px] text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#a1a1aa] transition-colors font-bold uppercase tracking-widest">
               &larr; VOLTAR AO PORTAL DO WORKSPACE
             </a>
           </div>
 
           <div className="mt-10 flex items-center justify-center gap-3">
-             <div className="h-[1px] w-12 bg-[#27272a]/50"></div>
-             <p className="text-center text-[9px] text-[#52525b] tracking-[0.2em] uppercase font-bold">POWERED BY METABUILDER</p>
-             <div className="h-[1px] w-12 bg-[#27272a]/50"></div>
+             <div className="h-[1px] w-12 bg-slate-200 dark:bg-[#27272a]/50 transition-colors duration-300"></div>
+             <p className="text-center text-[9px] text-slate-400 dark:text-[#52525b] tracking-[0.2em] uppercase font-bold transition-colors duration-300">POWERED BY METABUILDER</p>
+             <div className="h-[1px] w-12 bg-slate-200 dark:bg-[#27272a]/50 transition-colors duration-300"></div>
           </div>
         </div>
       </div>
@@ -324,6 +324,7 @@ module.exports = nextConfig;
   files.set('tailwind.config.ts', `import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -409,11 +410,11 @@ export function HeaderControls() {
   }, [theme])
 
   return (
-    <div className="flex items-center bg-[#18181b]/80 border border-[#27272a] rounded-full p-1 shadow-sm">
+    <div className="flex items-center bg-white/80 dark:bg-[#18181b]/80 border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
       {/* Botão de Tema */}
       <button 
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="w-8 h-8 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all"
+        className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
         title="Alternar Tema"
       >
         {theme === 'dark' ? (
@@ -432,16 +433,16 @@ export function HeaderControls() {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col font-sans">
-      <header className="h-[60px] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-20 border-b border-[#27272a]/30 bg-[#09090b]/80 backdrop-blur-md">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b] flex flex-col font-sans transition-colors duration-300">
+      <header className="h-[60px] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-20 border-b border-slate-200 dark:border-[#27272a]/30 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md transition-colors duration-300">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[10px] bg-[#18181b] border border-[#27272a] flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="w-8 h-8 rounded-[10px] bg-slate-100 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center transition-colors duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-600 dark:text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
               <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
             </svg>
           </div>
-          <span className="font-bold text-white text-[13px] tracking-wide uppercase">${ast.projectName}</span>
+          <span className="font-bold text-slate-900 dark:text-white text-[13px] tracking-wide uppercase transition-colors duration-300">${ast.projectName}</span>
         </div>
         
         <div className="flex items-center gap-4">
