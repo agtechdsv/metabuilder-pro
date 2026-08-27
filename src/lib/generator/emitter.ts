@@ -455,43 +455,145 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 }
 `)
 
-  // (protected)/layout.tsx — COM sidebar
-  const navItems = ast.routes.map(r =>
-    `        <a href="/${r.path.replace(/^\//, '')}" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-          ${r.title}
-        </a>`
-  ).join('\n')
+  // (protected)/layout.tsx — COM sidebar e Header Interativo
+  const navItemsJson = JSON.stringify(ast.routes.map(r => ({ path: '/' + (r.path.startsWith('/') ? r.path.slice(1) : r.path), title: r.title })))
 
-  files.set('app/(protected)/layout.tsx', `import Link from 'next/link'
+  files.set('app/components/DashboardLayout.tsx', `'use client'
+import { useState, useEffect } from 'react'
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({ children, projectName, navItems }: any) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isAvatarOpen, setIsAvatarOpen] = useState(false)
+  const [theme, setTheme] = useState('dark')
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [theme])
+
   return (
-    <div className="flex min-h-screen bg-[var(--background)]">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-[#09090b] transition-colors duration-300">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-[var(--card-border)] bg-[var(--card)] flex flex-col shrink-0">
-        <div className="p-5 border-b border-[var(--card-border)]">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
+      <aside className={\`transition-all duration-300 border-r border-slate-200 dark:border-[#27272a]/50 bg-white dark:bg-[#09090b] flex flex-col shrink-0 \${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}\`}>
+        <div className="h-[68px] flex items-center px-5 border-b border-slate-200 dark:border-[#27272a]/50 shrink-0">
+          <div className="w-9 h-9 rounded-[10px] bg-indigo-600 flex items-center justify-center shrink-0 shadow-inner">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          {isSidebarOpen && (
+            <div className="ml-3 flex flex-col justify-center overflow-hidden">
+               <span className="font-extrabold text-slate-900 dark:text-white text-sm tracking-wide uppercase truncate">{projectName}</span>
+               <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">Metabuilder PRO</span>
             </div>
-            <span className="font-bold text-white text-sm">${ast.projectName}</span>
-          </Link>
+          )}
         </div>
-        <nav className="flex-1 p-3 space-y-1">
-${navItems}
+        
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+          {navItems.map((item: any) => (
+             <a key={item.path} href={item.path} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-[#a1a1aa] hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181b] transition-all">
+               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+               {isSidebarOpen && <span className="truncate">{item.title}</span>}
+             </a>
+          ))}
         </nav>
-        <div className="p-4 border-t border-[var(--card-border)] flex items-center justify-between">
-          <p className="text-xs text-[var(--muted)]">MetaBuilder PRO</p>
-          <a href="/api/logout" className="text-xs text-[var(--muted)] hover:text-red-400 transition-colors">Sair</a>
+
+        <div className="p-4 border-t border-slate-200 dark:border-[#27272a]/50">
+          <a href="/api/logout" className={\`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-[#a1a1aa] hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all \${!isSidebarOpen && 'justify-center'}\`}>
+             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">A</div>
+             {isSidebarOpen && (
+               <div className="flex-1 flex items-center justify-between truncate">
+                 <div className="flex flex-col truncate pr-2">
+                   <span className="text-xs font-bold text-slate-900 dark:text-white truncate">alexandregms@gmai...</span>
+                   <span className="text-[10px] text-slate-500 dark:text-[#71717a]">Sair do Sistema</span>
+                 </div>
+                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+               </div>
+             )}
+          </a>
         </div>
       </aside>
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">{children}</main>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-[68px] border-b border-slate-200 dark:border-[#27272a]/50 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 relative z-20 transition-colors duration-300">
+          <div className="flex items-center gap-6">
+             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 dark:text-[#71717a] hover:text-slate-900 dark:hover:text-white transition-colors">
+               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+             </button>
+             
+             <div className="flex items-center gap-3 text-xs font-bold text-slate-500 dark:text-[#71717a] uppercase tracking-wide">
+               <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#27272a] hover:bg-slate-50 dark:hover:bg-[#18181b] cursor-pointer transition-colors">
+                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                 PORTAL
+               </span>
+               <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-slate-300 dark:text-[#27272a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+               <span className="flex items-center gap-2 px-2 py-1.5 text-slate-900 dark:text-white">
+                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                 Dashboard
+               </span>
+             </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {/* Theme Toggle */}
+            <div className="flex items-center bg-slate-100 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-white dark:hover:bg-[#27272a] transition-all"
+                title="Alternar Tema"
+              >
+                {theme === 'dark' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                )}
+              </button>
+            </div>
+
+            {/* Avatar Combo */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsAvatarOpen(!isAvatarOpen)}
+                className="flex items-center gap-2 pl-1 pr-3 py-1 bg-slate-100 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-full hover:bg-slate-200 dark:hover:bg-[#27272a] transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px]">A</div>
+                <span className="text-xs font-bold text-slate-700 dark:text-[#d4d4d8]">Alexandregms</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-slate-500 dark:text-[#71717a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+
+              {isAvatarOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-xl shadow-xl py-1 z-50 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-slate-200 dark:border-[#27272a]">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Alexandre GMS</p>
+                    <p className="text-[10px] text-slate-500 dark:text-[#71717a] truncate">alexandregms@gmail.com</p>
+                  </div>
+                  <a href="/api/logout" className="block px-4 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-[#27272a] transition-colors">Sair do sistema</a>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto p-6 md:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   )
+}
+`)
+
+  files.set('app/(protected)/layout.tsx', `import { DashboardLayout } from '@/app/components/DashboardLayout'
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardLayout projectName="${ast.projectName}" navItems={${navItemsJson}}>{children}</DashboardLayout>
 }
 `)
 
@@ -499,21 +601,25 @@ ${navItems}
   const routeCards = ast.routes.map(r =>
     `      <a
         href="${r.path}"
-        className="group flex flex-col gap-3 bg-[var(--card)] border border-[var(--card-border)] rounded-2xl p-6 hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+        className="group flex flex-col justify-between bg-white dark:bg-[#141416] border border-slate-200 dark:border-[#27272a] rounded-3xl p-6 sm:p-8 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-indigo-500/10 transition-all duration-300 min-h-[220px]"
       >
-        <div className="flex items-center justify-between">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/15 flex items-center justify-center ring-1 ring-indigo-500/30 group-hover:bg-indigo-600/25 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>
+        <div>
+          <div className="w-12 h-12 rounded-2xl border border-slate-200 dark:border-[#27272a] bg-slate-50 dark:bg-[#18181b] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-400 dark:text-[#71717a] group-hover:text-indigo-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
             </svg>
           </div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[var(--muted)] group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
+          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors tracking-tight">${r.title}</h2>
+          <p className="text-[10px] font-bold text-slate-400 dark:text-[#52525b] mt-1.5 uppercase tracking-widest">CASO DE USO</p>
         </div>
-        <div>
-          <h2 className="text-base font-semibold text-white group-hover:text-indigo-300 transition-colors">${r.title}</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">${r.path}</p>
+        
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100 dark:border-[#27272a]/50">
+          <span className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ACESSAR</span>
+          <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 dark:group-hover:bg-indigo-600 transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-slate-400 dark:text-[#71717a] group-hover:text-white transition-colors group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </div>
         </div>
       </a>`
   ).join('\n')
@@ -524,23 +630,29 @@ export const metadata: Metadata = { title: "Dashboard — ${ast.projectName}" };
 
 export default function Home() {
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="border-b border-[var(--card-border)] pb-8">
-        <div className="inline-flex items-center gap-2 text-xs text-indigo-400 bg-indigo-600/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-          Sistema operacional
+    <div className="max-w-[1400px] mx-auto space-y-8">
+      {/* Header do Dash */}
+      <div className="mb-10">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">${ast.projectName}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-6 h-[2px] bg-indigo-600"></div>
+              <span className="text-[10px] font-bold text-slate-500 dark:text-[#71717a] uppercase tracking-[0.2em]">ORM COMPLETO</span>
+            </div>
+          </div>
         </div>
-        <h1 className="text-4xl font-bold text-white tracking-tight">${ast.projectName}</h1>
-        <p className="text-[var(--muted)] mt-2 text-lg">Selecione um módulo para começar.</p>
       </div>
 
-      {/* Módulos Grid */}
-      <div>
-        <h2 className="text-sm font-medium text-[var(--muted)] uppercase tracking-widest mb-4">Módulos disponíveis</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Grid de Módulos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 ${routeCards}
-        </div>
       </div>
     </div>
   );
