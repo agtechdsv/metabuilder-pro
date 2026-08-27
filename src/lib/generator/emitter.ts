@@ -39,61 +39,60 @@ export default function LoginPage() {
   return (
     <main className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#4f46e5]/10 rounded-full blur-[120px] pointer-events-none"></div>
       
-      <div className="w-full max-w-[420px] relative z-10">
+      <div className="w-full max-w-[380px] relative z-10">
         {/* Card */}
-        <div className="bg-[#141416] border border-[#27272a] rounded-3xl p-10 shadow-2xl shadow-black/50">
+        <div className="bg-[#09090b]/80 backdrop-blur-xl border border-[#27272a]/50 rounded-3xl p-8 sm:p-10 shadow-2xl">
           {/* Logo */}
           <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-12 h-12 rounded-2xl bg-[#18181b] border border-[#27272a] flex items-center justify-center shadow-inner">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
                 <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
               </svg>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white text-center mb-2">Bem-vindo de volta!</h1>
-          <p className="text-[#a1a1aa] text-sm text-center mb-8">Entre com suas credenciais para acessar o sistema.</p>
+          <h1 className="text-2xl font-bold text-white text-center mb-2 tracking-tight">Bem-vindo de volta!</h1>
+          <p className="text-[#a1a1aa] text-[13px] text-center mb-8 leading-relaxed px-4">Entre com suas credenciais para acessar o portal.</p>
 
           {/* Biometria */}
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-3 border border-[#27272a] text-[#d4d4d8] rounded-xl py-3 px-4 text-sm font-medium transition-all mb-8 bg-[#18181b] hover:bg-[#27272a] hover:text-white"
+            className="w-full flex items-center justify-center gap-2 border border-[#27272a]/80 text-[#818cf8] rounded-xl py-3 px-4 text-xs font-bold tracking-wide transition-all mb-8 bg-[#18181b]/50 hover:bg-[#27272a]/50 uppercase"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12C2 6.48 6.48 2 12 2s10 4.48 10 10"/>
-              <path d="M12 22c-5.52 0-10-4.48-10-10"/>
-              <path d="M9 9a3 3 0 1 1 6 0 3 3 0 0 1-6 0Z"/>
-              <path d="M12 12v5"/>
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10A10 10 0 0 0 12 2Z"/>
+              <path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
             </svg>
             ENTRAR COM BIOMETRIA
           </button>
 
-          <div className="flex items-center gap-3 mb-8">
-            <div className="flex-1 h-px bg-[#27272a]"></div>
-            <span className="text-[11px] text-[#71717a] uppercase tracking-wider font-medium">ou</span>
-            <div className="flex-1 h-px bg-[#27272a]"></div>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="flex-1 h-[1px] bg-[#27272a]/80"></div>
+            <span className="text-[10px] text-[#52525b] uppercase tracking-widest font-semibold">ou</span>
+            <div className="flex-1 h-[1px] bg-[#27272a]/80"></div>
           </div>
 
           {/* Form */}
           <form action="/api/login" method="post" className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-[11px] font-bold text-[#a1a1aa] uppercase tracking-wider">E-mail</label>
+              <label htmlFor="email" className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-widest">E-mail</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 placeholder="exemplo@empresa.com"
-                className="w-full bg-[#09090b] border border-[#27272a] focus:border-indigo-500 text-white placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none transition-colors"
+                className="w-full bg-[#18181b] border-none text-[#d4d4d8] placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-[11px] font-bold text-[#a1a1aa] uppercase tracking-wider">Senha</label>
-                <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Esqueci minha senha</a>
+                <label htmlFor="password" className="text-[10px] font-bold text-[#a1a1aa] uppercase tracking-widest">Senha</label>
+                <a href="#" className="text-[10px] text-[#4f46e5] hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">Esqueci minha senha?</a>
               </div>
               <div className="relative">
                 <input
@@ -101,11 +100,11 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   placeholder="Sua senha secreta"
-                  className="w-full bg-[#09090b] border border-[#27272a] focus:border-indigo-500 text-white placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none transition-colors pr-10"
+                  className="w-full bg-[#18181b] border-none text-[#d4d4d8] placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner pr-12"
                 />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717a] hover:text-[#a1a1aa] transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#52525b] hover:text-[#a1a1aa] transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>
                   </svg>
                 </button>
               </div>
@@ -113,19 +112,23 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl py-3.5 px-4 text-sm transition-colors shadow-lg shadow-indigo-600/20 mt-4"
+              className="w-full bg-[#4f46e5] hover:bg-[#6366f1] text-white font-bold rounded-xl py-3.5 px-4 text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 mt-6 uppercase"
             >
               ENTRAR NO SISTEMA
             </button>
           </form>
 
           <div className="mt-8 text-center">
-            <a href="/" className="text-xs text-[#71717a] hover:text-[#a1a1aa] transition-colors font-medium">
-              &larr; Voltar ao Dashboard
+            <a href="/" className="text-[10px] text-[#71717a] hover:text-[#a1a1aa] transition-colors font-bold uppercase tracking-widest">
+              &larr; VOLTAR AO PORTAL DO WORKSPACE
             </a>
           </div>
 
-          <p className="text-center text-[10px] text-[#52525b] mt-8 tracking-widest uppercase font-semibold">Powered by MetaBuilder PRO</p>
+          <div className="mt-10 flex items-center justify-center gap-3">
+             <div className="h-[1px] w-12 bg-[#27272a]/50"></div>
+             <p className="text-center text-[9px] text-[#52525b] tracking-[0.2em] uppercase font-bold">POWERED BY METABUILDER</p>
+             <div className="h-[1px] w-12 bg-[#27272a]/50"></div>
+          </div>
         </div>
       </div>
     </main>
@@ -392,30 +395,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // (auth)/layout.tsx — sem sidebar, com top header (para /login)
   files.set('app/(auth)/layout.tsx', `export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col">
-      <header className="h-16 flex items-center justify-between px-6 shrink-0 relative z-20">
+    <div className="min-h-screen bg-[#09090b] flex flex-col font-sans">
+      <header className="h-[60px] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-20 border-b border-[#27272a]/30 bg-[#09090b]/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#18181b] border border-[#27272a] flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="w-8 h-8 rounded-[10px] bg-[#18181b] border border-[#27272a] flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
               <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
             </svg>
           </div>
-          <span className="font-bold text-white text-sm tracking-wide uppercase">${ast.projectName}</span>
+          <span className="font-bold text-white text-[13px] tracking-wide uppercase">${ast.projectName}</span>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-[#18181b] border border-[#27272a] rounded-full px-2 py-1.5">
-            <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-white hover:bg-white/5 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+          <div className="flex items-center gap-1.5 bg-[#18181b]/80 border border-[#27272a] rounded-full px-1.5 py-1.5 shadow-sm">
+            <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             </button>
-            <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-white hover:bg-white/5 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <button className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </button>
-            <button className="flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-[#a1a1aa] hover:text-white transition-colors">
-              <span className="w-4 h-4 rounded-full bg-green-500 overflow-hidden flex items-center justify-center relative"><span className="absolute inset-0 bg-yellow-400 rotate-45 scale-75"></span><span className="absolute w-2 h-2 rounded-full bg-blue-600"></span></span>
+            <button className="flex items-center gap-1.5 pl-2 pr-3 py-1 text-[11px] font-bold text-[#a1a1aa] hover:text-white transition-all border-l border-[#27272a]/80 ml-0.5">
+              <span className="w-4 h-4 rounded-full bg-green-500 overflow-hidden flex items-center justify-center relative shadow-inner"><span className="absolute inset-0 bg-yellow-400 rotate-45 scale-75"></span><span className="absolute w-2 h-2 rounded-full bg-blue-600"></span></span>
               PT
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-[#71717a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </button>
           </div>
         </div>
