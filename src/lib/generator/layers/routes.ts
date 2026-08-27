@@ -5,8 +5,8 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
     const model = ast.models.find(m => m.id === route.modelId)
     if (!model) continue
     
-    // O path da rota costuma vir com '/' (ex: /usuarios), então anexamos à pasta app
-    const routeDir = `app${route.path}`
+    // O path da rota costuma vir com '/' (ex: /usuarios), então anexamos à pasta app/(protected)
+    const routeDir = `app/(protected)${route.path}`
     
     if (route.type === 'list') {
       const visibleCols = route.components.filter(c => c.isVisible)
