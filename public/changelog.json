@@ -1,4 +1,19 @@
 {
+  "v1.0.4": {
+    "date": "2026-08-27",
+    "pt": [
+      "Novo motor de geração de projetos Next.js: exporte aplicações completas com arquitetura moderna, configurações base e fluxo de autenticação já integrado e pronto para uso.",
+      "Aceleração de desenvolvimento: automação inteligente na criação e estruturação de arquivos para levar seus projetos da ideia à produção muito mais rápido."
+    ],
+    "en": [
+      "New Next.js project export engine: generate full, production-ready applications with pre-configured authentication flows and robust base architecture.",
+      "Accelerated development: automated file generation and project scaffolding to help you launch your applications faster than ever."
+    ],
+    "es": [
+      "Nuevo motor de generación de proyectos Next.js: exporta aplicaciones completas y listas para producción con flujos de autenticación y configuración base preintegrados.",
+      "Desarrollo acelerado: automatización inteligente en la creación de archivos y estructura para llevar tus proyectos a producción en tiempo récord."
+    ]
+  },
   "v1.0.3": {
     "date": "2026-08-26",
     "pt": [
