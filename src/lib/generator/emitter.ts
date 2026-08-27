@@ -398,8 +398,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 import { useState, useEffect } from 'react'
 
 export function HeaderControls() {
-  const [langOpen, setLangOpen] = useState(false)
-  const [lang, setLang] = useState('PT')
   const [theme, setTheme] = useState('dark')
 
   useEffect(() => {
@@ -411,57 +409,19 @@ export function HeaderControls() {
   }, [theme])
 
   return (
-    <div className="flex items-center gap-1.5 bg-[#18181b]/80 border border-[#27272a] rounded-full px-1.5 py-1.5 shadow-sm">
-      {/* Botão de Histórico */}
-      <button 
-        onClick={() => alert('Nenhum histórico de acesso recente.')}
-        className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all"
-        title="Histórico"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-      </button>
-
+    <div className="flex items-center bg-[#18181b]/80 border border-[#27272a] rounded-full p-1 shadow-sm">
       {/* Botão de Tema */}
       <button 
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="w-7 h-7 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all"
+        className="w-8 h-8 flex items-center justify-center rounded-full text-[#71717a] hover:text-[#d4d4d8] hover:bg-[#27272a] transition-all"
         title="Alternar Tema"
       >
         {theme === 'dark' ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         )}
       </button>
-
-      {/* Seletor de Idioma */}
-      <div className="relative">
-        <button 
-          onClick={() => setLangOpen(!langOpen)}
-          className="flex items-center gap-1.5 pl-2 pr-3 py-1 text-[11px] font-bold text-[#a1a1aa] hover:text-white transition-all border-l border-[#27272a]/80 ml-0.5"
-        >
-          {lang === 'PT' ? (
-            <span className="w-4 h-4 rounded-full bg-green-500 overflow-hidden flex items-center justify-center relative shadow-inner"><span className="absolute inset-0 bg-yellow-400 rotate-45 scale-75"></span><span className="absolute w-2 h-2 rounded-full bg-blue-600"></span></span>
-          ) : (
-            <span className="w-4 h-4 rounded-full bg-blue-800 overflow-hidden flex items-center justify-center relative shadow-inner"><span className="absolute inset-0 bg-red-600 w-1 h-4"></span><span className="absolute inset-0 bg-red-600 h-1 w-4 top-1.5"></span></span>
-          )}
-          {lang}
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-[#71717a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-
-        {langOpen && (
-          <div className="absolute right-0 top-full mt-2 w-32 bg-[#18181b] border border-[#27272a] rounded-xl shadow-xl overflow-hidden py-1 z-50">
-            <button onClick={() => { setLang('PT'); setLangOpen(false) }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-[#a1a1aa] hover:text-white hover:bg-[#27272a] transition-colors text-left">
-              <span className="w-4 h-4 rounded-full bg-green-500 overflow-hidden flex items-center justify-center relative"><span className="absolute inset-0 bg-yellow-400 rotate-45 scale-75"></span><span className="absolute w-2 h-2 rounded-full bg-blue-600"></span></span>
-              Português
-            </button>
-            <button onClick={() => { setLang('EN'); setLangOpen(false) }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-[#a1a1aa] hover:text-white hover:bg-[#27272a] transition-colors text-left">
-              <span className="w-4 h-4 rounded-full bg-blue-800 overflow-hidden flex items-center justify-center relative"><span className="absolute inset-0 bg-red-600 w-1 h-4"></span><span className="absolute inset-0 bg-red-600 h-1 w-4 top-1.5"></span></span>
-              English
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
