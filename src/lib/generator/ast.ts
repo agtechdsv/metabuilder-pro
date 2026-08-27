@@ -68,6 +68,14 @@ export interface ActionNode {
   body?: string // Código customizado (se houver)
 }
 
+export interface AuthConfig {
+  authType: string // 'legacy_db' | 'managed' | 'ldap' | 'none'
+  tableName?: string
+  emailColumn?: string
+  passwordColumn?: string
+  hashFormat?: string // 'bcrypt' | 'md5' | 'plain'
+}
+
 export interface AppAST {
   projectName: string
   projectSlug: string // ex: 'crm' — usado como sub-rota no workspace
@@ -75,6 +83,7 @@ export interface AppAST {
   dbConnectionString?: string
   supabaseUrl?: string
   supabaseAnonKey?: string
+  authConfig?: AuthConfig
   models: ModelNode[]
   routes: RouteNode[]
   actions: ActionNode[]

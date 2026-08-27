@@ -137,7 +137,7 @@ export default function LoginPage() {
 `)
 
   // app/api/login/route.ts — define o cookie de sessão
-  files.set('app/api/login/route.ts', `import { NextResponse } from 'next/server'
+  let loginApiContent = `import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -145,21 +145,76 @@ export async function POST(request: Request) {
   const password = formData.get('password') as string
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
-  // Validação simples — substitua por sua lógica real de auth
+  if (!email || !password) {
+    return NextResponse.redirect(new URL('/login?error=credentials', request.url))
+  }
+`
+
+  if (ast.authConfig?.authType === 'legacy_db' && ast.dbStack === 'postgres') {
+    const table = ast.authConfig.tableName || 'usuarios'
+    const emailCol = ast.authConfig.emailColumn || 'email'
+    const passCol = ast.authConfig.passwordColumn || 'hash_senha'
+    const isBcrypt = ast.authConfig.hashFormat === 'bcrypt'
+    
+    loginApiContent = `import { NextResponse } from 'next/server'
+import { Pool } from 'pg'
+${isBcrypt ? "import bcrypt from 'bcryptjs'" : ""}
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
   if (!email || !password) {
     return NextResponse.redirect(new URL('/login?error=credentials', request.url))
   }
 
+  try {
+    const { rows } = await pool.query('SELECT * FROM ${table} WHERE ${emailCol} = $1', [email])
+    if (rows.length === 0) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    }
+    
+    const user = rows[0]
+    ${isBcrypt 
+      ? `const isValid = await bcrypt.compare(password, user.${passCol})\n    if (!isValid) return NextResponse.redirect(new URL('/login?error=invalid', request.url))` 
+      : `if (password !== user.${passCol}) return NextResponse.redirect(new URL('/login?error=invalid', request.url))`
+    }
+
+    const response = NextResponse.redirect(new URL(redirect, request.url))
+    response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+    return response
+
+  } catch (err) {
+    console.error('Login DB Error:', err)
+    return NextResponse.redirect(new URL('/login?error=server', request.url))
+  }
+}
+`
+  } else {
+    loginApiContent += `
+  // Validação simples (mock)
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 dias
+    maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
   return response
 }
-`)
+`
+  }
+
+  files.set('app/api/login/route.ts', loginApiContent)
 
   // app/api/logout/route.ts — limpa o cookie de sessão
   files.set('app/api/logout/route.ts', `import { NextResponse } from 'next/server'
@@ -698,6 +753,18 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   if (ast.projects.some(p => p.app.dbStack === 'mysql'))      allDeps['mysql2'] = '^3.9.0'
   if (ast.projects.some(p => p.app.dbStack === 'sqlserver'))  allDeps['mssql'] = '^10.0.0'
   if (ast.projects.some(p => p.app.dbStack === 'oracle'))     allDeps['oracledb'] = '^6.5.0'
+  if (ast.projects.some(p => p.app.authConfig?.hashFormat === 'bcrypt')) allDeps['bcryptjs'] = '^2.4.3'
+
+  const devDeps: Record<string, string> = {
+    typescript: '^5.0.0',
+    '@types/node': '^20',
+    '@types/react': '^18',
+    '@types/react-dom': '^18',
+    tailwindcss: '^3.4.0',
+    postcss: '^8.4.0',
+  }
+  if (ast.projects.some(p => p.app.dbStack === 'postgres'))   devDeps['@types/pg'] = '^8.11.0'
+  if (ast.projects.some(p => p.app.authConfig?.hashFormat === 'bcrypt')) devDeps['@types/bcryptjs'] = '^2.4.6'
 
   files.set('package.json', JSON.stringify({
     name: ast.workspaceSlug,
@@ -705,14 +772,7 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
     private: true,
     scripts: { dev: 'next dev', build: 'next build', start: 'next start' },
     dependencies: allDeps,
-    devDependencies: {
-      typescript: '^5.0.0',
-      '@types/node': '^20',
-      '@types/react': '^18',
-      '@types/react-dom': '^18',
-      tailwindcss: '^3.4.0',
-      postcss: '^8.4.0',
-    },
+    devDependencies: devDeps,
   }, null, 2))
 
   // 3. .env.local com credenciais do workspace

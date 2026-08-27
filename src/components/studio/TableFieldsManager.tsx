@@ -248,7 +248,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder={t('dashboard.projects.studio.metadata.search_placeholder')}
-              className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-2xl pl-11 pr-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
@@ -327,7 +327,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       onClick={fetchFields}
                       disabled={loadingFields}
                       type="button"
-                      className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-full transition-all flex items-center justify-center group shadow-sm"
+                      className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-full transition-all flex items-center justify-center group shadow-sm"
                       title={t('dashboard.projects.studio.metadata.refresh_tooltip')}
                     >
                       <RefreshCw className={`w-4 h-4 ${loadingFields ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500 ease-out'}`} />
@@ -361,7 +361,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       value={modelDisplayName}
                       onChange={e => setModelDisplayName(e.target.value)}
                       placeholder={t('dashboard.projects.studio.metadata.friendly_name_placeholder')}
-                      className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -373,13 +373,13 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       value={modelDescription}
                       onChange={e => setModelDescription(e.target.value)}
                       placeholder={t('dashboard.projects.studio.metadata.description_placeholder')}
-                      className="w-full bg-neutral-50 dark:bg-neutral-955 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
                 </div>
 
                 {/* Permissões da Tabela */}
-                <div className="bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
+                <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
                   <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-indigo-500" /> {t('dashboard.projects.studio.metadata.actions_permissions')}
                   </span>
@@ -455,7 +455,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                         ui_widget: 'text'
                       }
                       return (
-                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-955 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
+                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
                           {/* Column Identification */}
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
@@ -488,7 +488,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 value={edit.display_name}
                                 onChange={e => handleFieldChange(f.id, 'display_name', e.target.value)}
                                 placeholder={f.db_column_name}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                               />
                             </div>
                             <div className="space-y-1.5">
@@ -497,7 +497,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 type="number"
                                 value={edit.order_index}
                                 onChange={e => handleFieldChange(f.id, 'order_index', parseInt(e.target.value) || 0)}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                               />
                             </div>
                             <div className="space-y-1.5 md:col-span-2">
@@ -505,7 +505,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                               <select
                                 value={edit.ui_widget || 'text'}
                                 onChange={e => handleFieldChange(f.id, 'ui_widget', e.target.value)}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors appearance-none"
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors appearance-none"
                               >
                                 <option value="text">Texto (Padrão)</option>
                                 <option value="number">Número</option>
