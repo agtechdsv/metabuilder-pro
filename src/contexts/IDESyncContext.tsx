@@ -388,7 +388,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const handleOpenBrowser = async () => {
-    addConsoleLog('↗ Abrindo localhost:3000 no browser...', 'info')
+    addConsoleLog(t('ide.console.opening_browser', '↗ Abrindo localhost:3000 no browser...'), 'info')
     import('@tauri-apps/plugin-shell').then(({ open }) => {
       open('http://localhost:3000')
     }).catch(() => {
@@ -1500,7 +1500,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                         {/* Log lines */}
                         <div className="flex-1 overflow-y-auto px-3 py-2 font-mono text-[11px] leading-relaxed space-y-0.5">
                           {consoleLogs.length === 0 && (
-                            <span className="text-neutral-600">Console pronto. Use os ícones acima para iniciar.</span>
+                            <span className="text-neutral-600">{t('ide.console.ready', 'Console pronto. Use os ícones acima para iniciar.')}</span>
                           )}
                           {consoleLogs.map((log, i) => (
                             <div key={i} className={`flex gap-2 ${

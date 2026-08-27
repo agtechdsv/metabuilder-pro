@@ -170,6 +170,13 @@ export async function get${model.name}ById(id: string) {
   return data
 }
 
+export async function get${model.name}ByField(field: string, value: any) {
+  const supabase = createClient()
+  const { data, error } = await supabase.from('${model.dbTable}').select('*').eq(field, value)
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function create${model.name}(formData: FormData) {
   const supabase = createClient()
   const rawData = Object.fromEntries(formData.entries())
@@ -211,6 +218,11 @@ export async function get${model.name}List() {
 export async function get${model.name}ById(id: string) {
   const res = await query('SELECT ${allColumns} FROM "${model.dbSchema}"."${model.dbTable}" WHERE "${pk}" = $1', [id])
   return res.rows[0] || null
+}
+
+export async function get${model.name}ByField(field: string, value: any) {
+  const res = await query(\`SELECT ${allColumns} FROM "${model.dbSchema}"."${model.dbTable}" WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
+  return res.rows
 }
 
 export async function create${model.name}(formData: FormData) {
@@ -259,6 +271,11 @@ export async function get${model.name}ById(id: string) {
   return rows[0] || null
 }
 
+export async function get${model.name}ByField(field: string, value: any) {
+  const rows = await query(\`SELECT ${allColumns} FROM "${model.dbTable}" WHERE "\${field}" = :val ORDER BY "${pk}" DESC\`, { val: value })
+  return rows
+}
+
 export async function create${model.name}(formData: FormData) {
   const rawData = Object.fromEntries(formData.entries())
   const keys = Object.keys(rawData)
@@ -301,6 +318,11 @@ export async function get${model.name}List() {
 export async function get${model.name}ById(id: string) {
   const rows = await query('SELECT ${allColumns} FROM \`${model.dbTable}\` WHERE \`${pk}\` = ?', [id])
   return rows[0] || null
+}
+
+export async function get${model.name}ByField(field: string, value: any) {
+  const rows = await query(\`SELECT ${allColumns} FROM \\\`${model.dbTable}\\\` WHERE \\\`\${field}\\\` = ? ORDER BY \\\`${pk}\\\` DESC\`, [value])
+  return rows
 }
 
 export async function create${model.name}(formData: FormData) {
@@ -349,6 +371,12 @@ export async function get${model.name}ById(id: string) {
   const pool = await getPool()
   const result = await pool.request().input('id', id).query('SELECT ${allColumns} FROM [${model.dbTable}] WHERE [${pk}] = @id')
   return result.recordset[0] || null
+}
+
+export async function get${model.name}ByField(field: string, value: any) {
+  const pool = await getPool()
+  const result = await pool.request().input('val', value).query(\`SELECT ${allColumns} FROM [${model.dbTable}] WHERE [\${field}] = @val ORDER BY [${pk}] DESC\`)
+  return result.recordset
 }
 
 export async function create${model.name}(formData: FormData) {

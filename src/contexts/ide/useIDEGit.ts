@@ -4,6 +4,7 @@ import { LocalSyncManager } from '@/utils/localSyncManager'
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory } from '@tauri-apps/api/path'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 
 export interface UseIDEGitProps {
   target: any
@@ -14,6 +15,7 @@ export interface UseIDEGitProps {
 
 export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseIDEGitProps) {
   const { toast } = useToast()
+  const { t } = useI18n()
   const supabase = createClient()
 
   const [isSyncing, setIsSyncing] = useState(false)
@@ -83,13 +85,13 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
       await loadFileTree()
       
       if (mergeResult.oid) {
-        toast('Merge limpo! Nenhum conflito encontrado.', 'success')
+        toast(t('ide.git.merge_clean', 'Merge limpo! Nenhum conflito encontrado.'), 'success')
       } else {
-        toast('Atenção: Conflitos encontrados. Resolva no editor antes de confirmar.', 'info')
+        toast(t('ide.git.merge_conflicts', 'Atenção: Conflitos encontrados. Resolva no editor antes de confirmar.'), 'info')
       }
     } catch (err: any) {
       const msg = typeof err === 'string' ? err : err.message
-      toast(`Erro ao sincronizar: ${msg}`, 'error')
+      toast(`${t('ide.git.sync_error', 'Erro ao sincronizar:')} ${msg}`, 'error')
     } finally {
       setIsSyncing(false)
     }
@@ -103,9 +105,9 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
       setSandboxMode(false)
       setIsCommitModalOpen(false)
       await loadFileTree()
-      toast('Sincronização Efetivada', 'success')
+      toast(t('ide.git.sync_confirmed', 'Sincronização Efetivada'), 'success')
     } catch (err: any) {
-      toast(`Erro: ${err.message}`, 'error')
+      toast(`${t('ide.git.error', 'Erro:')} ${err.message}`, 'error')
     } finally {
       setIsCommitting(false)
     }
@@ -120,9 +122,9 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
       await loadFileTree()
       resetTabs()
       setShowDiscardConfirm(false)
-      toast('Sincronização Descartada', 'info')
+      toast(t('ide.git.sync_discarded', 'Sincronização Descartada'), 'info')
     } catch (err: any) {
-      toast(`Erro: ${err.message}`, 'error')
+      toast(`${t('ide.git.error', 'Erro:')} ${err.message}`, 'error')
     } finally {
       setIsDiscarding(false)
     }
@@ -137,9 +139,9 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
       resetTabs()
       setIsLogModalOpen(false)
       setRevertConfirmOid(null)
-      toast('Código revertido com sucesso!', 'success')
+      toast(t('ide.git.revert_success', 'Código revertido com sucesso!'), 'success')
     } catch (err: any) {
-      toast(`Erro ao reverter: ${err.message}`, 'error')
+      toast(`${t('ide.git.error', 'Erro:')} ${err.message}`, 'error')
     } finally {
       setIsReverting(false)
     }

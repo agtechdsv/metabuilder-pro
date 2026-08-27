@@ -79,7 +79,9 @@ export function parseMetaBuilderJSON(
       relations: viewRelations.map((r: any) => ({
         modelId: r.target_model_id,
         type: r.relation_type,
-        displayMode: r.display_mode || 'tab'
+        displayMode: r.display_mode || 'tab',
+        sourceColumn: r.source_column || 'id',
+        targetColumn: r.target_column
       }))
     })
   }
@@ -94,7 +96,7 @@ export function parseMetaBuilderJSON(
   }
 
   const authConfigNode = rawJson.auth_config ? {
-    authType: rawJson.auth_config.auth_type || 'legacy_db',
+    authType: rawJson.auth_config.auth_type || 'database',
     tableName: rawJson.auth_config.table_name || 'usuarios',
     emailColumn: rawJson.auth_config.email_column || 'email',
     passwordColumn: rawJson.auth_config.password_column || 'hash_senha',

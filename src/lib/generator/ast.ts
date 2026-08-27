@@ -56,6 +56,8 @@ export interface RouteNode {
     modelId: string
     type: '1:N' | 'N:1' | 'N:N'
     displayMode: 'inline' | 'tab' | 'modal'
+    sourceColumn: string
+    targetColumn: string
   }[]
 }
 

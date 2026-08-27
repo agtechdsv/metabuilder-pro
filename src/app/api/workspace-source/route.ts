@@ -87,10 +87,11 @@ async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
   const enriched = await Promise.all(projects.map(async (project: any) => {
     const projectId = project.id
 
-    const [{ data: models }, { data: uiViewsPublished }, { data: relations }] = await Promise.all([
+    const [{ data: models }, { data: uiViewsPublished }, { data: relations }, { data: authConfig }] = await Promise.all([
       supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
       supabase.from('ui_views').select('*').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
       supabase.from('relations').select('*').eq('project_id', projectId),
+      supabase.from('project_auth_config').select('*').eq('project_id', projectId).single()
     ])
 
     let finalViews = uiViewsPublished
@@ -106,6 +107,13 @@ async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
       views: finalViews || [],
       fields: (models || []).flatMap((m: any) => m.fields || []),
       relations: relations || [],
+      auth_config: authConfig ? {
+        auth_type: authConfig.auth_type,
+        table_name: authConfig.db_table_name,
+        email_column: authConfig.db_email_column,
+        password_column: authConfig.db_password_column,
+        hash_format: authConfig.db_password_hash_type
+      } : undefined
     }
   }))
 

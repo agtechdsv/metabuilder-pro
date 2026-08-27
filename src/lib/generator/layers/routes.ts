@@ -87,10 +87,12 @@ export default async function ${model.name}ListPage() {
     // Detalhe / Formulário / Master-Detail
     if (route.type === 'detail' || route.type === 'form') {
       const hasRelations = route.relations && route.relations.length > 0
-      const imports = [
+      
+      let importsStr = [
         `import Link from 'next/link'`,
         `import { get${model.name}ById } from '@/app/actions/${model.name.toLowerCase()}'`,
         hasRelations ? `import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'` : '',
+        hasRelations ? `import {\n  Table,\n  TableBody,\n  TableCell,\n  TableHead,\n  TableHeader,\n  TableRow,\n} from '@/components/ui/table'` : '',
         `import { Input } from '@/components/ui/input'`,
         `import { Label } from '@/components/ui/label'`,
         `import { Button } from '@/components/ui/button'`
@@ -124,41 +126,75 @@ export default async function ${model.name}ListPage() {
       `
 
       let pageBody = ''
+      let dataFetchers = `const data = isNew ? null : await get${model.name}ById(params.id)\n`
 
       if (hasRelations) {
-        // Gera o Master-Detail com Abas
+        let tabsTriggers = ''
+        let tabsContents = ''
+
+        for (const r of route.relations) {
+          const relModel = ast.models.find(m => m.id === r.modelId)
+          if (!relModel) continue
+
+          importsStr += `\nimport { get${relModel.name}ByField } from '@/app/actions/${relModel.name.toLowerCase()}'`
+          
+          dataFetchers += `  const relData_${relModel.name} = isNew ? [] : await get${relModel.name}ByField('${r.targetColumn}', data?.${r.sourceColumn})\n`
+
+          tabsTriggers += `\n          <TabsTrigger value="rel_${r.modelId}" className="px-5 py-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-[var(--muted)] rounded-lg">${relModel.name}</TabsTrigger>`
+          
+          const relVisibleCols = relModel.fields.slice(0, 4)
+
+          tabsContents += `
+        <TabsContent value="rel_${r.modelId}" className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-6">
+          <div className="rounded-xl border border-[var(--card-border)] bg-[var(--background)] overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[var(--card-border)] hover:bg-transparent">
+                  ${relVisibleCols.map(f => `<TableHead className="text-[var(--muted)] font-semibold uppercase text-xs tracking-wider px-4 py-3">${f.name}</TableHead>`).join('\n                  ')}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {relData_${relModel.name}.map((item: any) => (
+                  <TableRow key={item.id || Math.random()} className="border-[var(--card-border)] hover:bg-white/5 transition-colors">
+                    ${relVisibleCols.map(f => `<TableCell className="px-4 py-3 text-sm text-[var(--foreground)]">{String(item.${f.dbColumn} ?? '-')}</TableCell>`).join('\n                    ')}
+                  </TableRow>
+                ))}
+                {relData_${relModel.name}.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={${relVisibleCols.length}} className="h-32 text-center text-[var(--muted)]">
+                      Nenhum registro de ${relModel.name} encontrado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>`
+        }
+
         pageBody = `
       <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="mb-6 w-full justify-start h-auto p-1 bg-[var(--card)] border border-[var(--card-border)] rounded-xl">
-          <TabsTrigger value="geral" className="px-5 py-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-[var(--muted)] rounded-lg">Geral</TabsTrigger>
-          ${route.relations.map(r => `<TabsTrigger value="rel_${r.modelId}" className="px-5 py-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-[var(--muted)] rounded-lg">${r.modelId}</TabsTrigger>`).join('\n          ')}
+        <TabsList className="mb-6 w-full justify-start h-auto p-1 bg-[var(--card)] border border-[var(--card-border)] rounded-xl overflow-x-auto">
+          <TabsTrigger value="geral" className="px-5 py-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white text-[var(--muted)] rounded-lg">Geral</TabsTrigger>${tabsTriggers}
         </TabsList>
         
         <TabsContent value="geral" className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-6">
           ${formContent}
         </TabsContent>
-
-        ${route.relations.map(r => `
-        <TabsContent value="rel_${r.modelId}" className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-6">
-          <p className="text-sm text-[var(--muted)]">Registros relacionados de ${r.modelId} aparecerão aqui.</p>
-        </TabsContent>
-        `).join('\n        ')}
-      </Tabs>
-        `
+        ${tabsContents}
+      </Tabs>`
       } else {
         pageBody = `
       <div className="bg-[var(--card)] rounded-xl border border-[var(--card-border)] p-6">
         ${formContent}
-      </div>
-        `
+      </div>`
       }
 
-      const pageContent = `${imports}
+      const pageContent = `${importsStr}
 
 export default async function ${model.name}DetailPage({ params }: { params: { id: string } }) {
   const isNew = params.id === 'new'
-  const data = isNew ? null : await get${model.name}ById(params.id)
-
+  ${dataFetchers}
   if (!isNew && !data) {
     return <div className="p-8 text-red-500">Registro não encontrado.</div>
   }
@@ -170,7 +206,7 @@ export default async function ${model.name}DetailPage({ params }: { params: { id
           ← Voltar
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-white">
-          {isNew ? 'Novo Registro' : \`Detalhes de \${data?.id}\`}
+          {isNew ? 'Novo Registro' : \`Detalhes de \${data?.id || params.id}\`}
         </h1>
       </div>
 

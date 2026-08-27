@@ -150,7 +150,7 @@ export async function POST(request: Request) {
   }
 `
 
-  if (ast.authConfig?.authType === 'legacy_db' && ast.dbStack === 'postgres') {
+  if (ast.authConfig?.authType === 'database' && ast.dbStack === 'postgres') {
     const table = ast.authConfig.tableName || 'usuarios'
     const emailCol = ast.authConfig.emailColumn || 'email'
     const passCol = ast.authConfig.passwordColumn || 'hash_senha'
