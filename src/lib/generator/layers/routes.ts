@@ -7,7 +7,7 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
     
     // O path da rota costuma vir com '/' (ex: /usuarios), então anexamos à pasta app/(protected)
     const routeDir = `app/(protected)${route.path}`
-    const visibleCols = route.components.filter(c => c.isVisible)
+    const visibleCols = (route.components || []).filter(c => c.isVisible !== false && c.placementType === 'grid')
     
     // ==========================================
     // 1. PAGE.TSX (LISTAGEM)
@@ -244,7 +244,7 @@ export default async function ${model.name}ListPage() {
       <form className="space-y-8">
         ${topSlots}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-          ${(route.components || []).filter(c => c.isVisible !== false).map(c => `
+          ${(route.components || []).filter(c => c.isVisible !== false && c.placementType === 'form').map(c => `
           <div className="space-y-2">
             <Label htmlFor="${c.field}" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">${c.label}</Label>
             <Input 

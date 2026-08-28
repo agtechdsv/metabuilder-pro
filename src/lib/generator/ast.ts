@@ -37,7 +37,8 @@ export interface ModelNode {
 }
 
 export interface UIComponentNode {
-  type: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'relation'
+  type: 'text' | 'number' | 'select' | 'date' | 'boolean' | 'relation' | string
+  placementType?: 'grid' | 'form' | 'filter' | string
   field: string
   label: string
   isVisible: boolean

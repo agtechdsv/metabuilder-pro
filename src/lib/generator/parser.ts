@@ -63,7 +63,8 @@ export function parseMetaBuilderJSON(
       const fieldDef = rawFields.find((f: any) => f.id === c.field_id)
       const isHidden = c.hidden === true || c.config?.hidden === true || c.is_visible === false
       return {
-        type: c.component_type || 'text',
+        type: fieldDef ? mapFieldType(fieldDef.data_type) : 'text',
+        placementType: c.component_type || 'form',
         field: fieldDef ? fieldDef.db_column_name : c.field_id,
         label: c.label || c.name || fieldDef?.display_name || 'Campo',
         isVisible: !isHidden,
@@ -71,23 +72,39 @@ export function parseMetaBuilderJSON(
       }
     })
 
-    routes.push({
-      path: `/${rv.slug || rv.name.toLowerCase()}`,
-      type: rv.layout_config?.default_view === 'card' ? 'detail' : 'list',
-      modelId: rv.model_id,
-      title: rv.name,
-      layout: rv.layout_config?.default_view || 'list',
-      layoutConfig: rv.layout_config,
-      components,
-      actions: [],
-      relations: viewRelations.map((r: any) => ({
-        modelId: r.target_model_id,
-        type: r.relation_type,
-        displayMode: r.display_mode || 'tab',
-        sourceColumn: r.source_column || 'id',
-        targetColumn: r.target_column
-      }))
-    })
+      const inferredRelations = models
+        .filter(m => m.id !== rv.model_id && m.fields.some(f => f.relation?.targetModel === rv.model_id))
+        .map(m => {
+          const fkField = m.fields.find(f => f.relation?.targetModel === rv.model_id)!
+          return {
+            modelId: m.id,
+            type: '1:N',
+            displayMode: 'tab',
+            sourceColumn: 'id',
+            targetColumn: fkField.dbColumn
+          }
+        })
+
+      routes.push({
+        path: `/${rv.slug || rv.name.toLowerCase()}`,
+        type: rv.layout_config?.default_view === 'card' ? 'detail' : 'list',
+        modelId: rv.model_id,
+        title: rv.name,
+        layout: rv.layout_config?.default_view || 'list',
+        layoutConfig: rv.layout_config,
+        components,
+        actions: [],
+        relations: [
+          ...viewRelations.map((r: any) => ({
+            modelId: r.target_model_id,
+            type: r.relation_type,
+            displayMode: r.display_mode || 'tab',
+            sourceColumn: r.source_column || 'id',
+            targetColumn: r.target_column
+          })),
+          ...inferredRelations
+        ]
+      })
   }
 
   // 3. Build Standard Actions for Models (CRUD)
