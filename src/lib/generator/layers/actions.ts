@@ -205,23 +205,26 @@ export async function delete${model.name}(id: string) {
 function generatePgActions(model: ModelNode) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
+  const tableRef = model.dbTable.includes('.')
+    ? model.dbTable.split('.').map(p => `"${p}"`).join('.')
+    : `"${model.dbTable}"`
 
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
 export async function get${model.name}List() {
-  const res = await query('SELECT ${allColumns} FROM "${model.dbSchema}"."${model.dbTable}" ORDER BY "${pk}" DESC')
+  const res = await query('SELECT ${allColumns} FROM ${tableRef} ORDER BY "${pk}" DESC')
   return res.rows
 }
 
 export async function get${model.name}ById(id: string) {
-  const res = await query('SELECT ${allColumns} FROM "${model.dbSchema}"."${model.dbTable}" WHERE "${pk}" = $1', [id])
+  const res = await query('SELECT ${allColumns} FROM ${tableRef} WHERE "${pk}" = $1', [id])
   return res.rows[0] || null
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const res = await query(\`SELECT ${allColumns} FROM "${model.dbSchema}"."${model.dbTable}" WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
+  const res = await query(\`SELECT ${allColumns} FROM ${tableRef} WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
   return res.rows
 }
 
@@ -232,7 +235,7 @@ export async function create${model.name}(formData: FormData) {
   const placeholders = keys.map((_, i) => \`$\${i + 1}\`).join(', ')
   const columns = keys.map(k => \`"\${k}"\`).join(', ')
   
-  await query(\`INSERT INTO "${model.dbSchema}"."${model.dbTable}" (\${columns}) VALUES (\${placeholders})\`, values)
+  await query(\`INSERT INTO ${tableRef} (\${columns}) VALUES (\${placeholders})\`, values)
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
@@ -242,12 +245,12 @@ export async function update${model.name}(id: string, formData: FormData) {
   const values = Object.values(rawData)
   const setString = keys.map((k, i) => \`"\${k}" = $\${i + 1}\`).join(', ')
   
-  await query(\`UPDATE "${model.dbSchema}"."${model.dbTable}" SET \${setString} WHERE "${pk}" = $\${keys.length + 1}\`, [...values, id])
+  await query(\`UPDATE ${tableRef} SET \${setString} WHERE "${pk}" = $\${keys.length + 1}\`, [...values, id])
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
 export async function delete${model.name}(id: string) {
-  await query('DELETE FROM "${model.dbSchema}"."${model.dbTable}" WHERE "${pk}" = $1', [id])
+  await query('DELETE FROM ${tableRef} WHERE "${pk}" = $1', [id])
   revalidatePath('/${model.name.toLowerCase()}')
 }
 `
