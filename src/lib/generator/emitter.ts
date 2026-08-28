@@ -848,7 +848,58 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   files.set('.gitignore', `/node_modules\n/.next\n/out\n.DS_Store\n.env*.local\n.env\n`)
 
   // tailwind.config.ts
-  files.set('tailwind.config.ts', `import type { Config } from 'tailwindcss';\nconst config: Config = {\n  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],\n  theme: { extend: {} },\n  plugins: [],\n};\nexport default config;\n`)
+  files.set('tailwind.config.ts', `import type { Config } from 'tailwindcss';
+const config: Config = {
+  darkMode: ["class"],
+  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;
+`)
 
   // 4. Por projeto: layout + rotas + actions + components
   for (const project of ast.projects) {
@@ -883,6 +934,31 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   const primaryProject = ast.projects[0]?.app
   if (primaryProject) {
     generateLoginPage(primaryProject, files)
+  }
+
+  // 6. BYOC Stubs (Custom Components)
+  const byocSet = new Set<string>()
+  for (const project of ast.projects) {
+    for (const route of project.app.routes) {
+      if (route.layoutConfig?.custom_slots) {
+        for (const slot of route.layoutConfig.custom_slots) {
+          if (slot.component) byocSet.add(slot.component)
+        }
+      }
+    }
+  }
+
+  for (const componentName of byocSet) {
+    files.set(`components/byoc/${componentName}.tsx`, `export default function ${componentName}({ data, config }: { data: any, config: any }) {
+  return (
+    <div className="p-4 border border-dashed border-indigo-500/50 bg-indigo-500/5 rounded-xl text-center">
+      <div className="text-xs font-bold text-indigo-400 mb-1">BYOC Component</div>
+      <div className="text-sm font-medium text-foreground">${componentName}</div>
+      <div className="text-[10px] text-muted-foreground mt-2">Replace this stub with your real component in src/components/byoc/</div>
+    </div>
+  )
+}
+`)
   }
 
   return files

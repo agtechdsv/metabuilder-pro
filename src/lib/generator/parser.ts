@@ -74,6 +74,7 @@ export function parseMetaBuilderJSON(
       modelId: rv.model_id,
       title: rv.name,
       layout: rv.layout_config?.default_view || 'list',
+      layoutConfig: rv.layout_config,
       components,
       actions: [],
       relations: viewRelations.map((r: any) => ({

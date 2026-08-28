@@ -50,6 +50,7 @@ export interface RouteNode {
   modelId: string
   title: string
   layout: 'list' | 'card' | 'grid'
+  layoutConfig?: any // JSON raw from ui_views.layout_config
   components: UIComponentNode[]
   actions: string[] // IDs de ActionNodes associados
   relations: {
