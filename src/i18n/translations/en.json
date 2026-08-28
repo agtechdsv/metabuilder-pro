@@ -2619,6 +2619,18 @@
     "project": {
       "eject_notif_title": "Project Ejected! 🎉",
       "eject_notif_body": "Files and dependencies installed successfully."
+    },
+    "console": {
+      "ready": "Console ready. Use the icons above to start.",
+      "opening_browser": "↗ Opening localhost:3000 in browser..."
+    },
+    "git": {
+      "sync_discarded": "Sync Discarded",
+      "merge_clean": "Clean merge! No conflicts found."
+    },
+    "tooltip": {
+      "stop_server": "Stop server",
+      "open_browser": "Open in Browser"
     }
   },
   "desktop_landing": {

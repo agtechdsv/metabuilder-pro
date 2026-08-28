@@ -2620,6 +2620,18 @@
     "project": {
       "eject_notif_title": "Projeto Ejetado! 🎉",
       "eject_notif_body": "Os arquivos e dependências foram instalados com sucesso."
+    },
+    "console": {
+      "ready": "Console pronto. Use os ícones acima para iniciar.",
+      "opening_browser": "↗ Abrindo localhost:3000 no browser..."
+    },
+    "git": {
+      "sync_discarded": "Sincronização Descartada",
+      "merge_clean": "Merge limpo! Nenhum conflito encontrado."
+    },
+    "tooltip": {
+      "stop_server": "Stop servidor",
+      "open_browser": "Abrir no Browser"
     }
   },
   "desktop_landing": {

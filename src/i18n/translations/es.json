@@ -2690,6 +2690,18 @@
     "project": {
       "eject_notif_title": "¡Proyecto Expulsado! 🎉",
       "eject_notif_body": "Archivos y dependencias instalados correctamente."
+    },
+    "console": {
+      "ready": "Consola lista. Usa los iconos de arriba para iniciar.",
+      "opening_browser": "↗ Abriendo localhost:3000 en el navegador..."
+    },
+    "git": {
+      "sync_discarded": "Sincronización Descartada",
+      "merge_clean": "¡Fusión limpia! No se encontraron conflictos."
+    },
+    "tooltip": {
+      "stop_server": "Detener servidor",
+      "open_browser": "Abrir en el Navegador"
     }
   },
   "desktop_landing": {

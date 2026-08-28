@@ -137,31 +137,24 @@ export default function LoginPage() {
 `)
 
   // app/api/login/route.ts — define o cookie de sessão
-  let loginApiContent = `import { NextResponse } from 'next/server'
-
-export async function POST(request: Request) {
-  const formData = await request.formData()
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
-
-  if (!email || !password) {
-    return NextResponse.redirect(new URL('/login?error=credentials', request.url))
-  }
-`
-
-  if (ast.authConfig?.authType === 'database' && ast.dbStack === 'postgres') {
+  let loginApiContent = `import { NextResponse } from 'next/server'\n`
+  
+  if (ast.authConfig?.authType === 'database') {
     const table = ast.authConfig.tableName || 'usuarios'
     const emailCol = ast.authConfig.emailColumn || 'email'
     const passCol = ast.authConfig.passwordColumn || 'hash_senha'
     const isBcrypt = ast.authConfig.hashFormat === 'bcrypt'
     
-    loginApiContent = `import { NextResponse } from 'next/server'
-import { Pool } from 'pg'
-${isBcrypt ? "import bcrypt from 'bcryptjs'" : ""}
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-
+    // Procura o model da tabela de auth para usar a generic server action
+    const authModel = ast.models.find(m => m.dbTable === table || m.name.toLowerCase() === table.toLowerCase())
+    
+    if (authModel) {
+      loginApiContent += `import { get${authModel.name}ByField } from '@/app/actions/${authModel.name.toLowerCase()}'\n`
+      if (isBcrypt) {
+        loginApiContent += `import bcrypt from 'bcryptjs'\n`
+      }
+      
+      loginApiContent += `
 export async function POST(request: Request) {
   const formData = await request.formData()
   const email = formData.get('email') as string
@@ -173,14 +166,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { rows } = await pool.query('SELECT * FROM ${table} WHERE ${emailCol} = $1', [email])
-    if (rows.length === 0) {
+    const rows = await get${authModel.name}ByField('${emailCol}', email)
+    if (!rows || rows.length === 0) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
     
     const user = rows[0]
     ${isBcrypt 
-      ? `const isValid = await bcrypt.compare(password, user.${passCol})\n    if (!isValid) return NextResponse.redirect(new URL('/login?error=invalid', request.url))` 
+      ? `const isValid = await bcrypt.compare(password, user.${passCol} || '')\n    if (!isValid) return NextResponse.redirect(new URL('/login?error=invalid', request.url))` 
       : `if (password !== user.${passCol}) return NextResponse.redirect(new URL('/login?error=invalid', request.url))`
     }
 
@@ -199,8 +192,32 @@ export async function POST(request: Request) {
   }
 }
 `
+    } else {
+      loginApiContent += `
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const email = formData.get('email') as string
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
+  // Tabela de auth não encontrada no AST: Fallback permissivo (Mock)
+  const response = NextResponse.redirect(new URL(redirect, request.url))
+  response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
+  return response
+}
+`
+    }
   } else {
     loginApiContent += `
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const email = formData.get('email') as string
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
   // Validação simples (mock)
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {

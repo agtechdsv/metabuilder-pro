@@ -1452,12 +1452,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                                 <span className="hidden sm:inline">Start</span>
                               </button>
                             ) : (
-                              <button
-                                onClick={handleStop}
-                                disabled={isStoppingServer}
-                                title="Stop servidor"
-                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
-                              >
+                                <button
+                                  onClick={handleStop}
+                                  disabled={isStoppingServer}
+                                  title={t('ide.tooltip.stop_server', 'Stop servidor')}
+                                  className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
+                                >
                                 {isStoppingServer
                                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
@@ -1469,7 +1469,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                             <button
                               onClick={handleOpenBrowser}
                               disabled={!devProcess}
-                              title="Abrir no Browser"
+                              title={t('ide.tooltip.open_browser', 'Abrir no Browser')}
                               className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
                             >
                               <AppWindow className="w-3.5 h-3.5" />
