@@ -96,7 +96,7 @@ export function parseMetaBuilderJSON(
   }
 
   const authConfigNode = rawJson.auth_config ? {
-    authType: rawJson.auth_config.auth_type || 'database',
+    authType: rawJson.auth_config.auth_type ?? 'database',
     tableName: rawJson.auth_config.table_name || 'usuarios',
     emailColumn: rawJson.auth_config.email_column || 'email',
     passwordColumn: rawJson.auth_config.password_column || 'hash_senha',

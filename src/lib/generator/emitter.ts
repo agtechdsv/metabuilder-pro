@@ -35,7 +35,18 @@ export const metadata: Metadata = {
   title: 'Login — ${ast.projectName}',
 }
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams?: { error?: string } }) {
+  const error = searchParams?.error
+  const errorMessage = error === 'invalid'
+    ? 'E-mail ou senha incorretos. Verifique suas credenciais.'
+    : error === 'credentials'
+    ? 'Por favor, preencha o e-mail e a senha.'
+    : error === 'server'
+    ? 'Erro ao processar login. Verifique a conexão com o banco de dados.'
+    : error === 'config'
+    ? 'Tabela de autenticação não encontrada nos modelos do projeto.'
+    : null
+
   return (
     <main className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
       {/* Background Glow */}
@@ -55,26 +66,13 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2 tracking-tight transition-colors duration-300">Bem-vindo de volta!</h1>
-          <p className="text-slate-500 dark:text-[#a1a1aa] text-[13px] text-center mb-8 leading-relaxed px-4 transition-colors duration-300">Entre com suas credenciais para acessar o portal.</p>
+          <p className="text-slate-500 dark:text-[#a1a1aa] text-[13px] text-center mb-6 leading-relaxed px-4 transition-colors duration-300">Entre com suas credenciais para acessar o portal.</p>
 
-          {/* Biometria */}
-          <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 border border-slate-200 dark:border-[#27272a]/80 text-indigo-600 dark:text-[#818cf8] rounded-xl py-3 px-4 text-xs font-bold tracking-wide transition-all mb-8 bg-slate-50 hover:bg-slate-100 dark:bg-[#18181b]/50 dark:hover:bg-[#27272a]/50 uppercase"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a10 10 0 0 0-10 10c0 5.52 4.48 10 10 10s10-4.48 10-10A10 10 0 0 0 12 2Z"/>
-              <path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-            </svg>
-            ENTRAR COM BIOMETRIA
-          </button>
-
-          <div className="flex items-center gap-4 mb-8">
-            <div className="flex-1 h-[1px] bg-slate-200 dark:bg-[#27272a]/80 transition-colors duration-300"></div>
-            <span className="text-[10px] text-slate-400 dark:text-[#52525b] uppercase tracking-widest font-semibold transition-colors duration-300">ou</span>
-            <div className="flex-1 h-[1px] bg-slate-200 dark:bg-[#27272a]/80 transition-colors duration-300"></div>
-          </div>
+          {errorMessage && (
+            <div className="mb-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold text-center leading-relaxed">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Form */}
           <form action="/api/login" method="post" className="space-y-5">
@@ -84,6 +82,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
+                required
                 placeholder="exemplo@empresa.com"
                 className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
               />
@@ -99,14 +98,10 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
+                  required
                   placeholder="Sua senha secreta"
                   className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner pr-12"
                 />
-                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#52525b] hover:text-slate-600 dark:hover:text-[#a1a1aa] transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>
-                  </svg>
-                </button>
               </div>
             </div>
 
@@ -143,22 +138,29 @@ export default function LoginPage() {
     const table = ast.authConfig.tableName || 'usuarios'
     const emailCol = ast.authConfig.emailColumn || 'email'
     const passCol = ast.authConfig.passwordColumn || 'hash_senha'
-    const isBcrypt = ast.authConfig.hashFormat === 'bcrypt'
+    const hashFormat = ast.authConfig.hashFormat || 'bcrypt'
     
     // Procura o model da tabela de auth para usar a generic server action
-    const authModel = ast.models.find(m => m.dbTable === table || m.name.toLowerCase() === table.toLowerCase())
+    const authModel = ast.models.find(m => 
+      m.dbTable?.toLowerCase() === table.toLowerCase() || 
+      m.name?.toLowerCase() === table.toLowerCase() ||
+      table.toLowerCase().endsWith(m.dbTable?.toLowerCase()) ||
+      m.dbTable?.toLowerCase().endsWith(table.toLowerCase())
+    )
     
     if (authModel) {
       loginApiContent += `import { get${authModel.name}ByField } from '@/app/actions/${authModel.name.toLowerCase()}'\n`
-      if (isBcrypt) {
+      if (hashFormat === 'bcrypt') {
         loginApiContent += `import bcrypt from 'bcryptjs'\n`
+      } else if (hashFormat === 'md5' || hashFormat === 'sha256') {
+        loginApiContent += `import crypto from 'crypto'\n`
       }
       
       loginApiContent += `
 export async function POST(request: Request) {
   const formData = await request.formData()
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  const email = (formData.get('email') as string || '').trim()
+  const password = formData.get('password') as string || ''
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
   if (!email || !password) {
@@ -172,9 +174,21 @@ export async function POST(request: Request) {
     }
     
     const user = rows[0]
-    ${isBcrypt 
-      ? `const isValid = await bcrypt.compare(password, user.${passCol} || '')\n    if (!isValid) return NextResponse.redirect(new URL('/login?error=invalid', request.url))` 
-      : `if (password !== user.${passCol}) return NextResponse.redirect(new URL('/login?error=invalid', request.url))`
+    const dbHash = String(user['${passCol}'] ?? user['${passCol.toLowerCase()}'] ?? user['${passCol.toUpperCase()}'] ?? '')
+
+    let isValid = false
+    ${
+      hashFormat === 'bcrypt'
+        ? `isValid = await bcrypt.compare(password, dbHash)`
+        : hashFormat === 'sha256'
+        ? `const hash = crypto.createHash('sha256').update(password).digest('hex')\n    isValid = (hash.toLowerCase() === dbHash.toLowerCase())`
+        : hashFormat === 'md5'
+        ? `const hash = crypto.createHash('md5').update(password).digest('hex')\n    isValid = (hash.toLowerCase() === dbHash.toLowerCase())`
+        : `isValid = (password === dbHash)`
+    }
+
+    if (!isValid) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
 
     const response = NextResponse.redirect(new URL(redirect, request.url))
@@ -195,30 +209,52 @@ export async function POST(request: Request) {
     } else {
       loginApiContent += `
 export async function POST(request: Request) {
-  const formData = await request.formData()
-  const email = formData.get('email') as string
-  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
-
-  // Tabela de auth não encontrada no AST: Fallback permissivo (Mock)
-  const response = NextResponse.redirect(new URL(redirect, request.url))
-  response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  })
-  return response
+  console.error('Tabela de autenticação "${table}" não encontrada nos modelos do projeto.')
+  return NextResponse.redirect(new URL('/login?error=config', request.url))
 }
 `
     }
+  } else if (ast.authConfig?.authType === 'managed' && ast.dbStack === 'supabase') {
+    loginApiContent += `import { createClient } from '@/app/actions/db'\n
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const email = (formData.get('email') as string || '').trim()
+  const password = formData.get('password') as string || ''
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
+  if (!email || !password) {
+    return NextResponse.redirect(new URL('/login?error=credentials', request.url))
+  }
+
+  try {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    }
+
+    const response = NextResponse.redirect(new URL(redirect, request.url))
+    response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+    return response
+  } catch (err) {
+    console.error('Login Supabase Error:', err)
+    return NextResponse.redirect(new URL('/login?error=server', request.url))
+  }
+}
+`
   } else {
     loginApiContent += `
 export async function POST(request: Request) {
   const formData = await request.formData()
-  const email = formData.get('email') as string
+  const email = (formData.get('email') as string || '').trim() || 'user@example.com'
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
-  // Validação simples (mock)
+  // Autenticação desativada ou mock
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
     httpOnly: true,
@@ -300,6 +336,7 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@radix-ui/react-label": "^2.0.2",
       "@radix-ui/react-slot": "^1.0.2",
       "@radix-ui/react-tabs": "^1.0.4",
+      ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "bcryptjs": "^2.4.3" } : {}),
       ...(ast.dbStack === 'supabase' 
           ? { "@supabase/ssr": "^0.3.0", "@supabase/supabase-js": "^2.40.0" }
           : ast.dbStack === 'oracle'
@@ -317,7 +354,8 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@types/react-dom": "^18",
       "tailwindcss": "^3.4.0",
       "postcss": "^8.4.0",
-      "autoprefixer": "^10.4.19"
+      "autoprefixer": "^10.4.19",
+      ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "@types/bcryptjs": "^2.4.6" } : {})
     }
   }, null, 2))
 
@@ -832,6 +870,12 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
       const newPath = path.replace(/^app\//, `app/${pSlug}/`)
       files.set(newPath, content)
     }
+  }
+
+  // 5. Página de login unificada para o workspace
+  const primaryProject = ast.projects[0]?.app
+  if (primaryProject) {
+    generateLoginPage(primaryProject, files)
   }
 
   return files

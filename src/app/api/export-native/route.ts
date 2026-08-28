@@ -26,18 +26,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
     }
 
-    // 3. Fetch Models & Fields
-    const { data: models } = await supabase
-      .from('models')
-      .select('*, fields(*)')
-      .eq('project_id', projectId)
-
-    // 4. Fetch Views & Components
-    const { data: views } = await supabase
-      .from('ui_views')
-      .select('*, ui_components(*)')
-      .eq('project_id', projectId)
-      .eq('status', 'published')
+    // 3. Fetch Models, Views, Relations & Auth Config in parallel
+    const [
+      { data: models },
+      { data: views },
+      { data: relations },
+      { data: authConfig }
+    ] = await Promise.all([
+      supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
+      supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published'),
+      supabase.from('relations').select('*').eq('project_id', projectId),
+      supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle()
+    ])
 
     // Se não tiver views publicadas, pega todas
     let finalViews = views
@@ -59,7 +59,15 @@ export async function POST(request: Request) {
       models: models || [],
       fields: flatFields,
       views: finalViews || [],
-      components
+      components,
+      relations: relations || [],
+      auth_config: authConfig ? {
+        auth_type: authConfig.auth_type,
+        table_name: authConfig.db_table_name,
+        email_column: authConfig.db_email_column,
+        password_column: authConfig.db_password_column,
+        hash_format: authConfig.db_password_hash_type
+      } : undefined
     }
 
     // --- CLEAN CODE GENERATOR ---
