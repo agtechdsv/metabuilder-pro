@@ -17,15 +17,7 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
 import { get${model.name}List } from '@/app/actions/${model.name.toLowerCase()}'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Search, Filter, Download, Zap, Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, Download, Zap, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
 
 export default async function ${model.name}ListPage() {
   const data = await get${model.name}List()
@@ -93,91 +85,110 @@ export default async function ${model.name}ListPage() {
       </div>
 
       {/* Tabela Premium */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-12 px-4 py-4 text-center">
-                  <input type="checkbox" className="rounded border-input bg-background text-primary focus:ring-primary focus:ring-offset-neutral-900" />
-                </TableHead>
-                <TableHead className="w-14"></TableHead>
-                ${visibleCols.map(c => `<TableHead className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest px-4 py-4 whitespace-nowrap">${c.label}</TableHead>`).join('\n                ')}
-                <TableHead className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest px-4 py-4 text-foregroundight">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm flex flex-col w-full transition-opacity duration-300">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead className="sticky top-0 z-20">
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="sticky left-0 z-30 bg-muted/50 px-4 py-4 w-[60px] border-r border-border shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
+                  <input type="checkbox" className="rounded-md bg-background border-input text-primary focus:ring-primary transition-all" />
+                </th>
+                ${visibleCols.map(c => `
+                <th
+                  className="px-6 py-4 text-[10px] font-black text-muted-foreground tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-muted group/th transition-colors"
+                  style={{
+                    color: '${c.config?.label?.color || ''}' || undefined,
+                    fontWeight: ${c.config?.label?.bold ? "'bold'" : "undefined"},
+                    fontStyle: ${c.config?.label?.italic ? "'italic'" : "undefined"},
+                    textTransform: ${c.config?.label?.uppercase ? "'uppercase'" : "undefined"},
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    ${c.label}
+                    <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
+                      <ArrowUpDown className="w-3 h-3" />
+                    </div>
+                  </div>
+                </th>`).join('\n                ')}
+                <th className="sticky right-0 z-30 bg-muted/50 px-4 py-4 text-right text-[10px] font-black text-muted-foreground tracking-[0.15em] border-l border-border shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                  AÇÕES
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
               {data.map((item: any) => {
                 const getInitials = () => {
                   const val = String(item.${visibleCols[0]?.field || 'id'} || '??');
                   return val.substring(0, 2).toUpperCase();
                 };
                 return (
-                  <TableRow key={item.id} className="border-border hover:bg-white/[0.02] transition-colors group">
-                    <TableCell className="px-4 py-4 text-center">
-                      <input type="checkbox" className="rounded border-input bg-background text-primary focus:ring-primary focus:ring-offset-neutral-900 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    </TableCell>
-                    <TableCell className="px-4 py-4">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-                        <span className="text-xs font-bold text-primary">{getInitials()}</span>
-                      </div>
-                    </TableCell>
+                  <tr key={item.id} className="group hover:bg-muted/30 transition-colors">
+                    <td className="sticky left-0 z-10 bg-card group-hover:bg-muted/30 px-4 py-4 w-[60px] border-r border-border text-center transition-colors">
+                       <input type="checkbox" className="rounded-md bg-background border-input text-primary focus:ring-primary opacity-50 group-hover:opacity-100 transition-all" />
+                    </td>
                     ${visibleCols.map((c, idx) => {
-                      // Se for campo de status comum, vamos colocar um badge colorido, senão apenas texto
                       if (c.field.toLowerCase().includes('status') || c.field.toLowerCase().includes('ativo') || c.field.toLowerCase().includes('state')) {
-                        return `<TableCell className="px-4 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                        return `<td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-primary/10 text-primary border border-primary/20">
                             {String(item.${c.field} ?? '-')}
                           </span>
-                        </TableCell>`
+                        </td>`
                       }
-                      return `<TableCell className="px-4 py-4 text-sm text-[var(--foreground)] \${idx === 0 ? 'font-medium' : ''} whitespace-nowrap">
+                      return `<td className="px-6 py-4 text-sm text-foreground whitespace-nowrap">
                         {String(item.${c.field} ?? '-')}
-                      </TableCell>`
+                      </td>`
                     }).join('\n                    ')}
-                    <TableCell className="px-4 py-4">
+                    <td className="sticky right-0 z-10 bg-card group-hover:bg-muted/30 px-4 py-4 text-right border-l border-border transition-colors">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full">
+                          <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
                         <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-primary hover:text-indigo-300 hover:bg-primary/10 rounded-full">
+                          <Button variant="ghost" size="icon" className="w-8 h-8 text-primary hover:text-primary hover:bg-primary/10 rounded-full">
                             <Pencil className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-foregrounded-400 hover:text-foregrounded-300 hover:bg-destructive/10 rounded-full">
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 )
               })}
               {data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={${visibleCols.length + 3}} className="h-48 text-center text-muted-foreground">
+                <tr>
+                  <td colSpan={${visibleCols.length + 2}} className="h-48 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center mb-2">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
                         <Search className="w-5 h-5 opacity-40" />
                       </div>
                       <span className="font-semibold text-foreground">Nenhum registro encontrado</span>
                       <span className="text-sm">Tente ajustar seus filtros ou cadastre um novo registro.</span>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
         
         {/* Footer Paginação */}
-        <div className="p-4 border-t border-border bg-muted/30 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground font-medium">Exibindo <strong className="text-foreground">1</strong> a <strong className="text-foreground">{data.length}</strong> de <strong className="text-foreground">{data.length}</strong> resultados</p>
+        <div className="px-8 py-4 bg-muted/30 border-t border-border flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+            <span className="opacity-60">Exibir</span>
+            <select className="bg-transparent border-none outline-none text-primary focus:ring-0 cursor-pointer">
+              <option value={10}>10 linhas</option>
+              <option value={50}>50 linhas</option>
+            </select>
+            <span className="mx-2 opacity-20">|</span>
+            <span className="opacity-60">Total: <span className="text-foreground">{data.length}</span></span>
+          </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground" disabled><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground" disabled><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground h-8 w-8 p-0"><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground h-8 w-8 p-0"><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       </div>

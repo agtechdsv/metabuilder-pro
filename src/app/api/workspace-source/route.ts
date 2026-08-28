@@ -89,7 +89,7 @@ async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
 
     const [{ data: models }, { data: uiViewsPublished }, { data: relations }, { data: authConfig }] = await Promise.all([
       supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
-      supabase.from('ui_views').select('*').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
+      supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
       supabase.from('relations').select('*').eq('project_id', projectId),
       supabase.from('project_auth_config').select('*').eq('project_id', projectId).single()
     ])
@@ -97,15 +97,18 @@ async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
     let finalViews = uiViewsPublished
     if (!finalViews || finalViews.length === 0) {
       const { data: allViews } = await supabase
-        .from('ui_views').select('*').eq('project_id', projectId).order('created_at', { ascending: true })
+        .from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).order('created_at', { ascending: true })
       finalViews = allViews
     }
+
+    const components = finalViews?.flatMap((v: any) => v.ui_components || []) || []
 
     return {
       ...project,
       models: models || [],
       views: finalViews || [],
       fields: (models || []).flatMap((m: any) => m.fields || []),
+      components,
       relations: relations || [],
       auth_config: authConfig ? {
         auth_type: authConfig.auth_type,

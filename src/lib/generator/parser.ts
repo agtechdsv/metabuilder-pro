@@ -57,13 +57,16 @@ export function parseMetaBuilderJSON(
     const rawRelations = rawJson.relations || []
     const viewRelations = rawRelations.filter((r: any) => r.source_model_id === rv.model_id)
 
-    const components: UIComponentNode[] = vComps.map((c: any) => {
+    const components: UIComponentNode[] = vComps
+      .sort((a: any, b: any) => (a.position ?? a.order ?? 999) - (b.position ?? b.order ?? 999))
+      .map((c: any) => {
       const fieldDef = rawFields.find((f: any) => f.id === c.field_id)
+      const isHidden = c.hidden === true || c.config?.hidden === true || c.is_visible === false
       return {
         type: c.component_type || 'text',
         field: fieldDef ? fieldDef.db_column_name : c.field_id,
         label: c.label || c.name || fieldDef?.display_name || 'Campo',
-        isVisible: c.is_visible !== false,
+        isVisible: !isHidden,
         config: c.config || {}
       }
     })
