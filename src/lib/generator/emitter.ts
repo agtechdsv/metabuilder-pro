@@ -140,13 +140,15 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
     const passCol = ast.authConfig.passwordColumn || 'hash_senha'
     const hashFormat = ast.authConfig.hashFormat || 'bcrypt'
     
-    // Procura o model da tabela de auth para usar a generic server action
-    const authModel = ast.models.find(m => 
-      m.dbTable?.toLowerCase() === table.toLowerCase() || 
-      m.name?.toLowerCase() === table.toLowerCase() ||
-      table.toLowerCase().endsWith(m.dbTable?.toLowerCase()) ||
-      m.dbTable?.toLowerCase().endsWith(table.toLowerCase())
-    )
+    const cleanTable = (table || '').toLowerCase().trim().replace(/^.*\./, '')
+    const targetTable = (table || '').toLowerCase().trim()
+    
+    // Procura estritamente o model da tabela de auth pelo nome exato da tabela
+    const authModel = 
+      ast.models.find(m => (m.dbTable || '').toLowerCase().trim() === targetTable) ||
+      ast.models.find(m => (m.name || '').toLowerCase().trim() === targetTable) ||
+      ast.models.find(m => (m.dbTable || '').toLowerCase().trim() === cleanTable) ||
+      ast.models.find(m => (m.name || '').toLowerCase().trim() === cleanTable)
     
     if (authModel) {
       loginApiContent += `import { get${authModel.name}ByField } from '@/app/actions/${authModel.name.toLowerCase()}'\n`
