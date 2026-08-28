@@ -1,4 +1,19 @@
 {
+  "v1.0.12": {
+    "date": "2026-08-28",
+    "pt": [
+      "Novo Gerador Inteligente de Páginas de Listagem: agora com suporte a componentes dinâmicos e renderização flexível para visualização de dados sob medida.",
+      "Melhorias contínuas de estabilidade e sincronização estrutural na plataforma."
+    ],
+    "en": [
+      "New Smart List Page Generator: now supporting dynamic components and flexible rendering for tailored data visualization.",
+      "Continuous platform stability and structural sync improvements."
+    ],
+    "es": [
+      "Nuevo Generador Inteligente de Páginas de Listado: ahora con soporte para componentes dinámicos y renderizado flexible para una visualización de datos a medida.",
+      "Mejoras continuas de estabilidad y sincronización estructural en la plataforma."
+    ]
+  },
   "v1.0.11": {
     "date": "2026-08-28",
     "pt": [
