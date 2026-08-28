@@ -85,17 +85,18 @@ export default async function ${model.name}ListPage() {
       </div>
 
       {/* Tabela Premium */}
-      <div className="bg-card border border-border rounded-[2rem] overflow-hidden shadow-sm flex flex-col w-full transition-opacity duration-300">
+      {/* Tabela Premium (ViewListRenderer style) */}
+      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300">
         <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead className="sticky top-0 z-20">
-              <tr className="bg-muted/50 border-b border-border">
-                <th className="sticky left-0 z-30 bg-muted/50 px-4 py-4 w-[60px] border-r border-border shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
-                  <input type="checkbox" className="rounded-md bg-background border-input text-primary focus:ring-primary transition-all" />
+              <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+                <th className="sticky left-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
+                  <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
                 </th>
                 ${visibleCols.map(c => `
                 <th
-                  className="px-6 py-4 text-[10px] font-black text-muted-foreground tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-muted group/th transition-colors"
+                  className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 group/th transition-colors"
                   style={{
                     color: '${c.config?.label?.color || ''}' || undefined,
                     fontWeight: ${c.config?.label?.bold ? "'bold'" : "undefined"},
@@ -110,47 +111,47 @@ export default async function ${model.name}ListPage() {
                     </div>
                   </div>
                 </th>`).join('\n                ')}
-                <th className="sticky right-0 z-30 bg-muted/50 px-4 py-4 text-right text-[10px] font-black text-muted-foreground tracking-[0.15em] border-l border-border shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                   AÇÕES
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {data.map((item: any) => {
+            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+              {data.map((item: any, rowIndex: number) => {
                 const getInitials = () => {
                   const val = String(item.${visibleCols[0]?.field || 'id'} || '??');
                   return val.substring(0, 2).toUpperCase();
                 };
                 return (
-                  <tr key={item.id} className="group hover:bg-muted/30 transition-colors">
-                    <td className="sticky left-0 z-10 bg-card group-hover:bg-muted/30 px-4 py-4 w-[60px] border-r border-border text-center transition-colors">
-                       <input type="checkbox" className="rounded-md bg-background border-input text-primary focus:ring-primary opacity-50 group-hover:opacity-100 transition-all" />
+                  <tr key={item.id} className="group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
+                    <td className={\`sticky left-0 z-10 px-4 py-4 whitespace-nowrap w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)] transition-colors \${rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"}\`}>
+                       <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 opacity-50 group-hover:opacity-100 transition-all" />
                     </td>
                     ${visibleCols.map((c, idx) => {
                       if (c.field.toLowerCase().includes('status') || c.field.toLowerCase().includes('ativo') || c.field.toLowerCase().includes('state')) {
                         return `<td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-primary/10 text-primary border border-primary/20">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800/50">
                             {String(item.${c.field} ?? '-')}
                           </span>
                         </td>`
                       }
-                      return `<td className="px-6 py-4 text-sm text-foreground whitespace-nowrap">
+                      return `<td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
                         {String(item.${c.field} ?? '-')}
                       </td>`
                     }).join('\n                    ')}
-                    <td className="sticky right-0 z-10 bg-card group-hover:bg-muted/30 px-4 py-4 text-right border-l border-border transition-colors">
+                    <td className={\`sticky right-0 z-10 px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] transition-colors \${rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"}\`}>
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full">
+                          <Button variant="ghost" size="icon" className="w-8 h-8 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </Link>
                         <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-primary hover:text-primary hover:bg-primary/10 rounded-full">
+                          <Button variant="ghost" size="icon" className="w-8 h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 rounded-full">
                             <Pencil className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full">
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 rounded-full">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -160,12 +161,12 @@ export default async function ${model.name}ListPage() {
               })}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={${visibleCols.length + 2}} className="h-48 text-center text-muted-foreground">
+                  <td colSpan={${visibleCols.length + 2}} className="h-48 text-center text-neutral-500">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+                      <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-2">
                         <Search className="w-5 h-5 opacity-40" />
                       </div>
-                      <span className="font-semibold text-foreground">Nenhum registro encontrado</span>
+                      <span className="font-semibold text-neutral-900 dark:text-white">Nenhum registro encontrado</span>
                       <span className="text-sm">Tente ajustar seus filtros ou cadastre um novo registro.</span>
                     </div>
                   </td>
@@ -176,19 +177,19 @@ export default async function ${model.name}ListPage() {
         </div>
         
         {/* Footer Paginação */}
-        <div className="px-8 py-4 bg-muted/30 border-t border-border flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+        <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
             <span className="opacity-60">Exibir</span>
-            <select className="bg-transparent border-none outline-none text-primary focus:ring-0 cursor-pointer">
+            <select className="bg-transparent border-none outline-none text-indigo-600 focus:ring-0 cursor-pointer">
               <option value={10}>10 linhas</option>
               <option value={50}>50 linhas</option>
             </select>
             <span className="mx-2 opacity-20">|</span>
-            <span className="opacity-60">Total: <span className="text-foreground">{data.length}</span></span>
+            <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground h-8 w-8 p-0"><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" className="bg-background border-border text-muted-foreground h-8 w-8 p-0"><ChevronRight className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none"><ChevronLeft className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none"><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
       </div>
@@ -243,7 +244,7 @@ export default async function ${model.name}ListPage() {
       <form className="space-y-8">
         ${topSlots}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-          ${route.components.filter(c => c.isVisible).map(c => `
+          ${(route.components || []).filter(c => c.isVisible !== false).map(c => `
           <div className="space-y-2">
             <Label htmlFor="${c.field}" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">${c.label}</Label>
             <Input 
@@ -350,7 +351,7 @@ export default async function ${model.name}ListPage() {
     </div>`
     }
 
-    const detailPageContent = `${importsStr}
+    const detailPageContent = `${importsFinal}
 
 export default async function ${model.name}DetailPage({ params }: { params: { id: string } }) {
   const isNew = params.id === 'new'
