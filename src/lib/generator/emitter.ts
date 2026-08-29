@@ -624,15 +624,15 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   const isActive = (item: NavItem) => {
     if (item.type === 'view') {
-      return pathname === \`/\${projectSlug}/\${item.target}\` ||
-             pathname?.startsWith(\`/\${projectSlug}/\${item.target}/\`)
+      return pathname === \`/\${item.target}\` ||
+             pathname?.startsWith(\`/\${item.target}/\`)
     }
     return false
   }
 
   const renderItem = (item: NavItem) => {
     const active = isActive(item)
-    const href = item.type === 'view' ? \`/\${projectSlug}/\${item.target}\` : (item.target || '#')
+    const href = item.type === 'view' ? \`/\${item.target}\` : (item.target || '#')
 
     if (item.type === 'folder') {
       const expanded = expandedFolders.includes(item.id)
@@ -807,7 +807,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     target: r.viewSlug,
   }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => `
   <a
-    href="/${ast.projectSlug}/${n.target || n.id}"
+    href="/${n.target || n.id}"
     className="group flex flex-col justify-between bg-white dark:bg-[#141416] border border-slate-200 dark:border-[#27272a] rounded-3xl p-6 sm:p-8 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 min-h-[200px]"
   >
     <div>
