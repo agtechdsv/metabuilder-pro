@@ -1,4 +1,4 @@
-﻿import { AppAST, WorkspaceAST } from './ast'
+import { AppAST, WorkspaceAST } from './ast'
 import { generateRoutes } from './layers/routes'
 import { generateActions } from './layers/actions'
 import { generateComponents } from './layers/components'
@@ -831,7 +831,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   files.set('app/(protected)/page.tsx', `import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: \`Dashboard - \${ast.projectName}\` }
+export const metadata: Metadata = { title: 'Dashboard - ${ast.projectName}' }
 
 export default function DashboardPage() {
   return (
