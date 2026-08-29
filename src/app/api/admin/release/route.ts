@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
+export const maxDuration = 300 // 5 minutes max duration for Vercel Pro/Enterprise (to prevent 504 Gateway Timeout)
+
+
 const OWNER = 'agtechdsv'
 const REPO = 'metabuilder-pro'
 const BRANCH = 'heads/master' // or refs/heads/master
