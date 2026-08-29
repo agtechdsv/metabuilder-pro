@@ -34,8 +34,8 @@ function generateSupabaseClient() {
   return `import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export function createClient() {
-  const cookieStore = cookies()
+export async function createClient() {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -157,28 +157,28 @@ import { createClient } from './db'
 import { revalidatePath } from 'next/cache'
 
 export async function get${model.name}List() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data, error } = await supabase.from('${model.dbTable}').select('*').order('${pk}', { ascending: false })
   if (error) throw new Error(error.message)
   return data
 }
 
 export async function get${model.name}ById(id: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data, error } = await supabase.from('${model.dbTable}').select('*').eq('${pk}', id).single()
   if (error) throw new Error(error.message)
   return data
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data, error } = await supabase.from('${model.dbTable}').select('*').eq(field, value)
   if (error) throw new Error(error.message)
   return data
 }
 
 export async function create${model.name}(formData: FormData) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const rawData = Object.fromEntries(formData.entries())
   const { error } = await supabase.from('${model.dbTable}').insert([rawData])
   if (error) throw new Error(error.message)
@@ -186,7 +186,7 @@ export async function create${model.name}(formData: FormData) {
 }
 
 export async function update${model.name}(id: string, formData: FormData) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const rawData = Object.fromEntries(formData.entries())
   const { error } = await supabase.from('${model.dbTable}').update(rawData).eq('${pk}', id)
   if (error) throw new Error(error.message)
@@ -194,7 +194,7 @@ export async function update${model.name}(id: string, formData: FormData) {
 }
 
 export async function delete${model.name}(id: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { error } = await supabase.from('${model.dbTable}').delete().eq('${pk}', id)
   if (error) throw new Error(error.message)
   revalidatePath('/${model.name.toLowerCase()}')

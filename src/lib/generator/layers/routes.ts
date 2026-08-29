@@ -435,9 +435,10 @@ import { ArrowLeft, Save } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Detalhe — ${route.title}' }
 
-export default async function ${mn}DetailPage({ params }: { params: { id: string } }) {
+export default async function ${mn}DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const isEdit = true // esta página é de edição e visualização
-  const data = await get${mn}ById(params.id)
+  const resolvedParams = await params
+  const data = await get${mn}ById(resolvedParams.id)
 
   if (!data) notFound()
 
@@ -464,7 +465,7 @@ export default async function ${mn}DetailPage({ params }: { params: { id: string
         'use server'
         const payload: Record<string, any> = {}
         formData.forEach((v, k) => { payload[k] = v })
-        await update${mn}(params.id, payload)
+        await update${mn}(resolvedParams.id, payload)
       }}>
         <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />

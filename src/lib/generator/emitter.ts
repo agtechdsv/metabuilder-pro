@@ -45,8 +45,9 @@ export const metadata: Metadata = {
   title: 'Login — ${ast.projectName}',
 }
 
-export default function LoginPage({ searchParams }: { searchParams?: { error?: string } }) {
-  const error = searchParams?.error
+export default async function LoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
+  const resolvedSearchParams = await searchParams
+  const error = resolvedSearchParams?.error
   const errorMessage = error === 'invalid'
     ? 'E-mail ou senha incorretos. Verifique suas credenciais.'
     : error === 'credentials'
@@ -233,7 +234,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
