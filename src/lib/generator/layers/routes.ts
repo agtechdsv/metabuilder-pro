@@ -1,4 +1,4 @@
-/**
+﻿/**
  * routes.ts
  *
  * Gera as pages Next.js para cada RouteNode da AST.
@@ -260,7 +260,8 @@ function generateListPage(route: RouteNode): string {
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 import { delete${mn} } from '@/app/actions/${mnLower}'
-import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { DeleteButton } from '@/components/ui/delete-button'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
@@ -349,9 +350,7 @@ ${tdCells}
                         <Pencil className="w-4 h-4" />
                       </Link>
                       <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}>
-                        <button type="submit" className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" title="Excluir" onClick={(e) => { if (!confirm('Confirmar exclusão?')) e.preventDefault() }}>
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <DeleteButton />
                       </form>
                     </div>
                   </td>

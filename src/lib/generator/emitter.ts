@@ -1,4 +1,4 @@
-import { AppAST, WorkspaceAST } from './ast'
+﻿import { AppAST, WorkspaceAST } from './ast'
 import { generateRoutes } from './layers/routes'
 import { generateActions } from './layers/actions'
 import { generateComponents } from './layers/components'
@@ -7,7 +7,7 @@ import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss
 /**
  * emitter.ts
  *
- * Recebe a AST (Ãrvore Abstrata) e orquestra a geraÃ§Ã£o de todos os arquivos
+ * Recebe a AST (Ãrvore Abstrata) e orquestra a geração de todos os arquivos
  * do projeto Next.js em um mapa de string (Memory FS).
  */
 
@@ -17,7 +17,7 @@ export function generateNativeProject(ast: AppAST): Map<string, string> {
   // 1. Arquivos Base do Projeto
   generateBaseFiles(ast, files)
 
-  // 2. GeraÃ§Ã£o das Camadas
+  // 2. Geração das Camadas
   generateRoutes(ast, files)
   generateActions(ast, files)
   generateComponents(ast, files)
@@ -216,7 +216,7 @@ export async function POST(request: Request) {
     } else {
       loginApiContent += `
 export async function POST(request: Request) {
-  console.error('Tabela de autenticaÃ§Ã£o "${table}" nÃ£o encontrada nos modelos do projeto.')
+  console.error('Tabela de autenticação "${table}" não encontrada nos modelos do projeto.')
   return NextResponse.redirect(new URL('/login?error=config', request.url))
 }
 `
@@ -261,7 +261,7 @@ export async function POST(request: Request) {
   const email = (formData.get('email') as string || '').trim() || 'user@example.com'
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
-  // AutenticaÃ§Ã£o desativada ou mock
+  // Autenticação desativada ou mock
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
     httpOnly: true,
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
 
   files.set('app/api/login/route.ts', loginApiContent)
 
-  // app/api/logout/route.ts â€” limpa o cookie de sessÃ£o
+  // app/api/logout/route.ts â€” limpa o cookie de sessão
   files.set('app/api/logout/route.ts', `import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -286,7 +286,7 @@ export async function GET(request: Request) {
 }
 `)
 
-  // middleware.ts â€” intercepta toda requisiÃ§Ã£o e redireciona para /login se nÃ£o autenticado
+  // middleware.ts â€” intercepta toda requisição e redireciona para /login se não autenticado
   files.set('middleware.ts', `import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -421,7 +421,7 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
     exclude: ["node_modules"]
   }, null, 2))
 
-  // next.config.js (Next.js 14 nÃ£o suporta .ts aqui)
+  // next.config.js (Next.js 14 não suporta .ts aqui)
   files.set('next.config.js', `/** @type {import('next').NextConfig} */
 const nextConfig = {};
 
@@ -522,7 +522,7 @@ export function HeaderControls() {
 
   return (
     <div className="flex items-center bg-white/80 dark:bg-[#18181b]/80 border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
-      {/* BotÃ£o de Tema */}
+      {/* Botão de Tema */}
       <button 
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
@@ -831,7 +831,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   files.set('app/(protected)/page.tsx', `import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Dashboard â€” ${ast.projectName}' }
+export const metadata: Metadata = { title: \`Dashboard - \${ast.projectName}\` }
 
 export default function DashboardPage() {
   return (
@@ -989,12 +989,12 @@ export default config;
     const routeNav = pApp.routes.map(r => ({ path: r.path, title: r.title }))
     files.set(`app/${pSlug}/layout.tsx`, generateProjectLayout(project.name, pSlug, routeNav))
 
-    // PÃ¡gina Ã­ndice do projeto (redirect para primeira view)
+    // PÃ¡gina índice do projeto (redirect para primeira view)
     const firstRoute = pApp.routes[0]?.path || '/'
     files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation'\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}')\n}\n`)
 
-    // Middleware de autenticaÃ§Ã£o
-    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃƒO exigem autenticaÃ§Ã£o\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas pÃºblicas e arquivos estÃ¡ticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessÃ£o\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estÃ¡ticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
+    // Middleware de autenticação
+    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃƒO exigem autenticação\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas pÃºblicas e arquivos estÃ¡ticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessão\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estÃ¡ticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
 
     // Rotas, Actions e Components â€” com prefix do projeto
     const projectFiles = new Map<string, string>()
@@ -1081,16 +1081,16 @@ export default function DownloadsPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Gerenciador de Downloads</h1>
         </div>
-        <p className="text-sm text-[var(--muted)]">Central de exportaÃ§Ãµes assÃ­ncronas do sistema.</p>
+        <p className="text-sm text-[var(--muted)]">Central de exportAções assíncronas do sistema.</p>
       </div>
 
       {/* Info Alert */}
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
         <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
         <div>
-          <h4 className="text-sm font-semibold text-amber-500">FILA DE GERAÃ‡ÃƒO DE ARQUIVOS</h4>
+          <h4 className="text-sm font-semibold text-amber-500">FILA DE GERAÇÃO DE ARQUIVOS</h4>
           <p className="text-xs text-amber-500/80 mt-1 leading-relaxed">
-            As exportaÃ§Ãµes com mais de 1.000 registros sÃ£o processadas em background para nÃ£o travar o uso da aplicaÃ§Ã£o. VocÃª pode continuar trabalhando normalmente e voltar aqui quando o status estiver concluÃ­do.
+            As exportAções com mais de 1.000 registros são processadas em background para não travar o uso da aplicação. VocÃª pode continuar trabalhando normalmente e voltar aqui quando o status estiver Concluído.
           </p>
         </div>
       </div>
@@ -1099,7 +1099,7 @@ export default function DownloadsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Solicitado', value: metrics.total, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-          { label: 'Download ConcluÃ­do', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+          { label: 'Download Concluído', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
           { label: 'Em Processamento', value: metrics.processing, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
           { label: 'Falhas', value: metrics.failed, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
         ].map((m, idx) => (
@@ -1118,7 +1118,7 @@ export default function DownloadsPage() {
       {/* Tabs placeholder */}
       <div className="border-b border-[var(--card-border)] flex gap-6 mt-8">
         <div className="pb-3 border-b-2 border-indigo-500 font-semibold text-sm text-white">Todas ({metrics.total})</div>
-        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">ConcluÃ­das ({metrics.completed})</div>
+        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Concluídas ({metrics.completed})</div>
         <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Pendentes ({metrics.processing})</div>
       </div>
 
@@ -1128,14 +1128,14 @@ export default function DownloadsPage() {
           <div className="col-span-5 flex items-center gap-2 text-xs font-black tracking-widest text-[var(--muted)] uppercase"><ArrowUpDown className="w-3 h-3"/> Arquivo</div>
           <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Registros</div>
           <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Status</div>
-          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">AÃ§Ãµes</div>
+          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">Ações</div>
         </div>
 
         <div className="divide-y divide-[var(--card-border)]">
           {jobs.length === 0 ? (
              <div className="p-12 text-center flex flex-col items-center">
                <Download className="w-12 h-12 text-[var(--muted)] opacity-20 mb-4" />
-               <h3 className="text-white font-semibold mb-1">Nenhuma exportaÃ§Ã£o encontrada</h3>
+               <h3 className="text-white font-semibold mb-1">Nenhuma exportação encontrada</h3>
                <p className="text-[var(--muted)] text-sm">Gere arquivos nas telas de listagem clicando em "Exportar".</p>
              </div>
           ) : jobs.map((job) => (
@@ -1163,7 +1163,7 @@ export default function DownloadsPage() {
                <div className="col-span-3">
                  {job.status === 'completed' && (
                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold ring-1 ring-emerald-500/20">
-                     <CheckCircle2 className="w-3.5 h-3.5" /> ConcluÃ­do
+                     <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
                    </span>
                  )}
                  {job.status === 'processing' && (

@@ -170,5 +170,21 @@ TableCell.displayName = "TableCell"
 
 export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell }
 `)
+  files.set('components/ui/delete-button.tsx', `'use client'
 
+import { Trash2 } from 'lucide-react'
+
+export function DeleteButton() {
+  return (
+    <button 
+      type="submit" 
+      className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" 
+      title="Excluir" 
+      onClick={(e) => { if (!confirm('Confirmar exclusão?')) e.preventDefault() }}
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  )
+}
+`)
 }
