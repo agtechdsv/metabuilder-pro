@@ -1,195 +1,382 @@
-import { AppAST } from '../ast'
+/**
+ * routes.ts
+ *
+ * Gera as pages Next.js para cada RouteNode da AST.
+ *
+ * Para logic_type 'pesquisa_cadastro':
+ *   - page.tsx     → Listagem com grid dinâmico (gridFields) e filtros (filterFields)
+ *   - [id]/page.tsx → Detalhe com formFields e abas de relacionamento (relationTabs)
+ *   - new/page.tsx  → Cadastro com formFields
+ *
+ * Para outros logic_type: placeholder "Em desenvolvimento"
+ */
 
-export function generateRoutes(ast: AppAST, files: Map<string, string>) {
-  for (const route of ast.routes) {
-    const model = ast.models.find(m => m.id === route.modelId)
-    if (!model) continue
-    
-    // O path da rota costuma vir com '/' (ex: /usuarios), então anexamos à pasta app/(protected)
-    const routeDir = `app/(protected)${route.path}`
-    const visibleCols = (route.components || []).filter(c => c.isVisible !== false && c.placementType === 'grid')
-    
-    // ==========================================
-    // 1. PAGE.TSX (LISTAGEM)
-    // ==========================================
-    if (route.type === 'list') {
-      const pageContent = `import Link from 'next/link'
-import { get${model.name}List } from '@/app/actions/${model.name.toLowerCase()}'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Search, Filter, Download, Zap, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react'
+import { AppAST, RouteNode, ResolvedField, RelationTab } from '../ast'
 
-export default async function ${model.name}ListPage() {
-  const data = await get${model.name}List()
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toCamel(str: string): string {
+  return str
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_m, c) => c.toUpperCase())
+    .replace(/^[A-Z]/, (m) => m.toLowerCase())
+}
+
+/**
+ * Gera o trecho JSX para renderizar o valor de um campo na tabela de listagem.
+ * Replica a lógica de renderização do Runtime ViewPageContent.
+ */
+function renderGridCellValue(field: ResolvedField, varName = 'item'): string {
+  const col = field.dbColumn.includes('.') ? `["${field.dbColumn}"]` : `.${field.dbColumn}`
+  const raw = `${varName}${col}`
+  const dt = (field.dataType || '').toLowerCase()
+
+  if (field.isByoc || field.isVirtual) {
+    return `<span className="text-xs text-neutral-400 italic">// TODO: virtual field</span>`
+  }
+  if (field.isPrimaryKey) {
+    return `<span className="font-mono text-[10px] text-neutral-400 truncate max-w-[80px] block">{String(${raw} ?? '-').slice(0, 8)}...</span>`
+  }
+  if (dt === 'boolean') {
+    return `<span className={\`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider \${${raw} ? 'bg-green-50 text-green-600 border border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800/50' : 'bg-neutral-100 text-neutral-500 border border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700'}\`}>{${raw} ? 'Sim' : 'Não'}</span>`
+  }
+  if (dt === 'date' || dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') {
+    return `<span>{${raw} ? new Date(${raw}).toLocaleDateString('pt-BR') : '-'}</span>`
+  }
+  if (field.config?.options?.length) {
+    const optsCode = JSON.stringify(field.config.options)
+    return `{(() => { const opts = ${optsCode}; const opt = opts.find((o: any) => o.value === String(${raw})); return opt ? <span className={\`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800/50\`} style={opt.color ? { backgroundColor: opt.color + '20', color: opt.color, borderColor: opt.color + '40' } : undefined}>{opt.label}</span> : <span>{String(${raw} ?? '-')}</span> })()}`
+  }
+  if (field.config?.format === 'currency') {
+    return `<span>{${raw} != null ? Number(${raw}).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}</span>`
+  }
+  if (field.config?.format === 'percent') {
+    return `<span>{${raw} != null ? Number(${raw}).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 1 }) : '-'}</span>`
+  }
+  return `<span>{String(${raw} ?? '-')}</span>`
+}
+
+/**
+ * Gera o trecho JSX para um campo de formulário.
+ * Replica o mapeamento de input do Runtime.
+ */
+function renderFormField(field: ResolvedField, isEdit = false): string {
+  const col = field.dbColumn.replace(/\./g, '_')
+  const label = field.label || field.dbColumn
+  const required = field.config?.required || false
+  const placeholder = field.config?.placeholder || ''
+  const readOnly = field.config?.readOnly || field.isPrimaryKey
+  const dt = (field.dataType || '').toLowerCase()
+
+  if (field.isPrimaryKey && !isEdit) return '' // não renderiza PK no form de criação
+
+  if (field.isByoc || field.isVirtual) {
+    return `
+          {/* TODO: campo virtual/BYOC — ${field.label} */}
+          <div className="space-y-2 opacity-50 pointer-events-none">
+            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label} <span className="text-[9px] normal-case text-amber-500">[Em desenvolvimento]</span></label>
+            <input disabled value="// TODO" className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm" />
+          </div>`
+  }
+
+  if (field.config?.options?.length) {
+    const optsCode = JSON.stringify(field.config.options)
+    return `
+          <div className="space-y-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            <select
+              id="${col}"
+              name="${col}"
+              ${required ? 'required' : ''}
+              ${readOnly ? 'disabled' : ''}
+              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+            >
+              <option value="">Selecione...</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+  }
+
+  if (field.config?.relation?.targetTable) {
+    const { targetTable, displayColumn, valueColumn } = field.config.relation
+    return `
+          <div className="space-y-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            {/* TODO: Carregar lista de ${targetTable} para o select */}
+            <select
+              id="${col}"
+              name="${col}"
+              ${required ? 'required' : ''}
+              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+            >
+              <option value="">Selecione ${label}...</option>
+              {/* TODO: map(${targetTable}List, o => <option value={o.${valueColumn}}>{o.${displayColumn}}</option>) */}
+            </select>
+          </div>`
+  }
+
+  if (dt === 'boolean') {
+    return `
+          <div className="space-y-2">
+            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}</label>
+            <div className="flex items-center gap-3 py-1">
+              <input
+                id="${col}"
+                name="${col}"
+                type="checkbox"
+                ${readOnly ? 'disabled' : ''}
+                defaultChecked={isEdit ? Boolean(data?.${col}) : false}
+                className="w-5 h-5 rounded-md border-2 border-neutral-300 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="${col}" className="text-sm text-neutral-700 dark:text-neutral-300">${label}</label>
+            </div>
+          </div>`
+  }
+
+  if (dt === 'date') {
+    return `
+          <div className="space-y-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            <input
+              id="${col}"
+              name="${col}"
+              type="date"
+              ${required ? 'required' : ''}
+              ${readOnly ? 'readOnly disabled' : ''}
+              defaultValue={isEdit && data?.${col} ? String(data.${col}).slice(0, 10) : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+            />
+          </div>`
+  }
+
+  if (field.config?.multiline || dt === 'text') {
+    const rows = field.config?.rows || 4
+    return `
+          <div className="space-y-2 md:col-span-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            <textarea
+              id="${col}"
+              name="${col}"
+              rows={${rows}}
+              ${required ? 'required' : ''}
+              ${readOnly ? 'readOnly disabled' : ''}
+              placeholder="${placeholder}"
+              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 resize-y min-h-[100px]"
+            />
+          </div>`
+  }
+
+  const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number'
+    : (dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') ? 'datetime-local'
+    : 'text'
+
+  return `
+          <div className="space-y-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            <input
+              id="${col}"
+              name="${col}"
+              type="${inputType}"
+              ${required ? 'required' : ''}
+              ${readOnly ? 'readOnly disabled' : ''}
+              placeholder="${placeholder}"
+              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+          </div>`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIP Placeholder (para logic_types não suportados ainda)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateWipPage(route: RouteNode): string {
+  return `import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: '${route.title}' }
+
+export default function ${route.modelName}Page() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
+      <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </div>
+      <h1 className="text-xl font-black text-neutral-900 dark:text-white mb-2">${route.title}</h1>
+      <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md">
+        Este tipo de visualização (<strong>${route.logicType}</strong>) está em desenvolvimento e será disponibilizado em breve.
+      </p>
+    </div>
+  )
+}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Listagem (pesquisa_cadastro — page.tsx)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateListPage(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+  const hasCreate = route.buttons.length === 0 || route.buttons.some(b => b.actionType === 'create')
+
+  // Cabeçalhos da tabela
+  const thCells = route.gridFields
+    .filter(f => !f.hidden)
+    .map(f => `              <th className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap">${f.label.toUpperCase()}</th>`)
+    .join('\n')
+
+  // Células de dados
+  const tdCells = route.gridFields
+    .filter(f => !f.hidden)
+    .map(f => `                <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">\n                  ${renderGridCellValue(f)}\n                </td>`)
+    .join('\n')
+
+  // Filtros
+  const filterFields = route.filterFields.length > 0 ? route.filterFields : route.gridFields.filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
+  const filterInputs = filterFields.map(f => {
+    const col = f.dbColumn.replace('.', '_')
+    return `
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <input
+              type="search"
+              name="${col}_filter"
+              placeholder="Filtrar por ${f.label.toLowerCase()}..."
+              className="flex h-10 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+            />
+          </div>`
+  }).join('\n')
+
+  return `import type { Metadata } from 'next'
+import Link from 'next/link'
+import { get${mn}List } from '@/app/actions/${mnLower}'
+import { delete${mn} } from '@/app/actions/${mnLower}'
+import { Plus, Pencil, Trash2, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+
+export const metadata: Metadata = { title: '${route.title}' }
+
+export default async function ${mn}ListPage() {
+  const data = await get${mn}List()
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto space-y-6">
-      {/* Cabeçalho Premium */}
+    <div className="p-6 sm:p-8 max-w-[1600px] mx-auto space-y-6">
+      {/* Cabeçalho */}
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-             <div className="text-xl font-bold text-primary">{String('${model.name}').charAt(0)}</div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-600/10 flex items-center justify-center ring-1 ring-indigo-500/20">
+            <span className="text-xl font-bold text-indigo-600">{String('${mn}').charAt(0)}</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               ${route.title}
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[10px] font-semibold text-muted-foreground border border-input tracking-wider">
-                {data.length} REGISTRO{data.length !== 1 ? 'S' : ''}
+              <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 tracking-wider">
+                {data.length} REG
               </span>
             </h1>
-            <p className="text-xs font-black tracking-widest text-muted-foreground mt-1 uppercase">SISTEMA METABUILDER</p>
+            <p className="text-xs font-black tracking-widest text-neutral-400 dark:text-neutral-500 mt-1 uppercase">${route.logicType.replace(/_/g, ' ')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="bg-background border-border text-foreground hover:text-foreground hover:bg-secondary hidden sm:flex">
-            <Zap className="w-4 h-4 mr-2 text-primary" /> Automações
-          </Button>
-          <Button variant="outline" className="bg-background border-border text-foreground hover:text-foreground hover:bg-secondary hidden sm:flex">
-            <Download className="w-4 h-4 mr-2" /> Exportar
-          </Button>
-          <Link href="${route.path}/new">
-            <Button className="bg-primary hover:bg-primary/90 text-foreground shadow-lg shadow-primary/20 px-6 font-semibold tracking-wide">
-              + Novo Registro
-            </Button>
-          </Link>
+${route.buttons.filter(b => b.placement !== 'row' && b.placement !== 'form').map(b => {
+  if (b.actionType === 'create') {
+    return `          <Link href="${route.path}/new" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+            <Plus className="w-4 h-4" /> ${b.label}
+          </Link>`
+  }
+  if (b.actionType === 'export') {
+    return `          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-xs font-bold tracking-wide transition-all">
+            ${b.label}
+          </button>`
+  }
+  return `          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-xs font-bold tracking-wide transition-all">
+            {/* TODO: ${b.label} — ${b.actionType} */}
+            ${b.label}
+          </button>`
+}).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+            <Plus className="w-4 h-4" /> Novo ${route.title}
+          </Link>` : '')}
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="p-5 bg-card border border-border rounded-2xl shadow-inner flex flex-col md:flex-row gap-4 items-end">
+      {/* Filtros */}
+      <div className="p-5 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm flex flex-col md:flex-row gap-4 items-end">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase ml-1">Pesquisa Rápida</label>
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar registros..." className="pl-9 bg-background border-border text-foreground focus-visible:ring-primary" />
-            </div>
-          </div>
-          <div className="space-y-1.5 hidden md:block">
-            <label className="text-[10px] font-black tracking-widest text-muted-foreground uppercase ml-1">Status</label>
-            <select className="flex h-10 w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
-              <option value="">Todos os status</option>
-              <option value="active">Ativo</option>
-              <option value="inactive">Inativo</option>
-            </select>
-          </div>
+${filterInputs}
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <Button className="bg-secondary hover:bg-secondary/80 text-foreground flex-1 md:flex-none">
+          <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tracking-wide transition-colors flex-1 md:flex-none">
             Pesquisar
-          </Button>
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground flex-1 md:flex-none">
+          </button>
+          <button type="reset" className="px-5 py-2.5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 text-xs font-bold tracking-wide transition-colors">
             Limpar
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* Tabela Premium */}
-      {/* Tabela Premium (ViewListRenderer style) */}
-      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300">
-        <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[1200px]">
+      {/* Tabela */}
+      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="sticky top-0 z-20">
               <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="sticky left-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)]">
-                  <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 transition-all" />
-                </th>
-                ${visibleCols.map(c => `
-                <th
-                  className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 group/th transition-colors"
-                  style={{
-                    color: '${c.config?.label?.color || ''}' || undefined,
-                    fontWeight: ${c.config?.label?.bold ? "'bold'" : "undefined"},
-                    fontStyle: ${c.config?.label?.italic ? "'italic'" : "undefined"},
-                    textTransform: ${c.config?.label?.uppercase ? "'uppercase'" : "undefined"},
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    ${c.label}
-                    <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
-                      <ArrowUpDown className="w-3 h-3" />
-                    </div>
-                  </div>
-                </th>`).join('\n                ')}
-                <th className="sticky right-0 z-30 bg-neutral-100 dark:bg-neutral-900 px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
-                  AÇÕES
-                </th>
+                <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em]">#</th>
+${thCells}
+                <th className="px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50">AÇÕES</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-              {data.map((item: any, rowIndex: number) => {
-                const getInitials = () => {
-                  const val = String(item.${visibleCols[0]?.field || 'id'} || '??');
-                  return val.substring(0, 2).toUpperCase();
-                };
-                return (
-                  <tr key={item.id} className="group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
-                    <td className={\`sticky left-0 z-10 px-4 py-4 whitespace-nowrap w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50 shadow-[4px_0_10px_rgba(0,0,0,0.03)] transition-colors \${rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"}\`}>
-                       <input type="checkbox" className="rounded-md bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 opacity-50 group-hover:opacity-100 transition-all" />
-                    </td>
-                    ${visibleCols.map((c, idx) => {
-                      if (c.field.toLowerCase().includes('status') || c.field.toLowerCase().includes('ativo') || c.field.toLowerCase().includes('state')) {
-                        return `<td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800/50">
-                            {String(item.${c.field} ?? '-')}
-                          </span>
-                        </td>`
-                      }
-                      return `<td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
-                        {String(item.${c.field} ?? '-')}
-                      </td>`
-                    }).join('\n                    ')}
-                    <td className={\`sticky right-0 z-10 px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] transition-colors \${rowIndex % 2 === 0 ? "bg-white dark:bg-neutral-900" : "bg-neutral-100/90 dark:bg-neutral-800"}\`}>
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Link href={\`${route.path}/\${item.id}\`}>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 rounded-full">
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </Link>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30 rounded-full">
+            <tbody>
+              {data.map((item: any, idx: number) => (
+                <tr key={item.${route.primaryKey}} className={\`group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors \${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/20'}\`}>
+                  <td className="px-4 py-4 w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50">
+                    <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{idx + 1}</span>
+                  </td>
+${tdCells}
+                  <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar">
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                      <Link href={\`${route.path}/\${item.${route.primaryKey}}/edit\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar">
+                        <Pencil className="w-4 h-4" />
+                      </Link>
+                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}>
+                        <button type="submit" className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" title="Excluir" onClick={(e) => { if (!confirm('Confirmar exclusão?')) e.preventDefault() }}>
                           <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={${visibleCols.length + 2}} className="h-48 text-center text-neutral-500">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-2">
-                        <Search className="w-5 h-5 opacity-40" />
-                      </div>
-                      <span className="font-semibold text-neutral-900 dark:text-white">Nenhum registro encontrado</span>
-                      <span className="text-sm">Tente ajustar seus filtros ou cadastre um novo registro.</span>
-                    </div>
+                  <td colSpan={${route.gridFields.filter(f => !f.hidden).length + 2}} className="h-48 text-center">
+                    <p className="text-neutral-400 dark:text-neutral-600 text-sm">Nenhum registro encontrado.</p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        
-        {/* Footer Paginação */}
         <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
-            <span className="opacity-60">Exibir</span>
-            <select className="bg-transparent border-none outline-none text-indigo-600 focus:ring-0 cursor-pointer">
-              <option value={10}>10 linhas</option>
-              <option value={50}>50 linhas</option>
-            </select>
-            <span className="mx-2 opacity-20">|</span>
-            <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white">{data.length}</span></span>
-          </div>
+          <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">{data.length} registro{data.length !== 1 ? 's' : ''}</span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none"><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none"><ChevronRight className="w-4 h-4" /></Button>
+            <button className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none" title="Anterior">
+              <ChevronLeft className="w-4 h-4 text-neutral-500" />
+            </button>
+            <span className="text-[11px] font-bold text-neutral-500">1</span>
+            <button className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none" title="Próxima">
+              <ChevronRight className="w-4 h-4 text-neutral-500" />
+            </button>
           </div>
         </div>
       </div>
@@ -197,223 +384,203 @@ export default async function ${model.name}ListPage() {
   )
 }
 `
-      files.set(`${routeDir}/page.tsx`, pageContent)
-    }
-    
-    // ==========================================
-    // 2. DETALHE E FORMULÁRIO (GERADO PARA TODAS AS ROTAS)
-    // ==========================================
-    const hasRelations = route.relations && route.relations.length > 0
-    const layoutConfig = route.layoutConfig || {}
-    const customSlots = layoutConfig.custom_slots || []
-    const byocComponents = customSlots.map((s: any) => s.component).filter(Boolean)
-    
-    let importsStr = [
-      `import Link from 'next/link'`,
-      `import { get${model.name}ById } from '@/app/actions/${model.name.toLowerCase()}'`,
-      hasRelations ? `import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'` : '',
-      hasRelations ? `import {\n  Table,\n  TableBody,\n  TableCell,\n  TableHead,\n  TableHeader,\n  TableRow,\n} from '@/components/ui/table'` : '',
-      `import { Input } from '@/components/ui/input'`,
-      `import { Label } from '@/components/ui/label'`,
-      `import { Button } from '@/components/ui/button'`,
-      `import { ArrowLeft, Save, CheckCircle2 } from 'lucide-react'`
-    ]
-    
-    if (byocComponents.length > 0) {
-      const uniqueByoc = Array.from(new Set(byocComponents))
-      importsStr.push(...uniqueByoc.map((c: any) => `import ${c} from '@/components/byoc/${c}'`))
-    }
-    
-    const importsFinal = importsStr.filter(Boolean).join('\n')
+}
 
-    // Top BYOC slots
-    const topSlots = customSlots.filter((s: any) => s.placement === 'top' || !s.placement).map((s: any) => `
-        <div className="mb-6">
-          <${s.component} data={data} config={${JSON.stringify(s.config || {})}} />
-        </div>
-    `).join('\\n')
+// ─────────────────────────────────────────────────────────────────────────────
+// Detalhe + Formulário (pesquisa_cadastro — [id]/page.tsx)
+// ─────────────────────────────────────────────────────────────────────────────
 
-    // Bottom BYOC slots
-    const bottomSlots = customSlots.filter((s: any) => s.placement === 'bottom').map((s: any) => `
-        <div className="mt-6">
-          <${s.component} data={data} config={${JSON.stringify(s.config || {})}} />
-        </div>
-    `).join('\\n')
+function generateDetailPage(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+  const pk = route.primaryKey
 
-    const formContent = `
-      <form className="space-y-8">
-        ${topSlots}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-          ${(route.components || []).filter(c => c.isVisible !== false && c.placementType === 'form').map(c => `
-          <div className="space-y-2">
-            <Label htmlFor="${c.field}" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">${c.label}</Label>
-            <Input 
-              id="${c.field}"
-              type="${c.type === 'number' ? 'number' : c.type === 'date' ? 'date' : 'text'}" 
-              name="${c.field}"
-              defaultValue={data?.${c.field} ?? ''}
-              disabled={!isNew}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-primary rounded-xl h-11"
-            />
-          </div>`).join('\n          ')}
-        </div>
-        ${bottomSlots}
-        
-        {isNew && (
-          <div className="flex justify-end pt-6 border-t border-border">
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 px-8 h-11 text-sm font-semibold tracking-wide rounded-xl">
-              <Save className="w-4 h-4 mr-2" />
-              Salvar ${route.title}
-            </Button>
+  const formFieldsHtml = route.formFields
+    .map(f => renderFormField(f, true))
+    .filter(Boolean)
+    .join('\n')
+
+  const tabsHtml = route.relationTabs.length > 0
+    ? route.relationTabs.map((tab, i) => {
+        const tabThCells = tab.gridFields.map(f => `                    <th className="px-4 py-3 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-widest whitespace-nowrap">${f.label.toUpperCase()}</th>`).join('\n')
+        const tabTdCells = tab.gridFields.map(f => `                      <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">${renderGridCellValue(f)}</td>`).join('\n')
+
+        return `
+        {/* Aba: ${tab.label} */}
+        <div className="${i > 0 ? 'hidden' : ''}"> {/* TODO: implementar tabs com estado */}
+          <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-4">${tab.label}</h3>
+          {/* TODO: carregar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
+${tabThCells}
+                </tr>
+              </thead>
+              <tbody>
+                {/* TODO: map(${tab.relatedTable}List, item => <tr>...</tr>) */}
+                <tr><td colSpan={${tab.gridFields.length}} className="px-4 py-8 text-center text-sm text-neutral-400">// TODO: carregar ${tab.label}</td></tr>
+              </tbody>
+            </table>
           </div>
-        )}
-      </form>
-    `
+        </div>`
+      }).join('\n')
+    : ''
 
-    let pageBody = ''
-    let dataFetchers = `const data = isNew ? null : await get${model.name}ById(params.id)\n`
+  return `import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
+import { ArrowLeft, Save } from 'lucide-react'
 
-    if (hasRelations) {
-      let tabsTriggers = ''
-      let tabsContents = ''
+export const metadata: Metadata = { title: 'Detalhe — ${route.title}' }
 
-      for (const r of route.relations) {
-        const relModel = ast.models.find(m => m.id === r.modelId)
-        if (!relModel) continue
+export default async function ${mn}DetailPage({ params }: { params: { id: string } }) {
+  const isEdit = true // esta página é de edição e visualização
+  const data = await get${mn}ById(params.id)
 
-        dataFetchers += `  const relData_${relModel.name} = isNew ? [] : await get${relModel.name}ByField('${r.targetColumn}', data?.${r.sourceColumn})\n`
-
-        tabsTriggers += `\n          <TabsTrigger value="rel_${r.modelId}" className="px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground font-semibold text-sm rounded-lg transition-all">${relModel.name}</TabsTrigger>`
-        
-        const relVisibleCols = relModel.fields.slice(0, 4)
-
-        tabsContents += `
-      <TabsContent value="rel_${r.modelId}" className="mt-6">
-        <div className="bg-card rounded-2xl border border-border shadow-xl overflow-hidden">
-          {/* Sub-header relation */}
-          <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
-             <h3 className="text-sm font-bold text-foreground">\${relModel.name} Associados</h3>
-             <Button variant="outline" size="sm" className="bg-background border-input text-xs text-foreground">
-               + Adicionar Item
-             </Button>
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
-                  ${relVisibleCols.map(f => `<TableHead className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest px-5 py-3 whitespace-nowrap">${f.name}</TableHead>`).join('\n                  ')}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {relData_${relModel.name}.map((item: any) => (
-                  <TableRow key={item.id || Math.random()} className="border-border hover:bg-white/5 transition-colors">
-                    ${relVisibleCols.map(f => `<TableCell className="px-5 py-3 text-sm text-[var(--foreground)]">{String(item.${f.dbColumn} ?? '-')}</TableCell>`).join('\n                    ')}
-                  </TableRow>
-                ))}
-                {relData_${relModel.name}.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={${relVisibleCols.length}} className="h-32 text-center text-muted-foreground">
-                      Nenhum registro de ${relModel.name} encontrado.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </TabsContent>`
-      }
-
-      pageBody = `
-    <Tabs defaultValue="geral" className="w-full">
-      <TabsList className="w-full justify-start h-auto p-1.5 bg-muted/50 border border-border rounded-xl overflow-x-auto mb-2 inline-flex">
-        <TabsTrigger value="geral" className="px-6 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-foreground text-muted-foreground font-semibold text-sm rounded-lg transition-all">Dados Gerais</TabsTrigger>${tabsTriggers}
-      </TabsList>
-      
-      <TabsContent value="geral" className="mt-6">
-        <div className="bg-card rounded-3xl border border-border p-8 shadow-2xl relative overflow-hidden">
-          {/* Decorativo de fundo */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
-          <div className="relative z-10">
-            ${formContent}
-          </div>
-        </div>
-      </TabsContent>
-      ${tabsContents}
-    </Tabs>`
-    } else {
-      pageBody = `
-    <div className="bg-card rounded-3xl border border-border p-8 shadow-2xl relative overflow-hidden mt-6">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
-      <div className="relative z-10">
-        ${formContent}
-      </div>
-    </div>`
-    }
-
-    const detailPageContent = `${importsFinal}
-
-export default async function ${model.name}DetailPage({ params }: { params: { id: string } }) {
-  const isNew = params.id === 'new'
-  ${dataFetchers}
-  if (!isNew && !data) {
-    return (
-      <div className="p-8 max-w-5xl mx-auto text-center mt-20">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Registro não encontrado</h2>
-        <p className="text-muted-foreground mb-6">O registro solicitado não existe ou foi removido.</p>
-        <Link href="${route.path}">
-          <Button className="bg-primary hover:bg-primary/90">Voltar para listagem</Button>
-        </Link>
-      </div>
-    )
-  }
+  if (!data) notFound()
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto pb-24">
-      {/* Header Contexto */}
-      <div className="mb-8">
-        <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-muted-foreground hover:text-foreground transition-colors mb-4 uppercase tracking-widest">
-          <ArrowLeft className="w-3 h-3 mr-1.5" />
-          Voltar para ${route.title}
-        </Link>
-        <div className="flex items-end justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <span className="text-xl font-bold text-primary">{isNew ? '+' : String(data?.id || 'ID').substring(0,2).toUpperCase()}</span>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">
-                {isNew ? 'Novo Registro' : \`\${route.title} #\${data?.id || params.id}\`}
-              </h1>
-              <p className="text-sm text-muted-foreground">Preencha os dados abaixo para salvar no banco de dados.</p>
-            </div>
+    <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
+      <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
+        <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para ${route.title}
+      </Link>
+
+      <div className="flex items-end justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+            <span className="text-2xl font-black text-indigo-600">{String(data.${pk}).charAt(0).toUpperCase()}</span>
           </div>
-          
-          {/* Exemplo de Stepper de Jornada Fake p/ Visual Rico */}
-          {!isNew && (
-            <div className="hidden lg:flex items-center gap-2">
-              {['Novo', 'Análise', 'Concluído'].map((step, idx) => (
-                <div key={step} className="flex items-center gap-2">
-                  <div className={\`flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-bold border \${idx === 0 ? 'bg-indigo-500/20 text-primary border-indigo-500/30' : 'bg-secondary text-muted-foreground border-input'}\`}>
-                    {idx === 0 && <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                    {step}
-                  </div>
-                  {idx < 2 && <div className="w-8 h-[2px] bg-secondary rounded-full" />}
-                </div>
-              ))}
-            </div>
-          )}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">${route.title}</h1>
+            <p className="text-sm text-neutral-400">ID: {String(data.${pk}).slice(0, 8)}...</p>
+          </div>
         </div>
       </div>
 
-      ${pageBody}
+      {/* Formulário */}
+      <form action={async (formData: FormData) => {
+        'use server'
+        const payload: Record<string, any> = {}
+        formData.forEach((v, k) => { payload[k] = v })
+        await update${mn}(params.id, payload)
+      }}>
+        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 relative z-10">
+${formFieldsHtml}
+          </div>
+
+          <div className="flex justify-end pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6">
+            <button type="submit" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+              <Save className="w-4 h-4" /> Salvar Alterações
+            </button>
+          </div>
+        </div>
+      </form>
+
+      ${route.relationTabs.length > 0 ? `
+      {/* Relacionamentos */}
+      <div className="mt-8">
+        <div className="flex gap-2 mb-6 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">
+          ${route.relationTabs.map((tab, i) => `<button className="${i === 0 ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg' : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200'}">${tab.label}</button>`).join('\n          ')}
+        </div>
+        ${tabsHtml}
+      </div>
+      ` : ''}
     </div>
   )
 }
 `
-    // Dynamic route [id] gerada independentemente se a view mãe é list ou form/detail
-    files.set(`${routeDir}/[id]/page.tsx`, detailPageContent)
-  }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cadastro (new/page.tsx)
+// ─────────────────────────────────────────────────────────────────────────────
 
+function generateNewPage(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+
+  const formFieldsHtml = route.formFields
+    .map(f => renderFormField(f, false))
+    .filter(Boolean)
+    .join('\n')
+
+  return `import type { Metadata } from 'next'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { create${mn} } from '@/app/actions/${mnLower}'
+import { ArrowLeft, Save } from 'lucide-react'
+
+export const metadata: Metadata = { title: 'Novo — ${route.title}' }
+
+export default function ${mn}NewPage() {
+  const isEdit = false
+  const data: any = {}
+
+  return (
+    <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
+      <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
+        <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para ${route.title}
+      </Link>
+
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+          <span className="text-2xl font-black text-indigo-600">+</span>
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Novo ${route.title}</h1>
+          <p className="text-sm text-neutral-400">Preencha os campos para criar um novo registro.</p>
+        </div>
+      </div>
+
+      <form action={async (formData: FormData) => {
+        'use server'
+        const payload: Record<string, any> = {}
+        formData.forEach((v, k) => { payload[k] = v })
+        const result = await create${mn}(payload)
+        if (result?.id) redirect(\`${route.path}/\${result.id}\`)
+        else redirect('${route.path}')
+      }}>
+        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 relative z-10">
+${formFieldsHtml}
+          </div>
+
+          <div className="flex justify-end pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6">
+            <button type="submit" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+              <Save className="w-4 h-4" /> Criar ${route.title}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  )
+}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Entry point
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateRoutes(ast: AppAST, files: Map<string, string>) {
+  for (const route of ast.routes) {
+    const routeDir = `app/(protected)${route.path}`
+
+    if (route.logicType === 'pesquisa_cadastro' || route.logicType === 'personalizado') {
+      // Listagem
+      files.set(`${routeDir}/page.tsx`, generateListPage(route))
+      // Detalhe/Edição
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else {
+      // Placeholder "Em desenvolvimento" para outros tipos
+      files.set(`${routeDir}/page.tsx`, generateWipPage(route))
+    }
+  }
+}

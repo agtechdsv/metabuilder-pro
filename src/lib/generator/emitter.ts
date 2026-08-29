@@ -7,7 +7,7 @@ import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss
 /**
  * emitter.ts
  *
- * Recebe a AST (Árvore Abstrata) e orquestra a geração de todos os arquivos
+ * Recebe a AST (Ãrvore Abstrata) e orquestra a geraÃ§Ã£o de todos os arquivos
  * do projeto Next.js em um mapa de string (Memory FS).
  */
 
@@ -17,21 +17,28 @@ export function generateNativeProject(ast: AppAST): Map<string, string> {
   // 1. Arquivos Base do Projeto
   generateBaseFiles(ast, files)
 
-  // 2. Geração das Camadas
+  // 2. GeraÃ§Ã£o das Camadas
   generateRoutes(ast, files)
   generateActions(ast, files)
   generateComponents(ast, files)
 
-  // 3. Página de Login
+  // 3. PÃ¡gina de Login
   generateLoginPage(ast, files)
 
-  // 4. Página de Downloads
+  // 4. PÃ¡gina de Downloads
   generateDownloadsPage(ast, files)
 
   return files
 }
 
+import { T } from './layers/design-tokens'
+
 function generateLoginPage(ast: AppAST, files: Map<string, string>) {
+  const iconFallback = ast.projectName.charAt(0).toUpperCase()
+  const projectIconSvg = ast.projectIcon && ast.projectIcon.startsWith('<svg') 
+    ? ast.projectIcon 
+    : `<span className="text-xl font-bold text-white">${iconFallback}</span>`
+
   files.set('app/(auth)/login/page.tsx', `import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -51,25 +58,17 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
     : null
 
   return (
-    <main className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-[#4f46e5]/10 rounded-full blur-[120px] pointer-events-none"></div>
-      
+    <main className="${T.LOGIN_PAGE}">
       <div className="w-full max-w-[380px] relative z-10">
         {/* Card */}
-        <div className="bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-xl border border-slate-200 dark:border-[#27272a]/50 rounded-3xl p-8 sm:p-10 shadow-xl dark:shadow-2xl transition-colors duration-300">
+        <div className="${T.LOGIN_CARD}">
           {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center shadow-inner transition-colors duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-indigo-600 dark:text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </div>
+          <div className="${T.LOGIN_LOGO}">
+            ${projectIconSvg}
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2 tracking-tight transition-colors duration-300">Bem-vindo de volta!</h1>
-          <p className="text-slate-500 dark:text-[#a1a1aa] text-[13px] text-center mb-6 leading-relaxed px-4 transition-colors duration-300">Entre com suas credenciais para acessar o portal.</p>
+          <h1 className="${T.LOGIN_TITLE}">Bem-vindo de volta!</h1>
+          <p className="${T.LOGIN_SUBTITLE}">Entre com suas credenciais para acessar o sistema.</p>
 
           {errorMessage && (
             <div className="mb-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold text-center leading-relaxed">
@@ -80,20 +79,20 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
           {/* Form */}
           <form action="/api/login" method="post" className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-[10px] font-bold text-slate-500 dark:text-[#a1a1aa] uppercase tracking-widest transition-colors duration-300">E-mail</label>
+              <label htmlFor="email" className="${T.LOGIN_LABEL}">E-mail</label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 required
                 placeholder="exemplo@empresa.com"
-                className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+                className="${T.LOGIN_INPUT}"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-[10px] font-bold text-slate-500 dark:text-[#a1a1aa] uppercase tracking-widest transition-colors duration-300">Senha</label>
+                <label htmlFor="password" className="${T.LOGIN_LABEL}">Senha</label>
                 <a href="#" className="text-[10px] text-indigo-600 dark:text-[#4f46e5] hover:text-indigo-700 dark:hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">Esqueci minha senha?</a>
               </div>
               <div className="relative">
@@ -103,22 +102,22 @@ export default function LoginPage({ searchParams }: { searchParams?: { error?: s
                   type="password"
                   required
                   placeholder="Sua senha secreta"
-                  className="w-full bg-slate-100 dark:bg-[#18181b] border-none text-slate-900 dark:text-[#d4d4d8] placeholder:text-slate-400 dark:placeholder:text-[#52525b] rounded-xl px-4 py-3.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner pr-12"
+                  className="${T.LOGIN_INPUT}"
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 dark:bg-[#4f46e5] hover:bg-indigo-700 dark:hover:bg-[#6366f1] text-white font-bold rounded-xl py-3.5 px-4 text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 mt-6 uppercase"
+              className="${T.LOGIN_BTN}"
             >
               ENTRAR NO SISTEMA
             </button>
           </form>
 
           <div className="mt-8 text-center">
-            <a href="/" className="text-[10px] text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#a1a1aa] transition-colors font-bold uppercase tracking-widest">
-              &larr; VOLTAR AO PORTAL DO WORKSPACE
+            <a href="/" className="${T.LOGIN_BACK_LINK}">
+              &larr; VOLTAR AO INÍCIO
             </a>
           </div>
 
@@ -216,7 +215,7 @@ export async function POST(request: Request) {
     } else {
       loginApiContent += `
 export async function POST(request: Request) {
-  console.error('Tabela de autenticação "${table}" não encontrada nos modelos do projeto.')
+  console.error('Tabela de autenticaÃ§Ã£o "${table}" nÃ£o encontrada nos modelos do projeto.')
   return NextResponse.redirect(new URL('/login?error=config', request.url))
 }
 `
@@ -261,7 +260,7 @@ export async function POST(request: Request) {
   const email = (formData.get('email') as string || '').trim() || 'user@example.com'
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
-  // Autenticação desativada ou mock
+  // AutenticaÃ§Ã£o desativada ou mock
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
     httpOnly: true,
@@ -276,7 +275,7 @@ export async function POST(request: Request) {
 
   files.set('app/api/login/route.ts', loginApiContent)
 
-  // app/api/logout/route.ts — limpa o cookie de sessão
+  // app/api/logout/route.ts â€” limpa o cookie de sessÃ£o
   files.set('app/api/logout/route.ts', `import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -286,7 +285,7 @@ export async function GET(request: Request) {
 }
 `)
 
-  // middleware.ts — intercepta toda requisição e redireciona para /login se não autenticado
+  // middleware.ts â€” intercepta toda requisiÃ§Ã£o e redireciona para /login se nÃ£o autenticado
   files.set('middleware.ts', `import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -331,37 +330,38 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "start": "next start"
     },
     dependencies: {
-      "next": "^14.2.0",
-      "react": "^18.3.0",
-      "react-dom": "^18.3.0",
-      "lucide-react": "^0.360.0",
-      "clsx": "^2.1.0",
-      "tailwind-merge": "^2.2.0",
-      "react-hook-form": "^7.51.0",
-      "@hookform/resolvers": "^3.3.4",
-      "zod": "^3.22.4",
-      "@radix-ui/react-label": "^2.0.2",
-      "@radix-ui/react-slot": "^1.0.2",
-      "@radix-ui/react-tabs": "^1.0.4",
+      "next": "^15.0.0",
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0",
+      "lucide-react": "^0.511.0",
+      "clsx": "^2.1.1",
+      "tailwind-merge": "^2.3.0",
+      "framer-motion": "^12.0.0",
+      "react-hook-form": "^7.54.0",
+      "@hookform/resolvers": "^3.9.0",
+      "zod": "^3.23.0",
+      "@radix-ui/react-label": "^2.1.0",
+      "@radix-ui/react-slot": "^1.1.0",
+      "@radix-ui/react-tabs": "^1.1.0",
       ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "bcryptjs": "^2.4.3" } : {}),
-      ...(ast.dbStack === 'supabase' 
-          ? { "@supabase/ssr": "^0.3.0", "@supabase/supabase-js": "^2.40.0" }
+      ...(ast.dbStack === 'supabase'
+          ? { "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.45.0" }
           : ast.dbStack === 'oracle'
             ? { "oracledb": "^6.5.0" }
             : ast.dbStack === 'mysql'
-              ? { "mysql2": "^3.9.0" }
+              ? { "mysql2": "^3.11.0" }
               : ast.dbStack === 'sqlserver'
-                ? { "mssql": "^10.0.0" }
-                : { "pg": "^8.11.0" })
+                ? { "mssql": "^11.0.0" }
+                : { "pg": "^8.13.0" })
     },
     devDependencies: {
-      "typescript": "^5.0.0",
-      "@types/node": "^20",
-      "@types/react": "^18",
-      "@types/react-dom": "^18",
+      "typescript": "^5.6.0",
+      "@types/node": "^22",
+      "@types/react": "^19",
+      "@types/react-dom": "^19",
       "tailwindcss": "^3.4.0",
       "postcss": "^8.4.0",
-      "autoprefixer": "^10.4.19",
+      "autoprefixer": "^10.4.20",
       ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "@types/bcryptjs": "^2.4.6" } : {})
     }
   }, null, 2))
@@ -397,7 +397,7 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
 .env
 `)
 
-  // tsconfig.json — essencial para o alias @/ funcionar
+  // tsconfig.json â€” essencial para o alias @/ funcionar
   files.set('tsconfig.json', JSON.stringify({
     compilerOptions: {
       target: "ES2017",
@@ -420,7 +420,7 @@ function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
     exclude: ["node_modules"]
   }, null, 2))
 
-  // next.config.js (Next.js 14 não suporta .ts aqui)
+  // next.config.js (Next.js 14 nÃ£o suporta .ts aqui)
   files.set('next.config.js', `/** @type {import('next').NextConfig} */
 const nextConfig = {};
 
@@ -446,48 +446,41 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  theme: {
-    extend: {
-      colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-      },
-    },
-  },
+  theme: { extend: {} },
   plugins: [],
 };
 export default config;
 `)
 
-  // globals.css — dark design system
+  // globals.css â€” idÃªntico ao Runtime Web
   files.set('app/globals.css', `@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-border: #27272a;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --muted: #71717a;
-  --radius: 0.75rem;
-}
-
 * { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #f8fafc; /* slate-50 */
+  color: #0f172a; /* slate-900 */
   min-height: 100vh;
   font-family: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
 }
 
+.dark body {
+  background: #050505;
+  color: #fafafa;
+}
+
+/* Custom scrollbar â€” igual ao Runtime */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 9999px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.6); }
+
 a { text-decoration: none; color: inherit; }
 `)
 
-  // Root Layout — apenas html/body/globals, SEM sidebar
+  // Root Layout â€” apenas html/body/globals, SEM sidebar
   files.set('app/layout.tsx', `import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -528,7 +521,7 @@ export function HeaderControls() {
 
   return (
     <div className="flex items-center bg-white/80 dark:bg-[#18181b]/80 border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
-      {/* Botão de Tema */}
+      {/* BotÃ£o de Tema */}
       <button 
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
@@ -545,7 +538,7 @@ export function HeaderControls() {
 }
 `)
 
-  // (auth)/layout.tsx — sem sidebar, com top header (para /login)
+  // (auth)/layout.tsx â€” sem sidebar, com top header (para /login)
   files.set('app/(auth)/layout.tsx', `import { HeaderControls } from '@/app/components/HeaderControls'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -572,133 +565,230 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 }
 `)
 
-  // (protected)/layout.tsx — COM sidebar e Header Interativo
-  const navItemsJson = JSON.stringify(ast.routes.map(r => ({ path: '/' + (r.path.startsWith('/') ? r.path.slice(1) : r.path), title: r.title })))
+  // â”€â”€ Sidebar fiel ao DynamicSidebar.tsx do Runtime â”€â”€
+  const navItems = ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
+    id: r.viewSlug,
+    label: r.title,
+    icon: r.icon || 'Layout',
+    type: 'view',
+    target: r.viewSlug,
+  }))
+  const navItemsJson = JSON.stringify(navItems)
+  const projectIcon = ast.projectIcon || 'Box'
 
-  files.set('app/components/DashboardLayout.tsx', `'use client'
-import { useState, useEffect } from 'react'
+  files.set('app/components/AppSidebar.tsx', `'use client'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  ChevronRight, Home, LogOut, PanelLeftClose, PanelLeftOpen,
+  Layout, Box
+} from 'lucide-react'
 
-export function DashboardLayout({ children, projectName, navItems }: any) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isAvatarOpen, setIsAvatarOpen] = useState(false)
-  const [theme, setTheme] = useState('dark')
+interface NavItem {
+  id: string
+  label: string
+  icon?: string
+  type: 'view' | 'folder' | 'link'
+  target?: string
+  children?: NavItem[]
+}
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [theme])
+interface AppSidebarProps {
+  projectName: string
+  projectSlug: string
+  navItems: NavItem[]
+  isCollapsed: boolean
+  setIsCollapsed: (v: boolean) => void
+}
 
+// Minimal icon renderer â€” clientes podem substituir por lucide-react completo
+function NavIcon({ name, size = 20 }: { name?: string; size?: number }) {
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-[#09090b] transition-colors duration-300">
-      {/* Sidebar */}
-      <aside className={\`transition-all duration-300 border-r border-slate-200 dark:border-[#27272a]/50 bg-white dark:bg-[#09090b] flex flex-col shrink-0 \${isSidebarOpen ? 'w-[280px]' : 'w-[80px]'}\`}>
-        <div className="h-[68px] flex items-center px-5 border-b border-slate-200 dark:border-[#27272a]/50 shrink-0">
-          <div className="w-9 h-9 rounded-[10px] bg-indigo-600 flex items-center justify-center shrink-0 shadow-inner">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </div>
-          {isSidebarOpen && (
-            <div className="ml-3 flex flex-col justify-center overflow-hidden">
-               <span className="font-extrabold text-slate-900 dark:text-white text-sm tracking-wide uppercase truncate">{projectName}</span>
-               <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">Metabuilder PRO</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="9" y1="21" x2="9" y2="9"/>
+    </svg>
+  )
+}
+
+export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, setIsCollapsed }: AppSidebarProps) {
+  const pathname = usePathname()
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([])
+
+  const toggleFolder = (id: string) => {
+    setExpandedFolders(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
+  }
+
+  const isActive = (item: NavItem) => {
+    if (item.type === 'view') {
+      return pathname === \`/\${projectSlug}/\${item.target}\` ||
+             pathname?.startsWith(\`/\${projectSlug}/\${item.target}/\`)
+    }
+    return false
+  }
+
+  const renderItem = (item: NavItem) => {
+    const active = isActive(item)
+    const href = item.type === 'view' ? \`/\${projectSlug}/\${item.target}\` : (item.target || '#')
+
+    if (item.type === 'folder') {
+      const expanded = expandedFolders.includes(item.id)
+      return (
+        <div key={item.id} className="space-y-1">
+          <button
+            onClick={() => toggleFolder(item.id)}
+            className={\`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative
+              hover:bg-indigo-500/10 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400
+              \${isCollapsed ? 'justify-center px-0' : ''}\`}
+          >
+            <NavIcon name={item.icon} size={isCollapsed ? 24 : 20} />
+            {!isCollapsed && (
+              <span className="flex-1 flex items-center justify-between">
+                <span className="text-sm font-bold truncate">{item.label}</span>
+                <ChevronRight className={\`w-4 h-4 transition-transform duration-300 \${expanded ? 'rotate-90' : ''}\`} />
+              </span>
+            )}
+          </button>
+          {!isCollapsed && expanded && item.children && (
+            <div className="ml-4 pl-4 border-l border-neutral-200 dark:border-neutral-800 space-y-1">
+              {item.children.map(child => renderItem(child))}
             </div>
           )}
         </div>
-        
-        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-          {navItems.map((item: any) => (
-             <a key={item.path} href={item.path} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-[#a1a1aa] hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#18181b] transition-all">
-               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-               {isSidebarOpen && <span className="truncate">{item.title}</span>}
-             </a>
-          ))}
-        </nav>
+      )
+    }
 
-        <div className="p-4 border-t border-slate-200 dark:border-[#27272a]/50">
-          <a href="/api/logout" className={\`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-[#a1a1aa] hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all \${!isSidebarOpen && 'justify-center'}\`}>
-             <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">A</div>
-             {isSidebarOpen && (
-               <div className="flex-1 flex items-center justify-between truncate">
-                 <div className="flex flex-col truncate pr-2">
-                   <span className="text-xs font-bold text-slate-900 dark:text-white truncate">alexandregms@gmai...</span>
-                   <span className="text-[10px] text-slate-500 dark:text-[#71717a]">Sair do Sistema</span>
-                 </div>
-                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-               </div>
-             )}
-          </a>
+    return (
+      <Link
+        key={item.id}
+        href={href}
+        target={item.type === 'link' ? '_blank' : undefined}
+        className={\`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative
+          \${active
+            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+            : 'hover:bg-indigo-500/10 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400'}
+          \${isCollapsed ? 'justify-center px-0' : ''}\`}
+      >
+        <NavIcon name={item.icon} size={isCollapsed ? 24 : 20} />
+        {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
+        {active && !isCollapsed && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+        {isCollapsed && (
+          <div className="absolute left-full ml-4 px-3 py-2 bg-neutral-900 text-white text-[10px] font-bold capitalize tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[1000] shadow-xl translate-x-2 group-hover:translate-x-0">
+            {item.label}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-neutral-900" />
+          </div>
+        )}
+      </Link>
+    )
+  }
+
+  return (
+    <aside
+      style={{ width: isCollapsed ? 80 : 288, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
+      className={\`sticky top-0 h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 z-[100] flex flex-col shrink-0 \${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}\`}
+    >
+      {/* Header */}
+      <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
+        <Link href={\`/\${projectSlug}/dashboard\`} className="flex items-center gap-3 group relative">
+          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
+            <Box size={18} />
+          </div>
+          {!isCollapsed && (
+            <div className="flex flex-col truncate">
+              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-900 dark:text-white leading-none truncate">{projectName}</span>
+              <span className="text-[7px] font-black uppercase tracking-[0.2em] text-indigo-500 opacity-70 mt-0.5">MetaBuilder PRO</span>
+            </div>
+          )}
+        </Link>
+      </div>
+
+      {/* Nav */}
+      <nav className={\`flex-1 px-4 py-6 space-y-2 custom-scrollbar \${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}\`}>
+        {navItems.map(item => renderItem(item))}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-neutral-900/30">
+        <div className={\`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 shadow-sm \${isCollapsed ? 'justify-center p-2' : ''}\`}>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">U</div>
+          {!isCollapsed && (
+            <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+              <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">UsuÃ¡rio</span>
+              <a href="/api/logout" className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate">Sair do Sistema</a>
+            </div>
+          )}
+          {!isCollapsed && (
+            <a href="/api/logout" title="Sair" className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors">
+              <LogOut className="w-4 h-4" />
+            </a>
+          )}
         </div>
-      </aside>
+      </div>
+    </aside>
+  )
+}
+`)
 
-      {/* Main Content Area */}
+  // Protected Layout â€” usa AppSidebar + Header idÃªntico ao Runtime
+  files.set('app/(protected)/layout.tsx', `'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { PanelLeftClose, PanelLeftOpen, Home, ChevronRight } from 'lucide-react'
+import { AppSidebar } from '@/app/components/AppSidebar'
+
+const NAV_ITEMS = ${navItemsJson}
+const PROJECT_SLUG = '${ast.projectSlug}'
+const PROJECT_NAME = '${ast.projectName}'
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const pathname = usePathname()
+
+  const segments = (pathname || '').split('/').filter(Boolean).slice(1) // remove project slug
+  const currentLabel = segments[segments.length - 1] || ''
+  const navItem = NAV_ITEMS.find((n: any) => n.target === currentLabel)
+
+  return (
+    <div className="flex min-h-screen bg-slate-50 dark:bg-[#050505]">
+      <AppSidebar
+        projectName={PROJECT_NAME}
+        projectSlug={PROJECT_SLUG}
+        navItems={NAV_ITEMS}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-[68px] border-b border-slate-200 dark:border-[#27272a]/50 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 relative z-20 transition-colors duration-300">
-          <div className="flex items-center gap-6">
-             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-slate-500 dark:text-[#71717a] hover:text-slate-900 dark:hover:text-white transition-colors">
-               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-             </button>
-             
-             <div className="flex items-center gap-3 text-xs font-bold text-slate-500 dark:text-[#71717a] uppercase tracking-wide">
-               <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#27272a] hover:bg-slate-50 dark:hover:bg-[#18181b] cursor-pointer transition-colors">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-                 PORTAL
-               </span>
-               <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-slate-300 dark:text-[#27272a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-               <span className="flex items-center gap-2 px-2 py-1.5 text-slate-900 dark:text-white">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                 Dashboard
-               </span>
-             </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Theme Toggle */}
-            <div className="flex items-center bg-slate-100 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-white dark:hover:bg-[#27272a] transition-all"
-                title="Alternar Tema"
-              >
-                {theme === 'dark' ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                )}
-              </button>
-            </div>
+        {/* Header */}
+        <header className="h-16 border-b border-neutral-200/50 dark:border-white/5 bg-white/80 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-[90] flex items-center px-6 gap-4">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 transition-all hover:scale-105 active:scale-95"
+          >
+            {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
 
-            {/* Avatar Combo */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsAvatarOpen(!isAvatarOpen)}
-                className="flex items-center gap-2 pl-1 pr-3 py-1 bg-slate-100 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-full hover:bg-slate-200 dark:hover:bg-[#27272a] transition-colors"
-              >
-                <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px]">A</div>
-                <span className="text-xs font-bold text-slate-700 dark:text-[#d4d4d8]">Alexandregms</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-slate-500 dark:text-[#71717a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-              </button>
+          <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800" />
 
-              {isAvatarOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] rounded-xl shadow-xl py-1 z-50 overflow-hidden">
-                  <div className="px-4 py-2 border-b border-slate-200 dark:border-[#27272a]">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">Alexandre GMS</p>
-                    <p className="text-[10px] text-slate-500 dark:text-[#71717a] truncate">alexandregms@gmail.com</p>
-                  </div>
-                  <a href="/api/logout" className="block px-4 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-[#27272a] transition-colors">Sair do sistema</a>
-                </div>
-              )}
-            </div>
-          </div>
+          <nav className="flex-1 flex items-center gap-2 text-[10px] font-bold capitalize tracking-widest text-neutral-400 overflow-hidden">
+            <Link href={\`/\${PROJECT_SLUG}/dashboard\`} className="hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0">
+              <Home className="w-3 h-3" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+            {navItem && (
+              <div className="flex items-center gap-2 min-w-0">
+                <ChevronRight className="w-3 h-3 opacity-30 shrink-0" />
+                <span className="text-neutral-900 dark:text-white truncate capitalize">{navItem.label}</span>
+              </div>
+            )}
+          </nav>
+
+          <a href="/api/logout" className="text-xs text-neutral-400 hover:text-red-500 transition-colors font-bold uppercase tracking-widest">Sair</a>
         </header>
-        
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6 md:p-8">
+
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
@@ -707,80 +797,68 @@ export function DashboardLayout({ children, projectName, navItems }: any) {
 }
 `)
 
-  files.set('app/(protected)/layout.tsx', `import { DashboardLayout } from '@/app/components/DashboardLayout'
-
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout projectName="${ast.projectName}" navItems={${navItemsJson}}>{children}</DashboardLayout>
-}
-`)
-
-  // Root Page — Dashboard com cards das rotas
-  const routeCards = ast.routes.map(r =>
-    `      <a
-        href="${r.path}"
-        className="group flex flex-col justify-between bg-white dark:bg-[#141416] border border-slate-200 dark:border-[#27272a] rounded-3xl p-6 sm:p-8 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-indigo-500/10 transition-all duration-300 min-h-[220px]"
-      >
-        <div>
-          <div className="w-12 h-12 rounded-2xl border border-slate-200 dark:border-[#27272a] bg-slate-50 dark:bg-[#18181b] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-slate-400 dark:text-[#71717a] group-hover:text-indigo-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
-            </svg>
-          </div>
-          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors tracking-tight">${r.title}</h2>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-[#52525b] mt-1.5 uppercase tracking-widest">CASO DE USO</p>
-        </div>
-        
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100 dark:border-[#27272a]/50">
-          <span className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ACESSAR</span>
-          <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 dark:group-hover:bg-indigo-600 transition-all duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-slate-400 dark:text-[#71717a] group-hover:text-white transition-colors group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-      </a>`
-  ).join('\n')
-
-  files.set('app/(protected)/page.tsx', `import type { Metadata } from "next";
-
-export const metadata: Metadata = { title: "Dashboard — ${ast.projectName}" };
-
-export default function Home() {
-  return (
-    <div className="max-w-[1400px] mx-auto space-y-8">
-      {/* Header do Dash */}
-      <div className="mb-10">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">${ast.projectName}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-6 h-[2px] bg-indigo-600"></div>
-              <span className="text-[10px] font-bold text-slate-500 dark:text-[#71717a] uppercase tracking-[0.2em]">ORM COMPLETO</span>
-            </div>
-          </div>
-        </div>
+  // Dashboard page â€” idÃªntico ao Runtime /dashboard
+  const navCards = (ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
+    id: r.viewSlug,
+    label: r.title,
+    icon: r.icon,
+    type: 'view',
+    target: r.viewSlug,
+  }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => `
+  <a
+    href="/${ast.projectSlug}/${n.target || n.id}"
+    className="group flex flex-col justify-between bg-white dark:bg-[#141416] border border-slate-200 dark:border-[#27272a] rounded-3xl p-6 sm:p-8 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 min-h-[200px]"
+  >
+    <div>
+      <div className="w-10 h-10 rounded-2xl bg-indigo-600/10 dark:bg-indigo-600/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
       </div>
-
-      {/* Grid de Módulos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-${routeCards}
+      <h2 className="font-black text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">${n.label}</h2>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-neutral-500 mt-0.5">CASO DE USO</p>
+    </div>
+    <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-[#27272a]/50 mt-4">
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ACESSAR</span>
+      <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-all duration-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 dark:text-[#71717a] group-hover:text-white transition-colors group-hover:translate-x-0.5">
+          <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+        </svg>
       </div>
     </div>
-  );
+  </a>`).join('\n')
+
+  files.set('app/(protected)/page.tsx', `import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Dashboard â€” ${ast.projectName}' }
+
+export default function DashboardPage() {
+  return (
+    <div className="p-6 sm:p-8 max-w-[1400px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-10">
+        <div className="w-14 h-14 rounded-3xl bg-indigo-600/10 dark:bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600 dark:text-indigo-400">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">${ast.projectName}</h1>
+          <p className="text-xs font-bold tracking-[0.15em] uppercase text-indigo-500 mt-0.5">CASOS DE USO</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+${navCards}
+      </div>
+    </div>
+  )
 }
 `)
 }
-
 /**
  * generateWorkspaceProject
  *
- * Recebe uma WorkspaceAST e produz um único projeto Next.js com:
+ * Recebe uma WorkspaceAST e produz um Ãºnico projeto Next.js com:
  *  - Portal de entrada (/) com cards de todos os projetos
  *  - Sub-rotas por projeto (/[slug]/...)
  *  - Server Actions e componentes isolados por projeto
@@ -793,7 +871,7 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   files.set('app/globals.css', generateWorkspaceGlobalCss())
   files.set('app/page.tsx', generatePortalPage(ast))
 
-  // 2. package.json unificado (dependências de todos os projetos)
+  // 2. package.json unificado (dependÃªncias de todos os projetos)
   const allDeps: Record<string, string> = {
     'next': '^14.2.0',
     'react': '^18.3.0',
@@ -910,14 +988,14 @@ export default config;
     const routeNav = pApp.routes.map(r => ({ path: r.path, title: r.title }))
     files.set(`app/${pSlug}/layout.tsx`, generateProjectLayout(project.name, pSlug, routeNav))
 
-    // Página índice do projeto (redirect para primeira view)
+    // PÃ¡gina Ã­ndice do projeto (redirect para primeira view)
     const firstRoute = pApp.routes[0]?.path || '/'
     files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation'\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}')\n}\n`)
 
-    // Middleware de autenticação
-    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃO exigem autenticação\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas públicas e arquivos estáticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessão\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estáticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
+    // Middleware de autenticaÃ§Ã£o
+    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃƒO exigem autenticaÃ§Ã£o\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas pÃºblicas e arquivos estÃ¡ticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessÃ£o\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estÃ¡ticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
 
-    // Rotas, Actions e Components — com prefix do projeto
+    // Rotas, Actions e Components â€” com prefix do projeto
     const projectFiles = new Map<string, string>()
     generateRoutes(pApp, projectFiles)
     generateActions(pApp, projectFiles)
@@ -930,7 +1008,7 @@ export default config;
     }
   }
 
-  // 5. Página de login unificada para o workspace
+  // 5. PÃ¡gina de login unificada para o workspace
   const primaryProject = ast.projects[0]?.app
   if (primaryProject) {
     generateLoginPage(primaryProject, files)
@@ -940,8 +1018,8 @@ export default config;
   const byocSet = new Set<string>()
   for (const project of ast.projects) {
     for (const route of project.app.routes) {
-      if (route.layoutConfig?.custom_slots) {
-        for (const slot of route.layoutConfig.custom_slots) {
+      if (route.rawLayoutConfig?.custom_slots) {
+        for (const slot of route.rawLayoutConfig.custom_slots) {
           if (slot.component) byocSet.add(slot.component)
         }
       }
@@ -979,7 +1057,7 @@ import {
 } from 'lucide-react'
 
 export default function DownloadsPage() {
-  // Dados mockados estruturais (O frontend fará fetch real na API em v2)
+  // Dados mockados estruturais (O frontend farÃ¡ fetch real na API em v2)
   const jobs = [
     { id: '1', file_name: 'clientes_export.csv', status: 'completed', progress: 100, record_count: 1450, file_size: 45020, created_at: new Date().toISOString() },
     { id: '2', file_name: 'pedidos_relatorio.xlsx', status: 'processing', progress: 45, record_count: 8500, created_at: new Date().toISOString() },
@@ -1002,16 +1080,16 @@ export default function DownloadsPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Gerenciador de Downloads</h1>
         </div>
-        <p className="text-sm text-[var(--muted)]">Central de exportações assíncronas do sistema.</p>
+        <p className="text-sm text-[var(--muted)]">Central de exportaÃ§Ãµes assÃ­ncronas do sistema.</p>
       </div>
 
       {/* Info Alert */}
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
         <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
         <div>
-          <h4 className="text-sm font-semibold text-amber-500">FILA DE GERAÇÃO DE ARQUIVOS</h4>
+          <h4 className="text-sm font-semibold text-amber-500">FILA DE GERAÃ‡ÃƒO DE ARQUIVOS</h4>
           <p className="text-xs text-amber-500/80 mt-1 leading-relaxed">
-            As exportações com mais de 1.000 registros são processadas em background para não travar o uso da aplicação. Você pode continuar trabalhando normalmente e voltar aqui quando o status estiver concluído.
+            As exportaÃ§Ãµes com mais de 1.000 registros sÃ£o processadas em background para nÃ£o travar o uso da aplicaÃ§Ã£o. VocÃª pode continuar trabalhando normalmente e voltar aqui quando o status estiver concluÃ­do.
           </p>
         </div>
       </div>
@@ -1020,7 +1098,7 @@ export default function DownloadsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Solicitado', value: metrics.total, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-          { label: 'Download Concluído', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+          { label: 'Download ConcluÃ­do', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
           { label: 'Em Processamento', value: metrics.processing, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
           { label: 'Falhas', value: metrics.failed, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
         ].map((m, idx) => (
@@ -1039,7 +1117,7 @@ export default function DownloadsPage() {
       {/* Tabs placeholder */}
       <div className="border-b border-[var(--card-border)] flex gap-6 mt-8">
         <div className="pb-3 border-b-2 border-indigo-500 font-semibold text-sm text-white">Todas ({metrics.total})</div>
-        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Concluídas ({metrics.completed})</div>
+        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">ConcluÃ­das ({metrics.completed})</div>
         <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Pendentes ({metrics.processing})</div>
       </div>
 
@@ -1049,14 +1127,14 @@ export default function DownloadsPage() {
           <div className="col-span-5 flex items-center gap-2 text-xs font-black tracking-widest text-[var(--muted)] uppercase"><ArrowUpDown className="w-3 h-3"/> Arquivo</div>
           <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Registros</div>
           <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Status</div>
-          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">Ações</div>
+          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">AÃ§Ãµes</div>
         </div>
 
         <div className="divide-y divide-[var(--card-border)]">
           {jobs.length === 0 ? (
              <div className="p-12 text-center flex flex-col items-center">
                <Download className="w-12 h-12 text-[var(--muted)] opacity-20 mb-4" />
-               <h3 className="text-white font-semibold mb-1">Nenhuma exportação encontrada</h3>
+               <h3 className="text-white font-semibold mb-1">Nenhuma exportaÃ§Ã£o encontrada</h3>
                <p className="text-[var(--muted)] text-sm">Gere arquivos nas telas de listagem clicando em "Exportar".</p>
              </div>
           ) : jobs.map((job) => (
@@ -1070,7 +1148,7 @@ export default function DownloadsPage() {
                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)]">
                      <Calendar className="w-3 h-3" />
                      {new Date(job.created_at).toLocaleString()}
-                     {job.file_size && <span className="opacity-50">· {(job.file_size / 1024).toFixed(2)} KB</span>}
+                     {job.file_size && <span className="opacity-50">Â· {(job.file_size / 1024).toFixed(2)} KB</span>}
                    </div>
                  </div>
                </div>
@@ -1084,7 +1162,7 @@ export default function DownloadsPage() {
                <div className="col-span-3">
                  {job.status === 'completed' && (
                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold ring-1 ring-emerald-500/20">
-                     <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
+                     <CheckCircle2 className="w-3.5 h-3.5" /> ConcluÃ­do
                    </span>
                  )}
                  {job.status === 'processing' && (

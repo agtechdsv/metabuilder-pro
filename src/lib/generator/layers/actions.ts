@@ -1,4 +1,4 @@
-import { AppAST, ModelNode } from '../ast'
+import { AppAST, ModelNode, FieldNode } from '../ast'
 
 export function generateActions(ast: AppAST, files: Map<string, string>) {
   // Configuração global de banco baseada na stack escolhida
@@ -150,7 +150,7 @@ export async function getPool() {
 // -----------------------------------------------------------------------------
 
 function generateSupabaseActions(model: ModelNode) {
-  const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
+  const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
 
   return `'use server'
 import { createClient } from './db'
@@ -203,10 +203,10 @@ export async function delete${model.name}(id: string) {
 }
 
 function generatePgActions(model: ModelNode) {
-  const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
-  const allColumns = model.fields.map(f => f.dbColumn).join(', ')
+  const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
+  const allColumns = model.fields.map((f: FieldNode) => f.dbColumn).join(', ')
   const tableRef = model.dbTable.includes('.')
-    ? model.dbTable.split('.').map(p => `"${p}"`).join('.')
+    ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
 
   return `'use server'
