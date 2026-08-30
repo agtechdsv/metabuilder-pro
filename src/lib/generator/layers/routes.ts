@@ -303,7 +303,7 @@ export default async function ${mn}ListPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-${route.buttons.filter(b => b.placement !== 'row' && b.placement !== 'form').map(b => {
+${route.buttons.filter(b => b.placement === 'header').map(b => {
   if (b.actionType === 'create') {
     return `          <Link href="${route.path}/new" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
             <Plus className="w-4 h-4" /> ${b.label}
@@ -358,36 +358,32 @@ ${thCells}
                   </td>
 ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
-                    <div className="flex items-center justify-end gap-1 transition-opacity">
-                                                                                                              ${(() => {
-                        const rowBtns = route.buttons.filter(b => b.placement === 'row')
-                        if (rowBtns.length === 0) {
-                          return (
-                            '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar">\n' +
-                            '  <Eye className="w-4 h-4" />\n' +
-                            '</Link>\n' +
-                            '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar">\n' +
-                            '  <Pencil className="w-4 h-4" />\n' +
-                            '</Link>\n' +
-                            '<form action={async () => { \'use server\'; await delete' + mn + '(item.' + route.primaryKey + ') }}>\n' +
-                            '  <DeleteButton />\n' +
-                            '</form>'
-                          )
-                        }
-                        return rowBtns.map(b => {
-                          if (b.actionType === 'view') {
-                            return '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="' + b.label + '"><Eye className="w-4 h-4" /></Link>'
-                          }
-                          if (b.actionType === 'update' || b.actionType === 'edit') {
-                            return '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="' + b.label + '"><Pencil className="w-4 h-4" /></Link>'
-                          }
-                          if (b.actionType === 'delete') {
-                            return '<form action={async () => { \'use server\'; await delete' + mn + '(item.' + route.primaryKey + ') }}><DeleteButton /></form>'
-                          }
-                          const iconContent = b.icon ? '<span className="text-sm font-black">' + b.icon + '</span>' : '<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>'
-                          return '<button className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="' + b.label + '">\n' + iconContent + '\n</button>'
-                        }).join('\n                      ')
-                      })()}
+                    <div className="flex items-center justify-end gap-1">
+${(() => {
+  const rowBtns = route.buttons.filter(b => b.placement === 'row')
+  if (rowBtns.length === 0) {
+    return [
+      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar"><Eye className="w-4 h-4" /></Link>`,
+      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}/edit\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar"><Pencil className="w-4 h-4" /></Link>`,
+      `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`,
+    ].join('\n')
+  }
+  return rowBtns.map(b => {
+    if (b.actionType === 'view') {
+      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Eye className="w-4 h-4" /></Link>`
+    }
+    if (b.actionType === 'update' || b.actionType === 'edit') {
+      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}/edit\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="${b.label}"><Pencil className="w-4 h-4" /></Link>`
+    }
+    if (b.actionType === 'delete') {
+      return `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`
+    }
+    const iconContent = b.icon
+      ? `<span className="text-sm font-black">${b.icon}</span>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>`
+    return `                      <button type="button" className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}">${iconContent}</button>`
+  }).join('\n')
+})()}
                     </div>
                   </td>
                 </tr>
@@ -404,15 +400,6 @@ ${tdCells}
         </div>
         <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
           <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">{data.length} registro{data.length !== 1 ? 's' : ''}</span>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none" title="Anterior">
-              <ChevronLeft className="w-4 h-4 text-neutral-500" />
-            </button>
-            <span className="text-[11px] font-bold text-neutral-500">1</span>
-            <button className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all border-none bg-transparent shadow-none" title="Próxima">
-              <ChevronRight className="w-4 h-4 text-neutral-500" />
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -422,18 +409,13 @@ ${tdCells}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Detalhe + Formulário (pesquisa_cadastro — [id]/page.tsx)
+// Detalhe / View (pesquisa_cadastro — [id]/page.tsx) — somente leitura
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateDetailPage(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey
-
-  const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true))
-    .filter(Boolean)
-    .join('\n')
 
   const tabsHtml = route.relationTabs.length > 0
     ? route.relationTabs.map((tab, i) => {
@@ -442,7 +424,7 @@ function generateDetailPage(route: RouteNode): string {
 
         return `
         {/* Aba: ${tab.label} */}
-        <div className="${i > 0 ? 'hidden' : ''}"> {/* TODO: implementar tabs com estado */}
+        <div className="${i > 0 ? 'hidden' : ''}">
           <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-4">${tab.label}</h3>
           {/* TODO: carregar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}
           <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
@@ -453,7 +435,6 @@ ${tabThCells}
                 </tr>
               </thead>
               <tbody>
-                {/* TODO: map(${tab.relatedTable}List, item => <tr>...</tr>) */}
                 <tr><td colSpan={${tab.gridFields.length}} className="px-4 py-8 text-center text-sm text-neutral-400">// TODO: carregar ${tab.label}</td></tr>
               </tbody>
             </table>
@@ -465,13 +446,12 @@ ${tabThCells}
   return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
-import { ArrowLeft, Save } from 'lucide-react'
+import { get${mn}ById } from '@/app/actions/${mnLower}'
+import { ArrowLeft, Pencil } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Detalhe — ${route.title}' }
 
 export default async function ${mn}DetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const isEdit = true // esta página é de edição e visualização
   const resolvedParams = await params
   const data = await get${mn}ById(resolvedParams.id)
 
@@ -493,9 +473,85 @@ export default async function ${mn}DetailPage({ params }: { params: Promise<{ id
             <p className="text-sm text-neutral-400">ID: {String(data.${pk}).slice(0, 8)}...</p>
           </div>
         </div>
+        <Link href={\`${route.path}/\${resolvedParams.id}/edit\`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+          <Pencil className="w-4 h-4" /> Editar
+        </Link>
       </div>
 
-      {/* Formulário */}
+      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl">
+        <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+          {Object.entries(data as Record<string, unknown>).map(([k, v]) => (
+            <div key={k} className="space-y-1">
+              <dt className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{k.replace(/_/g, ' ')}</dt>
+              <dd className="text-sm text-neutral-900 dark:text-white font-medium">{v != null ? String(v) : <span className="text-neutral-400 italic">—</span>}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      ${
+route.relationTabs.length > 0 ? `
+      <div className="mt-8">
+        <div className="flex gap-2 mb-6 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">
+          ${route.relationTabs.map((tab, i) => `<button className="${i === 0 ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg' : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200'}">${tab.label}</button>`).join('\n          ')}
+        </div>
+        ${tabsHtml}
+      </div>
+      ` : ''}
+    </div>
+  )
+}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Edição (pesquisa_cadastro — [id]/edit/page.tsx)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateEditPage(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+  const pk = route.primaryKey
+
+  const formFieldsHtml = route.formFields
+    .map(f => renderFormField(f, true))
+    .filter(Boolean)
+    .join('\n')
+
+  return `import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
+import { ArrowLeft, Save } from 'lucide-react'
+
+export const metadata: Metadata = { title: 'Editar — ${route.title}' }
+
+export default async function ${mn}EditPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params
+  const data = await get${mn}ById(resolvedParams.id)
+
+  if (!data) notFound()
+
+  const isEdit = true
+
+  return (
+    <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
+      <Link href={\`${route.path}/\${resolvedParams.id}\`} className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
+        <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para Detalhe
+      </Link>
+
+      <div className="flex items-end justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+            <span className="text-2xl font-black text-indigo-600">{String(data.${pk}).charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Editar ${route.title}</h1>
+            <p className="text-sm text-neutral-400">ID: {String(data.${pk}).slice(0, 8)}...</p>
+          </div>
+        </div>
+      </div>
+
       <form action={async (formData: FormData) => {
         'use server'
         const payload: Record<string, any> = {}
@@ -515,16 +571,6 @@ ${formFieldsHtml}
           </div>
         </div>
       </form>
-
-      ${route.relationTabs.length > 0 ? `
-      {/* Relacionamentos */}
-      <div className="mt-8">
-        <div className="flex gap-2 mb-6 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">
-          ${route.relationTabs.map((tab, i) => `<button className="${i === 0 ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg' : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200'}">${tab.label}</button>`).join('\n          ')}
-        </div>
-        ${tabsHtml}
-      </div>
-      ` : ''}
     </div>
   )
 }
@@ -610,8 +656,10 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
     if (route.logicType === 'pesquisa_cadastro' || route.logicType === 'personalizado') {
       // Listagem
       files.set(`${routeDir}/page.tsx`, generateListPage(route))
-      // Detalhe/Edição
+      // Detalhe (view-only)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      // Edição
+      files.set(`${routeDir}/[id]/edit/page.tsx`, generateEditPage(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else {
