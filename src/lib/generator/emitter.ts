@@ -205,7 +205,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
-    response.cookies.set('mb_user', encodeURIComponent(JSON.stringify({ email, name: user['nome'] || user['nome_completo'] || user['name'] || user['NOME'] || '' })), {
+    response.cookies.set('mb_user', JSON.stringify({ email, name: user['nome'] || user['nome_completo'] || user['name'] || user['NOME'] || '' }), {
       httpOnly: false,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
@@ -253,7 +253,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
-    response.cookies.set('mb_user', encodeURIComponent(JSON.stringify({ email })), {
+    response.cookies.set('mb_user', JSON.stringify({ email }), {
       httpOnly: false,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
@@ -565,19 +565,15 @@ export function HeaderControls() {
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           )}
         </button>
-
-        {/* Idioma Mock */}
-        <button className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all text-xs font-bold" title="Idioma">
-          PT
-        </button>
       </div>
 
       {/* Avatar e Dropdown */}
-      <div className="relative">
-        <button 
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white hover:scale-105 active:scale-95 transition-all shadow-sm"
-        >
+      <div 
+        className="relative group"
+        onMouseEnter={() => setMenuOpen(true)}
+        onMouseLeave={() => setMenuOpen(false)}
+      >
+        <button className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white hover:scale-105 active:scale-95 transition-all shadow-sm">
           {avatarLetter}
         </button>
         
