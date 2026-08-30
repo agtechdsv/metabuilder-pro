@@ -281,6 +281,12 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
   })
+  response.cookies.set('mb_user', JSON.stringify({ email, name: email.split('@')[0] }), {
+    httpOnly: false,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
   return response
 }
 `
@@ -294,6 +300,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const response = NextResponse.redirect(new URL('/login', request.url))
   response.cookies.delete('mb_session')
+  response.cookies.delete('mb_user')
   return response
 }
 `)
@@ -542,7 +549,9 @@ export function HeaderControls() {
       try {
         const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
         setClientUser(userData)
-      } catch (e) {}
+      } catch (e) {
+        document.cookie = 'mb_user=; Max-Age=0; path=/;'
+      }
     }
   }, [])
 
@@ -688,7 +697,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
         const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
         setClientUser(userData)
       } catch (e) {
-        console.error(e)
+        document.cookie = 'mb_user=; Max-Age=0; path=/;'
       }
     }
   }, [])
