@@ -547,7 +547,8 @@ export function HeaderControls() {
       .find(row => row.trim().startsWith('mb_user='))
     if (cookieValue) {
       try {
-        const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
+        const payload = cookieValue.substring('mb_user='.length)
+        const userData = JSON.parse(decodeURIComponent(payload))
         setClientUser(userData)
       } catch (e) {
         document.cookie = 'mb_user=; Max-Age=0; path=/;'
@@ -587,16 +588,18 @@ export function HeaderControls() {
         </button>
         
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-            <div className="p-3 border-b border-slate-200 dark:border-[#27272a] bg-slate-50/50 dark:bg-black/20">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
-              <p className="text-xs text-slate-500 dark:text-neutral-400 truncate mt-0.5">{displayEmail}</p>
-            </div>
-            <div className="p-1.5">
-              <a href="/api/logout" className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Sair do Sistema
-              </a>
+          <div className="absolute right-0 top-full pt-2 z-50">
+            <div className="w-56 rounded-xl bg-white dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+              <div className="p-3 border-b border-slate-200 dark:border-[#27272a] bg-slate-50/50 dark:bg-black/20">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 truncate mt-0.5">{displayEmail}</p>
+              </div>
+              <div className="p-1.5">
+                <a href="/api/logout" className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Sair do Sistema
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -694,7 +697,8 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
       .find(row => row.trim().startsWith('mb_user='))
     if (cookieValue) {
       try {
-        const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
+        const payload = cookieValue.substring('mb_user='.length)
+        const userData = JSON.parse(decodeURIComponent(payload))
         setClientUser(userData)
       } catch (e) {
         document.cookie = 'mb_user=; Max-Age=0; path=/;'
