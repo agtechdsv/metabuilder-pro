@@ -205,6 +205,12 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
+    response.cookies.set('mb_user', encodeURIComponent(JSON.stringify({ email, name: user['nome'] || user['nome_completo'] || user['name'] || user['NOME'] || '' })), {
+      httpOnly: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
     return response
 
   } catch (err) {
@@ -243,6 +249,12 @@ export async function POST(request: Request) {
     const response = NextResponse.redirect(new URL(redirect, request.url))
     response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
       httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+    response.cookies.set('mb_user', encodeURIComponent(JSON.stringify({ email })), {
+      httpOnly: false,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
@@ -511,6 +523,8 @@ import { useState, useEffect } from 'react'
 
 export function HeaderControls() {
   const [theme, setTheme] = useState('dark')
+  const [clientUser, setClientUser] = useState<any>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -520,23 +534,72 @@ export function HeaderControls() {
     }
   }, [theme])
 
+  useEffect(() => {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.trim().startsWith('mb_user='))
+    if (cookieValue) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
+        setClientUser(userData)
+      } catch (e) {}
+    }
+  }, [])
+
+  const displayName = clientUser?.name || clientUser?.email || 'Usuário'
+  const displayEmail = clientUser?.email || 'Sair do Sistema'
+  const avatarLetter = displayName.charAt(0).toUpperCase()
+
   return (
-    <div className="flex items-center bg-white/80 dark:bg-[#18181b]/80 border border-slate-200 dark:border-[#27272a] rounded-full p-1 shadow-sm transition-colors duration-300">
-      {/* Botão de Tema */}
-      <button 
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
-        title="Alternar Tema"
-      >
-        {theme === 'dark' ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <div className="flex items-center gap-3 md:gap-4 relative">
+      <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
+        {/* Botão de Tema */}
+        <button 
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
+          title="Alternar Tema"
+        >
+          {theme === 'dark' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          )}
+        </button>
+
+        {/* Idioma Mock */}
+        <button className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all text-xs font-bold" title="Idioma">
+          PT
+        </button>
+      </div>
+
+      {/* Avatar e Dropdown */}
+      <div className="relative">
+        <button 
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white hover:scale-105 active:scale-95 transition-all shadow-sm"
+        >
+          {avatarLetter}
+        </button>
+        
+        {menuOpen && (
+          <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="p-3 border-b border-slate-200 dark:border-[#27272a] bg-slate-50/50 dark:bg-black/20">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 truncate mt-0.5">{displayEmail}</p>
+            </div>
+            <div className="p-1.5">
+              <a href="/api/logout" className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sair do Sistema
+              </a>
+            </div>
+          </div>
         )}
-      </button>
+      </div>
     </div>
   )
 }
+
 `)
 
   // (auth)/layout.tsx â€” sem sidebar, com top header (para /login)
@@ -603,7 +666,10 @@ interface AppSidebarProps {
   setIsCollapsed: (v: boolean) => void
 }
 
-// Minimal icon renderer â€” clientes podem substituir por lucide-react completo
+  setIsCollapsed: (c: boolean) => void
+}
+
+// Minimal icon renderer — clientes podem substituir por lucide-react completo
 function NavIcon({ name, size = 20 }: { name?: string; size?: number }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -617,6 +683,26 @@ function NavIcon({ name, size = 20 }: { name?: string; size?: number }) {
 export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, setIsCollapsed }: AppSidebarProps) {
   const pathname = usePathname()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
+  const [clientUser, setClientUser] = useState<any>(null)
+
+  useEffect(() => {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.trim().startsWith('mb_user='))
+    if (cookieValue) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]))
+        setClientUser(userData)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }, [])
+
+  const displayName = clientUser?.name || clientUser?.email || 'Usuário'
+  const avatarLetter = displayName.charAt(0).toUpperCase()
+
+
 
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
@@ -713,10 +799,10 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
       {/* Footer */}
       <div className="p-4 border-t border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-neutral-900/30">
         <div className={\`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 shadow-sm \${isCollapsed ? 'justify-center p-2' : ''}\`}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">U</div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">{avatarLetter}</div>
           {!isCollapsed && (
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-              <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">UsuÃ¡rio</span>
+              <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{displayName}</span>
               <a href="/api/logout" className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate">Sair do Sistema</a>
             </div>
           )}
@@ -739,6 +825,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, Home, ChevronRight } from 'lucide-react'
 import { AppSidebar } from '@/app/components/AppSidebar'
+import { HeaderControls } from '@/app/components/HeaderControls'
 
 const NAV_ITEMS = ${navItemsJson}
 const PROJECT_SLUG = '${ast.projectSlug}'
@@ -786,7 +873,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
             )}
           </nav>
 
-          <a href="/api/logout" className="text-xs text-neutral-400 hover:text-red-500 transition-colors font-bold uppercase tracking-widest">Sair</a>
+          <HeaderControls />
         </header>
 
         <main className="flex-1 overflow-auto">
