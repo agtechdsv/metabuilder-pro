@@ -1,22 +1,4 @@
 {
-  "v1.0.15": {
-    "date": "2026-08-29",
-    "pt": [
-      "Navegação mais fluida e confiável: correção definitiva nos links do painel e menu lateral, eliminando erros de página não encontrada (404).",
-      "Melhorias na experiência de gerenciamento e exclusão: botões de ação e remoção mais responsivos, sem travamentos e com exibição perfeita de caracteres.",
-      "Modernização e estabilidade do sistema: atualizações estruturais que tornam o carregamento de dados e páginas mais rápido, seguro e eficiente."
-    ],
-    "en": [
-      "Smoother and more reliable navigation: fixed dashboard and sidebar links to eliminate 404 page-not-found errors.",
-      "Enhanced management and action responsiveness: delete and interactive buttons now respond seamlessly without errors, alongside corrected text encoding.",
-      "System modernization and stability: performance improvements for faster, safer, and more consistent data loading across the platform."
-    ],
-    "es": [
-      "Navegación más fluida y confiable: corrección en los enlaces del panel y del menú lateral para eliminar los errores 404 de página no encontrada.",
-      "Mejoras en la experiencia de gestión y eliminación: botones de acción y borrado más estables y receptivos, con corrección en la visualización de caracteres.",
-      "Modernización y estabilidad de la plataforma: mejoras de rendimiento para una carga de datos más rápida, segura y consistente."
-    ]
-  },
   "v1.0.14": {
     "date": "2026-08-29",
     "pt": [
