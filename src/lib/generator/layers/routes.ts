@@ -226,7 +226,7 @@ export default function ${route.modelName}Page() {
 function generateListPage(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
-  const hasCreate = route.buttons.length === 0 || route.buttons.some(b => b.actionType === 'create')
+  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
   // Cabeçalhos da tabela
   const thCells = route.gridFields
@@ -364,7 +364,7 @@ ${(() => {
   if (rowBtns.length === 0) {
     return [
       `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar"><Eye className="w-4 h-4" /></Link>`,
-      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}/edit\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar"><Pencil className="w-4 h-4" /></Link>`,
+      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar"><Pencil className="w-4 h-4" /></Link>`,
       `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`,
     ].join('\n')
   }
@@ -373,7 +373,7 @@ ${(() => {
       return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Eye className="w-4 h-4" /></Link>`
     }
     if (b.actionType === 'update' || b.actionType === 'edit') {
-      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}/edit\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="${b.label}"><Pencil className="w-4 h-4" /></Link>`
+      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="${b.label}"><Pencil className="w-4 h-4" /></Link>`
     }
     if (b.actionType === 'delete') {
       return `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`
@@ -409,7 +409,7 @@ ${(() => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Detalhe / View (pesquisa_cadastro — [id]/page.tsx) — somente leitura
+// Mestre-Detalhe + Edição ([id]/page.tsx) — formulário + abas relacionamento
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateDetailPage(route: RouteNode): string {
@@ -417,45 +417,56 @@ function generateDetailPage(route: RouteNode): string {
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey
 
-  const tabsHtml = route.relationTabs.length > 0
-    ? route.relationTabs.map((tab, i) => {
-        const tabThCells = tab.gridFields.map(f => `                    <th className="px-4 py-3 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-widest whitespace-nowrap">${f.label.toUpperCase()}</th>`).join('\n')
-        const tabTdCells = tab.gridFields.map(f => `                      <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">${renderGridCellValue(f)}</td>`).join('\n')
+  const formFieldsHtml = route.formFields
+    .map(f => renderFormField(f, true))
+    .filter(Boolean)
+    .join('\n')
 
-        return `
-        {/* Aba: ${tab.label} */}
-        <div className="${i > 0 ? 'hidden' : ''}">
-          <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-4">${tab.label}</h3>
-          {/* TODO: carregar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}
-          <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-${tabThCells}
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colSpan={${tab.gridFields.length}} className="px-4 py-8 text-center text-sm text-neutral-400">// TODO: carregar ${tab.label}</td></tr>
-              </tbody>
-            </table>
+  const hasRelationTabs = route.relationTabs.length > 0
+
+  // Tab buttons (static, styled for first-active)
+  const tabButtons = hasRelationTabs
+    ? route.relationTabs.map((tab, i) =>
+        `          <button
+            onClick={() => setActiveTab(${i})}
+            className={\`px-6 py-2.5 font-semibold text-sm rounded-lg transition-colors \${activeTab === ${i} ? 'bg-indigo-600 text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}\`}
+          >
+            ${tab.label}
+          </button>`
+      ).join('\n')
+    : ''
+
+  // Tab panels
+  const tabPanels = hasRelationTabs
+    ? route.relationTabs.map((tab, i) => {
+        return `        {activeTab === ${i} && (
+          <div>
+            {/* TODO: buscar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}
+            <p className="text-sm text-neutral-400 text-center py-8">Nenhum registro encontrado em ${tab.label}.</p>
           </div>
-        </div>`
+        )}`
       }).join('\n')
     : ''
 
-  return `import type { Metadata } from 'next'
+  const clientDirective = hasRelationTabs ? `'use client'\n` : ''
+  const useStateImport = hasRelationTabs ? `import { useState } from 'react'\n` : ''
+  const useStateHook = hasRelationTabs ? `\n  const [activeTab, setActiveTab] = useState(0)` : ''
+
+  return `${clientDirective}import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { get${mn}ById } from '@/app/actions/${mnLower}'
-import { ArrowLeft, Pencil } from 'lucide-react'
-
-export const metadata: Metadata = { title: 'Detalhe — ${route.title}' }
+import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
+import { ArrowLeft, Save } from 'lucide-react'
+${useStateImport}
+export const metadata: Metadata = { title: 'Editar — ${route.title}' }
 
 export default async function ${mn}DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
   const data = await get${mn}ById(resolvedParams.id)
 
-  if (!data) notFound()
+  if (!data) notFound()${useStateHook}
+
+  const isEdit = true
 
   return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
@@ -466,90 +477,10 @@ export default async function ${mn}DetailPage({ params }: { params: Promise<{ id
       <div className="flex items-end justify-between mb-8">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-            <span className="text-2xl font-black text-indigo-600">{String(data.${pk}).charAt(0).toUpperCase()}</span>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">${route.title}</h1>
-            <p className="text-sm text-neutral-400">ID: {String(data.${pk}).slice(0, 8)}...</p>
-          </div>
-        </div>
-        <Link href={\`${route.path}/\${resolvedParams.id}/edit\`} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
-          <Pencil className="w-4 h-4" /> Editar
-        </Link>
-      </div>
-
-      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl">
-        <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-          {Object.entries(data as Record<string, unknown>).map(([k, v]) => (
-            <div key={k} className="space-y-1">
-              <dt className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{k.replace(/_/g, ' ')}</dt>
-              <dd className="text-sm text-neutral-900 dark:text-white font-medium">{v != null ? String(v) : <span className="text-neutral-400 italic">—</span>}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      ${
-route.relationTabs.length > 0 ? `
-      <div className="mt-8">
-        <div className="flex gap-2 mb-6 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">
-          ${route.relationTabs.map((tab, i) => `<button className="${i === 0 ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg' : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200'}">${tab.label}</button>`).join('\n          ')}
-        </div>
-        ${tabsHtml}
-      </div>
-      ` : ''}
-    </div>
-  )
-}
-`
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Edição (pesquisa_cadastro — [id]/edit/page.tsx)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function generateEditPage(route: RouteNode): string {
-  const mn = route.modelName
-  const mnLower = mn.toLowerCase()
-  const pk = route.primaryKey
-
-  const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true))
-    .filter(Boolean)
-    .join('\n')
-
-  return `import type { Metadata } from 'next'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
-import { ArrowLeft, Save } from 'lucide-react'
-
-export const metadata: Metadata = { title: 'Editar — ${route.title}' }
-
-export default async function ${mn}EditPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params
-  const data = await get${mn}ById(resolvedParams.id)
-
-  if (!data) notFound()
-
-  const isEdit = true
-
-  return (
-    <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
-      <Link href={\`${route.path}/\${resolvedParams.id}\`} className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
-        <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para Detalhe
-      </Link>
-
-      <div className="flex items-end justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-            <span className="text-2xl font-black text-indigo-600">{String(data.${pk}).charAt(0).toUpperCase()}</span>
+            <span className="text-2xl font-black text-indigo-600">{String(data.${pk} ?? '?').charAt(0).toUpperCase()}</span>
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Editar ${route.title}</h1>
-            <p className="text-sm text-neutral-400">ID: {String(data.${pk}).slice(0, 8)}...</p>
-          </div>
-        </div>
       </div>
 
       <form action={async (formData: FormData) => {
@@ -656,10 +587,8 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
     if (route.logicType === 'pesquisa_cadastro' || route.logicType === 'personalizado') {
       // Listagem
       files.set(`${routeDir}/page.tsx`, generateListPage(route))
-      // Detalhe (view-only)
+      // Mestre-Detalhe + Edição (formulário + abas de relacionamento)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
-      // Edição
-      files.set(`${routeDir}/[id]/edit/page.tsx`, generateEditPage(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else {
@@ -668,3 +597,4 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
     }
   }
 }
+
