@@ -369,7 +369,7 @@ ${tdCells}
                             '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar">\n' +
                             '  <Pencil className="w-4 h-4" />\n' +
                             '</Link>\n' +
-                            '<form action={async () => { \\\'use server\\\'; await delete' + mn + '(item.' + route.primaryKey + ') }}>\n' +
+                            '<form action={async () => { \'use server\'; await delete' + mn + '(item.' + route.primaryKey + ') }}>\n' +
                             '  <DeleteButton />\n' +
                             '</form>'
                           )
@@ -382,7 +382,7 @@ ${tdCells}
                             return '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="' + b.label + '"><Pencil className="w-4 h-4" /></Link>'
                           }
                           if (b.actionType === 'delete') {
-                            return '<form action={async () => { \\\'use server\\\'; await delete' + mn + '(item.' + route.primaryKey + ') }}><DeleteButton /></form>'
+                            return '<form action={async () => { \'use server\'; await delete' + mn + '(item.' + route.primaryKey + ') }}><DeleteButton /></form>'
                           }
                           const iconContent = b.icon ? '<span className="text-sm font-black">' + b.icon + '</span>' : '<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>'
                           return '<button className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="' + b.label + '">\n' + iconContent + '\n</button>'
