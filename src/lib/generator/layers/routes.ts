@@ -359,34 +359,34 @@ ${thCells}
 ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                     <div className="flex items-center justify-end gap-1 transition-opacity">
-                      ${(() => {
+                                                                                                              ${(() => {
                         const rowBtns = route.buttons.filter(b => b.placement === 'row')
                         if (rowBtns.length === 0) {
-                          return \`
-                      <Link href={\\\`\${route.path}/\\\${item.\${route.primaryKey}}\\\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar">
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <Link href={\\\`\${route.path}/\\\${item.\${route.primaryKey}}/edit\\\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar">
-                        <Pencil className="w-4 h-4" />
-                      </Link>
-                      <form action={async () => { 'use server'; await delete\${mn}(item.\${route.primaryKey}) }}>
-                        <DeleteButton />
-                      </form>\`
+                          return (
+                            '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar">\n' +
+                            '  <Eye className="w-4 h-4" />\n' +
+                            '</Link>\n' +
+                            '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar">\n' +
+                            '  <Pencil className="w-4 h-4" />\n' +
+                            '</Link>\n' +
+                            '<form action={async () => { \\\'use server\\\'; await delete' + mn + '(item.' + route.primaryKey + ') }}>\n' +
+                            '  <DeleteButton />\n' +
+                            '</form>'
+                          )
                         }
                         return rowBtns.map(b => {
                           if (b.actionType === 'view') {
-                            return \`<Link href={\\\`\${route.path}/\\\${item.\${route.primaryKey}}\\\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="\${b.label}"><Eye className="w-4 h-4" /></Link>\`
+                            return '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="' + b.label + '"><Eye className="w-4 h-4" /></Link>'
                           }
                           if (b.actionType === 'update' || b.actionType === 'edit') {
-                            return \`<Link href={\\\`\${route.path}/\\\${item.\${route.primaryKey}}/edit\\\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="\${b.label}"><Pencil className="w-4 h-4" /></Link>\`
+                            return '<Link href={`' + route.path + '/${item.' + route.primaryKey + '}/edit`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="' + b.label + '"><Pencil className="w-4 h-4" /></Link>'
                           }
                           if (b.actionType === 'delete') {
-                            return \`<form action={async () => { 'use server'; await delete\${mn}(item.\${route.primaryKey}) }}><DeleteButton /></form>\`
+                            return '<form action={async () => { \\\'use server\\\'; await delete' + mn + '(item.' + route.primaryKey + ') }}><DeleteButton /></form>'
                           }
-                          return \`<button className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="\${b.label}">
-                        \${b.icon ? \`<span className="text-sm font-black">\${b.icon}</span>\` : \`<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>\`}
-                      </button>\`
-                        }).join('\\n                      ')
+                          const iconContent = b.icon ? '<span className="text-sm font-black">' + b.icon + '</span>' : '<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>'
+                          return '<button className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="' + b.label + '">\n' + iconContent + '\n</button>'
+                        }).join('\n                      ')
                       })()}
                     </div>
                   </td>

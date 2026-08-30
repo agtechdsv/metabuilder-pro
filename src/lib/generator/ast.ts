@@ -91,7 +91,7 @@ export interface ResolvedField {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ButtonStyle = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'
-export type ButtonActionType = 'create' | 'update' | 'delete' | 'custom' | 'export' | 'link' | 'download'
+export type ButtonActionType = 'create' | 'update' | 'delete' | 'custom' | 'export' | 'link' | 'download' | 'view' | 'edit' | 'search' | 'clear'
 
 export interface ViewButton {
   id: string
