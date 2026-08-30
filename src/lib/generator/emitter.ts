@@ -666,8 +666,6 @@ interface AppSidebarProps {
   setIsCollapsed: (v: boolean) => void
 }
 
-  setIsCollapsed: (c: boolean) => void
-}
 
 // Minimal icon renderer — clientes podem substituir por lucide-react completo
 function NavIcon({ name, size = 20 }: { name?: string; size?: number }) {
