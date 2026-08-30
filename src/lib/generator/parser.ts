@@ -399,17 +399,33 @@ function resolvePersonalizadoView(view: any, allViews: any[]): any {
 
 function parseButtons(buttonsConfig: any[]): ViewButton[] {
   if (!Array.isArray(buttonsConfig)) return []
-  return buttonsConfig.map((b: any, idx: number) => ({
-    id: b.id || `btn_${idx}`,
-    label: b.label || b.name || 'Ação',
-    icon: b.icon,
-    style: (b.style || b.variant || 'primary') as ButtonStyle,
-    actionType: (b.action_type || b.type || 'custom') as ButtonActionType,
-    placement: b.placement || 'header',
-    confirmationMessage: b.confirmation_message,
-    customLogic: b.custom_logic || b.logic,
-    linkTarget: b.link_target || b.url,
-  }))
+  return buttonsConfig.map((b: any, idx: number) => {
+    const actionType = (b.action_type || b.type || 'custom') as ButtonActionType
+    let placement = b.placement
+    
+    // Infer placement if missing or force standard placements to avoid duplicates
+    if (['view', 'update', 'delete', 'edit'].includes(actionType)) {
+      placement = 'row'
+    } else if (['search', 'clear'].includes(actionType)) {
+      placement = 'filter'
+    } else if (['create', 'export'].includes(actionType)) {
+      placement = 'header'
+    } else if (!placement) {
+      placement = 'header'
+    }
+
+    return {
+      id: b.id || `btn_${idx}`,
+      label: b.label || b.name || 'Ação',
+      icon: b.icon,
+      style: (b.style || b.variant || 'primary') as ButtonStyle,
+      actionType,
+      placement,
+      confirmationMessage: b.confirmation_message,
+      customLogic: b.custom_logic || b.logic,
+      linkTarget: b.link_target || b.url,
+    }
+  })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
