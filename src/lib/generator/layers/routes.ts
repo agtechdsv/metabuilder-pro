@@ -359,7 +359,7 @@ ${thCells}
 ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                     <div className="flex items-center justify-end gap-1 transition-opacity">
-                      \${(() => {
+                      ${(() => {
                         const rowBtns = route.buttons.filter(b => b.placement === 'row')
                         if (rowBtns.length === 0) {
                           return \`
