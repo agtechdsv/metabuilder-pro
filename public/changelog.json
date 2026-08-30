@@ -1,22 +1,4 @@
 {
-  "v1.0.3": {
-    "date": "2026-08-26",
-    "pt": [
-      "Novo Gerador Inteligente de Projetos Next.js: crie e inicialize workspaces completos e prontos para produção em segundos.",
-      "Geração Automatizada de Estruturas e Rotas: criação instantânea da arquitetura de arquivos e camadas de navegação para acelerar o desenvolvimento.",
-      "Orquestração Avançada de Workspaces: fluxo aprimorado de montagem e organização de projetos com maior robustez e confiabilidade."
-    ],
-    "en": [
-      "New Intelligent Next.js Project Generator: create and scaffold complete, production-ready workspaces in seconds.",
-      "Automated File & Route Generation: instant creation of workspace architecture and routing layers to accelerate development.",
-      "Advanced Workspace Orchestration: streamlined project initialization and structure management for greater reliability."
-    ],
-    "es": [
-      "Nuevo Generador Inteligente de Proyectos Next.js: cree e inicialice espacios de trabajo completos y listos para producción en segundos.",
-      "Generación Automatizada de Estructuras y Rutas: configuración instantánea de la arquitectura de archivos y capas de navegación para acelerar el desarrollo.",
-      "Orquestación Avanzada de Espacios de Trabajo: flujo optimizado de creación y organización de proyectos con mayor confiabilidad."
-    ]
-  },
   "v1.0.2": {
     "date": "2026-08-26",
     "pt": [
