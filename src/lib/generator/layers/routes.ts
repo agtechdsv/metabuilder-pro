@@ -1,4 +1,4 @@
-﻿/**
+/**
  * routes.ts
  *
  * Gera as pages Next.js para cada RouteNode da AST.
@@ -244,6 +244,22 @@ function generateListPage(route: RouteNode): string {
   const filterFields = route.filterFields.length > 0 ? route.filterFields : route.gridFields.filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
   const filterInputs = filterFields.map(f => {
     const col = f.dbColumn.replace('.', '_')
+    if (f.config?.options?.length) {
+      const optsCode = JSON.stringify(f.config.options)
+      return `
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              className="flex h-10 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+            >
+              <option value="">Todos</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+    }
     return `
           <div className="space-y-1.5">
             <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
@@ -342,7 +358,7 @@ ${thCells}
                   </td>
 ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1 transition-opacity">
                       <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar">
                         <Eye className="w-4 h-4" />
                       </Link>
@@ -352,6 +368,10 @@ ${tdCells}
                       <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}>
                         <DeleteButton />
                       </form>
+                      ${route.buttons.filter(b => b.placement === 'row').map(b => `
+                      <button className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}">
+                        ${b.icon ? `<span className="text-sm font-black">${b.icon}</span>` : `<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>`}
+                      </button>`).join('\n')}
                     </div>
                   </td>
                 </tr>
