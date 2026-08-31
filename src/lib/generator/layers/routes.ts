@@ -544,7 +544,7 @@ ${activeTabResolution}
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-0.5">${route.title}</h1>
-            <p className="text-sm text-neutral-400">{String(data.nome || data.name || data.nome_empresa || data.title || data.${pk} ?? '')}</p>
+            <p className="text-sm text-neutral-400">{String(data.nome || data.name || data.nome_empresa || data.title || data.${pk} || '')}</p>
           </div>
         </div>
         <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors uppercase tracking-widest">
