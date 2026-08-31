@@ -840,4 +840,102 @@ export function DetailRelationSection({
   )
 }
 `)
+
+  // ---------------------------------------------------------------------------
+  // DetailMasterForm.tsx — Formulário da Aba Mestre com Feedback Toast
+  // ---------------------------------------------------------------------------
+  files.set('components/DetailMasterForm.tsx', `'use client'
+
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
+
+interface DetailMasterFormProps {
+  id: string
+  backPath: string
+  title: string
+  updateAction: (id: string, payload: Record<string, any>) => Promise<any>
+  children: React.ReactNode
+}
+
+export function DetailMasterForm({ id, backPath, title, updateAction, children }: DetailMasterFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [toastMessage])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    try {
+      const formData = new FormData(e.currentTarget)
+      const payload: Record<string, any> = {}
+      formData.forEach((v, k) => { payload[k] = v })
+      await updateAction(id, payload)
+      setToastType('success')
+      setToastMessage('Registro atualizado com sucesso!')
+    } catch (err: any) {
+      console.error(err)
+      setToastType('error')
+      setToastMessage(err?.message || 'Erro ao salvar alterações.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
+        {children}
+
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
+          <Link
+            href={backPath}
+            className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Cancelar
+          </Link>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </form>
+
+      {/* Toast Notification (Canto Inferior Direito) */}
+      {toastMessage && (
+        <div className={\`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-5 duration-300 \${
+          toastType === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 bg-white/95 dark:bg-neutral-900/95'
+            : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300 bg-white/95 dark:bg-neutral-900/95'
+        }\`}>
+          <div className={\`w-7 h-7 rounded-xl flex items-center justify-center \${
+            toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+          }\`}>
+            {toastType === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+          </div>
+          <span className="text-xs font-bold tracking-wide">{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="p-1 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+`)
 }

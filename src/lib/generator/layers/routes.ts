@@ -600,6 +600,7 @@ ${tabButtons}
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
+import { DetailMasterForm } from '@/components/DetailMasterForm'
 ${relationImports}
 import { ArrowLeft, Save, Plus, Pencil } from 'lucide-react'
 
@@ -670,25 +671,11 @@ ${tabsHeader}
 
         {/* Conteúdo da Aba Mestre (Tab 0) */}
         {(!${hasRelationTabs} || activeTab === 0) && (
-          <form action={async (formData: FormData) => {
-            'use server'
-            const payload: Record<string, any> = {}
-            formData.forEach((v, k) => { payload[k] = v })
-            await update${mn}(resolvedParams.id, payload)
-          }} className="relative z-10 space-y-6">
+          <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
 ${formFieldsHtml}
             </div>
-
-            <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
-              <Link href="${route.path}" className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                Cancelar
-              </Link>
-              <button type="submit" className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
-                <Save className="w-4 h-4" /> Salvar Alterações
-              </button>
-            </div>
-          </form>
+          </DetailMasterForm>
         )}
 
 ${tabPanels}
