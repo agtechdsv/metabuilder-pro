@@ -72,11 +72,38 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.isPrimaryKey && !isEdit) return '' // não renderiza PK no form de criação
 
   if (field.isByoc || field.isVirtual) {
+    const isTimeline = label.toLowerCase().includes('timeline') || col.toLowerCase().includes('timeline') || label.toLowerCase().includes('jornada')
+    if (isTimeline) {
+      return `
+          {/* Timeline BYOC — ${field.label} */}
+          <div className="space-y-3 md:col-span-2 lg:col-span-3 pt-2">
+            <label className="block text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${label}</label>
+            <div className="p-6 bg-slate-50/50 dark:bg-neutral-800/30 border border-slate-200/80 dark:border-neutral-700/60 rounded-2xl">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-6">JORNADA DE NEGOCIAÇÃO</div>
+              <div className="flex items-center justify-between relative px-4">
+                <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-600 z-0" />
+                {['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho'].map((st, i) => {
+                  const currentStatus = String(data?.status || data?.status_lead || 'Em Negociação')
+                  const isCurrent = currentStatus === st
+                  const isPassed = ['Novo', 'Contactado'].includes(st) || isCurrent
+                  return (
+                    <div key={st} className="flex flex-col items-center gap-2 relative z-10">
+                      <div className={\`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all \${isCurrent ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : isPassed ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-neutral-800 border-2 border-neutral-300 dark:border-neutral-600 text-neutral-400'}\`}>
+                        {isPassed ? '✓' : i + 1}
+                      </div>
+                      <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">{st}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>`
+    }
     return `
           {/* TODO: campo virtual/BYOC — ${field.label} */}
           <div className="space-y-2 opacity-50 pointer-events-none">
             <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label} <span className="text-[9px] normal-case text-amber-500">[Em desenvolvimento]</span></label>
-            <input disabled value="// TODO" className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm" />
+            <input disabled value="// TODO" className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm" />
           </div>`
   }
 
@@ -91,7 +118,7 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
               ${required ? 'required' : ''}
               ${readOnly ? 'disabled' : ''}
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             >
               <option value="">Selecione...</option>
               {(${optsCode} as Array<{value: string; label: string}>).map(opt => (
@@ -112,7 +139,7 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
               name="${col}"
               ${required ? 'required' : ''}
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             >
               <option value="">Selecione ${label}...</option>
               {/* TODO: map(${targetTable}List, o => <option value={o.${valueColumn}}>{o.${displayColumn}}</option>) */}
@@ -149,12 +176,12 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
               ${required ? 'required' : ''}
               ${readOnly ? 'readOnly disabled' : ''}
               defaultValue={isEdit && data?.${col} ? String(data.${col}).slice(0, 10) : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             />
           </div>`
   }
 
-  if (field.config?.multiline || dt === 'text') {
+  if (field.config?.multiline || field.config?.component?.type === 'textarea') {
     const rows = field.config?.rows || 4
     return `
           <div className="space-y-2 md:col-span-2">
@@ -187,7 +214,7 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
               ${readOnly ? 'readOnly disabled' : ''}
               placeholder="${placeholder}"
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>`
 }
@@ -410,7 +437,7 @@ ${(() => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mestre-Detalhe + Edição ([id]/page.tsx) — Server Component puro
-// Abas via searchParams (?tab=0) para compatibilidade com metadata e server actions
+// Abas no topo do card via searchParams (?tab=0) para perfeita paridade com Web
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateDetailPage(route: RouteNode): string {
@@ -427,30 +454,37 @@ function generateDetailPage(route: RouteNode): string {
 
   const tabButtons = hasRelationTabs
     ? route.relationTabs.map((tab, i) => [
-        `          <Link`,
-        `            href={\`?tab=${i}\`}`,
-        `            scroll={false}`,
-        `            className={activeTab === ${i}`,
-        `              ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg shadow-lg shadow-indigo-500/20 transition-all'`,
-        `              : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200 transition-all'}`,
-        `          >`,
-        `            ${tab.label}`,
-        `          </Link>`,
+        `            <Link`,
+        `              href={\`?tab=${i + 1}\`}`,
+        `              scroll={false}`,
+        `              className={activeTab === ${i + 1}`,
+        `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all'`,
+        `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all'}`,
+        `            >`,
+        `              ${tab.label}`,
+        `            </Link>`,
       ].join('\n')).join('\n')
     : ''
 
   const tabPanels = hasRelationTabs
     ? route.relationTabs.map((tab, i) => [
-        `        {activeTab === ${i} && (`,
-        `          <div>`,
-        `            <div className="flex items-center justify-between mb-4">`,
-        `              <h3 className="text-base font-bold text-neutral-900 dark:text-white">${tab.label}</h3>`,
-        `              <span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">${tab.relatedTable} (${tab.foreignKey} = {String(data.${pk} ?? '')})</span>`,
+        `          {activeTab === ${i + 1} && (`,
+        `            <div className="relative z-10 space-y-6">`,
+        `              <div className="flex items-center justify-between">`,
+        `                <div>`,
+        `                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">${tab.label}</h3>`,
+        `                  <p className="text-xs text-neutral-400">Registros de ${tab.relatedTable} vinculados a este ${route.title.toLowerCase()}</p>`,
+        `                </div>`,
+        `                <Link href={\`/${tab.relatedTable}/new?${tab.foreignKey}=\${data.${pk}}\`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm">`,
+        `                  <Plus className="w-3.5 h-3.5" /> Adicionar ${tab.label}`,
+        `                </Link>`,
+        `              </div>`,
+        `              {/* Lista / Grid de registros filhos */}`,
+        `              <div className="bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center">`,
+        `                <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">Nenhum registro de <strong>${tab.label}</strong> encontrado para este ${route.title.toLowerCase()}.</p>`,
+        `              </div>`,
         `            </div>`,
-        `            {/* TODO: Carregar registros filhos de ${tab.relatedTable} onde ${tab.foreignKey} = data.${pk} */}`,
-        `            <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">Nenhum registro encontrado em ${tab.label}.</p>`,
-        `          </div>`,
-        `        )}`,
+        `          )}`,
       ].join('\n')).join('\n')
     : ''
 
@@ -466,26 +500,28 @@ function generateDetailPage(route: RouteNode): string {
     ? `\n  const resolvedSearch = searchParams ? await searchParams : {}\n  const activeTab = Number(typeof resolvedSearch?.tab === 'string' ? resolvedSearch.tab : 0)\n`
     : ''
 
-  const tabsSection = hasRelationTabs
-    ? [
-        '',
-        '      {/* Abas de relacionamento (Mestre-Detalhe) */}',
-        '      <div className="mt-6">',
-        '        <div className="flex gap-2 mb-4 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">',
-        tabButtons,
-        '        </div>',
-        '        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6">',
-        tabPanels,
-        '        </div>',
-        '      </div>',
-      ].join('\n')
+  const tabsHeader = hasRelationTabs
+    ? `
+          {/* Barra de Abas no Topo do Card */}
+          <div className="flex items-center gap-8 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-8 relative z-10">
+            <Link
+              href="?tab=0"
+              scroll={false}
+              className={activeTab === 0
+                ? "text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all"
+                : "text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all"}
+            >
+              ${route.title}
+            </Link>
+${tabButtons}
+          </div>`
     : ''
 
   return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Pencil } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
 
@@ -500,40 +536,52 @@ ${activeTabResolution}
 
   return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
-      <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
-        <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para ${route.title}
-      </Link>
-
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-          <span className="text-2xl font-black text-indigo-600">{String(data.${pk} ?? '?').charAt(0).toUpperCase()}</span>
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+            <Pencil className="w-6 h-6 text-indigo-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-0.5">${route.title}</h1>
+            <p className="text-sm text-neutral-400">{String(data.nome || data.name || data.nome_empresa || data.title || data.${pk} ?? '')}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Editar ${route.title}</h1>
-          <p className="text-sm text-neutral-400">ID: {String(data.${pk} ?? '').slice(0, 8)}...</p>
-        </div>
+        <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors uppercase tracking-widest">
+          <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Voltar para Lista
+        </Link>
       </div>
 
-      <form action={async (formData: FormData) => {
-        'use server'
-        const payload: Record<string, any> = {}
-        formData.forEach((v, k) => { payload[k] = v })
-        await update${mn}(resolvedParams.id, payload)
-      }}>
-        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden mb-6">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 relative z-10">
-${formFieldsHtml}
-          </div>
+      {/* Card Principal */}
+      <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
+${tabsHeader}
 
-          <div className="flex justify-end pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6">
-            <button type="submit" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
-              <Save className="w-4 h-4" /> Salvar Alterações
-            </button>
-          </div>
-        </div>
-      </form>
-${tabsSection}
+        {/* Conteúdo da Aba Mestre (Tab 0) */}
+        {(!${hasRelationTabs} || activeTab === 0) && (
+          <form action={async (formData: FormData) => {
+            'use server'
+            const payload: Record<string, any> = {}
+            formData.forEach((v, k) => { payload[k] = v })
+            await update${mn}(resolvedParams.id, payload)
+          }} className="relative z-10 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+${formFieldsHtml}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
+              <Link href="${route.path}" className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                Cancelar
+              </Link>
+              <button type="submit" className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+                <Save className="w-4 h-4" /> Salvar Alterações
+              </button>
+            </div>
+          </form>
+        )}
+
+${tabPanels}
+      </div>
     </div>
   )
 }

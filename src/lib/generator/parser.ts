@@ -255,6 +255,8 @@ function resolveViewZones(
       if (!zones.includes('form')) return false
       const field = allFields.find((f: any) => f.id === c.field_id)
       if (!field || field.is_visible_in_form === false) return false
+      // Garante que o form do mestre contenha apenas campos do modelo mestre
+      if (field.model_id && field.model_id !== viewModelId) return false
       return true
     })
     .sort((a: any, b: any) => {
