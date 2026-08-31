@@ -424,33 +424,47 @@ function generateDetailPage(route: RouteNode): string {
 
   const hasRelationTabs = route.relationTabs.length > 0
 
-  // Tab buttons (static, styled for first-active)
   const tabButtons = hasRelationTabs
-    ? route.relationTabs.map((tab, i) =>
-        `          <button
-            onClick={() => setActiveTab(${i})}
-            className={\`px-6 py-2.5 font-semibold text-sm rounded-lg transition-colors \${activeTab === ${i} ? 'bg-indigo-600 text-white' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}\`}
-          >
-            ${tab.label}
-          </button>`
-      ).join('\n')
+    ? route.relationTabs.map((tab, i) => [
+        '          <button',
+        '            type="button"',
+        `            onClick={() => setActiveTab(${i})}`,
+        `            className={\`px-6 py-2.5 font-semibold text-sm rounded-lg transition-colors \${activeTab === ${i} ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}\`}`,
+        '          >',
+        `            ${tab.label}`,
+        '          </button>',
+      ].join('\n')).join('\n')
     : ''
 
-  // Tab panels
   const tabPanels = hasRelationTabs
-    ? route.relationTabs.map((tab, i) => {
-        return `        {activeTab === ${i} && (
-          <div>
-            {/* TODO: buscar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}
-            <p className="text-sm text-neutral-400 text-center py-8">Nenhum registro encontrado em ${tab.label}.</p>
-          </div>
-        )}`
-      }).join('\n')
+    ? route.relationTabs.map((tab, i) => [
+        `        {activeTab === ${i} && (`,
+        `          <div>`,
+        `            {/* TODO: buscar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}`,
+        `            <p className="text-sm text-neutral-400 text-center py-8">Nenhum registro em ${tab.label}.</p>`,
+        `          </div>`,
+        `        )}`,
+      ].join('\n')).join('\n')
     : ''
 
   const clientDirective = hasRelationTabs ? `'use client'\n` : ''
   const useStateImport = hasRelationTabs ? `import { useState } from 'react'\n` : ''
-  const useStateHook = hasRelationTabs ? `\n  const [activeTab, setActiveTab] = useState(0)` : ''
+  const useStateHook = hasRelationTabs ? `  const [activeTab, setActiveTab] = useState(0)\n\n` : ''
+
+  const tabsSection = hasRelationTabs
+    ? [
+        '',
+        '      {/* Abas de relacionamento */}',
+        '      <div className="mt-4">',
+        '        <div className="flex gap-2 mb-4 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">',
+        tabButtons,
+        '        </div>',
+        '        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6">',
+        tabPanels,
+        '        </div>',
+        '      </div>',
+      ].join('\n')
+    : ''
 
   return `${clientDirective}import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -458,29 +472,28 @@ import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
 import { ArrowLeft, Save } from 'lucide-react'
 ${useStateImport}
-export const metadata: Metadata = { title: 'Editar — ${route.title}' }
+export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
 
 export default async function ${mn}DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params
   const data = await get${mn}ById(resolvedParams.id)
 
-  if (!data) notFound()${useStateHook}
+  if (!data) notFound()
 
-  const isEdit = true
-
-  return (
+${useStateHook}  return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
       <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
         <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para ${route.title}
       </Link>
 
-      <div className="flex items-end justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-            <span className="text-2xl font-black text-indigo-600">{String(data.${pk} ?? '?').charAt(0).toUpperCase()}</span>
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Editar ${route.title}</h1>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+          <span className="text-2xl font-black text-indigo-600">{String(data.${pk} ?? '?').charAt(0).toUpperCase()}</span>
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-1">Editar ${route.title}</h1>
+          <p className="text-sm text-neutral-400">ID: {String(data.${pk} ?? '').slice(0, 8)}...</p>
+        </div>
       </div>
 
       <form action={async (formData: FormData) => {
