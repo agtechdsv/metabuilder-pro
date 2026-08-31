@@ -665,7 +665,9 @@ export function DetailRelationSection({
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                               {/* Efeito Cortina (Expansão In-place) */}
+                </div>
+
+                {/* Efeito Cortina (Expansão In-place) */}
                 {isExpanded && (
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
