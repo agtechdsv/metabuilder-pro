@@ -236,6 +236,158 @@ export interface DetailRelationSectionProps {
   deleteAction: (id: string) => Promise<any>
 }
 
+function SubItemAccordion({
+  subItem,
+  sIdx,
+  subKey,
+  isSubExpanded,
+  subFields,
+  toggleSubItem,
+  formatDateForInput,
+}: {
+  subItem: any
+  sIdx: number
+  subKey: string
+  isSubExpanded: boolean
+  subFields: DetailFieldConfig[]
+  toggleSubItem: (k: string) => void
+  formatDateForInput: (v: any) => string
+}) {
+  const [qtd, setQtd] = useState<number>(Number(subItem.quantidade || 1))
+  const [preco, setPreco] = useState<number>(Number(subItem.preco_unitario || subItem.valor_unitario || 0))
+
+  const total = qtd * preco
+
+  let subTitle = ''
+  for (const sf of subFields) {
+    const val = subItem[sf.dbColumn]
+    if (sf.config?.options && sf.config.options.length > 0) {
+      const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
+      if (opt?.label) {
+        subTitle = opt.label
+        break
+      }
+    }
+  }
+  if (!subTitle) {
+    subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
+  }
+
+  return (
+    <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
+      {/* Barra do Cabeçalho do Sub-Item */}
+      <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
+        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+          {subTitle}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => toggleSubItem(subKey)}
+            className="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors shadow-sm"
+          >
+            {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Campos do Sub-Item Expandido */}
+      {isSubExpanded && subFields.length > 0 && (
+        <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
+          {subFields.map((sf: any) => {
+            const val = subItem[sf.dbColumn]
+            const dt = (sf.dataType || '').toLowerCase()
+            const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+            const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+            const isSelect = sf.config?.options && sf.config.options.length > 0
+            const isQtdField = sf.dbColumn.includes('quant') || sf.label.toLowerCase().includes('quant')
+            const isPrecoField = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.label.toLowerCase().includes('preço') || sf.label.toLowerCase().includes('preco')
+            const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
+
+            const widthVal = sf.config?.width || sf.config?.component?.width || ''
+            const colSpanVal = sf.config?.colSpan || sf.config?.col_span || ''
+            let colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
+            if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
+              colSpanClass = 'col-span-1'
+            } else if (widthVal === '50%' || widthVal === 'w-1/2' || colSpanVal === 2 || colSpanVal === '2') {
+              colSpanClass = 'col-span-1 md:col-span-2'
+            }
+
+            if (isSelect) {
+              return (
+                <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                  <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                    {sf.label}
+                  </label>
+                  <select
+                    name={sf.dbColumn}
+                    defaultValue={String(val ?? '')}
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Selecione...</option>
+                    {sf.config.options.map((opt: any, oIdx: number) => {
+                      const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
+                      const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                      return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                    })}
+                  </select>
+                </div>
+              )
+            }
+
+            if (isTotalField) {
+              return (
+                <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                  <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                    {sf.label}
+                  </label>
+                  <input
+                    name={sf.dbColumn}
+                    type="text"
+                    readOnly
+                    value={total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
+                    className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 font-semibold rounded-xl px-4 py-2.5 text-sm outline-none cursor-not-allowed"
+                  />
+                </div>
+              )
+            }
+
+            let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
+            if (isPrecoField && val && !isNaN(Number(val))) {
+              initialFormatted = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+            }
+
+            return (
+              <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                  {sf.label}
+                </label>
+                <input
+                  name={sf.dbColumn}
+                  type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                  defaultValue={initialFormatted}
+                  onChange={(e) => {
+                    if (isQtdField) setQtd(Number(e.target.value) || 0)
+                    if (isPrecoField) setPreco(Number(e.target.value.replace(/\\./g, '').replace(',', '.')) || Number(e.target.value) || 0)
+                  }}
+                  placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                />
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DetailRelationSection({
   label,
   relatedTable,
@@ -513,17 +665,42 @@ export function DetailRelationSection({
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                </div>
-
-                {/* Efeito Cortina (Expansão In-place) */}
+                               {/* Efeito Cortina (Expansão In-place) */}
                 {isExpanded && (
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {editableFields.map(f => {
                         const val = getFieldValue(item, f.dbColumn)
                         const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                         const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
                         const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
+                        const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
+                        const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
+
+                        const widthVal = f.config?.width || f.config?.component?.width || ''
+                        const colSpanVal = f.config?.colSpan || f.config?.col_span || ''
+                        let colSpanClass = 'col-span-1 md:col-span-2'
+                        if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 4 || colSpanVal === '4' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                          colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
+                        } else if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
+                          colSpanClass = 'col-span-1'
+                        }
+
+                        let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
+                        if (isCalculatedTotal && itemChildRecords && itemChildRecords.length > 0) {
+                          const sum = itemChildRecords.reduce((acc: number, sub: any) => {
+                            const q = Number(sub.quantidade || 1)
+                            const p = Number(sub.preco_unitario || sub.valor_unitario || 0)
+                            return acc + (q * p)
+                          }, 0)
+                          if (sum > 0) {
+                            displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          } else if (val && !isNaN(Number(val))) {
+                            displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          }
+                        } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
+                          displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
 
                         if (hasOptions) {
                           const selectedOpt = f.config!.options!.find((o: any) => {
@@ -534,14 +711,15 @@ export function DetailRelationSection({
                           const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
 
                           return (
-                            <div key={f.dbColumn} className="space-y-1.5">
+                            <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                               <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
                                 {f.label}
                               </label>
                               <select
                                 name={f.dbColumn}
                                 defaultValue={defVal}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                disabled={isReadOnly}
+                                className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-white dark:bg-neutral-900'} border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                               >
                                 <option value="">Selecione...</option>
                                 {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
@@ -558,16 +736,17 @@ export function DetailRelationSection({
                         }
 
                         return (
-                          <div key={f.dbColumn} className="space-y-1.5">
+                          <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                             <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
                               {f.label}
                             </label>
                             <input
                               name={f.dbColumn}
-                              type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                              type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
+                              readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                              defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
-                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                              defaultValue={displayVal}
+                              className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-neutral-200'} border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                             />
                           </div>
                         )
@@ -601,100 +780,24 @@ export function DetailRelationSection({
                             const subKey = \`\${item.id || idx}-\${sIdx}\`
                             const isSubExpanded = !!expandedSubItems[subKey]
 
-                            let subTitle = ''
-                            for (const sf of subFields) {
-                              const val = subItem[sf.dbColumn]
-                              if (sf.config?.options && sf.config.options.length > 0) {
-                                const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
-                                if (opt?.label) {
-                                  subTitle = opt.label
-                                  break
-                                }
-                              }
-                            }
-                            if (!subTitle) {
-                              subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
-                            }
-
                             return (
-                              <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
-                                <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
-                                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                                    {subTitle}
-                                  </span>
-                                  <div className="flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => toggleSubItem(subKey)}
-                                      className="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors shadow-sm"
-                                    >
-                                      {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                    </button>
-                                    <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
-                                      <Pencil className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {isSubExpanded && subFields.length > 0 && (
-                                  <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
-                                    {subFields.map((sf: any) => {
-                                      const val = subItem[sf.dbColumn]
-                                      const dt = (sf.dataType || '').toLowerCase()
-                                      const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
-                                      const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-                                      const isSelect = sf.config?.options && sf.config.options.length > 0
-
-                                      if (isSelect) {
-                                        return (
-                                          <div key={sf.dbColumn} className="space-y-1.5">
-                                            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                                              {sf.label}
-                                            </label>
-                                            <select
-                                              name={sf.dbColumn}
-                                              defaultValue={String(val ?? '')}
-                                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
-                                            >
-                                              <option value="">Selecione...</option>
-                                              {sf.config.options.map((opt: any, oIdx: number) => {
-                                                const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
-                                                const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
-                                                return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
-                                              })}
-                                            </select>
-                                          </div>
-                                        )
-                                      }
-
-                                      return (
-                                        <div key={sf.dbColumn} className="space-y-1.5">
-                                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                                            {sf.label}
-                                          </label>
-                                          <input
-                                            name={sf.dbColumn}
-                                            type={isDate ? 'date' : isNumber ? 'number' : 'text'}
-                                            defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
-                                            placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
-                                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                                          />
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                              </div>
+                              <SubItemAccordion
+                                key={sIdx}
+                                subItem={subItem}
+                                sIdx={sIdx}
+                                subKey={subKey}
+                                isSubExpanded={isSubExpanded}
+                                subFields={subFields}
+                                toggleSubItem={toggleSubItem}
+                                formatDateForInput={formatDateForInput}
+                              />
                             )
                           })}
                         </div>
                       )}
                     </div>
                   </div>
-                )}
+                )}        )}
               </div>
             )
           })}
@@ -760,12 +863,40 @@ export function DetailRelationSection({
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <input type="hidden" name={foreignKey} value={parentId} />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
                     const val = getFieldValue(editingItem, f.dbColumn)
                     const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                     const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
                     const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
+                    const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
+                    const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
+
+                    const widthVal = f.config?.width || f.config?.component?.width || ''
+                    const colSpanVal = f.config?.colSpan || f.config?.col_span || ''
+                    let colSpanClass = 'col-span-1 md:col-span-2'
+                    if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 4 || colSpanVal === '4' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                      colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
+                    } else if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
+                      colSpanClass = 'col-span-1'
+                    }
+
+                    const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
+                    let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
+                    if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
+                      const sum = editChildRecords.reduce((acc: number, sub: any) => {
+                        const q = Number(sub.quantidade || 1)
+                        const p = Number(sub.preco_unitario || sub.valor_unitario || 0)
+                        return acc + (q * p)
+                      }, 0)
+                      if (sum > 0) {
+                        displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      } else if (val && !isNaN(Number(val))) {
+                        displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                    } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
+                      displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    }
 
                     if (hasOptions) {
                       const selectedOpt = f.config!.options!.find((o: any) => {
@@ -776,14 +907,15 @@ export function DetailRelationSection({
                       const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
 
                       return (
-                        <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
+                        <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                           <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
                             {f.label}
                           </label>
                           <select
                             name={f.dbColumn}
                             defaultValue={defVal}
-                            className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                            disabled={isReadOnly}
+                            className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                           >
                             <option value="">Selecione...</option>
                             {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
@@ -800,16 +932,17 @@ export function DetailRelationSection({
                     }
 
                     return (
-                      <div key={f.dbColumn} className="space-y-1.5">
+                      <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                         <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
                           {f.label}
                         </label>
                         <input
                           name={f.dbColumn}
-                          type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                          type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
+                          readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                          defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
-                          className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                          defaultValue={displayVal}
+                          className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                         />
                       </div>
                     )
@@ -858,93 +991,17 @@ export function DetailRelationSection({
                       const subKey = \`modal-\${editingItem.id || 'edit'}-\${sIdx}\`
                       const isSubExpanded = !!expandedSubItems[subKey]
 
-                      let subTitle = ''
-                      for (const sf of subFields) {
-                        const val = sub[sf.dbColumn]
-                        if (sf.config?.options && sf.config.options.length > 0) {
-                          const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
-                          if (opt?.label) {
-                            subTitle = opt.label
-                            break
-                          }
-                        }
-                      }
-                      if (!subTitle) {
-                        subTitle = String(sub.produto_nome || sub.produto || sub.nome || sub.descricao || sub.name || \`Item #\${sIdx + 1}\`)
-                      }
-
                       return (
-                        <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
-                          <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
-                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                              {subTitle}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => toggleSubItem(subKey)}
-                                className="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors shadow-sm"
-                              >
-                                {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              </button>
-                              <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {isSubExpanded && subFields.length > 0 && (
-                            <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
-                              {subFields.map((sf: any) => {
-                                const val = sub[sf.dbColumn]
-                                const dt = (sf.dataType || '').toLowerCase()
-                                const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
-                                const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-                                const isSelect = sf.config?.options && sf.config.options.length > 0
-
-                                if (isSelect) {
-                                  return (
-                                    <div key={sf.dbColumn} className="space-y-1.5">
-                                      <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                                        {sf.label}
-                                      </label>
-                                      <select
-                                        name={sf.dbColumn}
-                                        defaultValue={String(val ?? '')}
-                                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
-                                      >
-                                        <option value="">Selecione...</option>
-                                        {sf.config.options.map((opt: any, oIdx: number) => {
-                                          const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
-                                          const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
-                                          return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
-                                        })}
-                                      </select>
-                                    </div>
-                                  )
-                                }
-
-                                return (
-                                  <div key={sf.dbColumn} className="space-y-1.5">
-                                    <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                                      {sf.label}
-                                    </label>
-                                    <input
-                                      name={sf.dbColumn}
-                                      type={isDate ? 'date' : isNumber ? 'number' : 'text'}
-                                      defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
-                                      placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
-                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                                    />
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
+                        <SubItemAccordion
+                          key={sIdx}
+                          subItem={sub}
+                          sIdx={sIdx}
+                          subKey={subKey}
+                          isSubExpanded={isSubExpanded}
+                          subFields={subFields}
+                          toggleSubItem={toggleSubItem}
+                          formatDateForInput={formatDateForInput}
+                        />
                       )
                     })}
                   </div>

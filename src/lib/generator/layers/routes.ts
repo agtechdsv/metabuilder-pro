@@ -107,16 +107,34 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
           </div>`
   }
 
+  const widthVal = field.config?.width || field.config?.component?.width || ''
+  const colSpanVal = field.config?.colSpan || field.config?.col_span || ''
+  let colSpanClass = 'col-span-1'
+  if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 3 || colSpanVal === '3' || field.config?.multiline || field.config?.component?.type === 'textarea') {
+    colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-3'
+  } else if (widthVal === '50%' || widthVal === 'w-1/2' || colSpanVal === 2 || colSpanVal === '2') {
+    colSpanClass = 'col-span-1 md:col-span-2'
+  }
+
+  const isReadOnly = Boolean(
+    readOnly ||
+    field.config?.readOnly ||
+    field.config?.content?.readonly ||
+    field.config?.readonly ||
+    field.isVirtual ||
+    col.startsWith('virt_')
+  )
+
   if (field.config?.options?.length) {
     const optsCode = JSON.stringify(field.config.options)
     return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             <select
               id="${col}"
               name="${col}"
               ${required ? 'required' : ''}
-              ${readOnly ? 'disabled' : ''}
+              ${isReadOnly ? 'disabled' : ''}
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
               className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             >
@@ -131,7 +149,7 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.config?.relation?.targetTable) {
     const { targetTable, displayColumn, valueColumn } = field.config.relation
     return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             {/* TODO: Carregar lista de ${targetTable} para o select */}
             <select
@@ -149,14 +167,14 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
 
   if (dt === 'boolean') {
     return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}</label>
             <div className="flex items-center gap-3 py-1">
               <input
                 id="${col}"
                 name="${col}"
                 type="checkbox"
-                ${readOnly ? 'disabled' : ''}
+                ${isReadOnly ? 'disabled' : ''}
                 defaultChecked={isEdit ? Boolean(data?.${col}) : false}
                 className="w-5 h-5 rounded-md border-2 border-neutral-300 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500"
               />
@@ -168,14 +186,14 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   const isDate = dt === 'date' || col.toLowerCase().includes('data') || col.toLowerCase().includes('date')
   if (isDate) {
     return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
               type="date"
               ${required ? 'required' : ''}
-              ${readOnly ? 'readOnly disabled' : ''}
+              ${isReadOnly ? 'readOnly disabled' : ''}
               defaultValue={isEdit ? formatDateForInput(data?.${col}) : ''}
               className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             />
@@ -184,14 +202,14 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
 
   if (dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') {
     return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
               type="datetime-local"
               ${required ? 'required' : ''}
-              ${readOnly ? 'readOnly disabled' : ''}
+              ${isReadOnly ? 'readOnly disabled' : ''}
               defaultValue={isEdit ? formatDatetimeForInput(data?.${col}) : ''}
               className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             />
@@ -201,14 +219,14 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.config?.multiline || field.config?.component?.type === 'textarea') {
     const rows = field.config?.rows || 4
     return `
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             <textarea
               id="${col}"
               name="${col}"
               rows={${rows}}
               ${required ? 'required' : ''}
-              ${readOnly ? 'readOnly disabled' : ''}
+              ${isReadOnly ? 'readOnly disabled' : ''}
               placeholder="${placeholder}"
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
               className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 resize-y min-h-[100px]"
@@ -219,17 +237,17 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number' : 'text'
 
   return `
-          <div className="space-y-2">
+          <div className="space-y-2 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
               type="${inputType}"
               ${required ? 'required' : ''}
-              ${readOnly ? 'readOnly disabled' : ''}
+              ${isReadOnly ? 'readOnly disabled' : ''}
               placeholder="${placeholder}"
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full ${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
           </div>`
 }
