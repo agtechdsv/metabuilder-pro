@@ -409,7 +409,8 @@ ${(() => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mestre-Detalhe + Edição ([id]/page.tsx) — formulário + abas relacionamento
+// Mestre-Detalhe + Edição ([id]/page.tsx) — Server Component puro
+// Abas via searchParams (?tab=0) para compatibilidade com metadata e server actions
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateDetailPage(route: RouteNode): string {
@@ -426,13 +427,15 @@ function generateDetailPage(route: RouteNode): string {
 
   const tabButtons = hasRelationTabs
     ? route.relationTabs.map((tab, i) => [
-        '          <button',
-        '            type="button"',
-        `            onClick={() => setActiveTab(${i})}`,
-        `            className={\`px-6 py-2.5 font-semibold text-sm rounded-lg transition-colors \${activeTab === ${i} ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'}\`}`,
-        '          >',
+        `          <Link`,
+        `            href={\`?tab=${i}\`}`,
+        `            scroll={false}`,
+        `            className={activeTab === ${i}`,
+        `              ? 'px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg shadow-lg shadow-indigo-500/20 transition-all'`,
+        `              : 'px-6 py-2.5 text-neutral-500 dark:text-neutral-400 font-semibold text-sm rounded-lg hover:text-neutral-700 dark:hover:text-neutral-200 transition-all'}`,
+        `          >`,
         `            ${tab.label}`,
-        '          </button>',
+        `          </Link>`,
       ].join('\n')).join('\n')
     : ''
 
@@ -440,22 +443,34 @@ function generateDetailPage(route: RouteNode): string {
     ? route.relationTabs.map((tab, i) => [
         `        {activeTab === ${i} && (`,
         `          <div>`,
-        `            {/* TODO: buscar ${tab.relatedTable} WHERE ${tab.foreignKey} = data.${pk} */}`,
-        `            <p className="text-sm text-neutral-400 text-center py-8">Nenhum registro em ${tab.label}.</p>`,
+        `            <div className="flex items-center justify-between mb-4">`,
+        `              <h3 className="text-base font-bold text-neutral-900 dark:text-white">${tab.label}</h3>`,
+        `              <span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">${tab.relatedTable} (${tab.foreignKey} = {String(data.${pk} ?? '')})</span>`,
+        `            </div>`,
+        `            {/* TODO: Carregar registros filhos de ${tab.relatedTable} onde ${tab.foreignKey} = data.${pk} */}`,
+        `            <p className="text-sm text-neutral-400 dark:text-neutral-500 text-center py-8">Nenhum registro encontrado em ${tab.label}.</p>`,
         `          </div>`,
         `        )}`,
       ].join('\n')).join('\n')
     : ''
 
-  const clientDirective = hasRelationTabs ? `'use client'\n` : ''
-  const useStateImport = hasRelationTabs ? `import { useState } from 'react'\n` : ''
-  const useStateHook = hasRelationTabs ? `  const [activeTab, setActiveTab] = useState(0)\n\n` : ''
+  const tabSearchParamType = hasRelationTabs
+    ? `{\n  params: Promise<{ id: string }>\n  searchParams?: Promise<Record<string, string | string[] | undefined>>\n}`
+    : `{\n  params: Promise<{ id: string }>\n}`
+
+  const tabSearchParamArg = hasRelationTabs
+    ? `  params,\n  searchParams,\n`
+    : `  params,\n`
+
+  const activeTabResolution = hasRelationTabs
+    ? `\n  const resolvedSearch = searchParams ? await searchParams : {}\n  const activeTab = Number(typeof resolvedSearch?.tab === 'string' ? resolvedSearch.tab : 0)\n`
+    : ''
 
   const tabsSection = hasRelationTabs
     ? [
         '',
-        '      {/* Abas de relacionamento */}',
-        '      <div className="mt-4">',
+        '      {/* Abas de relacionamento (Mestre-Detalhe) */}',
+        '      <div className="mt-6">',
         '        <div className="flex gap-2 mb-4 p-1.5 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto">',
         tabButtons,
         '        </div>',
@@ -466,21 +481,22 @@ function generateDetailPage(route: RouteNode): string {
       ].join('\n')
     : ''
 
-  return `${clientDirective}import type { Metadata } from 'next'
+  return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
 import { ArrowLeft, Save } from 'lucide-react'
-${useStateImport}
+
 export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
 
-export default async function ${mn}DetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ${mn}DetailPage({
+${tabSearchParamArg}}: ${tabSearchParamType}) {
   const resolvedParams = await params
   const data = await get${mn}ById(resolvedParams.id)
 
   if (!data) notFound()
-
-${useStateHook}  return (
+${activeTabResolution}
+  return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
       <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
         <ArrowLeft className="w-3 h-3 mr-2" /> Voltar para ${route.title}
@@ -502,7 +518,7 @@ ${useStateHook}  return (
         formData.forEach((v, k) => { payload[k] = v })
         await update${mn}(resolvedParams.id, payload)
       }}>
-        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+        <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden mb-6">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 relative z-10">
 ${formFieldsHtml}
@@ -515,6 +531,7 @@ ${formFieldsHtml}
           </div>
         </div>
       </form>
+${tabsSection}
     </div>
   )
 }

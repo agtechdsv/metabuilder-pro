@@ -399,34 +399,75 @@ function resolvePersonalizadoView(view: any, allViews: any[]): any {
 
 function parseButtons(buttonsConfig: any[]): ViewButton[] {
   if (!Array.isArray(buttonsConfig)) return []
-  return buttonsConfig.map((b: any, idx: number) => {
-    const actionType = (b.action_type || b.type || 'custom') as ButtonActionType
-    let placement = b.placement
-    
-    // Infer placement if missing or force standard placements to avoid duplicates
-    if (['view', 'update', 'delete', 'edit'].includes(actionType)) {
-      placement = 'row'
-    } else if (['search', 'clear'].includes(actionType)) {
-      placement = 'filter'
-    } else if (['create', 'export'].includes(actionType)) {
-      placement = 'header'
-    } else if (!placement) {
-      placement = 'header'
-    }
 
-    return {
-      id: b.id || `btn_${idx}`,
-      label: b.label || b.name || 'Ação',
-      icon: b.icon,
-      style: (b.style || b.variant || 'primary') as ButtonStyle,
-      actionType,
-      placement,
-      confirmationMessage: b.confirmation_message,
-      customLogic: b.custom_logic || b.logic,
-      linkTarget: b.link_target || b.url,
-    }
-  })
+  const ROW_IDS = new Set(['view', 'edit', 'delete'])
+  const FILTER_IDS = new Set(['search', 'clear'])
+  const HEADER_IDS = new Set(['add', 'create', 'export'])
+
+  const ROW_LABELS = new Set(['visualizar', 'view', 'editar', 'edit', 'excluir', 'delete', 'deletar', 'remover', 'apagar'])
+  const FILTER_LABELS = new Set(['pesquisar', 'search', 'buscar', 'limpar', 'clear', 'filtrar', 'filtro', 'limpa'])
+  const HEADER_LABELS = new Set(['novo registro', 'novo', 'adicionar', 'add', 'create', 'exportar', 'exportar dados', 'export'])
+
+  return buttonsConfig
+    .filter((b: any) => b && b.visible !== false)
+    .map((b: any, idx: number): ViewButton => {
+      const id = String(b.id || '').toLowerCase().trim()
+      const rawAction = String(b.action_key || b.action_type || b.action || b.type || '').toLowerCase().trim()
+      const label = String(b.custom_label || b.label || b.name || '').toLowerCase().trim()
+
+      let actionType: ButtonActionType = 'custom'
+      let placement: 'header' | 'row' | 'form' | 'filter' = 'header'
+
+      if (id === 'add' || rawAction === 'create') {
+        actionType = 'create'
+        placement = 'header'
+      } else if (id === 'export' || rawAction === 'export') {
+        actionType = 'export'
+        placement = 'header'
+      } else if (id === 'view' || rawAction === 'view') {
+        actionType = 'view'
+        placement = 'row'
+      } else if (id === 'edit' || rawAction === 'update' || rawAction === 'edit' || rawAction === 'pencil') {
+        actionType = 'edit'
+        placement = 'row'
+      } else if (id === 'delete' || rawAction === 'delete') {
+        actionType = 'delete'
+        placement = 'row'
+      } else if (id === 'search' || rawAction === 'search') {
+        actionType = 'search'
+        placement = 'filter'
+      } else if (id === 'clear' || rawAction === 'clear') {
+        actionType = 'clear'
+        placement = 'filter'
+      } else {
+        actionType = (b.action_type || 'custom') as ButtonActionType
+        if (ROW_IDS.has(id) || ROW_LABELS.has(label)) {
+          placement = 'row'
+        } else if (FILTER_IDS.has(id) || FILTER_LABELS.has(label)) {
+          placement = 'filter'
+        } else if (HEADER_IDS.has(id) || HEADER_LABELS.has(label)) {
+          placement = 'header'
+        } else if (b.placement === 'row' || b.placement === 'form' || b.placement === 'header' || b.placement === 'filter') {
+          placement = b.placement
+        } else {
+          placement = 'row'
+        }
+      }
+
+      return {
+        id: b.id || `btn_${idx}`,
+        label: b.custom_label || b.label || b.name || 'Ação',
+        icon: b.icon,
+        style: (b.style || b.variant || 'primary') as ButtonStyle,
+        actionType,
+        placement,
+        confirmationMessage: b.confirmation_message,
+        customLogic: b.custom_logic || b.logic,
+        linkTarget: b.link_target || b.url,
+      }
+    })
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Relation Tabs — resolve abas de detalhe (relações 1:N)

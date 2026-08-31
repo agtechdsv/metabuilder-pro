@@ -99,7 +99,7 @@ export interface ViewButton {
   icon?: string
   style: ButtonStyle
   actionType: ButtonActionType
-  placement?: 'header' | 'row' | 'form'    // onde o botão aparece
+  placement?: 'header' | 'row' | 'form' | 'filter'    // onde o botão aparece
   confirmationMessage?: string              // se presente, exibe diálogo de confirmação
   customLogic?: string                      // código JS da ação customizada (para //TODO)
   linkTarget?: string                       // para actionType = 'link'
