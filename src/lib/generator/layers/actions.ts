@@ -156,6 +156,19 @@ function generateSupabaseActions(model: ModelNode) {
 import { createClient } from './db'
 import { revalidatePath } from 'next/cache'
 
+function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
+  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
+    ? Object.fromEntries((formData as FormData).entries())
+    : (formData && typeof formData === 'object' ? { ...formData } : {})
+
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(rawData)) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    clean[k] = v === '' ? null : v
+  }
+  return clean
+}
+
 export async function get${model.name}List() {
   const supabase = await createClient()
   const { data, error } = await supabase.from('${model.dbTable}').select('*').order('${pk}', { ascending: false })
@@ -177,18 +190,19 @@ export async function get${model.name}ByField(field: string, value: any) {
   return data
 }
 
-export async function create${model.name}(formData: FormData) {
+export async function create${model.name}(formData: FormData | Record<string, any>) {
   const supabase = await createClient()
-  const rawData = Object.fromEntries(formData.entries())
-  const { error } = await supabase.from('${model.dbTable}').insert([rawData])
+  const clean = parsePayload(formData)
+  const { data, error } = await supabase.from('${model.dbTable}').insert([clean]).select('${pk}').single()
   if (error) throw new Error(error.message)
   revalidatePath('/${model.name.toLowerCase()}')
+  return data
 }
 
-export async function update${model.name}(id: string, formData: FormData) {
+export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const supabase = await createClient()
-  const rawData = Object.fromEntries(formData.entries())
-  const { error } = await supabase.from('${model.dbTable}').update(rawData).eq('${pk}', id)
+  const clean = parsePayload(formData)
+  const { error } = await supabase.from('${model.dbTable}').update(clean).eq('${pk}', id)
   if (error) throw new Error(error.message)
   revalidatePath('/${model.name.toLowerCase()}')
 }
@@ -204,7 +218,6 @@ export async function delete${model.name}(id: string) {
 
 function generatePgActions(model: ModelNode) {
   const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
-  const allColumns = model.fields.map((f: FieldNode) => f.dbColumn).join(', ')
   const tableRef = model.dbTable.includes('.')
     ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
@@ -212,6 +225,19 @@ function generatePgActions(model: ModelNode) {
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+
+function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
+  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
+    ? Object.fromEntries((formData as FormData).entries())
+    : (formData && typeof formData === 'object' ? { ...formData } : {})
+
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(rawData)) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    clean[k] = v === '' ? null : v
+  }
+  return clean
+}
 
 export async function get${model.name}List() {
   const res = await query('SELECT * FROM ${tableRef} ORDER BY "${pk}" DESC')
@@ -228,21 +254,22 @@ export async function get${model.name}ByField(field: string, value: any) {
   return res.rows
 }
 
-export async function create${model.name}(formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
-  const values = Object.values(rawData)
+export async function create${model.name}(formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
+  const values = Object.values(clean)
   const placeholders = keys.map((_, i) => \`$\${i + 1}\`).join(', ')
   const columns = keys.map(k => \`"\${k}"\`).join(', ')
   
-  await query(\`INSERT INTO ${tableRef} (\${columns}) VALUES (\${placeholders})\`, values)
+  const res = await query(\`INSERT INTO ${tableRef} (\${columns}) VALUES (\${placeholders}) RETURNING "${pk}"\`, values)
   revalidatePath('/${model.name.toLowerCase()}')
+  return res.rows[0] || null
 }
 
-export async function update${model.name}(id: string, formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
-  const values = Object.values(rawData)
+export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
+  const values = Object.values(clean)
   const setString = keys.map((k, i) => \`"\${k}" = $\${i + 1}\`).join(', ')
   
   await query(\`UPDATE ${tableRef} SET \${setString} WHERE "${pk}" = $\${keys.length + 1}\`, [...values, id])
@@ -264,6 +291,19 @@ function generateOracleActions(model: ModelNode) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
+function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
+  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
+    ? Object.fromEntries((formData as FormData).entries())
+    : (formData && typeof formData === 'object' ? { ...formData } : {})
+
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(rawData)) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    clean[k] = v === '' ? null : v
+  }
+  return clean
+}
+
 export async function get${model.name}List() {
   const rows = await query('SELECT ${allColumns} FROM "${model.dbTable}" ORDER BY "${pk}" DESC')
   return rows
@@ -279,22 +319,22 @@ export async function get${model.name}ByField(field: string, value: any) {
   return rows
 }
 
-export async function create${model.name}(formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
+export async function create${model.name}(formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
   const placeholders = keys.map(k => \`:\${k}\`).join(', ')
   const columns = keys.map(k => \`"\${k}"\`).join(', ')
   
-  await query(\`INSERT INTO "${model.dbTable}" (\${columns}) VALUES (\${placeholders})\`, rawData)
+  await query(\`INSERT INTO "${model.dbTable}" (\${columns}) VALUES (\${placeholders})\`, clean)
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
-export async function update${model.name}(id: string, formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
+export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
   const setString = keys.map(k => \`"\${k}" = :\${k}\`).join(', ')
   
-  await query(\`UPDATE "${model.dbTable}" SET \${setString} WHERE "${pk}" = :id\`, { ...rawData, id })
+  await query(\`UPDATE "${model.dbTable}" SET \${setString} WHERE "${pk}" = :id\`, { ...clean, id })
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
@@ -313,6 +353,19 @@ function generateMysqlActions(model: ModelNode) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
+function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
+  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
+    ? Object.fromEntries((formData as FormData).entries())
+    : (formData && typeof formData === 'object' ? { ...formData } : {})
+
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(rawData)) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    clean[k] = v === '' ? null : v
+  }
+  return clean
+}
+
 export async function get${model.name}List() {
   const rows = await query('SELECT ${allColumns} FROM \`${model.dbTable}\` ORDER BY \`${pk}\` DESC')
   return rows
@@ -328,10 +381,10 @@ export async function get${model.name}ByField(field: string, value: any) {
   return rows
 }
 
-export async function create${model.name}(formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
-  const values = Object.values(rawData)
+export async function create${model.name}(formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
+  const values = Object.values(clean)
   const placeholders = keys.map(() => '?').join(', ')
   const columns = keys.map(k => \`\\\`\${k}\\\`\`).join(', ')
   
@@ -339,10 +392,10 @@ export async function create${model.name}(formData: FormData) {
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
-export async function update${model.name}(id: string, formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
-  const values = Object.values(rawData)
+export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
+  const values = Object.values(clean)
   const setString = keys.map(k => \`\\\`\${k}\\\` = ?\`).join(', ')
   
   await query(\`UPDATE \`${model.dbTable}\` SET \${setString} WHERE \`${pk}\` = ?\`, [...values, id])
@@ -364,6 +417,19 @@ function generateSqlServerActions(model: ModelNode) {
 import { getPool } from './db'
 import { revalidatePath } from 'next/cache'
 
+function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
+  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
+    ? Object.fromEntries((formData as FormData).entries())
+    : (formData && typeof formData === 'object' ? { ...formData } : {})
+
+  const clean: Record<string, any> = {}
+  for (const [k, v] of Object.entries(rawData)) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    clean[k] = v === '' ? null : v
+  }
+  return clean
+}
+
 export async function get${model.name}List() {
   const pool = await getPool()
   const result = await pool.request().query('SELECT ${allColumns} FROM [${model.dbTable}] ORDER BY [${pk}] DESC')
@@ -382,29 +448,29 @@ export async function get${model.name}ByField(field: string, value: any) {
   return result.recordset
 }
 
-export async function create${model.name}(formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
+export async function create${model.name}(formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
   const placeholders = keys.map(k => \`@\${k}\`).join(', ')
   const columns = keys.map(k => \`[\${k}]\`).join(', ')
   
   const pool = await getPool()
   const request = pool.request()
-  keys.forEach(k => { request.input(k, rawData[k] as string) })
+  keys.forEach(k => { request.input(k, clean[k] as string) })
   
   await request.query(\`INSERT INTO [${model.dbTable}] (\${columns}) VALUES (\${placeholders})\`)
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
-export async function update${model.name}(id: string, formData: FormData) {
-  const rawData = Object.fromEntries(formData.entries())
-  const keys = Object.keys(rawData)
+export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
+  const clean = parsePayload(formData)
+  const keys = Object.keys(clean)
   const setString = keys.map(k => \`[\${k}] = @\${k}\`).join(', ')
   
   const pool = await getPool()
   const request = pool.request()
   request.input('pk_id', id)
-  keys.forEach(k => { request.input(k, rawData[k] as string) })
+  keys.forEach(k => { request.input(k, clean[k] as string) })
   
   await request.query(\`UPDATE [${model.dbTable}] SET \${setString} WHERE [${pk}] = @pk_id\`)
   revalidatePath('/${model.name.toLowerCase()}')
