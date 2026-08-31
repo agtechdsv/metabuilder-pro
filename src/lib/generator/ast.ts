@@ -111,9 +111,13 @@ export interface ViewButton {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SubRelationDetail {
+  relatedModelId: string
   relatedTable: string         // ex: 'itens_pedido'
   relatedModelName: string     // ex: 'ItensPedido'
   foreignKey: string           // ex: 'pedido_id'
+  label: string                // ex: 'Itens de Pedido'
+  gridFields: ResolvedField[]
+  formFields?: ResolvedField[]
 }
 
 export interface RelationTab {

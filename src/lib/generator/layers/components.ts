@@ -212,6 +212,15 @@ export interface DetailFieldConfig {
   dbColumn: string
   dataType?: string
   isPrimaryKey?: boolean
+  config?: any
+}
+
+export interface SubRelationConfig {
+  relatedTable: string
+  relatedModelName: string
+  foreignKey: string
+  label: string
+  fields: DetailFieldConfig[]
 }
 
 export interface DetailRelationSectionProps {
@@ -221,9 +230,10 @@ export interface DetailRelationSectionProps {
   parentId: string
   items: any[]
   fields: DetailFieldConfig[]
-  createAction: (formData: FormData) => Promise<void>
-  updateAction: (id: string, formData: FormData) => Promise<void>
-  deleteAction: (id: string) => Promise<void>
+  subDetails?: SubRelationConfig[]
+  createAction: (formData: FormData | Record<string, any>) => Promise<any>
+  updateAction: (id: string, formData: FormData | Record<string, any>) => Promise<any>
+  deleteAction: (id: string) => Promise<any>
 }
 
 export function DetailRelationSection({
@@ -233,6 +243,7 @@ export function DetailRelationSection({
   parentId,
   items = [],
   fields = [],
+  subDetails = [],
   createAction,
   updateAction,
   deleteAction,
@@ -245,15 +256,11 @@ export function DetailRelationSection({
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
 
-  // Sub-itens mock/dinâmicos para a aba "Itens do Pedido"
-  const [expandedSubItems, setExpandedSubItems] = useState<Record<number, boolean>>({})
-  const defaultSubItems = [
-    { id: 1, produto: 'Servidor Enterprise Rack', quantidade: 4, preco_unitario: '12.000,04', total_rs: '48.000,16' },
-    { id: 2, produto: 'Switch de Rede 48-portas', quantidade: 2, preco_unitario: '8.500,00', total_rs: '17.000,00' },
-    { id: 3, produto: 'Suporte Premium 24/7', quantidade: 1, preco_unitario: '68.501,83', total_rs: '68.501,83' },
-  ]
-  const [subItems, setSubItems] = useState<any[]>(defaultSubItems)
+  const toggleSubItem = (key: string) => {
+    setExpandedSubItems(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   useEffect(() => {
     setLocalItems(items)
@@ -372,6 +379,8 @@ export function DetailRelationSection({
 
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
+  const subConfig = (subDetails && subDetails[0]) || null
+  const subFields = subConfig?.fields?.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig.foreignKey) || []
 
   return (
     <div className={\`relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
@@ -587,30 +596,97 @@ export function DetailRelationSection({
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-1.5 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900/50">
-                          {itemChildRecords.map((subItem, sIdx) => {
-                            const subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
-                            const subQtd = subItem.quantidade !== undefined && subItem.quantidade !== null ? \`Qtd: \${subItem.quantidade}\` : ''
-                            const subPreco = subItem.preco_unitario !== undefined && subItem.preco_unitario !== null ? \`R$ \${Number(subItem.preco_unitario).toFixed(2)}\` : subItem.valor_unitario ? \`R$ \${Number(subItem.valor_unitario).toFixed(2)}\` : subItem.subtotal ? \`R$ \${Number(subItem.subtotal).toFixed(2)}\` : ''
-                            const subExtra = [subQtd, subPreco].filter(Boolean).join(' \u2022 ')
+                        <div className="space-y-3">
+                          {itemChildRecords.map((subItem: any, sIdx: number) => {
+                            const subKey = \`\${item.id || idx}-\${sIdx}\`
+                            const isSubExpanded = !!expandedSubItems[subKey]
+
+                            let subTitle = ''
+                            for (const sf of subFields) {
+                              const val = subItem[sf.dbColumn]
+                              if (sf.config?.options && sf.config.options.length > 0) {
+                                const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
+                                if (opt?.label) {
+                                  subTitle = opt.label
+                                  break
+                                }
+                              }
+                            }
+                            if (!subTitle) {
+                              subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
+                            }
 
                             return (
-                              <div key={sIdx} className="py-2.5 px-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs shadow-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                              <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
+                                <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
+                                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
                                     {subTitle}
                                   </span>
-                                  {subExtra && (
-                                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
-                                      {subExtra}
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSubItem(subKey)}
+                                      className="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors shadow-sm"
+                                    >
+                                      {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    </button>
+                                    <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
-                                  <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
-                                </div>
+
+                                {isSubExpanded && subFields.length > 0 && (
+                                  <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
+                                    {subFields.map((sf: any) => {
+                                      const val = subItem[sf.dbColumn]
+                                      const dt = (sf.dataType || '').toLowerCase()
+                                      const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+                                      const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+                                      const isSelect = sf.config?.options && sf.config.options.length > 0
+
+                                      if (isSelect) {
+                                        return (
+                                          <div key={sf.dbColumn} className="space-y-1.5">
+                                            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                                              {sf.label}
+                                            </label>
+                                            <select
+                                              name={sf.dbColumn}
+                                              defaultValue={String(val ?? '')}
+                                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                                            >
+                                              <option value="">Selecione...</option>
+                                              {sf.config.options.map((opt: any, oIdx: number) => {
+                                                const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
+                                                const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                                                return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                                              })}
+                                            </select>
+                                          </div>
+                                        )
+                                      }
+
+                                      return (
+                                        <div key={sf.dbColumn} className="space-y-1.5">
+                                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                                            {sf.label}
+                                          </label>
+                                          <input
+                                            name={sf.dbColumn}
+                                            type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                                            defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
+                                            placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
+                                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                          />
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             )
                           })}
@@ -777,32 +853,97 @@ export function DetailRelationSection({
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {(editingItem.items || editingItem.itens_pedido || []).map((sub: any, sIdx: number) => {
-                      const subTitle = String(sub.produto_nome || sub.produto || sub.nome || sub.descricao || sub.name || \`Item #\${sIdx + 1}\`)
-                      const subQtd = sub.quantidade !== undefined && sub.quantidade !== null ? \`Qtd: \${sub.quantidade}\` : ''
-                      const subPreco = sub.preco_unitario !== undefined && sub.preco_unitario !== null ? \`R$ \${Number(sub.preco_unitario).toFixed(2)}\` : sub.valor_unitario ? \`R$ \${Number(sub.valor_unitario).toFixed(2)}\` : sub.subtotal ? \`R$ \${Number(sub.subtotal).toFixed(2)}\` : ''
-                      const subExtra = [subQtd, subPreco].filter(Boolean).join(' • ')
+                      const subKey = \`modal-\${editingItem.id || 'edit'}-\${sIdx}\`
+                      const isSubExpanded = !!expandedSubItems[subKey]
+
+                      let subTitle = ''
+                      for (const sf of subFields) {
+                        const val = sub[sf.dbColumn]
+                        if (sf.config?.options && sf.config.options.length > 0) {
+                          const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
+                          if (opt?.label) {
+                            subTitle = opt.label
+                            break
+                          }
+                        }
+                      }
+                      if (!subTitle) {
+                        subTitle = String(sub.produto_nome || sub.produto || sub.nome || sub.descricao || sub.name || \`Item #\${sIdx + 1}\`)
+                      }
 
                       return (
-                        <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
-                          <div className="py-2.5 px-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                                {subTitle}
-                              </span>
-                              {subExtra && (
-                                <span className="text-[11px] text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
-                                  {subExtra}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
-                              <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                        <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
+                          <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
+                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                              {subTitle}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => toggleSubItem(subKey)}
+                                className="w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors shadow-sm"
+                              >
+                                {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                              <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
+
+                          {isSubExpanded && subFields.length > 0 && (
+                            <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
+                              {subFields.map((sf: any) => {
+                                const val = sub[sf.dbColumn]
+                                const dt = (sf.dataType || '').toLowerCase()
+                                const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+                                const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+                                const isSelect = sf.config?.options && sf.config.options.length > 0
+
+                                if (isSelect) {
+                                  return (
+                                    <div key={sf.dbColumn} className="space-y-1.5">
+                                      <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                                        {sf.label}
+                                      </label>
+                                      <select
+                                        name={sf.dbColumn}
+                                        defaultValue={String(val ?? '')}
+                                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                                      >
+                                        <option value="">Selecione...</option>
+                                        {sf.config.options.map((opt: any, oIdx: number) => {
+                                          const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
+                                          const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                                          return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                                        })}
+                                      </select>
+                                    </div>
+                                  )
+                                }
+
+                                return (
+                                  <div key={sf.dbColumn} className="space-y-1.5">
+                                    <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                                      {sf.label}
+                                    </label>
+                                    <input
+                                      name={sf.dbColumn}
+                                      type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                                      defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
+                                      placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                    />
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       )
                     })}

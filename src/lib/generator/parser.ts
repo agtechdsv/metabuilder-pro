@@ -713,16 +713,96 @@ function resolveRelationTabs(
     const subRelations = rawRelations.filter((r: any) => r.to_model_id === childModel.id)
     const subDetails: SubRelationDetail[] = subRelations.map((sr: any) => {
       const subModel = allModels.find((m: any) => m.id === sr.from_model_id)
+      if (!subModel) return null
       const subFkField = allFields.find((f: any) => f.id === sr.from_field_id)
       const subFkCol = subFkField?.db_column_name || `${childModel.db_table_name}_id`
-      if (subModel) {
-        return {
-          relatedTable: subModel.db_table_name,
-          relatedModelName: toPascalCase(subModel.db_table_name),
-          foreignKey: subFkCol,
-        }
+      const subModelName = toPascalCase(subModel.db_table_name)
+      const subView = allViews.find(
+        (v: any) => v.model_id === subModel.id && v.logic_type !== 'personalizado'
+      )
+
+      const subModelColumnNames = new Set(
+        allFields.filter((f: any) => f.model_id === subModel.id).map((f: any) => f.db_column_name)
+      )
+
+      let subGridFields: ResolvedField[] = []
+      let subFormFields: ResolvedField[] = []
+      if (subView) {
+        const resolved = resolveViewZones(subView, allModels, allFields, byocMap)
+        subGridFields = resolved.gridFields.filter(f => {
+          const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+          return subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+        })
+        subFormFields = resolved.formFields.filter(f => {
+          const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+          return subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+        })
+        if (subFormFields.length === 0) subFormFields = subGridFields
+      } else {
+        const subFields = allFields.filter((f: any) => f.model_id === subModel.id)
+        subGridFields = subFields.map((f: any): ResolvedField => ({
+          id: f.id,
+          dbColumn: f.db_column_name,
+          sqlExpression: f.db_column_name,
+          label: f.display_name || f.db_column_name,
+          dataType: f.data_type || 'varchar',
+          isPrimaryKey: f.is_primary_key || false,
+          isSortable: f.is_sortable || false,
+          isVirtual: false,
+          isByoc: false,
+          config: {},
+        }))
+        subFormFields = subGridFields
       }
-      return null
+
+      const enrichSubFields = (fieldsList: ResolvedField[]) => {
+        return fieldsList.map(f => {
+          const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+          const fkRel = rawRelations.find((r: any) =>
+            r.from_model_id === subModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
+          )
+          let targetModel = fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null
+          if (!targetModel) {
+            targetModel = allModels.find((m: any) =>
+              m.id !== subModel.id &&
+              (colOnly === m.db_table_name ||
+               colOnly === m.db_table_name.slice(0, -1) ||
+               colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
+               colOnly === `${m.db_table_name}_id` ||
+               colOnly === `id_${m.db_table_name}` ||
+               colOnly === `id_${m.db_table_name.slice(0, -1)}`)
+            )
+          }
+          if (targetModel) {
+            return {
+              ...f,
+              config: {
+                ...f.config,
+                relation: {
+                  targetTable: targetModel.db_table_name,
+                  targetModel: toPascalCase(targetModel.db_table_name),
+                  displayColumn: 'nome',
+                  valueColumn: 'id',
+                }
+              }
+            }
+          }
+          return f
+        })
+      }
+
+      subGridFields = enrichSubFields(subGridFields)
+      subFormFields = enrichSubFields(subFormFields)
+
+      return {
+        relatedModelId: subModel.id,
+        relatedTable: subModel.db_table_name,
+        relatedModelName: subModelName,
+        foreignKey: subFkCol,
+        label: subModel.display_name || subModelName,
+        gridFields: subGridFields,
+        formFields: subFormFields,
+      }
     }).filter(Boolean) as SubRelationDetail[]
 
     tabs.push({

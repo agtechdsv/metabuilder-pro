@@ -490,6 +490,16 @@ function generateDetailPage(route: RouteNode): string {
           lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
         }
       })
+      if (tab.subDetails) {
+        tab.subDetails.forEach(sub => {
+          const allSubFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
+          allSubFields.forEach(f => {
+            if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
+              lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+            }
+          })
+        })
+      }
     })
   }
 
@@ -543,6 +553,23 @@ function generateDetailPage(route: RouteNode): string {
           config: f.config,
         })))
 
+        const subDetailsJson = tab.subDetails && tab.subDetails.length > 0
+          ? JSON.stringify(tab.subDetails.map(sub => ({
+              relatedTable: sub.relatedTable,
+              relatedModelName: sub.relatedModelName,
+              foreignKey: sub.foreignKey,
+              label: sub.label,
+              fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
+                id: f.id,
+                label: f.label,
+                dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+                dataType: f.dataType,
+                isPrimaryKey: f.isPrimaryKey,
+                config: f.config,
+              }))
+            })))
+          : '[]'
+
         const lookupMappingCode = Array.from(lookupModels.entries()).map(([tTable]) => [
           `                if (targetTable === '${tTable}') {`,
           `                  return {`,
@@ -571,6 +598,14 @@ function generateDetailPage(route: RouteNode): string {
           lookupMappingCode,
           `                return f`,
           `              })}`,
+          `              subDetails={(${subDetailsJson} as any[]).map((sub: any) => ({`,
+          `                ...sub`,
+          `                fields: (sub.fields || []).map((f: any) => {`,
+          `                  const targetTable = f.config?.relation?.targetTable`,
+          lookupMappingCode,
+          `                  return f`,
+          `                })`,
+          `              }))}`,
           `              createAction={create${tab.relatedModelName}}`,
           `              updateAction={update${tab.relatedModelName}}`,
           `              deleteAction={delete${tab.relatedModelName}}`,
