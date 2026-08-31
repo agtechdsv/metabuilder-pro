@@ -165,7 +165,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
           </div>`
   }
 
-  if (dt === 'date') {
+  const isDate = dt === 'date' || col.toLowerCase().includes('data') || col.toLowerCase().includes('date')
+  if (isDate) {
     return `
           <div className="space-y-2">
             <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
@@ -175,7 +176,23 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
               type="date"
               ${required ? 'required' : ''}
               ${readOnly ? 'readOnly disabled' : ''}
-              defaultValue={isEdit && data?.${col} ? String(data.${col}).slice(0, 10) : ''}
+              defaultValue={isEdit ? formatDateForInput(data?.${col}) : ''}
+              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+            />
+          </div>`
+  }
+
+  if (dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') {
+    return `
+          <div className="space-y-2">
+            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+            <input
+              id="${col}"
+              name="${col}"
+              type="datetime-local"
+              ${required ? 'required' : ''}
+              ${readOnly ? 'readOnly disabled' : ''}
+              defaultValue={isEdit ? formatDatetimeForInput(data?.${col}) : ''}
               className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
             />
           </div>`
@@ -199,9 +216,7 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
           </div>`
   }
 
-  const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number'
-    : (dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') ? 'datetime-local'
-    : 'text'
+  const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number' : 'text'
 
   return `
           <div className="space-y-2">
@@ -588,6 +603,37 @@ import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
 ${relationImports}
 import { ArrowLeft, Save, Plus, Pencil } from 'lucide-react'
 
+function formatDateForInput(v: any) {
+  if (!v) return ''
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 10)
+}
+
+function formatDatetimeForInput(v: any) {
+  if (!v) return ''
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}T\${hours}:\${minutes}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 16)
+}
+
 export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
 
 export default async function ${mn}DetailPage({
@@ -671,6 +717,37 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { create${mn} } from '@/app/actions/${mnLower}'
 import { ArrowLeft, Save } from 'lucide-react'
+
+function formatDateForInput(v: any) {
+  if (!v) return ''
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 10)
+}
+
+function formatDatetimeForInput(v: any) {
+  if (!v) return ''
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}T\${hours}:\${minutes}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 16)
+}
 
 export const metadata: Metadata = { title: 'Novo — ${route.title}' }
 
