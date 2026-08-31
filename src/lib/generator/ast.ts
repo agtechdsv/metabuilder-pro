@@ -110,6 +110,12 @@ export interface ViewButton {
 // Relation Tabs — abas de detalhe (relacionamentos 1:N)
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface SubRelationDetail {
+  relatedTable: string         // ex: 'itens_pedido'
+  relatedModelName: string     // ex: 'ItensPedido'
+  foreignKey: string           // ex: 'pedido_id'
+}
+
 export interface RelationTab {
   relatedModelId: string
   relatedTable: string         // nome real da tabela filha no banco
@@ -120,6 +126,7 @@ export interface RelationTab {
   label: string                // label da aba (nome do modelo relacionado)
   gridFields: ResolvedField[]  // campos da tabela filha visíveis na aba
   formFields?: ResolvedField[] // campos do formulário da tabela filha
+  subDetails?: SubRelationDetail[] // sub-detalhes (ex: itens_pedido para pedidos)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

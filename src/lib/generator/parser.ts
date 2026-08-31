@@ -11,6 +11,7 @@ import {
   ResolvedFieldConfig,
   ViewButton,
   RelationTab,
+  SubRelationDetail,
   NavigationItem,
   AuthConfig,
   ButtonStyle,
@@ -625,16 +626,26 @@ function resolveRelationTabs(
       (v: any) => v.model_id === rel.from_model_id && v.logic_type !== 'personalizado'
     )
 
+    const childModelColumnNames = new Set(
+      allFields.filter((f: any) => f.model_id === childModel.id).map((f: any) => f.db_column_name)
+    )
+
     let childGridFields: ResolvedField[] = []
     let childFormFields: ResolvedField[] = []
     if (childView) {
       const resolved = resolveViewZones(childView, allModels, allFields, byocMap)
-      // Para aba de detalhe, inclui apenas campos que pertencem à tabela filha (remove joins estranhos como produtos.categoria)
+      // Para aba de detalhe, inclui apenas colunas que realmente pertencem ao modelo filho
       childGridFields = resolved.gridFields
-        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(childModel.db_table_name + '.'))
+        .filter(f => {
+          const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+          return childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+        })
         .slice(0, 6)
       childFormFields = resolved.formFields
-        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(childModel.db_table_name + '.'))
+        .filter(f => {
+          const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+          return childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+        })
       if (childFormFields.length === 0) {
         childFormFields = childGridFields
       }
@@ -698,6 +709,22 @@ function resolveRelationTabs(
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 
+    // Identifica sub-detalhes (relações 1:N filhas deste modelo, ex: pedidos -> itens_pedido)
+    const subRelations = rawRelations.filter((r: any) => r.to_model_id === childModel.id)
+    const subDetails: SubRelationDetail[] = subRelations.map((sr: any) => {
+      const subModel = allModels.find((m: any) => m.id === sr.from_model_id)
+      const subFkField = allFields.find((f: any) => f.id === sr.from_field_id)
+      const subFkCol = subFkField?.db_column_name || `${childModel.db_table_name}_id`
+      if (subModel) {
+        return {
+          relatedTable: subModel.db_table_name,
+          relatedModelName: toPascalCase(subModel.db_table_name),
+          foreignKey: subFkCol,
+        }
+      }
+      return null
+    }).filter(Boolean) as SubRelationDetail[]
+
     tabs.push({
       relatedModelId: rel.from_model_id,
       relatedTable: childModel.db_table_name,
@@ -708,6 +735,7 @@ function resolveRelationTabs(
       label: tabLabel,
       gridFields: childGridFields,
       formFields: childFormFields,
+      subDetails,
     })
   }
 

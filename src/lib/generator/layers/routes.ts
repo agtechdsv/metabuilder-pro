@@ -501,10 +501,30 @@ function generateDetailPage(route: RouteNode): string {
     `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
   ).join('')
 
+  const subDetailModels = new Map<string, string>()
+  if (hasRelationTabs) {
+    route.relationTabs.forEach(tab => {
+      if (tab.subDetails) {
+        tab.subDetails.forEach(sub => {
+          subDetailModels.set(sub.relatedTable, sub.relatedModelName)
+        })
+      }
+    })
+  }
+
+  const subDetailImports = Array.from(subDetailModels.entries()).map(([_, modelName]) =>
+    `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`
+  ).join('\n')
+
+  const subDetailQueries = Array.from(subDetailModels.entries()).map(([table, modelName]) =>
+    `  const ${table}AllList = await get${modelName}List().catch(() => [])\n`
+  ).join('')
+
   const relationImports = hasRelationTabs
     ? [
         `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
         lookupImports,
+        subDetailImports,
         ...route.relationTabs.map(t => `import { get${t.relatedModelName}ByField, create${t.relatedModelName}, update${t.relatedModelName}, delete${t.relatedModelName} } from '@/app/actions/${t.relatedModelName.toLowerCase()}'`),
       ].filter(Boolean).join('\n')
     : ''
@@ -575,7 +595,25 @@ function generateDetailPage(route: RouteNode): string {
   const relationQueries = hasRelationTabs
     ? [
         lookupQueries,
-        ...route.relationTabs.map((tab) => `  const ${tab.relatedTable}List = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`)
+        subDetailQueries,
+        ...route.relationTabs.map((tab) => {
+          const rawQuery = `  const ${tab.relatedTable}ListRaw = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`
+          if (tab.subDetails && tab.subDetails.length > 0) {
+            const sub = tab.subDetails[0]
+            return (
+              rawQuery +
+              `  const ${tab.relatedTable}List = (${tab.relatedTable}ListRaw || []).map((row: any) => {\n` +
+              `    const rowId = String(row.id || row.codigo || '')\n` +
+              `    const childItems = (${sub.relatedTable}AllList || []).filter((subRow: any) => {\n` +
+              `      const fkVal = String(subRow['${sub.foreignKey}'] || subRow['id_${tab.relatedTable}'] || subRow['${tab.relatedTable}_id'] || subRow['${tab.relatedTable}'] || '')\n` +
+              `      return fkVal === rowId\n` +
+              `    })\n` +
+              `    return { ...row, items: childItems, itens_pedido: childItems, _details: childItems }\n` +
+              `  })\n`
+            )
+          }
+          return rawQuery + `  const ${tab.relatedTable}List = ${tab.relatedTable}ListRaw || []\n`
+        })
       ].filter(Boolean).join('')
     : ''
 

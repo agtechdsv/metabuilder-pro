@@ -588,17 +588,32 @@ export function DetailRelationSection({
                         </div>
                       ) : (
                         <div className="space-y-1.5 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900/50">
-                          {itemChildRecords.map((subItem, sIdx) => (
-                            <div key={sIdx} className="py-2 px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs">
-                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">
-                                {String(subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
-                                <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                          {itemChildRecords.map((subItem, sIdx) => {
+                            const subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
+                            const subQtd = subItem.quantidade !== undefined && subItem.quantidade !== null ? \`Qtd: \${subItem.quantidade}\` : ''
+                            const subPreco = subItem.preco_unitario !== undefined && subItem.preco_unitario !== null ? \`R$ \${Number(subItem.preco_unitario).toFixed(2)}\` : subItem.valor_unitario ? \`R$ \${Number(subItem.valor_unitario).toFixed(2)}\` : subItem.subtotal ? \`R$ \${Number(subItem.subtotal).toFixed(2)}\` : ''
+                            const subExtra = [subQtd, subPreco].filter(Boolean).join(' \u2022 ')
+
+                            return (
+                              <div key={sIdx} className="py-2.5 px-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs shadow-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                                    {subTitle}
+                                  </span>
+                                  {subExtra && (
+                                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
+                                      {subExtra}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
+                                  <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -763,19 +778,34 @@ export function DetailRelationSection({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {(editingItem.items || editingItem.itens_pedido || []).map((sub: any, sIdx: number) => (
-                      <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
-                        <div className="py-2.5 px-4 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                            {String(sub.produto || sub.nome || sub.descricao || \`Item #\${sIdx + 1}\`)}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
-                            <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                    {(editingItem.items || editingItem.itens_pedido || []).map((sub: any, sIdx: number) => {
+                      const subTitle = String(sub.produto_nome || sub.produto || sub.nome || sub.descricao || sub.name || \`Item #\${sIdx + 1}\`)
+                      const subQtd = sub.quantidade !== undefined && sub.quantidade !== null ? \`Qtd: \${sub.quantidade}\` : ''
+                      const subPreco = sub.preco_unitario !== undefined && sub.preco_unitario !== null ? \`R$ \${Number(sub.preco_unitario).toFixed(2)}\` : sub.valor_unitario ? \`R$ \${Number(sub.valor_unitario).toFixed(2)}\` : sub.subtotal ? \`R$ \${Number(sub.subtotal).toFixed(2)}\` : ''
+                      const subExtra = [subQtd, subPreco].filter(Boolean).join(' • ')
+
+                      return (
+                        <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
+                          <div className="py-2.5 px-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                                {subTitle}
+                              </span>
+                              {subExtra && (
+                                <span className="text-[11px] text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md font-mono">
+                                  {subExtra}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
+                              <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
