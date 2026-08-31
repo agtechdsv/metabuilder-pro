@@ -599,7 +599,7 @@ function generateDetailPage(route: RouteNode): string {
           `                return f`,
           `              })}`,
           `              subDetails={(${subDetailsJson} as any[]).map((sub: any) => ({`,
-          `                ...sub`,
+          `                ...sub,`,
           `                fields: (sub.fields || []).map((f: any) => {`,
           `                  const targetTable = f.config?.relation?.targetTable`,
           lookupMappingCode,
