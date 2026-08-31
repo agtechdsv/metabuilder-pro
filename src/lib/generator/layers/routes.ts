@@ -276,7 +276,7 @@ function generateListPage(route: RouteNode): string {
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 import { delete${mn} } from '@/app/actions/${mnLower}'
-import { Plus, Pencil, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Eye, ChevronLeft, ChevronRight, Receipt } from 'lucide-react'
 import { DeleteButton } from '@/components/ui/delete-button'
 
 export const metadata: Metadata = { title: '${route.title}' }
@@ -378,10 +378,10 @@ ${(() => {
     if (b.actionType === 'delete') {
       return `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`
     }
-    const iconContent = b.icon
-      ? `<span className="text-sm font-black">${b.icon}</span>`
-      : `<svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>`
-    return `                      <button type="button" className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}">${iconContent}</button>`
+    if (b.linkTarget) {
+      return `                      <Link href={\`${b.linkTarget}?${mnLower}_id=\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Receipt className="w-4 h-4" /></Link>`
+    }
+    return `                      <button type="button" className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Receipt className="w-4 h-4" /></button>`
   }).join('\n')
 })()}
                     </div>

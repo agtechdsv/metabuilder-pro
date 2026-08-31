@@ -16,6 +16,7 @@ import {
   ButtonStyle,
   ButtonActionType,
 } from './ast'
+import { getActionContexts } from '@/lib/customActionsHelper'
 
 /**
  * parser.ts
@@ -468,6 +469,83 @@ function parseButtons(buttonsConfig: any[]): ViewButton[] {
     })
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Actions — converte layout_config.custom_actions em ViewButton[]
+// Respeita os contextos de exibição configurados pelo dev (row, global_top, master)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function parseCustomActions(customActions: any[], allViews: any[] = []): ViewButton[] {
+  if (!Array.isArray(customActions)) return []
+  const buttons: ViewButton[] = []
+
+  for (const act of customActions) {
+    if (!act || act.enabled === false) continue
+
+    const label = act.label || act.name || 'Ação Customizada'
+    const icon = act.icon || act.custom_icon || 'Receipt'
+
+    // Resolve URL / caso de uso de destino se o trigger for use_case
+    let linkTarget = act.linkTarget || act.url || act.target_url
+    if (!linkTarget && act.target_use_case) {
+      const targetView = allViews.find(
+        (v: any) => v.slug === act.target_use_case || v.id === act.target_use_case || v.name?.toLowerCase() === String(act.target_use_case).toLowerCase()
+      )
+      const targetSlug = targetView?.slug || act.target_use_case
+      linkTarget = `/${targetSlug}`
+    }
+
+    const searchContexts = getActionContexts(act, 'search')
+    const masterContexts = getActionContexts(act, 'master')
+
+    // 1. Linha do Grid de Pesquisa
+    if (searchContexts.includes('row')) {
+      buttons.push({
+        id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}`,
+        label,
+        icon,
+        style: (act.style || 'primary') as ButtonStyle,
+        actionType: 'custom',
+        placement: 'row',
+        confirmationMessage: act.confirmation_message,
+        customLogic: act.custom_logic || act.logic || act.trigger_type,
+        linkTarget,
+      })
+    }
+
+    // 2. Cabeçalho / Topo Global da Pesquisa
+    if (searchContexts.includes('global_top')) {
+      buttons.push({
+        id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}_top`,
+        label,
+        icon,
+        style: (act.style || 'primary') as ButtonStyle,
+        actionType: 'custom',
+        placement: 'header',
+        confirmationMessage: act.confirmation_message,
+        customLogic: act.custom_logic || act.logic || act.trigger_type,
+        linkTarget,
+      })
+    }
+
+    // 3. Topo do Formulário Mestre
+    if (masterContexts.includes('global_top') || masterContexts.includes('field_group')) {
+      buttons.push({
+        id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}_form`,
+        label,
+        icon,
+        style: (act.style || 'primary') as ButtonStyle,
+        actionType: 'custom',
+        placement: 'form',
+        confirmationMessage: act.confirmation_message,
+        customLogic: act.custom_logic || act.logic || act.trigger_type,
+        linkTarget,
+      })
+    }
+  }
+
+  return buttons
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Relation Tabs — resolve abas de detalhe (relações 1:N)
@@ -634,8 +712,10 @@ export function parseMetaBuilderJSON(
       byocMap
     )
 
-    // Buttons
-    const buttons: ViewButton[] = parseButtons(resolvedView.buttons_config || [])
+    // Buttons (padrão de interface + custom_actions configuradas pelo dev)
+    const stdButtons: ViewButton[] = parseButtons(resolvedView.buttons_config || [])
+    const customButtons: ViewButton[] = parseCustomActions(resolvedView.layout_config?.custom_actions || [], rawViews)
+    const buttons: ViewButton[] = [...stdButtons, ...customButtons]
 
     // Relation Tabs
     const relationTabs: RelationTab[] = resolveRelationTabs(
