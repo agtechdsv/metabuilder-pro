@@ -190,8 +190,21 @@ export function DeleteButton() {
 
   files.set('components/DetailRelationSection.tsx', `'use client'
 
-import React, { useState } from 'react'
-import { ChevronDown, ChevronUp, Pencil, Trash2, Plus, Maximize2, Minimize2, X, Save, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import {
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Trash2,
+  Plus,
+  Maximize2,
+  Minimize2,
+  X,
+  Save,
+  AlertTriangle,
+  ExternalLink,
+  Layers
+} from 'lucide-react'
 
 export interface DetailFieldConfig {
   id: string
@@ -224,21 +237,36 @@ export function DetailRelationSection({
   updateAction,
   deleteAction,
 }: DetailRelationSectionProps) {
+  const [localItems, setLocalItems] = useState<any[]>(items)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalActiveTab, setModalActiveTab] = useState<'master' | 'items'>('master')
   const [editingItem, setEditingItem] = useState<any | null>(null)
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const allExpanded = items.length > 0 && items.every((_, idx) => expandedRows[idx])
+  // Sub-itens mock/dinâmicos para a aba "Itens do Pedido"
+  const [expandedSubItems, setExpandedSubItems] = useState<Record<number, boolean>>({})
+  const defaultSubItems = [
+    { id: 1, produto: 'Servidor Enterprise Rack', quantidade: 4, preco_unitario: '12.000,04', total_rs: '48.000,16' },
+    { id: 2, produto: 'Switch de Rede 48-portas', quantidade: 2, preco_unitario: '8.500,00', total_rs: '17.000,00' },
+    { id: 3, produto: 'Suporte Premium 24/7', quantidade: 1, preco_unitario: '68.501,83', total_rs: '68.501,83' },
+  ]
+  const [subItems, setSubItems] = useState<any[]>(defaultSubItems)
+
+  useEffect(() => {
+    setLocalItems(items)
+  }, [items])
+
+  const allExpanded = localItems.length > 0 && localItems.every((_, idx) => expandedRows[idx])
 
   const toggleExpandAll = () => {
     if (allExpanded) {
       setExpandedRows({})
     } else {
       const next: Record<string, boolean> = {}
-      items.forEach((_, idx) => { next[idx] = true })
+      localItems.forEach((_, idx) => { next[idx] = true })
       setExpandedRows(next)
     }
   }
@@ -247,13 +275,27 @@ export function DetailRelationSection({
     setExpandedRows(prev => ({ ...prev, [idx]: !prev[idx] }))
   }
 
-  const handleOpenAdd = () => {
+  const handleAddInline = () => {
+    const tempItem: any = {
+      _isNew: true,
+      id: \`temp-\${Date.now()}\`,
+    }
+    editableFields.forEach(f => {
+      tempItem[f.dbColumn] = ''
+    })
+    setLocalItems([tempItem, ...localItems])
+    setExpandedRows(prev => ({ ...prev, 0: true }))
+  }
+
+  const handleOpenAddModal = () => {
     setEditingItem(null)
+    setModalActiveTab('master')
     setIsModalOpen(true)
   }
 
-  const handleOpenEdit = (item: any) => {
+  const handleOpenEditModal = (item: any) => {
     setEditingItem(item)
+    setModalActiveTab('master')
     setIsModalOpen(true)
   }
 
@@ -265,7 +307,7 @@ export function DetailRelationSection({
       if (!formData.get(foreignKey)) {
         formData.set(foreignKey, parentId)
       }
-      if (editingItem && (editingItem.id || editingItem.codigo)) {
+      if (editingItem && (editingItem.id || editingItem.codigo) && !String(editingItem.id).startsWith('temp-')) {
         await updateAction(editingItem.id || editingItem.codigo, formData)
       } else {
         await createAction(formData)
@@ -283,7 +325,11 @@ export function DetailRelationSection({
     if (!deletingItem) return
     setIsSubmitting(true)
     try {
-      await deleteAction(deletingItem.id || deletingItem.codigo)
+      if (String(deletingItem.id).startsWith('temp-')) {
+        setLocalItems(localItems.filter(i => i.id !== deletingItem.id))
+      } else {
+        await deleteAction(deletingItem.id || deletingItem.codigo)
+      }
       setDeletingItem(null)
     } catch (err) {
       console.error('Erro ao excluir:', err)
@@ -293,6 +339,8 @@ export function DetailRelationSection({
   }
 
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
+  const isPedido = relatedTable.toLowerCase().includes('pedido')
+  const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
 
   return (
     <div className={\`relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
@@ -300,10 +348,10 @@ export function DetailRelationSection({
       <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
         <div>
           <h3 className="text-sm font-bold text-neutral-800 dark:text-neutral-200 capitalize">{label}</h3>
-          <p className="text-xs text-neutral-400">Total de {items.length} {items.length === 1 ? 'registro' : 'registros'}</p>
+          <p className="text-xs text-neutral-400">Total de {localItems.length} {localItems.length === 1 ? 'registro' : 'registros'}</p>
         </div>
 
-        {/* Toolbar no Topo à Direita */}
+        {/* Toolbar no Topo à Direita: Expandir/Recolher, Adicionar Inline, Abrir Modal */}
         <div className="flex items-center gap-1 bg-neutral-100/80 dark:bg-neutral-800/60 p-1 rounded-xl border border-neutral-200/60 dark:border-neutral-700/50">
           <button
             type="button"
@@ -315,11 +363,19 @@ export function DetailRelationSection({
           </button>
           <button
             type="button"
-            onClick={handleOpenAdd}
+            onClick={handleAddInline}
             className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
-            title={\`Adicionar \${label}\`}
+            title={\`Adicionar \${label} (Inline)\`}
           >
             <Plus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenAddModal}
+            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
+            title="Abrir Modal"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -333,22 +389,31 @@ export function DetailRelationSection({
       </div>
 
       {/* Lista de Registros Filhos */}
-      {items.length === 0 ? (
+      {localItems.length === 0 ? (
         <div className="bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center">
           <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">
             Nenhum registro de <strong>{label}</strong> vinculado a este registro.
           </p>
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm mt-2"
-          >
-            <Plus className="w-3.5 h-3.5" /> Adicionar Primeiro {label}
-          </button>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <button
+              type="button"
+              onClick={handleAddInline}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" /> Adicionar na Lista
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenAddModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-xs hover:bg-neutral-50 transition-colors shadow-sm"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Abrir Modal
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-1.5">
-          {items.map((item, idx) => {
+          {localItems.map((item, idx) => {
             const isExpanded = !!expandedRows[idx]
             const itemId = String(item.id || item.codigo || \`idx-\${idx}\`)
 
@@ -366,7 +431,7 @@ export function DetailRelationSection({
                     </span>
                   </div>
 
-                  {/* Ações da Linha: Expandir, Editar, Excluir */}
+                  {/* Ações da Linha: Expandir, Editar na Modal, Excluir */}
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -382,9 +447,9 @@ export function DetailRelationSection({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleOpenEdit(item)}
+                      onClick={() => handleOpenEditModal(item)}
                       className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
-                      title="Editar"
+                      title="Editar na Modal (Mestre/Detalhe)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
@@ -409,17 +474,16 @@ export function DetailRelationSection({
                             {f.label}
                           </label>
                           <input
-                            readOnly
-                            disabled
-                            value={String(item[f.dbColumn] ?? item[f.dbColumn.replace(/\\./g, '_')] ?? '')}
+                            readOnly={!item._isNew}
+                            defaultValue={String(item[f.dbColumn] ?? item[f.dbColumn.replace(/\\./g, '_')] ?? '')}
                             className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3.5 py-2 text-xs text-neutral-800 dark:text-neutral-200 outline-none"
                           />
                         </div>
                       ))}
                     </div>
 
-                    {/* Sub-detalhes (ex: ITENS DO PEDIDO) */}
-                    {relatedTable.toLowerCase().includes('pedido') && (
+                    {/* Sub-detalhes inline (ex: ITENS DO PEDIDO) */}
+                    {isPedido && (
                       <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -436,12 +500,12 @@ export function DetailRelationSection({
                         </div>
 
                         <div className="space-y-1.5 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900/50">
-                          {['Servidor Enterprise Rack', 'Switch de Rede 48-portas', 'Suporte Premium 24/7'].map((subItem, sIdx) => (
+                          {subItems.map((subItem, sIdx) => (
                             <div key={sIdx} className="py-2 px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs">
-                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">{subItem}</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">{subItem.produto}</span>
                               <div className="flex items-center gap-1">
-                                <span className="p-1 text-blue-500"><Pencil className="w-3 h-3" /></span>
-                                <span className="p-1 text-red-400"><Trash2 className="w-3 h-3" /></span>
+                                <span className="p-1 text-blue-500 hover:bg-blue-50 rounded"><Pencil className="w-3 h-3" /></span>
+                                <span className="p-1 text-red-400 hover:bg-red-50 rounded"><Trash2 className="w-3 h-3" /></span>
                               </div>
                             </div>
                           ))}
@@ -456,20 +520,23 @@ export function DetailRelationSection({
         </div>
       )}
 
-      {/* Modal de Criação / Edição */}
+      {/* Modal Mestre-Detalhe de Criação / Edição (com Abas Pedidos / Itens do Pedido) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
-            <div className="flex items-center justify-between">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+            {/* Header da Modal */}
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
-                  <Pencil className="w-5 h-5" />
+                  {editingItem ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                    {editingItem ? \`Editar \${label}\` : \`Adicionar \${label}\`}
+                    {editingItem ? 'Editar Registro' : 'Novo Registro'}
                   </h3>
-                  <p className="text-xs text-neutral-400">Preencha os campos abaixo</p>
+                  <p className="text-xs text-neutral-400">
+                    {editingItem ? \`Registro \${editingItem.id || editingItem.codigo || ''}\` : 'Novo Item'}
+                  </p>
                 </div>
               </div>
               <button
@@ -481,47 +548,251 @@ export function DetailRelationSection({
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
-              <input type="hidden" name={foreignKey} value={parentId} />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto px-1 py-1">
-                {editableFields.map(f => {
-                  const val = editingItem ? (editingItem[f.dbColumn] ?? editingItem[f.dbColumn.replace(/\\./g, '_')] ?? '') : ''
-                  const isDate = f.dataType === 'date' || f.dbColumn.includes('data')
-                  const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float'
-                  return (
-                    <div key={f.dbColumn} className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                        {f.label}
-                      </label>
-                      <input
-                        name={f.dbColumn}
-                        type={isDate ? 'date' : isNumber ? 'number' : 'text'}
-                        defaultValue={isDate && val ? String(val).slice(0, 10) : String(val)}
-                        className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                      />
-                    </div>
-                  )
-                })}
-              </div>
+            {/* Abas da Modal: [Mestre] e [Itens do Mestre] */}
+            <div className="flex items-center gap-6 border-b border-neutral-100 dark:border-neutral-800 pb-2">
+              <button
+                type="button"
+                onClick={() => setModalActiveTab('master')}
+                className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
+                  modalActiveTab === 'master'
+                    ? 'text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                }\`}
+              >
+                {label}
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalActiveTab('items')}
+                className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
+                  modalActiveTab === 'items'
+                    ? 'text-indigo-600 border-b-2 border-indigo-600'
+                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                }\`}
+              >
+                {isPedido ? 'Itens do Pedido' : \`Itens de \${detailSingular}\`}
+              </button>
+            </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
-                >
-                  <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
+            {/* Conteúdo da Aba Mestre na Modal */}
+            {modalActiveTab === 'master' && (
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                <input type="hidden" name={foreignKey} value={parentId} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
+                  {editableFields.map(f => {
+                    const val = editingItem ? (editingItem[f.dbColumn] ?? editingItem[f.dbColumn.replace(/\\./g, '_')] ?? '') : ''
+                    const isDate = f.dataType === 'date' || f.dbColumn.includes('data')
+                    const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float'
+                    const isStatus = f.dbColumn.toLowerCase().includes('status')
+                    const isFuncionario = f.dbColumn.toLowerCase().includes('func') || f.dbColumn.toLowerCase().includes('usuario')
+
+                    if (isStatus) {
+                      return (
+                        <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
+                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                            {f.label}
+                          </label>
+                          <select
+                            name={f.dbColumn}
+                            defaultValue={String(val || 'Pendente')}
+                            className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Processando">Processando</option>
+                            <option value="Entregue">Entregue</option>
+                            <option value="Cancelado">Cancelado</option>
+                          </select>
+                        </div>
+                      )
+                    }
+
+                    if (isFuncionario) {
+                      return (
+                        <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
+                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                            {f.label}
+                          </label>
+                          <select
+                            name={f.dbColumn}
+                            defaultValue={String(val || '')}
+                            className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="Beatriz Alves">Beatriz Alves</option>
+                            <option value="Carlos Silva">Carlos Silva</option>
+                            <option value="Ana Souza">Ana Souza</option>
+                          </select>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div key={f.dbColumn} className="space-y-1.5">
+                        <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                          {f.label}
+                        </label>
+                        <input
+                          name={f.dbColumn}
+                          type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                          placeholder={\`Digite o valor para \${f.label}...\`}
+                          defaultValue={isDate && val ? String(val).slice(0, 10) : String(val)}
+                          className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Conteúdo da Aba Itens do Pedido na Modal */}
+            {modalActiveTab === 'items' && (
+              <div className="space-y-4 max-h-[55vh] overflow-y-auto px-1">
+                <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                  <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
+                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allExp = subItems.every((_, i) => expandedSubItems[i])
+                        const next: Record<number, boolean> = {}
+                        if (!allExp) subItems.forEach((_, i) => { next[i] = true })
+                        setExpandedSubItems(next)
+                      }}
+                      className="p-1 text-neutral-400 hover:text-neutral-600"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubItems([...subItems, { id: Date.now(), produto: 'Novo Produto', quantidade: 1, preco_unitario: '0,00', total_rs: '0,00' }])
+                        setExpandedSubItems(prev => ({ ...prev, [subItems.length]: true }))
+                      }}
+                      className="p-1 text-neutral-400 hover:text-indigo-600"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                    <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3 h-3" /></button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {subItems.map((sub, sIdx) => {
+                    const isSubExpanded = !!expandedSubItems[sIdx]
+                    return (
+                      <div key={sub.id || sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
+                        <div className="py-2.5 px-4 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{sub.produto}</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSubItems(prev => ({ ...prev, [sIdx]: !prev[sIdx] }))}
+                              className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                            >
+                              <ChevronDown className={\`w-3.5 h-3.5 transition-transform duration-300 \${isSubExpanded ? 'rotate-180' : ''}\`} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSubItems(prev => ({ ...prev, [sIdx]: true }))}
+                              className="p-1 text-blue-500 hover:bg-blue-50 rounded"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSubItems(subItems.filter((_, i) => i !== sIdx))}
+                              className="p-1 text-red-400 hover:bg-red-50 rounded"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expansão dos campos do item do pedido */}
+                        {isSubExpanded && (
+                          <div className="p-4 bg-slate-50/70 dark:bg-neutral-950/60 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                            <div className="space-y-1">
+                              <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Produto</label>
+                              <select
+                                defaultValue={sub.produto}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
+                              >
+                                <option value="Servidor Enterprise Rack">Servidor Enterprise Rack</option>
+                                <option value="Switch de Rede 48-portas">Switch de Rede 48-portas</option>
+                                <option value="Suporte Premium 24/7">Suporte Premium 24/7</option>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Quantidade</label>
+                                <input
+                                  type="number"
+                                  defaultValue={sub.quantidade}
+                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Preço Unitário</label>
+                                <input
+                                  type="text"
+                                  defaultValue={sub.preco_unitario}
+                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Total R$</label>
+                                <input
+                                  type="text"
+                                  defaultValue={sub.total_rs}
+                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    <Save className="w-4 h-4" /> Salvar Alterações
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
