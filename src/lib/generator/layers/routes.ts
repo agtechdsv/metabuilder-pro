@@ -23,6 +23,12 @@ function toCamel(str: string): string {
     .replace(/^[A-Z]/, (m) => m.toLowerCase())
 }
 
+function toPascalCase(str: string): string {
+  return str
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_m, c) => c.toUpperCase())
+    .replace(/^[a-z]/, (m) => m.toUpperCase())
+}
+
 /**
  * Gera o trecho JSX para renderizar o valor de um campo na tabela de listagem.
  * Replica a lógica de renderização do Runtime ViewPageContent.
@@ -61,31 +67,89 @@ function renderGridCellValue(field: ResolvedField, varName = 'item'): string {
  * Gera o trecho JSX para um campo de formulário.
  * Replica o mapeamento de input do Runtime.
  */
-function renderFormField(field: ResolvedField, isEdit = false): string {
-  const col = field.dbColumn.replace(/\./g, '_')
-  const label = field.label || field.dbColumn
-  const required = field.config?.required || false
-  const placeholder = field.config?.placeholder || ''
-  const readOnly = field.config?.readOnly || field.isPrimaryKey
-  const dt = (field.dataType || '').toLowerCase()
+function getColSpanClass(field: ResolvedField): string {
+  const cfg = field.config || {}
+  const comp = cfg.component || {}
+  const layout = cfg.layout || {}
+  const layoutPadrao = cfg.layout_padrao || comp.layout_padrao || {}
 
-  if (field.isPrimaryKey && !isEdit) return '' // não renderiza PK no form de criação
+  const rawCols =
+    comp.columns ??
+    comp.col_span ??
+    comp.colunas ??
+    comp.ocupar_colunas ??
+    comp.span ??
+    layout.columns ??
+    layout.col_span ??
+    layoutPadrao.colunas ??
+    layoutPadrao.ocupar_colunas ??
+    cfg.columns ??
+    cfg.col_span ??
+    cfg.colSpan ??
+    cfg.colunas ??
+    cfg.ocupar_colunas
+
+  let numCols: number | null = null
+  if (typeof rawCols === 'number') {
+    numCols = rawCols
+  } else if (typeof rawCols === 'string') {
+    const match = rawCols.match(/\d+/)
+    if (match) numCols = parseInt(match[0], 10)
+  }
+
+  if (numCols === null) {
+    const w = String(cfg.width || comp.width || '').trim()
+    if (w === '100%' || w === '100' || w === 'w-full' || cfg.multiline || comp.type === 'textarea' || field.isByoc || field.isVirtual) {
+      numCols = 12
+    } else if (w === '50%' || w === '50' || w === 'w-1/2') {
+      numCols = 6
+    } else if (w === '33%' || w === '33.33%' || w === '33.33') {
+      numCols = 4
+    } else if (w === '25%' || w === '25' || w === 'w-1/4') {
+      numCols = 3
+    }
+  }
+
+  if (!numCols) {
+    numCols = 6
+  }
+
+  if (numCols >= 12) return 'col-span-12'
+  if (numCols === 6) return 'col-span-12 md:col-span-6'
+  if (numCols === 4) return 'col-span-12 md:col-span-4'
+  if (numCols === 3) return 'col-span-12 md:col-span-3'
+  if (numCols === 2) return 'col-span-12 md:col-span-2'
+  if (numCols === 1) return 'col-span-12 md:col-span-1'
+  if (numCols === 8) return 'col-span-12 md:col-span-8'
+  if (numCols === 9) return 'col-span-12 md:col-span-9'
+  return `col-span-12 md:col-span-${numCols}`
+}
+
+function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false): string {
+  const col = field.dbColumn
+  const label = field.label
+  const dt = field.dataType
+  const required = field.config?.required || false
+  const placeholder = field.config?.placeholder || `Digite ${label}...`
+  const colSpanClass = getColSpanClass(field)
 
   if (field.isByoc || field.isVirtual) {
-    const isTimeline = label.toLowerCase().includes('timeline') || col.toLowerCase().includes('timeline') || label.toLowerCase().includes('jornada')
-    if (isTimeline) {
+    const byocName = field.config?.byocName || field.id.replace(/^byoc_/, '')
+    const byocComponentName = toPascalCase(byocName)
+
+    if (byocName.toLowerCase().includes('timeline') || byocName.toLowerCase().includes('status')) {
+      const steps = ['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho']
       return `
-          {/* Timeline BYOC — ${field.label} */}
-          <div className="space-y-3 md:col-span-2 lg:col-span-3 pt-2">
-            <label className="block text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${label}</label>
-            <div className="p-6 bg-slate-50/50 dark:bg-neutral-800/30 border border-slate-200/80 dark:border-neutral-700/60 rounded-2xl">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-6">JORNADA DE NEGOCIAÇÃO</div>
-              <div className="flex items-center justify-between relative px-4">
-                <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-600 z-0" />
-                {['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho'].map((st, i) => {
-                  const currentStatus = String(data?.status || data?.status_lead || 'Em Negociação')
-                  const isCurrent = currentStatus === st
-                  const isPassed = ['Novo', 'Contactado'].includes(st) || isCurrent
+          {/* BYOC — ${field.label} */}
+          <div className="space-y-3 col-span-12">
+            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${field.label}</span>
+            <div className="bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 shadow-inner">
+              <div className="flex items-center justify-between relative">
+                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 dark:bg-indigo-600/50 rounded-full" />
+                <div className="absolute left-6 right-1/4 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 rounded-full" />
+                {${JSON.stringify(steps)}.map((st, i) => {
+                  const isPassed = i < 2
+                  const isCurrent = i === 2
                   return (
                     <div key={st} className="flex flex-col items-center gap-2 relative z-10">
                       <div className={\`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all \${isCurrent ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : isPassed ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-neutral-800 border-2 border-neutral-300 dark:border-neutral-600 text-neutral-400'}\`}>
@@ -101,19 +165,10 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
     }
     return `
           {/* TODO: campo virtual/BYOC — ${field.label} */}
-          <div className="space-y-2 opacity-50 pointer-events-none">
-            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label} <span className="text-[9px] normal-case text-amber-500">[Em desenvolvimento]</span></label>
+          <div className="space-y-2 col-span-12 opacity-50 pointer-events-none">
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label} <span className="text-[9px] normal-case text-amber-500">[Em desenvolvimento]</span></label>
             <input disabled value="// TODO" className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm" />
           </div>`
-  }
-
-  const widthVal = field.config?.width || field.config?.component?.width || ''
-  const colSpanVal = field.config?.colSpan || field.config?.col_span || ''
-  let colSpanClass = 'col-span-1'
-  if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 3 || colSpanVal === '3' || field.config?.multiline || field.config?.component?.type === 'textarea') {
-    colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-3'
-  } else if (widthVal === '50%' || widthVal === 'w-1/2' || colSpanVal === 2 || colSpanVal === '2') {
-    colSpanClass = 'col-span-1 md:col-span-2'
   }
 
   const isReadOnly = Boolean(
@@ -128,8 +183,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.config?.options?.length) {
     const optsCode = JSON.stringify(field.config.options)
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             <select
               id="${col}"
               name="${col}"
@@ -149,8 +204,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.config?.relation?.targetTable) {
     const { targetTable, displayColumn, valueColumn } = field.config.relation
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             {/* TODO: Carregar lista de ${targetTable} para o select */}
             <select
               id="${col}"
@@ -167,8 +222,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
 
   if (dt === 'boolean') {
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}</label>
             <div className="flex items-center gap-3 py-1">
               <input
                 id="${col}"
@@ -186,8 +241,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   const isDate = dt === 'date' || col.toLowerCase().includes('data') || col.toLowerCase().includes('date')
   if (isDate) {
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
@@ -202,8 +257,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
 
   if (dt === 'timestamp' || dt === 'timestamptz' || dt === 'datetime') {
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
@@ -219,8 +274,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   if (field.config?.multiline || field.config?.component?.type === 'textarea') {
     const rows = field.config?.rows || 4
     return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             <textarea
               id="${col}"
               name="${col}"
@@ -237,8 +292,8 @@ function renderFormField(field: ResolvedField, isEdit = false): string {
   const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number' : 'text'
 
   return `
-          <div className="space-y-2 ${colSpanClass}">
-            <label htmlFor="${col}" className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label}${required ? ' *' : ''}</label>
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
             <input
               id="${col}"
               name="${col}"
@@ -763,7 +818,7 @@ ${tabsHeader}
         {/* Conteúdo da Aba Mestre (Tab 0) */}
         {(!${hasRelationTabs} || activeTab === 0) && (
           <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+            <div className="grid grid-cols-12 gap-x-6 gap-y-5">
 ${formFieldsHtml}
             </div>
           </DetailMasterForm>
@@ -859,7 +914,7 @@ export default function ${mn}NewPage() {
       }}>
         <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] pointer-events-none rounded-full" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6 relative z-10">
+          <div className="grid grid-cols-12 gap-x-6 gap-y-5 relative z-10">
 ${formFieldsHtml}
           </div>
 

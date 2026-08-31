@@ -236,7 +236,7 @@ export interface DetailRelationSectionProps {
   deleteAction: (id: string) => Promise<any>
 }
 
-function SubItemAccordion({
+const SubItemAccordion = React.forwardRef(({
   subItem,
   sIdx,
   subKey,
@@ -252,15 +252,31 @@ function SubItemAccordion({
   subFields: DetailFieldConfig[]
   toggleSubItem: (k: string) => void
   formatDateForInput: (v: any) => string
-}) {
-  const [qtd, setQtd] = useState<number>(Number(subItem.quantidade || 1))
-  const [preco, setPreco] = useState<number>(Number(subItem.preco_unitario || subItem.valor_unitario || 0))
+}, ref: any) => {
+  const getSubVal = (col: string) => {
+    if (!subItem) return ''
+    if (subItem[col] !== undefined && subItem[col] !== null) return subItem[col]
+    const colOnly = col.includes('.') ? col.split('.').pop()! : col
+    if (subItem[colOnly] !== undefined && subItem[colOnly] !== null) return subItem[colOnly]
+    const targetKeys = [col.toLowerCase(), colOnly.toLowerCase()]
+    for (const k of Object.keys(subItem)) {
+      if (targetKeys.includes(k.toLowerCase())) return subItem[k]
+    }
+    return ''
+  }
+
+  const rawQtd = getSubVal('quantidade') || getSubVal('qtd') || 1
+  const rawPreco = getSubVal('preco_unitario') || getSubVal('valor_unitario') || getSubVal('preco') || 0
+  const parsedPreco = typeof rawPreco === 'number' ? rawPreco : (Number(String(rawPreco).replace(',', '.')) || 0)
+
+  const [qtd, setQtd] = useState<number>(Number(rawQtd) || 1)
+  const [preco, setPreco] = useState<number>(parsedPreco)
 
   const total = qtd * preco
 
   let subTitle = ''
   for (const sf of subFields) {
-    const val = subItem[sf.dbColumn]
+    const val = getSubVal(sf.dbColumn)
     if (sf.config?.options && sf.config.options.length > 0) {
       const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
       if (opt?.label) {
@@ -299,9 +315,9 @@ function SubItemAccordion({
 
       {/* Campos do Sub-Item Expandido */}
       {isSubExpanded && subFields.length > 0 && (
-        <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
+        <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-12 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
           {subFields.map((sf: any) => {
-            const val = subItem[sf.dbColumn]
+            const val = getSubVal(sf.dbColumn)
             const dt = (sf.dataType || '').toLowerCase()
             const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
@@ -310,19 +326,25 @@ function SubItemAccordion({
             const isPrecoField = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.label.toLowerCase().includes('preço') || sf.label.toLowerCase().includes('preco')
             const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
 
+            const rawCols = sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.columns ?? sf.config?.colSpan
+            const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
             const widthVal = sf.config?.width || sf.config?.component?.width || ''
-            const colSpanVal = sf.config?.colSpan || sf.config?.col_span || ''
-            let colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
-            if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
-              colSpanClass = 'col-span-1'
-            } else if (widthVal === '50%' || widthVal === 'w-1/2' || colSpanVal === 2 || colSpanVal === '2') {
-              colSpanClass = 'col-span-1 md:col-span-2'
+            
+            let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
+            if (numCols === 12 || widthVal === '100%') {
+              colSpanClass = 'col-span-12'
+            } else if (numCols === 6 || widthVal === '50%') {
+              colSpanClass = 'col-span-12 md:col-span-6'
+            } else if (numCols === 4 || widthVal === '33%') {
+              colSpanClass = 'col-span-12 md:col-span-4'
+            } else if (numCols === 3 || widthVal === '25%') {
+              colSpanClass = 'col-span-12 md:col-span-3'
             }
 
             if (isSelect) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                  <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                  <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                     {sf.label}
                   </label>
                   <select
@@ -344,7 +366,7 @@ function SubItemAccordion({
             if (isTotalField) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                  <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                  <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                     {sf.label}
                   </label>
                   <input
@@ -359,22 +381,28 @@ function SubItemAccordion({
             }
 
             let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
-            if (isPrecoField && val && !isNaN(Number(val))) {
-              initialFormatted = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+            if (isPrecoField && val !== undefined && val !== null && val !== '') {
+              const numP = typeof val === 'number' ? val : Number(String(val).replace(',', '.'))
+              if (!isNaN(numP)) {
+                initialFormatted = numP.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              }
             }
 
             return (
               <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                   {sf.label}
                 </label>
                 <input
                   name={sf.dbColumn}
-                  type={isDate ? 'date' : isNumber ? 'number' : 'text'}
+                  type={isDate ? 'date' : isNumber && !isPrecoField ? 'number' : 'text'}
                   defaultValue={initialFormatted}
                   onChange={(e) => {
                     if (isQtdField) setQtd(Number(e.target.value) || 0)
-                    if (isPrecoField) setPreco(Number(e.target.value.replace(/\\./g, '').replace(',', '.')) || Number(e.target.value) || 0)
+                    if (isPrecoField) {
+                      const cleanVal = e.target.value.replace(/\./g, '').replace(',', '.')
+                      setPreco(Number(cleanVal) || 0)
+                    }
                   }}
                   placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -386,7 +414,7 @@ function SubItemAccordion({
       )}
     </div>
   )
-}
+})
 
 export function DetailRelationSection({
   label,
@@ -670,7 +698,7 @@ export function DetailRelationSection({
                 {/* Efeito Cortina (Expansão In-place) */}
                 {isExpanded && (
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-12 gap-4">
                       {editableFields.map(f => {
                         const val = getFieldValue(item, f.dbColumn)
                         const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
@@ -680,12 +708,17 @@ export function DetailRelationSection({
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
                         const widthVal = f.config?.width || f.config?.component?.width || ''
-                        const colSpanVal = f.config?.colSpan || f.config?.col_span || ''
-                        let colSpanClass = 'col-span-1 md:col-span-2'
-                        if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 4 || colSpanVal === '4' || f.config?.multiline || f.config?.component?.type === 'textarea') {
-                          colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
-                        } else if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
-                          colSpanClass = 'col-span-1'
+                        const rawCols = f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
+                        const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
+                        let colSpanClass = 'col-span-12 md:col-span-6'
+                        if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                          colSpanClass = 'col-span-12'
+                        } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                          colSpanClass = 'col-span-12 md:col-span-3'
+                        } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                          colSpanClass = 'col-span-12 md:col-span-4'
+                        } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
+                          colSpanClass = 'col-span-12 md:col-span-6'
                         }
 
                         let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
@@ -714,7 +747,7 @@ export function DetailRelationSection({
 
                           return (
                             <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                              <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                              <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                                 {f.label}
                               </label>
                               <select
@@ -739,7 +772,7 @@ export function DetailRelationSection({
 
                         return (
                           <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                            <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                               {f.label}
                             </label>
                             <input
@@ -754,7 +787,6 @@ export function DetailRelationSection({
                         )
                       })}
                     </div>
-
                     {/* Sub-detalhes inline (ex: ITENS DO DETALHE) */}
                     <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
                       <div className="flex items-center justify-between">
@@ -865,7 +897,7 @@ export function DetailRelationSection({
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <input type="hidden" name={foreignKey} value={parentId} />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
+                <div className="grid grid-cols-12 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
                     const val = getFieldValue(editingItem, f.dbColumn)
                     const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
@@ -875,12 +907,17 @@ export function DetailRelationSection({
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
                     const widthVal = f.config?.width || f.config?.component?.width || ''
-                    const colSpanVal = f.config?.colSpan || f.config?.col_span || ''
-                    let colSpanClass = 'col-span-1 md:col-span-2'
-                    if (widthVal === '100%' || widthVal === 'w-full' || colSpanVal === 'full' || colSpanVal === 4 || colSpanVal === '4' || f.config?.multiline || f.config?.component?.type === 'textarea') {
-                      colSpanClass = 'col-span-1 md:col-span-2 lg:col-span-4'
-                    } else if (widthVal === '25%' || widthVal === 'w-1/4' || colSpanVal === 1 || colSpanVal === '1') {
-                      colSpanClass = 'col-span-1'
+                    const rawCols = f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
+                    const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
+                    let colSpanClass = 'col-span-12 md:col-span-6'
+                    if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                      colSpanClass = 'col-span-12'
+                    } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                      colSpanClass = 'col-span-12 md:col-span-3'
+                    } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                      colSpanClass = 'col-span-12 md:col-span-4'
+                    } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
+                      colSpanClass = 'col-span-12 md:col-span-6'
                     }
 
                     const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
@@ -910,7 +947,7 @@ export function DetailRelationSection({
 
                       return (
                         <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                             {f.label}
                           </label>
                           <select
@@ -935,7 +972,7 @@ export function DetailRelationSection({
 
                     return (
                       <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                        <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
+                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                           {f.label}
                         </label>
                         <input

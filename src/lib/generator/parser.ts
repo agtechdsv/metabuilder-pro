@@ -110,14 +110,15 @@ function applyFieldsMeta(
   return {
     label: merged.label,
     width: merged.width,
+    columns: merged.columns || merged.col_span || merged.component?.columns || merged.component?.col_span,
     format: merged.format,
     options,
     relation,
-    readOnly: merged.readOnly || merged.read_only,
-    required: merged.required || merged.is_required,
-    placeholder: merged.placeholder,
+    readOnly: merged.readOnly || merged.read_only || merged.content?.readonly,
+    required: merged.required || merged.is_required || merged.content?.required,
+    placeholder: merged.placeholder || merged.content?.placeholder,
     multiline: merged.multiline || merged.is_multiline,
-    rows: merged.rows,
+    rows: merged.rows || merged.component?.rows,
     ...merged,
     ...(options ? { options } : {}),
   }
@@ -136,8 +137,13 @@ function buildResolvedField(
   fieldsMetadata: Record<string, any>
 ): ResolvedField {
   const { dbColumn, sqlExpression } = resolveFieldJoin(field, viewModelId, allModels)
-  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, field.config || {}, field)
-  const labelFromMeta = config.label?.text || config.label
+  const baseConfig = { ...(field.config || {}), ...(component.config || {}) }
+  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field)
+  const labelFromMeta =
+    config.label?.text ||
+    (typeof config.label === 'string' ? config.label : null) ||
+    config.texto_exibicao ||
+    config.display_text
   const label =
     typeof labelFromMeta === 'string' && labelFromMeta.trim()
       ? labelFromMeta
@@ -739,19 +745,64 @@ function resolveRelationTabs(
         })
         if (subFormFields.length === 0) subFormFields = subGridFields
       } else {
-        const subFields = allFields.filter((f: any) => f.model_id === subModel.id)
-        subGridFields = subFields.map((f: any): ResolvedField => ({
-          id: f.id,
-          dbColumn: f.db_column_name,
-          sqlExpression: f.db_column_name,
-          label: f.display_name || f.db_column_name,
-          dataType: f.data_type || 'varchar',
-          isPrimaryKey: f.is_primary_key || false,
-          isSortable: f.is_sortable || false,
-          isVirtual: false,
-          isByoc: false,
-          config: {},
-        }))
+        const auditColumns = new Set(['criado_em', 'atualizado_em', 'created_at', 'updated_at', 'deleted_at'])
+        const subFields = allFields.filter((f: any) =>
+          f.model_id === subModel.id &&
+          !f.is_primary_key &&
+          f.db_column_name !== subFkCol &&
+          !auditColumns.has(f.db_column_name.toLowerCase())
+        )
+        subGridFields = subFields.map((f: any): ResolvedField => {
+          let label = f.display_name
+          if (!label || label === f.db_column_name || label.toUpperCase() === f.db_column_name.toUpperCase()) {
+            const map: Record<string, string> = {
+              'produto_id': 'Produto',
+              'produto': 'Produto',
+              'quantidade': 'Quantidade',
+              'qtd': 'Quantidade',
+              'preco_unitario': 'Preço Unitário',
+              'valor_unitario': 'Preço Unitário',
+              'preco': 'Preço Unitário',
+              'total_rs': 'Total R$',
+              'total': 'Total R$',
+              'subtotal': 'Total R$',
+              'motorista_id': 'Motorista',
+              'data_estimada': 'Data Estimada',
+              'lat_atual': 'Lat Atual',
+              'lng_atual': 'Lng Atual',
+              'status': 'Status',
+            }
+            label = map[f.db_column_name.toLowerCase()] || f.db_column_name
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (c: string) => c.toUpperCase())
+          }
+          return {
+            id: f.id,
+            dbColumn: f.db_column_name,
+            sqlExpression: f.db_column_name,
+            label,
+            dataType: f.data_type || 'varchar',
+            isPrimaryKey: f.is_primary_key || false,
+            isSortable: f.is_sortable || false,
+            isVirtual: false,
+            isByoc: false,
+            config: f.config || {},
+          }
+        })
+        if (subModel.db_table_name === 'itens_pedido' && !subGridFields.some(f => f.dbColumn.includes('total'))) {
+          subGridFields.push({
+            id: 'virt_total_rs',
+            dbColumn: 'total_rs',
+            sqlExpression: 'total_rs',
+            label: 'Total R$',
+            dataType: 'numeric',
+            isPrimaryKey: false,
+            isSortable: false,
+            isVirtual: true,
+            isByoc: false,
+            config: { readOnly: true, width: '25%', columns: 3 },
+          })
+        }
         subFormFields = subGridFields
       }
 

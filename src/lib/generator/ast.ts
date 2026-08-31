@@ -50,7 +50,8 @@ export interface SelectOption {
 /** Configuração completa de um campo em uma zona específica */
 export interface ResolvedFieldConfig {
   label?: FieldLabelConfig
-  width?: number               // largura em px ou percentual
+  width?: number | string      // largura em px ou percentual
+  columns?: number | string    // número de colunas (1..12)
   format?: string              // 'currency' | 'percent' | 'date_pt' | 'datetime_pt' | etc.
   options?: SelectOption[]     // para campos enum/select
   relation?: FieldRelationConfig
