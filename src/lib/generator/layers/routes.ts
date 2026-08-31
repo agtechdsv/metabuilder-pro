@@ -516,7 +516,7 @@ function generateDetailPage(route: RouteNode): string {
         `                            title="Editar"`,
         `                          >`,
         `                            <Pencil className="w-3.5 h-3.5" />`,
-        `                          </Link`,
+        `                          </Link>`,
         `                        </div>`,
         `                      </div>`,
         ``,
