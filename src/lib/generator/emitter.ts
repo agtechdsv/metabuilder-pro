@@ -539,10 +539,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
-\`)
+`)
 
   // Componente cliente para os controles do header
-  files.set('app/components/HeaderControls.tsx', \`'use client'
+  files.set('app/components/HeaderControls.tsx', `'use client'
 
 import { useState, useEffect } from 'react'
 
@@ -631,12 +631,11 @@ export function HeaderControls() {
               </div>
             </div>
           </div>
+        )}
       </div>
     </div>
   )
 }
-\`)
-
 `)
 
   // (auth)/layout.tsx â€” sem sidebar, com top header (para /login)
