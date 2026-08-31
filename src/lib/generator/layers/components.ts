@@ -797,7 +797,7 @@ export function DetailRelationSection({
                       )}
                     </div>
                   </div>
-                )}        )}
+                )}
               </div>
             )
           })}
