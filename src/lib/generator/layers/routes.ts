@@ -482,12 +482,13 @@ function generateDetailPage(route: RouteNode): string {
         `              foreignKey="${tab.foreignKey}"`,
         `              parentId={resolvedParams.id}`,
         `              items={${tab.relatedTable}List || []}`,
-        `              fields={${JSON.stringify(tab.gridFields.map(f => ({
+        `              fields={${JSON.stringify((tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields).map(f => ({
           id: f.id,
           label: f.label,
           dbColumn: f.dbColumn.replace(/\./g, '_'),
           dataType: f.dataType,
-          isPrimaryKey: f.isPrimaryKey
+          isPrimaryKey: f.isPrimaryKey,
+          config: f.config,
         })))} }`,
         `              createAction={create${tab.relatedModelName}}`,
         `              updateAction={update${tab.relatedModelName}}`,

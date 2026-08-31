@@ -606,12 +606,14 @@ function resolveRelationTabs(
     )
 
     let childGridFields: ResolvedField[] = []
+    let childFormFields: ResolvedField[] = []
     if (childView) {
       const resolved = resolveViewZones(childView, allModels, allFields, byocMap)
       // Para aba de detalhe, usa os primeiros 6 campos do grid da view filha
       childGridFields = resolved.gridFields.slice(0, 6)
+      childFormFields = resolved.formFields
     } else {
-      // Fallback: usa os primeiros 5 campos do modelo filho
+      // Fallback: usa os campos do modelo filho
       const childModelFields = allFields.filter((f: any) => f.model_id === rel.from_model_id)
       childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => ({
         id: f.id,
@@ -625,6 +627,7 @@ function resolveRelationTabs(
         isByoc: false,
         config: {},
       }))
+      childFormFields = childGridFields
     }
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
@@ -638,6 +641,7 @@ function resolveRelationTabs(
       displayMode: rel.display_mode || 'tab',
       label: tabLabel,
       gridFields: childGridFields,
+      formFields: childFormFields,
     })
   }
 

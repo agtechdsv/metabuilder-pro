@@ -118,6 +118,7 @@ export interface RelationTab {
   displayMode: 'tab' | 'inline'
   label: string                // label da aba (nome do modelo relacionado)
   gridFields: ResolvedField[]  // campos da tabela filha visíveis na aba
+  formFields?: ResolvedField[] // campos do formulário da tabela filha
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
