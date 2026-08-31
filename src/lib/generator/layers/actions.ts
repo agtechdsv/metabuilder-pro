@@ -214,17 +214,17 @@ import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
 export async function get${model.name}List() {
-  const res = await query('SELECT ${allColumns} FROM ${tableRef} ORDER BY "${pk}" DESC')
+  const res = await query('SELECT * FROM ${tableRef} ORDER BY "${pk}" DESC')
   return res.rows
 }
 
 export async function get${model.name}ById(id: string) {
-  const res = await query('SELECT ${allColumns} FROM ${tableRef} WHERE "${pk}" = $1', [id])
+  const res = await query('SELECT * FROM ${tableRef} WHERE "${pk}" = $1', [id])
   return res.rows[0] || null
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const res = await query(\`SELECT ${allColumns} FROM ${tableRef} WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
+  const res = await query(\`SELECT * FROM ${tableRef} WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
   return res.rows
 }
 

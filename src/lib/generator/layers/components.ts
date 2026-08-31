@@ -336,10 +336,24 @@ export function DetailRelationSection({
     } finally {
       setIsSubmitting(false)
     }
+    const getFieldValue = (obj: any, dbCol: string) => {
+    if (!obj) return ''
+    if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
+    const under = dbCol.replace(/\\./g, '_')
+    if (obj[under] !== undefined && obj[under] !== null) return obj[under]
+    const colOnly = dbCol.includes('.') ? dbCol.split('.').pop()! : dbCol
+    if (obj[colOnly] !== undefined && obj[colOnly] !== null) return obj[colOnly]
+    const targetKeys = [dbCol.toLowerCase(), under.toLowerCase(), colOnly.toLowerCase()]
+    for (const k of Object.keys(obj)) {
+      const kLower = k.toLowerCase()
+      if (targetKeys.includes(kLower)) {
+        return obj[k]
+      }
+    }
+    return ''
   }
 
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
-  const isPedido = relatedTable.toLowerCase().includes('pedido')
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
 
   return (
@@ -420,6 +434,7 @@ export function DetailRelationSection({
             const itemTitle = isNew
               ? 'Novo Registro'
               : String(item.nome || item.name || item.titulo || item.title || item.id || item.codigo || \`Registro #\${idx + 1}\`)
+            const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
 
             return (
               <div key={itemId} className="flex flex-col rounded-2xl transition-all duration-300">
@@ -479,13 +494,12 @@ export function DetailRelationSection({
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
                     <div className="space-y-4">
                       {editableFields.map(f => {
-                        const val = item ? (item[f.dbColumn] ?? item[f.dbColumn.replace(/\\./g, '_')] ?? '') : ''
-                        const isDate = f.dataType === 'date' || f.dbColumn.includes('data')
-                        const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float'
-                        const isStatus = f.dbColumn.toLowerCase().includes('status')
-                        const isFuncionario = f.dbColumn.toLowerCase().includes('func') || f.dbColumn.toLowerCase().includes('usuario')
+                        const val = getFieldValue(item, f.dbColumn)
+                        const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
+                        const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
+                        const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
 
-                        if (isStatus) {
+                        if (hasOptions) {
                           return (
                             <div key={f.dbColumn} className="space-y-1.5">
                               <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
@@ -497,30 +511,14 @@ export function DetailRelationSection({
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                               >
                                 <option value="">Selecione...</option>
-                                <option value="Pendente">Pendente</option>
-                                <option value="Processando">Processando</option>
-                                <option value="Entregue">Entregue</option>
-                                <option value="Cancelado">Cancelado</option>
-                              </select>
-                            </div>
-                          )
-                        }
-
-                        if (isFuncionario) {
-                          return (
-                            <div key={f.dbColumn} className="space-y-1.5">
-                              <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                                {f.label}
-                              </label>
-                              <select
-                                name={f.dbColumn}
-                                defaultValue={String(val || '')}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                              >
-                                <option value="">Selecione...</option>
-                                <option value="Beatriz Alves">Beatriz Alves</option>
-                                <option value="Carlos Silva">Carlos Silva</option>
-                                <option value="Ana Souza">Ana Souza</option>
+                                {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val)) && (
+                                  <option value={String(val)}>{String(val)}</option>
+                                )}
+                                {f.config!.options!.map((opt: any, oIdx: number) => {
+                                  const optVal = typeof opt === 'object' ? opt.value : opt
+                                  const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                                  return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                                })}
                               </select>
                             </div>
                           )
@@ -534,8 +532,8 @@ export function DetailRelationSection({
                             <input
                               name={f.dbColumn}
                               type={isDate ? 'date' : isNumber ? 'number' : 'text'}
-                              placeholder={f.dbColumn.includes('total') ? '0,00' : \`Digite o valor para \${f.label}...\`}
-                              defaultValue={isDate && val ? String(val).slice(0, 10) : String(val)}
+                              placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
+                              defaultValue={isDate && val ? String(val).slice(0, 10) : String(val ?? '')}
                               className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                             />
                           </div>
@@ -543,43 +541,43 @@ export function DetailRelationSection({
                       })}
                     </div>
 
-                    {/* Sub-detalhes inline (ex: ITENS DO PEDIDO) */}
-                    {isPedido && (
-                      <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                            <span className="text-xs font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
-                              ITENS DO PEDIDO
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                            <button type="button" className="p-1 text-neutral-400 hover:text-indigo-600"><Plus className="w-3.5 h-3.5" /></button>
-                            <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3.5 h-3.5" /></button>
-                          </div>
+                    {/* Sub-detalhes inline (ex: ITENS DO DETALHE) */}
+                    <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                          <span className="text-xs font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
+                            ITENS DE {detailSingular.toUpperCase()}
+                          </span>
                         </div>
-
-                        {isNew ? (
-                          <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
-                            <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
-                              Nenhum registro de Itens do Pedido encontrado.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-1.5 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900/50">
-                            {subItems.map((subItem, sIdx) => (
-                              <div key={sIdx} className="py-2 px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs">
-                                <span className="font-semibold text-neutral-700 dark:text-neutral-300">{subItem.produto}</span>
-                                <div className="flex items-center gap-1">
-                                  <span className="p-1 text-blue-500 hover:bg-blue-50 rounded"><Pencil className="w-3.5 h-3.5" /></span>
-                                  <span className="p-1 text-red-400 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                          <button type="button" className="p-1 text-neutral-400 hover:text-indigo-600"><Plus className="w-3.5 h-3.5" /></button>
+                          <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3.5 h-3.5" /></button>
+                        </div>
                       </div>
-                    )}
+
+                      {isNew || itemChildRecords.length === 0 ? (
+                        <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
+                          <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
+                            Nenhum registro de Itens encontrado.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 pl-2 border-l-2 border-indigo-200 dark:border-indigo-900/50">
+                          {itemChildRecords.map((subItem, sIdx) => (
+                            <div key={sIdx} className="py-2 px-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between text-xs">
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                                {String(subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
+                                <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -588,7 +586,7 @@ export function DetailRelationSection({
         </div>
       )}
 
-      {/* Modal Mestre-Detalhe de Criação / Edição (com Abas Pedidos / Itens do Pedido) */}
+      {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
@@ -638,7 +636,7 @@ export function DetailRelationSection({
                     : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
                 }\`}
               >
-                {isPedido ? 'Itens do Pedido' : \`Itens de \${detailSingular}\`}
+                {\`Itens de \${detailSingular}\`}
               </button>
             </div>
 
@@ -649,34 +647,12 @@ export function DetailRelationSection({
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
-                    const val = editingItem ? (editingItem[f.dbColumn] ?? editingItem[f.dbColumn.replace(/\\./g, '_')] ?? '') : ''
-                    const isDate = f.dataType === 'date' || f.dbColumn.includes('data')
-                    const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float'
-                    const isStatus = f.dbColumn.toLowerCase().includes('status')
-                    const isFuncionario = f.dbColumn.toLowerCase().includes('func') || f.dbColumn.toLowerCase().includes('usuario')
+                    const val = getFieldValue(editingItem, f.dbColumn)
+                    const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
+                    const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
+                    const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
 
-                    if (isStatus) {
-                      return (
-                        <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
-                          <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                            {f.label}
-                          </label>
-                          <select
-                            name={f.dbColumn}
-                            defaultValue={String(val || 'Pendente')}
-                            className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-                          >
-                            <option value="">Selecione...</option>
-                            <option value="Pendente">Pendente</option>
-                            <option value="Processando">Processando</option>
-                            <option value="Entregue">Entregue</option>
-                            <option value="Cancelado">Cancelado</option>
-                          </select>
-                        </div>
-                      )
-                    }
-
-                    if (isFuncionario) {
+                    if (hasOptions) {
                       return (
                         <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
                           <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
@@ -688,9 +664,14 @@ export function DetailRelationSection({
                             className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                           >
                             <option value="">Selecione...</option>
-                            <option value="Beatriz Alves">Beatriz Alves</option>
-                            <option value="Carlos Silva">Carlos Silva</option>
-                            <option value="Ana Souza">Ana Souza</option>
+                            {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val)) && (
+                              <option value={String(val)}>{String(val)}</option>
+                            )}
+                            {f.config!.options!.map((opt: any, oIdx: number) => {
+                              const optVal = typeof opt === 'object' ? opt.value : opt
+                              const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                              return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                            })}
                           </select>
                         </div>
                       )
@@ -704,8 +685,8 @@ export function DetailRelationSection({
                         <input
                           name={f.dbColumn}
                           type={isDate ? 'date' : isNumber ? 'number' : 'text'}
-                          placeholder={\`Digite o valor para \${f.label}...\`}
-                          defaultValue={isDate && val ? String(val).slice(0, 10) : String(val)}
+                          placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
+                          defaultValue={isDate && val ? String(val).slice(0, 10) : String(val ?? '')}
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                         />
                       </div>
@@ -732,116 +713,41 @@ export function DetailRelationSection({
               </form>
             )}
 
-            {/* Conteúdo da Aba Itens do Pedido na Modal */}
+            {/* Conteúdo da Aba Itens do Detalhe na Modal */}
             {modalActiveTab === 'items' && (
               <div className="space-y-4 max-h-[55vh] overflow-y-auto px-1">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
                   <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allExp = subItems.every((_, i) => expandedSubItems[i])
-                        const next: Record<number, boolean> = {}
-                        if (!allExp) subItems.forEach((_, i) => { next[i] = true })
-                        setExpandedSubItems(next)
-                      }}
-                      className="p-1 text-neutral-400 hover:text-neutral-600"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSubItems([...subItems, { id: Date.now(), produto: 'Novo Produto', quantidade: 1, preco_unitario: '0,00', total_rs: '0,00' }])
-                        setExpandedSubItems(prev => ({ ...prev, [subItems.length]: true }))
-                      }}
-                      className="p-1 text-neutral-400 hover:text-indigo-600"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                    <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3 h-3" /></button>
+                    <button type="button" className="p-1 text-neutral-400 hover:text-indigo-600"><Plus className="w-3.5 h-3.5" /></button>
+                    <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {subItems.map((sub, sIdx) => {
-                    const isSubExpanded = !!expandedSubItems[sIdx]
-                    return (
-                      <div key={sub.id || sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
+                {!editingItem || !editingItem.items || editingItem.items.length === 0 ? (
+                  <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
+                    <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
+                      Nenhum registro de Itens encontrado.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {(editingItem.items || editingItem.itens_pedido || []).map((sub: any, sIdx: number) => (
+                      <div key={sIdx} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm">
                         <div className="py-2.5 px-4 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{sub.produto}</span>
+                          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                            {String(sub.produto || sub.nome || sub.descricao || \`Item #\${sIdx + 1}\`)}
+                          </span>
                           <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setExpandedSubItems(prev => ({ ...prev, [sIdx]: !prev[sIdx] }))}
-                              className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
-                            >
-                              <ChevronDown className={\`w-3.5 h-3.5 transition-transform duration-300 \${isSubExpanded ? 'rotate-180' : ''}\`} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setExpandedSubItems(prev => ({ ...prev, [sIdx]: true }))}
-                              className="p-1 text-blue-500 hover:bg-blue-50 rounded"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSubItems(subItems.filter((_, i) => i !== sIdx))}
-                              className="p-1 text-red-400 hover:bg-red-50 rounded"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer"><Pencil className="w-3.5 h-3.5" /></span>
+                            <span className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></span>
                           </div>
                         </div>
-
-                        {/* Expansão dos campos do item do pedido */}
-                        {isSubExpanded && (
-                          <div className="p-4 bg-slate-50/70 dark:bg-neutral-950/60 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
-                            <div className="space-y-1">
-                              <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Produto</label>
-                              <select
-                                defaultValue={sub.produto}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
-                              >
-                                <option value="Servidor Enterprise Rack">Servidor Enterprise Rack</option>
-                                <option value="Switch de Rede 48-portas">Switch de Rede 48-portas</option>
-                                <option value="Suporte Premium 24/7">Suporte Premium 24/7</option>
-                              </select>
-                            </div>
-                            <div className="grid grid-cols-3 gap-3">
-                              <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Quantidade</label>
-                                <input
-                                  type="number"
-                                  defaultValue={sub.quantidade}
-                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Preço Unitário</label>
-                                <input
-                                  type="text"
-                                  defaultValue={sub.preco_unitario}
-                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-wider">Total R$</label>
-                                <input
-                                  type="text"
-                                  defaultValue={sub.total_rs}
-                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    )
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}>
+                )}
 
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                   <button

@@ -500,7 +500,7 @@ body {
 a { text-decoration: none; color: inherit; }
 `)
 
-  // Root Layout â€” apenas html/body/globals, SEM sidebar
+  // Root Layout — apenas html/body/globals, SEM sidebar
   files.set('app/layout.tsx', `import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -514,32 +514,61 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: \`
+              (function() {
+                try {
+                  var saved = localStorage.getItem('mb_theme');
+                  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            \`,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         {children}
       </body>
     </html>
   )
 }
-`)
+\`)
 
   // Componente cliente para os controles do header
-  files.set('app/components/HeaderControls.tsx', `'use client'
+  files.set('app/components/HeaderControls.tsx', \`'use client'
 
 import { useState, useEffect } from 'react'
 
 export function HeaderControls() {
-  const [theme, setTheme] = useState('dark')
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [mounted, setMounted] = useState(false)
   const [clientUser, setClientUser] = useState<any>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    if (theme === 'dark') {
+    setMounted(true)
+    const isDark = document.documentElement.classList.contains('dark')
+    setTheme(isDark ? 'dark' : 'light')
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(nextTheme)
+    if (nextTheme === 'dark') {
       document.documentElement.classList.add('dark')
+      try { localStorage.setItem('mb_theme', 'dark') } catch (e) {}
     } else {
       document.documentElement.classList.remove('dark')
+      try { localStorage.setItem('mb_theme', 'light') } catch (e) {}
     }
-  }, [theme])
+  }
 
   useEffect(() => {
     const cookieValue = document.cookie
@@ -565,7 +594,7 @@ export function HeaderControls() {
       <div className="flex items-center gap-2 pr-2 border-r border-neutral-200 dark:border-neutral-800">
         {/* Botão de Tema */}
         <button 
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={toggleTheme}
           className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
           title="Alternar Tema"
         >
@@ -602,11 +631,11 @@ export function HeaderControls() {
               </div>
             </div>
           </div>
-        )}
       </div>
     </div>
   )
 }
+\`)
 
 `)
 
