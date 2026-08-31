@@ -496,6 +496,8 @@ ${tabSearchParamArg}}: ${tabSearchParamType}) {
 
   if (!data) notFound()
 ${activeTabResolution}
+  const isEdit = true
+
   return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
       <Link href="${route.path}" className="inline-flex items-center text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors mb-6 uppercase tracking-widest">
