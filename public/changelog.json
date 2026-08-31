@@ -1,4 +1,16 @@
 {
+  "v1.0.4": {
+    "date": "2026-08-31",
+    "pt": [
+      "Maior flexibilidade na interface com suporte a Ações Personalizadas, permitindo posicionamento sob medida e fluxos de navegação direcionados para enriquecer a experiência de uso."
+    ],
+    "en": [
+      "Enhanced layout flexibility with Custom Actions support, allowing tailored button placements and streamlined navigation flows for an improved user experience."
+    ],
+    "es": [
+      "Mayor flexibilidad en la interfaz con soporte para Acciones Personalizadas, permitiendo ubicaciones a medida y flujos de navegación optimizados para enriquecer la experiencia del usuario."
+    ]
+  },
   "v1.0.3": {
     "date": "2026-08-31",
     "pt": [
