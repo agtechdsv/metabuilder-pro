@@ -336,7 +336,9 @@ export function DetailRelationSection({
     } finally {
       setIsSubmitting(false)
     }
-    const getFieldValue = (obj: any, dbCol: string) => {
+  }
+
+  const getFieldValue = (obj: any, dbCol: string) => {
     if (!obj) return ''
     if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
     const under = dbCol.replace(/\\./g, '_')
