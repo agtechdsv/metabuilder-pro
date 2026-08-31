@@ -276,12 +276,16 @@ function resolveViewZones(
     return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata)]
   })
 
-  // Injeta campos virtuais/BYOC no form
+  // Injeta campos virtuais/BYOC no form (apenas BYOCs ou campos com configuração explícita de form)
   formFieldsOrder
     .filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_'))
     .forEach((id: string) => {
-      if (!formFields.find((f) => f.id === id)) {
-        formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
+      const isByoc = id.startsWith('byoc_')
+      const hasFormMeta = !!(fieldsMetadata[`form-${id}`] || fieldsMetadata[id]?.zone === 3 || fieldsMetadata[id]?.component)
+      if (isByoc || hasFormMeta) {
+        if (!formFields.find((f) => f.id === id)) {
+          formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
+        }
       }
     })
 
@@ -562,6 +566,11 @@ function resolveRelationTabs(
   byocMap: Record<string, string>
 ): RelationTab[] {
   const tabs: RelationTab[] = []
+  const layoutConfig = view.layout_config || {}
+  const joins: any[] = layoutConfig.joins || []
+  const detailsDisplayMode: Record<string, string> = layoutConfig.details_display_mode || {}
+  const hiddenDetails: string[] = layoutConfig.hidden_details || []
+  const tablesConfig: string[] = view.tables_config || []
 
   // Relações onde esta view é o "pai" (to_model_id = view.model_id)
   const parentRelations = rawRelations.filter(
@@ -571,6 +580,20 @@ function resolveRelationTabs(
   for (const rel of parentRelations) {
     const childModel = allModels.find((m: any) => m.id === rel.from_model_id)
     if (!childModel) continue
+
+    // Se o childModel está explicitamente oculto ou não faz parte dos joins/detalhes configurados:
+    if (hiddenDetails.includes(childModel.id)) continue
+    if (detailsDisplayMode[childModel.id] === 'hidden') continue
+
+    // Se a view tem joins ou tables_config configurados, só inclui os modelos participantes
+    const isJoined = joins.some((j: any) => j.table === childModel.db_table_name || j.model_id === childModel.id)
+    const isConfiguredTable = tablesConfig.includes(childModel.db_table_name) || tablesConfig.includes(childModel.id)
+    const isExplicitTab = detailsDisplayMode[childModel.id] === 'tabs' || detailsDisplayMode[childModel.id] === 'sections'
+
+    // Se o dev configurou joins ou tables_config, respeita a seleção dele:
+    if ((joins.length > 0 || tablesConfig.length > 0) && !isJoined && !isConfiguredTable && !isExplicitTab) {
+      continue
+    }
 
     const fkFieldRaw = allFields.find((f: any) => f.id === rel.from_field_id)
     const foreignKey = fkFieldRaw?.db_column_name || ''
@@ -585,12 +608,12 @@ function resolveRelationTabs(
     let childGridFields: ResolvedField[] = []
     if (childView) {
       const resolved = resolveViewZones(childView, allModels, allFields, byocMap)
-      // Para aba de detalhe, usa os primeiros 5 campos do grid da view filha
-      childGridFields = resolved.gridFields.slice(0, 5)
+      // Para aba de detalhe, usa os primeiros 6 campos do grid da view filha
+      childGridFields = resolved.gridFields.slice(0, 6)
     } else {
-      // Fallback: usa os primeiros 4 campos do modelo filho
+      // Fallback: usa os primeiros 5 campos do modelo filho
       const childModelFields = allFields.filter((f: any) => f.model_id === rel.from_model_id)
-      childGridFields = childModelFields.slice(0, 4).map((f: any): ResolvedField => ({
+      childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => ({
         id: f.id,
         dbColumn: f.db_column_name,
         sqlExpression: f.db_column_name,
@@ -604,6 +627,8 @@ function resolveRelationTabs(
       }))
     }
 
+    const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
+
     tabs.push({
       relatedModelId: rel.from_model_id,
       relatedTable: childModel.db_table_name,
@@ -611,7 +636,7 @@ function resolveRelationTabs(
       foreignKey,
       sourceKey: 'id',
       displayMode: rel.display_mode || 'tab',
-      label: childModel.display_name || childModelName,
+      label: tabLabel,
       gridFields: childGridFields,
     })
   }

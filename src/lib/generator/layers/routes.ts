@@ -466,23 +466,67 @@ function generateDetailPage(route: RouteNode): string {
       ].join('\n')).join('\n')
     : ''
 
+  const relationImports = hasRelationTabs
+    ? Array.from(new Set(route.relationTabs.map(t => `import { get${t.relatedModelName}ByField } from '@/app/actions/${t.relatedModelName.toLowerCase()}'`))).join('\n')
+    : ''
+
   const tabPanels = hasRelationTabs
     ? route.relationTabs.map((tab, i) => [
         `          {activeTab === ${i + 1} && (`,
-        `            <div className="relative z-10 space-y-6">`,
+        `            <div className="relative z-10 space-y-4">`,
         `              <div className="flex items-center justify-between">`,
         `                <div>`,
         `                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">${tab.label}</h3>`,
-        `                  <p className="text-xs text-neutral-400">Registros de ${tab.relatedTable} vinculados a este ${route.title.toLowerCase()}</p>`,
+        `                  <p className="text-xs text-neutral-400">Total de {(${tab.relatedTable}List || []).length} {(${tab.relatedTable}List || []).length === 1 ? 'registro' : 'registros'}</p>`,
         `                </div>`,
-        `                <Link href={\`/${tab.relatedTable}/new?${tab.foreignKey}=\${data.${pk}}\`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm">`,
+        `                <Link`,
+        `                  href={\`/${tab.relatedTable}/new?${tab.foreignKey}=\${resolvedParams.id}\`}`,
+        `                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"`,
+        `                >`,
         `                  <Plus className="w-3.5 h-3.5" /> Adicionar ${tab.label}`,
         `                </Link>`,
         `              </div>`,
-        `              {/* Lista / Grid de registros filhos */}`,
-        `              <div className="bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center">`,
-        `                <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">Nenhum registro de <strong>${tab.label}</strong> encontrado para este ${route.title.toLowerCase()}.</p>`,
-        `              </div>`,
+        ``,
+        `              {(${tab.relatedTable}List || []).length === 0 ? (`,
+        `                <div className="bg-neutral-50/50 dark:bg-neutral-800/30 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center">`,
+        `                  <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">`,
+        `                    Nenhum registro de <strong>${tab.label}</strong> vinculado a este ${route.title.toLowerCase()}.`,
+        `                  </p>`,
+        `                </div>`,
+        `              ) : (`,
+        `                <div className="space-y-3">`,
+        `                  {(${tab.relatedTable}List || []).map((item: any, idx: number) => (`,
+        `                    <div`,
+        `                      key={item.id || idx}`,
+        `                      className="bg-white dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 rounded-2xl p-5 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all"`,
+        `                    >`,
+        `                      <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-700/40 mb-4">`,
+        `                        <div className="flex items-center gap-3">`,
+        `                          <span className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-black flex items-center justify-center">`,
+        `                            {idx + 1}`,
+        `                          </span>`,
+        `                          <span className="font-mono text-xs font-bold text-neutral-700 dark:text-neutral-300">`,
+        `                            {String(item.id || item.codigo || '').slice(0, 18)}...`,
+        `                          </span>`,
+        `                        </div>`,
+        `                        <div className="flex items-center gap-1">`,
+        `                          <Link`,
+        `                            href={\`/${tab.relatedTable}/\${item.id || item.codigo}\`}`,
+        `                            className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-neutral-700 transition-colors"`,
+        `                            title="Editar"`,
+        `                          >`,
+        `                            <Pencil className="w-3.5 h-3.5" />`,
+        `                          </Link`,
+        `                        </div>`,
+        `                      </div>`,
+        ``,
+        `                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">`,
+        tab.gridFields.filter(f => !f.isPrimaryKey && !f.hidden).slice(0, 4).map(f => `                        <div>\n                          <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block mb-1">${f.label}</span>\n                          <span className="font-semibold text-neutral-800 dark:text-neutral-200">{String(item.${f.dbColumn.replace(/\./g, '_')} ?? '-')}</span>\n                        </div>`).join('\n'),
+        `                      </div>`,
+        `                    </div>`,
+        `                  ))}`,
+        `                </div>`,
+        `              )}`,
         `            </div>`,
         `          )}`,
       ].join('\n')).join('\n')
@@ -498,6 +542,10 @@ function generateDetailPage(route: RouteNode): string {
 
   const activeTabResolution = hasRelationTabs
     ? `\n  const resolvedSearch = searchParams ? await searchParams : {}\n  const activeTab = Number(typeof resolvedSearch?.tab === 'string' ? resolvedSearch.tab : 0)\n`
+    : ''
+
+  const relationQueries = hasRelationTabs
+    ? route.relationTabs.map((tab) => `  const ${tab.relatedTable}List = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`).join('')
     : ''
 
   const tabsHeader = hasRelationTabs
@@ -521,6 +569,7 @@ ${tabButtons}
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
+${relationImports}
 import { ArrowLeft, Save, Plus, Pencil } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
@@ -532,7 +581,7 @@ ${tabSearchParamArg}}: ${tabSearchParamType}) {
 
   if (!data) notFound()
 ${activeTabResolution}
-  const isEdit = true
+${relationQueries}  const isEdit = true
 
   return (
     <div className="p-6 sm:p-8 max-w-[1200px] mx-auto pb-24">
