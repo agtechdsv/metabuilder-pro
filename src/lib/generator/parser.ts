@@ -81,24 +81,44 @@ function applyFieldsMeta(
   fieldId: string,
   zone: 'grid' | 'form' | 'filter',
   fieldsMetadata: Record<string, any>,
-  baseFieldConfig: any
+  baseFieldConfig: any,
+  rawField?: any
 ): ResolvedFieldConfig {
   const zoneMeta = fieldsMetadata[`${zone}-${fieldId}`] || {}
   const globalMeta = fieldsMetadata[fieldId] || {}
   const merged = { ...baseFieldConfig, ...globalMeta, ...zoneMeta }
 
+  let options = merged.options || rawField?.options || rawField?.enum_values || baseFieldConfig?.options || baseFieldConfig?.enum_values
+  if (Array.isArray(options)) {
+    options = options.map((opt: any) => typeof opt === 'string' ? { label: opt, value: opt } : opt)
+  }
+
+  const colName = (rawField?.db_column_name || '').toLowerCase()
+  const dispName = (rawField?.display_name || '').toLowerCase()
+  if ((colName === 'status' || dispName === 'status' || colName.endsWith('_status')) && (!options || options.length === 0)) {
+    options = [
+      { label: 'Pendente', value: 'Pendente' },
+      { label: 'Processando', value: 'Processando' },
+      { label: 'Entregue', value: 'Entregue' },
+      { label: 'Cancelado', value: 'Cancelado' }
+    ]
+  }
+
+  const relation = merged.relation || rawField?.relation || baseFieldConfig?.relation
+
   return {
     label: merged.label,
     width: merged.width,
     format: merged.format,
-    options: merged.options,
-    relation: merged.relation,
+    options,
+    relation,
     readOnly: merged.readOnly || merged.read_only,
     required: merged.required || merged.is_required,
     placeholder: merged.placeholder,
     multiline: merged.multiline || merged.is_multiline,
     rows: merged.rows,
-    ...merged, // pass-through de tudo não mapeado
+    ...merged,
+    ...(options ? { options } : {}),
   }
 }
 
@@ -115,7 +135,7 @@ function buildResolvedField(
   fieldsMetadata: Record<string, any>
 ): ResolvedField {
   const { dbColumn, sqlExpression } = resolveFieldJoin(field, viewModelId, allModels)
-  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, field.config || {})
+  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, field.config || {}, field)
   const labelFromMeta = config.label?.text || config.label
   const label =
     typeof labelFromMeta === 'string' && labelFromMeta.trim()
@@ -609,9 +629,15 @@ function resolveRelationTabs(
     let childFormFields: ResolvedField[] = []
     if (childView) {
       const resolved = resolveViewZones(childView, allModels, allFields, byocMap)
-      // Para aba de detalhe, usa os primeiros 6 campos do grid da view filha
-      childGridFields = resolved.gridFields.slice(0, 6)
+      // Para aba de detalhe, inclui apenas campos que pertencem à tabela filha (remove joins estranhos como produtos.categoria)
+      childGridFields = resolved.gridFields
+        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(childModel.db_table_name + '.'))
+        .slice(0, 6)
       childFormFields = resolved.formFields
+        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(childModel.db_table_name + '.'))
+      if (childFormFields.length === 0) {
+        childFormFields = childGridFields
+      }
     } else {
       // Fallback: usa os campos do modelo filho
       const childModelFields = allFields.filter((f: any) => f.model_id === rel.from_model_id)
@@ -629,6 +655,46 @@ function resolveRelationTabs(
       }))
       childFormFields = childGridFields
     }
+
+    // Enriquece campos de FK/Lookup com a relação para a tabela destino (ex: funcionario -> funcionarios)
+    const enrichRelationFields = (fieldsList: ResolvedField[]) => {
+      return fieldsList.map(f => {
+        const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+        const fkRel = rawRelations.find((r: any) =>
+          r.from_model_id === childModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
+        )
+        let targetModel = fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null
+        if (!targetModel) {
+          targetModel = allModels.find((m: any) =>
+            m.id !== childModel.id &&
+            (colOnly === m.db_table_name ||
+             colOnly === m.db_table_name.slice(0, -1) ||
+             colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
+             colOnly === `${m.db_table_name}_id` ||
+             colOnly === `id_${m.db_table_name}` ||
+             colOnly === `id_${m.db_table_name.slice(0, -1)}`)
+          )
+        }
+        if (targetModel) {
+          return {
+            ...f,
+            config: {
+              ...f.config,
+              relation: {
+                targetTable: targetModel.db_table_name,
+                targetModel: toPascalCase(targetModel.db_table_name),
+                displayColumn: 'nome',
+                valueColumn: 'id',
+              }
+            }
+          }
+        }
+        return f
+      })
+    }
+
+    childGridFields = enrichRelationFields(childGridFields)
+    childFormFields = enrichRelationFields(childFormFields)
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 

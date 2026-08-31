@@ -466,36 +466,83 @@ function generateDetailPage(route: RouteNode): string {
       ].join('\n')).join('\n')
     : ''
 
+  const lookupModels = new Map<string, string>()
+  if (hasRelationTabs) {
+    route.relationTabs.forEach(tab => {
+      const allTabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
+      allTabFields.forEach(f => {
+        if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
+          lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+        }
+      })
+    })
+  }
+
+  const lookupImports = Array.from(lookupModels.entries()).map(([_, modelName]) =>
+    `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`
+  ).join('\n')
+
+  const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
+    `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
+  ).join('')
+
   const relationImports = hasRelationTabs
     ? [
         `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
+        lookupImports,
         ...route.relationTabs.map(t => `import { get${t.relatedModelName}ByField, create${t.relatedModelName}, update${t.relatedModelName}, delete${t.relatedModelName} } from '@/app/actions/${t.relatedModelName.toLowerCase()}'`),
-      ].join('\n')
+      ].filter(Boolean).join('\n')
     : ''
 
   const tabPanels = hasRelationTabs
-    ? route.relationTabs.map((tab, i) => [
-        `          {activeTab === ${i + 1} && (`,
-        `            <DetailRelationSection`,
-        `              label="${tab.label}"`,
-        `              relatedTable="${tab.relatedTable}"`,
-        `              foreignKey="${tab.foreignKey}"`,
-        `              parentId={resolvedParams.id}`,
-        `              items={${tab.relatedTable}List || []}`,
-        `              fields={${JSON.stringify((tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields).map(f => ({
+    ? route.relationTabs.map((tab, i) => {
+        const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
+          .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
+        
+        const fieldsJson = JSON.stringify(tabFields.map(f => ({
           id: f.id,
           label: f.label,
-          dbColumn: f.dbColumn.replace(/\./g, '_'),
+          dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
           dataType: f.dataType,
           isPrimaryKey: f.isPrimaryKey,
           config: f.config,
-        })))} }`,
-        `              createAction={create${tab.relatedModelName}}`,
-        `              updateAction={update${tab.relatedModelName}}`,
-        `              deleteAction={delete${tab.relatedModelName}}`,
-        `            />`,
-        `          )}`,
-      ].join('\n')).join('\n')
+        })))
+
+        const lookupMappingCode = Array.from(lookupModels.entries()).map(([tTable]) => [
+          `                if (targetTable === '${tTable}') {`,
+          `                  return {`,
+          `                    ...f,`,
+          `                    config: {`,
+          `                      ...f.config,`,
+          `                      options: (${tTable}LookupList || []).map((r: any) => ({`,
+          `                        value: String(r.id ?? r.codigo ?? r.uuid ?? ''),`,
+          `                        label: String(r.nome || r.nome_completo || r.nome_empresa || r.name || r.title || r.id || ''),`,
+          `                      }))`,
+          `                    }`,
+          `                  }`,
+          `                }`,
+        ].join('\n')).join('\n')
+
+        return [
+          `          {activeTab === ${i + 1} && (`,
+          `            <DetailRelationSection`,
+          `              label="${tab.label}"`,
+          `              relatedTable="${tab.relatedTable}"`,
+          `              foreignKey="${tab.foreignKey}"`,
+          `              parentId={resolvedParams.id}`,
+          `              items={${tab.relatedTable}List || []}`,
+          `              fields={(${fieldsJson} as any[]).map((f: any) => {`,
+          `                const targetTable = f.config?.relation?.targetTable`,
+          lookupMappingCode,
+          `                return f`,
+          `              })}`,
+          `              createAction={create${tab.relatedModelName}}`,
+          `              updateAction={update${tab.relatedModelName}}`,
+          `              deleteAction={delete${tab.relatedModelName}}`,
+          `            />`,
+          `          )}`,
+        ].join('\n')
+      }).join('\n')
     : ''
 
   const tabSearchParamType = hasRelationTabs
@@ -511,7 +558,10 @@ function generateDetailPage(route: RouteNode): string {
     : ''
 
   const relationQueries = hasRelationTabs
-    ? route.relationTabs.map((tab) => `  const ${tab.relatedTable}List = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`).join('')
+    ? [
+        lookupQueries,
+        ...route.relationTabs.map((tab) => `  const ${tab.relatedTable}List = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`)
+      ].filter(Boolean).join('')
     : ''
 
   const tabsHeader = hasRelationTabs

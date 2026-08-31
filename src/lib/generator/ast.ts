@@ -36,6 +36,7 @@ export interface FieldLabelConfig {
 
 export interface FieldRelationConfig {
   targetTable: string      // tabela alvo do FK (ex: 'empresas')
+  targetModel?: string     // nome do modelo alvo (ex: 'Empresas')
   displayColumn: string    // coluna de exibição (ex: 'nome')
   valueColumn: string      // coluna de valor / PK (ex: 'id')
 }

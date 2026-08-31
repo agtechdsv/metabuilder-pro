@@ -338,6 +338,21 @@ export function DetailRelationSection({
     }
   }
 
+  const formatDateForInput = (v: any) => {
+    if (!v) return ''
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+    try {
+      const d = new Date(v)
+      if (!isNaN(d.getTime())) {
+        const year = d.getUTCFullYear()
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(d.getUTCDate()).padStart(2, '0')
+        return \`\${year}-\${month}-\${day}\`
+      }
+    } catch (e) {}
+    return String(v).slice(0, 10)
+  }
+
   const getFieldValue = (obj: any, dbCol: string) => {
     if (!obj) return ''
     if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
@@ -502,6 +517,13 @@ export function DetailRelationSection({
                         const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
 
                         if (hasOptions) {
+                          const selectedOpt = f.config!.options!.find((o: any) => {
+                            const oV = typeof o === 'object' ? String(o.value) : String(o)
+                            const oL = typeof o === 'object' ? String(o.label) : String(o)
+                            return oV === String(val) || oL === String(val)
+                          })
+                          const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
+
                           return (
                             <div key={f.dbColumn} className="space-y-1.5">
                               <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
@@ -509,11 +531,11 @@ export function DetailRelationSection({
                               </label>
                               <select
                                 name={f.dbColumn}
-                                defaultValue={String(val || '')}
+                                defaultValue={defVal}
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                               >
                                 <option value="">Selecione...</option>
-                                {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val)) && (
+                                {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
                                   <option value={String(val)}>{String(val)}</option>
                                 )}
                                 {f.config!.options!.map((opt: any, oIdx: number) => {
@@ -535,7 +557,7 @@ export function DetailRelationSection({
                               name={f.dbColumn}
                               type={isDate ? 'date' : isNumber ? 'number' : 'text'}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                              defaultValue={isDate && val ? String(val).slice(0, 10) : String(val ?? '')}
+                              defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
                               className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                             />
                           </div>
@@ -655,6 +677,13 @@ export function DetailRelationSection({
                     const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
 
                     if (hasOptions) {
+                      const selectedOpt = f.config!.options!.find((o: any) => {
+                        const oV = typeof o === 'object' ? String(o.value) : String(o)
+                        const oL = typeof o === 'object' ? String(o.label) : String(o)
+                        return oV === String(val) || oL === String(val)
+                      })
+                      const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
+
                       return (
                         <div key={f.dbColumn} className="space-y-1.5 md:col-span-2">
                           <label className="block text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
@@ -662,11 +691,11 @@ export function DetailRelationSection({
                           </label>
                           <select
                             name={f.dbColumn}
-                            defaultValue={String(val || '')}
+                            defaultValue={defVal}
                             className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                           >
                             <option value="">Selecione...</option>
-                            {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val)) && (
+                            {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
                               <option value={String(val)}>{String(val)}</option>
                             )}
                             {f.config!.options!.map((opt: any, oIdx: number) => {
@@ -688,7 +717,7 @@ export function DetailRelationSection({
                           name={f.dbColumn}
                           type={isDate ? 'date' : isNumber ? 'number' : 'text'}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                          defaultValue={isDate && val ? String(val).slice(0, 10) : String(val ?? '')}
+                          defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                         />
                       </div>
