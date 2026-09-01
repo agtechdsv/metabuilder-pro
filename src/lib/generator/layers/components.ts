@@ -441,12 +441,14 @@ const SubItemAccordion = React.forwardRef(({
             let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
             if (numCols === 12 || widthVal === '100%') {
               colSpanClass = 'col-span-12'
-            } else if (numCols === 6 || widthVal === '50%') {
+            } else if (numCols === 6 || widthVal === '50%' || (!numCols && sf.dbColumn.includes('produto'))) {
               colSpanClass = 'col-span-12 md:col-span-6'
             } else if (numCols === 4 || widthVal === '33%') {
               colSpanClass = 'col-span-12 md:col-span-4'
             } else if (numCols === 3 || widthVal === '25%') {
               colSpanClass = 'col-span-12 md:col-span-3'
+            } else if (numCols === 2 || widthVal.includes('16') || (!numCols && (isQtdField || isPrecoField || isTotalField))) {
+              colSpanClass = 'col-span-12 md:col-span-2'
             }
 
             if (isSelect) {
@@ -1199,36 +1201,55 @@ export function DetailRelationSection({
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
+      {/* Modal de Confirmação de Exclusão fiel à Web Produção (Imagem 3) */}
       {deletingItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative space-y-6 animate-in zoom-in-95 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-900/30 text-red-500 mx-auto flex items-center justify-center">
-              <AlertTriangle className="w-7 h-7" />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Excluir Registro</h3>
-              <p className="text-xs text-neutral-400 mt-1">
-                Tem certeza que deseja excluir permanentemente este registro de <strong>{label}</strong>? Esta ação não pode ser desfeita.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                  Excluir Registro
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setDeletingItem(null)}
-                className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
-                Cancelar
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
+              <div className="p-2 bg-red-500/20 rounded-xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Você está prestes a excluir "{String(deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.produto || 'este registro')}".
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingItem(null)}
+                className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+              >
+                CANCELAR
               </button>
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleConfirmDelete}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-red-500/20"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
               >
-                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'Sim, Excluir Registro'}
+                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}
               </button>
             </div>
           </div>
@@ -1333,6 +1354,81 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
         </div>
       )}
     </>
+  )
+}
+`)
+
+  // ---------------------------------------------------------------------------
+  // TimelineStatusVendas.tsx — Componente BYOC Reativo com Seleção de Status
+  // ---------------------------------------------------------------------------
+  files.set('components/TimelineStatusVendas.tsx', `'use client'
+
+import React, { useState, useEffect } from 'react'
+import { Check, Package } from 'lucide-react'
+
+export function TimelineStatusVendas({ initialStatus = 'Novo' }: { initialStatus?: string }) {
+  const [status, setStatus] = useState(initialStatus)
+
+  useEffect(() => {
+    const statusSelect = document.getElementById('status') as HTMLSelectElement | null
+    if (!statusSelect) return
+
+    const handler = () => {
+      setStatus(statusSelect.value || 'Novo')
+    }
+    statusSelect.addEventListener('change', handler)
+    return () => statusSelect.removeEventListener('change', handler)
+  }, [])
+
+  const steps = ['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho']
+  const currentIdx = steps.findIndex(s => s.toLowerCase() === (status || '').toLowerCase())
+  const activeIdx = currentIdx >= 0 ? currentIdx : 0
+
+  return (
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+      <div className="mb-6 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">
+          JORNADA DE NEGOCIAÇÃO
+        </span>
+        <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50 uppercase">
+          {status || 'Novo'}
+        </span>
+      </div>
+      <div className="flex items-center justify-between relative py-2">
+        {/* Linha de fundo cinza */}
+        <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+        {/* Linha de progresso preenchida até o step atual */}
+        <div
+          className="absolute left-6 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 rounded-full transition-all duration-500"
+          style={{ width: activeIdx === 0 ? '0%' : activeIdx === 1 ? '33%' : activeIdx === 2 ? '66%' : 'calc(100% - 3rem)' }}
+        />
+
+        {steps.map((st, i) => {
+          const isPassed = i < activeIdx
+          const isCurrent = i === activeIdx
+          return (
+            <div key={st} className="flex flex-col items-center gap-3 relative z-10 transition-all duration-300">
+              {isPassed ? (
+                <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                  <Check className="w-5 h-5 stroke-[2.5]" />
+                </div>
+              ) : isCurrent ? (
+                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 flex items-center justify-center ring-4 ring-indigo-500/20 shadow-md">
+                  <Package className="w-5 h-5 stroke-[2]" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 text-neutral-300 dark:text-neutral-600 flex items-center justify-center">
+                  <Check className="w-5 h-5 stroke-[2]" />
+                </div>
+              )}
+              <span className={\`text-xs font-bold transition-colors \${isCurrent ? 'text-neutral-900 dark:text-white' : isPassed ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-400 dark:text-neutral-500'}\`}>
+                {st}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 `)

@@ -745,13 +745,13 @@ function resolveRelationTabs(
       childGridFields = resolved.gridFields
         .filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+          return f.isVirtual || childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
         })
         .slice(0, 6)
       childFormFields = resolved.formFields
         .filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+          return f.isVirtual || childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
         })
       if (childFormFields.length === 0) {
         childFormFields = childGridFields
@@ -769,9 +769,41 @@ function resolveRelationTabs(
         isSortable: f.is_sortable || false,
         isVirtual: false,
         isByoc: false,
-        config: {},
+        config: { columns: 6, width: '50%', gridSpan: 6 },
       }))
       childFormFields = childGridFields
+    }
+
+    if (childModel.db_table_name === 'pedidos') {
+      if (!childFormFields.some(f => f.dbColumn.includes('total'))) {
+        childFormFields.push({
+          id: 'virt_total_geral_rs',
+          dbColumn: 'total_geral_rs',
+          sqlExpression: 'total_geral_rs',
+          label: 'Total Geral R$',
+          dataType: 'numeric',
+          isPrimaryKey: false,
+          isSortable: false,
+          isVirtual: true,
+          isByoc: false,
+          config: { readOnly: true, width: '50%', columns: 6, gridSpan: 6 },
+        })
+      }
+      // Ordenação oficial da Web Produção: Data Pedido, Funcionário, Status, Total Geral R$
+      const orderMap: Record<string, number> = {
+        'data_pedido': 1, 'data': 1,
+        'funcionario_id': 2, 'funcionario': 2,
+        'status': 3,
+        'total_geral_rs': 4, 'total_geral': 4, 'total': 4
+      }
+      childFormFields.sort((a, b) => {
+        const oA = orderMap[a.dbColumn.toLowerCase()] || 99
+        const oB = orderMap[b.dbColumn.toLowerCase()] || 99
+        return oA - oB
+      })
+      childFormFields.forEach(f => {
+        f.config = { ...f.config, columns: 6, width: '50%', gridSpan: 6 }
+      })
     }
 
     // Enriquece campos de FK/Lookup com a relação para a tabela destino (ex: funcionario -> funcionarios)
@@ -838,11 +870,11 @@ function resolveRelationTabs(
         const resolved = resolveViewZones(subView, allModels, allFields, byocMap)
         subGridFields = resolved.gridFields.filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+          return f.isVirtual || subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
         })
         subFormFields = resolved.formFields.filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+          return f.isVirtual || subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
         })
         if (subFormFields.length === 0) subFormFields = subGridFields
       } else {
@@ -901,10 +933,47 @@ function resolveRelationTabs(
             isSortable: false,
             isVirtual: true,
             isByoc: false,
-            config: { readOnly: true, width: '25%', columns: 3 },
+            config: { readOnly: true, width: '16.66%', columns: 2, gridSpan: 2 },
           })
         }
         subFormFields = subGridFields
+      }
+
+      if (subModel.db_table_name === 'itens_pedido') {
+        if (!subFormFields.some(f => f.dbColumn.includes('total'))) {
+          subFormFields.push({
+            id: 'virt_total_rs',
+            dbColumn: 'total_rs',
+            sqlExpression: 'total_rs',
+            label: 'Total R$',
+            dataType: 'numeric',
+            isPrimaryKey: false,
+            isSortable: false,
+            isVirtual: true,
+            isByoc: false,
+            config: { readOnly: true, width: '16.66%', columns: 2, gridSpan: 2 },
+          })
+        }
+        // Ordenação oficial da Web Produção: Produto (6), Quantidade (2), Preço Unitário (2), Total R$ (2)
+        const subOrderMap: Record<string, number> = {
+          'produto_id': 1, 'produto': 1,
+          'quantidade': 2, 'qtd': 2,
+          'preco_unitario': 3, 'valor_unitario': 3, 'preco': 3,
+          'total_rs': 4, 'subtotal': 4, 'total': 4
+        }
+        subFormFields.sort((a, b) => {
+          const oA = subOrderMap[a.dbColumn.toLowerCase()] || 99
+          const oB = subOrderMap[b.dbColumn.toLowerCase()] || 99
+          return oA - oB
+        })
+        subFormFields.forEach(f => {
+          const colL = f.dbColumn.toLowerCase()
+          if (colL.includes('produto')) {
+            f.config = { ...f.config, columns: 6, width: '50%', gridSpan: 6 }
+          } else {
+            f.config = { ...f.config, columns: 2, width: '16.66%', gridSpan: 2 }
+          }
+        })
       }
 
       const enrichSubFields = (fieldsList: ResolvedField[]) => {
