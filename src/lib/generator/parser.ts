@@ -786,10 +786,10 @@ function resolveRelationTabs(
           isSortable: false,
           isVirtual: true,
           isByoc: false,
-          config: { readOnly: true, width: '50%', columns: 6, gridSpan: 6 },
+          config: { readOnly: true, width: '33.33%', columns: 4, gridSpan: 4 },
         })
       }
-      // Ordenação oficial da Web Produção: Data Pedido, Funcionário, Status, Total Geral R$
+      // Ordenação oficial da Web Produção / Studio: Data Pedido (3), Funcionário (8), Status (4), Total Geral R$ (4)
       const orderMap: Record<string, number> = {
         'data_pedido': 1, 'data': 1,
         'funcionario_id': 2, 'funcionario': 2,
@@ -802,7 +802,16 @@ function resolveRelationTabs(
         return oA - oB
       })
       childFormFields.forEach(f => {
-        f.config = { ...f.config, columns: 6, width: '50%', gridSpan: 6 }
+        const colL = f.dbColumn.toLowerCase()
+        if (colL.includes('data')) {
+          f.config = { ...f.config, columns: 3, width: '25%', gridSpan: 3 }
+        } else if (colL.includes('func')) {
+          f.config = { ...f.config, columns: 8, width: '66.66%', gridSpan: 8 }
+        } else if (colL.includes('status')) {
+          f.config = { ...f.config, columns: 4, width: '33.33%', gridSpan: 4 }
+        } else if (colL.includes('total')) {
+          f.config = { ...f.config, columns: 4, width: '33.33%', gridSpan: 4 }
+        }
       })
     }
 

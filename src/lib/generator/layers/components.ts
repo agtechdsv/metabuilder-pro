@@ -834,12 +834,18 @@ export function DetailRelationSection({
                         let colSpanClass = 'col-span-12 md:col-span-6'
                         if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
                           colSpanClass = 'col-span-12'
-                        } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
-                          colSpanClass = 'col-span-12 md:col-span-3'
-                        } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
-                          colSpanClass = 'col-span-12 md:col-span-4'
+                        } else if (numCols === 9 || widthVal === '75%') {
+                          colSpanClass = 'col-span-12 md:col-span-9'
+                        } else if (numCols === 8 || widthVal === '66%' || widthVal === '66.66%') {
+                          colSpanClass = 'col-span-12 md:col-span-8'
                         } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
                           colSpanClass = 'col-span-12 md:col-span-6'
+                        } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                          colSpanClass = 'col-span-12 md:col-span-4'
+                        } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                          colSpanClass = 'col-span-12 md:col-span-3'
+                        } else if (numCols === 2 || widthVal.includes('16')) {
+                          colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
                         let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
@@ -1045,12 +1051,18 @@ export function DetailRelationSection({
                     let colSpanClass = 'col-span-12 md:col-span-6'
                     if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
                       colSpanClass = 'col-span-12'
-                    } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
-                      colSpanClass = 'col-span-12 md:col-span-3'
-                    } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
-                      colSpanClass = 'col-span-12 md:col-span-4'
+                    } else if (numCols === 9 || widthVal === '75%') {
+                      colSpanClass = 'col-span-12 md:col-span-9'
+                    } else if (numCols === 8 || widthVal === '66%' || widthVal === '66.66%') {
+                      colSpanClass = 'col-span-12 md:col-span-8'
                     } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
                       colSpanClass = 'col-span-12 md:col-span-6'
+                    } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                      colSpanClass = 'col-span-12 md:col-span-4'
+                    } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                      colSpanClass = 'col-span-12 md:col-span-3'
+                    } else if (numCols === 2 || widthVal.includes('16')) {
+                      colSpanClass = 'col-span-12 md:col-span-2'
                     }
 
                     const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
@@ -1502,21 +1514,44 @@ import React, { useState, useEffect } from 'react'
 import { Check, Package } from 'lucide-react'
 
 export function ${compName}({ initialStatus = 'Novo', data }: { initialStatus?: string; data?: any }) {
-  const [status, setStatus] = useState(initialStatus)
+  const rawInit = (data?.status || data?.Status || initialStatus || 'Novo')
+  const [status, setStatus] = useState(rawInit)
 
   useEffect(() => {
-    const statusSelect = document.getElementById('status') as HTMLSelectElement | null
-    if (!statusSelect) return
-
-    const handler = () => {
-      setStatus(statusSelect.value || 'Novo')
+    const checkSelect = () => {
+      const select = (document.getElementById('status') || document.querySelector('select[name="status"]') || document.querySelector('select[name*="status" i]')) as HTMLSelectElement | null
+      if (select && select.value) {
+        setStatus(select.value)
+      }
     }
-    statusSelect.addEventListener('change', handler)
-    return () => statusSelect.removeEventListener('change', handler)
+
+    checkSelect()
+
+    const handler = (e: Event) => {
+      const target = e.target as HTMLSelectElement | HTMLInputElement | null
+      if (target && (target.id === 'status' || target.name === 'status' || target.name?.toLowerCase().includes('status'))) {
+        if (target.value) {
+          setStatus(target.value)
+        }
+      }
+    }
+
+    document.addEventListener('change', handler)
+    document.addEventListener('input', handler)
+
+    const timer = setTimeout(checkSelect, 150)
+
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('change', handler)
+      document.removeEventListener('input', handler)
+    }
   }, [])
 
   const steps = ['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho']
-  const currentIdx = steps.findIndex(s => s.toLowerCase() === (status || '').toLowerCase())
+  const normalize = (s: string) => (s || '').toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim()
+  const currentNormalized = normalize(status)
+  const currentIdx = steps.findIndex(s => normalize(s) === currentNormalized)
   const activeIdx = currentIdx >= 0 ? currentIdx : 0
 
   return (

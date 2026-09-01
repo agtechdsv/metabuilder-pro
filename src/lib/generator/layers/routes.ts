@@ -175,7 +175,7 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
           {/* BYOC — ${field.label} */}
           <div className="space-y-3 col-span-12">
             <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${byocCleanLabel}</span>
-            <${byocComponentName} initialStatus={isEdit ? String(data?.status ?? 'Novo') : 'Novo'} data={data} />
+            <${byocComponentName} initialStatus={isEdit ? String(data?.status || data?.Status || 'Novo') : 'Novo'} data={data} />
           </div>`
   }
 
