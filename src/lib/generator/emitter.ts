@@ -771,7 +771,8 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   const isActive = (item: NavItem) => {
     if (item.type === 'view') {
-      const target = (item.target || item.id || '').replace(/^\//, '')
+      const raw = item.target || item.id || ''
+      const target = raw.startsWith('/') ? raw.slice(1) : raw
       return pathname === \`/\${target}\` ||
              pathname?.startsWith(\`/\${target}/\`) ||
              pathname === \`/\${projectSlug}/\${target}\` ||
@@ -782,7 +783,8 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   const renderItem = (item: NavItem) => {
     const active = isActive(item)
-    const target = (item.target || item.id || '').replace(/^\//, '')
+    const raw = item.target || item.id || ''
+    const target = raw.startsWith('/') ? raw.slice(1) : raw
     const href = item.type === 'view' ? \`/\${target}\` : (item.target || '#')
 
     if (item.type === 'folder') {
@@ -956,7 +958,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => `
         <Link
           key="${n.id}"
-          href="/${(n.target || n.id).replace(/^\//, '')}"
+          href="/${String(n.target || n.id).startsWith('/') ? String(n.target || n.id).slice(1) : String(n.target || n.id)}"
           className="group relative p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500 transition-all shadow-sm hover:shadow-2xl dark:shadow-none overflow-hidden flex flex-col justify-between min-h-[220px]"
         >
           {/* Glow Effect */}
