@@ -140,6 +140,25 @@ function getColSpanClass(field: ResolvedField): string {
   return 'col-span-12 md:col-span-6'
 }
 
+export function getByocComponentName(field: ResolvedField): string {
+  if (field.config?.byocName) return toPascalCase(field.config.byocName)
+  if (field.config?.componentName) return toPascalCase(field.config.componentName)
+  if (field.config?.component?.name) return toPascalCase(field.config.component.name)
+  
+  const rawId = String(field.id || '').replace(/^byoc_/, '')
+  const withoutHash = rawId.replace(/^[a-z0-9]{6,10}_/i, '')
+  if (withoutHash && withoutHash.length > 2) {
+    return toPascalCase(withoutHash)
+  }
+  
+  const rawLabel = String(field.label || '').replace(/^\[BYOC\]\s*/i, '')
+  if (rawLabel) {
+    return toPascalCase(rawLabel)
+  }
+  
+  return toPascalCase(rawId) || 'TimelineStatusVendas'
+}
+
 function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false): string {
   const col = field.dbColumn
   const label = field.label
@@ -149,8 +168,7 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
   const colSpanClass = getColSpanClass(field)
 
   if (field.isByoc || field.dataType === 'byoc' || field.id.startsWith('byoc_')) {
-    const rawName = field.config?.byocName || field.config?.componentName || field.id.replace(/^byoc_/, '') || field.label.replace(/^\[BYOC\]\s*/i, '')
-    const byocComponentName = toPascalCase(rawName) || 'TimelineStatusVendas'
+    const byocComponentName = getByocComponentName(field)
     const byocCleanLabel = field.label.replace(/^\[BYOC\]\s*/i, '')
 
     return `
@@ -905,10 +923,7 @@ ${tabButtons}
 
   const byocImports = route.formFields
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
-    .map(f => {
-      const rawName = f.config?.byocName || f.config?.componentName || f.id.replace(/^byoc_/, '') || f.label.replace(/^\[BYOC\]\s*/i, '')
-      return toPascalCase(rawName) || 'TimelineStatusVendas'
-    })
+    .map(f => getByocComponentName(f))
     .filter((v, i, a) => v && a.indexOf(v) === i)
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
@@ -1086,10 +1101,7 @@ function generateNewPage(route: RouteNode): string {
 
   const byocImports = route.formFields
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
-    .map(f => {
-      const rawName = f.config?.byocName || f.config?.componentName || f.id.replace(/^byoc_/, '') || f.label.replace(/^\[BYOC\]\s*/i, '')
-      return toPascalCase(rawName) || 'TimelineStatusVendas'
-    })
+    .map(f => getByocComponentName(f))
     .filter((v, i, a) => v && a.indexOf(v) === i)
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')

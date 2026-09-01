@@ -1359,14 +1359,108 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
 `)
 
   // ---------------------------------------------------------------------------
-  // TimelineStatusVendas.tsx — Componente BYOC Reativo com Seleção de Status
+  // TopProgressBar.tsx — Barra de Progresso de Navegação e Requisições
   // ---------------------------------------------------------------------------
-  files.set('components/TimelineStatusVendas.tsx', `'use client'
+  files.set('components/TopProgressBar.tsx', `'use client'
+
+import React, { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+
+export function TopProgressBar() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [progress, setProgress] = useState(0)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (progress > 0) {
+      setProgress(100)
+      const timer = setTimeout(() => {
+        setVisible(false)
+        setProgress(0)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [pathname, searchParams])
+
+  useEffect(() => {
+    let t1: any
+    let t2: any
+
+    const handleStart = () => {
+      setVisible(true)
+      setProgress(25)
+      t1 = setTimeout(() => setProgress(prev => (prev >= 25 && prev < 80 ? 70 : prev)), 200)
+      t2 = setTimeout(() => setProgress(prev => (prev >= 70 && prev < 90 ? 88 : prev)), 600)
+    }
+
+    const handleClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement)?.closest('a')
+      if (target && target.href && !target.target && !target.hasAttribute('download')) {
+        const url = new URL(target.href, window.location.href)
+        if (url.origin === window.location.origin) {
+          handleStart()
+        }
+      }
+    }
+
+    const handleSubmit = () => {
+      handleStart()
+    }
+
+    document.addEventListener('click', handleClick)
+    document.addEventListener('submit', handleSubmit)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('submit', handleSubmit)
+    }
+  }, [])
+
+  if (!visible && progress === 0) return null
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[99999] h-[3px] pointer-events-none overflow-hidden bg-transparent">
+      <div
+        className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500 shadow-[0_0_12px_rgba(99,102,241,0.8)] transition-all duration-300 ease-out"
+        style={{
+          width: \`\${progress}%\`,
+          opacity: visible ? 1 : 0,
+        }}
+      />
+    </div>
+  )
+}
+`)
+
+  // ---------------------------------------------------------------------------
+  // Componentes BYOC (dinâmicos + templates padrão com suporte a aliases)
+  // ---------------------------------------------------------------------------
+  const byocNames = new Set<string>()
+  byocNames.add('TimelineStatusVendas')
+  byocNames.add('Czqngyk4TimelineStatusVendas')
+
+  ;(ast.routes || []).forEach(r => {
+    ;(r.formFields || []).forEach(f => {
+      if (f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_')) {
+        const rawId = f.id.replace(/^byoc_/, '')
+        const rawPascal = rawId.replace(/[^a-zA-Z0-9_]/g, '')
+        if (rawPascal) byocNames.add(rawPascal)
+        if (f.config?.byocName) byocNames.add(f.config.byocName)
+        if (f.config?.componentName) byocNames.add(f.config.componentName)
+      }
+    })
+  })
+
+  byocNames.forEach(compName => {
+    if (compName.toLowerCase().includes('timeline') || compName.toLowerCase().includes('status')) {
+      files.set(`components/${compName}.tsx`, `'use client'
 
 import React, { useState, useEffect } from 'react'
 import { Check, Package } from 'lucide-react'
 
-export function TimelineStatusVendas({ initialStatus = 'Novo' }: { initialStatus?: string }) {
+export function ${compName}({ initialStatus = 'Novo', data }: { initialStatus?: string; data?: any }) {
   const [status, setStatus] = useState(initialStatus)
 
   useEffect(() => {
@@ -1432,4 +1526,20 @@ export function TimelineStatusVendas({ initialStatus = 'Novo' }: { initialStatus
   )
 }
 `)
+    } else {
+      files.set(`components/${compName}.tsx`, `'use client'
+
+import React from 'react'
+
+export function ${compName}({ data }: { data?: any }) {
+  return (
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
+      <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">${compName}</span>
+      <p className="text-xs text-neutral-400 mt-1">Componente BYOC personalizado carregado com sucesso.</p>
+    </div>
+  )
+}
+`)
+    }
+  })
 }
