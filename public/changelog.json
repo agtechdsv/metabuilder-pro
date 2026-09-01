@@ -1,4 +1,34 @@
 {
+  "v1.0.8": {
+    "date": "2026-09-01",
+    "pt": [
+      "Paridade visual e estrutural completa com a versão Web de produção em listagens, filtros avançados, ordenação, dashboards e barra lateral.",
+      "Novo layout de edição otimizado para telas largas (até 1600px) com cabeçalhos aprimorados e grid responsivo de 12 colunas fiel às configurações do Studio.",
+      "Formatação inteligente e em tempo real com máscaras dinâmicas de preenchimento para CNPJ, CPF, CEP e Telefone.",
+      "Novo componente visual 'Jornada de Negociação' (Timeline de Vendas) com atualização reativa e instantânea de status.",
+      "Ações de salvar e cancelar persistentes em todas as abas de detalhes e novo modal padronizado de confirmação de exclusão.",
+      "Barra de progresso global no topo da página (TopProgressBar) com animação suave durante navegações e carregamentos.",
+      "Maior robustez na sincronização dinâmica de componentes customizados (BYOC) e proteção de dados com isolamento seguro de colunas em formulários mestre-detalhe."
+    ],
+    "en": [
+      "Full 1:1 visual and functional parity with production web across listings, advanced filters, sorting, dashboards, and sidebar.",
+      "Optimized edit layout for widescreen displays (up to 1600px) featuring improved headers and a responsive 12-column grid aligned with Studio configs.",
+      "Intelligent real-time input formatting with automatic masks for CNPJ, CPF, Postal Code, and Phone numbers.",
+      "New reactive 'Deal Journey' visual timeline component with real-time status updates.",
+      "Persistent Save and Cancel actions across all detail tabs alongside a standardized, safer delete confirmation modal.",
+      "New animated top progress bar (TopProgressBar) providing smooth visual feedback during page transitions and data requests.",
+      "Enhanced dynamic integration for custom BYOC components and reinforced data security with strict column whitelisting on master-detail records."
+    ],
+    "es": [
+      "Paridad visual y funcional 1:1 completa con la versión web de producción en listados, filtros avanzados, ordenación, paneles y barra lateral.",
+      "Nuevo diseño de edición optimizado para pantallas anchas (hasta 1600px) con encabezados mejorados y cuadrícula responsiva de 12 columnas fiel al Studio.",
+      "Formateo inteligente en tiempo real con máscaras automáticas para documentos (CNPJ/CPF), códigos postales y teléfonos.",
+      "Nuevo componente visual 'Jornada de Negociación' (Timeline de Ventas) con actualización reactiva e instantánea de estados.",
+      "Acciones de guardar y cancelar persistentes en todas las pestañas de detalle y nuevo modal estandarizado de confirmación de eliminación.",
+      "Nueva barra de progreso superior global (TopProgressBar) con animaciones fluidas durante la navegación y peticiones.",
+      "Mayor robustez en la integración dinámica de componentes personalizados (BYOC) y máxima protección de datos en formularios maestro-detalle."
+    ]
+  },
   "v1.0.7": {
     "date": "2026-09-01",
     "pt": [
