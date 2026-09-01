@@ -172,18 +172,126 @@ export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell }
 `)
   files.set('components/ui/delete-button.tsx', `'use client'
 
-import { Trash2 } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { Trash2, AlertCircle, X, Loader2 } from 'lucide-react'
 
-export function DeleteButton() {
+interface DeleteButtonProps {
+  recordName?: string
+  onDelete: () => Promise<void>
+}
+
+export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  const handleConfirm = () => {
+    startTransition(async () => {
+      try {
+        await onDelete()
+        setIsOpen(false)
+      } catch (err) {
+        console.error('Erro ao excluir registro:', err)
+        setIsOpen(false)
+      }
+    })
+  }
+
   return (
-    <button 
-      type="submit" 
-      className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" 
-      title="Excluir" 
-      onClick={(e) => { if (!confirm('Confirmar exclusão?')) e.preventDefault() }}
+    <>
+      <button 
+        type="button" 
+        onClick={() => setIsOpen(true)}
+        className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" 
+        title="Excluir" 
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                  Excluir Registro
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
+              <div className="p-2 bg-red-500/20 rounded-xl shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Você está prestes a excluir {recordName ? \`"\${recordName}"\` : 'este registro'}.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleConfirm}
+                className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50"
+              >
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {isPending ? 'Excluindo...' : 'Confirmar Exclusão'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+`)
+
+  files.set('components/ui/limit-selector.tsx', `'use client'
+
+import { useRouter, useSearchParams } from 'next/navigation'
+
+export function LimitSelector({ currentLimit }: { currentLimit: number }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const handleChange = (newLimit: string) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : '')
+    params.set('limit', newLimit)
+    params.set('page', '1')
+    router.push(\`?\${params.toString()}\`)
+  }
+
+  return (
+    <select
+      value={currentLimit}
+      onChange={(e) => handleChange(e.target.value)}
+      className="bg-transparent border-none outline-none text-indigo-600 font-bold focus:ring-0 cursor-pointer text-[11px] uppercase tracking-widest"
     >
-      <Trash2 className="w-3.5 h-3.5" />
-    </button>
+      <option value={10}>10 Linhas</option>
+      <option value={15}>15 Linhas</option>
+      <option value={25}>25 Linhas</option>
+      <option value={50}>50 Linhas</option>
+    </select>
   )
 }
 `)

@@ -890,6 +890,7 @@ import { usePathname } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, Home, ChevronRight } from 'lucide-react'
 import { AppSidebar } from '@/app/components/AppSidebar'
 import { HeaderControls } from '@/app/components/HeaderControls'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
 
 const NAV_ITEMS = ${navItemsJson}
 const PROJECT_SLUG = '${ast.projectSlug}'
@@ -899,9 +900,13 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
 
-  const segments = (pathname || '').split('/').filter(Boolean).slice(1) // remove project slug
-  const currentLabel = segments[segments.length - 1] || ''
-  const navItem = NAV_ITEMS.find((n: any) => n.target === currentLabel)
+  const segments = (pathname || '').split('/').filter(Boolean)
+  const slugSegment = segments[0] === PROJECT_SLUG ? segments[1] : segments[0]
+  const navItem = NAV_ITEMS.find((n: any) => {
+    const raw = String(n.target || n.id || '')
+    const t = raw.startsWith('/') ? raw.slice(1) : raw
+    return t === slugSegment || n.label?.toLowerCase() === slugSegment?.toLowerCase()
+  })
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#050505]">
@@ -925,13 +930,16 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
           <nav className="flex-1 flex items-center gap-2 text-[10px] font-bold capitalize tracking-widest text-neutral-400 overflow-hidden">
             <Link href="/" className="hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0">
-              <Home className="w-3 h-3" />
+              <Home className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
             {navItem && (
               <div className="flex items-center gap-2 min-w-0">
                 <ChevronRight className="w-3 h-3 opacity-30 shrink-0" />
-                <span className="text-neutral-900 dark:text-white truncate capitalize">{navItem.label}</span>
+                <div className="flex items-center gap-1.5 text-neutral-900 dark:text-white truncate">
+                  <DynamicIcon icon={navItem.icon || 'Layout'} size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="truncate">{navItem.label}</span>
+                </div>
               </div>
             )}
           </nav>
@@ -1006,7 +1014,7 @@ export default function DashboardPage() {
             <DynamicIcon icon="${ast.projectIcon || 'Layers'}" size={24} />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight uppercase">
+            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
               ${ast.projectName}
             </h1>
             <div className="flex items-center gap-2 mt-1">

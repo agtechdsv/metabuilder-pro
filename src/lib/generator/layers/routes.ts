@@ -437,9 +437,10 @@ function generateListPage(route: RouteNode): string {
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 import { delete${mn} } from '@/app/actions/${mnLower}'
-import { Plus, Pencil, Eye, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
+import { Plus, Pencil, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { LimitSelector } from '@/components/ui/limit-selector'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
@@ -515,7 +516,7 @@ ${filterFields.map(f => {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight uppercase">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
                 ${route.title}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-black text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 tracking-widest uppercase">
@@ -598,14 +599,15 @@ ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                     <div className="flex items-center justify-end gap-1.5">
                       <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
-                        <Eye className="w-3.5 h-3.5" />
+                        <Search className="w-3.5 h-3.5" />
                       </Link>
                       <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </Link>
-                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}>
-                        <DeleteButton />
-                      </form>
+                      <DeleteButton
+                        recordName={item.nome || item.name || item.titulo || item.razao_social || String(item.${route.primaryKey})}
+                        onDelete={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}
+                      />
 ${route.buttons.filter(b => b.placement === 'row' && b.actionType !== 'view' && b.actionType !== 'edit' && b.actionType !== 'update' && b.actionType !== 'delete').map(b => `
                       <Link href={\`${b.linkTarget || '#'}${b.linkTarget?.includes('?') ? '&' : '?'}${mnLower}_id=\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="${b.label}">
                         <DynamicIcon icon="${b.icon || 'Receipt'}" size={14} />
@@ -629,7 +631,7 @@ ${route.buttons.filter(b => b.placement === 'row' && b.actionType !== 'view' && 
         <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
             <span className="opacity-60">Exibir</span>
-            <span className="text-indigo-600 font-bold">{limit} Linhas</span>
+            <LimitSelector currentLimit={limit} />
             <span className="mx-2 opacity-20">|</span>
             <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white font-bold">{totalRows}</span></span>
           </div>
