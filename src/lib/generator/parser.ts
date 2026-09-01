@@ -774,44 +774,21 @@ function resolveRelationTabs(
       childFormFields = childGridFields
     }
 
-    if (childModel.db_table_name === 'pedidos') {
-      if (!childFormFields.some(f => f.dbColumn.includes('total'))) {
-        childFormFields.push({
-          id: 'virt_total_geral_rs',
-          dbColumn: 'total_geral_rs',
-          sqlExpression: 'total_geral_rs',
-          label: 'Total Geral R$',
-          dataType: 'numeric',
-          isPrimaryKey: false,
-          isSortable: false,
-          isVirtual: true,
-          isByoc: false,
-          config: { readOnly: true, width: '33.33%', columns: 4, gridSpan: 4 },
-        })
-      }
-      // Ordenação oficial da Web Produção / Studio: Data Pedido (3), Funcionário (8), Status (4), Total Geral R$ (4)
-      const orderMap: Record<string, number> = {
-        'data_pedido': 1, 'data': 1,
-        'funcionario_id': 2, 'funcionario': 2,
-        'status': 3,
-        'total_geral_rs': 4, 'total_geral': 4, 'total': 4
-      }
-      childFormFields.sort((a, b) => {
-        const oA = orderMap[a.dbColumn.toLowerCase()] || 99
-        const oB = orderMap[b.dbColumn.toLowerCase()] || 99
-        return oA - oB
-      })
-      childFormFields.forEach(f => {
-        const colL = f.dbColumn.toLowerCase()
-        if (colL.includes('data')) {
-          f.config = { ...f.config, columns: 3, width: '25%', gridSpan: 3 }
-        } else if (colL.includes('func')) {
-          f.config = { ...f.config, columns: 8, width: '66.66%', gridSpan: 8 }
-        } else if (colL.includes('status')) {
-          f.config = { ...f.config, columns: 4, width: '33.33%', gridSpan: 4 }
-        } else if (colL.includes('total')) {
-          f.config = { ...f.config, columns: 4, width: '33.33%', gridSpan: 4 }
-        }
+    // Se o modelo filho possui sub-itens/filhos (ex: Itens do Pedido, Parcelas, etc.) e não possui campo de total,
+    // adiciona um campo virtual para exibir a somatória calculada dinâmica dos sub-itens:
+    const hasSubChildren = rawRelations.some((r: any) => r.to_model_id === childModel.id && r.from_model_id !== view.model_id)
+    if (hasSubChildren && !childFormFields.some(f => f.dbColumn.toLowerCase().includes('total') || f.label.toLowerCase().includes('total'))) {
+      childFormFields.push({
+        id: 'virt_total_geral_rs',
+        dbColumn: 'total_geral_rs',
+        sqlExpression: 'total_geral_rs',
+        label: 'Total Geral R$',
+        dataType: 'numeric',
+        isPrimaryKey: false,
+        isSortable: false,
+        isVirtual: true,
+        isByoc: false,
+        config: { readOnly: true, width: '33.33%', columns: 4, gridSpan: 4 },
       })
     }
 
