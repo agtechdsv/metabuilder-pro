@@ -408,9 +408,9 @@ function resolveViewZones(
     return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata)]
   })
 
-  // Injeta componentes BYOC no form (componentes customizados de UI)
+  // Injeta componentes BYOC e virtuais no form (componentes customizados de UI)
   formFieldsOrder
-    .filter((id: string) => id.startsWith('byoc_'))
+    .filter((id: string) => id.startsWith('byoc_') || id.startsWith('virt_'))
     .forEach((id: string) => {
       if (!formFields.find((f) => f.id === id)) {
         formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
@@ -728,37 +728,59 @@ function resolveRelationTabs(
 
     const childModelName = toPascalCase(childModel.db_table_name)
 
-    // Tenta encontrar a view do modelo filho para usar seus gridFields
+    const parentViewFieldsMetadata = layoutConfig.fields_metadata || {}
+    const parentViewFormFieldsOrder: string[] = layoutConfig.form_fields || []
+    const childModelFields = allFields.filter((f: any) => f.model_id === childModel.id)
+    const childModelFieldIds = new Set(childModelFields.map((f: any) => f.id))
     const childView = allViews.find(
       (v: any) => v.model_id === rel.from_model_id && v.logic_type !== 'personalizado'
     )
 
-    const childModelColumnNames = new Set(
-      allFields.filter((f: any) => f.model_id === childModel.id).map((f: any) => f.db_column_name)
-    )
+    // 1. Prioridade Máxima: Campos configurados diretamente no Use Case atual (layout_config da view pai no Studio)
+    const configuredChildFieldIds = parentViewFormFieldsOrder.filter(fid => {
+      if (childModelFieldIds.has(fid)) return true
+      if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
+        const meta = parentViewFieldsMetadata[fid] || {}
+        return meta.virtual_model_id === childModel.id || meta.byoc_model_id === childModel.id
+      }
+      return false
+    })
 
     let childGridFields: ResolvedField[] = []
     let childFormFields: ResolvedField[] = []
-    if (childView) {
+
+    if (configuredChildFieldIds.length > 0) {
+      const formComponents = (view.ui_components || []).filter((c: any) => {
+        const field = allFields.find((f: any) => f.id === c.field_id)
+        return field && childModelFieldIds.has(field.id)
+      })
+      childFormFields = configuredChildFieldIds.map(fid => {
+        if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
+          return buildVirtualField(fid, 'form', parentViewFieldsMetadata, byocMap)
+        }
+        const field = allFields.find((f: any) => f.id === fid)
+        const comp = formComponents.find((c: any) => c.field_id === fid) || { field_id: fid, config: {} }
+        return buildResolvedField(comp, field, 'form', childModel.id, allModels, parentViewFieldsMetadata)
+      })
+      childGridFields = childFormFields.slice(0, 6)
+    } else if (childView) {
       const resolved = resolveViewZones(childView, allModels, allFields, byocMap)
-      // Para aba de detalhe, inclui apenas colunas que realmente pertencem ao modelo filho
       childGridFields = resolved.gridFields
         .filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return f.isVirtual || childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+          return f.isVirtual || childModelFieldIds.size === 0 || childModelFields.some(mf => mf.db_column_name === colName)
         })
         .slice(0, 6)
       childFormFields = resolved.formFields
         .filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return f.isVirtual || childModelColumnNames.size === 0 || childModelColumnNames.has(colName)
+          return f.isVirtual || childModelFieldIds.size === 0 || childModelFields.some(mf => mf.db_column_name === colName)
         })
       if (childFormFields.length === 0) {
         childFormFields = childGridFields
       }
     } else {
       // Fallback: usa os campos do modelo filho
-      const childModelFields = allFields.filter((f: any) => f.model_id === rel.from_model_id)
       childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => ({
         id: f.id,
         dbColumn: f.db_column_name,
@@ -846,21 +868,44 @@ function resolveRelationTabs(
         (v: any) => v.model_id === subModel.id && v.logic_type !== 'personalizado'
       )
 
-      const subModelColumnNames = new Set(
-        allFields.filter((f: any) => f.model_id === subModel.id).map((f: any) => f.db_column_name)
-      )
+      const subModelFields = allFields.filter((f: any) => f.model_id === subModel.id)
+      const subModelFieldIds = new Set(subModelFields.map((f: any) => f.id))
+
+      const configuredSubFieldIds = parentViewFormFieldsOrder.filter(fid => {
+        if (subModelFieldIds.has(fid)) return true
+        if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
+          const meta = parentViewFieldsMetadata[fid] || {}
+          return meta.virtual_model_id === subModel.id || meta.byoc_model_id === subModel.id
+        }
+        return false
+      })
 
       let subGridFields: ResolvedField[] = []
       let subFormFields: ResolvedField[] = []
-      if (subView) {
+
+      if (configuredSubFieldIds.length > 0) {
+        const subComponents = (view.ui_components || []).filter((c: any) => {
+          const field = allFields.find((f: any) => f.id === c.field_id)
+          return field && subModelFieldIds.has(field.id)
+        })
+        subFormFields = configuredSubFieldIds.map(fid => {
+          if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
+            return buildVirtualField(fid, 'form', parentViewFieldsMetadata, byocMap)
+          }
+          const field = allFields.find((f: any) => f.id === fid)
+          const comp = subComponents.find((c: any) => c.field_id === fid) || { field_id: fid, config: {} }
+          return buildResolvedField(comp, field, 'form', subModel.id, allModels, parentViewFieldsMetadata)
+        })
+        subGridFields = subFormFields
+      } else if (subView) {
         const resolved = resolveViewZones(subView, allModels, allFields, byocMap)
         subGridFields = resolved.gridFields.filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return f.isVirtual || subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+          return f.isVirtual || subModelFieldIds.size === 0 || subModelFields.some(mf => mf.db_column_name === colName)
         })
         subFormFields = resolved.formFields.filter(f => {
           const colName = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-          return f.isVirtual || subModelColumnNames.size === 0 || subModelColumnNames.has(colName)
+          return f.isVirtual || subModelFieldIds.size === 0 || subModelFields.some(mf => mf.db_column_name === colName)
         })
         if (subFormFields.length === 0) subFormFields = subGridFields
       } else {
