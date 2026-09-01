@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
-import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight } from 'lucide-react'
+import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
@@ -410,7 +410,7 @@ export default function RecordForm({
                               title={detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
                               className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
                             >
-                              {detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                              {detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
                             </button>
                           )}
                         </div>
