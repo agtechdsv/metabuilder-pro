@@ -679,39 +679,50 @@ export function DetailRelationSection({
           <p className="text-xs text-neutral-400">Total de {localItems.length} {localItems.length === 1 ? 'registro' : 'registros'}</p>
         </div>
 
-        {/* Toolbar no Topo à Direita: Expandir/Recolher, Adicionar Inline, Abrir Modal */}
-        <div className="flex items-center gap-1 bg-neutral-100/80 dark:bg-neutral-800/60 p-1 rounded-xl border border-neutral-200/60 dark:border-neutral-700/50">
-          <button
-            type="button"
-            onClick={toggleExpandAll}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
-            title={allExpanded ? 'Recolher Todos' : 'Expandir Todos'}
-          >
-            {allExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+        {/* Toolbar no Topo à Direita: Expandir/Recolher, Adicionar, Abrir Modal */}
+        <div className="flex items-center gap-2">
+          {/* Pill de Expandir/Recolher Tudo */}
+          <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => {
+                const next: Record<string, boolean> = {}
+                localItems.forEach((_, idx) => { next[idx] = true })
+                setExpandedRows(next)
+              }}
+              className="p-1 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-neutral-700 transition-all"
+              title="Expandir Todos"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpandedRows({})}
+              className="p-1 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-neutral-700 transition-all"
+              title="Recolher Todos"
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Adicionar Registro (+) */}
           <button
             type="button"
             onClick={handleAddInline}
-            className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
-            title={\`Adicionar \${label} (Inline)\`}
+            className="p-2 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all active:scale-95 shadow-sm flex items-center justify-center"
+            title={\`Adicionar \${label}\`}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
           </button>
+
+          {/* Abrir Modal (ExternalLink) */}
           <button
             type="button"
             onClick={handleOpenAddModal}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
-            title="Abrir Modal"
+            className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+            title="Abrir em Modal"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMaximized(prev => !prev)}
-            className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-white dark:hover:bg-neutral-700 shadow-sm transition-all"
-            title={isMaximized ? 'Restaurar' : 'Maximizar'}
-          >
-            {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <ExternalLink className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -904,9 +915,21 @@ export function DetailRelationSection({
                             ITENS DE {detailSingular.toUpperCase()}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                          <button type="button" className="p-1 text-neutral-400 hover:text-indigo-600"><Plus className="w-3.5 h-3.5" /></button>
-                          <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3.5 h-3.5" /></button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+                            title="Adicionar"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors"
+                            title="Abrir Modal"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 

@@ -150,30 +150,56 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
 
   if (field.isByoc || field.isVirtual) {
     const byocName = field.config?.byocName || field.id.replace(/^byoc_/, '')
-    const byocComponentName = toPascalCase(byocName)
+    const byocCleanLabel = field.label.replace(/^\[BYOC\]\s*/i, '')
 
     if (byocName.toLowerCase().includes('timeline') || byocName.toLowerCase().includes('status')) {
-      const steps = ['Novo', 'Contactado', 'Em Negociação', 'Fechado Ganho']
       return `
           {/* BYOC — ${field.label} */}
           <div className="space-y-3 col-span-12">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${field.label}</span>
-            <div className="bg-slate-50 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-2xl p-6 shadow-inner">
-              <div className="flex items-center justify-between relative">
-                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 dark:bg-indigo-600/50 rounded-full" />
-                <div className="absolute left-6 right-1/4 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 rounded-full" />
-                {${JSON.stringify(steps)}.map((st, i) => {
-                  const isPassed = i < 2
-                  const isCurrent = i === 2
-                  return (
-                    <div key={st} className="flex flex-col items-center gap-2 relative z-10">
-                      <div className={\`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all \${isCurrent ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : isPassed ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-neutral-800 border-2 border-neutral-300 dark:border-neutral-600 text-neutral-400'}\`}>
-                        {isPassed ? '✓' : i + 1}
-                      </div>
-                      <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">{st}</span>
-                    </div>
-                  )
-                })}
+            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${byocCleanLabel}</span>
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+              <div className="mb-6">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">
+                  JORNADA DE NEGOCIAÇÃO
+                </span>
+              </div>
+              <div className="flex items-center justify-between relative py-2">
+                {/* Linha de fundo cinza */}
+                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+                {/* Linha de progresso azul preenchida até o step atual */}
+                <div className="absolute left-6 w-2/3 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 rounded-full" />
+                
+                {/* Step 1: Novo (Passado / Concluído com Check) */}
+                <div className="flex flex-col items-center gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <Check className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white">Novo</span>
+                </div>
+
+                {/* Step 2: Contactado (Passado / Concluído com Check) */}
+                <div className="flex flex-col items-center gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <Check className="w-5 h-5 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white">Contactado</span>
+                </div>
+
+                {/* Step 3: Em Negociação (Ativo com Ícone de Caixa / Roxo Claro) */}
+                <div className="flex flex-col items-center gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 flex items-center justify-center ring-4 ring-indigo-500/20 shadow-md">
+                    <Package className="w-5 h-5 stroke-[2]" />
+                  </div>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white">Em Negociação</span>
+                </div>
+
+                {/* Step 4: Fechado Ganho (Futuro) */}
+                <div className="flex flex-col items-center gap-3 relative z-10">
+                  <div className="w-10 h-10 rounded-full bg-white dark:bg-neutral-900 border-2 border-neutral-200 dark:border-neutral-700 text-neutral-300 dark:text-neutral-600 flex items-center justify-center">
+                    <Check className="w-5 h-5 stroke-[2]" />
+                  </div>
+                  <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Fechado Ganho</span>
+                </div>
               </div>
             </div>
           </div>`
@@ -911,7 +937,7 @@ import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 ${relationImports}
-import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Pencil, Download, Zap, Check, Package } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''

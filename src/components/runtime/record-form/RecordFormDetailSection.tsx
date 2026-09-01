@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Pencil, Plus, Trash2, ChevronDown, ChevronUp, PanelRight, Maximize2 } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, ChevronDown, ChevronUp, PanelRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getActionContexts } from '@/lib/customActionsHelper';
 import { getActionIcon, getActionColorClasses, getFontFamily, getFontSize, applyMask, parseMaskedNumber, parseFixedOptions } from './RecordFormUtils';
@@ -201,7 +201,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                 title={detailsInterfaceTypes[modelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
                 className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
               >
-                {detailsInterfaceTypes[modelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {detailsInterfaceTypes[modelId || ''] === 'drawer' ? <PanelRight className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
               </button>
             )}
           </div>

@@ -87,14 +87,16 @@ function applyFieldsMeta(
   modelName?: string
 ): ResolvedFieldConfig {
   const colName = (rawField?.db_column_name || '').toLowerCase()
+  const rawId = (rawField?.id || fieldId || '').toLowerCase()
   const tblName = (modelName || '').toLowerCase()
   const fullColName = tblName && colName ? `${tblName}.${colName}` : ''
 
   // Busca chaves candidatas no fieldsMetadata do Studio:
-  // ex: form-d6cd21d2-..., clientes.nome_empresa, form-clientes.nome_empresa, nome_empresa
   const candidateKeys = [
     `${zone}-${fieldId}`,
     fieldId,
+    rawId ? `${zone}-${rawId}` : null,
+    rawId || null,
     fullColName ? `${zone}-${fullColName}` : null,
     fullColName || null,
     colName ? `${zone}-${colName}` : null,
@@ -108,11 +110,12 @@ function applyFieldsMeta(
     }
   }
 
-  // Busca também por chaves case-insensitive no fieldsMetadata
+  // Busca também por chaves case-insensitive e correspondência parcial no fieldsMetadata
   for (const [mk, mv] of Object.entries(fieldsMetadata)) {
     const mkLower = mk.toLowerCase()
     if (
-      (colName && (mkLower === colName || mkLower === `${zone}-${colName}`)) ||
+      (colName && (mkLower === colName || mkLower === `${zone}-${colName}` || mkLower.endsWith(`.${colName}`))) ||
+      (rawId && (mkLower === rawId || mkLower === `${zone}-${rawId}` || mkLower.endsWith(rawId))) ||
       (fullColName && (mkLower === fullColName || mkLower === `${zone}-${fullColName}`))
     ) {
       mergedMeta = { ...mergedMeta, ...mv }
@@ -122,6 +125,10 @@ function applyFieldsMeta(
   const merged = { ...baseFieldConfig, ...mergedMeta }
 
   let options =
+    mergedMeta.options ||
+    mergedMeta.component?.options ||
+    mergedMeta.component?.fixed_options ||
+    mergedMeta.fixed_options ||
     merged.options ||
     merged.component?.options ||
     merged.component?.fixed_options ||
@@ -158,27 +165,31 @@ function applyFieldsMeta(
     ]
   }
 
-  const relation = merged.relation || rawField?.relation || baseFieldConfig?.relation
+  const relation = mergedMeta.relation || merged.relation || rawField?.relation || baseFieldConfig?.relation
 
-  // Extrai colunas de 1 a 12 de todas as possíveis propriedades do Studio
+  // Extrai colunas de 1 a 12 com prioridade ABSOLUTA para a metadata da zona configurada no Studio
   const rawCols =
-    merged.component?.gridSpan ??
-    merged.component?.modalGridSpan ??
-    merged.gridSpan ??
-    merged.modalGridSpan ??
-    merged.component?.columns ??
-    merged.component?.col_span ??
-    merged.component?.colspan ??
-    merged.component?.layout_padrao?.colunas ??
-    merged.component?.layout_padrao?.ocupar_colunas ??
-    merged.layout_padrao?.colunas ??
-    merged.layout_padrao?.ocupar_colunas ??
-    merged.layout?.columns ??
-    merged.layout?.col_span ??
-    merged.columns ??
-    merged.col_span ??
-    merged.colSpan ??
-    merged.ocupar_colunas
+    mergedMeta.component?.gridSpan ??
+    mergedMeta.component?.modalGridSpan ??
+    mergedMeta.gridSpan ??
+    mergedMeta.modalGridSpan ??
+    mergedMeta.component?.columns ??
+    mergedMeta.component?.col_span ??
+    mergedMeta.component?.colspan ??
+    mergedMeta.component?.layout_padrao?.colunas ??
+    mergedMeta.component?.layout_padrao?.ocupar_colunas ??
+    mergedMeta.layout_padrao?.colunas ??
+    mergedMeta.layout_padrao?.ocupar_colunas ??
+    mergedMeta.layout?.columns ??
+    mergedMeta.layout?.col_span ??
+    mergedMeta.columns ??
+    mergedMeta.col_span ??
+    mergedMeta.colSpan ??
+    mergedMeta.ocupar_colunas ??
+    baseFieldConfig?.component?.gridSpan ??
+    baseFieldConfig?.gridSpan ??
+    baseFieldConfig?.columns ??
+    baseFieldConfig?.col_span
 
   let columns: number | undefined
   if (rawCols !== undefined && rawCols !== null && rawCols !== '') {
@@ -191,19 +202,19 @@ function applyFieldsMeta(
   }
 
   return {
-    label: merged.label,
-    width: merged.width,
-    gridSpan: columns || merged.gridSpan || merged.component?.gridSpan,
-    modalGridSpan: merged.component?.modalGridSpan || merged.modalGridSpan,
-    columns: columns || merged.columns || merged.col_span,
-    format: merged.format,
+    label: mergedMeta.label || merged.label,
+    width: mergedMeta.width || mergedMeta.component?.width || merged.width,
+    gridSpan: columns || mergedMeta.gridSpan || mergedMeta.component?.gridSpan || merged.gridSpan || merged.component?.gridSpan,
+    modalGridSpan: mergedMeta.component?.modalGridSpan || mergedMeta.modalGridSpan || merged.component?.modalGridSpan || merged.modalGridSpan,
+    columns: columns || mergedMeta.columns || mergedMeta.col_span || merged.columns || merged.col_span,
+    format: mergedMeta.format || merged.format,
     options,
     relation,
-    readOnly: merged.readOnly || merged.read_only || merged.content?.readonly,
-    required: merged.required || merged.is_required || merged.content?.required,
-    placeholder: merged.placeholder || merged.content?.placeholder,
-    multiline: merged.multiline || merged.is_multiline,
-    rows: merged.rows || merged.component?.rows,
+    readOnly: mergedMeta.readOnly || mergedMeta.read_only || mergedMeta.content?.readonly || merged.readOnly || merged.read_only || merged.content?.readonly,
+    required: mergedMeta.required || mergedMeta.is_required || mergedMeta.content?.required || merged.required || merged.is_required || merged.content?.required,
+    placeholder: mergedMeta.placeholder || mergedMeta.content?.placeholder || merged.placeholder || merged.content?.placeholder,
+    multiline: mergedMeta.multiline || mergedMeta.is_multiline || merged.multiline || merged.is_multiline,
+    rows: mergedMeta.rows || mergedMeta.component?.rows || merged.rows || merged.component?.rows,
     ...merged,
     ...(columns ? { columns, gridSpan: columns } : {}),
     ...(options ? { options } : {}),
