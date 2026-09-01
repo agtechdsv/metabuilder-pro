@@ -83,18 +83,49 @@ function applyFieldsMeta(
   zone: 'grid' | 'form' | 'filter',
   fieldsMetadata: Record<string, any>,
   baseFieldConfig: any,
-  rawField?: any
+  rawField?: any,
+  modelName?: string
 ): ResolvedFieldConfig {
-  const zoneMeta = fieldsMetadata[`${zone}-${fieldId}`] || {}
-  const globalMeta = fieldsMetadata[fieldId] || {}
-  const merged = { ...baseFieldConfig, ...globalMeta, ...zoneMeta }
+  const colName = (rawField?.db_column_name || '').toLowerCase()
+  const tblName = (modelName || '').toLowerCase()
+  const fullColName = tblName && colName ? `${tblName}.${colName}` : ''
+
+  // Busca chaves candidatas no fieldsMetadata do Studio:
+  // ex: form-d6cd21d2-..., clientes.nome_empresa, form-clientes.nome_empresa, nome_empresa
+  const candidateKeys = [
+    `${zone}-${fieldId}`,
+    fieldId,
+    fullColName ? `${zone}-${fullColName}` : null,
+    fullColName || null,
+    colName ? `${zone}-${colName}` : null,
+    colName || null,
+  ].filter(Boolean) as string[]
+
+  let mergedMeta: Record<string, any> = {}
+  for (const k of candidateKeys) {
+    if (fieldsMetadata[k]) {
+      mergedMeta = { ...mergedMeta, ...fieldsMetadata[k] }
+    }
+  }
+
+  // Busca também por chaves case-insensitive no fieldsMetadata
+  for (const [mk, mv] of Object.entries(fieldsMetadata)) {
+    const mkLower = mk.toLowerCase()
+    if (
+      (colName && (mkLower === colName || mkLower === `${zone}-${colName}`)) ||
+      (fullColName && (mkLower === fullColName || mkLower === `${zone}-${fullColName}`))
+    ) {
+      mergedMeta = { ...mergedMeta, ...mv }
+    }
+  }
+
+  const merged = { ...baseFieldConfig, ...mergedMeta }
 
   let options = merged.options || rawField?.options || rawField?.enum_values || baseFieldConfig?.options || baseFieldConfig?.enum_values
   if (Array.isArray(options)) {
     options = options.map((opt: any) => typeof opt === 'string' ? { label: opt, value: opt } : opt)
   }
 
-  const colName = (rawField?.db_column_name || '').toLowerCase()
   const dispName = (rawField?.display_name || '').toLowerCase()
   if ((colName === 'status' || dispName === 'status' || colName.endsWith('_status')) && (!options || options.length === 0)) {
     options = [
@@ -107,10 +138,36 @@ function applyFieldsMeta(
 
   const relation = merged.relation || rawField?.relation || baseFieldConfig?.relation
 
+  // Extrai colunas de 1 a 12 de todas as possíveis propriedades do Studio
+  const rawCols =
+    merged.component?.columns ??
+    merged.component?.col_span ??
+    merged.component?.colspan ??
+    merged.component?.layout_padrao?.colunas ??
+    merged.component?.layout_padrao?.ocupar_colunas ??
+    merged.layout_padrao?.colunas ??
+    merged.layout_padrao?.ocupar_colunas ??
+    merged.layout?.columns ??
+    merged.layout?.col_span ??
+    merged.columns ??
+    merged.col_span ??
+    merged.colSpan ??
+    merged.ocupar_colunas
+
+  let columns: number | undefined
+  if (rawCols !== undefined && rawCols !== null && rawCols !== '') {
+    if (typeof rawCols === 'number') {
+      columns = rawCols
+    } else if (typeof rawCols === 'string') {
+      const m = rawCols.match(/\d+/)
+      if (m) columns = parseInt(m[0], 10)
+    }
+  }
+
   return {
     label: merged.label,
     width: merged.width,
-    columns: merged.columns || merged.col_span || merged.component?.columns || merged.component?.col_span,
+    columns: columns || merged.columns || merged.col_span,
     format: merged.format,
     options,
     relation,
@@ -120,6 +177,7 @@ function applyFieldsMeta(
     multiline: merged.multiline || merged.is_multiline,
     rows: merged.rows || merged.component?.rows,
     ...merged,
+    ...(columns ? { columns } : {}),
     ...(options ? { options } : {}),
   }
 }
@@ -136,9 +194,11 @@ function buildResolvedField(
   allModels: any[],
   fieldsMetadata: Record<string, any>
 ): ResolvedField {
+  const model = allModels.find(m => m.id === field.model_id || m.id === viewModelId)
+  const modelTableName = model?.db_table_name || ''
   const { dbColumn, sqlExpression } = resolveFieldJoin(field, viewModelId, allModels)
   const baseConfig = { ...(field.config || {}), ...(component.config || {}) }
-  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field)
+  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field, modelTableName)
   const labelFromMeta =
     config.label?.text ||
     (typeof config.label === 'string' ? config.label : null) ||
