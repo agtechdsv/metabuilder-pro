@@ -151,10 +151,13 @@ export async function getPool() {
 
 function generateSupabaseActions(model: ModelNode) {
   const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
+  const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   return `'use server'
 import { createClient } from './db'
 import { revalidatePath } from 'next/cache'
+
+const allowedColumns = new Set(${allowedColsCode})
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -164,6 +167,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   const clean: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (!allowedColumns.has(k)) continue
     clean[k] = v === '' ? null : v
   }
   return clean
@@ -202,6 +206,10 @@ export async function create${model.name}(formData: FormData | Record<string, an
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const supabase = await createClient()
   const clean = parsePayload(formData)
+  if (Object.keys(clean).length === 0) {
+    revalidatePath('/${model.name.toLowerCase()}')
+    return
+  }
   const { error } = await supabase.from('${model.dbTable}').update(clean).eq('${pk}', id)
   if (error) throw new Error(error.message)
   revalidatePath('/${model.name.toLowerCase()}')
@@ -221,10 +229,13 @@ function generatePgActions(model: ModelNode) {
   const tableRef = model.dbTable.includes('.')
     ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
+  const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+
+const allowedColumns = new Set(${allowedColsCode})
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -234,6 +245,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   const clean: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (!allowedColumns.has(k)) continue
     clean[k] = v === '' ? null : v
   }
   return clean
@@ -257,6 +269,7 @@ export async function get${model.name}ByField(field: string, value: any) {
 export async function create${model.name}(formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) return null
   const values = Object.values(clean)
   const placeholders = keys.map((_, i) => \`$\${i + 1}\`).join(', ')
   const columns = keys.map(k => \`"\${k}"\`).join(', ')
@@ -269,6 +282,10 @@ export async function create${model.name}(formData: FormData | Record<string, an
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) {
+    revalidatePath('/${model.name.toLowerCase()}')
+    return
+  }
   const values = Object.values(clean)
   const setString = keys.map((k, i) => \`"\${k}" = $\${i + 1}\`).join(', ')
   
@@ -286,10 +303,13 @@ export async function delete${model.name}(id: string) {
 function generateOracleActions(model: ModelNode) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
+  const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+
+const allowedColumns = new Set(${allowedColsCode})
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -299,6 +319,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   const clean: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (!allowedColumns.has(k)) continue
     clean[k] = v === '' ? null : v
   }
   return clean
@@ -322,6 +343,7 @@ export async function get${model.name}ByField(field: string, value: any) {
 export async function create${model.name}(formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) return
   const placeholders = keys.map(k => \`:\${k}\`).join(', ')
   const columns = keys.map(k => \`"\${k}"\`).join(', ')
   
@@ -332,6 +354,10 @@ export async function create${model.name}(formData: FormData | Record<string, an
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) {
+    revalidatePath('/${model.name.toLowerCase()}')
+    return
+  }
   const setString = keys.map(k => \`"\${k}" = :\${k}\`).join(', ')
   
   await query(\`UPDATE "${model.dbTable}" SET \${setString} WHERE "${pk}" = :id\`, { ...clean, id })
@@ -348,10 +374,13 @@ export async function delete${model.name}(id: string) {
 function generateMysqlActions(model: ModelNode) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
+  const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+
+const allowedColumns = new Set(${allowedColsCode})
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -361,6 +390,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   const clean: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (!allowedColumns.has(k)) continue
     clean[k] = v === '' ? null : v
   }
   return clean
@@ -384,6 +414,7 @@ export async function get${model.name}ByField(field: string, value: any) {
 export async function create${model.name}(formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) return
   const values = Object.values(clean)
   const placeholders = keys.map(() => '?').join(', ')
   const columns = keys.map(k => \`\\\`\${k}\\\`\`).join(', ')
@@ -395,6 +426,10 @@ export async function create${model.name}(formData: FormData | Record<string, an
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) {
+    revalidatePath('/${model.name.toLowerCase()}')
+    return
+  }
   const values = Object.values(clean)
   const setString = keys.map(k => \`\\\`\${k}\\\` = ?\`).join(', ')
   
@@ -412,10 +447,13 @@ export async function delete${model.name}(id: string) {
 function generateSqlServerActions(model: ModelNode) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
+  const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   return `'use server'
 import { getPool } from './db'
 import { revalidatePath } from 'next/cache'
+
+const allowedColumns = new Set(${allowedColsCode})
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -425,6 +463,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   const clean: Record<string, any> = {}
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (!allowedColumns.has(k)) continue
     clean[k] = v === '' ? null : v
   }
   return clean
@@ -451,6 +490,7 @@ export async function get${model.name}ByField(field: string, value: any) {
 export async function create${model.name}(formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) return
   const placeholders = keys.map(k => \`@\${k}\`).join(', ')
   const columns = keys.map(k => \`[\${k}]\`).join(', ')
   
@@ -465,6 +505,10 @@ export async function create${model.name}(formData: FormData | Record<string, an
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
   const keys = Object.keys(clean)
+  if (keys.length === 0) {
+    revalidatePath('/${model.name.toLowerCase()}')
+    return
+  }
   const setString = keys.map(k => \`[\${k}] = @\${k}\`).join(', ')
   
   const pool = await getPool()

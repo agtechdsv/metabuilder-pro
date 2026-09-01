@@ -221,8 +221,30 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
     col.startsWith('virt_')
   )
 
-  if (field.config?.options?.length) {
-    const optsCode = JSON.stringify(field.config.options)
+  let options = field.config?.options
+  if (!options || !Array.isArray(options) || options.length === 0) {
+    const rawFixed = field.config?.fixed_options || field.config?.component?.fixed_options
+    if (typeof rawFixed === 'string' && rawFixed.trim()) {
+      options = rawFixed.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean).map((s: string) => {
+        if (s.includes(':')) {
+          const [l, v] = s.split(':').map((p: string) => p.trim())
+          return { label: l || v, value: v || l }
+        }
+        return { label: s, value: s }
+      })
+    } else if (col === 'status' || col.endsWith('_status') || label.toLowerCase() === 'status') {
+      options = [
+        { label: 'Novo', value: 'Novo' },
+        { label: 'Contactado', value: 'Contactado' },
+        { label: 'Em Negociação', value: 'Em Negociação' },
+        { label: 'Fechado Ganho', value: 'Fechado Ganho' },
+        { label: 'Perdido', value: 'Perdido' }
+      ]
+    }
+  }
+
+  if (options && Array.isArray(options) && options.length > 0) {
+    const optsCode = JSON.stringify(options)
     return `
           <div className="space-y-1.5 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
@@ -331,6 +353,7 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
   }
 
   const inputType = (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number' : 'text'
+  const mask = field.config?.mask || field.config?.content?.mask || (col.toLowerCase().includes('cnpj') ? '00.000.000/0000-00' : col.toLowerCase().includes('cpf') ? '000.000.000-00' : col.toLowerCase().includes('cep') ? '00000-000' : (col.toLowerCase().includes('telefone') || col.toLowerCase().includes('phone')) ? '(00) 00000-0000' : '')
 
   return `
           <div className="space-y-1.5 ${colSpanClass}">
@@ -342,7 +365,7 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
               ${required ? 'required' : ''}
               ${isReadOnly ? 'readOnly disabled' : ''}
               placeholder="${placeholder}"
-              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              defaultValue={isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''}
               className="w-full ${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
           </div>`
@@ -970,6 +993,33 @@ function formatDatetimeForInput(v: any) {
   return String(v).slice(0, 16)
 }
 
+function formatWithMask(v: any, mask?: string) {
+  if (!v && v !== 0) return ''
+  const s = String(v)
+  if (mask === '00.000.000/0000-00' || (!mask && (s.length === 14 || /^\\d{14}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 14) {
+      return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+    }
+  }
+  if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) {
+      return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
+    }
+  }
+  if (mask === '00000-000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 8) return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+  if (mask === '(00) 00000-0000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+    if (d.length === 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6, 10)}\`
+  }
+  return s
+}
+
 export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
 
 export default async function ${mn}DetailPage({
@@ -1110,6 +1160,33 @@ function formatDatetimeForInput(v: any) {
     }
   } catch (e) {}
   return String(v).slice(0, 16)
+}
+
+function formatWithMask(v: any, mask?: string) {
+  if (!v && v !== 0) return ''
+  const s = String(v)
+  if (mask === '00.000.000/0000-00' || (!mask && (s.length === 14 || /^\\d{14}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 14) {
+      return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+    }
+  }
+  if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) {
+      return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
+    }
+  }
+  if (mask === '00000-000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 8) return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+  if (mask === '(00) 00000-0000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+    if (d.length === 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6, 10)}\`
+  }
+  return s
 }
 
 export const metadata: Metadata = { title: 'Novo — ${route.title}' }
