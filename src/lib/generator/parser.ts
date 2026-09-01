@@ -140,6 +140,10 @@ function applyFieldsMeta(
 
   // Extrai colunas de 1 a 12 de todas as possíveis propriedades do Studio
   const rawCols =
+    merged.component?.gridSpan ??
+    merged.component?.modalGridSpan ??
+    merged.gridSpan ??
+    merged.modalGridSpan ??
     merged.component?.columns ??
     merged.component?.col_span ??
     merged.component?.colspan ??
@@ -167,6 +171,8 @@ function applyFieldsMeta(
   return {
     label: merged.label,
     width: merged.width,
+    gridSpan: columns || merged.gridSpan || merged.component?.gridSpan,
+    modalGridSpan: merged.component?.modalGridSpan || merged.modalGridSpan,
     columns: columns || merged.columns || merged.col_span,
     format: merged.format,
     options,
@@ -177,7 +183,7 @@ function applyFieldsMeta(
     multiline: merged.multiline || merged.is_multiline,
     rows: merged.rows || merged.component?.rows,
     ...merged,
-    ...(columns ? { columns } : {}),
+    ...(columns ? { columns, gridSpan: columns } : {}),
     ...(options ? { options } : {}),
   }
 }

@@ -708,7 +708,7 @@ export function DetailRelationSection({
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
                         const widthVal = f.config?.width || f.config?.component?.width || ''
-                        const rawCols = f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
+                        const rawCols = f.config?.gridSpan ?? f.config?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
                         const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                         let colSpanClass = 'col-span-12 md:col-span-6'
                         if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
@@ -907,7 +907,7 @@ export function DetailRelationSection({
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
                     const widthVal = f.config?.width || f.config?.component?.width || ''
-                    const rawCols = f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
+                    const rawCols = f.config?.modalGridSpan ?? f.config?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
                     const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                     let colSpanClass = 'col-span-12 md:col-span-6'
                     if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {

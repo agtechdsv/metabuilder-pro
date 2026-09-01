@@ -52,6 +52,8 @@ export interface ResolvedFieldConfig {
   label?: FieldLabelConfig
   width?: number | string      // largura em px ou percentual
   columns?: number | string    // número de colunas (1..12)
+  gridSpan?: number | string   // span de colunas no grid de 12 colunas (Studio: component.gridSpan)
+  modalGridSpan?: number | string // span de colunas na modal (Studio: component.modalGridSpan)
   format?: string              // 'currency' | 'percent' | 'date_pt' | 'datetime_pt' | etc.
   options?: SelectOption[]     // para campos enum/select
   relation?: FieldRelationConfig

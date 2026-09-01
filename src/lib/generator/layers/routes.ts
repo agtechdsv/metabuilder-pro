@@ -74,6 +74,11 @@ function getColSpanClass(field: ResolvedField): string {
   const layoutPadrao = cfg.layout_padrao || comp.layout_padrao || {}
 
   const rawCols =
+    comp.gridSpan ??
+    comp.modalGridSpan ??
+    cfg.gridSpan ??
+    cfg.grid_span ??
+    cfg.modalGridSpan ??
     comp.columns ??
     comp.col_span ??
     comp.colunas ??
@@ -97,32 +102,34 @@ function getColSpanClass(field: ResolvedField): string {
     if (match) numCols = parseInt(match[0], 10)
   }
 
-  if (numCols === null) {
-    const w = String(cfg.width || comp.width || '').trim()
-    if (w === '100%' || w === '100' || w === 'w-full' || cfg.multiline || comp.type === 'textarea' || field.isByoc || field.isVirtual) {
-      numCols = 12
-    } else if (w === '50%' || w === '50' || w === 'w-1/2') {
-      numCols = 6
-    } else if (w === '33%' || w === '33.33%' || w === '33.33') {
-      numCols = 4
-    } else if (w === '25%' || w === '25' || w === 'w-1/4') {
-      numCols = 3
-    }
+  if (numCols !== null) {
+    if (numCols >= 12) return 'col-span-12'
+    if (numCols === 6) return 'col-span-12 md:col-span-6'
+    if (numCols === 4) return 'col-span-12 md:col-span-4'
+    if (numCols === 3) return 'col-span-12 md:col-span-3'
+    if (numCols === 2) return 'col-span-12 md:col-span-2'
+    if (numCols === 1) return 'col-span-12 md:col-span-1'
+    if (numCols === 8) return 'col-span-12 md:col-span-8'
+    if (numCols === 9) return 'col-span-12 md:col-span-9'
+    return `col-span-12 md:col-span-${numCols}`
   }
 
-  if (!numCols) {
-    numCols = 6
+  if (cfg.multiline || comp.type === 'textarea' || field.isByoc || field.isVirtual) {
+    return 'col-span-12'
   }
 
-  if (numCols >= 12) return 'col-span-12'
-  if (numCols === 6) return 'col-span-12 md:col-span-6'
-  if (numCols === 4) return 'col-span-12 md:col-span-4'
-  if (numCols === 3) return 'col-span-12 md:col-span-3'
-  if (numCols === 2) return 'col-span-12 md:col-span-2'
-  if (numCols === 1) return 'col-span-12 md:col-span-1'
-  if (numCols === 8) return 'col-span-12 md:col-span-8'
-  if (numCols === 9) return 'col-span-12 md:col-span-9'
-  return `col-span-12 md:col-span-${numCols}`
+  const w = String(cfg.width || comp.width || '').trim()
+  if (w === '50%' || w === '50' || w === 'w-1/2') {
+    return 'col-span-12 md:col-span-6'
+  }
+  if (w === '33%' || w === '33.33%' || w === '33.33') {
+    return 'col-span-12 md:col-span-4'
+  }
+  if (w === '25%' || w === '25' || w === 'w-1/4') {
+    return 'col-span-12 md:col-span-3'
+  }
+
+  return 'col-span-12 md:col-span-6'
 }
 
 function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false): string {
