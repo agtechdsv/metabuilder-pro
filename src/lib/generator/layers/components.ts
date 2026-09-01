@@ -1277,6 +1277,39 @@ interface DetailMasterFormProps {
   children: React.ReactNode
 }
 
+function formatWithMask(v: any, mask?: string) {
+  if (!v && v !== 0) return ''
+  const s = String(v)
+  if (mask === '00.000.000/0000-00' || (!mask && (s.length === 14 || /^\\d{14}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '').slice(0, 14)
+    if (d.length <= 2) return d
+    if (d.length <= 5) return \`\${d.slice(0, 2)}.\${d.slice(2)}\`
+    if (d.length <= 8) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5)}\`
+    if (d.length <= 12) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8)}\`
+    return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+  }
+  if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '').slice(0, 11)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return \`\${d.slice(0, 3)}.\${d.slice(3)}\`
+    if (d.length <= 9) return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6)}\`
+    return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
+  }
+  if (mask === '00000-000') {
+    const d = s.replace(/\\D/g, '').slice(0, 8)
+    if (d.length <= 5) return d
+    return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+  if (mask === '(00) 00000-0000') {
+    const d = s.replace(/\\D/g, '').slice(0, 11)
+    if (d.length <= 2) return d.length ? \`(\${d}\` : ''
+    if (d.length <= 6) return \`(\${d.slice(0, 2)}) \${d.slice(2)}\`
+    if (d.length <= 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6)}\`
+    return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+  }
+  return s
+}
+
 export function DetailMasterForm({ id, backPath, title, updateAction, children }: DetailMasterFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -1288,6 +1321,14 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
       return () => clearTimeout(timer)
     }
   }, [toastMessage])
+
+  const handleInput = (e: React.FormEvent<HTMLFormElement>) => {
+    const target = e.target as HTMLInputElement
+    const mask = target?.getAttribute?.('data-mask')
+    if (mask) {
+      target.value = formatWithMask(target.value, mask)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -1310,7 +1351,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
+      <form onSubmit={handleSubmit} onInput={handleInput} className="relative z-10 space-y-6">
         {children}
 
         <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">

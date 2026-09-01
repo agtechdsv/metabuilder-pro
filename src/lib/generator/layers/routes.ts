@@ -333,7 +333,7 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
               ${isReadOnly ? 'readOnly disabled' : ''}
               placeholder="${placeholder}"
               defaultValue={isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''}
-              ${mask ? `onInput={(e) => { const el = e.currentTarget; el.value = formatWithMask(el.value, '${mask}') }}` : ''}
+              ${mask ? `data-mask="${mask}"` : ''}
               className="w-full ${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
           </div>`
