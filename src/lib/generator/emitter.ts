@@ -665,7 +665,47 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 }
 `)
 
-  // â”€â”€ Sidebar fiel ao DynamicSidebar.tsx do Runtime â”€â”€
+  // ── DynamicIcon Component ──
+  files.set('app/components/DynamicIcon.tsx', `'use client'
+
+import React from 'react'
+import * as LucideIcons from 'lucide-react'
+import { LucideProps } from 'lucide-react'
+
+interface DynamicIconProps extends LucideProps {
+  icon?: any
+  className?: string
+  size?: number
+}
+
+export function DynamicIcon({ icon, className, size = 20, ...props }: DynamicIconProps) {
+  if (!icon) return <LucideIcons.Layout className={className} size={size} {...props} />
+
+  if (typeof icon !== 'string') {
+    return <>{icon}</>
+  }
+
+  if (icon.trim().startsWith('<svg')) {
+    return (
+      <div
+        className={className}
+        dangerouslySetInnerHTML={{ __html: icon }}
+        style={{ width: size, height: size }}
+      />
+    )
+  }
+
+  const cleanName = icon
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_m: any, c: string) => c.toUpperCase())
+    .replace(/^[a-z]/, (m: string) => m.toUpperCase())
+
+  const IconComponent = (LucideIcons as any)[cleanName] || (LucideIcons as any)[icon] || LucideIcons.Layout
+  return <IconComponent className={className} size={size} {...props} />
+}
+export default DynamicIcon
+`)
+
+  // ── Sidebar fiel ao DynamicSidebar.tsx do Runtime ──
   const navItems = ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
     id: r.viewSlug,
     label: r.title,
@@ -674,16 +714,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     target: r.viewSlug,
   }))
   const navItemsJson = JSON.stringify(navItems)
-  const projectIcon = ast.projectIcon || 'Box'
+  const projectIcon = ast.projectIcon || 'Layers'
 
   files.set('app/components/AppSidebar.tsx', `'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  ChevronRight, Home, LogOut, PanelLeftClose, PanelLeftOpen,
-  Layout, Box
+  ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
 
 interface NavItem {
   id: string
@@ -700,18 +740,6 @@ interface AppSidebarProps {
   navItems: NavItem[]
   isCollapsed: boolean
   setIsCollapsed: (v: boolean) => void
-}
-
-
-// Minimal icon renderer — clientes podem substituir por lucide-react completo
-function NavIcon({ name, size = 20 }: { name?: string; size?: number }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/>
-      <line x1="9" y1="21" x2="9" y2="9"/>
-    </svg>
-  )
 }
 
 export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, setIsCollapsed }: AppSidebarProps) {
@@ -737,23 +765,25 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
   const displayName = clientUser?.name || clientUser?.email || 'Usuário'
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
-
-
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
   }
 
   const isActive = (item: NavItem) => {
     if (item.type === 'view') {
-      return pathname === \`/\${item.target}\` ||
-             pathname?.startsWith(\`/\${item.target}/\`)
+      const target = (item.target || item.id || '').replace(/^\//, '')
+      return pathname === \`/\${target}\` ||
+             pathname?.startsWith(\`/\${target}/\`) ||
+             pathname === \`/\${projectSlug}/\${target}\` ||
+             pathname?.startsWith(\`/\${projectSlug}/\${target}/\`)
     }
     return false
   }
 
   const renderItem = (item: NavItem) => {
     const active = isActive(item)
-    const href = item.type === 'view' ? \`/\${item.target}\` : (item.target || '#')
+    const target = (item.target || item.id || '').replace(/^\//, '')
+    const href = item.type === 'view' ? \`/\${target}\` : (item.target || '#')
 
     if (item.type === 'folder') {
       const expanded = expandedFolders.includes(item.id)
@@ -765,7 +795,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
               hover:bg-indigo-500/10 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400
               \${isCollapsed ? 'justify-center px-0' : ''}\`}
           >
-            <NavIcon name={item.icon} size={isCollapsed ? 24 : 20} />
+            <DynamicIcon icon={item.icon || 'Layout'} size={isCollapsed ? 24 : 20} />
             {!isCollapsed && (
               <span className="flex-1 flex items-center justify-between">
                 <span className="text-sm font-bold truncate">{item.label}</span>
@@ -793,7 +823,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
             : 'hover:bg-indigo-500/10 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400'}
           \${isCollapsed ? 'justify-center px-0' : ''}\`}
       >
-        <NavIcon name={item.icon} size={isCollapsed ? 24 : 20} />
+        <DynamicIcon icon={item.icon || 'Layout'} size={isCollapsed ? 24 : 20} />
         {!isCollapsed && <span className="text-sm font-bold truncate">{item.label}</span>}
         {active && !isCollapsed && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
         {isCollapsed && (
@@ -811,11 +841,10 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
       style={{ width: isCollapsed ? 80 : 288, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
       className={\`sticky top-0 h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 z-[100] flex flex-col shrink-0 \${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}\`}
     >
-      {/* Header */}
       <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
-        <Link href={\`/\${projectSlug}/dashboard\`} className="flex items-center gap-3 group relative">
+        <Link href="/" className="flex items-center gap-3 group relative">
           <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 group-hover:scale-110 transition-transform">
-            <Box size={18} />
+            <DynamicIcon icon="${projectIcon}" size={18} />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col truncate">
@@ -826,12 +855,10 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
         </Link>
       </div>
 
-      {/* Nav */}
       <nav className={\`flex-1 px-4 py-6 space-y-2 custom-scrollbar \${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}\`}>
         {navItems.map(item => renderItem(item))}
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-neutral-900/30">
         <div className={\`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 shadow-sm \${isCollapsed ? 'justify-center p-2' : ''}\`}>
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shrink-0">{avatarLetter}</div>
@@ -853,7 +880,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 }
 `)
 
-  // Protected Layout â€” usa AppSidebar + Header idÃªntico ao Runtime
+  // Protected Layout — usa AppSidebar + Header idêntico ao Runtime
   files.set('app/(protected)/layout.tsx', `'use client'
 import { useState } from 'react'
 import Link from 'next/link'
@@ -884,7 +911,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         setIsCollapsed={setIsCollapsed}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <header className="h-16 border-b border-neutral-200/50 dark:border-white/5 bg-white/80 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-[90] flex items-center px-6 gap-4">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -896,7 +922,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800" />
 
           <nav className="flex-1 flex items-center gap-2 text-[10px] font-bold capitalize tracking-widest text-neutral-400 overflow-hidden">
-            <Link href={\`/\${PROJECT_SLUG}/dashboard\`} className="hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0">
+            <Link href="/" className="hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0">
               <Home className="w-3 h-3" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
@@ -920,58 +946,82 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 }
 `)
 
-  // Dashboard page â€” idÃªntico ao Runtime /dashboard
+  // Dashboard page — fiel à DynamicDashboard.tsx da Web Produção
   const navCards = (ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
     id: r.viewSlug,
     label: r.title,
-    icon: r.icon,
+    icon: r.icon || 'Layout',
     type: 'view',
     target: r.viewSlug,
   }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => `
-  <a
-    href="/${n.target || n.id}"
-    className="group flex flex-col justify-between bg-white dark:bg-[#141416] border border-slate-200 dark:border-[#27272a] rounded-3xl p-6 sm:p-8 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 min-h-[200px]"
-  >
-    <div>
-      <div className="w-10 h-10 rounded-2xl bg-indigo-600/10 dark:bg-indigo-600/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
-        </svg>
-      </div>
-      <h2 className="font-black text-base text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">${n.label}</h2>
-      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-neutral-500 mt-0.5">CASO DE USO</p>
-    </div>
-    <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-[#27272a]/50 mt-4">
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ACESSAR</span>
-      <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#18181b] border border-slate-200 dark:border-[#27272a] flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-all duration-300">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 dark:text-[#71717a] group-hover:text-white transition-colors group-hover:translate-x-0.5">
-          <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-        </svg>
-      </div>
-    </div>
-  </a>`).join('\n')
+        <Link
+          key="${n.id}"
+          href="/${(n.target || n.id).replace(/^\//, '')}"
+          className="group relative p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500 transition-all shadow-sm hover:shadow-2xl dark:shadow-none overflow-hidden flex flex-col justify-between min-h-[220px]"
+        >
+          {/* Glow Effect */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl group-hover:bg-indigo-500/10 transition-all duration-500" />
+          
+          <div className="relative z-10 flex flex-col h-full gap-6">
+            <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+              <DynamicIcon icon="${n.icon || 'Layout'}" size={28} />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                ${n.label}
+              </h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium uppercase tracking-widest">
+                CASO DE USO
+              </p>
+            </div>
+
+            <div className="mt-auto flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-hover:text-indigo-500 transition-colors">
+                ACESSAR
+              </span>
+              <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+        </Link>`).join('\n')
 
   files.set('app/(protected)/page.tsx', `import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
 
 export const metadata: Metadata = { title: 'Dashboard - ${ast.projectName}' }
 
 export default function DashboardPage() {
   return (
-    <div className="p-6 sm:p-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-10">
-        <div className="w-14 h-14 rounded-3xl bg-indigo-600/10 dark:bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600 dark:text-indigo-400">
-            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-          </svg>
-        </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">${ast.projectName}</h1>
-          <p className="text-xs font-bold tracking-[0.15em] uppercase text-indigo-500 mt-0.5">CASOS DE USO</p>
+    <div className="space-y-6">
+      {/* Header idêntico ao RuntimeHeader da Web Produção */}
+      <div className="px-6 sm:px-10 py-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="flex items-center gap-5">
+          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white">
+            <DynamicIcon icon="${ast.projectIcon || 'Layers'}" size={24} />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight uppercase">
+              ${ast.projectName}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                ${ast.projectDescription || 'CRM COMPLETO'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
+      {/* Grid de Cards ocupando o espaço horizontal com respiro confortável */}
+      <div className="px-6 sm:px-10 py-2 space-y-6 animate-in fade-in duration-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 ${navCards}
+        </div>
       </div>
     </div>
   )

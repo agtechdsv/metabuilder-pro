@@ -178,11 +178,11 @@ export function DeleteButton() {
   return (
     <button 
       type="submit" 
-      className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" 
+      className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" 
       title="Excluir" 
       onClick={(e) => { if (!confirm('Confirmar exclusão?')) e.preventDefault() }}
     >
-      <Trash2 className="w-4 h-4" />
+      <Trash2 className="w-3.5 h-3.5" />
     </button>
   )
 }

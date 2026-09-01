@@ -250,6 +250,7 @@ export interface NavigationItem {
 export interface AppAST {
   projectName: string
   projectSlug: string          // ex: 'crm' — usado como sub-rota no workspace
+  projectDescription?: string   // ex: 'CRM COMPLETO'
   projectIcon?: string         // ícone SVG ou nome lucide-react do projeto
   dbStack: DbType
   dbConnectionString?: string

@@ -350,10 +350,30 @@ function generateListPage(route: RouteNode): string {
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
-  // Cabeçalhos da tabela
+  // Cabeçalhos da tabela com ordenação interativa (Links preservando query params)
   const thCells = route.gridFields
     .filter(f => !f.hidden)
-    .map(f => `              <th className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap">${f.label.toUpperCase()}</th>`)
+    .map(f => {
+      const col = f.dbColumn
+      return `              <th
+                key="${col}"
+                className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
+              >
+                <Link
+                  href={makeQuery({ sort_by: '${col}', sort_order: sortBy === '${col}' && sortOrder === 'asc' ? 'desc' : 'asc' })}
+                  className="flex items-center gap-2"
+                >
+                  <span>${f.label.toUpperCase()}</span>
+                  <div className={\`transition-opacity \${sortBy === '${col}' ? 'opacity-100' : 'opacity-0 group-hover/th:opacity-100'}\`}>
+                    {sortBy === '${col}' ? (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowDown className="w-3.5 h-3.5 text-indigo-600" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                    )}
+                  </div>
+                </Link>
+              </th>`
+    })
     .join('\n')
 
   // Células de dados
@@ -366,31 +386,50 @@ function generateListPage(route: RouteNode): string {
   const filterFields = route.filterFields.length > 0 ? route.filterFields : route.gridFields.filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
   const filterInputs = filterFields.map(f => {
     const col = f.dbColumn.replace('.', '_')
-    if (f.config?.options?.length) {
-      const optsCode = JSON.stringify(f.config.options)
+    const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
+    const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
+    
+    let options = f.config?.options
+    if ((!options || options.length === 0) && (f.dbColumn.toLowerCase().includes('status') || f.label.toLowerCase().includes('status'))) {
+      options = [
+        { label: 'Novo', value: 'Novo' },
+        { label: 'Contactado', value: 'Contactado' },
+        { label: 'Em Negociação', value: 'Em Negociação' },
+        { label: 'Fechado Ganho', value: 'Fechado Ganho' },
+        { label: 'Perdido', value: 'Perdido' }
+      ]
+    }
+
+    if (options && options.length > 0) {
+      const optsCode = JSON.stringify(options)
       return `
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
             <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
             <select
               name="${col}_filter"
-              className="flex h-10 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+              defaultValue={params?.['${col}_filter'] || ''}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
             >
               <option value="">Todos</option>
-              {(${optsCode} as Array<{value: string; label: string}>).map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>`
     }
     return `
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
             <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
-            <input
-              type="search"
-              name="${col}_filter"
-              placeholder="Filtrar por ${f.label.toLowerCase()}..."
-              className="flex h-10 w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-            />
+            <div className="relative group">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input
+                type="text"
+                name="${col}_filter"
+                placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                defaultValue={params?.['${col}_filter'] || ''}
+                className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+              />
+            </div>
           </div>`
   }).join('\n')
 
@@ -398,119 +437,184 @@ function generateListPage(route: RouteNode): string {
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 import { delete${mn} } from '@/app/actions/${mnLower}'
-import { Plus, Pencil, Eye, ChevronLeft, ChevronRight, Receipt } from 'lucide-react'
+import { Plus, Pencil, Eye, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
-export default async function ${mn}ListPage() {
-  const data = await get${mn}List()
+export default async function ${mn}ListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}) {
+  const params = await searchParams
+  const sortBy = params?.sort_by
+  const sortOrder = params?.sort_order || 'asc'
+  const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
+  const limit = Math.max(1, parseInt(params?.limit || '15', 10) || 15)
+
+  const rawData = await get${mn}List()
+
+  // Filtros dinâmicos da URL
+  const filteredData = (rawData || []).filter((item: any) => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = params?.['${col}_filter']
+    if (val_${col}) {
+      const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
+      if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
+
+  // Ordenação de colunas
+  if (sortBy) {
+    filteredData.sort((a: any, b: any) => {
+      const rawCol = sortBy.replace('.', '_')
+      const valA = a[sortBy] ?? a[rawCol] ?? ''
+      const valB = b[sortBy] ?? b[rawCol] ?? ''
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortOrder === 'asc' ? valA - valB : valB - valA
+      }
+      return sortOrder === 'asc'
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA))
+    })
+  }
+
+  const totalRows = filteredData.length
+  const totalPages = Math.ceil(totalRows / limit) || 1
+  const paginatedData = filteredData.slice((page - 1) * limit, page * limit)
+
+  // Helper para construir querystring preservando filtros e ordenação
+  const makeQuery = (newParams: Record<string, string | number | undefined>) => {
+    const q = new URLSearchParams()
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== '') q.set(k, String(v))
+      }
+    }
+    for (const [k, v] of Object.entries(newParams)) {
+      if (v === undefined || v === '') q.delete(k)
+      else q.set(k, String(v))
+    }
+    const str = q.toString()
+    return str ? \`?\${str}\` : ''
+  }
 
   return (
-    <div className="p-6 sm:p-8 max-w-[1600px] mx-auto space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600/10 flex items-center justify-center ring-1 ring-indigo-500/20">
-            <span className="text-xl font-bold text-indigo-600">{String('${mn}').charAt(0)}</span>
+    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Cabeçalho fiel à Web Produção (RuntimeHeader) */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-5">
+          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+            <DynamicIcon icon="${route.icon || 'Users'}" size={24} />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              ${route.title}
-              <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 tracking-wider">
-                {data.length} REG
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight uppercase">
+                ${route.title}
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-black text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 tracking-widest uppercase">
+                {totalRows} REG
               </span>
-            </h1>
-            <p className="text-xs font-black tracking-widest text-neutral-400 dark:text-neutral-500 mt-1 uppercase">${route.logicType.replace(/_/g, ' ')}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                ${route.logicType.replace(/_/g, ' ')}
+              </span>
+            </div>
           </div>
         </div>
+
         <div className="flex items-center gap-3">
 ${route.buttons.filter(b => b.placement === 'header').map(b => {
   if (b.actionType === 'create') {
-    return `          <Link href="${route.path}/new" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
+    return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> ${b.label}
           </Link>`
   }
   if (b.actionType === 'export') {
-    return `          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-xs font-bold tracking-wide transition-all">
-            ${b.label}
+    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
           </button>`
   }
-  return `          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-xs font-bold tracking-wide transition-all">
-            {/* TODO: ${b.label} — ${b.actionType} */}
+  return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             ${b.label}
           </button>`
-}).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold tracking-wide transition-colors shadow-lg shadow-indigo-500/20">
-            <Plus className="w-4 h-4" /> Novo ${route.title}
+}).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : '')}
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="p-5 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm flex flex-col md:flex-row gap-4 items-end">
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+      {/* Filtros fiéis ao ViewFilterBar */}
+      <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+        <div className="flex flex-col lg:flex-row items-end gap-6">
+          <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
+          </div>
+          <div className="flex items-center gap-3 mb-[1px]">
+            <button
+              type="submit"
+              className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+            >
+              <Search className="w-4 h-4" />
+              Pesquisar
+            </button>
+            <Link
+              href="${route.path}"
+              className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              Limpar
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button type="submit" className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tracking-wide transition-colors flex-1 md:flex-none">
-            Pesquisar
-          </button>
-          <button type="reset" className="px-5 py-2.5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 text-xs font-bold tracking-wide transition-colors">
-            Limpar
-          </button>
-        </div>
-      </div>
+      </form>
 
-      {/* Tabela */}
+      {/* Tabela de Resultados */}
       <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full">
-        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 z-20">
               <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-                <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em]">#</th>
+                <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] text-center">#</th>
 ${thCells}
                 <th className="px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50">AÇÕES</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((item: any, idx: number) => (
-                <tr key={item.${route.primaryKey}} className={\`group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors \${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/20'}\`}>
+              {paginatedData.map((item: any, idx: number) => (
+                <tr key={item.${route.primaryKey} || idx} className={\`group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors \${idx % 2 === 0 ? '' : 'bg-neutral-50/50 dark:bg-neutral-900/20'}\`}>
                   <td className="px-4 py-4 w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50">
-                    <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{idx + 1}</span>
+                    <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{(page - 1) * limit + idx + 1}</span>
                   </td>
 ${tdCells}
                   <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
-                    <div className="flex items-center justify-end gap-1">
-${(() => {
-  const rowBtns = route.buttons.filter(b => b.placement === 'row')
-  if (rowBtns.length === 0) {
-    return [
-      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="Visualizar"><Eye className="w-4 h-4" /></Link>`,
-      `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="Editar"><Pencil className="w-4 h-4" /></Link>`,
-      `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`,
-    ].join('\n')
-  }
-  return rowBtns.map(b => {
-    if (b.actionType === 'view') {
-      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Eye className="w-4 h-4" /></Link>`
-    }
-    if (b.actionType === 'update' || b.actionType === 'edit') {
-      return `                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all" title="${b.label}"><Pencil className="w-4 h-4" /></Link>`
-    }
-    if (b.actionType === 'delete') {
-      return `                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}><DeleteButton /></form>`
-    }
-    if (b.linkTarget) {
-      return `                      <Link href={\`${b.linkTarget}?${mnLower}_id=\${item.${route.primaryKey}}\`} className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Receipt className="w-4 h-4" /></Link>`
-    }
-    return `                      <button type="button" className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all" title="${b.label}"><Receipt className="w-4 h-4" /></button>`
-  }).join('\n')
-})()}
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
+                        <Eye className="w-3.5 h-3.5" />
+                      </Link>
+                      <Link href={\`${route.path}/\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Link>
+                      <form action={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}>
+                        <DeleteButton />
+                      </form>
+${route.buttons.filter(b => b.placement === 'row' && b.actionType !== 'view' && b.actionType !== 'edit' && b.actionType !== 'update' && b.actionType !== 'delete').map(b => `
+                      <Link href={\`${b.linkTarget || '#'}${b.linkTarget?.includes('?') ? '&' : '?'}${mnLower}_id=\${item.${route.primaryKey}}\`} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="${b.label}">
+                        <DynamicIcon icon="${b.icon || 'Receipt'}" size={14} />
+                      </Link>`).join('')}
                     </div>
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
+              {paginatedData.length === 0 && (
                 <tr>
                   <td colSpan={${route.gridFields.filter(f => !f.hidden).length + 2}} className="h-48 text-center">
                     <p className="text-neutral-400 dark:text-neutral-600 text-sm">Nenhum registro encontrado.</p>
@@ -520,8 +624,49 @@ ${(() => {
             </tbody>
           </table>
         </div>
-        <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">{data.length} registro{data.length !== 1 ? 's' : ''}</span>
+
+        {/* Rodapé com Navegador de Páginas fiel à Web Produção */}
+        <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
+            <span className="opacity-60">Exibir</span>
+            <span className="text-indigo-600 font-bold">{limit} Linhas</span>
+            <span className="mx-2 opacity-20">|</span>
+            <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white font-bold">{totalRows}</span></span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={page > 1 ? makeQuery({ page: page - 1 }) : '#'}
+              className={\`p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all \${page <= 1 ? 'opacity-30 pointer-events-none' : ''}\`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Link>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => Math.abs(p - page) <= 2 || p === 1 || p === totalPages)
+                .map((p) => (
+                  <Link
+                    key={p}
+                    href={makeQuery({ page: p })}
+                    className={\`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex items-center justify-center \${
+                      page === p
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                        : 'text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                    }\`}
+                  >
+                    {p}
+                  </Link>
+                ))}
+            </div>
+
+            <Link
+              href={page < totalPages ? makeQuery({ page: page + 1 }) : '#'}
+              className={\`p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all \${page >= totalPages ? 'opacity-30 pointer-events-none' : ''}\`}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>

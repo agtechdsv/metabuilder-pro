@@ -121,7 +121,28 @@ function applyFieldsMeta(
 
   const merged = { ...baseFieldConfig, ...mergedMeta }
 
-  let options = merged.options || rawField?.options || rawField?.enum_values || baseFieldConfig?.options || baseFieldConfig?.enum_values
+  let options =
+    merged.options ||
+    merged.component?.options ||
+    merged.component?.fixed_options ||
+    merged.fixed_options ||
+    rawField?.options ||
+    rawField?.enum_values ||
+    rawField?.fixed_options ||
+    baseFieldConfig?.options ||
+    baseFieldConfig?.enum_values ||
+    baseFieldConfig?.fixed_options
+
+  if (typeof options === 'string') {
+    try {
+      const parsed = JSON.parse(options)
+      if (Array.isArray(parsed)) options = parsed
+    } catch (_) {}
+    if (typeof options === 'string') {
+      options = options.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(s => ({ label: s, value: s }))
+    }
+  }
+
   if (Array.isArray(options)) {
     options = options.map((opt: any) => typeof opt === 'string' ? { label: opt, value: opt } : opt)
   }
@@ -129,10 +150,11 @@ function applyFieldsMeta(
   const dispName = (rawField?.display_name || '').toLowerCase()
   if ((colName === 'status' || dispName === 'status' || colName.endsWith('_status')) && (!options || options.length === 0)) {
     options = [
-      { label: 'Pendente', value: 'Pendente' },
-      { label: 'Processando', value: 'Processando' },
-      { label: 'Entregue', value: 'Entregue' },
-      { label: 'Cancelado', value: 'Cancelado' }
+      { label: 'Novo', value: 'Novo' },
+      { label: 'Contactado', value: 'Contactado' },
+      { label: 'Em Negociação', value: 'Em Negociação' },
+      { label: 'Fechado Ganho', value: 'Fechado Ganho' },
+      { label: 'Perdido', value: 'Perdido' }
     ]
   }
 
@@ -203,7 +225,13 @@ function buildResolvedField(
   const model = allModels.find(m => m.id === field.model_id || m.id === viewModelId)
   const modelTableName = model?.db_table_name || ''
   const { dbColumn, sqlExpression } = resolveFieldJoin(field, viewModelId, allModels)
-  const baseConfig = { ...(field.config || {}), ...(component.config || {}) }
+  const zoneConfig =
+    zone === 'filter'
+      ? { ...(field.config?.filter_config || {}), ...(component.config?.filter_config || {}) }
+      : zone === 'grid'
+      ? { ...(field.config?.grid_config || {}), ...(component.config?.grid_config || {}) }
+      : { ...(field.config?.form_config || {}), ...(component.config?.form_config || {}) }
+  const baseConfig = { ...(field.config || {}), ...(component.config || {}), ...zoneConfig }
   const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field, modelTableName)
   const labelFromMeta =
     config.label?.text ||
@@ -1008,7 +1036,24 @@ export function parseMetaBuilderJSON(
 
   // ── Navigation ──
   const rawNav = rawJson.project?.navigation || rawJson.navigation || []
-  const navigation: NavigationItem[] = rawNav as NavigationItem[]
+  const navigation: NavigationItem[] = (rawNav as NavigationItem[]).map((item: any) => {
+    let icon = item.icon
+    if (!icon) {
+      const matchView = rawViews.find((v: any) =>
+        v.id === item.view_id ||
+        v.id === item.id ||
+        v.slug === item.target?.replace(/^\//, '') ||
+        (v.name && item.label && v.name.toLowerCase() === item.label.toLowerCase())
+      )
+      if (matchView) {
+        icon = findNavIcon([], matchView)
+      }
+    }
+    return {
+      ...item,
+      icon: icon || 'Layout'
+    }
+  })
 
   // ── Etapa 1→5: Constrói Routes a partir das Views ──
   const routes: RouteNode[] = []
@@ -1050,7 +1095,7 @@ export function parseMetaBuilderJSON(
     )
 
     // Encontra ícone do nav item correspondente
-    const navIcon = findNavIcon(navigation, rv.slug)
+    const navIcon = findNavIcon(navigation, resolvedView)
 
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
@@ -1096,10 +1141,17 @@ export function parseMetaBuilderJSON(
     }
   }
 
+  const projectDesc =
+    rawJson.project?.description ||
+    rawJson.description ||
+    rawJson.project?.subtitle ||
+    'CRM COMPLETO'
+
   return {
-    projectName: rawJson.project?.name || rawJson.name || 'MetabuilderExport',
+    projectName: rawJson.project?.name || rawJson.name || 'CRM',
     projectSlug: rawJson.project?.slug || rawJson.slug || 'app',
-    projectIcon: rawJson.project?.icon,
+    projectDescription: projectDesc,
+    projectIcon: rawJson.project?.icon || rawJson.icon || 'Layers',
     dbStack,
     dbConnectionString: options?.dbConnectionString,
     supabaseUrl: options?.supabaseUrl,
@@ -1144,15 +1196,51 @@ export function parseWorkspaceJSON(
 // Helper — encontra ícone de um nav item pelo slug
 // ─────────────────────────────────────────────────────────────────────────────
 
-function findNavIcon(navigation: NavigationItem[], slug: string): string | undefined {
-  for (const item of navigation) {
-    if (item.type === 'view' && (item.target === slug || item.target === `/${slug}`)) {
-      return item.icon
+function findNavIcon(navigation: NavigationItem[], view: any): string | undefined {
+  if (!view) return 'Layout'
+  const slug = (typeof view === 'string' ? view : (view.slug || '')).toLowerCase().replace(/^\//, '')
+  const viewId = typeof view === 'object' ? view.id : null
+  const viewName = typeof view === 'object' ? (view.name || '').toLowerCase() : ''
+
+  function search(items: NavigationItem[]): string | undefined {
+    for (const item of items) {
+      const target = (item.target || '').toLowerCase().replace(/^\//, '')
+      const isMatch =
+        (slug && target === slug) ||
+        (viewId && item.view_id === viewId) ||
+        (viewId && item.id === viewId) ||
+        (viewName && item.label && item.label.toLowerCase() === viewName)
+
+      if (isMatch && item.icon) {
+        return item.icon
+      }
+      if (item.type === 'folder' && item.children) {
+        const found = search(item.children)
+        if (found) return found
+      }
     }
-    if (item.type === 'folder' && item.children) {
-      const found = findNavIcon(item.children, slug)
-      if (found) return found
-    }
+    return undefined
   }
-  return undefined
+
+  const fromNav = search(navigation)
+  if (fromNav) return fromNav
+
+  if (typeof view === 'object') {
+    if (view.icon) return view.icon
+    if (view.layout_config?.icon) return view.layout_config.icon
+  }
+
+  // Fallbacks inteligentes por semântica do caso de uso
+  if (slug.includes('cliente') || viewName.includes('cliente')) return 'Users'
+  if (slug.includes('pedido') || viewName.includes('pedido')) return 'ShoppingCart'
+  if (slug.includes('produto') || viewName.includes('produto')) return 'Package'
+  if (slug.includes('empresa') || viewName.includes('empresa')) return 'Building2'
+  if (slug.includes('entrega') || viewName.includes('entrega')) return 'Truck'
+  if (slug.includes('projeto') || viewName.includes('projeto')) return 'FolderKanban'
+  if (slug.includes('download') || viewName.includes('download')) return 'Download'
+  if (slug.includes('funciona') || viewName.includes('funciona')) return 'UserCheck'
+  if (slug.includes('task') || viewName.includes('task')) return 'CheckSquare'
+  if (slug.includes('dash') || viewName.includes('dash')) return 'BarChart3'
+
+  return 'Layout'
 }
