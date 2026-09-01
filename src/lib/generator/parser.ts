@@ -397,16 +397,12 @@ function resolveViewZones(
     return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata)]
   })
 
-  // Injeta campos virtuais/BYOC no form (apenas BYOCs ou campos com configuração explícita de form)
+  // Injeta componentes BYOC no form (componentes customizados de UI)
   formFieldsOrder
-    .filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_'))
+    .filter((id: string) => id.startsWith('byoc_'))
     .forEach((id: string) => {
-      const isByoc = id.startsWith('byoc_')
-      const hasFormMeta = !!(fieldsMetadata[`form-${id}`] || fieldsMetadata[id]?.zone === 3 || fieldsMetadata[id]?.component)
-      if (isByoc || hasFormMeta) {
-        if (!formFields.find((f) => f.id === id)) {
-          formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
-        }
+      if (!formFields.find((f) => f.id === id)) {
+        formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
       }
     })
 
