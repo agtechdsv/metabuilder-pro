@@ -1,4 +1,25 @@
 {
+  "v1.0.6": {
+    "date": "2026-09-01",
+    "pt": [
+      "Novo layout em grade de 12 colunas para uma personalização visual mais precisa e flexível das telas e formulários.",
+      "Preservação aprimorada de rótulos personalizados do Studio e visualização mais limpa e intuitiva de subdetalhes.",
+      "Processamento e formatação de valores monetários e preços mais robustos e precisos em toda a plataforma.",
+      "Refinamentos visuais e correções estruturais nas seções de registros relacionados para uma navegação mais fluida."
+    ],
+    "en": [
+      "New flexible 12-column grid layout for more precise and customizable screen and form organization.",
+      "Enhanced preservation of custom Studio labels and a cleaner, more intuitive display for sub-details.",
+      "More robust and accurate processing and formatting of prices and monetary values across the platform.",
+      "Visual refinements and layout stability improvements in related record sections for a smoother experience."
+    ],
+    "es": [
+      "Nuevo diseño en cuadrícula de 12 columnas para una personalización visual más precisa y flexible de pantallas y formularios.",
+      "Preservación mejorada de etiquetas personalizadas de Studio y visualización más limpia e intuitiva de los subdetalles.",
+      "Procesamiento y formateo de valores monetarios y precios más robusto y preciso en toda la plataforma.",
+      "Refinamientos visuales y mejoras en la estabilidad de las secciones de registros relacionados para una experiencia más fluida."
+    ]
+  },
   "v1.0.5": {
     "date": "2026-08-31",
     "pt": [
