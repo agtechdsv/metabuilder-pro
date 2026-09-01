@@ -1044,16 +1044,16 @@ ${relationQueries}  const isEdit = true
         </div>
 ${tabsHeader}
 
-        {/* Conteúdo da Aba Mestre (Tab 0) */}
-        {(!${hasRelationTabs} || activeTab === 0) && (
-          <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
+        {/* Formulário com Suporte a Abas e Footer Persistente (Cancelar / Salvar) */}
+        <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
+          {(!${hasRelationTabs} || activeTab === 0) && (
             <div className="grid grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
             </div>
-          </DetailMasterForm>
-        )}
+          )}
 
 ${tabPanels}
+        </DetailMasterForm>
       </div>
     </div>
   )
