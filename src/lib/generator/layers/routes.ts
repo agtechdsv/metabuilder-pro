@@ -148,23 +148,16 @@ function renderFormField(field: ResolvedField, isEdit: boolean, readOnly = false
   const placeholder = field.config?.placeholder || `Digite ${label}...`
   const colSpanClass = getColSpanClass(field)
 
-  if (field.isByoc || field.isVirtual) {
-    const byocName = field.config?.byocName || field.id.replace(/^byoc_/, '')
+  if (field.isByoc || field.dataType === 'byoc' || field.id.startsWith('byoc_')) {
+    const rawName = field.config?.byocName || field.config?.componentName || field.id.replace(/^byoc_/, '') || field.label.replace(/^\[BYOC\]\s*/i, '')
+    const byocComponentName = toPascalCase(rawName) || 'TimelineStatusVendas'
     const byocCleanLabel = field.label.replace(/^\[BYOC\]\s*/i, '')
 
-    if (byocName.toLowerCase().includes('timeline') || byocName.toLowerCase().includes('status')) {
-      return `
+    return `
           {/* BYOC — ${field.label} */}
           <div className="space-y-3 col-span-12">
             <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">[BYOC] ${byocCleanLabel}</span>
-            <TimelineStatusVendas initialStatus={isEdit ? String(data?.status ?? 'Novo') : 'Novo'} />
-          </div>`
-    }
-    return `
-          {/* TODO: campo virtual/BYOC — ${field.label} */}
-          <div className="space-y-2 col-span-12 opacity-50 pointer-events-none">
-            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label} <span className="text-[9px] normal-case text-amber-500">[Em desenvolvimento]</span></label>
-            <input disabled value="// TODO" className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm" />
+            <${byocComponentName} initialStatus={isEdit ? String(data?.status ?? 'Novo') : 'Novo'} data={data} />
           </div>`
   }
 
@@ -910,14 +903,23 @@ ${tabButtons}
           </div>`
     : ''
 
+  const byocImports = route.formFields
+    .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
+    .map(f => {
+      const rawName = f.config?.byocName || f.config?.componentName || f.id.replace(/^byoc_/, '') || f.label.replace(/^\[BYOC\]\s*/i, '')
+      return toPascalCase(rawName) || 'TimelineStatusVendas'
+    })
+    .filter((v, i, a) => v && a.indexOf(v) === i)
+    .map(name => `import { ${name} } from '@/components/${name}'`)
+    .join('\n')
+
   return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
-import { TimelineStatusVendas } from '@/components/TimelineStatusVendas'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
-${relationImports}
+${byocImports ? `${byocImports}\n` : ''}${relationImports}
 import { ArrowLeft, Save, Plus, Pencil, Download, Zap, Check, Package } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -1082,12 +1084,21 @@ function generateNewPage(route: RouteNode): string {
     .filter(Boolean)
     .join('\n')
 
+  const byocImports = route.formFields
+    .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
+    .map(f => {
+      const rawName = f.config?.byocName || f.config?.componentName || f.id.replace(/^byoc_/, '') || f.label.replace(/^\[BYOC\]\s*/i, '')
+      return toPascalCase(rawName) || 'TimelineStatusVendas'
+    })
+    .filter((v, i, a) => v && a.indexOf(v) === i)
+    .map(name => `import { ${name} } from '@/components/${name}'`)
+    .join('\n')
+
   return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { create${mn} } from '@/app/actions/${mnLower}'
-import { TimelineStatusVendas } from '@/components/TimelineStatusVendas'
-import { DynamicIcon } from '@/app/components/DynamicIcon'
+${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {

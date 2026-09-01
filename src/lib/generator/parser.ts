@@ -1079,6 +1079,14 @@ export function parseMetaBuilderJSON(
 
   // BYOC map (nome do componente → código compilado)
   const byocMap: Record<string, string> = {}
+  rawComponents.forEach((c: any) => {
+    const name = c.name || c.component_name || c.id
+    const code = c.code || c.compiled_code || c.source_code || c.component_code
+    if (name && code) {
+      byocMap[name] = code
+      byocMap[toPascalCase(name)] = code
+    }
+  })
 
   // ── Etapa 1: Constrói Models & Fields ──
   const models: ModelNode[] = rawModels.map((rm: any) => {
