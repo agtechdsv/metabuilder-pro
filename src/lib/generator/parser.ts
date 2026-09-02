@@ -851,8 +851,19 @@ function resolveRelationTabs(
       })
     }
 
-    childGridFields = enrichRelationFields(childGridFields)
-    childFormFields = enrichRelationFields(childFormFields)
+    const uniqueByDbCol = (list: ResolvedField[]) => {
+      const seen = new Set<string>()
+      return list.filter(f => {
+        const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+        const key = (colOnly || f.id).toLowerCase()
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+    }
+
+    childGridFields = uniqueByDbCol(enrichRelationFields(childGridFields))
+    childFormFields = uniqueByDbCol(enrichRelationFields(childFormFields))
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 
@@ -953,58 +964,7 @@ function resolveRelationTabs(
             config: f.config || {},
           }
         })
-        if (subModel.db_table_name === 'itens_pedido' && !subGridFields.some(f => f.dbColumn.includes('total'))) {
-          subGridFields.push({
-            id: 'virt_total_rs',
-            dbColumn: 'total_rs',
-            sqlExpression: 'total_rs',
-            label: 'Total R$',
-            dataType: 'numeric',
-            isPrimaryKey: false,
-            isSortable: false,
-            isVirtual: true,
-            isByoc: false,
-            config: { readOnly: true, width: '16.66%', columns: 2, gridSpan: 2 },
-          })
-        }
         subFormFields = subGridFields
-      }
-
-      if (subModel.db_table_name === 'itens_pedido') {
-        if (!subFormFields.some(f => f.dbColumn.includes('total'))) {
-          subFormFields.push({
-            id: 'virt_total_rs',
-            dbColumn: 'total_rs',
-            sqlExpression: 'total_rs',
-            label: 'Total R$',
-            dataType: 'numeric',
-            isPrimaryKey: false,
-            isSortable: false,
-            isVirtual: true,
-            isByoc: false,
-            config: { readOnly: true, width: '16.66%', columns: 2, gridSpan: 2 },
-          })
-        }
-        // Ordenação oficial da Web Produção: Produto (6), Quantidade (2), Preço Unitário (2), Total R$ (2)
-        const subOrderMap: Record<string, number> = {
-          'produto_id': 1, 'produto': 1,
-          'quantidade': 2, 'qtd': 2,
-          'preco_unitario': 3, 'valor_unitario': 3, 'preco': 3,
-          'total_rs': 4, 'subtotal': 4, 'total': 4
-        }
-        subFormFields.sort((a, b) => {
-          const oA = subOrderMap[a.dbColumn.toLowerCase()] || 99
-          const oB = subOrderMap[b.dbColumn.toLowerCase()] || 99
-          return oA - oB
-        })
-        subFormFields.forEach(f => {
-          const colL = f.dbColumn.toLowerCase()
-          if (colL.includes('produto')) {
-            f.config = { ...f.config, columns: 6, width: '50%', gridSpan: 6 }
-          } else {
-            f.config = { ...f.config, columns: 2, width: '16.66%', gridSpan: 2 }
-          }
-        })
       }
 
       const enrichSubFields = (fieldsList: ResolvedField[]) => {
@@ -1043,8 +1003,8 @@ function resolveRelationTabs(
         })
       }
 
-      subGridFields = enrichSubFields(subGridFields)
-      subFormFields = enrichSubFields(subFormFields)
+      subGridFields = uniqueByDbCol(enrichSubFields(subGridFields))
+      subFormFields = uniqueByDbCol(enrichSubFields(subFormFields))
 
       return {
         relatedModelId: subModel.id,

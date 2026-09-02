@@ -434,20 +434,33 @@ const SubItemAccordion = React.forwardRef(({
             const isPrecoField = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.label.toLowerCase().includes('preço') || sf.label.toLowerCase().includes('preco')
             const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
 
-            const rawCols = sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.columns ?? sf.config?.colSpan
+            const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
             const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
             const widthVal = sf.config?.width || sf.config?.component?.width || ''
             
             let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
-            if (numCols === 12 || widthVal === '100%') {
-              colSpanClass = 'col-span-12'
-            } else if (numCols === 6 || widthVal === '50%' || (!numCols && sf.dbColumn.includes('produto'))) {
+            if (numCols) {
+              if (numCols >= 12) colSpanClass = 'col-span-12'
+              else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
+              else if (numCols === 8) colSpanClass = 'col-span-12 md:col-span-8'
+              else if (numCols === 7) colSpanClass = 'col-span-12 md:col-span-7'
+              else if (numCols === 6) colSpanClass = 'col-span-12 md:col-span-6'
+              else if (numCols === 5) colSpanClass = 'col-span-12 md:col-span-5'
+              else if (numCols === 4) colSpanClass = 'col-span-12 md:col-span-4'
+              else if (numCols === 3) colSpanClass = 'col-span-12 md:col-span-3'
+              else if (numCols === 2) colSpanClass = 'col-span-12 md:col-span-2'
+              else if (numCols === 1) colSpanClass = 'col-span-12 md:col-span-1'
+            } else if (widthVal === '75%') {
+              colSpanClass = 'col-span-12 md:col-span-9'
+            } else if (widthVal.includes('66')) {
+              colSpanClass = 'col-span-12 md:col-span-8'
+            } else if (widthVal === '50%' || widthVal === 'w-1/2' || sf.dbColumn.includes('produto')) {
               colSpanClass = 'col-span-12 md:col-span-6'
-            } else if (numCols === 4 || widthVal === '33%') {
+            } else if (widthVal === '33%' || widthVal === '33.33%') {
               colSpanClass = 'col-span-12 md:col-span-4'
-            } else if (numCols === 3 || widthVal === '25%') {
+            } else if (widthVal === '25%' || widthVal === 'w-1/4') {
               colSpanClass = 'col-span-12 md:col-span-3'
-            } else if (numCols === 2 || widthVal.includes('16') || (!numCols && (isQtdField || isPrecoField || isTotalField))) {
+            } else if (widthVal.includes('16') || isQtdField || isPrecoField || isTotalField) {
               colSpanClass = 'col-span-12 md:col-span-2'
             }
 
@@ -832,19 +845,30 @@ export function DetailRelationSection({
                         const rawCols = f.config?.gridSpan ?? f.config?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
                         const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                         let colSpanClass = 'col-span-12 md:col-span-6'
-                        if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                        if (numCols) {
+                          if (numCols >= 12) colSpanClass = 'col-span-12'
+                          else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
+                          else if (numCols === 8) colSpanClass = 'col-span-12 md:col-span-8'
+                          else if (numCols === 7) colSpanClass = 'col-span-12 md:col-span-7'
+                          else if (numCols === 6) colSpanClass = 'col-span-12 md:col-span-6'
+                          else if (numCols === 5) colSpanClass = 'col-span-12 md:col-span-5'
+                          else if (numCols === 4) colSpanClass = 'col-span-12 md:col-span-4'
+                          else if (numCols === 3) colSpanClass = 'col-span-12 md:col-span-3'
+                          else if (numCols === 2) colSpanClass = 'col-span-12 md:col-span-2'
+                          else if (numCols === 1) colSpanClass = 'col-span-12 md:col-span-1'
+                        } else if (f.config?.multiline || f.config?.component?.type === 'textarea') {
                           colSpanClass = 'col-span-12'
-                        } else if (numCols === 9 || widthVal === '75%') {
+                        } else if (widthVal === '75%') {
                           colSpanClass = 'col-span-12 md:col-span-9'
-                        } else if (numCols === 8 || widthVal === '66%' || widthVal === '66.66%') {
+                        } else if (widthVal.includes('66')) {
                           colSpanClass = 'col-span-12 md:col-span-8'
-                        } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
+                        } else if (widthVal === '50%' || widthVal === 'w-1/2') {
                           colSpanClass = 'col-span-12 md:col-span-6'
-                        } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                        } else if (widthVal === '33%' || widthVal === '33.33%') {
                           colSpanClass = 'col-span-12 md:col-span-4'
-                        } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                        } else if (widthVal === '25%' || widthVal === 'w-1/4') {
                           colSpanClass = 'col-span-12 md:col-span-3'
-                        } else if (numCols === 2 || widthVal.includes('16')) {
+                        } else if (widthVal.includes('16')) {
                           colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
@@ -1049,19 +1073,30 @@ export function DetailRelationSection({
                     const rawCols = f.config?.modalGridSpan ?? f.config?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
                     const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                     let colSpanClass = 'col-span-12 md:col-span-6'
-                    if (numCols === 12 || widthVal === '100%' || widthVal === 'w-full' || f.config?.multiline || f.config?.component?.type === 'textarea') {
+                    if (numCols) {
+                      if (numCols >= 12) colSpanClass = 'col-span-12'
+                      else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
+                      else if (numCols === 8) colSpanClass = 'col-span-12 md:col-span-8'
+                      else if (numCols === 7) colSpanClass = 'col-span-12 md:col-span-7'
+                      else if (numCols === 6) colSpanClass = 'col-span-12 md:col-span-6'
+                      else if (numCols === 5) colSpanClass = 'col-span-12 md:col-span-5'
+                      else if (numCols === 4) colSpanClass = 'col-span-12 md:col-span-4'
+                      else if (numCols === 3) colSpanClass = 'col-span-12 md:col-span-3'
+                      else if (numCols === 2) colSpanClass = 'col-span-12 md:col-span-2'
+                      else if (numCols === 1) colSpanClass = 'col-span-12 md:col-span-1'
+                    } else if (f.config?.multiline || f.config?.component?.type === 'textarea') {
                       colSpanClass = 'col-span-12'
-                    } else if (numCols === 9 || widthVal === '75%') {
+                    } else if (widthVal === '75%') {
                       colSpanClass = 'col-span-12 md:col-span-9'
-                    } else if (numCols === 8 || widthVal === '66%' || widthVal === '66.66%') {
+                    } else if (widthVal.includes('66')) {
                       colSpanClass = 'col-span-12 md:col-span-8'
-                    } else if (numCols === 6 || widthVal === '50%' || widthVal === 'w-1/2') {
+                    } else if (widthVal === '50%' || widthVal === 'w-1/2') {
                       colSpanClass = 'col-span-12 md:col-span-6'
-                    } else if (numCols === 4 || widthVal === '33%' || widthVal === '33.33%') {
+                    } else if (widthVal === '33%' || widthVal === '33.33%') {
                       colSpanClass = 'col-span-12 md:col-span-4'
-                    } else if (numCols === 3 || widthVal === '25%' || widthVal === 'w-1/4') {
+                    } else if (widthVal === '25%' || widthVal === 'w-1/4') {
                       colSpanClass = 'col-span-12 md:col-span-3'
-                    } else if (numCols === 2 || widthVal.includes('16')) {
+                    } else if (widthVal.includes('16')) {
                       colSpanClass = 'col-span-12 md:col-span-2'
                     }
 
