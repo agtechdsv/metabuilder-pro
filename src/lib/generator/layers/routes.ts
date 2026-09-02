@@ -924,6 +924,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
   const [activeTab, setActiveTab] = useState(0)
+  const isEdit = true
 
 ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `  const [${tTable}LookupList, set${tTable}LookupList] = useState<any[]>(cached${tTable}LookupList)`).join('\n')}
 
