@@ -170,7 +170,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+    } else if (typeof v === 'string' && v.includes(',')) {
       clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
     } else {
       clean[k] = v
@@ -254,7 +254,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+    } else if (typeof v === 'string' && v.includes(',')) {
       clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
     } else {
       clean[k] = v
@@ -334,7 +334,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+    } else if (typeof v === 'string' && v.includes(',')) {
       clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
     } else {
       clean[k] = v
@@ -411,7 +411,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+    } else if (typeof v === 'string' && v.includes(',')) {
       clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
     } else {
       clean[k] = v
@@ -490,7 +490,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+    } else if (typeof v === 'string' && v.includes(',')) {
       clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
     } else {
       clean[k] = v

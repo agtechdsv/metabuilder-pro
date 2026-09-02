@@ -359,6 +359,90 @@ export interface DetailRelationSectionProps {
   deleteSubAction?: (id: string) => Promise<any>
 }
 
+function parseAnyNumber(val: any): number {
+  if (val === null || val === undefined || val === '') return 0
+  if (typeof val === 'number') return isNaN(val) ? 0 : val
+  const s = String(val).trim()
+  if (!s) return 0
+  if (s.includes(',')) {
+    return Number(s.replace(/\\./g, '').replace(',', '.')) || 0
+  }
+  return Number(s) || 0
+}
+
+function formatMaskRealtime(val: string, mask?: string): string {
+  if (!val || !mask) return val || ''
+  const numbers = String(val).replace(/\\D/g, '')
+  if (!numbers) return ''
+
+  if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
+    const num = parseInt(numbers, 10) / 100
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  if (mask === '0.000') {
+    const num = parseInt(numbers, 10)
+    return num.toLocaleString('pt-BR')
+  }
+
+  if (mask === '000.000.000-00') {
+    const d = numbers.slice(0, 11)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return \`\${d.slice(0, 3)}.\${d.slice(3)}\`
+    if (d.length <= 9) return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6)}\`
+    return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
+  }
+
+  if (mask === '00.000.000/0000-00') {
+    const d = numbers.slice(0, 14)
+    if (d.length <= 2) return d
+    if (d.length <= 5) return \`\${d.slice(0, 2)}.\${d.slice(2)}\`
+    if (d.length <= 8) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5)}\`
+    if (d.length <= 12) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8)}\`
+    return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+  }
+
+  if (mask === '00000-000') {
+    const d = numbers.slice(0, 8)
+    if (d.length <= 5) return d
+    return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+
+  if (mask === '(00) 00000-0000' || mask === '(00) 0000-0000') {
+    const d = numbers.slice(0, 11)
+    if (d.length <= 2) return \`(\${d}\`
+    if (d.length <= 6) return \`(\${d.slice(0, 2)}) \${d.slice(2)}\`
+    if (d.length <= 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6)}\`
+    return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+  }
+
+  if (mask === '00/00/0000') {
+    const d = numbers.slice(0, 8)
+    if (d.length <= 2) return d
+    if (d.length <= 4) return \`\${d.slice(0, 2)}/\${d.slice(2)}\`
+    return \`\${d.slice(0, 2)}/\${d.slice(2, 4)}/\${d.slice(4, 8)}\`
+  }
+
+  return val
+}
+
+function applyFieldMask(val: any, mask?: string): string {
+  if (val === null || val === undefined || val === '') return ''
+  if (!mask) return String(val)
+
+  if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
+    const num = parseAnyNumber(val)
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  if (mask === '0.000') {
+    const num = parseAnyNumber(val)
+    return num.toLocaleString('pt-BR')
+  }
+
+  return formatMaskRealtime(String(val), mask)
+}
+
 const SubItemAccordion = React.forwardRef(({
   subItem,
   sIdx,
@@ -394,7 +478,7 @@ const SubItemAccordion = React.forwardRef(({
 
   const rawQtd = getSubVal('quantidade') || getSubVal('qtd') || 1
   const rawPreco = getSubVal('preco_unitario') || getSubVal('valor_unitario') || getSubVal('preco') || 0
-  const parsedPreco = typeof rawPreco === 'number' ? rawPreco : (Number(String(rawPreco).replace(/\\./g, '').replace(',', '.')) || 0)
+  const parsedPreco = parseAnyNumber(rawPreco)
 
   const [qtd, setQtd] = useState<number>(Number(rawQtd) || 1)
   const [preco, setPreco] = useState<number>(parsedPreco)
@@ -531,19 +615,19 @@ const SubItemAccordion = React.forwardRef(({
                     name={sf.dbColumn}
                     type="text"
                     readOnly
-                    value={total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
+                    value={total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00')}
                     className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 font-semibold rounded-xl px-4 py-2.5 text-sm outline-none cursor-not-allowed"
                   />
                 </div>
               )
             }
 
+            const mask = sf.config?.content?.mask || sf.config?.mask || (isPrecoField ? '0.000,00' : '')
             let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
-            if (isPrecoField && val !== undefined && val !== null && val !== '') {
-              const numP = typeof val === 'number' ? val : Number(String(val).replace(/\\./g, '').replace(',', '.'))
-              if (!isNaN(numP)) {
-                initialFormatted = numP.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              }
+            if (mask) {
+              initialFormatted = applyFieldMask(val, mask)
+            } else if (isPrecoField && val !== undefined && val !== null && val !== '') {
+              initialFormatted = applyFieldMask(val, '0.000,00')
             }
 
             return (
@@ -554,13 +638,17 @@ const SubItemAccordion = React.forwardRef(({
                 <input
                   key={\`\${sf.dbColumn}-\${initialFormatted}\`}
                   name={sf.dbColumn}
-                  type={isDate ? 'date' : isNumber && !isPrecoField ? 'number' : 'text'}
+                  data-mask={mask}
+                  type={isDate ? 'date' : (isNumber && !mask && !isPrecoField) ? 'number' : 'text'}
                   defaultValue={initialFormatted}
                   onChange={(e) => {
+                    if (mask) {
+                      e.target.value = formatMaskRealtime(e.target.value, mask)
+                    }
                     if (isQtdField) setQtd(Number(e.target.value) || 0)
                     if (isPrecoField) {
-                      const cleanVal = e.target.value.replace(/\\./g, '').replace(',', '.')
-                      setPreco(Number(cleanVal) || 0)
+                      const cleanVal = parseAnyNumber(e.target.value)
+                      setPreco(cleanVal)
                     }
                   }}
                   placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
@@ -702,7 +790,14 @@ export function DetailRelationSection({
           const parentInputs = rowContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.relation-parent-fields input, .relation-parent-fields select')
           parentInputs.forEach(inp => {
             if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
-              rowData[inp.name] = inp.value
+              const m = inp.getAttribute('data-mask')
+              if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+                rowData[inp.name] = parseAnyNumber(inp.value)
+              } else if (m === '0.000') {
+                rowData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+              } else {
+                rowData[inp.name] = inp.value
+              }
             }
           })
         } else {
@@ -738,7 +833,14 @@ export function DetailRelationSection({
               const subInputs = subContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
               subInputs.forEach(inp => {
                 if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
-                  subData[inp.name] = inp.value
+                  const m = inp.getAttribute('data-mask')
+                  if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+                    subData[inp.name] = parseAnyNumber(inp.value)
+                  } else if (m === '0.000') {
+                    subData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+                  } else {
+                    subData[inp.name] = inp.value
+                  }
                 }
               })
             } else {
@@ -858,8 +960,19 @@ export function DetailRelationSection({
       const formData = new FormData(e.currentTarget)
       const updatedSub: Record<string, any> = { ...editingSubItem.subItem }
       formData.forEach((v, k) => {
-        updatedSub[k] = v
         const matchedField = editingSubItem.subFields.find((f: any) => f.dbColumn === k)
+        const m = matchedField?.config?.content?.mask || matchedField?.config?.mask || ''
+        if (m === '0.000,00' || m === 'currency' || m === 'moeda' || k.includes('preco') || k.includes('valor')) {
+          const parsed = parseAnyNumber(v)
+          updatedSub[k] = parsed
+          formData.set(k, String(parsed))
+        } else if (m === '0.000') {
+          const parsed = parseInt(String(v).replace(/\\D/g, ''), 10) || 0
+          updatedSub[k] = parsed
+          formData.set(k, String(parsed))
+        } else {
+          updatedSub[k] = v
+        }
         if (matchedField?.config?.options) {
           const selectedOpt = matchedField.config.options.find((o: any) => String(o.value ?? o.id) === String(v))
           if (selectedOpt?.label) {
@@ -1203,21 +1316,24 @@ export function DetailRelationSection({
                           colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
+                        const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : '')
                         let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                         if (isCalculatedTotal && itemChildRecords && itemChildRecords.length > 0) {
                           const sum = itemChildRecords.reduce((acc: number, sub: any) => {
                             const q = Number(sub.quantidade || sub.qtd || 1)
                             const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
-                            const p = typeof rawP === 'number' ? rawP : (Number(String(rawP).replace(/\\./g, '').replace(',', '.')) || 0)
+                            const p = parseAnyNumber(rawP)
                             return acc + (q * p)
                           }, 0)
                           if (sum > 0) {
                             displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           } else if (val && !isNaN(Number(val))) {
-                            displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                           }
+                        } else if (mask) {
+                          displayVal = applyFieldMask(val, mask)
                         } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
-                          displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         }
 
                         if (hasOptions) {
@@ -1262,10 +1378,16 @@ export function DetailRelationSection({
                             <input
                               key={\`\${f.dbColumn}-\${displayVal}\`}
                               name={f.dbColumn}
-                              type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
+                              data-mask={mask}
+                              type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
                               defaultValue={displayVal}
+                              onChange={(e) => {
+                                if (mask) {
+                                  e.target.value = formatMaskRealtime(e.target.value, mask)
+                                }
+                              }}
                               className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-neutral-200'} border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                             />
                           </div>
@@ -1498,22 +1620,25 @@ export function DetailRelationSection({
                       colSpanClass = 'col-span-12 md:col-span-9'
                     }
 
+                    const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : '')
                     const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
                     let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                     if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
                       const sum = editChildRecords.reduce((acc: number, sub: any) => {
                         const q = Number(sub.quantidade || sub.qtd || 1)
                         const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
-                        const p = typeof rawP === 'number' ? rawP : (Number(String(rawP).replace(/\\./g, '').replace(',', '.')) || 0)
+                        const p = parseAnyNumber(rawP)
                         return acc + (q * p)
                       }, 0)
                       if (sum > 0) {
                         displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       } else if (val && !isNaN(Number(val))) {
-                        displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                       }
+                    } else if (mask) {
+                      displayVal = applyFieldMask(val, mask)
                     } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
-                      displayVal = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     }
 
                     if (hasOptions) {
@@ -1558,10 +1683,16 @@ export function DetailRelationSection({
                         <input
                           key={\`\${f.dbColumn}-\${displayVal}\`}
                           name={f.dbColumn}
-                          type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
+                          data-mask={mask}
+                          type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
                           defaultValue={displayVal}
+                          onChange={(e) => {
+                            if (mask) {
+                              e.target.value = formatMaskRealtime(e.target.value, mask)
+                            }
+                          }}
                           className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                         />
                       </div>
@@ -1834,19 +1965,19 @@ export function DetailRelationSection({
                           name={sf.dbColumn}
                           type="text"
                           readOnly
-                          value={subModalTotal > 0 ? subModalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
+                          value={subModalTotal > 0 ? subModalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
                           className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none"
                         />
                       </div>
                     )
                   }
 
+                  const mask = sf.config?.content?.mask || sf.config?.mask || (isPreco ? '0.000,00' : '')
                   let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
-                  if (isPreco && val !== undefined && val !== null && val !== '') {
-                    const numP = typeof val === 'number' ? val : Number(String(val).replace(/\\./g, '').replace(',', '.'))
-                    if (!isNaN(numP)) {
-                      initialFormatted = numP.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    }
+                  if (mask) {
+                    initialFormatted = applyFieldMask(val, mask)
+                  } else if (isPreco && val !== undefined && val !== null && val !== '') {
+                    initialFormatted = applyFieldMask(val, '0.000,00')
                   }
 
                   return (
@@ -1856,13 +1987,17 @@ export function DetailRelationSection({
                       </label>
                       <input
                         name={sf.dbColumn}
-                        type={isDate ? 'date' : (isNumber && !isPreco) ? 'number' : 'text'}
+                        data-mask={mask}
+                        type={isDate ? 'date' : (isNumber && !mask && !isPreco) ? 'number' : 'text'}
                         defaultValue={initialFormatted}
                         onChange={(e) => {
+                          if (mask) {
+                            e.target.value = formatMaskRealtime(e.target.value, mask)
+                          }
                           if (isQtd) setSubModalQtd(Number(e.target.value) || 0)
                           if (isPreco) {
-                            const cleanVal = e.target.value.replace(/\\./g, '').replace(',', '.')
-                            setSubModalPreco(Number(cleanVal) || 0)
+                            const cleanVal = parseAnyNumber(e.target.value)
+                            setSubModalPreco(cleanVal)
                           }
                         }}
                         placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
@@ -1998,16 +2133,59 @@ export interface DetailMasterFormProps {
 }
 
 function formatWithMask(value: string, mask?: string): string {
-  if (!value) return ''
-  const s = String(value)
-  if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
-    const d = s.replace(/\\D/g, '').slice(0, 11)
+  if (!value || !mask) return value || ''
+  const numbers = String(value).replace(/\\D/g, '')
+  if (!numbers) return ''
+
+  if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
+    const num = parseInt(numbers, 10) / 100
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  if (mask === '0.000') {
+    const num = parseInt(numbers, 10)
+    return num.toLocaleString('pt-BR')
+  }
+
+  if (mask === '000.000.000-00') {
+    const d = numbers.slice(0, 11)
     if (d.length <= 3) return d
     if (d.length <= 6) return \`\${d.slice(0, 3)}.\${d.slice(3)}\`
     if (d.length <= 9) return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6)}\`
     return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
   }
-  return s
+
+  if (mask === '00.000.000/0000-00') {
+    const d = numbers.slice(0, 14)
+    if (d.length <= 2) return d
+    if (d.length <= 5) return \`\${d.slice(0, 2)}.\${d.slice(2)}\`
+    if (d.length <= 8) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5)}\`
+    if (d.length <= 12) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8)}\`
+    return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+  }
+
+  if (mask === '00000-000') {
+    const d = numbers.slice(0, 8)
+    if (d.length <= 5) return d
+    return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+
+  if (mask === '(00) 00000-0000' || mask === '(00) 0000-0000') {
+    const d = numbers.slice(0, 11)
+    if (d.length <= 2) return \`(\${d}\`
+    if (d.length <= 6) return \`(\${d.slice(0, 2)}) \${d.slice(2)}\`
+    if (d.length <= 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6)}\`
+    return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+  }
+
+  if (mask === '00/00/0000') {
+    const d = numbers.slice(0, 8)
+    if (d.length <= 2) return d
+    if (d.length <= 4) return \`\${d.slice(0, 2)}/\${d.slice(2)}\`
+    return \`\${d.slice(0, 2)}/\${d.slice(2, 4)}/\${d.slice(4, 8)}\`
+  }
+
+  return value
 }
 
 export function DetailMasterForm({ id, backPath, title, updateAction, children }: DetailMasterFormProps) {
