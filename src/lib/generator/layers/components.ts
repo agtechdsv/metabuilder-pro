@@ -1277,7 +1277,7 @@ export function DetailRelationSection({
       {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
       {mounted && isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-5xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-6xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             {/* Header da Modal */}
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
@@ -1333,7 +1333,7 @@ export function DetailRelationSection({
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <input type="hidden" name={foreignKey} value={parentId} />
                 
-                <div className="grid grid-cols-12 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
+                <div className="grid grid-cols-12 gap-5 max-h-[55vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
                     const val = getFieldValue(editingItem, f.dbColumn)
                     const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
@@ -1342,9 +1342,16 @@ export function DetailRelationSection({
                     const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
-                    const widthVal = f.config?.width || f.config?.component?.width || ''
-                    const rawCols = f.config?.modalGridSpan ?? f.config?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
-                    const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
+                    const comp = f.config?.component || {}
+                    const formCfg = f.config?.form_config || {}
+                    const formComp = formCfg.component || {}
+                    const rawCols = f.config?.modalGridSpan ?? comp.modalGridSpan ?? formCfg.modalGridSpan ?? formComp.modalGridSpan ??
+                                    f.config?.gridSpan ?? comp.gridSpan ?? formCfg.gridSpan ?? formComp.gridSpan ??
+                                    f.config?.columns ?? comp.columns ?? f.config?.col_span ?? comp.col_span ?? f.config?.colSpan
+                    const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\\d+/) ? parseInt(rawCols.match(/\\d+/)![0], 10) : null)
+                    const rawWidth = String(f.config?.modalWidth || comp.modalWidth || formCfg.modalWidth || formComp.modalWidth ||
+                                            f.config?.width || comp.width || formCfg.width || formComp.width || '')
+
                     let colSpanClass = 'col-span-12 md:col-span-6'
                     if (numCols) {
                       if (numCols >= 12) colSpanClass = 'col-span-12'
@@ -1357,20 +1364,22 @@ export function DetailRelationSection({
                       else if (numCols === 3) colSpanClass = 'col-span-12 md:col-span-3'
                       else if (numCols === 2) colSpanClass = 'col-span-12 md:col-span-2'
                       else if (numCols === 1) colSpanClass = 'col-span-12 md:col-span-1'
-                    } else if (f.config?.multiline || f.config?.component?.type === 'textarea') {
+                    } else if (f.config?.multiline || comp.type === 'textarea') {
                       colSpanClass = 'col-span-12'
-                    } else if (widthVal === '75%') {
+                    } else if (rawWidth.includes('75')) {
                       colSpanClass = 'col-span-12 md:col-span-9'
-                    } else if (widthVal.includes('66')) {
+                    } else if (rawWidth.includes('66')) {
                       colSpanClass = 'col-span-12 md:col-span-8'
-                    } else if (widthVal === '50%' || widthVal === 'w-1/2') {
+                    } else if (rawWidth.includes('50') || rawWidth === 'w-1/2') {
                       colSpanClass = 'col-span-12 md:col-span-6'
-                    } else if (widthVal === '33%' || widthVal === '33.33%') {
+                    } else if (rawWidth.includes('33')) {
                       colSpanClass = 'col-span-12 md:col-span-4'
-                    } else if (widthVal === '25%' || widthVal === 'w-1/4') {
+                    } else if (rawWidth.includes('25') || rawWidth === 'w-1/4' || (isDate && !numCols)) {
                       colSpanClass = 'col-span-12 md:col-span-3'
-                    } else if (widthVal.includes('16')) {
+                    } else if (rawWidth.includes('16')) {
                       colSpanClass = 'col-span-12 md:col-span-2'
+                    } else if (f.dbColumn.includes('funcionario') || f.dbColumn.includes('cliente') || f.dbColumn.includes('fornecedor')) {
+                      colSpanClass = 'col-span-12 md:col-span-9'
                     }
 
                     const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
@@ -1583,7 +1592,7 @@ export function DetailRelationSection({
       {/* Modal de Edição de Sub-Item (Imagem 3 topo) */}
       {mounted && editingSubItem && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-5xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-6xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">

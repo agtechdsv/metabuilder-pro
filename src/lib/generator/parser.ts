@@ -791,18 +791,26 @@ function resolveRelationTabs(
       }
     } else {
       // Fallback: usa os campos do modelo filho
-      childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => ({
-        id: f.id,
-        dbColumn: f.db_column_name,
-        sqlExpression: f.db_column_name,
-        label: f.display_name || f.db_column_name,
-        dataType: f.data_type || 'varchar',
-        isPrimaryKey: f.is_primary_key || false,
-        isSortable: f.is_sortable || false,
-        isVirtual: false,
-        isByoc: false,
-        config: { columns: 6, width: '50%', gridSpan: 6 },
-      }))
+      childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => {
+        const dt = (f.data_type || '').toLowerCase()
+        const isDate = dt === 'date' || dt.includes('time') || f.db_column_name.includes('data')
+        const isLookup = f.db_column_name.includes('funcionario') || f.db_column_name.includes('cliente') || f.db_column_name.includes('fornecedor')
+        const cols = isDate ? 3 : isLookup ? 9 : 6
+        const width = isDate ? '25%' : isLookup ? '75%' : '50%'
+
+        return {
+          id: f.id,
+          dbColumn: f.db_column_name,
+          sqlExpression: f.db_column_name,
+          label: f.display_name || f.db_column_name,
+          dataType: f.data_type || 'varchar',
+          isPrimaryKey: f.is_primary_key || false,
+          isSortable: f.is_sortable || false,
+          isVirtual: false,
+          isByoc: false,
+          config: { columns: cols, width, gridSpan: cols, modalGridSpan: cols, modalWidth: width },
+        }
+      })
       childFormFields = childGridFields
     }
 
@@ -820,7 +828,7 @@ function resolveRelationTabs(
         isSortable: false,
         isVirtual: true,
         isByoc: false,
-        config: { readOnly: true, width: '33.33%', columns: 4, gridSpan: 4 },
+        config: { readOnly: true, width: '50%', columns: 6, gridSpan: 6, modalGridSpan: 6, modalWidth: '50%' },
       })
     }
 
