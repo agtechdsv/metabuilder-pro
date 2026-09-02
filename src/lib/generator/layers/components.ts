@@ -394,10 +394,15 @@ const SubItemAccordion = React.forwardRef(({
 
   const rawQtd = getSubVal('quantidade') || getSubVal('qtd') || 1
   const rawPreco = getSubVal('preco_unitario') || getSubVal('valor_unitario') || getSubVal('preco') || 0
-  const parsedPreco = typeof rawPreco === 'number' ? rawPreco : (Number(String(rawPreco).replace(',', '.')) || 0)
+  const parsedPreco = typeof rawPreco === 'number' ? rawPreco : (Number(String(rawPreco).replace(/\\./g, '').replace(',', '.')) || 0)
 
   const [qtd, setQtd] = useState<number>(Number(rawQtd) || 1)
   const [preco, setPreco] = useState<number>(parsedPreco)
+
+  useEffect(() => {
+    setQtd(Number(rawQtd) || 1)
+    setPreco(parsedPreco)
+  }, [rawQtd, parsedPreco])
 
   const total = qtd * preco
 
@@ -500,6 +505,7 @@ const SubItemAccordion = React.forwardRef(({
                     {sf.label}
                   </label>
                   <select
+                    key={\`\${sf.dbColumn}-\${String(val ?? '')}\`}
                     name={sf.dbColumn}
                     defaultValue={String(val ?? '')}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
@@ -534,7 +540,7 @@ const SubItemAccordion = React.forwardRef(({
 
             let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
             if (isPrecoField && val !== undefined && val !== null && val !== '') {
-              const numP = typeof val === 'number' ? val : Number(String(val).replace(',', '.'))
+              const numP = typeof val === 'number' ? val : Number(String(val).replace(/\\./g, '').replace(',', '.'))
               if (!isNaN(numP)) {
                 initialFormatted = numP.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               }
@@ -546,13 +552,14 @@ const SubItemAccordion = React.forwardRef(({
                   {sf.label}
                 </label>
                 <input
+                  key={\`\${sf.dbColumn}-\${initialFormatted}\`}
                   name={sf.dbColumn}
                   type={isDate ? 'date' : isNumber && !isPrecoField ? 'number' : 'text'}
                   defaultValue={initialFormatted}
                   onChange={(e) => {
                     if (isQtdField) setQtd(Number(e.target.value) || 0)
                     if (isPrecoField) {
-                      const cleanVal = e.target.value.replace(/\./g, '').replace(',', '.')
+                      const cleanVal = e.target.value.replace(/\\./g, '').replace(',', '.')
                       setPreco(Number(cleanVal) || 0)
                     }
                   }}
@@ -779,10 +786,30 @@ export function DetailRelationSection({
       const updatedFields = Object.fromEntries(formData.entries())
       if (editingItem && (editingItem.id || editingItem.codigo) && !String(editingItem.id).startsWith('temp-')) {
         await updateAction(editingItem.id || editingItem.codigo, formData)
-        setLocalItems(prev => prev.map(it => (it.id || it.codigo) === (editingItem.id || editingItem.codigo) ? { ...it, ...updatedFields } : it))
+        setLocalItems(prev => prev.map(it => {
+          const isMatch = (it.id && it.id === (editingItem.id || editingItem.codigo)) ||
+                          (it.codigo && it.codigo === (editingItem.id || editingItem.codigo))
+          if (isMatch) {
+            return {
+              ...it,
+              ...updatedFields,
+              items: editingItem.items || it.items,
+              itens_pedido: editingItem.itens_pedido || it.itens_pedido,
+              __v: (it.__v || 0) + 1
+            }
+          }
+          return it
+        }))
       } else {
         const created = await createAction(formData)
-        setLocalItems(prev => [{ ...updatedFields, id: created?.id || \`item-\${Date.now()}\` }, ...prev])
+        const newId = created?.id || \`item-\${Date.now()}\`
+        setLocalItems(prev => [{
+          ...updatedFields,
+          id: newId,
+          items: editingItem?.items || [],
+          itens_pedido: editingItem?.itens_pedido || [],
+          __v: 1
+        }, ...prev])
       }
       setToastType('success')
       setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
@@ -832,9 +859,25 @@ export function DetailRelationSection({
       const updatedSub: Record<string, any> = { ...editingSubItem.subItem }
       formData.forEach((v, k) => {
         updatedSub[k] = v
+        const matchedField = editingSubItem.subFields.find((f: any) => f.dbColumn === k)
+        if (matchedField?.config?.options) {
+          const selectedOpt = matchedField.config.options.find((o: any) => String(o.value ?? o.id) === String(v))
+          if (selectedOpt?.label) {
+            updatedSub[\`\${k}_nome\`] = selectedOpt.label
+            updatedSub[\`\${k}_label\`] = selectedOpt.label
+            if (k.includes('produto')) {
+              updatedSub.produto_nome = selectedOpt.label
+            }
+          }
+        }
       })
-      if (subConfig?.foreignKey && !updatedSub[subConfig.foreignKey]) {
-        updatedSub[subConfig.foreignKey] = editingSubItem.parentId
+      if (subConfig?.foreignKey) {
+        if (!updatedSub[subConfig.foreignKey]) {
+          updatedSub[subConfig.foreignKey] = editingSubItem.parentId
+        }
+        if (!formData.get(subConfig.foreignKey)) {
+          formData.set(subConfig.foreignKey, String(editingSubItem.parentId))
+        }
       }
 
       if (updateSubAction && updatedSub.id && !String(updatedSub.id).startsWith('temp-')) {
@@ -844,21 +887,33 @@ export function DetailRelationSection({
         if (created?.id) updatedSub.id = created.id
       }
 
-      setLocalItems(prev => prev.map(it => {
+      setLocalItems(prev => prev.map((it, itIdx) => {
         const itId = it.id || it.codigo
-        if (itId === editingSubItem.parentId) {
+        const isParent = itId === editingSubItem.parentId || String(itIdx) === String(editingSubItem.parentId) || String(it.id) === String(editingSubItem.parentId)
+        if (isParent) {
           const children = it.items || it.itens_pedido || []
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-          return { ...it, items: nextChildren, itens_pedido: nextChildren }
+          return {
+            ...it,
+            items: nextChildren,
+            itens_pedido: nextChildren,
+            __v: (it.__v || 0) + 1
+          }
         }
         return it
       }))
+
       if (editingItem) {
         const itId = editingItem.id || editingItem.codigo
-        if (itId === editingSubItem.parentId) {
+        const isParent = itId === editingSubItem.parentId || String(editingSubItem.parentId) === 'edit' || (editingSubItem.subItem && itId === editingSubItem.subItem[subConfig?.foreignKey || ''])
+        if (isParent) {
           const children = editingItem.items || editingItem.itens_pedido || []
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-          setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+          setEditingItem({
+            ...editingItem,
+            items: nextChildren,
+            itens_pedido: nextChildren
+          })
         }
       }
       setToastType('success')
@@ -883,21 +938,32 @@ export function DetailRelationSection({
         await deleteSubAction(deletingSubItem.subItem.id)
       }
 
-      setLocalItems(prev => prev.map(it => {
+      setLocalItems(prev => prev.map((it, itIdx) => {
         const itId = it.id || it.codigo
-        if (itId === deletingSubItem.parentId) {
+        const isParent = itId === deletingSubItem.parentId || String(itIdx) === String(deletingSubItem.parentId) || String(it.id) === String(deletingSubItem.parentId)
+        if (isParent) {
           const children = it.items || it.itens_pedido || []
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-          return { ...it, items: nextChildren, itens_pedido: nextChildren }
+          return {
+            ...it,
+            items: nextChildren,
+            itens_pedido: nextChildren,
+            __v: (it.__v || 0) + 1
+          }
         }
         return it
       }))
       if (editingItem) {
         const itId = editingItem.id || editingItem.codigo
-        if (itId === deletingSubItem.parentId) {
+        const isParent = itId === deletingSubItem.parentId || String(deletingSubItem.parentId) === 'edit'
+        if (isParent) {
           const children = editingItem.items || editingItem.itens_pedido || []
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-          setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+          setEditingItem({
+            ...editingItem,
+            items: nextChildren,
+            itens_pedido: nextChildren
+          })
         }
       }
       setToastType('success')
@@ -1042,7 +1108,7 @@ export function DetailRelationSection({
             const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
 
             return (
-              <div key={itemId} data-relation-row={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
+              <div key={\`\${itemId}-\${item.__v || 0}\`} data-relation-row={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
                 {/* Linha do Registro (Pill) */}
                 <div className={\`py-2.5 px-4 rounded-xl border flex items-center justify-between transition-all \${
                   isExpanded
@@ -1140,8 +1206,9 @@ export function DetailRelationSection({
                         let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                         if (isCalculatedTotal && itemChildRecords && itemChildRecords.length > 0) {
                           const sum = itemChildRecords.reduce((acc: number, sub: any) => {
-                            const q = Number(sub.quantidade || 1)
-                            const p = Number(sub.preco_unitario || sub.valor_unitario || 0)
+                            const q = Number(sub.quantidade || sub.qtd || 1)
+                            const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
+                            const p = typeof rawP === 'number' ? rawP : (Number(String(rawP).replace(/\\./g, '').replace(',', '.')) || 0)
                             return acc + (q * p)
                           }, 0)
                           if (sum > 0) {
@@ -1167,6 +1234,7 @@ export function DetailRelationSection({
                                 {f.label}
                               </label>
                               <select
+                                key={\`\${f.dbColumn}-\${defVal}\`}
                                 name={f.dbColumn}
                                 defaultValue={defVal}
                                 disabled={isReadOnly}
@@ -1192,6 +1260,7 @@ export function DetailRelationSection({
                               {f.label}
                             </label>
                             <input
+                              key={\`\${f.dbColumn}-\${displayVal}\`}
                               name={f.dbColumn}
                               type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
                               readOnly={isReadOnly}
@@ -1213,8 +1282,41 @@ export function DetailRelationSection({
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
+                          {/* Pill de Expandir/Recolher Todos os Sub-itens */}
+                          {itemChildRecords.length > 0 && (
+                            <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = { ...expandedSubItems }
+                                  itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = true })
+                                  setExpandedSubItems(next)
+                                }}
+                                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                                title="Expandir Todos"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = { ...expandedSubItems }
+                                  itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = false })
+                                  setExpandedSubItems(next)
+                                }}
+                                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                                title="Recolher Todos"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                           <button
                             type="button"
+                            onClick={() => {
+                              const newSub: any = { id: \`temp-\${Date.now()}\` }
+                              setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
+                            }}
                             className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
                             title="Adicionar"
                           >
@@ -1222,6 +1324,7 @@ export function DetailRelationSection({
                           </button>
                           <button
                             type="button"
+                            onClick={() => handleOpenEditModal(item)}
                             className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors"
                             title="Abrir Modal"
                           >
@@ -1341,11 +1444,11 @@ export function DetailRelationSection({
               </button>
             </div>
 
-            {/* Conteúdo da Aba Mestre na Modal */}
-            {modalActiveTab === 'master' && (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <input type="hidden" name={foreignKey} value={parentId} />
-                
+            <form id="modal-master-form" onSubmit={handleFormSubmit} className="space-y-4">
+              <input type="hidden" name={foreignKey} value={parentId} />
+
+              {/* Conteúdo da Aba Mestre na Modal */}
+              <div className={modalActiveTab === 'master' ? 'block' : 'hidden'}>
                 <div className="grid grid-cols-12 gap-5 max-h-[55vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
                     const val = getFieldValue(editingItem, f.dbColumn)
@@ -1399,8 +1502,9 @@ export function DetailRelationSection({
                     let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                     if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
                       const sum = editChildRecords.reduce((acc: number, sub: any) => {
-                        const q = Number(sub.quantidade || 1)
-                        const p = Number(sub.preco_unitario || sub.valor_unitario || 0)
+                        const q = Number(sub.quantidade || sub.qtd || 1)
+                        const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
+                        const p = typeof rawP === 'number' ? rawP : (Number(String(rawP).replace(/\\./g, '').replace(',', '.')) || 0)
                         return acc + (q * p)
                       }, 0)
                       if (sum > 0) {
@@ -1426,6 +1530,7 @@ export function DetailRelationSection({
                             {f.label}
                           </label>
                           <select
+                            key={\`\${f.dbColumn}-\${defVal}\`}
                             name={f.dbColumn}
                             defaultValue={defVal}
                             disabled={isReadOnly}
@@ -1451,6 +1556,7 @@ export function DetailRelationSection({
                           {f.label}
                         </label>
                         <input
+                          key={\`\${f.dbColumn}-\${displayVal}\`}
                           name={f.dbColumn}
                           type={isDate ? 'date' : (isNumber && !isCalculatedTotal) ? 'number' : 'text'}
                           readOnly={isReadOnly}
@@ -1462,34 +1568,57 @@ export function DetailRelationSection({
                     )
                   })}
                 </div>
+              </div>
 
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
-                  >
-                    <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Conteúdo da Aba Itens do Detalhe na Modal */}
-            {modalActiveTab === 'items' && (
-              <div className="space-y-4 max-h-[55vh] overflow-y-auto px-1">
+              {/* Conteúdo da Aba Itens do Detalhe na Modal */}
+              <div className={modalActiveTab === 'items' ? 'block space-y-4 max-h-[55vh] overflow-y-auto px-1' : 'hidden'}>
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
-                  <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                    <button type="button" className="p-1 text-neutral-400 hover:text-indigo-600"><Plus className="w-3.5 h-3.5" /></button>
-                    <button type="button" className="p-1 text-neutral-400 hover:text-neutral-600"><Maximize2 className="w-3.5 h-3.5" /></button>
+                  <div className="flex items-center gap-1.5">
+                    {editingItem && (editingItem.items || editingItem.itens_pedido || []).length > 0 && (
+                      <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = { ...expandedSubItems }
+                            ;(editingItem.items || editingItem.itens_pedido || []).forEach((_: any, sIdx: number) => {
+                              next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = true
+                            })
+                            setExpandedSubItems(next)
+                          }}
+                          className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                          title="Expandir Todos"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = { ...expandedSubItems }
+                            ;(editingItem.items || editingItem.itens_pedido || []).forEach((_: any, sIdx: number) => {
+                              next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = false
+                            })
+                            setExpandedSubItems(next)
+                          }}
+                          className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                          title="Recolher Todos"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSub: any = { id: \`temp-\${Date.now()}\` }
+                        const curItems = (editingItem?.items || editingItem?.itens_pedido || [])
+                        setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
+                      }}
+                      className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
+                      title="Adicionar Item"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -1522,25 +1651,26 @@ export function DetailRelationSection({
                     })}
                   </div>
                 )}
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
-                  >
-                    <Save className="w-4 h-4" /> Salvar Alterações
-                  </button>
-                </div>
               </div>
-            )}
+
+              {/* Footer Único da Modal */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                  <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body
