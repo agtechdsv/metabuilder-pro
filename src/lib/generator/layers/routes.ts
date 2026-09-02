@@ -775,7 +775,7 @@ function generateDetailPage(route: RouteNode): string {
   }
 
   const subDetailImports = Array.from(subDetailModels.entries()).map(([_, modelName]) =>
-    `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`
+    `import { get${modelName}List, create${modelName}, update${modelName}, delete${modelName} } from '@/app/actions/${modelName.toLowerCase()}'`
   ).join('\n')
 
   const subDetailQueries = Array.from(subDetailModels.entries()).map(([table, modelName]) =>
@@ -822,6 +822,14 @@ function generateDetailPage(route: RouteNode): string {
             })))
           : '[]'
 
+        const subActionProps = tab.subDetails && tab.subDetails.length > 0
+          ? [
+              `              createSubAction={create${tab.subDetails[0].relatedModelName}}`,
+              `              updateSubAction={update${tab.subDetails[0].relatedModelName}}`,
+              `              deleteSubAction={delete${tab.subDetails[0].relatedModelName}}`,
+            ].join('\n')
+          : ''
+
         const lookupMappingCode = Array.from(lookupModels.entries()).map(([tTable]) => [
           `                if (targetTable === '${tTable}') {`,
           `                  return {`,
@@ -861,9 +869,10 @@ function generateDetailPage(route: RouteNode): string {
           `              createAction={create${tab.relatedModelName}}`,
           `              updateAction={update${tab.relatedModelName}}`,
           `              deleteAction={delete${tab.relatedModelName}}`,
+          subActionProps,
           `            />`,
           `          )}`,
-        ].join('\n')
+        ].filter(Boolean).join('\n')
       }).join('\n')
     : ''
 
@@ -1069,16 +1078,18 @@ ${relationQueries}  const isEdit = true
         </div>
 ${tabsHeader}
 
-        {/* Formulário com Suporte a Abas e Footer Persistente (Cancelar / Salvar) */}
-        <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
-          {(!${hasRelationTabs} || activeTab === 0) && (
+        {/* Formulário com Suporte a Abas */}
+        {(!${hasRelationTabs} || activeTab === 0) ? (
+          <DetailMasterForm id={resolvedParams.id} backPath="${route.path}" title="${route.title}" updateAction={update${mn}}>
             <div className="grid grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
             </div>
-          )}
-
+          </DetailMasterForm>
+        ) : (
+          <div className="space-y-6">
 ${tabPanels}
-        </DetailMasterForm>
+          </div>
+        )}
       </div>
     </div>
   )

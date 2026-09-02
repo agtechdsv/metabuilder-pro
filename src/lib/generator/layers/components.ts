@@ -311,7 +311,9 @@ import {
   Save,
   AlertTriangle,
   ExternalLink,
-  Layers
+  Layers,
+  CheckCircle,
+  Loader2
 } from 'lucide-react'
 
 export interface DetailFieldConfig {
@@ -342,6 +344,9 @@ export interface DetailRelationSectionProps {
   createAction: (formData: FormData | Record<string, any>) => Promise<any>
   updateAction: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteAction: (id: string) => Promise<any>
+  createSubAction?: (formData: FormData | Record<string, any>) => Promise<any>
+  updateSubAction?: (id: string, formData: FormData | Record<string, any>) => Promise<any>
+  deleteSubAction?: (id: string) => Promise<any>
 }
 
 const SubItemAccordion = React.forwardRef(({
@@ -564,6 +569,9 @@ export function DetailRelationSection({
   createAction,
   updateAction,
   deleteAction,
+  createSubAction,
+  updateSubAction,
+  deleteSubAction,
 }: DetailRelationSectionProps) {
   const [localItems, setLocalItems] = useState<any[]>(items)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
@@ -576,6 +584,15 @@ export function DetailRelationSection({
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [toastMessage])
 
   const toggleSubItem = (key: string) => {
     setExpandedSubItems(prev => ({ ...prev, [key]: !prev[key] }))
@@ -625,93 +642,175 @@ export function DetailRelationSection({
     setIsModalOpen(true)
   }
 
+  const handleSaveInline = async (item: any, rowData: Record<string, any>) => {
+    setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
+    try {
+      const isNew = !item.id || String(item.id).startsWith('temp-')
+      if (isNew) {
+        const created = await createAction(rowData)
+        const newId = created?.id || created?.codigo || \`item-\${Date.now()}\`
+        setLocalItems(prev => prev.map(it => it.id === item.id ? { ...it, ...rowData, id: newId, _isNew: false } : it))
+      } else {
+        await updateAction(item.id || item.codigo, rowData)
+        setLocalItems(prev => prev.map(it => (it.id || it.codigo) === (item.id || item.codigo) ? { ...it, ...rowData } : it))
+      }
+      setToastType('success')
+      setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
+    } catch (err: any) {
+      console.error(err)
+      setToastType('error')
+      setToastMessage(err?.message || \`Erro ao salvar \${detailSingular.toLowerCase()}.\`)
+    } finally {
+      setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
+    }
+  }
+
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
       const formData = new FormData(e.currentTarget)
       if (!formData.get(foreignKey)) {
         formData.set(foreignKey, parentId)
       }
+      const updatedFields = Object.fromEntries(formData.entries())
       if (editingItem && (editingItem.id || editingItem.codigo) && !String(editingItem.id).startsWith('temp-')) {
         await updateAction(editingItem.id || editingItem.codigo, formData)
+        setLocalItems(prev => prev.map(it => (it.id || it.codigo) === (editingItem.id || editingItem.codigo) ? { ...it, ...updatedFields } : it))
       } else {
-        await createAction(formData)
+        const created = await createAction(formData)
+        setLocalItems(prev => [{ ...updatedFields, id: created?.id || \`item-\${Date.now()}\` }, ...prev])
       }
+      setToastType('success')
+      setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
       setIsModalOpen(false)
       setEditingItem(null)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar:', err)
+      setToastType('error')
+      setToastMessage(err?.message || \`Erro ao salvar \${detailSingular.toLowerCase()}.\`)
     } finally {
       setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
 
   const handleConfirmDelete = async () => {
     if (!deletingItem) return
     setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
       if (String(deletingItem.id).startsWith('temp-')) {
         setLocalItems(localItems.filter(i => i.id !== deletingItem.id))
       } else {
         await deleteAction(deletingItem.id || deletingItem.codigo)
+        setLocalItems(localItems.filter(i => (i.id || i.codigo) !== (deletingItem.id || deletingItem.codigo)))
       }
+      setToastType('success')
+      setToastMessage(\`\${detailSingular} excluído com sucesso!\`)
       setDeletingItem(null)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao excluir:', err)
+      setToastType('error')
+      setToastMessage(err?.message || \`Erro ao excluir \${detailSingular.toLowerCase()}.\`)
     } finally {
       setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
 
-  const handleSubItemFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubItemFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!editingSubItem) return
-    const formData = new FormData(e.currentTarget)
-    const updatedSub: Record<string, any> = { ...editingSubItem.subItem }
-    formData.forEach((v, k) => {
-      updatedSub[k] = v
-    })
-    setLocalItems(prev => prev.map(it => {
-      const itId = it.id || it.codigo
-      if (itId === editingSubItem.parentId) {
-        const children = it.items || it.itens_pedido || []
-        const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-        return { ...it, items: nextChildren, itens_pedido: nextChildren }
+    setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
+    try {
+      const formData = new FormData(e.currentTarget)
+      const updatedSub: Record<string, any> = { ...editingSubItem.subItem }
+      formData.forEach((v, k) => {
+        updatedSub[k] = v
+      })
+      if (subConfig?.foreignKey && !updatedSub[subConfig.foreignKey]) {
+        updatedSub[subConfig.foreignKey] = editingSubItem.parentId
       }
-      return it
-    }))
-    if (editingItem) {
-      const itId = editingItem.id || editingItem.codigo
-      if (itId === editingSubItem.parentId) {
-        const children = editingItem.items || editingItem.itens_pedido || []
-        const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-        setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+
+      if (updateSubAction && updatedSub.id && !String(updatedSub.id).startsWith('temp-')) {
+        await updateSubAction(updatedSub.id, formData)
+      } else if (createSubAction && (!updatedSub.id || String(updatedSub.id).startsWith('temp-'))) {
+        const created = await createSubAction(formData)
+        if (created?.id) updatedSub.id = created.id
       }
+
+      setLocalItems(prev => prev.map(it => {
+        const itId = it.id || it.codigo
+        if (itId === editingSubItem.parentId) {
+          const children = it.items || it.itens_pedido || []
+          const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+          return { ...it, items: nextChildren, itens_pedido: nextChildren }
+        }
+        return it
+      }))
+      if (editingItem) {
+        const itId = editingItem.id || editingItem.codigo
+        if (itId === editingSubItem.parentId) {
+          const children = editingItem.items || editingItem.itens_pedido || []
+          const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+          setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+        }
+      }
+      setToastType('success')
+      setToastMessage('Item salvo com sucesso!')
+      setEditingSubItem(null)
+    } catch (err: any) {
+      console.error(err)
+      setToastType('error')
+      setToastMessage(err?.message || 'Erro ao salvar item.')
+    } finally {
+      setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
-    setEditingSubItem(null)
   }
 
-  const handleConfirmDeleteSubItem = () => {
+  const handleConfirmDeleteSubItem = async () => {
     if (!deletingSubItem) return
-    setLocalItems(prev => prev.map(it => {
-      const itId = it.id || it.codigo
-      if (itId === deletingSubItem.parentId) {
-        const children = it.items || it.itens_pedido || []
-        const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-        return { ...it, items: nextChildren, itens_pedido: nextChildren }
+    setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
+    try {
+      if (deleteSubAction && deletingSubItem.subItem.id && !String(deletingSubItem.subItem.id).startsWith('temp-')) {
+        await deleteSubAction(deletingSubItem.subItem.id)
       }
-      return it
-    }))
-    if (editingItem) {
-      const itId = editingItem.id || editingItem.codigo
-      if (itId === deletingSubItem.parentId) {
-        const children = editingItem.items || editingItem.itens_pedido || []
-        const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-        setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+
+      setLocalItems(prev => prev.map(it => {
+        const itId = it.id || it.codigo
+        if (itId === deletingSubItem.parentId) {
+          const children = it.items || it.itens_pedido || []
+          const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
+          return { ...it, items: nextChildren, itens_pedido: nextChildren }
+        }
+        return it
+      }))
+      if (editingItem) {
+        const itId = editingItem.id || editingItem.codigo
+        if (itId === deletingSubItem.parentId) {
+          const children = editingItem.items || editingItem.itens_pedido || []
+          const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
+          setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+        }
       }
+      setToastType('success')
+      setToastMessage('Item excluído com sucesso!')
+      setDeletingSubItem(null)
+    } catch (err: any) {
+      console.error(err)
+      setToastType('error')
+      setToastMessage(err?.message || 'Erro ao excluir item.')
+    } finally {
+      setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
-    setDeletingSubItem(null)
   }
 
   const formatDateForInput = (v: any) => {
@@ -843,7 +942,7 @@ export function DetailRelationSection({
             const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
 
             return (
-              <div key={itemId} className="flex flex-col rounded-2xl transition-all duration-300">
+              <div key={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
                 {/* Linha do Registro (Pill) */}
                 <div className={\`py-2.5 px-4 rounded-xl border flex items-center justify-between transition-all \${
                   isExpanded
@@ -1060,6 +1159,36 @@ export function DetailRelationSection({
                           })}
                         </div>
                       )}
+                    </div>
+                    {/* Botão de Salvar Alterações da Linha Expandida */}
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => toggleRow(idx)}
+                        className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        Fechar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={(e) => {
+                          const container = (e.currentTarget as HTMLElement).closest('.relation-row-container')
+                          if (!container) return
+                          const inputs = container.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
+                          const rowData: Record<string, any> = { [foreignKey]: parentId }
+                          inputs.forEach(inp => {
+                            if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+                              rowData[inp.name] = inp.value
+                            }
+                          })
+                          handleSaveInline(item, rowData)
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
+                      >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1546,13 +1675,32 @@ export function DetailRelationSection({
               <button
                 type="button"
                 disabled={isSubmitting}
-                onClick={handleConfirmDeleteSubItem}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
-              >
-                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={\`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-5 duration-300 \${
+          toastType === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 bg-white/95 dark:bg-neutral-900/95'
+            : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300 bg-white/95 dark:bg-neutral-900/95'
+        }\`}>
+          <div className={\`w-7 h-7 rounded-xl flex items-center justify-center \${
+            toastType === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+          }\`}>
+            {toastType === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+          </div>
+          <span className="text-xs font-bold tracking-wide">{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="p-1 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
@@ -1569,7 +1717,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
 
-interface DetailMasterFormProps {
+export interface DetailMasterFormProps {
   id: string
   backPath: string
   title: string
@@ -1577,35 +1725,15 @@ interface DetailMasterFormProps {
   children: React.ReactNode
 }
 
-function formatWithMask(v: any, mask?: string) {
-  if (!v && v !== 0) return ''
-  const s = String(v)
-  if (mask === '00.000.000/0000-00' || (!mask && (s.length === 14 || /^\\d{14}$/.test(s)))) {
-    const d = s.replace(/\\D/g, '').slice(0, 14)
-    if (d.length <= 2) return d
-    if (d.length <= 5) return \`\${d.slice(0, 2)}.\${d.slice(2)}\`
-    if (d.length <= 8) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5)}\`
-    if (d.length <= 12) return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8)}\`
-    return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
-  }
+function formatWithMask(value: string, mask?: string): string {
+  if (!value) return ''
+  const s = String(value)
   if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
     const d = s.replace(/\\D/g, '').slice(0, 11)
     if (d.length <= 3) return d
     if (d.length <= 6) return \`\${d.slice(0, 3)}.\${d.slice(3)}\`
     if (d.length <= 9) return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6)}\`
     return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
-  }
-  if (mask === '00000-000') {
-    const d = s.replace(/\\D/g, '').slice(0, 8)
-    if (d.length <= 5) return d
-    return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
-  }
-  if (mask === '(00) 00000-0000') {
-    const d = s.replace(/\\D/g, '').slice(0, 11)
-    if (d.length <= 2) return d.length ? \`(\${d}\` : ''
-    if (d.length <= 6) return \`(\${d.slice(0, 2)}) \${d.slice(2)}\`
-    if (d.length <= 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6)}\`
-    return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
   }
   return s
 }
@@ -1633,6 +1761,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
+    window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
@@ -1646,6 +1775,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
       setToastMessage(err?.message || 'Erro ao salvar alterações.')
     } finally {
       setIsSubmitting(false)
+      window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
 
@@ -1672,7 +1802,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
         </div>
       </form>
 
-      {/* Toast Notification (Canto Inferior Direito) */}
+      {/* Toast Notification */}
       {toastMessage && (
         <div className={\`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-5 duration-300 \${
           toastType === 'success'
@@ -1727,12 +1857,30 @@ export function TopProgressBar() {
   useEffect(() => {
     let t1: any
     let t2: any
+    let tAuto: any
 
     const handleStart = () => {
       setVisible(true)
       setProgress(25)
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(tAuto)
       t1 = setTimeout(() => setProgress(prev => (prev >= 25 && prev < 80 ? 70 : prev)), 200)
       t2 = setTimeout(() => setProgress(prev => (prev >= 70 && prev < 90 ? 88 : prev)), 600)
+      tAuto = setTimeout(() => {
+        handleComplete()
+      }, 2500)
+    }
+
+    const handleComplete = () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(tAuto)
+      setProgress(100)
+      setTimeout(() => {
+        setVisible(false)
+        setProgress(0)
+      }, 300)
     }
 
     const handleClick = (e: MouseEvent) => {
@@ -1751,11 +1899,17 @@ export function TopProgressBar() {
 
     document.addEventListener('click', handleClick)
     document.addEventListener('submit', handleSubmit)
+    window.addEventListener('page-progress-start', handleStart)
+    window.addEventListener('page-progress-complete', handleComplete)
+
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
+      clearTimeout(tAuto)
       document.removeEventListener('click', handleClick)
       document.removeEventListener('submit', handleSubmit)
+      window.removeEventListener('page-progress-start', handleStart)
+      window.removeEventListener('page-progress-complete', handleComplete)
     }
   }, [])
 
