@@ -898,6 +898,64 @@ import { DynamicIcon } from '@/app/components/DynamicIcon'
 ${byocImports ? `${byocImports}\n` : ''}${relationImports}
 import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
 
+function formatDateForInput(v: any) {
+  if (!v) return ''
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 10)
+}
+
+function formatDatetimeForInput(v: any) {
+  if (!v) return ''
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}T\${hours}:\${minutes}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 16)
+}
+
+function formatWithMask(v: any, mask?: string) {
+  if (!v && v !== 0) return ''
+  const s = String(v)
+  if (mask === '00.000.000/0000-00' || (!mask && (s.length === 14 || /^\\d{14}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 14) {
+      return \`\${d.slice(0, 2)}.\${d.slice(2, 5)}.\${d.slice(5, 8)}/\${d.slice(8, 12)}-\${d.slice(12, 14)}\`
+    }
+  }
+  if (mask === '000.000.000-00' || (!mask && (s.length === 11 || /^\\d{11}$/.test(s)))) {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) {
+      return \`\${d.slice(0, 3)}.\${d.slice(3, 6)}.\${d.slice(6, 9)}-\${d.slice(9, 11)}\`
+    }
+  }
+  if (mask === '00000-000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 8) return \`\${d.slice(0, 5)}-\${d.slice(5, 8)}\`
+  }
+  if (mask === '(00) 00000-0000') {
+    const d = s.replace(/\\D/g, '')
+    if (d.length === 11) return \`(\${d.slice(0, 2)}) \${d.slice(2, 7)}-\${d.slice(7, 11)}\`
+    if (d.length === 10) return \`(\${d.slice(0, 2)}) \${d.slice(2, 6)}-\${d.slice(6, 10)}\`
+  }
+  return s
+}
+
 // TODO: In a more robust approach, lookups should be fetched either in Server Component and passed as props, 
 // or fetched in useEffect here. DetailRelationSection might be already handling fetching internally.
 // We are adding lookup fetches in useEffect.
