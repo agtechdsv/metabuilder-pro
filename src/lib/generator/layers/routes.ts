@@ -826,15 +826,17 @@ function generateDetailTabsClient(route: RouteNode): string {
           `                    ...f,`,
           `                    config: {`,
           `                      ...f.config,`,
-          `                      // Lookup data is missing in client context right now. We will fetch on mount if needed, or pass as props.`,
-          `                      // For now, keeping structure. DetailRelationSection can fetch it via actions.`,
+          `                      options: (${tTable}LookupList || []).map((r: any) => ({`,
+          `                        value: String(r.id ?? r.codigo ?? r.uuid ?? ''),`,
+          `                        label: String(r.nome || r.nome_completo || r.nome_empresa || r.name || r.title || r.id || ''),`,
+          `                      }))`,
           `                    }`,
           `                  }`,
           `                }`,
         ].join('\n')).join('\n')
 
         return [
-          `          {activeTab === ${i + 1} && (`,
+          `          <div className={activeTab === ${i + 1} ? 'block' : 'hidden'}>`,
           `            <DetailRelationSection`,
           `              label="${tab.label}"`,
           `              relatedTable="${tab.relatedTable}"`,
@@ -860,7 +862,7 @@ function generateDetailTabsClient(route: RouteNode): string {
           `              backPath={backPath}`,
           subActionProps,
           `            />`,
-          `          )}`,
+          `          </div>`,
         ].filter(Boolean).join('\n')
       }).join('\n')
     : ''
