@@ -1059,15 +1059,17 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
         </div>
 ${tabsHeader}
 
-        {/* Formulário com Suporte a Abas */}
-        {(!${hasRelationTabs} || activeTab === 0) ? (
+        {/* Formulário com Suporte a Abas (Renderizados simultaneamente, alternados via CSS para não perder estado) */}
+        <div className={(!${hasRelationTabs} || activeTab === 0) ? 'block' : 'hidden'}>
           <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction}>
             <div className="grid grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
             </div>
           </DetailMasterForm>
-        ) : (
-          <div className="space-y-6">
+        </div>
+        
+        {${hasRelationTabs} && (
+          <div className={activeTab !== 0 ? 'block space-y-6' : 'hidden'}>
 ${tabPanels}
           </div>
         )}
