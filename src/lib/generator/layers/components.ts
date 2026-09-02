@@ -352,6 +352,8 @@ const SubItemAccordion = React.forwardRef(({
   subFields,
   toggleSubItem,
   formatDateForInput,
+  onEditSubItem,
+  onDeleteSubItem,
 }: {
   subItem: any
   sIdx: number
@@ -360,6 +362,8 @@ const SubItemAccordion = React.forwardRef(({
   subFields: DetailFieldConfig[]
   toggleSubItem: (k: string) => void
   formatDateForInput: (v: any) => string
+  onEditSubItem?: (item: any, sIdx: number) => void
+  onDeleteSubItem?: (item: any, sIdx: number) => void
 }, ref: any) => {
   const getSubVal = (col: string) => {
     if (!subItem) return ''
@@ -412,10 +416,20 @@ const SubItemAccordion = React.forwardRef(({
           >
             {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-          <button type="button" className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+          <button
+            type="button"
+            onClick={() => onEditSubItem && onEditSubItem(subItem, sIdx)}
+            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+            title="Editar Item"
+          >
             <Pencil className="w-3.5 h-3.5" />
           </button>
-          <button type="button" className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+          <button
+            type="button"
+            onClick={() => onDeleteSubItem && onDeleteSubItem(subItem, sIdx)}
+            className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+            title="Excluir Item"
+          >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -557,6 +571,8 @@ export function DetailRelationSection({
   const [modalActiveTab, setModalActiveTab] = useState<'master' | 'items'>('master')
   const [editingItem, setEditingItem] = useState<any | null>(null)
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
+  const [editingSubItem, setEditingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string; subFields: DetailFieldConfig[] } | null>(null)
+  const [deletingSubItem, setDeletingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string } | null>(null)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
@@ -646,6 +662,56 @@ export function DetailRelationSection({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleSubItemFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editingSubItem) return
+    const formData = new FormData(e.currentTarget)
+    const updatedSub: Record<string, any> = { ...editingSubItem.subItem }
+    formData.forEach((v, k) => {
+      updatedSub[k] = v
+    })
+    setLocalItems(prev => prev.map(it => {
+      const itId = it.id || it.codigo
+      if (itId === editingSubItem.parentId) {
+        const children = it.items || it.itens_pedido || []
+        const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+        return { ...it, items: nextChildren, itens_pedido: nextChildren }
+      }
+      return it
+    }))
+    if (editingItem) {
+      const itId = editingItem.id || editingItem.codigo
+      if (itId === editingSubItem.parentId) {
+        const children = editingItem.items || editingItem.itens_pedido || []
+        const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+        setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+      }
+    }
+    setEditingSubItem(null)
+  }
+
+  const handleConfirmDeleteSubItem = () => {
+    if (!deletingSubItem) return
+    setLocalItems(prev => prev.map(it => {
+      const itId = it.id || it.codigo
+      if (itId === deletingSubItem.parentId) {
+        const children = it.items || it.itens_pedido || []
+        const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
+        return { ...it, items: nextChildren, itens_pedido: nextChildren }
+      }
+      return it
+    }))
+    if (editingItem) {
+      const itId = editingItem.id || editingItem.codigo
+      if (itId === deletingSubItem.parentId) {
+        const children = editingItem.items || editingItem.itens_pedido || []
+        const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
+        setEditingItem({ ...editingItem, items: nextChildren, itens_pedido: nextChildren })
+      }
+    }
+    setDeletingSubItem(null)
   }
 
   const formatDateForInput = (v: any) => {
@@ -987,6 +1053,8 @@ export function DetailRelationSection({
                                 subFields={subFields}
                                 toggleSubItem={toggleSubItem}
                                 formatDateForInput={formatDateForInput}
+                                onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx, subFields })}
+                                onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx })}
                               />
                             )
                           })}
@@ -1220,6 +1288,8 @@ export function DetailRelationSection({
                           subFields={subFields}
                           toggleSubItem={toggleSubItem}
                           formatDateForInput={formatDateForInput}
+                          onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit', subFields })}
+                          onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit' })}
                         />
                       )
                     })}
@@ -1248,7 +1318,7 @@ export function DetailRelationSection({
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão fiel à Web Produção (Imagem 3) */}
+      {/* Modal de Confirmação de Exclusão do Item Principal fiel à Web Produção (Imagem 3) */}
       {deletingItem && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
@@ -1277,7 +1347,7 @@ export function DetailRelationSection({
               <div>
                 <p className="text-sm font-bold">Você tem certeza?</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir "{String(deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.produto || 'este registro')}".
+                  Você está prestes a excluir "\${String(deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.produto || 'este registro')}".
                 </p>
               </div>
             </div>
@@ -1294,6 +1364,189 @@ export function DetailRelationSection({
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleConfirmDelete}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
+              >
+                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Sub-Item (Imagem 3 topo) */}
+      {editingSubItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+                    Editar Registro
+                  </h3>
+                  <p className="text-xs text-neutral-400 font-mono">
+                    Registro #\${editingSubItem.subItem.id || editingSubItem.subItem.codigo || ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingSubItem(null)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubItemFormSubmit} className="space-y-4">
+              <div className="grid grid-cols-12 gap-4 max-h-[50vh] overflow-y-auto px-1 py-1">
+                {editingSubItem.subFields.map(sf => {
+                  const val = editingSubItem.subItem[sf.dbColumn] ?? editingSubItem.subItem[sf.dbColumn.split('.').pop()!]
+                  const dt = (sf.dataType || '').toLowerCase()
+                  const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+                  const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+                  const isSelect = sf.config?.options && sf.config.options.length > 0
+                  const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
+
+                  const rawCols = sf.config?.modalGridSpan ?? sf.config?.gridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.gridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
+                  const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
+                  const widthVal = sf.config?.width || sf.config?.component?.width || ''
+                  
+                  let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
+                  if (numCols) {
+                    if (numCols >= 12) colSpanClass = 'col-span-12'
+                    else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
+                    else if (numCols === 8) colSpanClass = 'col-span-12 md:col-span-8'
+                    else if (numCols === 7) colSpanClass = 'col-span-12 md:col-span-7'
+                    else if (numCols === 6) colSpanClass = 'col-span-12 md:col-span-6'
+                    else if (numCols === 5) colSpanClass = 'col-span-12 md:col-span-5'
+                    else if (numCols === 4) colSpanClass = 'col-span-12 md:col-span-4'
+                    else if (numCols === 3) colSpanClass = 'col-span-12 md:col-span-3'
+                    else if (numCols === 2) colSpanClass = 'col-span-12 md:col-span-2'
+                    else if (numCols === 1) colSpanClass = 'col-span-12 md:col-span-1'
+                  } else if (widthVal === '75%') {
+                    colSpanClass = 'col-span-12 md:col-span-9'
+                  } else if (widthVal.includes('66')) {
+                    colSpanClass = 'col-span-12 md:col-span-8'
+                  } else if (widthVal === '50%' || widthVal === 'w-1/2' || sf.dbColumn.includes('produto')) {
+                    colSpanClass = 'col-span-12 md:col-span-6'
+                  } else if (widthVal === '33%' || widthVal === '33.33%') {
+                    colSpanClass = 'col-span-12 md:col-span-4'
+                  } else if (widthVal === '25%' || widthVal === 'w-1/4') {
+                    colSpanClass = 'col-span-12 md:col-span-3'
+                  } else if (widthVal.includes('16')) {
+                    colSpanClass = 'col-span-12 md:col-span-2'
+                  }
+
+                  if (isSelect) {
+                    return (
+                      <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                          {sf.label}
+                        </label>
+                        <select
+                          name={sf.dbColumn}
+                          defaultValue={String(val ?? '')}
+                          className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="">Selecione...</option>
+                          {sf.config.options.map((opt: any, oIdx: number) => {
+                            const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
+                            const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
+                            return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
+                          })}
+                        </select>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                      <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                        {sf.label}
+                      </label>
+                      <input
+                        name={sf.dbColumn}
+                        type={isDate ? 'date' : (isNumber && !isTotalField) ? 'number' : 'text'}
+                        readOnly={isTotalField}
+                        defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
+                        placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
+                        className={\`w-full \${isTotalField ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingSubItem(null)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                  <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão de Sub-Item (Imagem 3 fundo) */}
+      {deletingSubItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                  Excluir Registro
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletingSubItem(null)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
+              <div className="p-2 bg-red-500/20 rounded-xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Você está prestes a excluir "\${String(deletingSubItem.subItem.id || deletingSubItem.subItem.codigo || deletingSubItem.subItem.produto_nome || deletingSubItem.subItem.produto || 'este registro')}".
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingSubItem(null)}
+                className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+              >
+                CANCELAR
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleConfirmDeleteSubItem}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
               >
                 <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}

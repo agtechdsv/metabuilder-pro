@@ -360,10 +360,15 @@ function resolveViewZones(
     return [buildResolvedField(c, field, 'grid', viewModelId, allModels, fieldsMetadata)]
   })
 
-  // Injeta campos virtuais/BYOC no grid
+  // Injeta campos virtuais/BYOC no grid pertencentes a este modelo
   gridFieldsOrder
     .filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_'))
     .forEach((id: string) => {
+      const meta = fieldsMetadata[id] || fieldsMetadata[`grid-${id}`] || {}
+      const assignedModelId = id.startsWith('byoc_') ? meta.byoc_model_id : meta.virtual_model_id
+      if (assignedModelId && assignedModelId !== viewModelId) {
+        return
+      }
       if (!gridFields.find((f) => f.id === id)) {
         gridFields.push(buildVirtualField(id, 'grid', fieldsMetadata, byocMap))
       }
@@ -408,10 +413,15 @@ function resolveViewZones(
     return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata)]
   })
 
-  // Injeta componentes BYOC e virtuais no form (componentes customizados de UI)
+  // Injeta componentes BYOC e virtuais no form pertencentes a este modelo
   formFieldsOrder
     .filter((id: string) => id.startsWith('byoc_') || id.startsWith('virt_'))
     .forEach((id: string) => {
+      const meta = fieldsMetadata[id] || fieldsMetadata[`form-${id}`] || {}
+      const assignedModelId = id.startsWith('byoc_') ? meta.byoc_model_id : meta.virtual_model_id
+      if (assignedModelId && assignedModelId !== viewModelId) {
+        return
+      }
       if (!formFields.find((f) => f.id === id)) {
         formFields.push(buildVirtualField(id, 'form', fieldsMetadata, byocMap))
       }
