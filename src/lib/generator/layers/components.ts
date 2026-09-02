@@ -671,9 +671,17 @@ export function DetailRelationSection({
     setIsModalOpen(true)
   }
 
-  const handleSaveAll = async () => {
+  useEffect(() => {
+    const handleExternalRelationSave = () => {
+       if (!isSubmitting) handleSaveAll(true)
+    }
+    window.addEventListener('save-all-relations', handleExternalRelationSave)
+    return () => window.removeEventListener('save-all-relations', handleExternalRelationSave)
+  }, [isSubmitting, localItems])
+
+  const handleSaveAll = async (silent = false) => {
     setIsSubmitting(true)
-    window.dispatchEvent(new CustomEvent('page-progress-start'))
+    if (silent !== true) window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
       const sectionEl = document.querySelector('.relation-section-container')
 
@@ -742,15 +750,20 @@ export function DetailRelationSection({
         }
       }
 
-      setToastType('success')
-      setToastMessage('Alterações salvas com sucesso!')
+      if (silent !== true) {
+        setToastType('success')
+        setToastMessage('Alterações salvas com sucesso!')
+        window.dispatchEvent(new CustomEvent('save-master-form'))
+      }
     } catch (err: any) {
       console.error('Erro ao salvar alterações:', err)
-      setToastType('error')
-      setToastMessage(err?.message || 'Erro ao salvar alterações.')
+      if (silent !== true) {
+        setToastType('error')
+        setToastMessage(err?.message || 'Erro ao salvar alterações.')
+      }
     } finally {
       setIsSubmitting(false)
-      window.dispatchEvent(new CustomEvent('page-progress-complete'))
+      if (silent !== true) window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
 
@@ -1884,6 +1897,20 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
     }
   }, [toastMessage])
 
+  useEffect(() => {
+    const handleExternalSave = () => {
+      const form = document.getElementById('master-detail-form') as HTMLFormElement
+      if (form && form.requestSubmit) {
+        // We use a custom flag on the event to identify it as silent
+        const ev = new CustomEvent('submit', { cancelable: true, bubbles: true })
+        ;(ev as any).isSilentSave = true
+        form.dispatchEvent(ev)
+      }
+    }
+    window.addEventListener('save-master-form', handleExternalSave)
+    return () => window.removeEventListener('save-master-form', handleExternalSave)
+  }, [])
+
   const handleInput = (e: React.FormEvent<HTMLFormElement>) => {
     const target = e.target as HTMLInputElement
     const mask = target?.getAttribute?.('data-mask')
@@ -1892,30 +1919,36 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault()
+    const silent = e.nativeEvent?.isSilentSave || e.isSilentSave
     setIsSubmitting(true)
-    window.dispatchEvent(new CustomEvent('page-progress-start'))
+    if (!silent) window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
       formData.forEach((v, k) => { payload[k] = v })
       await updateAction(id, payload)
-      setToastType('success')
-      setToastMessage('Registro atualizado com sucesso!')
+      if (!silent) {
+        setToastType('success')
+        setToastMessage('Registro atualizado com sucesso!')
+        window.dispatchEvent(new CustomEvent('save-all-relations'))
+      }
     } catch (err: any) {
       console.error(err)
-      setToastType('error')
-      setToastMessage(err?.message || 'Erro ao salvar alterações.')
+      if (!silent) {
+        setToastType('error')
+        setToastMessage(err?.message || 'Erro ao salvar alterações.')
+      }
     } finally {
       setIsSubmitting(false)
-      window.dispatchEvent(new CustomEvent('page-progress-complete'))
+      if (!silent) window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
 
   return (
     <>
-      <form onSubmit={handleSubmit} onInput={handleInput} className="relative z-10 space-y-6">
+      <form id="master-detail-form" onSubmit={handleSubmit} onInput={handleInput} className="relative z-10 space-y-6">
         {children}
 
         <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
