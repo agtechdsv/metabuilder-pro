@@ -172,7 +172,8 @@ export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell }
 `)
   files.set('components/ui/delete-button.tsx', `'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Trash2, AlertCircle, X, Loader2 } from 'lucide-react'
 
 interface DeleteButtonProps {
@@ -182,7 +183,12 @@ interface DeleteButtonProps {
 
 export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleConfirm = () => {
     startTransition(async () => {
@@ -207,7 +213,7 @@ export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
         <Trash2 className="w-3.5 h-3.5" />
       </button>
 
-      {isOpen && (
+      {mounted && isOpen && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
             <div className="flex items-start justify-between">
@@ -259,7 +265,8 @@ export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
@@ -299,6 +306,7 @@ export function LimitSelector({ currentLimit }: { currentLimit: number }) {
   files.set('components/DetailRelationSection.tsx', `'use client'
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   ChevronDown,
@@ -577,6 +585,7 @@ export function DetailRelationSection({
   deleteSubAction,
 }: DetailRelationSectionProps) {
   const [localItems, setLocalItems] = useState<any[]>(items)
+  const [mounted, setMounted] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalActiveTab, setModalActiveTab] = useState<'master' | 'items'>('master')
@@ -591,6 +600,10 @@ export function DetailRelationSection({
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (editingSubItem) {
@@ -1262,7 +1275,7 @@ export function DetailRelationSection({
       </div>
 
       {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
-      {isModalOpen && (
+      {mounted && isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-5xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             {/* Header da Modal */}
@@ -1507,11 +1520,12 @@ export function DetailRelationSection({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Confirmação de Exclusão do Item Principal fiel à Web Produção (Imagem 3) */}
-      {deletingItem && (
+      {mounted && deletingItem && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
             <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
@@ -1562,11 +1576,12 @@ export function DetailRelationSection({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Edição de Sub-Item (Imagem 3 topo) */}
-      {editingSubItem && (
+      {mounted && editingSubItem && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in">
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 max-w-5xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
@@ -1724,11 +1739,12 @@ export function DetailRelationSection({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Confirmação de Exclusão de Sub-Item (Imagem 3 fundo) */}
-      {deletingSubItem && (
+      {mounted && deletingSubItem && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
             <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
@@ -1779,11 +1795,12 @@ export function DetailRelationSection({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast Notification */}
-      {toastMessage && (
+      {mounted && toastMessage && createPortal(
         <div className={\`fixed bottom-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-5 duration-300 \${
           toastType === 'success'
             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 bg-white/95 dark:bg-neutral-900/95'
@@ -1802,7 +1819,8 @@ export function DetailRelationSection({
           >
             <X className="w-3.5 h-3.5" />
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -1815,6 +1833,7 @@ export function DetailRelationSection({
   files.set('components/DetailMasterForm.tsx', `'use client'
 
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
 
@@ -1841,8 +1860,13 @@ function formatWithMask(value: string, mask?: string): string {
 
 export function DetailMasterForm({ id, backPath, title, updateAction, children }: DetailMasterFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (toastMessage) {
@@ -1904,7 +1928,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
       </form>
 
       {/* Toast Notification */}
-      {toastMessage && (
+      {mounted && toastMessage && createPortal(
         <div className={\`fixed bottom-6 right-6 z-[10000] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl backdrop-blur-md border animate-in slide-in-from-bottom-5 duration-300 \${
           toastType === 'success'
             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 bg-white/95 dark:bg-neutral-900/95'
@@ -1923,7 +1947,8 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
           >
             <X className="w-3.5 h-3.5" />
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
