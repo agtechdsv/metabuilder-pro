@@ -869,6 +869,7 @@ function generateDetailPage(route: RouteNode): string {
           `              createAction={create${tab.relatedModelName}}`,
           `              updateAction={update${tab.relatedModelName}}`,
           `              deleteAction={delete${tab.relatedModelName}}`,
+          `              backPath="${route.path}"`,
           subActionProps,
           `            />`,
           `          )}`,

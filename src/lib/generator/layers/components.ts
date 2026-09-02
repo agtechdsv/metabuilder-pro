@@ -299,6 +299,7 @@ export function LimitSelector({ currentLimit }: { currentLimit: number }) {
   files.set('components/DetailRelationSection.tsx', `'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   ChevronDown,
   ChevronUp,
@@ -341,6 +342,7 @@ export interface DetailRelationSectionProps {
   items: any[]
   fields: DetailFieldConfig[]
   subDetails?: SubRelationConfig[]
+  backPath?: string
   createAction: (formData: FormData | Record<string, any>) => Promise<any>
   updateAction: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteAction: (id: string) => Promise<any>
@@ -407,7 +409,7 @@ const SubItemAccordion = React.forwardRef(({
   }
 
   return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
+    <div data-sub-item={subKey} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white dark:bg-neutral-900 shadow-sm transition-all">
       {/* Barra do Cabeçalho do Sub-Item */}
       <div className="py-2.5 px-4 flex items-center justify-between bg-neutral-50/60 dark:bg-neutral-800/40">
         <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
@@ -566,6 +568,7 @@ export function DetailRelationSection({
   items = [],
   fields = [],
   subDetails = [],
+  backPath,
   createAction,
   updateAction,
   deleteAction,
@@ -642,25 +645,83 @@ export function DetailRelationSection({
     setIsModalOpen(true)
   }
 
-  const handleSaveInline = async (item: any, rowData: Record<string, any>) => {
+  const handleSaveAll = async () => {
     setIsSubmitting(true)
     window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
-      const isNew = !item.id || String(item.id).startsWith('temp-')
-      if (isNew) {
-        const created = await createAction(rowData)
-        const newId = created?.id || created?.codigo || \`item-\${Date.now()}\`
-        setLocalItems(prev => prev.map(it => it.id === item.id ? { ...it, ...rowData, id: newId, _isNew: false } : it))
-      } else {
-        await updateAction(item.id || item.codigo, rowData)
-        setLocalItems(prev => prev.map(it => (it.id || it.codigo) === (item.id || item.codigo) ? { ...it, ...rowData } : it))
+      const sectionEl = document.querySelector('.relation-section-container')
+
+      for (let idx = 0; idx < localItems.length; idx++) {
+        const item = localItems[idx]
+        const rowKey = String(item.id || item.codigo || \`idx-\${idx}\`)
+        const rowContainer = sectionEl?.querySelector(\`[data-relation-row="\${rowKey}"]\`) || document.querySelector(\`[data-relation-row="\${rowKey}"]\`)
+
+        const rowData: Record<string, any> = { [foreignKey]: parentId }
+        if (rowContainer) {
+          const parentInputs = rowContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.relation-parent-fields input, .relation-parent-fields select')
+          parentInputs.forEach(inp => {
+            if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+              rowData[inp.name] = inp.value
+            }
+          })
+        } else {
+          editableFields.forEach(f => {
+            if (item[f.dbColumn] !== undefined) rowData[f.dbColumn] = item[f.dbColumn]
+          })
+        }
+
+        let savedParentId = item.id || item.codigo
+        const isNewParent = !savedParentId || String(savedParentId).startsWith('temp-')
+        if (isNewParent) {
+          const created = await createAction(rowData)
+          if (created?.id || created?.codigo) {
+            savedParentId = created.id || created.codigo
+          }
+        } else if (Object.keys(rowData).length > 1) {
+          await updateAction(savedParentId, rowData)
+        }
+
+        if (subConfig && (updateSubAction || createSubAction)) {
+          const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
+          for (let sIdx = 0; sIdx < itemChildRecords.length; sIdx++) {
+            const subItem = itemChildRecords[sIdx]
+            const subKey = \`\${item.id || item.codigo || idx}-\${sIdx}\`
+            const subContainer = rowContainer?.querySelector(\`[data-sub-item="\${subKey}"]\`)
+
+            const subData: Record<string, any> = {}
+            if (subConfig.foreignKey) {
+              subData[subConfig.foreignKey] = savedParentId
+            }
+
+            if (subContainer) {
+              const subInputs = subContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
+              subInputs.forEach(inp => {
+                if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+                  subData[inp.name] = inp.value
+                }
+              })
+            } else {
+              subFields.forEach((sf: any) => {
+                if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
+              })
+            }
+
+            const isNewSub = !subItem.id || String(subItem.id).startsWith('temp-')
+            if (isNewSub && createSubAction) {
+              await createSubAction(subData)
+            } else if (!isNewSub && updateSubAction && subItem.id) {
+              await updateSubAction(subItem.id, subData)
+            }
+          }
+        }
       }
+
       setToastType('success')
-      setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
+      setToastMessage('Alterações salvas com sucesso!')
     } catch (err: any) {
-      console.error(err)
+      console.error('Erro ao salvar alterações:', err)
       setToastType('error')
-      setToastMessage(err?.message || \`Erro ao salvar \${detailSingular.toLowerCase()}.\`)
+      setToastMessage(err?.message || 'Erro ao salvar alterações.')
     } finally {
       setIsSubmitting(false)
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
@@ -851,7 +912,7 @@ export function DetailRelationSection({
   const subFields = subConfig?.fields?.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig.foreignKey) || []
 
   return (
-    <div className={\`relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
+    <div className={\`relation-section-container relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
       {/* Barra Superior de Ações da Aba */}
       <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
         <div>
@@ -942,7 +1003,7 @@ export function DetailRelationSection({
             const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
 
             return (
-              <div key={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
+              <div key={itemId} data-relation-row={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
                 {/* Linha do Registro (Pill) */}
                 <div className={\`py-2.5 px-4 rounded-xl border flex items-center justify-between transition-all \${
                   isExpanded
@@ -997,7 +1058,7 @@ export function DetailRelationSection({
                 {/* Efeito Cortina (Expansão In-place) */}
                 {isExpanded && (
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
-                    <div className="grid grid-cols-12 gap-4">
+                    <div className="relation-parent-fields grid grid-cols-12 gap-4">
                       {editableFields.map(f => {
                         const val = getFieldValue(item, f.dbColumn)
                         const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
@@ -1160,36 +1221,6 @@ export function DetailRelationSection({
                         </div>
                       )}
                     </div>
-                    {/* Botão de Salvar Alterações da Linha Expandida */}
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200/60 dark:border-neutral-800">
-                      <button
-                        type="button"
-                        onClick={() => toggleRow(idx)}
-                        className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                      >
-                        Fechar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={(e) => {
-                          const container = (e.currentTarget as HTMLElement).closest('.relation-row-container')
-                          if (!container) return
-                          const inputs = container.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
-                          const rowData: Record<string, any> = { [foreignKey]: parentId }
-                          inputs.forEach(inp => {
-                            if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
-                              rowData[inp.name] = inp.value
-                            }
-                          })
-                          handleSaveInline(item, rowData)
-                        }}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
-                      >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -1197,6 +1228,25 @@ export function DetailRelationSection({
           })}
         </div>
       )}
+
+      {/* Footer Global Persistente com Botões Cancelar e Salvar Alterações */}
+      <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
+        <Link
+          href={backPath || '#'}
+          className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+        >
+          Cancelar
+        </Link>
+        <button
+          type="button"
+          disabled={isSubmitting}
+          onClick={handleSaveAll}
+          className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
+        >
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+        </button>
+      </div>
 
       {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
       {isModalOpen && (

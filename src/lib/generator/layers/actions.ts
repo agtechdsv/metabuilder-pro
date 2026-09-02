@@ -168,7 +168,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
     if (!allowedColumns.has(k)) continue
-    clean[k] = v === '' ? null : v
+    if (v === '' || v === undefined) {
+      clean[k] = null
+    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else {
+      clean[k] = v
+    }
   }
   return clean
 }
@@ -246,7 +252,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
     if (!allowedColumns.has(k)) continue
-    clean[k] = v === '' ? null : v
+    if (v === '' || v === undefined) {
+      clean[k] = null
+    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else {
+      clean[k] = v
+    }
   }
   return clean
 }
@@ -320,7 +332,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
     if (!allowedColumns.has(k)) continue
-    clean[k] = v === '' ? null : v
+    if (v === '' || v === undefined) {
+      clean[k] = null
+    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else {
+      clean[k] = v
+    }
   }
   return clean
 }
@@ -391,7 +409,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
     if (!allowedColumns.has(k)) continue
-    clean[k] = v === '' ? null : v
+    if (v === '' || v === undefined) {
+      clean[k] = null
+    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else {
+      clean[k] = v
+    }
   }
   return clean
 }
@@ -464,7 +488,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   for (const [k, v] of Object.entries(rawData)) {
     if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
     if (!allowedColumns.has(k)) continue
-    clean[k] = v === '' ? null : v
+    if (v === '' || v === undefined) {
+      clean[k] = null
+    } else if (typeof v === 'string' && /^-?\\d{1,3}(\\.\\d{3})*,\\d+$/.test(v.trim())) {
+      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else {
+      clean[k] = v
+    }
   }
   return clean
 }
