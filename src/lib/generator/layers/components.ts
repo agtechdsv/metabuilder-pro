@@ -584,11 +584,24 @@ export function DetailRelationSection({
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [editingSubItem, setEditingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string; subFields: DetailFieldConfig[] } | null>(null)
   const [deletingSubItem, setDeletingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string } | null>(null)
+  const [subModalQtd, setSubModalQtd] = useState<number>(1)
+  const [subModalPreco, setSubModalPreco] = useState<number>(0)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
+
+  useEffect(() => {
+    if (editingSubItem) {
+      const it = editingSubItem.subItem
+      const q = it.quantidade || it.qtd || 1
+      const p = it.preco_unitario || it.valor_unitario || it.preco || 0
+      const numP = typeof p === 'number' ? p : (Number(String(p).replace(/\\./g, '').replace(',', '.')) || 0)
+      setSubModalQtd(Number(q) || 1)
+      setSubModalPreco(numP)
+    }
+  }, [editingSubItem])
 
   useEffect(() => {
     if (toastMessage) {
@@ -1251,7 +1264,7 @@ export function DetailRelationSection({
       {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-4xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             {/* Header da Modal */}
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
@@ -1555,7 +1568,7 @@ export function DetailRelationSection({
       {/* Modal de Edição de Sub-Item (Imagem 3 topo) */}
       {editingSubItem && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-2xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 max-w-4xl w-full shadow-2xl relative space-y-6 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
@@ -1587,6 +1600,8 @@ export function DetailRelationSection({
                   const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                   const isSelect = sf.config?.options && sf.config.options.length > 0
+                  const isQtd = sf.dbColumn.includes('quantidade') || sf.dbColumn.includes('qtd')
+                  const isPreco = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.dbColumn.includes('price')
                   const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
 
                   const rawCols = sf.config?.modalGridSpan ?? sf.config?.gridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.gridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
@@ -1615,7 +1630,7 @@ export function DetailRelationSection({
                     colSpanClass = 'col-span-12 md:col-span-4'
                   } else if (widthVal === '25%' || widthVal === 'w-1/4') {
                     colSpanClass = 'col-span-12 md:col-span-3'
-                  } else if (widthVal.includes('16')) {
+                  } else if (widthVal.includes('16') || isQtd || isPreco || isTotalField) {
                     colSpanClass = 'col-span-12 md:col-span-2'
                   }
 
@@ -1641,6 +1656,32 @@ export function DetailRelationSection({
                     )
                   }
 
+                  if (isTotalField) {
+                    const subModalTotal = subModalQtd * subModalPreco
+                    return (
+                      <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                          {sf.label}
+                        </label>
+                        <input
+                          name={sf.dbColumn}
+                          type="text"
+                          readOnly
+                          value={subModalTotal > 0 ? subModalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
+                          className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none"
+                        />
+                      </div>
+                    )
+                  }
+
+                  let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
+                  if (isPreco && val !== undefined && val !== null && val !== '') {
+                    const numP = typeof val === 'number' ? val : Number(String(val).replace(/\\./g, '').replace(',', '.'))
+                    if (!isNaN(numP)) {
+                      initialFormatted = numP.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    }
+                  }
+
                   return (
                     <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                       <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
@@ -1648,11 +1689,17 @@ export function DetailRelationSection({
                       </label>
                       <input
                         name={sf.dbColumn}
-                        type={isDate ? 'date' : (isNumber && !isTotalField) ? 'number' : 'text'}
-                        readOnly={isTotalField}
-                        defaultValue={isDate ? formatDateForInput(val) : String(val ?? '')}
+                        type={isDate ? 'date' : (isNumber && !isPreco) ? 'number' : 'text'}
+                        defaultValue={initialFormatted}
+                        onChange={(e) => {
+                          if (isQtd) setSubModalQtd(Number(e.target.value) || 0)
+                          if (isPreco) {
+                            const cleanVal = e.target.value.replace(/\\./g, '').replace(',', '.')
+                            setSubModalPreco(Number(cleanVal) || 0)
+                          }
+                        }}
                         placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
-                        className={\`w-full \${isTotalField ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
+                        className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
                       />
                     </div>
                   )
