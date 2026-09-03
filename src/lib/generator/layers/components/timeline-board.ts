@@ -21,7 +21,6 @@ import {
   LayoutGrid,
   Zap,
 } from 'lucide-react'
-import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { DeleteButton } from '@/components/ui/delete-button'
 
@@ -124,7 +123,10 @@ export function TimelineBoard({
     try {
       const d = new Date(rawDate)
       if (isNaN(d.getTime())) return String(rawDate)
-      return format(d, 'dd/MM/yyyy')
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const year = d.getFullYear()
+      return \`\${day}/\${month}/\${year}\`
     } catch {
       return String(rawDate)
     }
