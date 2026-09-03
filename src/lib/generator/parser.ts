@@ -16,6 +16,7 @@ import {
   AuthConfig,
   ButtonStyle,
   ButtonActionType,
+  TimelineConfig,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 
@@ -1273,6 +1274,34 @@ export function parseMetaBuilderJSON(
       }).filter(Boolean)
     }
 
+    let timelineConfig: TimelineConfig | undefined = undefined
+    if (resolvedView.logic_type === 'timeline' && resolvedView.layout_config?.timeline_config) {
+      const tc = resolvedView.layout_config.timeline_config
+      const resolveColumnName = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find((f: any) => f.id === fieldIdOrName || f.db_column_name === fieldIdOrName || f.display_name === fieldIdOrName)
+        return found ? (found.db_column_name || found.dbColumn) : fieldIdOrName
+      }
+
+      const dateField = resolveColumnName(tc.date_field)
+      const titleField = resolveColumnName(tc.title_field)
+      const descField = tc.desc_field ? resolveColumnName(tc.desc_field) : undefined
+      const iconField = tc.icon_field ? resolveColumnName(tc.icon_field) : undefined
+
+      timelineConfig = {
+        dateField: dateField || 'created_at',
+        titleField: titleField || 'id',
+        descField: descField || undefined,
+        iconField: iconField || undefined,
+        layoutStyle: tc.layout_style || 'infographic',
+        layoutDirection: tc.layout_direction || 'horizontal',
+        layoutMode: tc.layout_mode || 'alternating',
+        timelineOrderHorizontal: tc.timeline_order_horizontal || 'desc',
+        animated: tc.animated !== false,
+        cardScale: typeof tc.card_scale === 'number' ? tc.card_scale : 1.0,
+      }
+    }
+
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
       viewSlug: rv.slug || '',
@@ -1290,6 +1319,7 @@ export function parseMetaBuilderJSON(
       kanbanGroupField,
       kanbanGroupDisplayField,
       kanbanCardFields,
+      timelineConfig,
       buttons,
       relationTabs,
       rawLayoutConfig: resolvedView.layout_config,

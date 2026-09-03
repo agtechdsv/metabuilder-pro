@@ -4,12 +4,14 @@ import { generateRelationSectionComponent } from './relation-section'
 import { generateMasterFormComponent } from './master-form'
 import { generateByocComponents } from './byoc'
 import { generateKanbanBoardComponent } from './kanban-board'
+import { generateTimelineBoardComponent } from './timeline-board'
 
 export * from './ui-primitives'
 export * from './relation-section'
 export * from './master-form'
 export * from './byoc'
 export * from './kanban-board'
+export * from './timeline-board'
 
 /**
  * generateComponents
@@ -22,4 +24,5 @@ export function generateComponents(ast: AppAST, files: Map<string, string>) {
   generateMasterFormComponent(files)
   generateByocComponents(ast, files)
   generateKanbanBoardComponent(files)
+  generateTimelineBoardComponent(files)
 }

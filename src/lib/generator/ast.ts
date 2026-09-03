@@ -199,6 +199,9 @@ export interface RouteNode {
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
 
+  // ── Configuração específica para Timeline ──
+  timelineConfig?: TimelineConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -207,6 +210,19 @@ export interface RouteNode {
 
   // ── Raw layout_config (para features futuras / fallback) ──
   rawLayoutConfig?: any
+}
+
+export interface TimelineConfig {
+  dateField: string              // nome da coluna no banco (dbColumn)
+  titleField: string             // nome da coluna no banco (dbColumn)
+  descField?: string             // nome da coluna no banco (dbColumn)
+  iconField?: string             // nome da coluna no banco (dbColumn)
+  layoutStyle?: 'cards' | 'infographic'
+  layoutDirection?: 'horizontal' | 'vertical'
+  layoutMode?: 'alternating' | 'same_side'
+  timelineOrderHorizontal?: 'asc' | 'desc'
+  animated?: boolean
+  cardScale?: number
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
