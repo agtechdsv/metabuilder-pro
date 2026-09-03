@@ -91,6 +91,7 @@ export function TimelineBoard({
   const [scale, setScale] = useState<number>(
     timelineConfig.cardScale ?? 1.0
   )
+  const [animationTrigger, setAnimationTrigger] = useState<number>(0)
 
   useEffect(() => {
     if (timelineConfig.layoutDirection) setDirection(timelineConfig.layoutDirection)
@@ -410,7 +411,10 @@ export function TimelineBoard({
             <label className="text-[10px] font-bold text-neutral-500 uppercase">Animação:</label>
             <select
               value={animated ? 'true' : 'false'}
-              onChange={(e) => setAnimated(e.target.value === 'true')}
+              onChange={(e) => {
+                setAnimated(e.target.value === 'true')
+                setAnimationTrigger(prev => prev + 1)
+              }}
               className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
             >
               <option value="true">Ligada</option>
@@ -422,7 +426,10 @@ export function TimelineBoard({
             <label className="text-[10px] font-bold text-neutral-500 uppercase">Modo:</label>
             <select
               value={mode}
-              onChange={(e) => setMode(e.target.value as 'alternating' | 'same_side')}
+              onChange={(e) => {
+                setMode(e.target.value as 'alternating' | 'same_side')
+                setAnimationTrigger(prev => prev + 1)
+              }}
               className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
             >
               <option value="alternating">Zig-Zag</option>
@@ -434,7 +441,10 @@ export function TimelineBoard({
             <label className="text-[10px] font-bold text-neutral-500 uppercase">Aparência:</label>
             <select
               value={style}
-              onChange={(e) => setStyle(e.target.value as 'cards' | 'infographic')}
+              onChange={(e) => {
+                setStyle(e.target.value as 'cards' | 'infographic')
+                setAnimationTrigger(prev => prev + 1)
+              }}
               className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold focus:outline-none"
             >
               <option value="infographic">Info</option>
@@ -467,7 +477,10 @@ export function TimelineBoard({
             <div className="flex items-center ml-2 sm:ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 sm:pl-6">
               <button
                 type="button"
-                onClick={onRefresh}
+                onClick={() => {
+                  setAnimationTrigger(prev => prev + 1)
+                  onRefresh()
+                }}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-colors"
                 title="Atualizar Dados"
               >
@@ -479,12 +492,18 @@ export function TimelineBoard({
       </div>
 
       {/* Canvas Principal da Timeline */}
-      <div className="w-full bg-neutral-50/50 dark:bg-neutral-950/50 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden">
+      <div 
+        key={\`timeline-canvas-\${animationTrigger}-\${animated ? 'anim' : 'static'}-\${direction}-\${mode}-\${style}\`}
+        className="w-full bg-neutral-50/50 dark:bg-neutral-950/50 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden"
+      >
         {direction === 'horizontal' ? (
           <div className="relative w-full overflow-x-auto custom-scrollbar py-12 px-6">
             <div
-              className="relative min-w-max flex items-center gap-8 px-8"
-              style={{ minHeight: mode === 'alternating' ? '460px' : '320px' }}
+              className={cn(
+                "relative min-w-max flex gap-8 px-8 pb-6",
+                mode === 'alternating' ? "items-center" : "items-start"
+              )}
+              style={{ minHeight: mode === 'alternating' ? '460px' : (style === 'infographic' ? '320px' : '380px') }}
             >
               {/* Linha horizontal principal */}
               {sortedData.length > 1 && (
@@ -494,7 +513,7 @@ export function TimelineBoard({
                   transition={{ duration: Math.min(sortedData.length * 0.3 + 0.4, 3), ease: "easeOut" }}
                   className={cn(
                     "absolute h-[3px] bg-[#6366f1] -translate-y-1/2 rounded-full origin-left",
-                    mode === 'alternating' ? "top-1/2" : "top-[24px]"
+                    mode === 'alternating' ? "top-1/2" : "top-[60px]"
                   )}
                   style={{ left: \`\${scale * 175}px\`, right: \`\${scale * 175}px\` }}
                 />
@@ -514,7 +533,7 @@ export function TimelineBoard({
                     key={\`timeline-h-\${primaryKey}-\${index}\`}
                     className={cn(
                       "relative flex flex-col group",
-                      mode === 'alternating' ? "h-[450px]" : "h-full pt-[40px]"
+                      mode === 'alternating' ? "h-[450px]" : "h-auto"
                     )}
                     style={{ width: \`\${scale * 350}px\` }}
                   >
@@ -526,7 +545,7 @@ export function TimelineBoard({
                       transition={{ delay: animated ? Math.min(index * 0.2 + 0.2, 2) : 0, duration: 0.2 }}
                       className={cn(
                         "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-y-1/2 left-1/2 -translate-x-1/2",
-                        mode === 'alternating' ? "top-1/2" : "top-[24px]"
+                        mode === 'alternating' ? "top-1/2" : "top-[60px]"
                       )}
                       style={{
                         borderColor: itemColor,
@@ -545,9 +564,10 @@ export function TimelineBoard({
                           ? isEven
                             ? "h-1/2 justify-end flex-col"
                             : "h-1/2 mt-auto justify-start flex-col"
-                          : "mt-8"
+                          : "flex-col justify-start"
                       )}
                       style={{
+                        marginTop: mode === 'alternating' ? undefined : '60px',
                         paddingBottom:
                           mode === 'alternating' && isEven
                             ? style === 'infographic'
@@ -555,7 +575,7 @@ export function TimelineBoard({
                               : '32px'
                             : undefined,
                         paddingTop:
-                          mode === 'alternating' && !isEven
+                          (mode === 'alternating' && !isEven) || mode === 'same_side'
                             ? style === 'infographic'
                               ? '54px'
                               : '32px'
