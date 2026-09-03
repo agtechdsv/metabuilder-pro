@@ -168,7 +168,7 @@ ${hasCreate ? `          <Link
         data={filteredData}
         fields={fields}
         groupColumn="${groupCol}"
-        groupDisplayField=${groupDisplayField ? `"${groupDisplayField}"` : 'undefined'}
+        ${groupDisplayField ? `groupDisplayField="${groupDisplayField}"` : ''}
         cardFields={cardFields}
         primaryKey="${route.primaryKey}"
         basePath="${route.path}"
