@@ -451,6 +451,7 @@ const SubItemAccordion = React.forwardRef(({
   subFields,
   toggleSubItem,
   formatDateForInput,
+  onSubItemChange,
   onEditSubItem,
   onDeleteSubItem,
 }: {
@@ -461,6 +462,7 @@ const SubItemAccordion = React.forwardRef(({
   subFields: DetailFieldConfig[]
   toggleSubItem: (k: string) => void
   formatDateForInput: (v: any) => string
+  onSubItemChange?: (field: string, val: any) => void
   onEditSubItem?: (item: any, sIdx: number) => void
   onDeleteSubItem?: (item: any, sIdx: number) => void
 }, ref: any) => {
@@ -589,9 +591,10 @@ const SubItemAccordion = React.forwardRef(({
                     {sf.label}
                   </label>
                   <select
-                    key={\`\${sf.dbColumn}-\${String(val ?? '')}\`}
+                    key={sf.dbColumn}
                     name={sf.dbColumn}
                     defaultValue={String(val ?? '')}
+                    onChange={(e) => onSubItemChange?.(sf.dbColumn, e.target.value)}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Selecione...</option>
@@ -636,7 +639,7 @@ const SubItemAccordion = React.forwardRef(({
                   {sf.label}
                 </label>
                 <input
-                  key={\`\${sf.dbColumn}-\${initialFormatted}\`}
+                  key={sf.dbColumn}
                   name={sf.dbColumn}
                   data-mask={mask}
                   type={isDate ? 'date' : (isNumber && !mask && !isPrecoField) ? 'number' : 'text'}
@@ -645,11 +648,18 @@ const SubItemAccordion = React.forwardRef(({
                     if (mask) {
                       e.target.value = formatMaskRealtime(e.target.value, mask)
                     }
-                    if (isQtdField) setQtd(Number(e.target.value) || 0)
-                    if (isPrecoField) {
-                      const cleanVal = parseAnyNumber(e.target.value)
-                      setPreco(cleanVal)
+                    let newVal: any = e.target.value
+                    if (isQtdField) {
+                      const q = Number(e.target.value) || 0
+                      setQtd(q)
+                      newVal = q
                     }
+                    if (isPrecoField) {
+                      const p = parseAnyNumber(e.target.value)
+                      setPreco(p)
+                      newVal = p
+                    }
+                    onSubItemChange?.(sf.dbColumn, newVal)
                   }}
                   placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -720,6 +730,36 @@ export function DetailRelationSection({
 
   const toggleSubItem = (key: string) => {
     setExpandedSubItems(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSubItemFieldChange = (parentIdx: number, subIdx: number, field: string, val: any) => {
+    setLocalItems(prev => {
+      const next = [...prev]
+      const parent = { ...next[parentIdx] }
+      const children = [...(parent.items || parent.itens_pedido || [])]
+      if (children[subIdx]) {
+        children[subIdx] = { ...children[subIdx], [field]: val }
+        parent.items = children
+        parent.itens_pedido = children
+        next[parentIdx] = parent
+      }
+      return next
+    })
+  }
+
+  const handleModalSubItemFieldChange = (subIdx: number, field: string, val: any) => {
+    setEditingItem((prev: any) => {
+      if (!prev) return prev
+      const children = [...(prev.items || prev.itens_pedido || [])]
+      if (children[subIdx]) {
+        children[subIdx] = { ...children[subIdx], [field]: val }
+      }
+      return {
+        ...prev,
+        items: children,
+        itens_pedido: children
+      }
+    })
   }
 
   useEffect(() => {
@@ -881,38 +921,112 @@ export function DetailRelationSection({
     setIsSubmitting(true)
     window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
+      const modalEl = document.getElementById('modal-master-form')
       const formData = new FormData(e.currentTarget)
       if (!formData.get(foreignKey)) {
         formData.set(foreignKey, parentId)
       }
-      const updatedFields = Object.fromEntries(formData.entries())
-      if (editingItem && (editingItem.id || editingItem.codigo) && !String(editingItem.id).startsWith('temp-')) {
-        await updateAction(editingItem.id || editingItem.codigo, formData)
+
+      const masterData: Record<string, any> = { [foreignKey]: parentId }
+      editableFields.forEach(f => {
+        const inp = modalEl?.querySelector<HTMLInputElement | HTMLSelectElement>(\`[name="\${f.dbColumn}"]\`)
+        if (inp) {
+          const m = inp.getAttribute('data-mask')
+          if (m === '0.000,00' || m === 'currency' || m === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+            masterData[f.dbColumn] = parseAnyNumber(inp.value)
+          } else if (m === '0.000') {
+            masterData[f.dbColumn] = parseInt(inp.value.replace(/\\D/g, ''), 10) || 0
+          } else {
+            masterData[f.dbColumn] = inp.value
+          }
+        } else if (formData.has(f.dbColumn)) {
+          masterData[f.dbColumn] = formData.get(f.dbColumn)
+        }
+      })
+
+      let savedParentId = editingItem?.id || editingItem?.codigo
+      const isNewParent = !savedParentId || String(savedParentId).startsWith('temp-')
+
+      if (isNewParent) {
+        const created = await createAction(masterData)
+        savedParentId = created?.id || created?.codigo || \`item-\${Date.now()}\`
+      } else {
+        await updateAction(savedParentId, masterData)
+      }
+
+      const currentChildRecords = editingItem?.items || editingItem?.itens_pedido || []
+      const updatedChildRecords = [...currentChildRecords]
+
+      if (subConfig && (updateSubAction || createSubAction)) {
+        for (let sIdx = 0; sIdx < currentChildRecords.length; sIdx++) {
+          const subItem = currentChildRecords[sIdx]
+          const subKey = \`modal-\${editingItem?.id || 'edit'}-\${sIdx}\`
+          const subContainer = modalEl?.querySelector(\`[data-sub-item="\${subKey}"]\`)
+
+          const subData: Record<string, any> = {}
+          if (subConfig.foreignKey) {
+            subData[subConfig.foreignKey] = savedParentId
+          }
+
+          if (subContainer) {
+            const subInputs = subContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
+            subInputs.forEach(inp => {
+              if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+                const m = inp.getAttribute('data-mask')
+                if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+                  subData[inp.name] = parseAnyNumber(inp.value)
+                } else if (m === '0.000') {
+                  subData[inp.name] = parseInt(inp.value.replace(/\\D/g, ''), 10) || 0
+                } else {
+                  subData[inp.name] = inp.value
+                }
+              }
+            })
+          } else {
+            subFields.forEach((sf: any) => {
+              if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
+            })
+          }
+
+          const isNewSub = !subItem.id || String(subItem.id).startsWith('temp-')
+          if (isNewSub && createSubAction) {
+            const createdSub = await createSubAction(subData)
+            if (createdSub?.id) {
+              updatedChildRecords[sIdx] = { ...subItem, ...subData, id: createdSub.id }
+            } else {
+              updatedChildRecords[sIdx] = { ...subItem, ...subData }
+            }
+          } else if (!isNewSub && updateSubAction && subItem.id) {
+            await updateSubAction(subItem.id, subData)
+            updatedChildRecords[sIdx] = { ...subItem, ...subData }
+          }
+        }
+      }
+
+      if (isNewParent) {
+        setLocalItems(prev => [{
+          ...masterData,
+          id: savedParentId,
+          items: updatedChildRecords,
+          itens_pedido: updatedChildRecords,
+          __v: 1
+        }, ...prev])
+      } else {
         setLocalItems(prev => prev.map(it => {
-          const isMatch = (it.id && it.id === (editingItem.id || editingItem.codigo)) ||
-                          (it.codigo && it.codigo === (editingItem.id || editingItem.codigo))
+          const isMatch = (it.id && it.id === savedParentId) || (it.codigo && it.codigo === savedParentId)
           if (isMatch) {
             return {
               ...it,
-              ...updatedFields,
-              items: editingItem.items || it.items,
-              itens_pedido: editingItem.itens_pedido || it.itens_pedido,
+              ...masterData,
+              items: updatedChildRecords,
+              itens_pedido: updatedChildRecords,
               __v: (it.__v || 0) + 1
             }
           }
           return it
         }))
-      } else {
-        const created = await createAction(formData)
-        const newId = created?.id || \`item-\${Date.now()}\`
-        setLocalItems(prev => [{
-          ...updatedFields,
-          id: newId,
-          items: editingItem?.items || [],
-          itens_pedido: editingItem?.itens_pedido || [],
-          __v: 1
-        }, ...prev])
       }
+
       setToastType('success')
       setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
       setIsModalOpen(false)
@@ -1094,7 +1208,13 @@ export function DetailRelationSection({
 
   const formatDateForInput = (v: any) => {
     if (!v) return ''
-    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+    const s = String(v).trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10)
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+      const parts = s.split('/')
+      return \`\${parts[2]}-\${parts[1]}-\${parts[0]}\`
+    }
     try {
       const d = new Date(v)
       if (!isNaN(d.getTime())) {
@@ -1104,7 +1224,7 @@ export function DetailRelationSection({
         return \`\${year}-\${month}-\${day}\`
       }
     } catch (e) {}
-    return String(v).slice(0, 10)
+    return s.slice(0, 10)
   }
 
   const getFieldValue = (obj: any, dbCol: string) => {
@@ -1316,7 +1436,7 @@ export function DetailRelationSection({
                           colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
-                        const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : '')
+                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : ''))
                         let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                         if (isCalculatedTotal && itemChildRecords && itemChildRecords.length > 0) {
                           const sum = itemChildRecords.reduce((acc: number, sub: any) => {
@@ -1376,15 +1496,15 @@ export function DetailRelationSection({
                               {f.label}
                             </label>
                             <input
-                              key={\`\${f.dbColumn}-\${displayVal}\`}
+                              key={f.dbColumn}
                               name={f.dbColumn}
-                              data-mask={mask}
+                              data-mask={mask || undefined}
                               type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                              defaultValue={displayVal}
+                              {...(isCalculatedTotal ? { value: displayVal } : { defaultValue: displayVal })}
                               onChange={(e) => {
-                                if (mask) {
+                                if (!isDate && mask) {
                                   e.target.value = formatMaskRealtime(e.target.value, mask)
                                 }
                               }}
@@ -1417,7 +1537,7 @@ export function DetailRelationSection({
                                 className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
                                 title="Expandir Todos"
                               >
-                                <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                                <ChevronDown className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
@@ -1429,7 +1549,7 @@ export function DetailRelationSection({
                                 className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
                                 title="Recolher Todos"
                               >
-                                <ChevronDown className="w-3.5 h-3.5" />
+                                <ChevronUp className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           )}
@@ -1477,6 +1597,7 @@ export function DetailRelationSection({
                                 subFields={subFields}
                                 toggleSubItem={toggleSubItem}
                                 formatDateForInput={formatDateForInput}
+                                onSubItemChange={(field, val) => handleSubItemFieldChange(idx, sIdx, field, val)}
                                 onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx, subFields })}
                                 onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx })}
                               />
@@ -1620,7 +1741,7 @@ export function DetailRelationSection({
                       colSpanClass = 'col-span-12 md:col-span-9'
                     }
 
-                    const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : '')
+                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : ''))
                     const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
                     let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                     if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
@@ -1681,15 +1802,15 @@ export function DetailRelationSection({
                           {f.label}
                         </label>
                         <input
-                          key={\`\${f.dbColumn}-\${displayVal}\`}
+                          key={f.dbColumn}
                           name={f.dbColumn}
-                          data-mask={mask}
+                          data-mask={mask || undefined}
                           type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                          defaultValue={displayVal}
+                          {...(isCalculatedTotal ? { value: displayVal } : { defaultValue: displayVal })}
                           onChange={(e) => {
-                            if (mask) {
+                            if (!isDate && mask) {
                               e.target.value = formatMaskRealtime(e.target.value, mask)
                             }
                           }}
@@ -1720,7 +1841,7 @@ export function DetailRelationSection({
                           className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
                           title="Expandir Todos"
                         >
-                          <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                          <ChevronDown className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
@@ -1734,7 +1855,7 @@ export function DetailRelationSection({
                           className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
                           title="Recolher Todos"
                         >
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronUp className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
@@ -1775,6 +1896,7 @@ export function DetailRelationSection({
                           subFields={subFields}
                           toggleSubItem={toggleSubItem}
                           formatDateForInput={formatDateForInput}
+                          onSubItemChange={(field, val) => handleModalSubItemFieldChange(sIdx, field, val)}
                           onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit', subFields })}
                           onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit' })}
                         />
