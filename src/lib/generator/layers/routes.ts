@@ -1276,7 +1276,7 @@ function formatWithMask(v: any, mask?: string) {
   }
 
   if (mask === '0.000') {
-    const num = typeof v === 'number' ? v : (Number(s.includes(',') ? s.replace(/\\./g, '').replace(',', '.')) || 0)
+    const num = typeof v === 'number' ? v : (Number(s.includes(',') ? s.replace(/\\./g, '').replace(',', '.') : s) || 0)
     return num.toLocaleString('pt-BR')
   }
 
@@ -1421,7 +1421,7 @@ function formatWithMask(v: any, mask?: string) {
   }
 
   if (mask === '0.000') {
-    const num = typeof v === 'number' ? v : (Number(s.includes(',') ? s.replace(/\\./g, '').replace(',', '.')) || 0)
+    const num = typeof v === 'number' ? v : (Number(s.includes(',') ? s.replace(/\\./g, '').replace(',', '.') : s) || 0)
     return num.toLocaleString('pt-BR')
   }
 
