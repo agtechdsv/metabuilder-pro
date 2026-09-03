@@ -8,18 +8,66 @@ export function generateKanbanPage(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
 
+  // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros e cards
+  const lookupModels = new Map<string, string>() // table -> modelName
+  const allKanbanFields = [...(route.filterFields || []), ...(route.gridFields || [])]
+  allKanbanFields.forEach(f => {
+    const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (targetModel && targetTable) {
+      lookupModels.set(targetTable.toLowerCase(), targetModel)
+    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
+      const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
+      lookupModels.set(targetTable.toLowerCase(), modelName)
+    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const table = base.endsWith('s') ? base : (base + 's')
+      const modelName = table.charAt(0).toUpperCase() + table.slice(1)
+      lookupModels.set(table.toLowerCase(), modelName)
+    }
+  })
+
+  // Remove o próprio modelo se acidentalmente incluído
+  lookupModels.delete(mnLower)
+
+  const lookupImports = Array.from(lookupModels.entries()).map(([table, modelName]) =>
+    `import { get${modelName}List } from '@/app/actions/${table}'`
+  ).join('\n')
+
+  const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
+    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+  ).join('\n')
+
+  const buildOptionsCode: string[] = []
+  allKanbanFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
+      const t = targetTable.toLowerCase()
+      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: r.nome || r.name || r.titulo || r.title || r.razao_social || String(r.id) })),`)
+    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
+
   return `import type { Metadata } from 'next'
 import { get${mn}List } from '@/app/actions/${mnLower}'
+${lookupImports}
 import { KanbanClient } from './KanbanClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
 export default async function ${mn}KanbanPage() {
   const rawData = await get${mn}List()
+${lookupQueries}
+
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
+  }
 
   return (
     <KanbanClient
       initialData={rawData || []}
+      relationalOptions={relationalOptions}
     />
   )
 }
@@ -65,19 +113,29 @@ export function generateKanbanClient(route: RouteNode): string {
 
   return `'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { update${mn}, delete${mn} } from '@/app/actions/${mnLower}'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { Plus, Search, RefreshCcw, Zap, Download } from 'lucide-react'
 
-export function KanbanClient({ initialData }: { initialData: any[] }) {
+export function KanbanClient({
+  initialData,
+  relationalOptions = {}
+}: {
+  initialData: any[]
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+}) {
   const [dataList, setDataList] = useState<any[]>(initialData)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>({})
   const [visibleCount, setVisibleCount] = useState(50)
   const BATCH_SIZE = 50
+
+  useEffect(() => {
+    setDataList(initialData)
+  }, [initialData])
 
   const filterFields = ${filterFieldsData}
   const fields = ${fieldsData}
@@ -90,7 +148,7 @@ export function KanbanClient({ initialData }: { initialData: any[] }) {
         if (!val || !val.trim()) continue
         const itemVal = item[col]
         if (itemVal === null || itemVal === undefined) return false
-        if (!String(itemVal).toLowerCase().includes(val.toLowerCase().trim())) return false
+        if (String(itemVal).toLowerCase() !== val.toLowerCase().trim() && !String(itemVal).toLowerCase().includes(val.toLowerCase().trim())) return false
       }
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase()
@@ -179,6 +237,28 @@ ${hasCreate ? `          <Link
             {filterFields.map((f: any) => {
               const gridSpan = f.config?.filter_config?.component?.gridSpan || f.config?.gridSpan || 3
               const colSpanClass = 'col-span-12 sm:col-span-6 md:col-span-' + Math.min(12, gridSpan)
+              const options = relationalOptions?.[f.dbColumn] || f.config?.options || []
+              
+              if (options && options.length > 0) {
+                return (
+                  <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
+                    <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">
+                      {f.label}
+                    </label>
+                    <select
+                      value={filterValues[f.dbColumn] || ''}
+                      onChange={e => setFilterValues(prev => ({ ...prev, [f.dbColumn]: e.target.value }))}
+                      className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                    >
+                      <option value="">Todos</option>
+                      {options.map((opt: any, i: number) => (
+                        <option key={i} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              }
+
               return (
                 <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
                   <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">
@@ -203,7 +283,7 @@ ${hasCreate ? `          <Link
               <button
                 type="button"
                 onClick={() => setFilterValues({})}
-                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-indigo-600 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-indigo-600 transition-colors cursor-pointer"
               >
                 <RefreshCcw className="w-3 h-3" /> Limpar Filtros
               </button>
@@ -221,6 +301,7 @@ ${hasCreate ? `          <Link
         cardFields={cardFields}
         primaryKey="${route.primaryKey}"
         basePath="${route.path}"
+        relationalOptions={relationalOptions}
         onMove={handleMove}
         onDelete={handleDelete}
       />

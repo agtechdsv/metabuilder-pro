@@ -31,12 +31,14 @@ export async function POST(request: Request) {
       { data: models },
       { data: views },
       { data: relations },
-      { data: authConfig }
+      { data: authConfig },
+      { data: enumerations }
     ] = await Promise.all([
       supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
       supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published'),
       supabase.from('relations').select('*').eq('project_id', projectId),
-      supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle()
+      supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle(),
+      supabase.from('project_enumerations').select('*').eq('project_id', projectId)
     ])
 
     // Se não tiver views publicadas, pega todas
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
       views: finalViews || [],
       components,
       relations: relations || [],
+      enumerations: enumerations || [],
       auth_config: authConfig ? {
         auth_type: authConfig.auth_type,
         table_name: authConfig.db_table_name,

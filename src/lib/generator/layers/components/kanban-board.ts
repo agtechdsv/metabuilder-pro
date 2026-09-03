@@ -11,6 +11,9 @@ import {
   DndContext,
   DragOverlay,
   closestCorners,
+  pointerWithin,
+  rectIntersection,
+  CollisionDetection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -59,6 +62,7 @@ export interface KanbanBoardProps {
   primaryKey?: string
   basePath?: string
   dictionary?: Record<string, string>
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   onMove: (recordId: string, newValue: any) => Promise<void> | void
   onDelete?: (recordId: string) => Promise<void> | void
 }
@@ -83,6 +87,19 @@ function formatKanbanValue(v: any, f?: KanbanField): string {
   return String(v)
 }
 
+function resolveDisplayLabel(val: any, field?: KanbanField, relationalOptions?: Record<string, Array<{ value: string; label: string }>>): string {
+  if (val === null || val === undefined || val === '') return '-'
+  const strVal = String(val)
+  if (field && relationalOptions) {
+    const opts = relationalOptions[field.dbColumn] || (field.id ? relationalOptions[field.id] : undefined) || field.config?.options
+    if (opts && Array.isArray(opts)) {
+      const found = opts.find((o: any) => String(o.value) === strVal || String(o.id) === strVal)
+      if (found) return found.label || found.name || strVal
+    }
+  }
+  return formatKanbanValue(val, field)
+}
+
 export function KanbanBoard({
   data,
   fields,
@@ -92,6 +109,7 @@ export function KanbanBoard({
   primaryKey = 'id',
   basePath = '',
   dictionary = {},
+  relationalOptions = {},
   onMove,
   onDelete,
 }: KanbanBoardProps) {
@@ -115,12 +133,12 @@ export function KanbanBoard({
   }, [fields, groupColumn])
 
   const configuredOptions = useMemo(() => {
-    const opts = groupFieldDef?.config?.options
+    const opts = relationalOptions[groupColumn] || groupFieldDef?.config?.options
     if (Array.isArray(opts) && opts.length > 0) {
       return opts.map((o: any) => typeof o === 'string' ? o : o.value || o.label)
     }
     return []
-  }, [groupFieldDef])
+  }, [groupFieldDef, relationalOptions, groupColumn])
 
   const columns = useMemo(() => {
     const valuesFromData = localData.map(item => String(item[groupColumn] ?? 'Unassigned'))
@@ -148,6 +166,22 @@ export function KanbanBoard({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+
+  // Estratégia de detecção de colisão robusta:
+  // 1. Onde o ponteiro do mouse está apontando diretamente (evita falso positivo com a coluna adjacente)
+  // 2. Interseção retangular direta
+  // 3. Cantos mais próximos como fallback
+  const collisionDetectionStrategy: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args)
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions
+    }
+    const rectCollisions = rectIntersection(args)
+    if (rectCollisions.length > 0) {
+      return rectCollisions
+    }
+    return closestCorners(args)
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(String(event.active.id))
@@ -222,7 +256,7 @@ export function KanbanBoard({
       >
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetectionStrategy}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -249,6 +283,7 @@ export function KanbanBoard({
                 primaryKey={primaryKey}
                 basePath={basePath}
                 groupColumn={groupColumn}
+                relationalOptions={relationalOptions}
                 onDelete={onDelete}
               />
             )
@@ -262,6 +297,7 @@ export function KanbanBoard({
                 fields={displayFieldsForCards}
                 primaryKey={primaryKey}
                 basePath={basePath}
+                relationalOptions={relationalOptions}
                 isOverlay
               />
             ) : null}
@@ -280,6 +316,7 @@ function BoardColumn({
   primaryKey,
   basePath,
   groupColumn,
+  relationalOptions,
   onDelete,
 }: {
   id: string
@@ -289,6 +326,7 @@ function BoardColumn({
   primaryKey: string
   basePath: string
   groupColumn: string
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   onDelete?: (id: string) => Promise<void> | void
 }) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id })
@@ -340,6 +378,7 @@ function BoardColumn({
                   fields={fields}
                   primaryKey={primaryKey}
                   basePath={basePath}
+                  relationalOptions={relationalOptions}
                   onDelete={onDelete}
                 />
               )
@@ -348,7 +387,7 @@ function BoardColumn({
 
           {items.length === 0 && (
             <div className="h-24 flex-shrink-0 flex items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
-              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-300 dark:text-neutral-600">
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
                 Coluna Vazia
               </p>
             </div>
@@ -365,6 +404,7 @@ function BoardCard({
   fields,
   primaryKey,
   basePath,
+  relationalOptions,
   isOverlay = false,
   onDelete,
 }: {
@@ -373,6 +413,7 @@ function BoardCard({
   fields: KanbanField[]
   primaryKey: string
   basePath: string
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   isOverlay?: boolean
   onDelete?: (id: string) => Promise<void> | void
 }) {
@@ -397,7 +438,7 @@ function BoardCard({
 
   const detailUrl = basePath ? (basePath + '/' + id) : '#'
   const recordTitle = mainField 
-    ? formatKanbanValue(item[mainField.dbColumn], mainField) 
+    ? resolveDisplayLabel(item[mainField.dbColumn], mainField, relationalOptions) 
     : (item.nome || item.name || item.titulo || item[primaryKey] || 'este registro')
 
   return (
@@ -425,7 +466,7 @@ function BoardCard({
             </h4>
             {subField && (
               <span className="text-[10px] font-medium text-neutral-400 truncate max-w-[180px]">
-                {formatKanbanValue(item[subField.dbColumn], subField)}
+                {resolveDisplayLabel(item[subField.dbColumn], subField, relationalOptions)}
               </span>
             )}
           </div>
@@ -478,7 +519,7 @@ function BoardCard({
                   {f.label}:
                 </span>
                 <span className="text-[9px] font-bold text-neutral-600 dark:text-neutral-300 truncate max-w-[120px]">
-                  {formatKanbanValue(item[f.dbColumn], f)}
+                  {resolveDisplayLabel(item[f.dbColumn], f, relationalOptions)}
                 </span>
               </div>
             ))}

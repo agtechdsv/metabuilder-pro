@@ -84,7 +84,8 @@ function applyFieldsMeta(
   fieldsMetadata: Record<string, any>,
   baseFieldConfig: any,
   rawField?: any,
-  modelName?: string
+  modelName?: string,
+  enumsMap: Record<string, Array<{ label: string; value: string }>> = {}
 ): ResolvedFieldConfig {
   const colName = (rawField?.db_column_name || '').toLowerCase()
   const rawId = (rawField?.id || fieldId || '').toLowerCase()
@@ -140,6 +141,14 @@ function applyFieldsMeta(
     baseFieldConfig?.enum_values ||
     baseFieldConfig?.fixed_options
 
+  const comp = mergedMeta.component || merged.component || baseFieldConfig?.component
+  if (comp && comp.options_type === 'enumeration' && comp.rel_table) {
+    const enumOpts = enumsMap[comp.rel_table] || enumsMap[comp.rel_table.toLowerCase()]
+    if (enumOpts && enumOpts.length > 0) {
+      options = enumOpts
+    }
+  }
+
   if (typeof options === 'string') {
     try {
       const parsed = JSON.parse(options)
@@ -163,6 +172,13 @@ function applyFieldsMeta(
       { label: 'Fechado Ganho', value: 'Fechado Ganho' },
       { label: 'Perdido', value: 'Perdido' }
     ]
+  }
+
+  if (options && Array.isArray(options) && options.length > 0) {
+    merged.options = options
+    if (merged.component) {
+      merged.component = { ...(merged.component || {}), options }
+    }
   }
 
   const relation = mergedMeta.relation || merged.relation || rawField?.relation || baseFieldConfig?.relation
@@ -231,7 +247,8 @@ function buildResolvedField(
   zone: 'grid' | 'form' | 'filter',
   viewModelId: string,
   allModels: any[],
-  fieldsMetadata: Record<string, any>
+  fieldsMetadata: Record<string, any>,
+  enumsMap: Record<string, Array<{ label: string; value: string }>> = {}
 ): ResolvedField {
   const model = allModels.find(m => m.id === field.model_id || m.id === viewModelId)
   const modelTableName = model?.db_table_name || ''
@@ -243,7 +260,7 @@ function buildResolvedField(
       ? { ...(field.config?.grid_config || {}), ...(component.config?.grid_config || {}) }
       : { ...(field.config?.form_config || {}), ...(component.config?.form_config || {}) }
   const baseConfig = { ...(field.config || {}), ...(component.config || {}), ...zoneConfig }
-  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field, modelTableName)
+  const config = applyFieldsMeta(field.id, zone, fieldsMetadata, baseConfig, field, modelTableName, enumsMap)
   const labelFromMeta =
     config.label?.text ||
     (typeof config.label === 'string' ? config.label : null) ||
@@ -320,7 +337,8 @@ function resolveViewZones(
   view: any,
   allModels: any[],
   allFields: any[],
-  byocMap: Record<string, string>
+  byocMap: Record<string, string>,
+  enumsMap: Record<string, Array<{ label: string; value: string }>> = {}
 ): ZoneResolutionResult {
   const layoutConfig = view.layout_config || {}
   const fieldsMetadata: Record<string, any> = layoutConfig.fields_metadata || {}
@@ -357,7 +375,7 @@ function resolveViewZones(
   let gridFields: ResolvedField[] = gridComponents.flatMap((c: any) => {
     const field = allFields.find((f: any) => f.id === c.field_id)
     if (!field) return []
-    return [buildResolvedField(c, field, 'grid', viewModelId, allModels, fieldsMetadata)]
+    return [buildResolvedField(c, field, 'grid', viewModelId, allModels, fieldsMetadata, enumsMap)]
   })
 
   // Injeta campos virtuais/BYOC no grid pertencentes a este modelo
@@ -410,7 +428,7 @@ function resolveViewZones(
   let formFields: ResolvedField[] = formComponents.flatMap((c: any) => {
     const field = allFields.find((f: any) => f.id === c.field_id)
     if (!field) return []
-    return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata)]
+    return [buildResolvedField(c, field, 'form', viewModelId, allModels, fieldsMetadata, enumsMap)]
   })
 
   // Injeta componentes BYOC e virtuais no form pertencentes a este modelo
@@ -460,7 +478,7 @@ function resolveViewZones(
   const filterFields: ResolvedField[] = filterComponents.flatMap((c: any) => {
     const field = allFields.find((f: any) => f.id === c.field_id)
     if (!field) return []
-    return [buildResolvedField(c, field, 'filter', viewModelId, allModels, fieldsMetadata)]
+    return [buildResolvedField(c, field, 'filter', viewModelId, allModels, fieldsMetadata, enumsMap)]
   })
 
   // ── Primary Key ──
@@ -1097,6 +1115,24 @@ export function parseMetaBuilderJSON(
     }
   })
 
+  // Enumerations map para lookup de options de enums
+  const rawEnums: any[] = rawJson.enumerations || rawJson.project_enumerations || []
+  const enumsMap: Record<string, Array<{ label: string; value: string }>> = {}
+  rawEnums.forEach((e: any) => {
+    const formatted = (e.values || []).map((v: any) => {
+      if (typeof v === 'string') return { label: v, value: v }
+      return {
+        label: v.description || v.label || v.value || '',
+        value: v.value !== undefined ? String(v.value) : String(v.description || '')
+      }
+    })
+    if (e.id) enumsMap[e.id] = formatted
+    if (e.name) {
+      enumsMap[e.name] = formatted
+      enumsMap[e.name.toLowerCase()] = formatted
+    }
+  })
+
   // ── Etapa 1: Constrói Models & Fields ──
   const models: ModelNode[] = rawModels.map((rm: any) => {
     const mFields = rawFields.filter((f: any) => f.model_id === rm.id)
@@ -1169,7 +1205,8 @@ export function parseMetaBuilderJSON(
       resolvedView,
       rawModels,
       rawFields,
-      byocMap
+      byocMap,
+      enumsMap
     )
 
     // Buttons (padrão de interface + custom_actions configuradas pelo dev)
