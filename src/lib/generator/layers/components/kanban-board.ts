@@ -15,6 +15,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragStartEvent,
   DragEndEvent,
 } from '@dnd-kit/core'
@@ -39,6 +40,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DeleteButton } from '@/components/ui/delete-button'
 
 export interface KanbanField {
   id?: string
@@ -289,12 +291,19 @@ function BoardColumn({
   groupColumn: string
   onDelete?: (id: string) => Promise<void> | void
 }) {
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id })
   const itemIds = useMemo(() => {
     return items.map(item => String(item[primaryKey] || item.id))
   }, [items, primaryKey])
 
   return (
-    <div className="flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full">
+    <div
+      ref={setDroppableRef}
+      className={cn(
+        "flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full transition-colors",
+        isOver && "ring-2 ring-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-950/20"
+      )}
+    >
       {/* Cabeçalho da Coluna */}
       <div className="flex items-center justify-between px-5 py-4 sticky top-0 bg-white dark:bg-[#0a0a0a] z-30 border-b border-neutral-200 dark:border-neutral-800 shadow-[0_4px_12px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2">
@@ -387,12 +396,14 @@ function BoardCard({
   const otherFields = fields.slice(2, 5)
 
   const detailUrl = basePath ? (basePath + '/' + id) : '#'
+  const recordTitle = mainField 
+    ? formatKanbanValue(item[mainField.dbColumn], mainField) 
+    : (item.nome || item.name || item.titulo || item[primaryKey] || 'este registro')
 
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
-      layoutId={isOverlay ? undefined : id}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -407,13 +418,11 @@ function BoardCard({
         {/* Cabeçalho do Card */}
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-0.5">
-            <Link
-              href={detailUrl}
-              onPointerDown={e => e.stopPropagation()}
-              className="font-bold text-neutral-900 dark:text-white leading-tight hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            <h4
+              className="font-bold text-neutral-900 dark:text-white leading-tight"
             >
-              {mainField ? formatKanbanValue(item[mainField.dbColumn], mainField) : (item.nome || item.name || item.titulo || item[primaryKey] || 'Untitled')}
-            </Link>
+              {recordTitle}
+            </h4>
             {subField && (
               <span className="text-[10px] font-medium text-neutral-400 truncate max-w-[180px]">
                 {formatKanbanValue(item[subField.dbColumn], subField)}
@@ -434,20 +443,17 @@ function BoardCard({
               </Link>
             ) : null}
             {onDelete ? (
-              <button
-                type="button"
+              <div
                 onPointerDown={e => e.stopPropagation()}
-                onClick={e => {
-                  e.stopPropagation()
-                  if (confirm('Tem certeza que deseja excluir este registro?')) {
-                    onDelete(id)
-                  }
-                }}
-                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-all"
-                title="Excluir"
+                onClick={e => e.stopPropagation()}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+                <DeleteButton
+                  recordName={recordTitle}
+                  onDelete={async () => {
+                    await onDelete(id)
+                  }}
+                />
+              </div>
             ) : null}
             <Link
               href={detailUrl}

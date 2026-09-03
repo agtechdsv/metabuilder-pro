@@ -54,10 +54,6 @@ export function generateDetailTabsClient(route: RouteNode): string {
     })
   }
 
-  const lookupImports = Array.from(lookupModels.entries()).map(([_, modelName]) =>
-    `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`
-  ).join('\n')
-
   const subDetailModels = new Map<string, string>()
   if (hasRelationTabs) {
     route.relationTabs.forEach(tab => {
@@ -69,16 +65,37 @@ export function generateDetailTabsClient(route: RouteNode): string {
     })
   }
 
-  const subDetailImports = Array.from(subDetailModels.entries()).map(([_, modelName]) =>
-    `import { create${modelName}, update${modelName}, delete${modelName} } from '@/app/actions/${modelName.toLowerCase()}'`
-  ).join('\n')
+  const clientActionsMap = new Map<string, Set<string>>()
+  const addClientAction = (modelLower: string, fn: string) => {
+    const key = `@/app/actions/${modelLower}`
+    if (!clientActionsMap.has(key)) clientActionsMap.set(key, new Set())
+    clientActionsMap.get(key)!.add(fn)
+  }
+
+  lookupModels.forEach((modelName) => {
+    addClientAction(modelName.toLowerCase(), `get${modelName}List`)
+  })
+  subDetailModels.forEach((modelName) => {
+    addClientAction(modelName.toLowerCase(), `create${modelName}`)
+    addClientAction(modelName.toLowerCase(), `update${modelName}`)
+    addClientAction(modelName.toLowerCase(), `delete${modelName}`)
+  })
+  if (hasRelationTabs) {
+    route.relationTabs.forEach(t => {
+      addClientAction(t.relatedModelName.toLowerCase(), `create${t.relatedModelName}`)
+      addClientAction(t.relatedModelName.toLowerCase(), `update${t.relatedModelName}`)
+      addClientAction(t.relatedModelName.toLowerCase(), `delete${t.relatedModelName}`)
+    })
+  }
+
+  const clientActionImports = Array.from(clientActionsMap.entries())
+    .map(([path, fns]) => `import { ${Array.from(fns).join(', ')} } from '${path}'`)
+    .join('\n')
 
   const relationImports = hasRelationTabs
     ? [
         `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
-        lookupImports,
-        subDetailImports,
-        ...route.relationTabs.map(t => `import { create${t.relatedModelName}, update${t.relatedModelName}, delete${t.relatedModelName} } from '@/app/actions/${t.relatedModelName.toLowerCase()}'`),
+        clientActionImports,
       ].filter(Boolean).join('\n')
     : ''
 
@@ -463,22 +480,42 @@ export function generateDetailPage(route: RouteNode): string {
     })
   }
 
-  const subDetailImports = Array.from(subDetailModels.entries()).map(([_, modelName]) =>
-    `import { get${modelName}List, create${modelName}, update${modelName}, delete${modelName} } from '@/app/actions/${modelName.toLowerCase()}'`
-  ).join('\n')
+  const serverActionsMap = new Map<string, Set<string>>()
+  const addServerAction = (modelLower: string, fn: string) => {
+    const key = `@/app/actions/${modelLower}`
+    if (!serverActionsMap.has(key)) serverActionsMap.set(key, new Set())
+    serverActionsMap.get(key)!.add(fn)
+  }
+
+  // Modelo principal
+  addServerAction(mnLower, `get${mn}ById`)
+  addServerAction(mnLower, `update${mn}`)
+
+  lookupModels.forEach((modelName) => {
+    addServerAction(modelName.toLowerCase(), `get${modelName}List`)
+  })
+  subDetailModels.forEach((modelName) => {
+    addServerAction(modelName.toLowerCase(), `get${modelName}List`)
+    addServerAction(modelName.toLowerCase(), `create${modelName}`)
+    addServerAction(modelName.toLowerCase(), `update${modelName}`)
+    addServerAction(modelName.toLowerCase(), `delete${modelName}`)
+  })
+  if (hasRelationTabs) {
+    route.relationTabs.forEach(t => {
+      addServerAction(t.relatedModelName.toLowerCase(), `get${t.relatedModelName}ByField`)
+      addServerAction(t.relatedModelName.toLowerCase(), `create${t.relatedModelName}`)
+      addServerAction(t.relatedModelName.toLowerCase(), `update${t.relatedModelName}`)
+      addServerAction(t.relatedModelName.toLowerCase(), `delete${t.relatedModelName}`)
+    })
+  }
+
+  const serverActionImports = Array.from(serverActionsMap.entries())
+    .map(([path, fns]) => `import { ${Array.from(fns).join(', ')} } from '${path}'`)
+    .join('\n')
 
   const subDetailQueries = Array.from(subDetailModels.entries()).map(([table, modelName]) =>
     `  const ${table}AllList = await get${modelName}List().catch(() => [])\n`
   ).join('')
-
-  const relationImports = hasRelationTabs
-    ? [
-        `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
-        lookupImports,
-        subDetailImports,
-        ...route.relationTabs.map(t => `import { get${t.relatedModelName}ByField, create${t.relatedModelName}, update${t.relatedModelName}, delete${t.relatedModelName} } from '@/app/actions/${t.relatedModelName.toLowerCase()}'`),
-      ].filter(Boolean).join('\n')
-    : ''
 
   const relationQueries = hasRelationTabs
     ? [
@@ -514,9 +551,8 @@ export function generateDetailPage(route: RouteNode): string {
 
   return `import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { get${mn}ById, update${mn} } from '@/app/actions/${mnLower}'
-${byocImports ? `${byocImports}\n` : ''}${relationImports}
-import { ${mn}DetailTabsClient } from './DetailTabsClient'
+${serverActionImports}
+${byocImports ? `${byocImports}\n` : ''}${hasRelationTabs ? "import { DetailRelationSection } from '@/components/DetailRelationSection'\n" : ''}import { ${mn}DetailTabsClient } from './DetailTabsClient'
 
 function formatDateForInput(v: any) {
   if (!v) return ''

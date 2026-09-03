@@ -37,6 +37,20 @@ export function generateKanbanClient(route: RouteNode): string {
   const groupDisplayField = route.kanbanGroupDisplayField
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
+  const rawFilterFields = route.filterFields && route.filterFields.length > 0 
+    ? route.filterFields 
+    : route.gridFields
+
+  const filterFieldsData = JSON.stringify(
+    rawFilterFields.map(f => ({
+      id: f.id,
+      dbColumn: f.dbColumn,
+      label: f.label,
+      dataType: f.dataType,
+      config: f.config,
+    }))
+  )
+
   const fieldsData = JSON.stringify(
     route.gridFields.map(f => ({
       id: f.id,
@@ -61,20 +75,31 @@ import { Plus, Search, RefreshCcw, Zap, Download } from 'lucide-react'
 export function KanbanClient({ initialData }: { initialData: any[] }) {
   const [dataList, setDataList] = useState<any[]>(initialData)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
+  const filterFields = ${filterFieldsData}
   const fields = ${fieldsData}
   const cardFields = ${cardFieldsData}
 
-  // Filtragem de cartões por busca textual
+  // Filtragem de cartões por argumentos/filtros configurados e busca textual
   const filteredData = useMemo(() => {
-    if (!searchTerm.trim()) return dataList
-    const term = searchTerm.toLowerCase()
     return dataList.filter(item => {
-      return Object.values(item).some(val => 
-        val !== null && val !== undefined && String(val).toLowerCase().includes(term)
-      )
+      for (const [col, val] of Object.entries(filterValues)) {
+        if (!val || !val.trim()) continue
+        const itemVal = item[col]
+        if (itemVal === null || itemVal === undefined) return false
+        if (!String(itemVal).toLowerCase().includes(val.toLowerCase().trim())) return false
+      }
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase()
+        const match = Object.values(item).some(val => 
+          val !== null && val !== undefined && String(val).toLowerCase().includes(term)
+        )
+        if (!match) return false
+      }
+      return true
     })
-  }, [dataList, searchTerm])
+  }, [dataList, filterValues, searchTerm])
 
   const handleMove = async (recordId: string, newValue: any) => {
     setDataList(prev =>
@@ -140,28 +165,45 @@ ${hasCreate ? `          <Link
         </div>
       </div>
 
-      {/* Barra de Filtro e Busca Rápida no Kanban */}
-      <div className="p-4 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Buscar nos cartões do Kanban..."
-            className="w-full h-[40px] pl-10 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
-          />
+      {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção */}
+      {filterFields.length > 0 && (
+        <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm space-y-4">
+          <div className="grid grid-cols-12 gap-4">
+            {filterFields.map((f: any) => {
+              const gridSpan = f.config?.filter_config?.component?.gridSpan || f.config?.gridSpan || 3
+              const colSpanClass = 'col-span-12 sm:col-span-6 md:col-span-' + Math.min(12, gridSpan)
+              return (
+                <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
+                  <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">
+                    {f.label}
+                  </label>
+                  <div className="relative group">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type="text"
+                      placeholder={'Filtrar por ' + f.label + '...'}
+                      value={filterValues[f.dbColumn] || ''}
+                      onChange={e => setFilterValues(prev => ({ ...prev, [f.dbColumn]: e.target.value }))}
+                      className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {Object.values(filterValues).some(Boolean) && (
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setFilterValues({})}
+                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-indigo-600 transition-colors"
+              >
+                <RefreshCcw className="w-3 h-3" /> Limpar Filtros
+              </button>
+            </div>
+          )}
         </div>
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={() => setSearchTerm('')}
-            className="flex items-center gap-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
-          >
-            <RefreshCcw className="w-3.5 h-3.5" /> Limpar busca
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Componente KanbanBoard com Drag-and-Drop */}
       <KanbanBoard
