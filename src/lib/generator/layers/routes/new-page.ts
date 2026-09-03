@@ -233,7 +233,7 @@ ${buildOptionsCode.join('\n')}
           if (result?.id) redirect(\`${route.path}/\${result.id}\`)
           else redirect('${route.path}')
         }}>
-          <div className="grid grid-cols-12 gap-x-6 gap-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
           </div>
 

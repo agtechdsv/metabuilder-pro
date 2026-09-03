@@ -92,16 +92,17 @@ function applyFieldsMeta(
   const tblName = (modelName || '').toLowerCase()
   const fullColName = tblName && colName ? `${tblName}.${colName}` : ''
 
-  // Busca chaves candidatas no fieldsMetadata do Studio:
+  // Busca chaves candidatas no fieldsMetadata do Studio com prioridade crescente:
+  // As chaves específicas com prefixo da zona vêm por último para prevalecerem sobre chaves genéricas.
   const candidateKeys = [
-    `${zone}-${fieldId}`,
-    fieldId,
-    rawId ? `${zone}-${rawId}` : null,
     rawId || null,
-    fullColName ? `${zone}-${fullColName}` : null,
+    fieldId,
+    colName || null,
     fullColName || null,
     colName ? `${zone}-${colName}` : null,
-    colName || null,
+    fullColName ? `${zone}-${fullColName}` : null,
+    rawId ? `${zone}-${rawId}` : null,
+    `${zone}-${fieldId}`,
   ].filter(Boolean) as string[]
 
   let mergedMeta: Record<string, any> = {}
@@ -114,6 +115,12 @@ function applyFieldsMeta(
   // Busca também por chaves case-insensitive e correspondência parcial no fieldsMetadata
   for (const [mk, mv] of Object.entries(fieldsMetadata)) {
     const mkLower = mk.toLowerCase()
+    // IMPORTANTE: Nunca permita que metadados explicitamente prefixados com outra zona sobrescrevam a zona atual!
+    const otherZones = ['grid', 'form', 'filter'].filter(z => z !== zone)
+    if (otherZones.some(oz => mkLower.startsWith(`${oz}-`))) {
+      continue
+    }
+
     if (
       (colName && (mkLower === colName || mkLower === `${zone}-${colName}` || mkLower.endsWith(`.${colName}`))) ||
       (rawId && (mkLower === rawId || mkLower === `${zone}-${rawId}` || mkLower.endsWith(rawId))) ||

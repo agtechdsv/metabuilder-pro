@@ -51,10 +51,6 @@ export function renderGridCellValue(field: ResolvedField, varName = 'item'): str
  * Replica o mapeamento de input do Runtime.
  */
 export function getColSpanClass(field: ResolvedField): string {
-  if (field.isPrimaryKey) {
-    return 'col-span-12'
-  }
-
   const cfg = field.config || {}
   const comp = cfg.component || cfg.form_config?.component || {}
   const layout = cfg.layout || {}
@@ -164,7 +160,7 @@ export function renderFormField(
   // Primary Key (ID) - destaque visual fiel ao Studio (# PK)
   if (field.isPrimaryKey) {
     return `
-          <div className="space-y-1.5 col-span-12">
+          <div className="space-y-1.5 ${colSpanClass}">
             <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">${label} # PK</label>
             <input
               id="${col}"
