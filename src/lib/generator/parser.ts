@@ -1190,6 +1190,41 @@ export function parseMetaBuilderJSON(
     // Encontra ícone do nav item correspondente
     const navIcon = findNavIcon(navigation, resolvedView)
 
+    // Configurações específicas de Kanban
+    let kanbanGroupField: string | undefined = undefined
+    const rawKanbanGroup = resolvedView.layout_config?.kanban_group_field
+    if (rawKanbanGroup) {
+      if (typeof rawKanbanGroup === 'string') {
+        const foundField = rawFields.find((f: any) => f.id === rawKanbanGroup || f.db_column_name === rawKanbanGroup)
+        kanbanGroupField = foundField ? foundField.db_column_name : rawKanbanGroup
+      } else if (typeof rawKanbanGroup === 'object') {
+        const targetId = rawKanbanGroup.target_field_id || (rawKanbanGroup.relation_path?.[0]?.foreign_column_id)
+        const foundField = rawFields.find((f: any) => f.id === targetId)
+        kanbanGroupField = foundField ? foundField.db_column_name : undefined
+      }
+    }
+    if (!kanbanGroupField && resolvedView.logic_type === 'kanban') {
+      const statusField = rawFields.find((f: any) => f.model_id === model.id && (f.db_column_name === 'status' || f.db_column_name.toLowerCase().includes('status')))
+      kanbanGroupField = statusField ? statusField.db_column_name : 'status'
+    }
+
+    const kanbanGroupDisplayField = resolvedView.layout_config?.kanban_group_display_field || undefined
+
+    const rawCardFields = resolvedView.layout_config?.kanban_card_fields || resolvedView.layout_config?.kanban_cards_fields
+    let kanbanCardFields: string[] | undefined = undefined
+    if (Array.isArray(rawCardFields) && rawCardFields.length > 0) {
+      kanbanCardFields = rawCardFields.map((cf: any) => {
+        if (typeof cf === 'string') {
+          const f = rawFields.find((rf: any) => rf.id === cf || rf.db_column_name === cf)
+          return f ? f.dbColumn || f.db_column_name : cf
+        } else if (cf && typeof cf === 'object') {
+          const f = rawFields.find((rf: any) => rf.id === cf.target_field_id || rf.id === cf.id)
+          return f ? f.dbColumn || f.db_column_name : null
+        }
+        return null
+      }).filter(Boolean)
+    }
+
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
       viewSlug: rv.slug || '',
@@ -1204,6 +1239,9 @@ export function parseMetaBuilderJSON(
       formFields,
       filterFields,
       displayType: resolvedView.layout_config?.display_type || 'list',
+      kanbanGroupField,
+      kanbanGroupDisplayField,
+      kanbanCardFields,
       buttons,
       relationTabs,
       rawLayoutConfig: resolvedView.layout_config,

@@ -194,6 +194,11 @@ export interface RouteNode {
   // ── Configuração da tela ──
   displayType: 'list' | 'card' | 'both'
 
+  // ── Configuração específica para Kanban ──
+  kanbanGroupField?: string
+  kanbanGroupDisplayField?: string
+  kanbanCardFields?: string[]
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
