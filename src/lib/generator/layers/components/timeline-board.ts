@@ -40,6 +40,7 @@ export interface TimelineConfig {
   layoutDirection?: 'horizontal' | 'vertical'
   layoutMode?: 'alternating' | 'same_side'
   timelineOrderHorizontal?: 'asc' | 'desc'
+  timelineOrderVertical?: 'asc' | 'desc'
   animated?: boolean
   cardScale?: number
 }
@@ -106,16 +107,61 @@ export function TimelineBoard({
     { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: 'Extra Grande' },
   ]
 
+  // Ordenação selecionada no Studio com suporte dinâmico à direção (Horizontal / Vertical)
+  const sortedData = useMemo(() => {
+    if (!data || data.length === 0) return []
+    const dateCol = timelineConfig.dateField
+    if (!dateCol) return data
+
+    const currentOrder = direction === 'horizontal'
+      ? (timelineConfig.timelineOrderHorizontal || 'asc')
+      : (timelineConfig.timelineOrderVertical || 'asc')
+
+    return [...data].sort((a, b) => {
+      const valA = a[dateCol]
+      const valB = b[dateCol]
+      if (!valA && !valB) return 0
+      if (!valA) return 1
+      if (!valB) return -1
+      const timeA = new Date(valA).getTime()
+      const timeB = new Date(valB).getTime()
+      if (isNaN(timeA) || isNaN(timeB)) {
+        return currentOrder === 'desc'
+          ? String(valB).localeCompare(String(valA))
+          : String(valA).localeCompare(String(valB))
+      }
+      return currentOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+  }, [data, timelineConfig, direction])
+
   const resolveFieldValue = (row: any, colName?: string) => {
     if (!colName || !row) return ''
     const val = row[colName]
-    if (val === null || val === undefined) return ''
-    const opts = relationalOptions[colName]
-    if (opts && Array.isArray(opts)) {
-      const match = opts.find(o => String(o.value) === String(val))
-      if (match) return match.label
+    if (val !== null && val !== undefined && val !== '') {
+      const opts = relationalOptions[colName]
+      if (opts && Array.isArray(opts)) {
+        const match = opts.find(o => String(o.value) === String(val))
+        if (match) return match.label
+      }
+      return String(val)
     }
-    return String(val)
+
+    // Se o valor direto estiver vazio na linha (ex: colName é 'nome_empresa' mas na row está 'cliente_id')
+    // busca pela FK correspondente ou na coleção de relationalOptions
+    for (const [optKey, opts] of Object.entries(relationalOptions)) {
+      if (row[optKey] !== undefined && row[optKey] !== null) {
+        const match = opts.find(o => String(o.value) === String(row[optKey]))
+        if (match && match.label) {
+          const lowerCol = colName.toLowerCase()
+          const lowerKey = optKey.toLowerCase().replace('_id', '')
+          if (lowerKey.includes(lowerCol) || lowerCol.includes(lowerKey)) {
+            return match.label
+          }
+        }
+      }
+    }
+
+    return ''
   }
 
   const formatDate = (rawDate: any) => {
@@ -249,7 +295,7 @@ export function TimelineBoard({
       <span
         key="status"
         className="font-black uppercase tracking-widest text-neutral-500 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center gap-1.5 truncate"
-        style={{ fontSize: \`\${scale * 9}px\`, padding: \`\${scale * 2}px \${scale * 8}px\`, maxWidth: \`\${scale * 120}px\` }}
+        style={{ fontSize: \`\${scale * 9}px\`, padding: \`\${scale * 2}px \${scale * 8}px\` }}
       >
         <Tag style={{ width: \`\${scale * 12}px\`, height: \`\${scale * 12}px\` }} />
         {iconStatus}
@@ -441,11 +487,11 @@ export function TimelineBoard({
               style={{ minHeight: mode === 'alternating' ? '460px' : '320px' }}
             >
               {/* Linha horizontal principal */}
-              {data.length > 1 && (
+              {sortedData.length > 1 && (
                 <motion.div
                   initial={animated ? { scaleX: 0 } : false}
                   animate={animated ? { scaleX: 1 } : false}
-                  transition={{ duration: Math.min(data.length * 0.3 + 0.4, 3), ease: "easeOut" }}
+                  transition={{ duration: Math.min(sortedData.length * 0.3 + 0.4, 3), ease: "easeOut" }}
                   className={cn(
                     "absolute h-[3px] bg-[#6366f1] -translate-y-1/2 rounded-full origin-left",
                     mode === 'alternating' ? "top-1/2" : "top-[24px]"
@@ -454,7 +500,7 @@ export function TimelineBoard({
                 />
               )}
 
-              {data.map((item, index) => {
+              {sortedData.map((item, index) => {
                 const isEven = index % 2 === 0
                 const primaryKey = item.id || item.ID || item._id || index
                 const rawDate = item[timelineConfig.dateField]
@@ -561,7 +607,7 @@ export function TimelineBoard({
                                   : "M 0 60 L 22 60 A 10 10 0 0 0 32 70 L 32 102"
                               }
                             />
-                            {index < data.length - 1 && (
+                            {index < sortedData.length - 1 && (
                               <motion.path
                                 initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                 animate={animated ? { pathLength: 1, opacity: 1 } : false}
@@ -614,7 +660,7 @@ export function TimelineBoard({
                 )
               })}
 
-              {data.length === 0 && (
+              {sortedData.length === 0 && (
                 <div className="text-center py-20 w-full">
                   <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
@@ -633,7 +679,7 @@ export function TimelineBoard({
             <motion.div
               initial={animated ? { scaleY: 0 } : false}
               animate={animated ? { scaleY: 1 } : false}
-              transition={{ duration: Math.min(data.length * 0.3 + 0.4, 3), ease: "easeOut" }}
+              transition={{ duration: Math.min(sortedData.length * 0.3 + 0.4, 3), ease: "easeOut" }}
               className={cn(
                 "absolute top-0 bottom-0 w-[3px] bg-[#6366f1] -translate-x-1/2 rounded-full origin-top",
                 mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
@@ -641,7 +687,7 @@ export function TimelineBoard({
             />
 
             <div className="space-y-12">
-              {data.map((item, index) => {
+              {sortedData.map((item, index) => {
                 const isEven = index % 2 === 0
                 const primaryKey = item.id || item.ID || item._id || index
                 const rawDate = item[timelineConfig.dateField]
@@ -729,7 +775,7 @@ export function TimelineBoard({
                 )
               })}
 
-              {data.length === 0 && (
+              {sortedData.length === 0 && (
                 <div className="text-center py-20">
                   <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
@@ -752,7 +798,7 @@ export function TimelineBoard({
               className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-md hover:shadow-lg hover:border-indigo-500/30 text-xs font-black tracking-widest text-indigo-600 dark:text-indigo-400 uppercase transition-all active:scale-95 cursor-pointer"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
-              CARREGAR MAIS {visibleCount} REGISTROS... ({Math.min(data.length, totalRecords)} DE {totalRecords})
+              CARREGAR MAIS {visibleCount} REGISTROS... ({Math.min(sortedData.length, totalRecords)} DE {totalRecords})
             </button>
           </div>
         )}

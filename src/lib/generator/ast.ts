@@ -221,6 +221,7 @@ export interface TimelineConfig {
   layoutDirection?: 'horizontal' | 'vertical'
   layoutMode?: 'alternating' | 'same_side'
   timelineOrderHorizontal?: 'asc' | 'desc'
+  timelineOrderVertical?: 'asc' | 'desc'
   animated?: boolean
   cardScale?: number
 }

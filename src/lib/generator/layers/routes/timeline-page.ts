@@ -43,14 +43,35 @@ export function generateTimelinePage(route: RouteNode): string {
     `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
   ).join('\n')
 
-  const buildOptionsCode: string[] = []
+  const optionsMap = new Map<string, string>()
   allTimelineFields.forEach(f => {
+    if (optionsMap.has(f.dbColumn)) return
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
       const t = targetTable.toLowerCase()
-      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: r.nome || r.name || r.titulo || r.title || r.razao_social || String(r.id) })),`)
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn
+      const customAccess = relLabel ? `r['${relLabel}'] || ` : ''
+      optionsMap.set(
+        f.dbColumn,
+        `    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: String(${customAccess}r.nome_empresa || r.razao_social || r.nome || r.nome_completo || r.name || r.titulo || r.title || r.descricao || r.id || '') })),`
+      )
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      optionsMap.set(f.dbColumn, `    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
+
+  // Garante lookups para campos usados na timeline mesmo se não estiverem em filterFields
+  const extraLookupCols = [route.timelineConfig?.titleField, route.timelineConfig?.descField, route.timelineConfig?.iconField].filter(Boolean) as string[]
+  extraLookupCols.forEach(col => {
+    if (col && col.endsWith('_id') && !optionsMap.has(col)) {
+      const base = col.slice(0, -3)
+      const t = (base.endsWith('s') ? base : (base + 's')).toLowerCase()
+      if (lookupModels.has(t)) {
+        optionsMap.set(
+          col,
+          `    '${col}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: String(r.nome_empresa || r.razao_social || r.nome || r.nome_completo || r.name || r.titulo || r.title || r.descricao || r.id || '') })),`
+        )
+      }
     }
   })
 
@@ -66,7 +87,7 @@ export default async function ${mn}TimelinePage() {
 ${lookupQueries}
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${Array.from(optionsMap.values()).join('\n')}
   }
 
   return (
@@ -109,7 +130,8 @@ export function generateTimelineClient(route: RouteNode): string {
       layoutStyle: 'infographic',
       layoutDirection: 'horizontal',
       layoutMode: 'alternating',
-      timelineOrderHorizontal: 'desc',
+      timelineOrderHorizontal: 'asc',
+      timelineOrderVertical: 'asc',
       animated: false,
       cardScale: 1.0,
     }

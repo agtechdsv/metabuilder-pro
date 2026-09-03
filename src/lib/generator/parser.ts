@@ -1280,7 +1280,46 @@ export function parseMetaBuilderJSON(
       const resolveColumnName = (fieldIdOrName?: string): string => {
         if (!fieldIdOrName) return ''
         const found = rawFields.find((f: any) => f.id === fieldIdOrName || f.db_column_name === fieldIdOrName || f.display_name === fieldIdOrName)
-        return found ? (found.db_column_name || found.dbColumn) : fieldIdOrName
+        if (!found) return fieldIdOrName
+
+        // Se o campo pertence diretamente à tabela da view (ex: pedidos), usa sua própria coluna
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+
+        // Se pertence a uma tabela relacionada (ex: clientes, funcionarios),
+        // busca qual campo FK no modelo atual aponta para essa tabela relacionada
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            f.config?.relation?.targetModel === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) {
+          return fkField.db_column_name || fkField.dbColumn
+        }
+
+        // Fallback por convenção de nome de FK (ex: tabela clientes -> cliente_id, funcionarios -> funcionario_id)
+        const targetModel = models.find((m: any) => m.id === found.model_id)
+        if (targetModel) {
+          const table = targetModel.dbTable.toLowerCase()
+          const singular = table.endsWith('s') ? table.slice(0, -1) : table
+          const candidateFk = rawFields.find((f: any) =>
+            f.model_id === model.id && (
+              f.db_column_name === `${singular}_id` ||
+              f.db_column_name === `${table}_id`
+            )
+          )
+          if (candidateFk) {
+            return candidateFk.db_column_name || candidateFk.dbColumn
+          }
+        }
+
+        return found.db_column_name || found.dbColumn || fieldIdOrName
       }
 
       const dateField = resolveColumnName(tc.date_field)
@@ -1296,7 +1335,8 @@ export function parseMetaBuilderJSON(
         layoutStyle: tc.layout_style || 'infographic',
         layoutDirection: tc.layout_direction || 'horizontal',
         layoutMode: tc.layout_mode || 'alternating',
-        timelineOrderHorizontal: tc.timeline_order_horizontal || 'desc',
+        timelineOrderHorizontal: tc.timeline_order_horizontal || 'asc',
+        timelineOrderVertical: tc.timeline_order_vertical || 'asc',
         animated: tc.animated !== false,
         cardScale: typeof tc.card_scale === 'number' ? tc.card_scale : 1.0,
       }
