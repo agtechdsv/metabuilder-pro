@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import DeleteConfirmModal from '@/components/runtime/DeleteConfirmModal'
 
 interface EnumValue {
   value: string
@@ -30,6 +31,9 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
   const [editingEnum, setEditingEnum] = useState<Enumeration | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const [enumToDelete, setEnumToDelete] = useState<Enumeration | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Estados de Importação
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -230,7 +234,6 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
   }
 
   const deleteEnum = async (id: string) => {
-    if (!confirm(t('dashboard.projects.studio.enums.delete_confirm_msg'))) return
     const { error } = await supabase.from('project_enumerations').delete().eq('id', id)
     if (error) {
       toast(t('dashboard.projects.studio.enums.delete_error'), 'error')
@@ -362,7 +365,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
                     <button onClick={() => openEditModal(e)} className="p-2 text-neutral-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => deleteEnum(e.id)} className="p-2 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                    <button onClick={() => setEnumToDelete(e)} className="p-2 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -623,6 +626,24 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação de Exclusão Padrão de Alta Qualidade */}
+      <DeleteConfirmModal
+        isOpen={!!enumToDelete}
+        onClose={() => setEnumToDelete(null)}
+        onConfirm={async () => {
+          if (!enumToDelete) return
+          setIsDeleting(true)
+          try {
+            await deleteEnum(enumToDelete.id)
+          } finally {
+            setIsDeleting(false)
+            setEnumToDelete(null)
+          }
+        }}
+        isLoading={isDeleting}
+        recordName={enumToDelete?.name}
+      />
     </div>
   )
 }

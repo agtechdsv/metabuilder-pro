@@ -56,7 +56,7 @@ export function ViewFilterBar({
                         const comp = zoneConfig.component || { type: 'text' }
                         const fieldType = comp.type || 'text'
                         let options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
-                          ? (relationalOptions[field.id] || [])
+                          ? (relationalOptions[field.id] || relationalOptions[field.db_column_name] || [])
                           : parseFixedOptions(comp.fixed_options)
 
                         if (comp.depends_on && comp.filter_column) {
