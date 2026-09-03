@@ -500,10 +500,10 @@ export function TimelineBoard({
           <div className="relative w-full overflow-x-auto custom-scrollbar py-12 px-6">
             <div
               className={cn(
-                "relative min-w-max flex gap-8 px-8 pb-6",
-                mode === 'alternating' ? "items-center" : "items-start"
+                "relative min-w-max flex gap-8 px-8",
+                mode === 'alternating' ? "items-center" : "items-start pb-8"
               )}
-              style={{ minHeight: mode === 'alternating' ? '460px' : (style === 'infographic' ? '320px' : '380px') }}
+              style={{ minHeight: mode === 'alternating' ? '450px' : (style === 'infographic' ? '320px' : '380px') }}
             >
               {/* Linha horizontal principal */}
               {sortedData.length > 1 && (
