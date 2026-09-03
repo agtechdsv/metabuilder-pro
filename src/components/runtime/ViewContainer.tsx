@@ -688,7 +688,7 @@ export default function ViewContainer({
             className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl disabled:opacity-50 flex items-center gap-2 ring-1 ring-black/5 dark:ring-white/10"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-500" /> : <RefreshCcw className="w-4 h-4 text-indigo-500" />}
-            {t('runtime.load_more_dynamic', 'Carregar mais')} ({data.length} de {totalServerRows})
+            {t('runtime.load_more_dynamic', 'Carregar mais {count} registros...').replace('{count}', String(Math.min(itemsPerPage || 50, Math.max(0, totalServerRows - data.length))))} ({data.length} de {totalServerRows})
           </button>
         </div>
       )}

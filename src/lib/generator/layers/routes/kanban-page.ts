@@ -76,6 +76,8 @@ export function KanbanClient({ initialData }: { initialData: any[] }) {
   const [dataList, setDataList] = useState<any[]>(initialData)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterValues, setFilterValues] = useState<Record<string, string>>({})
+  const [visibleCount, setVisibleCount] = useState(50)
+  const BATCH_SIZE = 50
 
   const filterFields = ${filterFieldsData}
   const fields = ${fieldsData}
@@ -100,6 +102,11 @@ export function KanbanClient({ initialData }: { initialData: any[] }) {
       return true
     })
   }, [dataList, filterValues, searchTerm])
+
+  // Paginação dinâmica por etapas (batching) idêntica à Web Produção
+  const displayedData = useMemo(() => {
+    return filteredData.slice(0, visibleCount)
+  }, [filteredData, visibleCount])
 
   const handleMove = async (recordId: string, newValue: any) => {
     setDataList(prev =>
@@ -207,7 +214,7 @@ ${hasCreate ? `          <Link
 
       {/* Componente KanbanBoard com Drag-and-Drop */}
       <KanbanBoard
-        data={filteredData}
+        data={displayedData}
         fields={fields}
         groupColumn="${groupCol}"
         ${groupDisplayField ? `groupDisplayField="${groupDisplayField}"` : ''}
@@ -217,6 +224,20 @@ ${hasCreate ? `          <Link
         onMove={handleMove}
         onDelete={handleDelete}
       />
+
+      {/* Botão Flutuante de Carregar Mais Registros Fiel à Web Produção */}
+      {displayedData.length < filteredData.length && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setVisibleCount(prev => prev + BATCH_SIZE)}
+            className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl flex items-center gap-2 ring-1 ring-black/5 dark:ring-white/10 active:scale-95 cursor-pointer"
+          >
+            <RefreshCcw className="w-4 h-4 text-indigo-500" />
+            Carregar mais {Math.min(BATCH_SIZE, filteredData.length - displayedData.length)} registros... ({displayedData.length} de {filteredData.length})
+          </button>
+        </div>
+      )}
     </div>
   )
 }
