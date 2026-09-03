@@ -12,7 +12,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
   const backPath = route.path
 
   const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true))
+    .map(f => renderFormField(f, true, false, 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
@@ -317,6 +317,7 @@ export function ${mn}DetailTabsClient({
   title,
   icon,
   newPath,
+  relationalOptions = {},
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,`).join('\n') : ''}
 }: {
   id: string
@@ -326,6 +327,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
   title: string
   icon: string
   newPath: string
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
   const [activeTab, setActiveTab] = useState(0)
@@ -440,12 +442,31 @@ export function generateDetailPage(route: RouteNode): string {
   const hasRelationTabs = route.relationTabs.length > 0
 
   const lookupModels = new Map<string, string>()
+
+  // 1. Lookups para os campos do formulário principal
+  route.formFields.forEach(f => {
+    const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (targetModel && targetTable) {
+      lookupModels.set(targetTable.toLowerCase(), targetModel)
+    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
+      const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
+      lookupModels.set(targetTable.toLowerCase(), modelName)
+    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const table = base.endsWith('s') ? base : (base + 's')
+      const modelName = table.charAt(0).toUpperCase() + table.slice(1)
+      lookupModels.set(table.toLowerCase(), modelName)
+    }
+  })
+
+  // 2. Lookups para as abas de relação
   if (hasRelationTabs) {
     route.relationTabs.forEach(tab => {
       const allTabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
       allTabFields.forEach(f => {
         if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
-          lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+          lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
         }
       })
       if (tab.subDetails) {
@@ -453,7 +474,7 @@ export function generateDetailPage(route: RouteNode): string {
           const allSubFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
           allSubFields.forEach(f => {
             if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
-              lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+              lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
             }
           })
         })
@@ -461,13 +482,32 @@ export function generateDetailPage(route: RouteNode): string {
     })
   }
 
-  const lookupImports = Array.from(lookupModels.entries()).map(([_, modelName]) =>
-    `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`
-  ).join('\n')
+  const hasSelfRel = route.formFields.some(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    return targetTable && targetTable.toLowerCase() === mnLower
+  })
 
-  const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
-  ).join('')
+  const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) => {
+    if (table === mnLower) {
+      return `  const ${table}LookupList = await get${mn}List().catch(() => [])\n`
+    }
+    return `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
+  }).join('')
+
+  const selfLookupQuery = (hasSelfRel && !lookupModels.has(mnLower))
+    ? `  const ${mnLower}LookupList = await get${mn}List().catch(() => [])\n`
+    : ''
+
+  const buildOptionsCode: string[] = []
+  route.formFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    if (targetTable && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
+      const t = targetTable.toLowerCase()
+      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: r.nome || r.name || r.titulo || r.title || r.razao_social || String(r.id) })),`)
+    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
 
   const subDetailModels = new Map<string, string>()
   if (hasRelationTabs) {
@@ -490,9 +530,14 @@ export function generateDetailPage(route: RouteNode): string {
   // Modelo principal
   addServerAction(mnLower, `get${mn}ById`)
   addServerAction(mnLower, `update${mn}`)
+  if (hasSelfRel || lookupModels.has(mnLower)) {
+    addServerAction(mnLower, `get${mn}List`)
+  }
 
-  lookupModels.forEach((modelName) => {
-    addServerAction(modelName.toLowerCase(), `get${modelName}List`)
+  lookupModels.forEach((modelName, table) => {
+    if (table !== mnLower) {
+      addServerAction(modelName.toLowerCase(), `get${modelName}List`)
+    }
   })
   subDetailModels.forEach((modelName) => {
     addServerAction(modelName.toLowerCase(), `get${modelName}List`)
@@ -517,30 +562,33 @@ export function generateDetailPage(route: RouteNode): string {
     `  const ${table}AllList = await get${modelName}List().catch(() => [])\n`
   ).join('')
 
-  const relationQueries = hasRelationTabs
-    ? [
-        lookupQueries,
-        subDetailQueries,
-        ...route.relationTabs.map((tab) => {
-          const rawQuery = `  const ${tab.relatedTable}ListRaw = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`
-          if (tab.subDetails && tab.subDetails.length > 0) {
-            const sub = tab.subDetails[0]
-            return (
-              rawQuery +
-              `  const ${tab.relatedTable}List = (${tab.relatedTable}ListRaw || []).map((row: any) => {\n` +
-              `    const rowId = String(row.id || row.codigo || '')\n` +
-              `    const childItems = (${sub.relatedTable}AllList || []).filter((subRow: any) => {\n` +
-              `      const fkVal = String(subRow['${sub.foreignKey}'] || subRow['id_${tab.relatedTable}'] || subRow['${tab.relatedTable}_id'] || subRow['${tab.relatedTable}'] || '')\n` +
-              `      return fkVal === rowId\n` +
-              `    })\n` +
-              `    return { ...row, items: childItems, itens_pedido: childItems, _details: childItems }\n` +
-              `  })\n`
-            )
-          }
-          return rawQuery + `  const ${tab.relatedTable}List = ${tab.relatedTable}ListRaw || []\n`
-        })
-      ].filter(Boolean).join('')
-    : ''
+  const relationQueries = [
+    lookupQueries,
+    selfLookupQuery,
+    ...(hasRelationTabs
+      ? [
+          subDetailQueries,
+          ...route.relationTabs.map((tab) => {
+            const rawQuery = `  const ${tab.relatedTable}ListRaw = await get${tab.relatedModelName}ByField('${tab.foreignKey}', resolvedParams.id)\n`
+            if (tab.subDetails && tab.subDetails.length > 0) {
+              const sub = tab.subDetails[0]
+              return (
+                rawQuery +
+                `  const ${tab.relatedTable}List = (${tab.relatedTable}ListRaw || []).map((row: any) => {\n` +
+                `    const rowId = String(row.id || row.codigo || '')\n` +
+                `    const childItems = (${sub.relatedTable}AllList || []).filter((subRow: any) => {\n` +
+                `      const fkVal = String(subRow['${sub.foreignKey}'] || subRow['id_${tab.relatedTable}'] || subRow['${tab.relatedTable}_id'] || subRow['${tab.relatedTable}'] || '')\n` +
+                `      return fkVal === rowId\n` +
+                `    })\n` +
+                `    return { ...row, items: childItems, itens_pedido: childItems, _details: childItems }\n` +
+                `  })\n`
+              )
+            }
+            return rawQuery + `  const ${tab.relatedTable}List = ${tab.relatedTable}ListRaw || []\n`
+          })
+        ]
+      : [])
+  ].filter(Boolean).join('')
 
   const byocImports = route.formFields
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
@@ -656,6 +704,10 @@ export default async function ${mn}DetailPage({
   if (!data) notFound()
 
 ${relationQueries}
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
+  }
+
   return (
     <${mn}DetailTabsClient
       id={resolvedParams.id}
@@ -665,6 +717,7 @@ ${relationQueries}
       title="${route.title}"
       icon="${route.icon || 'Users'}"
       newPath="${route.path}/new"
+      relationalOptions={relationalOptions}
 ${hasRelationTabs ? route.relationTabs.map((tab) => `      ${tab.relatedTable}Items={${tab.relatedTable}List || []}`).join('\n') : ''}
     />
   )

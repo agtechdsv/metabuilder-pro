@@ -9,8 +9,59 @@ export function generateNewPage(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
 
+  const lookupModels = new Map<string, string>()
+  route.formFields.forEach(f => {
+    const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (targetModel && targetTable) {
+      lookupModels.set(targetTable.toLowerCase(), targetModel)
+    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
+      const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
+      lookupModels.set(targetTable.toLowerCase(), modelName)
+    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const table = base.endsWith('s') ? base : (base + 's')
+      const modelName = table.charAt(0).toUpperCase() + table.slice(1)
+      lookupModels.set(table.toLowerCase(), modelName)
+    }
+  })
+
+  const hasSelfRel = route.formFields.some(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    return targetTable && targetTable.toLowerCase() === mnLower
+  })
+
+  const lookupImports = Array.from(lookupModels.entries())
+    .filter(([table]) => table !== mnLower)
+    .map(([_, modelName]) => `import { get${modelName}List } from '@/app/actions/${modelName.toLowerCase()}'`)
+    .join('\n')
+
+  const selfActionImport = (hasSelfRel || lookupModels.has(mnLower)) ? `, get${mn}List` : ''
+
+  const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) => {
+    if (table === mnLower) {
+      return `  const ${table}LookupList = await get${mn}List().catch(() => [])\n`
+    }
+    return `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
+  }).join('')
+
+  const selfLookupQuery = (hasSelfRel && !lookupModels.has(mnLower))
+    ? `  const ${mnLower}LookupList = await get${mn}List().catch(() => [])\n`
+    : ''
+
+  const buildOptionsCode: string[] = []
+  route.formFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    if (targetTable && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
+      const t = targetTable.toLowerCase()
+      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: r.nome || r.name || r.titulo || r.title || r.razao_social || String(r.id) })),`)
+    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
+
   const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, false))
+    .map(f => renderFormField(f, false, false, 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
@@ -24,8 +75,8 @@ export function generateNewPage(route: RouteNode): string {
   return `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { create${mn} } from '@/app/actions/${mnLower}'
-${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { create${mn}${selfActionImport} } from '@/app/actions/${mnLower}'
+${lookupImports ? `${lookupImports}\n` : ''}${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -119,7 +170,12 @@ function formatWithMask(v: any, mask?: string) {
 
 export const metadata: Metadata = { title: 'Novo — ${route.title}' }
 
-export default function ${mn}NewPage() {
+export default async function ${mn}NewPage() {
+${lookupQueries}
+${selfLookupQuery}
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
+  }
   const isEdit = false
   const data: any = {}
 

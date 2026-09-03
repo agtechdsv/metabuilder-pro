@@ -737,6 +737,9 @@ function resolveRelationTabs(
     const childModel = allModels.find((m: any) => m.id === rel.from_model_id)
     if (!childModel) continue
 
+    // Auto-relacionamentos (ex: tarefa_antecessora -> tarefas) nunca são abas de detalhe
+    if (childModel.id === view.model_id) continue
+
     // Se o childModel está explicitamente oculto ou não faz parte dos joins/detalhes configurados:
     if (hiddenDetails.includes(childModel.id)) continue
     if (detailsDisplayMode[childModel.id] === 'hidden') continue
