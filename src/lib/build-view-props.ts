@@ -376,18 +376,33 @@ export async function buildViewProps(
       if (idxB === -1) return -1
       return idxA - idxB
     })
-    .map((c: any) => ({
-      id: c.field.id,
-      model_id: c.field.model_id,
-      model_name: tableDictionary[c.field.model_id],
-      display_name: c.label || c.field.display_name || c.field.db_column_name,
-      db_column_name: resolveResultKey(c.field),
-      sql_expression: resolveSqlExpression(c.field),
-      data_type: c.field.data_type,
-      config: Object.keys(c.config || {}).length > 0
+    .map((c: any) => {
+      const fId = c.field.id
+      const fCol = c.field.db_column_name
+      const baseMeta = view.layout_config?.fields_metadata?.[fId] || view.layout_config?.fields_metadata?.[fCol] || {}
+      const specificMeta = view.layout_config?.fields_metadata?.[`filter-${fId}`] || view.layout_config?.fields_metadata?.[`filter-${fCol}`] || {}
+      const rawCompConfig = Object.keys(c.config || {}).length > 0
         ? { ...(c.field.config || {}), ...(c.config || {}) }
-        : c.field.config
-    }))
+        : (c.field.config || {})
+      const mergedConfig = { ...rawCompConfig, ...baseMeta, ...specificMeta }
+      if (baseMeta.component || specificMeta.component) {
+        mergedConfig.component = {
+          ...(rawCompConfig.component || {}),
+          ...(baseMeta.component || {}),
+          ...(specificMeta.component || {})
+        }
+      }
+      return {
+        id: c.field.id,
+        model_id: c.field.model_id,
+        model_name: tableDictionary[c.field.model_id],
+        display_name: specificMeta.label?.text || baseMeta.label?.text || c.label || c.field.display_name || c.field.db_column_name,
+        db_column_name: resolveResultKey(c.field),
+        sql_expression: resolveSqlExpression(c.field),
+        data_type: c.field.data_type,
+        config: mergedConfig
+      }
+    })
 
   const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field
   const primaryKeyName = primaryKeyField?.db_column_name || 'id'

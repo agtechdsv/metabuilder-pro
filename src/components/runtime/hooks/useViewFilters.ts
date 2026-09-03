@@ -96,13 +96,36 @@ export function useViewFilters({
       const supabaseClient = createClient()
       const newOptions: Record<string, any[]> = {}
 
-      const allFieldsWithRelational = [...(filterFields || []), ...(displayFields || [])]
-      const uniqueFields = Array.from(new Map(allFieldsWithRelational.map(f => [f.id, f])).values())
+      // Mescla displayFields e filterFields garantindo que configurações de filtro ricas
+      // (como enums e dropdowns) NUNCA sejam sobrescritas por campos brutos ou dummies da zona grid/kanban
+      const fieldsMap = new Map<string, any>()
+      const allFields = [...(displayFields || []), ...(filterFields || [])]
+      for (const f of allFields) {
+        if (!f || !f.id) continue
+        const existing = fieldsMap.get(f.id)
+        if (!existing) {
+          fieldsMap.set(f.id, f)
+        } else {
+          const existingComp = existing.config?.filter_config?.component || existing.config?.component
+          const newComp = f.config?.filter_config?.component || f.config?.component
+          fieldsMap.set(f.id, {
+            ...existing,
+            ...f,
+            config: {
+              ...(existing.config || {}),
+              ...(f.config || {}),
+              ...(Object.keys(f.config || {}).length === 0 ? existing.config : {}),
+              component: newComp || existingComp
+            }
+          })
+        }
+      }
+      const uniqueFields = Array.from(fieldsMap.values())
 
       for (const field of uniqueFields) {
         const config = field.config?.filter_config || field.config?.grid_config || field.config
-        const comp = config?.component
-        const isRelationalComp = comp?.type && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
+        const comp = config?.component || field.config?.component
+        const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {

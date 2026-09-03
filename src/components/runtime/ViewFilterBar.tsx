@@ -53,7 +53,7 @@ export function ViewFilterBar({
                     </label>
                     <div className="relative group">
                       {(() => {
-                        const comp = zoneConfig.component || { type: 'text' }
+                        const comp = zoneConfig.component || field.config?.component || { type: 'text' }
                         const fieldType = comp.type || 'text'
                         let options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
                           ? (relationalOptions[field.id] || relationalOptions[field.db_column_name] || [])
