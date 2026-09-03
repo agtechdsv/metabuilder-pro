@@ -149,7 +149,8 @@ function applyFieldsMeta(
     baseFieldConfig?.fixed_options
 
   const comp = mergedMeta.component || merged.component || baseFieldConfig?.component
-  if (comp && comp.options_type === 'enumeration' && comp.rel_table) {
+  const compType = String(comp?.type || '').toLowerCase()
+  if (comp && comp.options_type === 'enumeration' && comp.rel_table && !['text', 'number', 'textarea'].includes(compType)) {
     const enumOpts = enumsMap[comp.rel_table] || enumsMap[comp.rel_table.toLowerCase()]
     if (enumOpts && enumOpts.length > 0) {
       options = enumOpts

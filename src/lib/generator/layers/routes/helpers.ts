@@ -200,14 +200,12 @@ export function renderFormField(
     }
   }
 
+  const isTextLike = ['text', 'number', 'textarea', 'date', 'datetime'].includes(compType)
+
   const isSelect =
     ['select', 'combo (select)', 'radio', 'radio buttons'].includes(compType) ||
-    comp.options_type === 'relational' ||
-    comp.options_type === 'enumeration' ||
-    Boolean(field.config?.relation?.targetTable) ||
-    Boolean(comp.rel_table) ||
-    (col.endsWith('_id') && !field.isPrimaryKey) ||
-    Boolean(options && options.length > 0)
+    ((col.endsWith('_id') || Boolean(field.config?.relation?.targetTable)) && !field.isPrimaryKey && !isTextLike) ||
+    (Boolean(options && options.length > 0) && !isTextLike)
 
   if (isSelect) {
     const defaultOpts = options && options.length > 0 ? JSON.stringify(options) : '[]'
