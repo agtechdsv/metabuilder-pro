@@ -1209,11 +1209,13 @@ export function DetailRelationSection({
   const formatDateForInput = (v: any) => {
     if (!v) return ''
     const s = String(v).trim()
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10)
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s
+    if (/^\\d{4}-\\d{2}-\\d{2}T/.test(s)) return s.slice(0, 10)
+    if (s.includes('/')) {
       const parts = s.split('/')
-      return \`\${parts[2]}-\${parts[1]}-\${parts[0]}\`
+      if (parts.length === 3) {
+        return \`\${parts[2].slice(0, 4)}-\${parts[1].padStart(2, '0')}-\${parts[0].padStart(2, '0')}\`
+      }
     }
     try {
       const d = new Date(v)
