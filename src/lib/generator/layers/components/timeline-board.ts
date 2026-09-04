@@ -518,11 +518,11 @@ export function TimelineBoard({
               {/* Linha horizontal principal conectando perfeitamente do nó 0 ao nó N-1 */}
               {sortedData.length > 1 && (
                 <motion.div
-                  initial={animated ? { scaleX: 0 } : false}
-                  animate={animated ? { scaleX: 1 } : false}
+                  initial={animated ? { scaleX: 0, y: "-50%" } : { y: "-50%" }}
+                  animate={{ scaleX: 1, y: "-50%" }}
                   transition={{ duration: animDuration, ease: "easeOut" }}
                   className={cn(
-                    "absolute h-[3px] bg-[#6366f1] -translate-y-1/2 rounded-full origin-left",
+                    "absolute h-[3px] bg-[#6366f1] rounded-full origin-left",
                     mode === 'alternating' ? "top-1/2" : "top-[60px]"
                   )}
                   style={{
@@ -552,13 +552,13 @@ export function TimelineBoard({
                   >
                     {/* Nó Central na Linha */}
                     <motion.div
-                      initial={animated ? { scale: 0, opacity: 0 } : false}
-                      animate={animated ? { scale: 1, opacity: 1 } : false}
+                      initial={animated ? { scale: 0, opacity: 0, x: "-50%", y: "-50%" } : { x: "-50%", y: "-50%" }}
+                      animate={{ scale: 1, opacity: 1, x: "-50%", y: "-50%" }}
                       whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       transition={{ delay: animated ? getNodeDelay(index) : 0, duration: 0.2 }}
                       className={cn(
-                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-y-1/2 left-1/2 -translate-x-1/2",
+                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 left-1/2",
                         mode === 'alternating' ? "top-1/2" : "top-[60px]"
                       )}
                       style={{
@@ -568,10 +568,7 @@ export function TimelineBoard({
                     />
 
                     {/* Conteúdo (Topo / Base no Zig-Zag) */}
-                    <motion.div
-                      initial={animated ? { y: 20, opacity: 0 } : false}
-                      animate={animated ? { y: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                    <div
                       className={cn(
                         "w-full flex relative",
                         mode === 'alternating'
@@ -680,7 +677,12 @@ export function TimelineBoard({
                         </div>
                       )}
 
-                      <div className="relative z-10 w-full">
+                      <motion.div
+                        initial={animated ? { y: isEven && mode === 'alternating' ? -15 : 15, opacity: 0 } : false}
+                        animate={animated ? { y: 0, opacity: 1 } : false}
+                        transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                        className="relative z-10 w-full"
+                      >
                         {style === 'infographic'
                           ? renderInfographicContent(
                               item,
@@ -694,8 +696,8 @@ export function TimelineBoard({
                               itemColor
                             )
                           : renderCardContent(item, title, desc, iconStatus, rawDate, false)}
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                    </div>
                   </div>
                 )
               })}
@@ -717,11 +719,11 @@ export function TimelineBoard({
           <div className={cn("relative mx-auto py-8", style === 'infographic' ? "max-w-4xl" : "max-w-5xl")}>
             {/* Linha vertical principal */}
             <motion.div
-              initial={animated ? { scaleY: 0 } : false}
-              animate={animated ? { scaleY: 1 } : false}
+              initial={animated ? { scaleY: 0, x: "-50%" } : { x: "-50%" }}
+              animate={{ scaleY: 1, x: "-50%" }}
               transition={{ duration: animDuration, ease: "easeOut" }}
               className={cn(
-                "absolute top-0 bottom-0 w-[3px] bg-[#6366f1] -translate-x-1/2 rounded-full origin-top",
+                "absolute top-0 bottom-0 w-[3px] bg-[#6366f1] rounded-full origin-top",
                 mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
               )}
             />
@@ -743,13 +745,13 @@ export function TimelineBoard({
                   >
                     {/* Nó na Linha Vertical */}
                     <motion.div
-                      initial={animated ? { scale: 0, opacity: 0 } : false}
-                      animate={animated ? { scale: 1, opacity: 1 } : false}
+                      initial={animated ? { scale: 0, opacity: 0, x: "-50%", y: "-50%" } : { x: "-50%", y: "-50%" }}
+                      animate={{ scale: 1, opacity: 1, x: "-50%", y: "-50%" }}
                       whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       transition={{ delay: animated ? getNodeDelay(index) : 0, duration: 0.2 }}
                       className={cn(
-                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-x-1/2 -translate-y-1/2",
+                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10",
                         style === 'infographic' ? "top-[32px]" : "top-8",
                         mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
                       )}
@@ -761,10 +763,7 @@ export function TimelineBoard({
 
                     {/* Lado Esquerdo/Direito Alternado (Apenas se mode for alternating) */}
                     {mode === 'alternating' && (
-                      <motion.div
-                        initial={animated ? { x: isEven ? 20 : -20, opacity: 0 } : false}
-                        animate={animated ? { x: 0, opacity: 1 } : false}
-                        transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                      <div
                         className={cn("hidden md:flex w-1/2 relative", isEven ? "pr-12 justify-end" : "pl-12 justify-start ml-auto")}
                       >
                         {style === 'infographic' && (
@@ -811,7 +810,13 @@ export function TimelineBoard({
                             </svg>
                           </div>
                         )}
-                        <div className="relative z-10 w-full" style={{ maxWidth: \`\${scale * 450}px\` }}>
+                        <motion.div
+                          initial={animated ? { x: isEven ? -15 : 15, opacity: 0 } : false}
+                          animate={animated ? { x: 0, opacity: 1 } : false}
+                          transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                          className="relative z-10 w-full"
+                          style={{ maxWidth: \`\${scale * 450}px\` }}
+                        >
                           {style === 'infographic'
                             ? renderInfographicContent(
                                 item,
@@ -825,15 +830,12 @@ export function TimelineBoard({
                                 itemColor
                               )
                             : renderCardContent(item, title, desc, iconStatus, rawDate, isEven)}
-                        </div>
-                      </motion.div>
+                        </motion.div>
+                      </div>
                     )}
 
                     {/* Layout Mobile (ou Same Side no Desktop) */}
-                    <motion.div
-                      initial={animated ? { x: 20, opacity: 0 } : false}
-                      animate={animated ? { x: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                    <div
                       className={cn("flex w-full relative pl-16 pr-4", mode === 'same_side' ? "" : "md:hidden")}
                     >
                       {style === 'infographic' && (
@@ -871,7 +873,13 @@ export function TimelineBoard({
                           </svg>
                         </div>
                       )}
-                      <div className="relative z-10 w-full" style={{ maxWidth: \`\${scale * 450}px\` }}>
+                      <motion.div
+                        initial={animated ? { x: 15, opacity: 0 } : false}
+                        animate={animated ? { x: 0, opacity: 1 } : false}
+                        transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
+                        className="relative z-10 w-full"
+                        style={{ maxWidth: \`\${scale * 450}px\` }}
+                      >
                         {style === 'infographic'
                           ? renderInfographicContent(
                               item,
@@ -885,8 +893,8 @@ export function TimelineBoard({
                               itemColor
                             )
                           : renderCardContent(item, title, desc, iconStatus, rawDate, false)}
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                    </div>
                   </div>
                 )
               })}
