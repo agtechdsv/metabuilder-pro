@@ -918,21 +918,21 @@ export function TimelineBoard({
             </div>
           </div>
         )}
-
-        {/* Barra de Paginação / Carregar Mais idêntica à Web Produção */}
-        {hasMore && onLoadMore && (
-          <div className="flex justify-center pb-8 pt-4">
-            <button
-              type="button"
-              onClick={onLoadMore}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-md hover:shadow-lg hover:border-indigo-500/30 text-xs font-black tracking-widest text-indigo-600 dark:text-indigo-400 uppercase transition-all active:scale-95 cursor-pointer"
-            >
-              <RefreshCcw className="w-3.5 h-3.5" />
-              CARREGAR MAIS {visibleCount} REGISTROS... ({Math.min(sortedData.length, totalRecords)} DE {totalRecords})
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Botão Flutuante de Carregar Mais Registros Fiel à Web Produção */}
+      {hasMore && onLoadMore && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-2xl flex items-center gap-2 ring-1 ring-black/5 dark:ring-white/10 active:scale-95 cursor-pointer"
+          >
+            <RefreshCcw className="w-4 h-4 text-indigo-500" />
+            CARREGAR MAIS {Math.min(visibleCount || 50, totalRecords - sortedData.length)} REGISTROS... ({sortedData.length} DE {totalRecords})
+          </button>
+        </div>
+      )}
     </div>
   )
 }
