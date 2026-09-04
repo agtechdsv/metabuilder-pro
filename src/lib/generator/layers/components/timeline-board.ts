@@ -135,6 +135,13 @@ export function TimelineBoard({
     })
   }, [data, timelineConfig, direction])
 
+  // Timings da animação calculados de forma suave para qualquer quantidade de registros (1 a 50+)
+  const animDuration = Math.min(sortedData.length * 0.08 + 0.3, 1.2)
+  const getNodeDelay = (idx: number) => Math.min(idx * 0.04 + 0.08, 0.7)
+  const getPath1Delay = (idx: number) => Math.min(idx * 0.04 + 0.12, 0.75)
+  const getPath2Delay = (idx: number) => Math.min(idx * 0.04 + 0.16, 0.8)
+  const getContentDelay = (idx: number) => Math.min(idx * 0.04 + 0.16, 0.8)
+
   const resolveFieldValue = (row: any, colName?: string) => {
     if (!colName || !row) return ''
     const val = row[colName]
@@ -500,25 +507,28 @@ export function TimelineBoard({
         className="w-full bg-neutral-50/50 dark:bg-neutral-950/50 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden"
       >
         {direction === 'horizontal' ? (
-          <div className="relative w-full overflow-x-auto custom-scrollbar py-12 px-6">
+          <div className="relative w-full overflow-x-auto custom-scrollbar py-8 px-4">
             <div
               className={cn(
-                "relative min-w-max flex gap-8 px-8",
+                "relative min-w-max flex gap-8 px-4",
                 mode === 'alternating' ? "items-center" : "items-start pb-8"
               )}
               style={{ minHeight: mode === 'alternating' ? '450px' : (style === 'infographic' ? '320px' : '380px') }}
             >
-              {/* Linha horizontal principal */}
+              {/* Linha horizontal principal conectando perfeitamente do nó 0 ao nó N-1 */}
               {sortedData.length > 1 && (
                 <motion.div
                   initial={animated ? { scaleX: 0 } : false}
                   animate={animated ? { scaleX: 1 } : false}
-                  transition={{ duration: sortedData.length * 0.4 + 0.5, ease: "easeOut" }}
+                  transition={{ duration: animDuration, ease: "easeOut" }}
                   className={cn(
                     "absolute h-[3px] bg-[#6366f1] -translate-y-1/2 rounded-full origin-left",
                     mode === 'alternating' ? "top-1/2" : "top-[60px]"
                   )}
-                  style={{ left: \`\${scale * 175}px\`, right: \`\${scale * 175}px\` }}
+                  style={{
+                    left: \`calc(1rem + \${scale * 175}px)\`,
+                    width: \`\${(sortedData.length - 1) * (scale * 350 + 32)}px\`,
+                  }}
                 />
               )}
 
@@ -546,7 +556,7 @@ export function TimelineBoard({
                       animate={animated ? { scale: 1, opacity: 1 } : false}
                       whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
-                      transition={{ delay: animated ? index * 0.4 + 0.4 : 0, duration: 0.2 }}
+                      transition={{ delay: animated ? getNodeDelay(index) : 0, duration: 0.2 }}
                       className={cn(
                         "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-y-1/2 left-1/2 -translate-x-1/2",
                         mode === 'alternating' ? "top-1/2" : "top-[60px]"
@@ -561,7 +571,7 @@ export function TimelineBoard({
                     <motion.div
                       initial={animated ? { y: 20, opacity: 0 } : false}
                       animate={animated ? { y: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
+                      transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
                       className={cn(
                         "w-full flex relative",
                         mode === 'alternating'
@@ -618,17 +628,23 @@ export function TimelineBoard({
                               initial={animated ? { pathLength: 0, opacity: 0 } : false}
                               animate={animated ? { pathLength: 1, opacity: 1 } : false}
                               transition={{
-                                delay: animated ? index * 0.4 + 0.3 : 0,
-                                duration: 0.5,
+                                delay: animated ? getPath1Delay(index) : 0,
+                                duration: 0.4,
                                 ease: "easeOut",
                               }}
                               stroke="#6366f1"
                               d={
-                                mode === 'alternating'
-                                  ? isEven
-                                    ? "M 0 60 L 22 60 A 10 10 0 0 1 32 50 L 32 18"
-                                    : "M 0 60 L 22 60 A 10 10 0 0 0 32 70 L 32 102"
-                                  : "M 0 60 L 22 60 A 10 10 0 0 0 32 70 L 32 102"
+                                index === 0
+                                  ? (mode === 'alternating'
+                                      ? (isEven
+                                          ? "M 22 60 A 10 10 0 0 1 32 50 L 32 18"
+                                          : "M 22 60 A 10 10 0 0 0 32 70 L 32 102")
+                                      : "M 22 60 A 10 10 0 0 0 32 70 L 32 102")
+                                  : (mode === 'alternating'
+                                      ? (isEven
+                                          ? "M 0 60 L 22 60 A 10 10 0 0 1 32 50 L 32 18"
+                                          : "M 0 60 L 22 60 A 10 10 0 0 0 32 70 L 32 102")
+                                      : "M 0 60 L 22 60 A 10 10 0 0 0 32 70 L 32 102")
                               }
                             />
                             {index < sortedData.length - 1 && (
@@ -636,8 +652,8 @@ export function TimelineBoard({
                                 initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                 animate={animated ? { pathLength: 1, opacity: 1 } : false}
                                 transition={{
-                                  delay: animated ? index * 0.4 + 0.5 : 0,
-                                  duration: 0.5,
+                                  delay: animated ? getPath2Delay(index) : 0,
+                                  duration: 0.4,
                                   ease: "easeOut",
                                 }}
                                 stroke="#6366f1"
@@ -698,12 +714,12 @@ export function TimelineBoard({
           </div>
         ) : (
           /* Direção Vertical */
-          <div className={cn("relative mx-auto py-12 px-6", style === 'infographic' ? "max-w-4xl" : "max-w-5xl")}>
+          <div className={cn("relative mx-auto py-8", style === 'infographic' ? "max-w-4xl" : "max-w-5xl")}>
             {/* Linha vertical principal */}
             <motion.div
               initial={animated ? { scaleY: 0 } : false}
               animate={animated ? { scaleY: 1 } : false}
-              transition={{ duration: sortedData.length * 0.4 + 0.5, ease: "easeOut" }}
+              transition={{ duration: animDuration, ease: "easeOut" }}
               className={cn(
                 "absolute top-0 bottom-0 w-[3px] bg-[#6366f1] -translate-x-1/2 rounded-full origin-top",
                 mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
@@ -731,7 +747,7 @@ export function TimelineBoard({
                       animate={animated ? { scale: 1, opacity: 1 } : false}
                       whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
                       whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
-                      transition={{ delay: animated ? index * 0.4 + 0.4 : 0, duration: 0.2 }}
+                      transition={{ delay: animated ? getNodeDelay(index) : 0, duration: 0.2 }}
                       className={cn(
                         "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-x-1/2 -translate-y-1/2",
                         style === 'infographic' ? "top-[32px]" : "top-8",
@@ -748,7 +764,7 @@ export function TimelineBoard({
                       <motion.div
                         initial={animated ? { x: isEven ? 20 : -20, opacity: 0 } : false}
                         animate={animated ? { x: 0, opacity: 1 } : false}
-                        transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
+                        transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
                         className={cn("hidden md:flex w-1/2 relative", isEven ? "pr-12 justify-end" : "pl-12 justify-start ml-auto")}
                       >
                         {style === 'infographic' && (
@@ -767,7 +783,7 @@ export function TimelineBoard({
                               <motion.path 
                                 initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                 animate={animated ? { pathLength: 1, opacity: 1 } : false}
-                                transition={{ delay: animated ? index * 0.4 + 0.3 : 0, duration: 0.5, ease: "easeOut" }}
+                                transition={{ delay: animated ? getPath1Delay(index) : 0, duration: 0.4, ease: "easeOut" }}
                                 stroke="#6366f1"
                                 d={isEven 
                                     ? "M 60 0 L 60 22 A 10 10 0 0 0 50 32 L 18 32"
@@ -780,7 +796,7 @@ export function TimelineBoard({
                                 <motion.path 
                                   initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                   animate={animated ? { pathLength: 1, opacity: 1 } : false}
-                                  transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.5, ease: "easeOut" }}
+                                  transition={{ delay: animated ? getPath2Delay(index) : 0, duration: 0.4, ease: "easeOut" }}
                                   stroke="#6366f1"
                                   d={isEven
                                     ? "M 70 32 A 10 10 0 0 1 60 42 L 60 64"
@@ -817,7 +833,7 @@ export function TimelineBoard({
                     <motion.div
                       initial={animated ? { x: 20, opacity: 0 } : false}
                       animate={animated ? { x: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
+                      transition={{ delay: animated ? getContentDelay(index) : 0, duration: 0.4 }}
                       className={cn("flex w-full relative pl-16 pr-4", mode === 'same_side' ? "" : "md:hidden")}
                     >
                       {style === 'infographic' && (
@@ -834,7 +850,7 @@ export function TimelineBoard({
                             <motion.path 
                               initial={animated ? { pathLength: 0, opacity: 0 } : false}
                               animate={animated ? { pathLength: 1, opacity: 1 } : false}
-                              transition={{ delay: animated ? index * 0.4 + 0.3 : 0, duration: 0.5, ease: "easeOut" }}
+                              transition={{ delay: animated ? getPath1Delay(index) : 0, duration: 0.4, ease: "easeOut" }}
                               stroke="#6366f1"
                               d="M 60 0 L 60 22 A 10 10 0 0 1 70 32 L 102 32"
                             />
@@ -844,7 +860,7 @@ export function TimelineBoard({
                               <motion.path 
                                 initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                 animate={animated ? { pathLength: 1, opacity: 1 } : false}
-                                transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.5, ease: "easeOut" }}
+                                transition={{ delay: animated ? getPath2Delay(index) : 0, duration: 0.4, ease: "easeOut" }}
                                 stroke="#6366f1"
                                 d="M 50 32 A 10 10 0 0 0 60 42 L 60 64"
                               />
