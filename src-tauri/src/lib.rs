@@ -204,7 +204,7 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
 #[command]
 fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
     let sidecar_command = app.shell().command("cmd")
-        .args(vec!["/c", "npm install"])
+        .args(vec!["/c", "npm install --prefer-offline --no-audit --no-fund --legacy-peer-deps"])
         .current_dir(&project_path);
 
     let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;

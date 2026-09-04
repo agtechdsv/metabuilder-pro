@@ -294,14 +294,23 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       const { listen } = await import('@tauri-apps/api/event')
       
       await new Promise<void>(async (resolve, reject) => {
+        const unlistenLog = await listen<string>('nextjs-dev-log', (event) => {
+          const text = event.payload
+          const lower = text.toLowerCase()
+          const type = lower.includes('error') ? 'error' : lower.includes('warn') ? 'warn' : 'stdout'
+          addConsoleLog(text, type)
+        })
+
         const unlistenInstall = await listen<boolean>('npm-install-done', (event) => {
           unlistenInstall()
+          unlistenLog()
           if (event.payload) resolve(); else reject(new Error('npm install falhou'))
         })
         try {
           await invoke('start_npm_install', { projectPath })
         } catch (e) {
           unlistenInstall()
+          unlistenLog()
           reject(e)
         }
       })

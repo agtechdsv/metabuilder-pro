@@ -13,7 +13,7 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   files.set('app/globals.css', generateWorkspaceGlobalCss())
   files.set('app/page.tsx', generatePortalPage(ast))
 
-  // 2. package.json unificado (dependÃªncias de todos os projetos)
+  // 2. package.json unificado (dependências de todos os projetos)
   const allDeps: Record<string, string> = {
     'next': '^14.2.0',
     'react': '^18.3.0',
@@ -70,6 +70,9 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
 
   // .gitignore
   files.set('.gitignore', `/node_modules\n/.next\n/out\n.DS_Store\n.env*.local\n.env\n`)
+
+  // .npmrc — acelera o npm install e pula auditorias desnecessárias
+  files.set('.npmrc', `legacy-peer-deps=true\nprefer-offline=true\naudit=false\nfund=false\n`)
 
   // tailwind.config.ts
   files.set('tailwind.config.ts', `import type { Config } from 'tailwindcss';
@@ -134,14 +137,14 @@ export default config;
     const routeNav = pApp.routes.map(r => ({ path: r.path, title: r.title }))
     files.set(`app/${pSlug}/layout.tsx`, generateProjectLayout(project.name, pSlug, routeNav))
 
-    // PÃ¡gina índice do projeto (redirect para primeira view)
+    // Página índice do projeto (redirect para primeira view)
     const firstRoute = pApp.routes[0]?.path || '/'
     files.set(`app/${pSlug}/page.tsx`, `import { redirect } from 'next/navigation'\nexport default function ProjectIndex() {\n  redirect('/${pSlug}${firstRoute}')\n}\n`)
 
     // Middleware de autenticação
-    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃƒO exigem autenticação\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas pÃºblicas e arquivos estÃ¡ticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessão\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estÃ¡ticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
+    files.set('middleware.ts', `import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\n// Rotas que NÃO exigem autenticação\nconst PUBLIC_PATHS = ['/login']\n\nexport function middleware(request: NextRequest) {\n  const { pathname } = request.nextUrl\n\n  // Permite rotas públicas e arquivos estáticos\n  if (\n    PUBLIC_PATHS.some(p => pathname.startsWith(p)) ||\n    pathname.startsWith('/_next') ||\n    pathname.startsWith('/favicon')\n  ) {\n    return NextResponse.next()\n  }\n\n  // Verifica o cookie de sessão\n  const session = request.cookies.get('mb_session')?.value\n\n  if (!session) {\n    const loginUrl = new URL('/login', request.url)\n    loginUrl.searchParams.set('redirect', pathname)\n    return NextResponse.redirect(loginUrl)\n  }\n\n  return NextResponse.next()\n}\n\nexport const config = {\n  matcher: [\n    // Protege tudo exceto arquivos estáticos e API do Next\n    '/((?!_next/static|_next/image|favicon.ico).*)',\n  ],\n}\n`)
 
-    // Rotas, Actions e Components â€” com prefix do projeto
+    // Rotas, Actions e Components — com prefix do projeto
     const projectFiles = new Map<string, string>()
     generateRoutes(pApp, projectFiles)
     generateActions(pApp, projectFiles)
@@ -154,7 +157,7 @@ export default config;
     }
   }
 
-  // 5. PÃ¡gina de login unificada para o workspace
+  // 5. Página de login unificada para o workspace
   const primaryProject = ast.projects[0]?.app
   if (primaryProject) {
     generateLoginPage(primaryProject, files)

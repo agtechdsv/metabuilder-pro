@@ -82,7 +82,10 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
 .env
 `)
 
-  // tsconfig.json â€” essencial para o alias @/ funcionar
+  // .npmrc — acelera o npm install, previne backtracking de peer deps e pula auditoria de rede
+  files.set('.npmrc', `legacy-peer-deps=true\nprefer-offline=true\naudit=false\nfund=false\n`)
+
+  // tsconfig.json — essencial para o alias @/ funcionar
   files.set('tsconfig.json', JSON.stringify({
     compilerOptions: {
       target: "ES2017",
