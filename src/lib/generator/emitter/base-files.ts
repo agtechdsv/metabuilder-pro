@@ -557,9 +557,9 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   // Protected Layout — usa AppSidebar + Header idêntico ao Runtime
   files.set('app/(protected)/layout.tsx', `'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, Home, ChevronRight } from 'lucide-react'
 import { AppSidebar } from '@/app/components/AppSidebar'
 import { HeaderControls } from '@/app/components/HeaderControls'
@@ -569,9 +569,19 @@ const NAV_ITEMS = ${navItemsJson}
 const PROJECT_SLUG = '${ast.projectSlug}'
 const PROJECT_NAME = '${ast.projectName}'
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const isEmbedded = searchParams?.get('embedded') === 'true'
+
+  if (isEmbedded) {
+    return (
+      <div className="flex-1 min-h-screen bg-transparent">
+        {children}
+      </div>
+    )
+  }
 
   const segments = (pathname || '').split('/').filter(Boolean)
   const slugSegment = segments[0] === PROJECT_SLUG ? segments[1] : segments[0]
@@ -625,6 +635,16 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+  )
+}
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="flex-1 min-h-screen bg-transparent">{children}</div>}>
+      <ProtectedLayoutContent>
+        {children}
+      </ProtectedLayoutContent>
+    </Suspense>
   )
 }
 `)

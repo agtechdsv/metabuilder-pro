@@ -96,13 +96,22 @@ export function generateListPage(route: RouteNode): string {
   const rowButtonsHtml = route.buttons
     .filter(b => b.placement === 'row' && b.actionType !== 'view' && b.actionType !== 'edit' && b.actionType !== 'update' && b.actionType !== 'delete')
     .map(b => {
-      const target = b.linkTarget || '#'
-      const sep = target.includes('?') ? '&' : '?'
-      const queryParam = `${mnLower}_id=' + item.${route.primaryKey}`
-      const iconName = b.icon || 'Receipt'
-      return `                      <Link href={'${target}${sep}${queryParam}} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="${b.label}">
-                        <DynamicIcon icon="${iconName}" size={14} />
-                      </Link>`
+      const actionConfig = {
+        id: b.id,
+        label: b.label,
+        icon: b.icon || 'Receipt',
+        style: b.style,
+        triggerType: b.triggerType,
+        usecaseSlug: b.usecaseSlug,
+        usecaseOpenMode: b.usecaseOpenMode || 'modal',
+        usecaseModalSize: b.usecaseModalSize || 'full',
+        usecaseModalWidth: b.usecaseModalWidth,
+        usecaseModalHeight: b.usecaseModalHeight,
+        usecaseSelectedFields: b.usecaseSelectedFields || [],
+        usecaseParams: b.usecaseParams || '',
+        linkTarget: b.linkTarget || '',
+      }
+      return `                      <CustomActionButton action={${JSON.stringify(actionConfig)}} item={item} />`
     })
     .join('\n')
 
@@ -113,6 +122,7 @@ import { delete${mn} } from '@/app/actions/${mnLower}'
 import { Plus, Pencil, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { CustomActionButton, CloseModalButton } from '@/components/ui/custom-action-button'
 import { LimitSelector } from '@/components/ui/limit-selector'
 
 export const metadata: Metadata = { title: '${route.title}' }
@@ -123,6 +133,7 @@ export default async function ${mn}ListPage({
   searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
   const params = await searchParams
+  const isEmbedded = params?.embedded === 'true'
   const sortBy = params?.sort_by
   const sortOrder = params?.sort_order || 'asc'
   const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
@@ -217,12 +228,31 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
             <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
           </button>`
   }
+  if (b.actionType === 'custom') {
+    const actionConfig = {
+      id: b.id,
+      label: b.label,
+      icon: b.icon || 'Zap',
+      style: b.style,
+      triggerType: b.triggerType,
+      usecaseSlug: b.usecaseSlug,
+      usecaseOpenMode: b.usecaseOpenMode || 'modal',
+      usecaseModalSize: b.usecaseModalSize || 'full',
+      usecaseModalWidth: b.usecaseModalWidth,
+      usecaseModalHeight: b.usecaseModalHeight,
+      usecaseSelectedFields: b.usecaseSelectedFields || [],
+      usecaseParams: b.usecaseParams || '',
+      linkTarget: b.linkTarget || '',
+    }
+    return `          <CustomActionButton action={${JSON.stringify(actionConfig)}} variant="header" />`
+  }
   return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             ${b.label}
           </button>`
 }).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : '')}
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 

@@ -656,61 +656,71 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
     const icon = act.icon || act.custom_icon || 'Receipt'
 
     // Resolve URL / caso de uso de destino se o trigger for use_case
+    const targetUseCaseSlug = act.usecase_slug || act.target_use_case
     let linkTarget = act.linkTarget || act.url || act.target_url
-    if (!linkTarget && act.target_use_case) {
+    if (!linkTarget && targetUseCaseSlug) {
       const targetView = allViews.find(
-        (v: any) => v.slug === act.target_use_case || v.id === act.target_use_case || v.name?.toLowerCase() === String(act.target_use_case).toLowerCase()
+        (v: any) => v.slug === targetUseCaseSlug || v.id === targetUseCaseSlug || v.name?.toLowerCase() === String(targetUseCaseSlug).toLowerCase()
       )
-      const targetSlug = targetView?.slug || act.target_use_case
+      const targetSlug = targetView?.slug || targetUseCaseSlug
       linkTarget = `/${targetSlug}`
     }
+
+    const triggerType = act.trigger_type || (targetUseCaseSlug ? 'usecase' : 'custom')
+    const usecaseSlug = targetUseCaseSlug
+    const usecaseOpenMode = act.usecase_open_mode || 'modal'
+    const usecaseModalSize = act.usecase_modal_size || 'full'
+    const usecaseModalWidth = act.usecase_modal_width
+    const usecaseModalHeight = act.usecase_modal_height
+    const usecaseSelectedFields = act.usecase_selected_fields || []
+    const usecaseParams = act.usecase_params || ''
 
     const searchContexts = getActionContexts(act, 'search')
     const masterContexts = getActionContexts(act, 'master')
 
+    const baseButton: Partial<ViewButton> = {
+      label,
+      icon,
+      style: (act.style || 'primary') as ButtonStyle,
+      actionType: 'custom',
+      confirmationMessage: act.confirmation_message,
+      customLogic: act.custom_logic || act.logic || act.trigger_type,
+      linkTarget,
+      triggerType,
+      usecaseSlug,
+      usecaseOpenMode,
+      usecaseModalSize,
+      usecaseModalWidth,
+      usecaseModalHeight,
+      usecaseSelectedFields,
+      usecaseParams,
+    }
+
     // 1. Linha do Grid de Pesquisa
     if (searchContexts.includes('row')) {
       buttons.push({
+        ...baseButton,
         id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}`,
-        label,
-        icon,
-        style: (act.style || 'primary') as ButtonStyle,
-        actionType: 'custom',
         placement: 'row',
-        confirmationMessage: act.confirmation_message,
-        customLogic: act.custom_logic || act.logic || act.trigger_type,
-        linkTarget,
-      })
+      } as ViewButton)
     }
 
     // 2. Cabeçalho / Topo Global da Pesquisa
     if (searchContexts.includes('global_top')) {
       buttons.push({
+        ...baseButton,
         id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}_top`,
-        label,
-        icon,
-        style: (act.style || 'primary') as ButtonStyle,
-        actionType: 'custom',
         placement: 'header',
-        confirmationMessage: act.confirmation_message,
-        customLogic: act.custom_logic || act.logic || act.trigger_type,
-        linkTarget,
-      })
+      } as ViewButton)
     }
 
     // 3. Topo do Formulário Mestre
     if (masterContexts.includes('global_top') || masterContexts.includes('field_group')) {
       buttons.push({
+        ...baseButton,
         id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}_form`,
-        label,
-        icon,
-        style: (act.style || 'primary') as ButtonStyle,
-        actionType: 'custom',
         placement: 'form',
-        confirmationMessage: act.confirmation_message,
-        customLogic: act.custom_logic || act.logic || act.trigger_type,
-        linkTarget,
-      })
+      } as ViewButton)
     }
   }
 

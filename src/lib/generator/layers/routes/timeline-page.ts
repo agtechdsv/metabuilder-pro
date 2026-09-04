@@ -98,7 +98,12 @@ import { TimelineClient } from './TimelineClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
-export default async function ${mn}TimelinePage() {
+export default async function ${mn}TimelinePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | undefined }>
+}) {
+  const params = searchParams ? await searchParams : {}
   const rawData = await get${mn}List()
 ${lookupQueries}
 
@@ -110,6 +115,7 @@ ${Array.from(optionsMap.values()).join('\n')}
     <TimelineClient
       initialData={rawData || []}
       relationalOptions={relationalOptions}
+      initialParams={params}
     />
   )
 }
@@ -331,15 +337,41 @@ function formatDatetimeForInput(v: any) {
 
 export function TimelineClient({
   initialData,
-  relationalOptions = {}
+  relationalOptions = {},
+  initialParams = {}
 }: {
   initialData: any[]
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  initialParams?: Record<string, string | undefined>
 }) {
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+  const [isEmbedded, setIsEmbedded] = useState(initialParams?.embedded === 'true')
+
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    if (initialParams) {
+      for (const [k, v] of Object.entries(initialParams)) {
+        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to') {
+          init[k] = v
+        }
+      }
+    }
+    return init
+  })
+
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    if (initialParams) {
+      for (const [k, v] of Object.entries(initialParams)) {
+        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to') {
+          init[k] = v
+        }
+      }
+    }
+    return init
+  })
+
   const [visibleCount, setVisibleCount] = useState(50)
   const BATCH_SIZE = 50
 
@@ -349,6 +381,23 @@ export function TimelineClient({
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      if (sp.get('embedded') === 'true') setIsEmbedded(true)
+      const fromUrl: Record<string, string> = {}
+      sp.forEach((val, key) => {
+        if (key !== 'embedded' && key !== 'preview' && key !== 'return_to') {
+          fromUrl[key] = val
+        }
+      })
+      if (Object.keys(fromUrl).length > 0) {
+        setFilterValues(prev => ({ ...fromUrl, ...prev }))
+        setActiveFilters(prev => ({ ...fromUrl, ...prev }))
+      }
+    }
+  }, [])
 
   useEffect(() => {
     setDataList(initialData)
@@ -505,6 +554,16 @@ ${hasCreate ? (isActionModal ? `          <button
           >
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>`) : ''}
+          {isEmbedded && (
+            <button 
+              type="button"
+              onClick={() => window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')}
+              className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0 ml-1 cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 

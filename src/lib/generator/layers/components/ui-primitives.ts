@@ -392,4 +392,228 @@ export function TopProgressBar() {
   )
 }
 `)
+
+  files.set('components/ui/custom-action-button.tsx', `'use client'
+
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { X } from 'lucide-react'
+
+export interface CustomActionParam {
+  source: string
+  target: string
+}
+
+export interface CustomActionConfig {
+  id: string
+  label: string
+  icon?: string
+  style?: string
+  triggerType?: string
+  usecaseSlug?: string
+  usecaseOpenMode?: 'page' | 'modal' | 'drawer'
+  usecaseModalSize?: 'sm' | 'md' | 'lg' | 'full' | 'custom'
+  usecaseModalWidth?: string
+  usecaseModalHeight?: string
+  usecaseSelectedFields?: Array<CustomActionParam | string>
+  usecaseParams?: string
+  linkTarget?: string
+}
+
+export function CustomActionButton({
+  action,
+  item,
+  variant = 'icon',
+}: {
+  action: CustomActionConfig
+  item?: any
+  variant?: 'icon' | 'header'
+}) {
+  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleMsg = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_MODAL') {
+        setIsOpen(false)
+        router.refresh()
+      }
+    }
+    window.addEventListener('message', handleMsg)
+    return () => window.removeEventListener('message', handleMsg)
+  }, [isOpen, router])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
+  const buildUrl = (isEmbedded: boolean) => {
+    const slug = action.usecaseSlug || (action.linkTarget ? action.linkTarget.replace(/^\\//, '') : '')
+    if (!slug) return '#'
+
+    const selectedFields = action.usecaseSelectedFields || []
+    const fieldParamParts = selectedFields.map(f => {
+      if (typeof f === 'string') {
+        const cleanKey = f.includes('.') ? f.split('.').pop()! : f
+        let val = item?.[f] !== undefined ? item[f] : item?.[cleanKey]
+        if (val === undefined && item) {
+          const lKey = cleanKey.toLowerCase()
+          for (const k of Object.keys(item)) {
+            if (k.toLowerCase() === lKey) {
+              val = item[k]
+              break
+            }
+          }
+        }
+        if (val === undefined || val === null || val === '') return ''
+        return \`\${encodeURIComponent(cleanKey)}=\${encodeURIComponent(val)}\`
+      } else if (f && typeof f === 'object' && f.source && f.target) {
+        const cleanSource = f.source.includes('.') ? f.source.split('.').pop()! : f.source
+        let val = item?.[f.source] !== undefined ? item[f.source] : item?.[cleanSource]
+        if (val === undefined && item) {
+          const lSource = f.source.toLowerCase()
+          const lClean = cleanSource.toLowerCase()
+          for (const k of Object.keys(item)) {
+            const lk = k.toLowerCase()
+            if (lk === lSource || lk === lClean) {
+              val = item[k]
+              break
+            }
+          }
+        }
+        if (val === undefined || val === null || val === '') return ''
+        return \`\${encodeURIComponent(f.target)}=\${encodeURIComponent(val)}\`
+      }
+      return ''
+    }).filter(Boolean)
+
+    const extraParams = (action.usecaseParams || '').trim()
+    const allParts = [...fieldParamParts]
+    if (extraParams) {
+      allParts.push(extraParams)
+    }
+    if (isEmbedded) {
+      allParts.push('embedded=true')
+    }
+
+    const qs = allParts.join('&')
+    return \`/\${slug}\${qs ? '?' + qs : ''}\`
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const openMode = action.usecaseOpenMode || 'modal'
+
+    if (openMode === 'page') {
+      const url = buildUrl(false)
+      if (url && url !== '#') {
+        router.push(url)
+      }
+      return
+    }
+
+    setIsOpen(true)
+  }
+
+  const openMode = action.usecaseOpenMode || 'modal'
+  const modalSize = action.usecaseModalSize || 'full'
+  const iframeUrl = buildUrl(true)
+
+  let sizeClasses = 'w-[95vw] h-[90vh] max-w-[95vw]'
+  if (modalSize === 'sm') sizeClasses = 'w-[90vw] max-w-md h-[500px]'
+  else if (modalSize === 'md') sizeClasses = 'w-[90vw] max-w-2xl h-[650px]'
+  else if (modalSize === 'lg') sizeClasses = 'w-[92vw] max-w-5xl h-[80vh]'
+  else if (modalSize === 'full') sizeClasses = 'w-[95vw] h-[90vh] max-w-[95vw]'
+
+  const customStyle: React.CSSProperties = {}
+  if (modalSize === 'custom') {
+    if (action.usecaseModalWidth) customStyle.width = action.usecaseModalWidth
+    if (action.usecaseModalHeight) customStyle.height = action.usecaseModalHeight
+  }
+
+  return (
+    <>
+      {variant === 'header' ? (
+        <button
+          type="button"
+          onClick={handleClick}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer"
+          title={action.label}
+        >
+          <DynamicIcon icon={action.icon || 'Zap'} size={16} className="text-neutral-400" />
+          <span>{action.label}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleClick}
+          className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center cursor-pointer"
+          title={action.label}
+        >
+          <DynamicIcon icon={action.icon || 'Receipt'} size={14} />
+        </button>
+      )}
+
+      {mounted && isOpen && openMode === 'drawer' && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200"
+          onClick={() => setIsOpen(false)}
+        >
+          <div 
+            className="w-full max-w-2xl h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <iframe src={iframeUrl} className="w-full h-full border-none" />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {mounted && isOpen && openMode === 'modal' && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsOpen(false)}
+        >
+          <div 
+            className={\`relative \${sizeClasses} bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800 animate-in zoom-in-95 duration-200 flex flex-col\`}
+            style={customStyle}
+            onClick={e => e.stopPropagation()}
+          >
+            <iframe src={iframeUrl} className="w-full h-full border-none rounded-[2.5rem]" />
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
+export function CloseModalButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')}
+      className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0 ml-1 cursor-pointer"
+      title="Fechar"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  )
+}
+`)
 }

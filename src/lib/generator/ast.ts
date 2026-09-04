@@ -97,6 +97,11 @@ export interface ResolvedField {
 export type ButtonStyle = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'
 export type ButtonActionType = 'create' | 'update' | 'delete' | 'custom' | 'export' | 'link' | 'download' | 'view' | 'edit' | 'search' | 'clear'
 
+export interface CustomActionParam {
+  source: string
+  target: string
+}
+
 export interface ViewButton {
   id: string
   label: string
@@ -107,6 +112,15 @@ export interface ViewButton {
   confirmationMessage?: string              // se presente, exibe diálogo de confirmação
   customLogic?: string                      // código JS da ação customizada (para //TODO)
   linkTarget?: string                       // para actionType = 'link'
+  // Configurações de Ação Customizada (Modal / UseCase / Trigger)
+  triggerType?: 'sql' | 'usecase' | 'rest' | 'custom'
+  usecaseSlug?: string
+  usecaseOpenMode?: 'page' | 'modal' | 'drawer'
+  usecaseModalSize?: 'sm' | 'md' | 'lg' | 'full' | 'custom'
+  usecaseModalWidth?: string
+  usecaseModalHeight?: string
+  usecaseSelectedFields?: Array<CustomActionParam | string>
+  usecaseParams?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
