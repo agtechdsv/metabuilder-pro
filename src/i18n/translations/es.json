@@ -2697,7 +2697,9 @@
     },
     "git": {
       "sync_discarded": "Sincronización Descartada",
-      "merge_clean": "¡Fusión limpia! No se encontraron conflictos."
+      "merge_clean": "¡Fusión limpia! No se encontraron conflictos.",
+      "no_changes_to_merge": "No hay cambios para el merge.",
+      "no_local_changes": "No hay cambios locales pendientes."
     },
     "tooltip": {
       "stop_server": "Detener servidor",
@@ -3684,7 +3686,9 @@
       "deps_installed_success": "¡Dependencias instaladas exitosamente!",
       "compiling_app": "Compilando la aplicación... Esperando la primera respuesta.",
       "app_ready": "Aplicación lista en localhost:3000",
-      "server_ready_toast": "¡Servidor listo!"
+      "server_ready_toast": "¡Servidor listo!",
+      "no_changes_to_merge": "No hay cambios para el merge.",
+      "no_local_changes": "No hay cambios locales pendientes."
     }
   },
   "formula_builder": {

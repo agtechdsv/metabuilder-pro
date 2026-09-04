@@ -81,7 +81,24 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
 
       await syncManager.syncFromWeb(apiRoute, `Bearer ${token}`, payload)
       const mergeResult = await syncManager.startSyncSandbox()
+
+      // Verifica se há alterações reais entre sandbox e local
+      const diffFiles = await syncManager.getMergeDiffFiles()
+      if (diffFiles.length === 0) {
+        await syncManager.cleanUpSandbox()
+        setSandboxMode(false)
+        const { branches, currentBranch } = await syncManager.getBranches()
+        setBranches(branches)
+        setSelectedBranch(currentBranch)
+        await loadFileTree()
+        toast(t('workspace_components.ide_local.no_changes_to_merge', 'Nenhuma alteração para o merge.'), 'info')
+        return
+      }
+
       setSandboxMode(true)
+      const { branches, currentBranch } = await syncManager.getBranches()
+      setBranches(branches)
+      setSelectedBranch(currentBranch)
       await loadFileTree()
       
       if (mergeResult.oid) {

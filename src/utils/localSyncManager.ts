@@ -352,27 +352,29 @@ export class LocalSyncManager {
   }
 
   /**
-   * Aborts the sync, destroying the sandbox and returning to local.
+   * Cleans up the sandbox branch and reverts working tree to local without deleting any env files.
    */
-  public async abortSync() {
+  public async cleanUpSandbox() {
+    if (!isTauri()) return;
     const { local, sandbox } = await this.getConfiguredBranches();
 
     // Revert to local
     await git.checkout({ fs: tauriFsAdapter, dir: this.projectDir, ref: local, force: true });
     
     // Delete sandbox branch
-    await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox });
+    try {
+      await git.deleteBranch({ fs: tauriFsAdapter, dir: this.projectDir, ref: sandbox });
+    } catch (e) {}
 
     // Clean up empty directories left by isomorphic-git
     await this.cleanupEmptyDirectories(this.projectDir);
+  }
 
-    // Clean up .env files if they were left untracked
-    try {
-      await tauriFs.remove(`${this.projectDir}/.env.local`, { baseDir: BaseDirectory.Home });
-    } catch (e) {}
-    try {
-      await tauriFs.remove(`${this.projectDir}/.env.example`, { baseDir: BaseDirectory.Home });
-    } catch (e) {}
+  /**
+   * Aborts the sync, destroying the sandbox and returning to local.
+   */
+  public async abortSync() {
+    await this.cleanUpSandbox();
   }
 
   /**

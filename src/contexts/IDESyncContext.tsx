@@ -500,7 +500,20 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           : await syncManager.getMergeDiffFiles();
           
         if (files.length === 0) {
-          toast(mode === 'commit' ? 'Nenhuma alteração local pendente.' : 'Nenhuma alteração para o merge.', 'info');
+          toast(
+            mode === 'commit'
+              ? t('workspace_components.ide_local.no_local_changes', 'Nenhuma alteração local pendente.')
+              : t('workspace_components.ide_local.no_changes_to_merge', 'Nenhuma alteração para o merge.'),
+            'info'
+          );
+          if (mode === 'merge') {
+            await syncManager.cleanUpSandbox();
+            setSandboxMode(false);
+            const { branches, currentBranch } = await syncManager.getBranches();
+            setBranches(branches);
+            setSelectedBranch(currentBranch);
+            await loadFileTree();
+          }
           return;
         }
         

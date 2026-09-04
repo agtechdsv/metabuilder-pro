@@ -2626,7 +2626,9 @@
     },
     "git": {
       "sync_discarded": "Sync Discarded",
-      "merge_clean": "Clean merge! No conflicts found."
+      "merge_clean": "Clean merge! No conflicts found.",
+      "no_changes_to_merge": "No changes to merge.",
+      "no_local_changes": "No pending local changes."
     },
     "tooltip": {
       "stop_server": "Stop server",
@@ -3624,7 +3626,9 @@
       "deps_installed_success": "Dependencies installed successfully!",
       "compiling_app": "Compiling application... Waiting for first response.",
       "app_ready": "Application ready at localhost:3000",
-      "server_ready_toast": "Server ready!"
+      "server_ready_toast": "Server ready!",
+      "no_changes_to_merge": "No changes to merge.",
+      "no_local_changes": "No pending local changes."
     }
   },
   "formula_builder": {
