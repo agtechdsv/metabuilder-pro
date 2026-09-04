@@ -10,6 +10,54 @@ export function generateListPage(route: RouteNode): string {
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
+  // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros e colunas da grid
+  const lookupModels = new Map<string, string>() // table -> modelName
+  const allListFields = [...(route.filterFields || []), ...(route.gridFields || [])]
+  allListFields.forEach(f => {
+    const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (targetModel && targetTable) {
+      lookupModels.set(targetTable.toLowerCase(), targetModel)
+    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
+      const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
+      lookupModels.set(targetTable.toLowerCase(), modelName)
+    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const table = base.endsWith('s') ? base : (base + 's')
+      const modelName = table.charAt(0).toUpperCase() + table.slice(1)
+      lookupModels.set(table.toLowerCase(), modelName)
+    }
+  })
+
+  // Remove o próprio modelo se acidentalmente incluído
+  lookupModels.delete(mnLower)
+
+  const lookupImports = Array.from(lookupModels.entries()).map(([table, modelName]) =>
+    `import { get${modelName}List } from '@/app/actions/${table}'`
+  ).join('\n')
+
+  const hasLookups = lookupModels.size > 0
+  const fetchDataCode = hasLookups
+    ? `  const [rawData, ${Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')}] = await Promise.all([\n    get${mn}List(),\n    ${Array.from(lookupModels.values()).map(m => `get${m}List().catch(() => [])`).join(',\n    ')}\n  ])`
+    : `  const rawData = await get${mn}List()`
+
+  const buildOptionsCode: string[] = []
+  allListFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
+      const t = targetTable.toLowerCase()
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
+
   // Cabeçalhos da tabela com ordenação interativa (Links preservando query params)
   const thCells = route.gridFields
     .filter(f => !f.hidden)
@@ -39,7 +87,7 @@ export function generateListPage(route: RouteNode): string {
   // Células de dados
   const tdCells = route.gridFields
     .filter(f => !f.hidden)
-    .map(f => `                <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">\n                  ${renderGridCellValue(f)}\n                </td>`)
+    .map(f => `                <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">\n                  ${renderGridCellValue(f, 'item', 'relationalOptions')}\n                </td>`)
     .join('\n')
 
   // Filtros
@@ -49,6 +97,9 @@ export function generateListPage(route: RouteNode): string {
     const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
     const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
     
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const isRelational = targetTable && lookupModels.has(targetTable.toLowerCase())
+
     let options = f.config?.options
     if ((!options || options.length === 0) && (f.dbColumn.toLowerCase().includes('status') || f.label.toLowerCase().includes('status'))) {
       options = [
@@ -58,6 +109,23 @@ export function generateListPage(route: RouteNode): string {
         { label: 'Fechado Ganho', value: 'Fechado Ganho' },
         { label: 'Perdido', value: 'Perdido' }
       ]
+    }
+
+    if (isRelational) {
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={params?.['${col}_filter'] || ''}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+            >
+              <option value="">Todos</option>
+              {(relationalOptions?.['${f.dbColumn}'] || []).map((opt: any, i: number) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
     }
 
     if (options && options.length > 0) {
@@ -119,7 +187,7 @@ export function generateListPage(route: RouteNode): string {
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 import { delete${mn} } from '@/app/actions/${mnLower}'
-import { Plus, Pencil, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
+${lookupImports ? `${lookupImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, Receipt, ArrowUpDown, ArrowUp, ArrowDown, Search, RefreshCcw, Download } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { CustomActionButton, CloseModalButton } from '@/components/ui/custom-action-button'
@@ -139,7 +207,11 @@ export default async function ${mn}ListPage({
   const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
   const limit = Math.max(1, parseInt(params?.limit || '15', 10) || 15)
 
-  const rawData = await get${mn}List()
+${fetchDataCode}
+
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
+  }
 
   // Filtros dinâmicos da URL
   const filteredData = (rawData || []).filter((item: any) => {

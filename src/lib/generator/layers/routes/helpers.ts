@@ -16,7 +16,7 @@ export function toPascalCase(str: string): string {
  * Gera o trecho JSX para renderizar o valor de um campo na tabela de listagem.
  * Replica a lógica de renderização do Runtime ViewPageContent.
  */
-export function renderGridCellValue(field: ResolvedField, varName = 'item'): string {
+export function renderGridCellValue(field: ResolvedField, varName = 'item', relationalOptionsVar?: string): string {
   const col = field.dbColumn.includes('.') ? `["${field.dbColumn}"]` : `.${field.dbColumn}`
   const raw = `${varName}${col}`
   const dt = (field.dataType || '').toLowerCase()
@@ -36,6 +36,17 @@ export function renderGridCellValue(field: ResolvedField, varName = 'item'): str
   if (field.config?.options?.length) {
     const optsCode = JSON.stringify(field.config.options)
     return `{(() => { const opts = ${optsCode}; const opt = opts.find((o: any) => o.value === String(${raw})); return opt ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800/50" style={opt.color ? { backgroundColor: opt.color + '20', color: opt.color, borderColor: opt.color + '40' } : undefined}>{opt.label}</span> : <span>{String(${raw} ?? '-')}</span> })()}`
+  }
+  if (relationalOptionsVar) {
+    const isRelational = !!(
+      field.config?.relation?.targetTable ||
+      field.config?.component?.rel_table ||
+      field.config?.rel_table ||
+      (field.dbColumn.endsWith('_id') && !field.isPrimaryKey)
+    )
+    if (isRelational) {
+      return `{(() => { const opt = ${relationalOptionsVar}?.[${JSON.stringify(field.dbColumn)}]?.find((o: any) => String(o.value) === String(${raw})); return <span>{opt ? opt.label : String(${raw} ?? '-')}</span> })()}`
+    }
   }
   if (field.config?.format === 'currency') {
     return `<span>{${raw} != null ? Number(${raw}).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-'}</span>`
