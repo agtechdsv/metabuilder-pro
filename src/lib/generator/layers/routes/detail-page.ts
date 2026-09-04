@@ -99,22 +99,32 @@ export function generateDetailTabsClient(route: RouteNode): string {
       ].filter(Boolean).join('\n')
     : ''
 
+  const usedTabPrefixes = new Set<string>()
+  const tabConstants: string[] = []
+
   const tabPanels = hasRelationTabs
     ? route.relationTabs.map((tab, i) => {
         const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
           .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
-        
-        const fieldsJson = JSON.stringify(tabFields.map(f => ({
+
+        const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+        const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+        usedTabPrefixes.add(constPrefix)
+
+        const fieldsConstName = `${constPrefix}_FIELDS`
+        const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+        const mappedFields = tabFields.map(f => ({
           id: f.id,
           label: f.label,
           dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
           dataType: f.dataType,
           isPrimaryKey: f.isPrimaryKey,
           config: f.config,
-        })))
+        }))
 
-        const subDetailsJson = tab.subDetails && tab.subDetails.length > 0
-          ? JSON.stringify(tab.subDetails.map(sub => ({
+        const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
+          ? tab.subDetails.map(sub => ({
               relatedTable: sub.relatedTable,
               relatedModelName: sub.relatedModelName,
               foreignKey: sub.foreignKey,
@@ -127,8 +137,17 @@ export function generateDetailTabsClient(route: RouteNode): string {
                 isPrimaryKey: f.isPrimaryKey,
                 config: f.config,
               }))
-            })))
-          : '[]'
+            }))
+          : []
+
+        tabConstants.push(
+          `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
+          `const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)}`,
+          ``,
+          `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
+          `const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)}`,
+          ``
+        )
 
         const subActionProps = tab.subDetails && tab.subDetails.length > 0
           ? [
@@ -164,12 +183,12 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `              foreignKey="${tab.foreignKey}"`,
           `              parentId={id}`,
           `              items={${tab.relatedTable}Items || []}`,
-          `              fields={(${fieldsJson} as any[]).map((f: any) => {`,
+          `              fields={(${fieldsConstName} as any[]).map((f: any) => {`,
           `                const targetTable = f.config?.relation?.targetTable`,
           lookupMappingCode,
           `                return f`,
           `              })}`,
-          `              subDetails={(${subDetailsJson} as any[]).map((sub: any) => ({`,
+          `              subDetails={(${subDetailsConstName} as any[]).map((sub: any) => ({`,
           `                ...sub,`,
           `                fields: (sub.fields || []).map((f: any) => {`,
           `                  const targetTable = f.config?.relation?.targetTable`,
@@ -311,7 +330,7 @@ function formatWithMask(v: any, mask?: string) {
 }
 
 ${Array.from(lookupModels.entries()).map(([tTable]) => `let cached${tTable}LookupList: any[] = []`).join('\n')}
-
+${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}
 export function ${mn}DetailTabsClient({
   id,
   data,

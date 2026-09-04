@@ -138,7 +138,9 @@ export function generateTimelineClient(route: RouteNode): string {
       label: f.label,
       dataType: f.dataType,
       config: f.config,
-    }))
+    })),
+    null,
+    2
   )
 
   const timelineConfigData = JSON.stringify(
@@ -152,7 +154,9 @@ export function generateTimelineClient(route: RouteNode): string {
       timelineOrderVertical: 'asc',
       animated: false,
       cardScale: 1.0,
-    }
+    },
+    null,
+    2
   )
 
   // Geração de formulário modal de edição/criação
@@ -177,22 +181,32 @@ export function generateTimelineClient(route: RouteNode): string {
       ].join('\n')
     : ''
 
+  const usedTabPrefixes = new Set<string>()
+  const tabConstants: string[] = []
+
   const relationTabPanels = hasRelationTabs && isActionModal
-    ? route.relationTabs.map(tab => {
+    ? route.relationTabs.map((tab, i) => {
         const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
           .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
 
-        const fieldsJson = JSON.stringify(tabFields.map(f => ({
+        const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+        const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+        usedTabPrefixes.add(constPrefix)
+
+        const fieldsConstName = `${constPrefix}_FIELDS`
+        const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+        const mappedFields = tabFields.map(f => ({
           id: f.id,
           label: f.label,
           dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
           dataType: f.dataType,
           isPrimaryKey: f.isPrimaryKey,
           config: f.config,
-        })))
+        }))
 
-        const subDetailsJson = tab.subDetails && tab.subDetails.length > 0
-          ? JSON.stringify(tab.subDetails.map(sub => ({
+        const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
+          ? tab.subDetails.map(sub => ({
               relatedTable: sub.relatedTable,
               relatedModelName: sub.relatedModelName,
               foreignKey: sub.foreignKey,
@@ -205,8 +219,17 @@ export function generateTimelineClient(route: RouteNode): string {
                 isPrimaryKey: f.isPrimaryKey,
                 config: f.config,
               }))
-            })))
-          : '[]'
+            }))
+          : []
+
+        tabConstants.push(
+          `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
+          `const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)}`,
+          ``,
+          `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
+          `const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)}`,
+          ``
+        )
 
         return `
             <div key="${tab.relatedTable}" className="space-y-3">
@@ -216,8 +239,8 @@ export function generateTimelineClient(route: RouteNode): string {
                 foreignKey="${tab.foreignKey}"
                 parentId={String(activeRecord?.${route.primaryKey} || activeRecord?.id || '')}
                 items={modalRelationItems['${tab.relatedTable}'] || []}
-                fields={${fieldsJson}}
-                subDetails={${subDetailsJson}}
+                fields={${fieldsConstName} as any}
+                subDetails={${subDetailsConstName} as any}
                 createAction={create${tab.relatedModelName}}
                 updateAction={update${tab.relatedModelName}}
                 deleteAction={delete${tab.relatedModelName}}
@@ -270,7 +293,7 @@ function formatDatetimeForInput(v: any) {
 
 const filterFields = ${filterFieldsData}
 const timelineConfig = ${timelineConfigData}
-
+${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}
 export function TimelineClient({
   initialData,
   relationalOptions = {}

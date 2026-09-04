@@ -102,7 +102,9 @@ export function generateKanbanClient(route: RouteNode): string {
       label: f.label,
       dataType: f.dataType,
       config: f.config,
-    }))
+    })),
+    null,
+    2
   )
 
   const fieldsData = JSON.stringify(
@@ -112,10 +114,12 @@ export function generateKanbanClient(route: RouteNode): string {
       label: f.label,
       dataType: f.dataType,
       config: f.config,
-    }))
+    })),
+    null,
+    2
   )
 
-  const cardFieldsData = JSON.stringify(route.kanbanCardFields || [])
+  const cardFieldsData = JSON.stringify(route.kanbanCardFields || [], null, 2)
 
   return `'use client'
 
@@ -125,6 +129,10 @@ import { update${mn}, delete${mn} } from '@/app/actions/${mnLower}'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { Plus, Search, RefreshCcw, Zap, Download } from 'lucide-react'
+
+const filterFields = ${filterFieldsData}
+const fields = ${fieldsData}
+const cardFields = ${cardFieldsData}
 
 export function KanbanClient({
   initialData,
@@ -142,10 +150,6 @@ export function KanbanClient({
   useEffect(() => {
     setDataList(initialData)
   }, [initialData])
-
-  const filterFields = ${filterFieldsData}
-  const fields = ${fieldsData}
-  const cardFields = ${cardFieldsData}
 
   // Filtragem de cartões por argumentos/filtros configurados e busca textual
   const filteredData = useMemo(() => {

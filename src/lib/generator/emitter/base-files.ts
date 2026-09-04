@@ -386,7 +386,7 @@ export default DynamicIcon
     type: 'view',
     target: r.viewSlug,
   }))
-  const navItemsJson = JSON.stringify(navItems)
+  const navItemsJson = JSON.stringify(navItems, null, 2)
   const projectIcon = ast.projectIcon || 'Layers'
 
   files.set('app/components/AppSidebar.tsx', `'use client'
