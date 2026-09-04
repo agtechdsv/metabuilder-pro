@@ -117,13 +117,11 @@ ${Array.from(optionsMap.values()).join('\n')}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Timeline Client Component ('use client')
+// ─────────────────────────────────────────────────────────────────────────────
+// Timeline Schema ([route]/schema.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateTimelineClient(route: RouteNode): string {
-  const mn = route.modelName
-  const mnLower = mn.toLowerCase()
-  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+export function generateTimelineSchema(route: RouteNode): string {
   const isActionModal = route.actionInterfaceType === 'modal' || route.rawLayoutConfig?.action_interface_type === 'modal'
   const hasRelationTabs = route.relationTabs.length > 0
 
@@ -159,6 +157,79 @@ export function generateTimelineClient(route: RouteNode): string {
     2
   )
 
+  const usedTabPrefixes = new Set<string>()
+  const tabConstants: string[] = []
+
+  if (hasRelationTabs && isActionModal) {
+    route.relationTabs.forEach((tab, i) => {
+      const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
+        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
+
+      const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+      const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+      usedTabPrefixes.add(constPrefix)
+
+      const fieldsConstName = `${constPrefix}_FIELDS`
+      const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+      const mappedFields = tabFields.map(f => ({
+        id: f.id,
+        label: f.label,
+        dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+        dataType: f.dataType,
+        isPrimaryKey: f.isPrimaryKey,
+        config: f.config,
+      }))
+
+      const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
+        ? tab.subDetails.map(sub => ({
+            relatedTable: sub.relatedTable,
+            relatedModelName: sub.relatedModelName,
+            foreignKey: sub.foreignKey,
+            label: sub.label,
+            fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
+              id: f.id,
+              label: f.label,
+              dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+              dataType: f.dataType,
+              isPrimaryKey: f.isPrimaryKey,
+              config: f.config,
+            }))
+          }))
+        : []
+
+      tabConstants.push(
+        `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
+        `export const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)} as const`,
+        ``,
+        `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
+        `export const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)} as const`,
+        ``
+      )
+    })
+  }
+
+  return `// ─────────────────────────────────────────────────────────────────────────────
+// Schemas e configurações declarativas para Timeline de ${route.title}
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const filterFields = ${filterFieldsData}
+
+export const timelineConfig = ${timelineConfigData}
+${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Timeline Client Component ('use client')
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateTimelineClient(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+  const isActionModal = route.actionInterfaceType === 'modal' || route.rawLayoutConfig?.action_interface_type === 'modal'
+  const hasRelationTabs = route.relationTabs.length > 0
+
   // Geração de formulário modal de edição/criação
   const modalFormFieldsHtml = route.formFields
     .map(f => renderFormField(f, true, false, 'relationalOptions'))
@@ -182,13 +253,10 @@ export function generateTimelineClient(route: RouteNode): string {
     : ''
 
   const usedTabPrefixes = new Set<string>()
-  const tabConstants: string[] = []
+  const modalTabConstNames: string[] = []
 
   const relationTabPanels = hasRelationTabs && isActionModal
     ? route.relationTabs.map((tab, i) => {
-        const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
-          .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
-
         const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
         const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
         usedTabPrefixes.add(constPrefix)
@@ -196,40 +264,7 @@ export function generateTimelineClient(route: RouteNode): string {
         const fieldsConstName = `${constPrefix}_FIELDS`
         const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
 
-        const mappedFields = tabFields.map(f => ({
-          id: f.id,
-          label: f.label,
-          dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
-          dataType: f.dataType,
-          isPrimaryKey: f.isPrimaryKey,
-          config: f.config,
-        }))
-
-        const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
-          ? tab.subDetails.map(sub => ({
-              relatedTable: sub.relatedTable,
-              relatedModelName: sub.relatedModelName,
-              foreignKey: sub.foreignKey,
-              label: sub.label,
-              fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
-                id: f.id,
-                label: f.label,
-                dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
-                dataType: f.dataType,
-                isPrimaryKey: f.isPrimaryKey,
-                config: f.config,
-              }))
-            }))
-          : []
-
-        tabConstants.push(
-          `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
-          `const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)}`,
-          ``,
-          `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
-          `const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)}`,
-          ``
-        )
+        modalTabConstNames.push(fieldsConstName, subDetailsConstName)
 
         return `
             <div key="${tab.relatedTable}" className="space-y-3">
@@ -250,6 +285,8 @@ export function generateTimelineClient(route: RouteNode): string {
       }).join('\n')
     : ''
 
+  const schemaImports = `import { filterFields, timelineConfig${modalTabConstNames.length > 0 ? `, ${modalTabConstNames.join(', ')}` : ''} } from './schema'`
+
   return `'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
@@ -258,7 +295,8 @@ import { useRouter } from 'next/navigation'
 import { delete${mn}, update${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { TimelineBoard } from '@/components/TimelineBoard'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
-${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}import { Plus, Search, RefreshCcw, Zap, Download, Pencil, X, Save } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports}
+import { Plus, Search, RefreshCcw, Zap, Download, Pencil, X, Save } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''
@@ -291,9 +329,6 @@ function formatDatetimeForInput(v: any) {
   return String(v).slice(0, 16)
 }
 
-const filterFields = ${filterFieldsData}
-const timelineConfig = ${timelineConfigData}
-${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}
 export function TimelineClient({
   initialData,
   relationalOptions = {}

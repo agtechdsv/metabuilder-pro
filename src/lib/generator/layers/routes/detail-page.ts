@@ -2,6 +2,79 @@ import { RouteNode } from '../../ast'
 import { renderFormField, getByocComponentName } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Declarative Schema para Abas de Relacionamento ([id]/schema.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateDetailSchema(route: RouteNode): string {
+  const hasRelationTabs = route.relationTabs.length > 0
+  if (!hasRelationTabs) {
+    return `// ─────────────────────────────────────────────────────────────────────────────
+// Schemas e configurações declarativas da rota ${route.title}
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const RELATION_TABS = [] as const
+`
+  }
+
+  const usedTabPrefixes = new Set<string>()
+  const tabConstants: string[] = []
+
+  route.relationTabs.forEach((tab, i) => {
+    const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
+      .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
+
+    const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+    const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+    usedTabPrefixes.add(constPrefix)
+
+    const fieldsConstName = `${constPrefix}_FIELDS`
+    const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+    const mappedFields = tabFields.map(f => ({
+      id: f.id,
+      label: f.label,
+      dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+      dataType: f.dataType,
+      isPrimaryKey: f.isPrimaryKey,
+      config: f.config,
+    }))
+
+    const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
+      ? tab.subDetails.map(sub => ({
+          relatedTable: sub.relatedTable,
+          relatedModelName: sub.relatedModelName,
+          foreignKey: sub.foreignKey,
+          label: sub.label,
+          fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
+            id: f.id,
+            label: f.label,
+            dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+            dataType: f.dataType,
+            isPrimaryKey: f.isPrimaryKey,
+            config: f.config,
+          }))
+        }))
+      : []
+
+    tabConstants.push(
+      `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
+      `export const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)} as const`,
+      ``,
+      `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
+      `export const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)} as const`,
+      ``
+    )
+  })
+
+  return `// ─────────────────────────────────────────────────────────────────────────────
+// Schemas e metadados declarativos para as abas de relacionamento de ${route.title}
+// ─────────────────────────────────────────────────────────────────────────────
+
+${tabConstants.join('\n')}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Client Component para Abas de Detalhe ([id]/DetailTabsClient.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -100,13 +173,10 @@ export function generateDetailTabsClient(route: RouteNode): string {
     : ''
 
   const usedTabPrefixes = new Set<string>()
-  const tabConstants: string[] = []
+  const importedConstNames: string[] = []
 
   const tabPanels = hasRelationTabs
     ? route.relationTabs.map((tab, i) => {
-        const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
-          .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
-
         const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
         const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
         usedTabPrefixes.add(constPrefix)
@@ -114,40 +184,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
         const fieldsConstName = `${constPrefix}_FIELDS`
         const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
 
-        const mappedFields = tabFields.map(f => ({
-          id: f.id,
-          label: f.label,
-          dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
-          dataType: f.dataType,
-          isPrimaryKey: f.isPrimaryKey,
-          config: f.config,
-        }))
-
-        const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
-          ? tab.subDetails.map(sub => ({
-              relatedTable: sub.relatedTable,
-              relatedModelName: sub.relatedModelName,
-              foreignKey: sub.foreignKey,
-              label: sub.label,
-              fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
-                id: f.id,
-                label: f.label,
-                dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
-                dataType: f.dataType,
-                isPrimaryKey: f.isPrimaryKey,
-                config: f.config,
-              }))
-            }))
-          : []
-
-        tabConstants.push(
-          `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
-          `const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)}`,
-          ``,
-          `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
-          `const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)}`,
-          ``
-        )
+        importedConstNames.push(fieldsConstName, subDetailsConstName)
 
         const subActionProps = tab.subDetails && tab.subDetails.length > 0
           ? [
@@ -231,14 +268,17 @@ ${tabButtons}
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
 
+  const schemaImports = hasRelationTabs && importedConstNames.length > 0
+    ? `import { ${importedConstNames.join(', ')} } from './schema'`
+    : ''
+
   return `'use client'
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
-${byocImports ? `${byocImports}\n` : ''}${relationImports}
-import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''
@@ -330,7 +370,7 @@ function formatWithMask(v: any, mask?: string) {
 }
 
 ${Array.from(lookupModels.entries()).map(([tTable]) => `let cached${tTable}LookupList: any[] = []`).join('\n')}
-${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}
+
 export function ${mn}DetailTabsClient({
   id,
   data,

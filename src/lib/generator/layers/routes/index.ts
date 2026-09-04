@@ -1,9 +1,9 @@
 import { AppAST } from '../../ast'
 import { generateListPage } from './list-page'
-import { generateDetailPage, generateDetailTabsClient } from './detail-page'
+import { generateDetailPage, generateDetailTabsClient, generateDetailSchema } from './detail-page'
 import { generateNewPage } from './new-page'
-import { generateKanbanPage, generateKanbanClient } from './kanban-page'
-import { generateTimelinePage, generateTimelineClient } from './timeline-page'
+import { generateKanbanPage, generateKanbanClient, generateKanbanSchema } from './kanban-page'
+import { generateTimelinePage, generateTimelineClient, generateTimelineSchema } from './timeline-page'
 import { generateWipPage } from './wip-page'
 
 export * from './helpers'
@@ -28,24 +28,29 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       // Mestre-Detalhe + Edição (formulário + abas de relacionamento)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else if (route.logicType === 'kanban') {
       // Kanban Listagem
       files.set(`${routeDir}/page.tsx`, generateKanbanPage(route))
       files.set(`${routeDir}/KanbanClient.tsx`, generateKanbanClient(route))
+      files.set(`${routeDir}/schema.ts`, generateKanbanSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no card)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else if (route.logicType === 'timeline') {
       // Timeline Listagem
       files.set(`${routeDir}/page.tsx`, generateTimelinePage(route))
       files.set(`${routeDir}/TimelineClient.tsx`, generateTimelineClient(route))
+      files.set(`${routeDir}/schema.ts`, generateTimelineSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no nó/card)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else {

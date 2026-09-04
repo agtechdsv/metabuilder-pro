@@ -81,16 +81,10 @@ ${buildOptionsCode.join('\n')}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Kanban Client Component ('use client')
+// Kanban Schema ([route]/schema.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateKanbanClient(route: RouteNode): string {
-  const mn = route.modelName
-  const mnLower = mn.toLowerCase()
-  const groupCol = route.kanbanGroupField || 'status'
-  const groupDisplayField = route.kanbanGroupDisplayField
-  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
-
+export function generateKanbanSchema(route: RouteNode): string {
   const rawFilterFields = route.filterFields && route.filterFields.length > 0 
     ? route.filterFields 
     : route.gridFields
@@ -121,6 +115,29 @@ export function generateKanbanClient(route: RouteNode): string {
 
   const cardFieldsData = JSON.stringify(route.kanbanCardFields || [], null, 2)
 
+  return `// ─────────────────────────────────────────────────────────────────────────────
+// Schemas e configurações declarativas para Kanban de ${route.title}
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const filterFields = ${filterFieldsData}
+
+export const fields = ${fieldsData}
+
+export const cardFields = ${cardFieldsData}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Kanban Client Component ('use client')
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateKanbanClient(route: RouteNode): string {
+  const mn = route.modelName
+  const mnLower = mn.toLowerCase()
+  const groupCol = route.kanbanGroupField || 'status'
+  const groupDisplayField = route.kanbanGroupDisplayField
+  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+
   return `'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
@@ -128,11 +145,8 @@ import Link from 'next/link'
 import { update${mn}, delete${mn} } from '@/app/actions/${mnLower}'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { filterFields, fields, cardFields } from './schema'
 import { Plus, Search, RefreshCcw, Zap, Download } from 'lucide-react'
-
-const filterFields = ${filterFieldsData}
-const fields = ${fieldsData}
-const cardFields = ${cardFieldsData}
 
 export function KanbanClient({
   initialData,
