@@ -4,6 +4,7 @@ import { generateDetailPage, generateDetailTabsClient, generateDetailSchema } fr
 import { generateNewPage } from './new-page'
 import { generateKanbanPage, generateKanbanClient, generateKanbanSchema } from './kanban-page'
 import { generateTimelinePage, generateTimelineClient, generateTimelineSchema } from './timeline-page'
+import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 
 export * from './helpers'
@@ -12,6 +13,7 @@ export * from './detail-page'
 export * from './new-page'
 export * from './kanban-page'
 export * from './timeline-page'
+export * from './analytics-page'
 export * from './wip-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +55,10 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
       // Criação
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'analytics' || route.logicType === 'dashboard_bi') {
+      // Dashboard BI / Analytics (Server-Side Aggregation)
+      files.set(`${routeDir}/page.tsx`, generateAnalyticsPage(route, ast))
+      files.set(`${routeDir}/AnalyticsClient.tsx`, generateAnalyticsClient(route, ast))
     } else {
       // Placeholder "Em desenvolvimento" para outros tipos
       files.set(`${routeDir}/page.tsx`, generateWipPage(route))
