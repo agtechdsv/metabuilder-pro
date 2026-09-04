@@ -144,10 +144,13 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `                    ...f,`,
           `                    config: {`,
           `                      ...f.config,`,
-          `                      options: (${tTable}LookupList || []).map((r: any) => ({`,
-          `                        value: String(r.id ?? r.codigo ?? r.uuid ?? ''),`,
-          `                        label: String(r.nome || r.nome_completo || r.nome_empresa || r.name || r.title || r.id || ''),`,
-          `                      }))`,
+          `                      options: (${tTable}LookupList || []).map((r: any) => {`,
+          `                        const relLbl = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label`,
+          `                        return {`,
+          `                          value: String(r.id ?? r.codigo ?? r.uuid ?? Object.values(r)[0] ?? ''),`,
+          `                          label: String(relLbl ? (r[relLbl] ?? r[relLbl.toLowerCase()] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? '') : (r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? '')),`,
+          `                        }`,
+          `                      })`,
           `                    }`,
           `                  }`,
           `                }`,
@@ -394,7 +397,7 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
                 {title.endsWith('s') ? title.slice(0, -1) : title}
               </h2>
               <p className="text-xs font-medium text-neutral-400 mt-0.5">
-                {String(data?.nome || data?.name || data?.nome_empresa || data?.title || data?.${pk} || '')}
+                {${route.rawLayoutConfig?.form_header_subtitle_field ? `String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')` : `String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')`}}
               </p>
             </div>
           </div>
@@ -503,7 +506,13 @@ export function generateDetailPage(route: RouteNode): string {
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
       const t = targetTable.toLowerCase()
-      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(r.id), label: r.nome || r.name || r.titulo || r.title || r.razao_social || String(r.id) })),`)
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
       buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
     }
@@ -580,7 +589,7 @@ export function generateDetailPage(route: RouteNode): string {
                 `      const fkVal = String(subRow['${sub.foreignKey}'] || subRow['id_${tab.relatedTable}'] || subRow['${tab.relatedTable}_id'] || subRow['${tab.relatedTable}'] || '')\n` +
                 `      return fkVal === rowId\n` +
                 `    })\n` +
-                `    return { ...row, items: childItems, itens_pedido: childItems, _details: childItems }\n` +
+                `    return { ...row, items: childItems, [${JSON.stringify(sub.relatedTable)}]: childItems, _details: childItems }\n` +
                 `  })\n`
               )
             }

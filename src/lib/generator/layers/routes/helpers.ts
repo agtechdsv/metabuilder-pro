@@ -129,7 +129,7 @@ export function getByocComponentName(field: ResolvedField): string {
     return toPascalCase(rawLabel)
   }
   
-  return toPascalCase(rawId) || 'TimelineStatusVendas'
+  return toPascalCase(rawId) || 'CustomComponent'
 }
 
 export function renderFormField(

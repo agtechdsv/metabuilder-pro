@@ -399,7 +399,10 @@ export function TimelineBoard({
             <label className="text-[10px] font-bold text-neutral-500 uppercase">Direção:</label>
             <select
               value={direction}
-              onChange={(e) => setDirection(e.target.value as 'horizontal' | 'vertical')}
+              onChange={(e) => {
+                setDirection(e.target.value as 'horizontal' | 'vertical')
+                setAnimationTrigger(prev => prev + 1)
+              }}
               className="bg-transparent text-indigo-600 outline-none cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 p-1 rounded transition-colors text-xs font-bold focus:outline-none"
             >
               <option value="horizontal">Horizontal</option>
@@ -510,7 +513,7 @@ export function TimelineBoard({
                 <motion.div
                   initial={animated ? { scaleX: 0 } : false}
                   animate={animated ? { scaleX: 1 } : false}
-                  transition={{ duration: Math.min(sortedData.length * 0.3 + 0.4, 3), ease: "easeOut" }}
+                  transition={{ duration: sortedData.length * 0.4 + 0.5, ease: "easeOut" }}
                   className={cn(
                     "absolute h-[3px] bg-[#6366f1] -translate-y-1/2 rounded-full origin-left",
                     mode === 'alternating' ? "top-1/2" : "top-[60px]"
@@ -541,8 +544,9 @@ export function TimelineBoard({
                     <motion.div
                       initial={animated ? { scale: 0, opacity: 0 } : false}
                       animate={animated ? { scale: 1, opacity: 1 } : false}
-                      whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1 } }}
-                      transition={{ delay: animated ? Math.min(index * 0.2 + 0.2, 2) : 0, duration: 0.2 }}
+                      whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
+                      whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
+                      transition={{ delay: animated ? index * 0.4 + 0.4 : 0, duration: 0.2 }}
                       className={cn(
                         "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-y-1/2 left-1/2 -translate-x-1/2",
                         mode === 'alternating' ? "top-1/2" : "top-[60px]"
@@ -557,7 +561,7 @@ export function TimelineBoard({
                     <motion.div
                       initial={animated ? { y: 20, opacity: 0 } : false}
                       animate={animated ? { y: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? Math.min(index * 0.2 + 0.3, 2.2) : 0, duration: 0.4 }}
+                      transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
                       className={cn(
                         "w-full flex relative",
                         mode === 'alternating'
@@ -614,7 +618,7 @@ export function TimelineBoard({
                               initial={animated ? { pathLength: 0, opacity: 0 } : false}
                               animate={animated ? { pathLength: 1, opacity: 1 } : false}
                               transition={{
-                                delay: animated ? Math.min(index * 0.2 + 0.2, 2) : 0,
+                                delay: animated ? index * 0.4 + 0.3 : 0,
                                 duration: 0.5,
                                 ease: "easeOut",
                               }}
@@ -632,7 +636,7 @@ export function TimelineBoard({
                                 initial={animated ? { pathLength: 0, opacity: 0 } : false}
                                 animate={animated ? { pathLength: 1, opacity: 1 } : false}
                                 transition={{
-                                  delay: animated ? Math.min(index * 0.2 + 0.4, 2.2) : 0,
+                                  delay: animated ? index * 0.4 + 0.5 : 0,
                                   duration: 0.5,
                                   ease: "easeOut",
                                 }}
@@ -681,7 +685,7 @@ export function TimelineBoard({
               })}
 
               {sortedData.length === 0 && (
-                <div className="text-center py-20 w-full">
+                <div className="text-center py-20 w-full absolute left-0 right-0">
                   <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
                   </div>
@@ -699,7 +703,7 @@ export function TimelineBoard({
             <motion.div
               initial={animated ? { scaleY: 0 } : false}
               animate={animated ? { scaleY: 1 } : false}
-              transition={{ duration: Math.min(sortedData.length * 0.3 + 0.4, 3), ease: "easeOut" }}
+              transition={{ duration: sortedData.length * 0.4 + 0.5, ease: "easeOut" }}
               className={cn(
                 "absolute top-0 bottom-0 w-[3px] bg-[#6366f1] -translate-x-1/2 rounded-full origin-top",
                 mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
@@ -725,10 +729,12 @@ export function TimelineBoard({
                     <motion.div
                       initial={animated ? { scale: 0, opacity: 0 } : false}
                       animate={animated ? { scale: 1, opacity: 1 } : false}
-                      whileHover={{ backgroundColor: itemColor }}
-                      transition={{ delay: animated ? Math.min(index * 0.2 + 0.2, 2) : 0, duration: 0.2 }}
+                      whileHover={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
+                      whileTap={{ backgroundColor: itemColor, transition: { duration: 0.1, delay: 0 } }}
+                      transition={{ delay: animated ? index * 0.4 + 0.4 : 0, duration: 0.2 }}
                       className={cn(
-                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-x-1/2 mt-4",
+                        "absolute w-4 h-4 bg-white dark:bg-neutral-900 border-4 rounded-full transition-colors duration-200 z-10 -translate-x-1/2 -translate-y-1/2",
+                        style === 'infographic' ? "top-[32px]" : "top-8",
                         mode === 'same_side' ? "left-8" : "left-8 md:left-1/2"
                       )}
                       style={{
@@ -737,19 +743,58 @@ export function TimelineBoard({
                       }}
                     />
 
-                    {/* Conteúdo Desktop Alternado */}
+                    {/* Lado Esquerdo/Direito Alternado (Apenas se mode for alternating) */}
                     {mode === 'alternating' && (
                       <motion.div
-                        initial={animated ? { x: isEven ? -20 : 20, opacity: 0 } : false}
+                        initial={animated ? { x: isEven ? 20 : -20, opacity: 0 } : false}
                         animate={animated ? { x: 0, opacity: 1 } : false}
-                        transition={{ delay: animated ? Math.min(index * 0.2 + 0.3, 2.2) : 0, duration: 0.4 }}
-                        className={cn(
-                          "hidden md:flex w-full relative",
-                          isEven
-                            ? "w-[calc(50%-2rem)] mr-auto justify-end pr-6"
-                            : "w-[calc(50%-2rem)] ml-auto justify-start pl-6"
-                        )}
+                        transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
+                        className={cn("hidden md:flex w-1/2 relative", isEven ? "pr-12 justify-end" : "pl-12 justify-start ml-auto")}
                       >
+                        {style === 'infographic' && (
+                          <div className="absolute pointer-events-none z-0" style={{
+                            top: '0px',
+                            right: isEven ? '-60px' : 'auto',
+                            left: isEven ? 'auto' : '-60px',
+                            width: '120px',
+                            height: '64px'
+                          }}>
+                            <svg width="120" height="64" viewBox="0 0 120 64" className="fill-none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              {/* Máscara para interromper a linha vertical no vão da ponte */}
+                              <rect x="57" y="20" width="6" height="24" className="fill-white dark:fill-neutral-950 stroke-none" />
+                              
+                              {/* Linha de entrada vertical e conector horizontal */}
+                              <motion.path 
+                                initial={animated ? { pathLength: 0, opacity: 0 } : false}
+                                animate={animated ? { pathLength: 1, opacity: 1 } : false}
+                                transition={{ delay: animated ? index * 0.4 + 0.3 : 0, duration: 0.5, ease: "easeOut" }}
+                                stroke="#6366f1"
+                                d={isEven 
+                                    ? "M 60 0 L 60 22 A 10 10 0 0 0 50 32 L 18 32"
+                                    : "M 60 0 L 60 22 A 10 10 0 0 1 70 32 L 102 32"
+                                }
+                              />
+
+                              {/* Linha de saída contornando a bolinha */}
+                              {index < sortedData.length - 1 && (
+                                <motion.path 
+                                  initial={animated ? { pathLength: 0, opacity: 0 } : false}
+                                  animate={animated ? { pathLength: 1, opacity: 1 } : false}
+                                  transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.5, ease: "easeOut" }}
+                                  stroke="#6366f1"
+                                  d={isEven
+                                    ? "M 70 32 A 10 10 0 0 1 60 42 L 60 64"
+                                    : "M 50 32 A 10 10 0 0 0 60 42 L 60 64"
+                                  }
+                                />
+                              )}
+                              
+                              {/* Círculos dos nós */}
+                              <circle cx="60" cy="32" r="4.5" fill={itemColor} stroke="none" />
+                              <circle cx={isEven ? "18" : "102"} cy="32" r="4.5" fill={itemColor} stroke="none" />
+                            </svg>
+                          </div>
+                        )}
                         <div className="relative z-10 w-full" style={{ maxWidth: \`\${scale * 450}px\` }}>
                           {style === 'infographic'
                             ? renderInfographicContent(
@@ -768,13 +813,48 @@ export function TimelineBoard({
                       </motion.div>
                     )}
 
-                    {/* Conteúdo Mobile (ou Same Side no Desktop) */}
+                    {/* Layout Mobile (ou Same Side no Desktop) */}
                     <motion.div
                       initial={animated ? { x: 20, opacity: 0 } : false}
                       animate={animated ? { x: 0, opacity: 1 } : false}
-                      transition={{ delay: animated ? Math.min(index * 0.2 + 0.3, 2.2) : 0, duration: 0.4 }}
+                      transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.4 }}
                       className={cn("flex w-full relative pl-16 pr-4", mode === 'same_side' ? "" : "md:hidden")}
                     >
+                      {style === 'infographic' && (
+                        <div className="absolute pointer-events-none z-0 left-[-28px]" style={{
+                          top: '0px',
+                          width: '120px',
+                          height: '64px'
+                        }}>
+                          <svg width="120" height="64" viewBox="0 0 120 64" className="fill-none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            {/* Máscara para interromper a linha vertical no vão da ponte */}
+                            <rect x="57" y="20" width="6" height="24" className="fill-white dark:fill-neutral-950 stroke-none" />
+                            
+                            {/* Linha de entrada vertical e conector horizontal */}
+                            <motion.path 
+                              initial={animated ? { pathLength: 0, opacity: 0 } : false}
+                              animate={animated ? { pathLength: 1, opacity: 1 } : false}
+                              transition={{ delay: animated ? index * 0.4 + 0.3 : 0, duration: 0.5, ease: "easeOut" }}
+                              stroke="#6366f1"
+                              d="M 60 0 L 60 22 A 10 10 0 0 1 70 32 L 102 32"
+                            />
+
+                            {/* Linha de saída contornando a bolinha */}
+                            {index < sortedData.length - 1 && (
+                              <motion.path 
+                                initial={animated ? { pathLength: 0, opacity: 0 } : false}
+                                animate={animated ? { pathLength: 1, opacity: 1 } : false}
+                                transition={{ delay: animated ? index * 0.4 + 0.5 : 0, duration: 0.5, ease: "easeOut" }}
+                                stroke="#6366f1"
+                                d="M 50 32 A 10 10 0 0 0 60 42 L 60 64"
+                              />
+                            )}
+                            
+                            <circle cx="60" cy="32" r="4.5" fill={itemColor} stroke="none" />
+                            <circle cx="102" cy="32" r="4.5" fill={itemColor} stroke="none" />
+                          </svg>
+                        </div>
+                      )}
                       <div className="relative z-10 w-full" style={{ maxWidth: \`\${scale * 450}px\` }}>
                         {style === 'infographic'
                           ? renderInfographicContent(

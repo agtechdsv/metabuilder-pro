@@ -1,16 +1,17 @@
 import { AppAST } from '../../ast'
+import { getByocComponentName } from '../routes/helpers'
 
 export function generateByocComponents(ast: AppAST, files: Map<string, string>) {
   // ---------------------------------------------------------------------------
-  // Componentes BYOC (dinâmicos + templates padrão com suporte a aliases)
+  // Componentes BYOC (dinâmicos baseados nas rotas e campos do Studio)
   // ---------------------------------------------------------------------------
   const byocNames = new Set<string>()
-  byocNames.add('TimelineStatusVendas')
-  byocNames.add('Czqngyk4TimelineStatusVendas')
 
   ;(ast.routes || []).forEach(r => {
     ;(r.formFields || []).forEach(f => {
       if (f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_')) {
+        const resolvedName = getByocComponentName(f)
+        if (resolvedName) byocNames.add(resolvedName)
         const rawId = f.id.replace(/^byoc_/, '')
         const rawPascal = rawId.replace(/[^a-zA-Z0-9_]/g, '')
         if (rawPascal) byocNames.add(rawPascal)

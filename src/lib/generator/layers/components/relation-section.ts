@@ -385,6 +385,20 @@ export function DetailRelationSection({
   updateSubAction,
   deleteSubAction,
 }: DetailRelationSectionProps) {
+  const subConfig = (subDetails && subDetails[0]) || null
+  const subTable = subConfig?.relatedTable || ''
+
+  const getSubRecords = (item: any): any[] => {
+    if (!item) return []
+    if (Array.isArray(item.items)) return item.items
+    if (subTable && Array.isArray(item[subTable])) return item[subTable]
+    if (Array.isArray(item._details)) return item._details
+    for (const key of Object.keys(item)) {
+      if (Array.isArray(item[key]) && key !== 'items') return item[key]
+    }
+    return []
+  }
+
   const [localItems, setLocalItems] = useState<any[]>(items)
   const [mounted, setMounted] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
@@ -432,11 +446,11 @@ export function DetailRelationSection({
     setLocalItems(prev => {
       const next = [...prev]
       const parent = { ...next[parentIdx] }
-      const children = [...(parent.items || parent.itens_pedido || [])]
+      const children = [...getSubRecords(parent)]
       if (children[subIdx]) {
         children[subIdx] = { ...children[subIdx], [field]: val }
         parent.items = children
-        parent.itens_pedido = children
+        if (subTable) { parent[subTable] = children }
         next[parentIdx] = parent
       }
       return next
@@ -446,14 +460,14 @@ export function DetailRelationSection({
   const handleModalSubItemFieldChange = (subIdx: number, field: string, val: any) => {
     setEditingItem((prev: any) => {
       if (!prev) return prev
-      const children = [...(prev.items || prev.itens_pedido || [])]
+      const children = [...getSubRecords(prev)]
       if (children[subIdx]) {
         children[subIdx] = { ...children[subIdx], [field]: val }
       }
       return {
         ...prev,
         items: children,
-        itens_pedido: children
+        ...(subTable ? { [subTable]: children } : {})
       }
     })
   }
@@ -554,7 +568,7 @@ export function DetailRelationSection({
         }
 
         if (subConfig && (updateSubAction || createSubAction)) {
-          const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
+          const itemChildRecords: any[] = getSubRecords(item)
           for (let sIdx = 0; sIdx < itemChildRecords.length; sIdx++) {
             const subItem = itemChildRecords[sIdx]
             const subKey = \`\${item.id || item.codigo || idx}-\${sIdx}\`
@@ -650,7 +664,7 @@ export function DetailRelationSection({
         await updateAction(savedParentId, masterData)
       }
 
-      const currentChildRecords = editingItem?.items || editingItem?.itens_pedido || []
+      const currentChildRecords = getSubRecords(editingItem)
       const updatedChildRecords = [...currentChildRecords]
 
       if (subConfig && (updateSubAction || createSubAction)) {
@@ -704,7 +718,7 @@ export function DetailRelationSection({
           ...masterData,
           id: savedParentId,
           items: updatedChildRecords,
-          itens_pedido: updatedChildRecords,
+          ...(subTable ? { [subTable]: updatedChildRecords } : {}),
           __v: 1
         }, ...prev])
       } else {
@@ -715,7 +729,7 @@ export function DetailRelationSection({
               ...it,
               ...masterData,
               items: updatedChildRecords,
-              itens_pedido: updatedChildRecords,
+              ...(subTable ? { [subTable]: updatedChildRecords } : {}),
               __v: (it.__v || 0) + 1
             }
           }
@@ -788,8 +802,9 @@ export function DetailRelationSection({
           if (selectedOpt?.label) {
             updatedSub[\`\${k}_nome\`] = selectedOpt.label
             updatedSub[\`\${k}_label\`] = selectedOpt.label
-            if (k.includes('produto')) {
-              updatedSub.produto_nome = selectedOpt.label
+            const displayCol = matchedField.config?.component?.rel_label || matchedField.config?.displayColumn
+            if (displayCol) {
+              updatedSub[displayCol] = selectedOpt.label
             }
           }
         }
@@ -814,12 +829,12 @@ export function DetailRelationSection({
         const itId = it.id || it.codigo
         const isParent = itId === editingSubItem.parentId || String(itIdx) === String(editingSubItem.parentId) || String(it.id) === String(editingSubItem.parentId)
         if (isParent) {
-          const children = it.items || it.itens_pedido || []
+          const children = getSubRecords(it)
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
           return {
             ...it,
             items: nextChildren,
-            itens_pedido: nextChildren,
+            ...(subTable ? { [subTable]: nextChildren } : {}),
             __v: (it.__v || 0) + 1
           }
         }
@@ -830,12 +845,12 @@ export function DetailRelationSection({
         const itId = editingItem.id || editingItem.codigo
         const isParent = itId === editingSubItem.parentId || String(editingSubItem.parentId) === 'edit' || (editingSubItem.subItem && itId === editingSubItem.subItem[subConfig?.foreignKey || ''])
         if (isParent) {
-          const children = editingItem.items || editingItem.itens_pedido || []
+          const children = getSubRecords(editingItem)
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
           setEditingItem({
             ...editingItem,
             items: nextChildren,
-            itens_pedido: nextChildren
+            ...(subTable ? { [subTable]: nextChildren } : {})
           })
         }
       }
@@ -865,12 +880,12 @@ export function DetailRelationSection({
         const itId = it.id || it.codigo
         const isParent = itId === deletingSubItem.parentId || String(itIdx) === String(deletingSubItem.parentId) || String(it.id) === String(deletingSubItem.parentId)
         if (isParent) {
-          const children = it.items || it.itens_pedido || []
+          const children = getSubRecords(it)
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
           return {
             ...it,
             items: nextChildren,
-            itens_pedido: nextChildren,
+            ...(subTable ? { [subTable]: nextChildren } : {}),
             __v: (it.__v || 0) + 1
           }
         }
@@ -880,12 +895,12 @@ export function DetailRelationSection({
         const itId = editingItem.id || editingItem.codigo
         const isParent = itId === deletingSubItem.parentId || String(deletingSubItem.parentId) === 'edit'
         if (isParent) {
-          const children = editingItem.items || editingItem.itens_pedido || []
+          const children = getSubRecords(editingItem)
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
           setEditingItem({
             ...editingItem,
             items: nextChildren,
-            itens_pedido: nextChildren
+            ...(subTable ? { [subTable]: nextChildren } : {})
           })
         }
       }
@@ -944,7 +959,6 @@ export function DetailRelationSection({
 
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
-  const subConfig = (subDetails && subDetails[0]) || null
   const subFields = subConfig?.fields?.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig.foreignKey) || []
 
   return (
@@ -1036,7 +1050,7 @@ export function DetailRelationSection({
             const itemTitle = isNew
               ? 'Novo Registro'
               : String(item.nome || item.name || item.titulo || item.title || item.id || item.codigo || \`Registro #\${idx + 1}\`)
-            const itemChildRecords: any[] = item.items || item.itens_pedido || item._details || []
+            const itemChildRecords: any[] = getSubRecords(item)
 
             return (
               <div key={\`\${itemId}-\${item.__v || 0}\`} data-relation-row={itemId} className="relation-row-container flex flex-col rounded-2xl transition-all duration-300">
@@ -1435,12 +1449,10 @@ export function DetailRelationSection({
                       colSpanClass = 'col-span-12 md:col-span-3'
                     } else if (rawWidth.includes('16')) {
                       colSpanClass = 'col-span-12 md:col-span-2'
-                    } else if (f.dbColumn.includes('funcionario') || f.dbColumn.includes('cliente') || f.dbColumn.includes('fornecedor')) {
-                      colSpanClass = 'col-span-12 md:col-span-9'
                     }
 
                     const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : ''))
-                    const editChildRecords = editingItem ? (editingItem.items || editingItem.itens_pedido || []) : []
+                    const editChildRecords = editingItem ? getSubRecords(editingItem) : []
                     let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
                     if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
                       const sum = editChildRecords.reduce((acc: number, sub: any) => {
@@ -1525,13 +1537,13 @@ export function DetailRelationSection({
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
                   <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
                   <div className="flex items-center gap-1.5">
-                    {editingItem && (editingItem.items || editingItem.itens_pedido || []).length > 0 && (
+                    {editingItem && getSubRecords(editingItem).length > 0 && (
                       <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
                         <button
                           type="button"
                           onClick={() => {
                             const next = { ...expandedSubItems }
-                            ;(editingItem.items || editingItem.itens_pedido || []).forEach((_: any, sIdx: number) => {
+                            ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
                               next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = true
                             })
                             setExpandedSubItems(next)
@@ -1545,7 +1557,7 @@ export function DetailRelationSection({
                           type="button"
                           onClick={() => {
                             const next = { ...expandedSubItems }
-                            ;(editingItem.items || editingItem.itens_pedido || []).forEach((_: any, sIdx: number) => {
+                            ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
                               next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = false
                             })
                             setExpandedSubItems(next)
@@ -1561,7 +1573,7 @@ export function DetailRelationSection({
                       type="button"
                       onClick={() => {
                         const newSub: any = { id: \`temp-\${Date.now()}\` }
-                        const curItems = (editingItem?.items || editingItem?.itens_pedido || [])
+                        const curItems = getSubRecords(editingItem)
                         setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
                       }}
                       className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
@@ -1572,7 +1584,7 @@ export function DetailRelationSection({
                   </div>
                 </div>
 
-                {!editingItem || !editingItem.items || editingItem.items.length === 0 ? (
+                {!editingItem || getSubRecords(editingItem).length === 0 ? (
                   <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
                     <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
                       Nenhum registro de Itens encontrado.
@@ -1580,7 +1592,7 @@ export function DetailRelationSection({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {(editingItem.items || editingItem.itens_pedido || []).map((sub: any, sIdx: number) => {
+                    {getSubRecords(editingItem).map((sub: any, sIdx: number) => {
                       const subKey = \`modal-\${editingItem.id || 'edit'}-\${sIdx}\`
                       const isSubExpanded = !!expandedSubItems[subKey]
 

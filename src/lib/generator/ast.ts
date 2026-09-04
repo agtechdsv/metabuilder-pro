@@ -208,6 +208,9 @@ export interface RouteNode {
   // ── Relacionamentos mestre-detalhe (abas) ──
   relationTabs: RelationTab[]
 
+  // ── Interface de Ação (page, drawer, modal) ──
+  actionInterfaceType?: 'page' | 'drawer' | 'modal'
+
   // ── Raw layout_config (para features futuras / fallback) ──
   rawLayoutConfig?: any
 }

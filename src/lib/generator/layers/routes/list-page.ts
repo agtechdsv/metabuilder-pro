@@ -278,7 +278,7 @@ ${tdCells}
                         <Pencil className="w-3.5 h-3.5" />
                       </Link>
                       <DeleteButton
-                        recordName={item.nome || item.name || item.titulo || item.razao_social || String(item.${route.primaryKey})}
+                        recordName={String(item[${JSON.stringify(route.gridFields.find(f => !f.isPrimaryKey && !f.hidden)?.dbColumn || route.primaryKey)}] || item.${route.primaryKey})}
                         onDelete={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}
                       />
 ${rowButtonsHtml}

@@ -1362,6 +1362,7 @@ export function parseMetaBuilderJSON(
       timelineConfig,
       buttons,
       relationTabs,
+      actionInterfaceType: resolvedView.layout_config?.action_interface_type || 'page',
       rawLayoutConfig: resolvedView.layout_config,
     })
   }
