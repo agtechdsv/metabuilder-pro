@@ -540,8 +540,6 @@ export default function ViewContainer({
             direction={timelineDirection}
             onDirectionChange={(newDir) => {
               setTimelineDirection(newDir);
-              setData([]);
-              setCurrentPage(1);
             }}
           />
         </div>

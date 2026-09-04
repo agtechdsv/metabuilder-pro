@@ -97,11 +97,16 @@ export default function DynamicTimeline({
   ]
 
   useEffect(() => {
-    setMode(timelineConfig.layout_mode || 'alternating')
-    setStyle(timelineConfig.layout_style || 'cards')
-    setAnimated(timelineConfig.animated !== false)
-    setScale(timelineConfig.card_scale ?? 1.0)
-  }, [timelineConfig])
+    if (timelineConfig?.layout_mode) setMode(timelineConfig.layout_mode)
+    if (timelineConfig?.layout_style) setStyle(timelineConfig.layout_style)
+    if (timelineConfig?.animated !== undefined) setAnimated(timelineConfig.animated !== false)
+    if (timelineConfig?.card_scale !== undefined) setScale(timelineConfig.card_scale)
+  }, [
+    timelineConfig?.layout_mode,
+    timelineConfig?.layout_style,
+    timelineConfig?.animated,
+    timelineConfig?.card_scale
+  ])
 
   // Dados sem manipulação de ordenação para refletir o backend
   const sortedData = data

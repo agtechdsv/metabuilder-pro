@@ -268,6 +268,9 @@ function formatDatetimeForInput(v: any) {
   return String(v).slice(0, 16)
 }
 
+const filterFields = ${filterFieldsData}
+const timelineConfig = ${timelineConfigData}
+
 export function TimelineClient({
   initialData,
   relationalOptions = {}
@@ -304,9 +307,6 @@ ${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${t
       setModalRelationItems({})
     }
   }, [activeRecord])
-
-  const filterFields = ${filterFieldsData}
-  const timelineConfig = ${timelineConfigData}
 
   // Filtragem de registros conforme a barra de argumentos/filtros
   const filteredData = useMemo(() => {

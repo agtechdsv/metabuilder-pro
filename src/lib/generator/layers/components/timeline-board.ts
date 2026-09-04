@@ -99,7 +99,13 @@ export function TimelineBoard({
     if (timelineConfig.layoutStyle) setStyle(timelineConfig.layoutStyle)
     if (timelineConfig.animated !== undefined) setAnimated(timelineConfig.animated !== false)
     if (timelineConfig.cardScale !== undefined) setScale(timelineConfig.cardScale)
-  }, [timelineConfig])
+  }, [
+    timelineConfig.layoutDirection,
+    timelineConfig.layoutMode,
+    timelineConfig.layoutStyle,
+    timelineConfig.animated,
+    timelineConfig.cardScale
+  ])
 
   const scales = [
     { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: 'Pequeno' },
