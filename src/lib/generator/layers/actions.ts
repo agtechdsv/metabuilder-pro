@@ -179,9 +179,13 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   return clean
 }
 
-export async function get${model.name}List() {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('${model.dbTable}').select('*').order('${pk}', { ascending: false })
+  let q = supabase.from('${model.dbTable}').select('*').order('${pk}', { ascending: false })
+  if (opts?.dateField && opts.startDate) q = q.gte(opts.dateField, opts.startDate)
+  if (opts?.dateField && opts.endDate) q = q.lte(opts.dateField, opts.endDate + 'T23:59:59')
+  if (opts?.limit) q = q.limit(opts.limit)
+  const { data, error } = await q
   if (error) throw new Error(error.message)
   return data
 }
@@ -263,8 +267,20 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   return clean
 }
 
-export async function get${model.name}List() {
-  const res = await query('SELECT * FROM ${tableRef} ORDER BY "${pk}" DESC')
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+  const conditions: string[] = []
+  const params: any[] = []
+  if (opts?.dateField && opts.startDate) {
+    params.push(opts.startDate)
+    conditions.push(\`"\${opts.dateField}" >= $\${params.length}\`)
+  }
+  if (opts?.dateField && opts.endDate) {
+    params.push(opts.endDate + 'T23:59:59')
+    conditions.push(\`"\${opts.dateField}" <= $\${params.length}\`)
+  }
+  const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
+  const limitClause = opts?.limit ? \` LIMIT \${opts.limit}\` : ''
+  const res = await query(\`SELECT * FROM ${tableRef}\${where} ORDER BY \"${pk}\" DESC\${limitClause}\`, params)
   return res.rows
 }
 
@@ -343,8 +359,20 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   return clean
 }
 
-export async function get${model.name}List() {
-  const rows = await query('SELECT ${allColumns} FROM "${model.dbTable}" ORDER BY "${pk}" DESC')
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+  const conditions: string[] = []
+  const params: Record<string, any> = {}
+  if (opts?.dateField && opts.startDate) {
+    params['p_startDate'] = opts.startDate
+    conditions.push(\`"\${opts.dateField}" >= :p_startDate\`)
+  }
+  if (opts?.dateField && opts.endDate) {
+    params['p_endDate'] = opts.endDate + 'T23:59:59'
+    conditions.push(\`"\${opts.dateField}" <= :p_endDate\`)
+  }
+  const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
+  const fetchFirst = opts?.limit ? \` FETCH FIRST \${opts.limit} ROWS ONLY\` : ''
+  const rows = await query(\`SELECT ${allColumns} FROM \"${model.dbTable}\"\${where} ORDER BY \"${pk}\" DESC\${fetchFirst}\`, params)
   return rows
 }
 
@@ -420,8 +448,20 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   return clean
 }
 
-export async function get${model.name}List() {
-  const rows = await query('SELECT ${allColumns} FROM \`${model.dbTable}\` ORDER BY \`${pk}\` DESC')
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+  const conditions: string[] = []
+  const params: any[] = []
+  if (opts?.dateField && opts.startDate) {
+    conditions.push('\`' + opts.dateField + '\` >= ?')
+    params.push(opts.startDate)
+  }
+  if (opts?.dateField && opts.endDate) {
+    conditions.push('\`' + opts.dateField + '\` <= ?')
+    params.push(opts.endDate + 'T23:59:59')
+  }
+  const where = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : ''
+  const limitClause = opts?.limit ? ' LIMIT ' + opts.limit : ''
+  const rows = await query('SELECT ${allColumns} FROM \`${model.dbTable}\`' + where + ' ORDER BY \`${pk}\` DESC' + limitClause, params)
   return rows
 }
 
@@ -499,9 +539,21 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
   return clean
 }
 
-export async function get${model.name}List() {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const pool = await getPool()
-  const result = await pool.request().query('SELECT ${allColumns} FROM [${model.dbTable}] ORDER BY [${pk}] DESC')
+  const request = pool.request()
+  const conditions: string[] = []
+  if (opts?.dateField && opts.startDate) {
+    request.input('startDate', opts.startDate)
+    conditions.push(\`[\${opts.dateField}] >= @startDate\`)
+  }
+  if (opts?.dateField && opts.endDate) {
+    request.input('endDate', opts.endDate + 'T23:59:59')
+    conditions.push(\`[\${opts.dateField}] <= @endDate\`)
+  }
+  const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
+  const topClause = opts?.limit ? \`TOP (\${opts.limit}) \` : ''
+  const result = await request.query(\`SELECT \${topClause}${allColumns} FROM [${model.dbTable}]\${where} ORDER BY [${pk}] DESC\`)
   return result.recordset
 }
 

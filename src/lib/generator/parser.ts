@@ -17,6 +17,8 @@ import {
   ButtonStyle,
   ButtonActionType,
   TimelineConfig,
+  AnalyticsConfig,
+  AnalyticsWidget,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 
@@ -1219,7 +1221,11 @@ export function parseMetaBuilderJSON(
     const resolvedView =
       rv.logic_type === 'personalizado' ? resolvePersonalizadoView(rv, rawViews) : rv
 
-    const model = models.find((m) => m.id === resolvedView.model_id)
+    const targetModelId = resolvedView.model_id || resolvedView.layout_config?.master_model_id || resolvedView.layout_config?.model_id
+    if (!resolvedView.model_id && targetModelId) {
+      resolvedView.model_id = targetModelId
+    }
+    const model = models.find((m) => m.id === targetModelId)
     if (!model) continue
 
     // Etapas 3, 4 e 5: resolve campos por zona
@@ -1352,6 +1358,59 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    let analyticsConfig: AnalyticsConfig | undefined = undefined
+    if (
+      (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
+      resolvedView.layout_config?.analytics_config
+    ) {
+      const ac = resolvedView.layout_config.analytics_config
+      const resolveWidgetColumn = (val?: string): string => {
+        if (!val) return ''
+        if (val.includes('.') || val.includes('*') || val.includes('+') || val.includes('/') || val.includes('-') || val.includes(' ')) {
+          return val
+        }
+        const found = rawFields.find((f: any) => f.id === val || f.db_column_name === val || f.name === val)
+        if (found) {
+          const colName = found.db_column_name || found.dbColumn || val
+          if (found.model_id && found.model_id !== model.id) {
+            const refModel = rawModels.find((m: any) => m.id === found.model_id)
+            if (refModel) {
+              return `${refModel.db_table_name}.${colName}`
+            }
+          }
+          return colName
+        }
+        return val
+      }
+
+      analyticsConfig = {
+        widgets: (ac.widgets || []).map((w: any) => ({
+          id: w.id || `widget_${Math.random().toString(36).substr(2, 9)}`,
+          title: w.title || 'Widget',
+          type: w.type || 'bar',
+          modelId: w.model_id || resolvedView.model_id || model.id,
+          field: resolveWidgetColumn(w.field),
+          calc: (w.calc || 'COUNT').toUpperCase(),
+          groupBy: resolveWidgetColumn(w.group_by),
+          width: w.width || 'third',
+          dateGranularity: w.date_granularity || '',
+          sortBy: w.sort_by || 'value_desc',
+          limitTopN: w.limit_top_n ? Number(w.limit_top_n) : undefined,
+          gaugeMin: w.gauge_min !== undefined ? Number(w.gauge_min) : undefined,
+          gaugeMax: w.gauge_max !== undefined ? Number(w.gauge_max) : undefined,
+          gaugeTarget: w.gauge_target !== undefined ? Number(w.gauge_target) : undefined,
+          gaugeStart: w.gauge_start !== undefined ? Number(w.gauge_start) : undefined,
+          gaugeEnd: w.gauge_end !== undefined ? Number(w.gauge_end) : undefined,
+          useFormula: !!w.use_formula,
+          formulaTokens: w.formula_tokens || [],
+          color: w.color || 'indigo',
+        })),
+        allowRuntimeEdit: ac.allow_runtime_edit !== false,
+        // Pushdown: campo de data para filtro no banco (ex: 'data_pedido', 'created_at')
+        dateFilterField: ac.date_filter_field || undefined,
+      }
+    }
+
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
       viewSlug: rv.slug || '',
@@ -1370,6 +1429,7 @@ export function parseMetaBuilderJSON(
       kanbanGroupDisplayField,
       kanbanCardFields,
       timelineConfig,
+      analyticsConfig,
       buttons,
       relationTabs,
       actionInterfaceType: resolvedView.layout_config?.action_interface_type || 'page',

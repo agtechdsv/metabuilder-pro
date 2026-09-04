@@ -20,6 +20,7 @@ export type LogicType =
   | 'timeline'
   | 'personalizado'
   | 'dashboard_bi'
+  | 'analytics'
   | string // fallback para futuros tipos
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +217,9 @@ export interface RouteNode {
   // ── Configuração específica para Timeline ──
   timelineConfig?: TimelineConfig
 
+  // ── Configuração específica para Analytics / Dashboard BI ──
+  analyticsConfig?: AnalyticsConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -227,6 +231,39 @@ export interface RouteNode {
 
   // ── Raw layout_config (para features futuras / fallback) ──
   rawLayoutConfig?: any
+}
+
+export interface AnalyticsWidget {
+  id: string
+  title: string
+  type: 'kpi' | 'bar' | 'pie' | 'line' | 'gauge' | string
+  modelId: string
+  field: string
+  calc: 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX' | string
+  groupBy?: string
+  width?: 'full' | 'half' | 'third' | 'quarter' | string
+  dateGranularity?: string
+  sortBy?: string
+  limitTopN?: number
+  gaugeMin?: number
+  gaugeMax?: number
+  gaugeTarget?: number
+  gaugeStart?: number
+  gaugeEnd?: number
+  useFormula?: boolean
+  formulaTokens?: any[]
+  color?: string
+}
+
+export interface AnalyticsConfig {
+  widgets: AnalyticsWidget[]
+  allowRuntimeEdit?: boolean
+  /**
+   * Campo de data usado pelo filtro global de período (ex: 'data_pedido', 'created_at').
+   * Quando ausente, o gerador aplica uma heurística por convenção de nome de coluna.
+   * Declare explicitamente para comportamento determinístico.
+   */
+  dateFilterField?: string
 }
 
 export interface TimelineConfig {

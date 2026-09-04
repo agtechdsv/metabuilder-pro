@@ -105,6 +105,11 @@ export interface BlueprintConfig {
 export interface AnalyticsConfig {
   widgets: BiWidget[]
   allow_runtime_edit: boolean
+  /**
+   * Campo de data para pushdown de filtro no banco.
+   * Ex: 'data_pedido', 'created_at'. Sem declaração, a heurística JS é usada.
+   */
+  date_filter_field?: string
 }
 
 export interface BiWidget {
