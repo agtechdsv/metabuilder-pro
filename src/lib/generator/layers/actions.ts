@@ -1,4 +1,5 @@
 import { AppAST, ModelNode, FieldNode } from '../ast'
+import { toPascalCase } from './routes/helpers'
 
 export function generateActions(ast: AppAST, files: Map<string, string>) {
   // Configuração global de banco baseada na stack escolhida
@@ -16,7 +17,7 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
 
   // Gerar ações de CRUD para cada modelo
   for (const model of ast.models) {
-    const actionContent = ast.dbStack === 'supabase'
+    let actionContent = ast.dbStack === 'supabase'
       ? generateSupabaseActions(model)
       : ast.dbStack === 'oracle'
         ? generateOracleActions(model)
@@ -26,7 +27,120 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
             ? generateSqlServerActions(model)
             : generatePgActions(model)
 
-    files.set(`app/actions/${model.name.toLowerCase()}.ts`, actionContent)
+    // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido)
+    const aliases = new Set<string>()
+    if (model.dbTable) {
+      const directCap = model.dbTable.charAt(0).toUpperCase() + model.dbTable.slice(1)
+      if (directCap !== model.name && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(directCap)) {
+        aliases.add(directCap)
+      }
+      const pascal = toPascalCase(model.dbTable)
+      if (pascal !== model.name && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(pascal)) {
+        aliases.add(pascal)
+      }
+    }
+
+    if (aliases.size > 0) {
+      let aliasCode = '\n// Compatibility aliases\n'
+      for (const alias of aliases) {
+        aliasCode += `export async function get${alias}List(opts?: any) { return get${model.name}List(opts) }\n`
+        aliasCode += `export async function get${alias}ById(id: string) { return get${model.name}ById(id) }\n`
+        aliasCode += `export async function get${alias}ByField(field: string, value: any) { return get${model.name}ByField(field, value) }\n`
+        aliasCode += `export async function create${alias}(formData: any) { return create${model.name}(formData) }\n`
+        aliasCode += `export async function update${alias}(id: string, formData: any) { return update${model.name}(id, formData) }\n`
+        aliasCode += `export async function delete${alias}(id: string) { return delete${model.name}(id) }\n`
+      }
+      actionContent += aliasCode
+    }
+
+    // Salvar o arquivo de action sob todas as convenções possíveis de caminho/nome de arquivo
+    const fileKeys = new Set<string>()
+    if (model.name) {
+      fileKeys.add(model.name.toLowerCase().trim())
+      fileKeys.add(model.name.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ''))
+    }
+    if (model.dbTable) {
+      fileKeys.add(model.dbTable.toLowerCase().trim())
+      fileKeys.add(model.dbTable.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ''))
+    }
+    if (model.id) {
+      fileKeys.add(model.id.toLowerCase().trim())
+    }
+
+    for (const key of fileKeys) {
+      if (key) {
+        files.set(`app/actions/${key}.ts`, actionContent)
+      }
+    }
+  }
+
+  // Varredura de segurança: garante que qualquer módulo de action importado em qualquer página exista
+  const actionImportRegex = /from\s+['"]@\/app\/actions\/([^'"]+)['"]/g
+  const neededActions = new Set<string>()
+
+  for (const [filePath, content] of files.entries()) {
+    if (filePath.startsWith('app/')) {
+      let match: RegExpExecArray | null
+      actionImportRegex.lastIndex = 0
+      while ((match = actionImportRegex.exec(content)) !== null) {
+        const actionModuleName = match[1]
+        if (actionModuleName && actionModuleName !== 'db') {
+          neededActions.add(actionModuleName)
+        }
+      }
+    }
+  }
+
+  for (const actionName of neededActions) {
+    const actionPath = `app/actions/${actionName}.ts`
+    if (!files.has(actionPath)) {
+      // Tenta associar com modelo do AST
+      const clean = actionName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '')
+      const foundModel = ast.models.find(m =>
+        (m.dbTable && m.dbTable.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '') === clean) ||
+        (m.name && m.name.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '') === clean) ||
+        (m.id && m.id.toLowerCase() === actionName.toLowerCase())
+      )
+
+      if (foundModel) {
+        const existingContent =
+          files.get(`app/actions/${(foundModel.dbTable || '').toLowerCase()}.ts`) ||
+          files.get(`app/actions/${(foundModel.name || '').toLowerCase()}.ts`)
+        if (existingContent) {
+          files.set(actionPath, existingContent)
+          continue
+        }
+      }
+
+      // Fallback seguro caso seja tabela/relação externa não modelada no AST
+      const pascalName = toPascalCase(actionName) || 'Record'
+      files.set(actionPath, `'use server'
+
+export async function get${pascalName}List(opts?: any) {
+  return []
+}
+
+export async function get${pascalName}ById(id: string) {
+  return null
+}
+
+export async function get${pascalName}ByField(field: string, value: any) {
+  return []
+}
+
+export async function create${pascalName}(formData: any) {
+  return null
+}
+
+export async function update${pascalName}(id: string, formData: any) {
+  return
+}
+
+export async function delete${pascalName}(id: string) {
+  return
+}
+`)
+    }
   }
 }
 

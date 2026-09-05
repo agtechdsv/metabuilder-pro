@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName } from './helpers'
+import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Timeline Page (Server Component)
@@ -27,12 +27,12 @@ export function generateTimelinePage(route: RouteNode): string {
     if (targetModel && targetTable) {
       lookupModels.set(targetTable.toLowerCase(), targetModel)
     } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
-      const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
+      const modelName = toPascalCase(targetTable)
       lookupModels.set(targetTable.toLowerCase(), modelName)
     } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
       const base = f.dbColumn.slice(0, -3)
       const table = base.endsWith('s') ? base : (base + 's')
-      const modelName = table.charAt(0).toUpperCase() + table.slice(1)
+      const modelName = toPascalCase(table)
       lookupModels.set(table.toLowerCase(), modelName)
     }
   })
