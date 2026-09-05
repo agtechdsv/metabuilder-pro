@@ -1000,6 +1000,7 @@ import {
   Search,
   Plus,
   Minimize2,
+  Maximize2,
   MousePointer2,
   LayoutGrid,
   ZoomIn,
