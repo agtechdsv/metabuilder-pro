@@ -4,6 +4,8 @@ import { generateDetailPage, generateDetailTabsClient, generateDetailSchema } fr
 import { generateNewPage } from './new-page'
 import { generateKanbanPage, generateKanbanClient, generateKanbanSchema } from './kanban-page'
 import { generateTimelinePage, generateTimelineClient, generateTimelineSchema } from './timeline-page'
+import { generateSchedulerPage, generateSchedulerClient, generateSchedulerSchema } from './scheduler-page'
+import { generateGalleryPage, generateGalleryClient, generateGallerySchema } from './gallery-page'
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 
@@ -13,6 +15,8 @@ export * from './detail-page'
 export * from './new-page'
 export * from './kanban-page'
 export * from './timeline-page'
+export * from './scheduler-page'
+export * from './gallery-page'
 export * from './analytics-page'
 export * from './wip-page'
 
@@ -50,6 +54,28 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/TimelineClient.tsx`, generateTimelineClient(route))
       files.set(`${routeDir}/schema.ts`, generateTimelineSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no nó/card)
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'scheduler') {
+      // Scheduler Listagem
+      files.set(`${routeDir}/page.tsx`, generateSchedulerPage(route))
+      files.set(`${routeDir}/SchedulerClient.tsx`, generateSchedulerClient(route))
+      files.set(`${routeDir}/schema.ts`, generateSchedulerSchema(route))
+      // Mestre-Detalhe + Edição (ao clicar no evento)
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'galeria') {
+      // Galeria (Vitrine de Catálogo / Assets)
+      files.set(`${routeDir}/page.tsx`, generateGalleryPage(route))
+      files.set(`${routeDir}/GalleryClient.tsx`, generateGalleryClient(route))
+      files.set(`${routeDir}/schema.ts`, generateGallerySchema(route))
+      // Mestre-Detalhe + Edição (ao clicar no card)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
       files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))

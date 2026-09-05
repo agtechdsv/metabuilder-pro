@@ -220,6 +220,12 @@ export interface RouteNode {
   // ── Configuração específica para Analytics / Dashboard BI ──
   analyticsConfig?: AnalyticsConfig
 
+  // ── Configuração específica para Scheduler / Agenda ──
+  schedulerConfig?: SchedulerConfig
+
+  // ── Configuração específica para Galeria / Vitrine de Catálogo ──
+  galleryConfig?: GalleryConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -278,6 +284,21 @@ export interface TimelineConfig {
   timelineOrderVertical?: 'asc' | 'desc'
   animated?: boolean
   cardScale?: number
+}
+
+export interface SchedulerConfig {
+  titleField: string        // dbColumn do título do evento (ex: 'descricao', 'status')
+  startDateField: string    // dbColumn de data/hora início (ex: 'data_estimada')
+  endDateField?: string     // dbColumn de data/hora fim (opcional)
+  colorField?: string       // dbColumn de cor / status (opcional, para colorir cards)
+}
+
+export interface GalleryConfig {
+  imageField?: string         // dbColumn do campo de imagem/URL/base64 (ex: 'foto', 'imagem')
+  titleField?: string         // dbColumn do título do card (ex: 'nome', 'descricao')
+  cardFields?: string[]       // dbColumns adicionais exibidos como metadados no card
+  cardFieldsLabels?: Record<string, string> // labels customizados por campo
+  clickBehavior?: 'fullscreen' | 'thumbnail' // comportamento de clique (padrão: 'fullscreen')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -19,6 +19,8 @@ import {
   TimelineConfig,
   AnalyticsConfig,
   AnalyticsWidget,
+  SchedulerConfig,
+  GalleryConfig,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
@@ -1440,6 +1442,126 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Scheduler / Agenda
+    // ─────────────────────────────────────────────────
+    let schedulerConfig: SchedulerConfig | undefined = undefined
+    if (resolvedView.logic_type === 'scheduler' && resolvedView.layout_config?.scheduler_config) {
+      const sc = resolvedView.layout_config.scheduler_config
+
+      const resolveSchedulerColumn = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find(
+          (f: any) => f.id === fieldIdOrName
+                   || f.db_column_name === fieldIdOrName
+                   || f.display_name === fieldIdOrName
+        )
+        if (!found) return fieldIdOrName
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) return fkField.db_column_name || fkField.dbColumn
+        return found.db_column_name || found.dbColumn || fieldIdOrName
+      }
+
+      schedulerConfig = {
+        titleField:     resolveSchedulerColumn(sc.title_field)      || 'id',
+        startDateField: resolveSchedulerColumn(sc.start_date_field) || 'created_at',
+        endDateField:   sc.end_date_field ? resolveSchedulerColumn(sc.end_date_field) : undefined,
+        colorField:     sc.color_field    ? resolveSchedulerColumn(sc.color_field)    : undefined,
+      }
+    }
+
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Galeria / Vitrine
+    // ─────────────────────────────────────────────────
+    let galleryConfig: GalleryConfig | undefined = undefined
+    if (resolvedView.logic_type === 'galeria') {
+      const gc = resolvedView.layout_config?.gallery_config || {}
+
+      const resolveGalleryColumn = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find(
+          (f: any) => f.id === fieldIdOrName
+                   || f.db_column_name === fieldIdOrName
+                   || f.display_name === fieldIdOrName
+                   || f.name === fieldIdOrName
+        )
+        if (!found) return fieldIdOrName
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) return fkField.db_column_name || fkField.dbColumn
+        return found.db_column_name || found.dbColumn || fieldIdOrName
+      }
+
+      // Auto-detecção de campo de imagem se não configurado
+      let autoImageField = gc.image_field ? resolveGalleryColumn(gc.image_field) : undefined
+      if (!autoImageField) {
+        const candidateImg = gridFields.find(f =>
+          f.dataType === 'image' ||
+          f.dataType === 'file' ||
+          f.dbColumn.toLowerCase().includes('foto') ||
+          f.dbColumn.toLowerCase().includes('imagem') ||
+          f.dbColumn.toLowerCase().includes('image') ||
+          f.dbColumn.toLowerCase().includes('avatar') ||
+          f.dbColumn.toLowerCase().includes('capa') ||
+          f.dbColumn.toLowerCase().includes('thumb') ||
+          f.dbColumn.toLowerCase().includes('url')
+        )
+        if (candidateImg) autoImageField = candidateImg.dbColumn
+      }
+
+      // Auto-detecção de campo de título se não configurado
+      let autoTitleField = gc.title_field ? resolveGalleryColumn(gc.title_field) : undefined
+      if (!autoTitleField) {
+        const candidateTitle = gridFields.find(f =>
+          !f.isPrimaryKey &&
+          (f.dbColumn.toLowerCase().includes('nome') ||
+           f.dbColumn.toLowerCase().includes('name') ||
+           f.dbColumn.toLowerCase().includes('titulo') ||
+           f.dbColumn.toLowerCase().includes('title') ||
+           f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dbColumn.toLowerCase().includes('description') ||
+           f.dataType === 'string')
+        )
+        if (candidateTitle) autoTitleField = candidateTitle.dbColumn
+        else autoTitleField = primaryKey
+      }
+
+      const rawCardFields: string[] = Array.isArray(gc.card_fields) ? gc.card_fields : []
+      const resolvedCardFields = rawCardFields.map((cf: string) => {
+        const found = rawFields.find((f: any) => f.id === cf || f.db_column_name === cf || f.name === cf)
+        return found ? (found.db_column_name || cf) : cf
+      }).filter(Boolean)
+
+      galleryConfig = {
+        imageField:       autoImageField,
+        titleField:       autoTitleField,
+        cardFields:       resolvedCardFields.length > 0 ? resolvedCardFields : undefined,
+        cardFieldsLabels: gc.card_fields_labels || undefined,
+        clickBehavior:    resolvedView.layout_config?.gallery_click_behavior || gc.gallery_click_behavior || 'fullscreen',
+      }
+    }
+
     let analyticsConfig: AnalyticsConfig | undefined = undefined
     if (
       (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
@@ -1606,6 +1728,8 @@ export function parseMetaBuilderJSON(
       kanbanGroupDisplayField,
       kanbanCardFields,
       timelineConfig,
+      schedulerConfig,
+      galleryConfig,
       analyticsConfig,
       buttons,
       relationTabs,
