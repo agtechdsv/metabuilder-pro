@@ -651,25 +651,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 }
 `)
 
-  // Protected Loading — fallback com spinner para transições do Next.js App Router
-  files.set('app/(protected)/loading.tsx', `'use client'
-import { Loader2 } from 'lucide-react'
-
-export default function ProtectedLoading() {
-  return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-300">
-      <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
-          <p className="text-sm">Buscando dados no Direct Access...</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-`)
-
   // Dashboard page — fiel à DynamicDashboard.tsx da Web Produção
   const navCards = (ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
     id: r.viewSlug,
