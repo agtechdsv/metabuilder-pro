@@ -121,7 +121,11 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
       await syncManager.confirmSync()
       setSandboxMode(false)
       setIsCommitModalOpen(false)
+      const { branches, currentBranch } = await syncManager.getBranches()
+      setBranches(branches)
+      setSelectedBranch(currentBranch)
       await loadFileTree()
+      resetTabs()
       toast(t('ide.git.sync_confirmed', 'Sincronização Efetivada'), 'success')
     } catch (err: any) {
       toast(`${t('ide.git.error', 'Erro:')} ${err.message}`, 'error')
@@ -136,6 +140,9 @@ export function useIDEGit({ target, syncManager, loadFileTree, resetTabs }: UseI
     try {
       await syncManager.abortSync()
       setSandboxMode(false)
+      const { branches, currentBranch } = await syncManager.getBranches()
+      setBranches(branches)
+      setSelectedBranch(currentBranch)
       await loadFileTree()
       resetTabs()
       setShowDiscardConfirm(false)

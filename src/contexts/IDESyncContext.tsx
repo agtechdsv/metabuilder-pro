@@ -440,6 +440,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         setGitLogs(logs)
       } else {
         await syncManager.checkoutBranch(branchName)
+        const { branches, currentBranch } = await syncManager.getBranches()
+        setBranches(branches)
+        setSelectedBranch(currentBranch)
+        if (target) {
+          const configManager = new GitConfigManager(target.slug)
+          const config = await configManager.getConfig()
+          const sandboxBranch = config.branchSandbox || 'sync-sandbox'
+          setSandboxMode(currentBranch === sandboxBranch)
+        }
         await loadFileTree()
         setFileContents({})
         setOriginalFileContents({})
@@ -1760,7 +1769,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                 <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h2 className="text-xl font-bold text-white">{modalMode === 'commit' ? t('ide_commit_local.title', 'Realizar Commit') : 'Revisar e Confirmar Merge'}</h2>
+                    <h2 className="text-xl font-bold text-white">{modalMode === 'commit' ? t('ide_commit_local.title', 'Realizar Commit') : t('ide_commit_local.review_and_confirm_merge', 'Revisar e Confirmar Merge')}</h2>
                   </div>
                   <button onClick={() => setIsCommitModalOpen(false)} disabled={isCommitting} className="text-neutral-500 hover:text-white transition-colors">
                     <X className="w-5 h-5" />
@@ -1785,7 +1794,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           </>
                         ) : (
                           <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm text-indigo-200">
-                            Revise as alterações geradas pelo Studio antes de efetivar o merge na sua branch local. Você pode reverter arquivos inteiros ou descartar trechos usando o visualizador de Diff ao lado.
+                            {t('ide_commit_local.merge_review_desc', 'Revise as alterações geradas pelo Studio antes de efetivar o merge na sua branch local. Você pode reverter arquivos inteiros ou descartar trechos usando o visualizador de Diff ao lado.')}
                           </div>
                         )}
                       </div>
@@ -1883,10 +1892,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                           </span>
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1 border border-neutral-800 rounded bg-neutral-900/50 p-0.5">
-                              <button onClick={handlePrevDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title="Alteração Anterior">
+                              <button onClick={handlePrevDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title={t('ide_commit_local.prev_diff', 'Alteração Anterior')}>
                                 <ChevronUp className="w-4 h-4" />
                               </button>
-                              <button onClick={handleNextDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title="Próxima Alteração">
+                              <button onClick={handleNextDiff} className="p-1 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-colors" title={t('ide_commit_local.next_diff', 'Próxima Alteração')}>
                                 <ChevronDown className="w-4 h-4" />
                               </button>
                             </div>
@@ -1968,12 +1977,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
                     {isCommitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {modalMode === 'commit' ? t('ide_commit_local.committing', 'Commitando...') : 'Processando...'}
+                        {modalMode === 'commit' ? t('ide_commit_local.committing', 'Commitando...') : t('ide_commit_local.processing', 'Processando...')}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        {modalMode === 'commit' ? `${t('ide_commit_local.confirm_commit', 'Confirmar Commit')} (${selectedCommitFiles.size})` : 'Efetivar Merge'}
+                        {modalMode === 'commit' ? `${t('ide_commit_local.confirm_commit', 'Confirmar Commit')} (${selectedCommitFiles.size})` : t('ide_commit_local.apply_merge', 'Efetivar Merge')}
                       </>
                     )}
                   </button>
