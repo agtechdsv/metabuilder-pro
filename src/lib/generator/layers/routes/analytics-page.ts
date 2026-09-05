@@ -12,24 +12,61 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   const primaryKey = route.primaryKey || 'id'
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
+  const resolveModel = (tableOrId: string) => {
+    if (!tableOrId) return undefined
+    const clean = tableOrId.toLowerCase().trim()
+    return ast.models.find(m =>
+      m.id.toLowerCase() === clean ||
+      m.dbTable.toLowerCase() === clean ||
+      m.name.toLowerCase() === clean
+    )
+  }
+
+  const getFieldRelTable = (f: any): string | null => {
+    if (f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration') {
+      return null
+    }
+    const raw = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (raw) {
+      const m = resolveModel(raw)
+      if (m) return m.dbTable.toLowerCase()
+      if (!raw.includes('-') && raw.length < 50) return raw.toLowerCase()
+      return null
+    }
+    if (f.dbColumn && f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const tbl = base.endsWith('s') ? base : `${base}s`
+      return tbl.toLowerCase()
+    }
+    return null
+  }
+
   // 1. Identifica todos os modelos necessários para os widgets, joins e grid/filtros
   const referencedTables = new Set<string>()
 
   // Tabelas referenciadas nas expressões dos widgets
   widgets.forEach(w => {
     if (w.modelId && w.modelId !== route.modelId) {
-      const m = ast.models.find(mod => mod.id === w.modelId)
+      const m = resolveModel(w.modelId)
       if (m) referencedTables.add(m.dbTable.toLowerCase())
     }
     if (w.field && typeof w.field === 'string') {
       const matches = w.field.match(/[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+/g)
       if (matches) {
-        matches.forEach(match => referencedTables.add(match.split('.')[0].toLowerCase()))
+        matches.forEach(match => {
+          const t = match.split('.')[0].toLowerCase()
+          const m = resolveModel(t)
+          if (m) referencedTables.add(m.dbTable.toLowerCase())
+          else if (!t.includes('-') && t.length < 50) referencedTables.add(t)
+        })
       }
     }
     if (w.groupBy && typeof w.groupBy === 'string') {
       if (w.groupBy.includes('.')) {
-        referencedTables.add(w.groupBy.split('.')[0].toLowerCase())
+        const t = w.groupBy.split('.')[0].toLowerCase()
+        const m = resolveModel(t)
+        if (m) referencedTables.add(m.dbTable.toLowerCase())
+        else if (!t.includes('-') && t.length < 50) referencedTables.add(t)
       } else if (w.groupBy.endsWith('_id')) {
         const base = w.groupBy.slice(0, -3)
         const tbl = base.endsWith('s') ? base : `${base}s`
@@ -38,40 +75,48 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     }
   })
 
-  // Tabelas nos joins declarados no layout_config
+  // Tabelas nos joins declarados no layout_config (normalizados)
   const rawJoins: Array<{ from: string; to: string; localKey?: string; foreignKey?: string }> =
     route.rawLayoutConfig?.joins || []
 
-  rawJoins.forEach(j => {
-    if (j.from) referencedTables.add(j.from.toLowerCase())
-    if (j.to) referencedTables.add(j.to.toLowerCase())
+  const normalizedJoins = rawJoins.map(j => {
+    const fromModel = resolveModel(j.from)
+    const toModel = resolveModel(j.to)
+    const fromTable = fromModel ? fromModel.dbTable.toLowerCase() : (j.from || '').toLowerCase()
+    const toTable = toModel ? toModel.dbTable.toLowerCase() : (j.to || '').toLowerCase()
+    return {
+      from: fromTable,
+      localKey: j.localKey || 'id',
+      to: toTable,
+      foreignKey: j.foreignKey || `${fromTable}_id`,
+    }
+  }).filter(j => !j.from.includes('-') && !j.to.includes('-') && j.from && j.to)
+
+  normalizedJoins.forEach(j => {
+    if (j.from) referencedTables.add(j.from)
+    if (j.to) referencedTables.add(j.to)
   })
 
   // Tabelas relacionais necessárias para as colunas da grid e filtros
   const allListFields = [...(route.filterFields || []), ...(route.gridFields || [])]
   allListFields.forEach(f => {
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
-    if (targetTable) {
-      referencedTables.add(targetTable.toLowerCase())
-    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
-      const base = f.dbColumn.slice(0, -3)
-      const table = base.endsWith('s') ? base : `${base}s`
-      referencedTables.add(table.toLowerCase())
-    }
+    const targetTable = getFieldRelTable(f)
+    if (targetTable) referencedTables.add(targetTable)
   })
 
   // Remove a tabela mestre da lista de lookups adicionais
   referencedTables.delete(route.modelTable.toLowerCase())
 
-  // Mapeia tabela -> ModelNode (ou gera nome PascalCase dinâmico se modelo não estiver no AST)
+  // Mapeia tabela -> ModelNode (APENAS modelos que realmente existem no AST!)
   const relatedModels: Array<{ table: string; modelName: string }> = []
   for (const tbl of Array.from(referencedTables)) {
-    const found = ast.models.find(m => m.dbTable.toLowerCase() === tbl)
-    const modelName = found ? found.name : (tbl.charAt(0).toUpperCase() + tbl.slice(1))
-    relatedModels.push({ table: tbl, modelName })
+    const found = resolveModel(tbl)
+    if (found) {
+      relatedModels.push({ table: found.dbTable.toLowerCase(), modelName: found.name })
+    }
   }
 
-  // Gera imports das actions
+  // Gera imports das actions (apenas para modelos válidos no AST)
   const relatedImports = relatedModels
     .map(rm => `import { get${rm.modelName}List } from '@/app/actions/${rm.table}'`)
     .join('\n')
@@ -102,9 +147,17 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   // Gera mapa de relationalOptions para os campos de lookup da grid e filtros
   const buildOptionsCode: string[] = []
   allListFields.forEach(f => {
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
-    if (targetTable && referencedTables.has(targetTable.toLowerCase())) {
-      const t = targetTable.toLowerCase()
+    const isEnum = f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration'
+    if (isEnum || (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)) {
+      if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+        buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      }
+      return
+    }
+
+    const targetTable = getFieldRelTable(f)
+    if (targetTable && referencedTables.has(targetTable) && relatedModels.some(rm => rm.table === targetTable)) {
+      const t = targetTable
       const varName = `${t.replace(/[^a-zA-Z0-9_]/g, '_')}Data`
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
@@ -113,8 +166,6 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
         : `r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.descricao ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
       buildOptionsCode.push(`    '${f.dbColumn}': (${varName} || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
-    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
     }
   })
 
@@ -157,8 +208,9 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
     const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
 
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
-    const isRelational = targetTable && referencedTables.has(targetTable.toLowerCase())
+    const isEnum = f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration'
+    const targetTable = getFieldRelTable(f)
+    const isRelational = !isEnum && !!(targetTable && referencedTables.has(targetTable) && relatedModels.some(rm => rm.table === targetTable))
 
     let options = f.config?.options
     if ((!options || options.length === 0) && (f.dbColumn.toLowerCase().includes('status') || f.label.toLowerCase().includes('status'))) {
@@ -260,7 +312,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     : `  // Filtro de data via query parameters\n  const filteredRows = denormalizedRows.filter(row => {\n    if (!startDate && !endDate) return true\n    const dateKey = Object.keys(row).find(k => {\n      const kl = k.toLowerCase()\n      return (kl.includes('data') || kl.includes('date') || kl.includes('created')) &&\n        !isNaN(new Date(row[k]).getTime())\n    }) ?? null\n    if (!dateKey) return true\n    const rowDate = new Date(row[dateKey]).getTime()\n    if (isNaN(rowDate)) return true\n    if (startDate && rowDate < new Date(startDate).getTime()) return false\n    if (endDate && rowDate > new Date(endDate + 'T23:59:59').getTime()) return false\n    return true\n  })`
 
   const widgetsJson = JSON.stringify(widgets, null, 2)
-  const joinsJson = JSON.stringify(rawJoins, null, 2)
+  const joinsJson = JSON.stringify(normalizedJoins, null, 2)
   const defaultItemsPerPage = route.rawLayoutConfig?.items_per_page || 50
 
   return `import type { Metadata } from 'next'

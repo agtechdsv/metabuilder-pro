@@ -76,6 +76,9 @@ function enrichFieldsWithRelations(
   rawFields: any[]
 ): ResolvedField[] {
   return fieldsList.map(f => {
+    if (f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration') {
+      return f
+    }
     if (f.config?.relation?.targetTable && f.config?.relation?.displayColumn) {
       return f
     }
@@ -1509,13 +1512,32 @@ export function parseMetaBuilderJSON(
         }
       })
     }
+    const getFieldRelTable = (f: ResolvedField): string | null => {
+      if (f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration') {
+        return null
+      }
+      const raw = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+      if (raw) {
+        const m = rawModels.find((rm: any) => rm.id === raw || rm.db_table_name.toLowerCase() === raw.toLowerCase())
+        if (m) return m.db_table_name.toLowerCase()
+        if (!raw.includes('-') && raw.length < 50) return raw.toLowerCase()
+        return null
+      }
+      if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+        const base = f.dbColumn.slice(0, -3)
+        const tbl = base.endsWith('s') ? base : `${base}s`
+        return tbl.toLowerCase()
+      }
+      return null
+    }
+
     gridFields.forEach(f => {
-      const relTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
-      if (relTable) referencedTableNames.add(relTable.toLowerCase())
+      const relTable = getFieldRelTable(f)
+      if (relTable) referencedTableNames.add(relTable)
     })
     filterFields.forEach(f => {
-      const relTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
-      if (relTable) referencedTableNames.add(relTable.toLowerCase())
+      const relTable = getFieldRelTable(f)
+      if (relTable) referencedTableNames.add(relTable)
     })
 
     const resolvedProjectRelations = resolveRelations(rawRelations, rawModels)
