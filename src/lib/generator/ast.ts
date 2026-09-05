@@ -19,6 +19,8 @@ export type LogicType =
   | 'scheduler'
   | 'timeline'
   | 'gantt'
+  | 'map'
+  | 'mapa'
   | 'personalizado'
   | 'dashboard_bi'
   | 'analytics'
@@ -230,6 +232,9 @@ export interface RouteNode {
   // ── Configuração específica para Gantt / Cronograma de Projetos ──
   ganttConfig?: GanttConfig
 
+  // ── Configuração específica para Mapa / Visão Geoespacial ──
+  mapConfig?: MapConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -310,6 +315,14 @@ export interface GanttConfig {
   startDateField: string      // dbColumn da data de início (ex: 'data_inicio', 'start_date')
   endDateField: string        // dbColumn da data de término (ex: 'data_fim', 'end_date')
   progressField?: string      // dbColumn da porcentagem de conclusão (0-100) (ex: 'progresso')
+}
+
+export interface MapConfig {
+  latField: string            // dbColumn da latitude (ex: 'latitude', 'lat')
+  lngField: string            // dbColumn da longitude (ex: 'longitude', 'lng')
+  titleField: string          // dbColumn do título/rótulo do marcador (ex: 'nome', 'titulo')
+  descField?: string          // dbColumn da descrição ou endereço no popup (opcional)
+  zoom?: number               // nível de zoom inicial (default: 13)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

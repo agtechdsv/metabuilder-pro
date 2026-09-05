@@ -22,6 +22,7 @@ import {
   SchedulerConfig,
   GalleryConfig,
   GanttConfig,
+  MapConfig,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
@@ -1661,6 +1662,100 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Mapa / Visão Geoespacial
+    // ─────────────────────────────────────────────────
+    let mapConfig: MapConfig | undefined = undefined
+    if (resolvedView.logic_type === 'map' || resolvedView.logic_type === 'mapa' || resolvedView.layout_config?.map_config) {
+      const mc = resolvedView.layout_config?.map_config || {}
+
+      const resolveMapColumn = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find(
+          (f: any) => f.id === fieldIdOrName
+                   || f.db_column_name === fieldIdOrName
+                   || f.display_name === fieldIdOrName
+                   || f.name === fieldIdOrName
+        )
+        if (!found) return fieldIdOrName
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) return fkField.db_column_name || fkField.dbColumn
+        return found.db_column_name || found.dbColumn || fieldIdOrName
+      }
+
+      // Auto-detecção de Latitude
+      let autoLatField = mc.lat_field ? resolveMapColumn(mc.lat_field) : undefined
+      if (!autoLatField) {
+        const candidateLat = gridFields.find(f => {
+          const col = f.dbColumn.toLowerCase()
+          return col === 'latitude' || col === 'lat' || col === 'lat_atual' || col.startsWith('lat_') || col.endsWith('_lat') || col.includes('latitude')
+        })
+        autoLatField = candidateLat ? candidateLat.dbColumn : 'latitude'
+      }
+
+      // Auto-detecção de Longitude
+      let autoLngField = mc.lng_field ? resolveMapColumn(mc.lng_field) : undefined
+      if (!autoLngField) {
+        const candidateLng = gridFields.find(f => {
+          const col = f.dbColumn.toLowerCase()
+          return col === 'longitude' || col === 'lng' || col === 'lon' || col === 'long' || col === 'lng_atual' || col.startsWith('lng_') || col.endsWith('_lng') || col.includes('longitude')
+        })
+        autoLngField = candidateLng ? candidateLng.dbColumn : 'longitude'
+      }
+
+      // Auto-detecção de Título
+      let autoTitleField = mc.title_field ? resolveMapColumn(mc.title_field) : undefined
+      if (!autoTitleField) {
+        const candidateTitle = gridFields.find(f =>
+          !f.isPrimaryKey &&
+          (f.dbColumn.toLowerCase().includes('nome') ||
+           f.dbColumn.toLowerCase().includes('name') ||
+           f.dbColumn.toLowerCase().includes('titulo') ||
+           f.dbColumn.toLowerCase().includes('title') ||
+           f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dbColumn.toLowerCase().includes('razao_social') ||
+           f.dataType === 'string')
+        )
+        autoTitleField = candidateTitle ? candidateTitle.dbColumn : primaryKey
+      }
+
+      // Auto-detecção de Descrição (opcional)
+      let autoDescField = mc.desc_field ? resolveMapColumn(mc.desc_field) : undefined
+      if (!autoDescField) {
+        const candidateDesc = gridFields.find(f =>
+          f.dbColumn !== autoTitleField &&
+          (f.dbColumn.toLowerCase().includes('endereco') ||
+           f.dbColumn.toLowerCase().includes('address') ||
+           f.dbColumn.toLowerCase().includes('cidade') ||
+           f.dbColumn.toLowerCase().includes('city') ||
+           f.dbColumn.toLowerCase().includes('bairro') ||
+           f.dbColumn.toLowerCase().includes('rua') ||
+           f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dbColumn.toLowerCase().includes('status'))
+        )
+        if (candidateDesc) autoDescField = candidateDesc.dbColumn
+      }
+
+      mapConfig = {
+        latField:   autoLatField,
+        lngField:   autoLngField,
+        titleField: autoTitleField,
+        descField:  autoDescField,
+        zoom:       typeof mc.zoom === 'number' ? mc.zoom : 13,
+      }
+    }
+
     let analyticsConfig: AnalyticsConfig | undefined = undefined
     if (
       (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
@@ -1830,6 +1925,7 @@ export function parseMetaBuilderJSON(
       schedulerConfig,
       galleryConfig,
       ganttConfig,
+      mapConfig,
       analyticsConfig,
       buttons,
       relationTabs,
