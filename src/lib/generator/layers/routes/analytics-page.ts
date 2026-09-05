@@ -1,4 +1,5 @@
 import { RouteNode, AppAST, AnalyticsWidget } from '../../ast'
+import { renderGridCellValue } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics / Dashboard BI Page Generator (Server-Side Aggregation)
@@ -8,8 +9,10 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const widgets = route.analyticsConfig?.widgets || []
+  const primaryKey = route.primaryKey || 'id'
+  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
-  // 1. Identifica todos os modelos necessários para os widgets e joins
+  // 1. Identifica todos os modelos necessários para os widgets, joins e grid/filtros
   const referencedTables = new Set<string>()
 
   // Tabelas referenciadas nas expressões dos widgets
@@ -24,8 +27,14 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
         matches.forEach(match => referencedTables.add(match.split('.')[0].toLowerCase()))
       }
     }
-    if (w.groupBy && typeof w.groupBy === 'string' && w.groupBy.includes('.')) {
-      referencedTables.add(w.groupBy.split('.')[0].toLowerCase())
+    if (w.groupBy && typeof w.groupBy === 'string') {
+      if (w.groupBy.includes('.')) {
+        referencedTables.add(w.groupBy.split('.')[0].toLowerCase())
+      } else if (w.groupBy.endsWith('_id')) {
+        const base = w.groupBy.slice(0, -3)
+        const tbl = base.endsWith('s') ? base : `${base}s`
+        referencedTables.add(tbl.toLowerCase())
+      }
     }
   })
 
@@ -38,21 +47,33 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     if (j.to) referencedTables.add(j.to.toLowerCase())
   })
 
+  // Tabelas relacionais necessárias para as colunas da grid e filtros
+  const allListFields = [...(route.filterFields || []), ...(route.gridFields || [])]
+  allListFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
+    if (targetTable) {
+      referencedTables.add(targetTable.toLowerCase())
+    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+      const base = f.dbColumn.slice(0, -3)
+      const table = base.endsWith('s') ? base : `${base}s`
+      referencedTables.add(table.toLowerCase())
+    }
+  })
+
   // Remove a tabela mestre da lista de lookups adicionais
   referencedTables.delete(route.modelTable.toLowerCase())
 
-  // Mapeia tabela -> ModelNode
+  // Mapeia tabela -> ModelNode (ou gera nome PascalCase dinâmico se modelo não estiver no AST)
   const relatedModels: Array<{ table: string; modelName: string }> = []
   for (const tbl of Array.from(referencedTables)) {
     const found = ast.models.find(m => m.dbTable.toLowerCase() === tbl)
-    if (found) {
-      relatedModels.push({ table: tbl, modelName: found.name })
-    }
+    const modelName = found ? found.name : (tbl.charAt(0).toUpperCase() + tbl.slice(1))
+    relatedModels.push({ table: tbl, modelName })
   }
 
   // Gera imports das actions
   const relatedImports = relatedModels
-    .map(rm => `import { get${rm.modelName}List } from '@/app/actions/${rm.modelName.toLowerCase()}'`)
+    .map(rm => `import { get${rm.modelName}List } from '@/app/actions/${rm.table}'`)
     .join('\n')
 
   // Gera destructuring do Promise.all para fetch paralelo
@@ -64,8 +85,6 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   // Campo de data declarado explicitamente no analytics_config (fallback: heurística)
   const dateFilterField = route.analyticsConfig?.dateFilterField ?? null
 
-  // Master fetch: injeta opts de pushdown quando dateFilterField está declarado.
-  // As tabelas relacionadas (lookups) nunca recebem filtro — são pequenas por natureza.
   const masterFetchCall = dateFilterField
     ? `get${mn}List({ dateField: '${dateFilterField}', startDate, endDate, limit: 50_000 }).catch(() => [])`
     : `get${mn}List().catch(() => [])`
@@ -80,24 +99,183 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     .map(rm => `    '${rm.table}': ${rm.table.replace(/[^a-zA-Z0-9_]/g, '_')}Data || [],`)
     .join('\n')
 
-  // Filtro de data:
-  //  - dateFilterField declarado → DB já filtrou via pushdown → filteredRows = denormalizedRows (sem custo JS)
-  //  - sem dateFilterField       → heurística JS por nome de coluna como fallback
+  // Gera mapa de relationalOptions para os campos de lookup da grid e filtros
+  const buildOptionsCode: string[] = []
+  allListFields.forEach(f => {
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    if (targetTable && referencedTables.has(targetTable.toLowerCase())) {
+      const t = targetTable.toLowerCase()
+      const varName = `${t.replace(/[^a-zA-Z0-9_]/g, '_')}Data`
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.descricao ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.descricao ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+      buildOptionsCode.push(`    '${f.dbColumn}': (${varName} || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+    }
+  })
+
+  // Cabeçalhos da tabela com ordenação
+  const thCells = route.gridFields
+    .filter(f => !f.hidden)
+    .map(f => {
+      const col = f.dbColumn
+      return `                    <th
+                      key="${col}"
+                      className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
+                    >
+                      <Link
+                        href={makeQuery({ sort_by: '${col}', sort_order: sortBy === '${col}' && sortOrder === 'asc' ? 'desc' : 'asc' })}
+                        className="flex items-center gap-2"
+                      >
+                        <span>${f.label.toUpperCase()}</span>
+                        <div className={"transition-opacity " + (sortBy === '${col}' ? 'opacity-100' : 'opacity-0 group-hover/th:opacity-100')}>
+                          {sortBy === '${col}' ? (
+                            sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowDown className="w-3.5 h-3.5 text-indigo-600" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                          )}
+                        </div>
+                      </Link>
+                    </th>`
+    })
+    .join('\n')
+
+  // Células da tabela
+  const tdCells = route.gridFields
+    .filter(f => !f.hidden)
+    .map(f => `                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">\n                        ${renderGridCellValue(f, 'item', 'relationalOptions')}\n                      </td>`)
+    .join('\n')
+
+  // Filtros da view
+  const filterFields = route.filterFields.length > 0 ? route.filterFields : []
+  const filterInputs = filterFields.map(f => {
+    const col = f.dbColumn.replace('.', '_')
+    const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
+    const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
+
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const isRelational = targetTable && referencedTables.has(targetTable.toLowerCase())
+
+    let options = f.config?.options
+    if ((!options || options.length === 0) && (f.dbColumn.toLowerCase().includes('status') || f.label.toLowerCase().includes('status'))) {
+      options = [
+        { label: 'Novo', value: 'Novo' },
+        { label: 'Contactado', value: 'Contactado' },
+        { label: 'Em Negociação', value: 'Em Negociação' },
+        { label: 'Fechado Ganho', value: 'Fechado Ganho' },
+        { label: 'Perdido', value: 'Perdido' }
+      ]
+    }
+
+    if (isRelational) {
+      return `
+                <div className="flex flex-col gap-1.5 ${colSpanClass}">
+                  <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+                  <select
+                    name="${col}_filter"
+                    defaultValue={params?.['${col}_filter'] || ''}
+                    className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                  >
+                    <option value="">Todos</option>
+                    {(relationalOptions?.['${f.dbColumn}'] || []).map((opt: any, i: number) => (
+                      <option key={i} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>`
+    }
+
+    if (options && options.length > 0) {
+      const optsCode = JSON.stringify(options)
+      return `
+                <div className="flex flex-col gap-1.5 ${colSpanClass}">
+                  <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+                  <select
+                    name="${col}_filter"
+                    defaultValue={params?.['${col}_filter'] || ''}
+                    className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                  >
+                    <option value="">Todos</option>
+                    {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
+                      <option key={i} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>`
+    }
+
+    return `
+                <div className="flex flex-col gap-1.5 ${colSpanClass}">
+                  <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+                  <div className="relative group">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+                    <input
+                      type="text"
+                      name="${col}_filter"
+                      placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                      defaultValue={params?.['${col}_filter'] || ''}
+                      className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                    />
+                  </div>
+                </div>`
+  }).join('\n')
+
+  // Header custom actions & buttons
+  const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
+    if (b.actionType === 'create') {
+      return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> ${b.label}
+          </Link>`
+    }
+    if (b.actionType === 'custom') {
+      const actionConfig = {
+        id: b.id,
+        label: b.label,
+        icon: b.icon || 'Zap',
+        style: b.style,
+        triggerType: b.triggerType,
+        usecaseSlug: b.usecaseSlug,
+        usecaseOpenMode: b.usecaseOpenMode || 'modal',
+        usecaseModalSize: b.usecaseModalSize || 'full',
+        usecaseModalWidth: b.usecaseModalWidth,
+        usecaseModalHeight: b.usecaseModalHeight,
+        usecaseSelectedFields: b.usecaseSelectedFields || [],
+        usecaseParams: b.usecaseParams || '',
+        linkTarget: b.linkTarget || '',
+      }
+      return `          <CustomActionButton action={${JSON.stringify(actionConfig)}} variant="header" />`
+    }
+    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            ${b.label}
+          </button>`
+  }).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> Novo Registro
+          </Link>` : '')
+
+  // Filtro de data server-side
   const filteredRowsCode = dateFilterField
-    ? `  // Filtro de data aplicado no banco via pushdown — sem re-filtro JS necessário.\n  const filteredRows = denormalizedRows`
-    : `  // Sem dateFilterField declarado: aplica heurística JS como fallback.\n  // NOTA DE ESCALA: declare analytics_config.dateFilterField para pushdown automático no banco.\n  const filteredRows = denormalizedRows.filter(row => {\n    if (!startDate && !endDate) return true\n    const dateKey = Object.keys(row).find(k => {\n      const kl = k.toLowerCase()\n      return (kl.includes('data') || kl.includes('date') || kl.includes('created')) &&\n        !isNaN(new Date(row[k]).getTime())\n    }) ?? null\n    if (!dateKey) return true\n    const rowDate = new Date(row[dateKey]).getTime()\n    if (isNaN(rowDate)) return true\n    if (startDate && rowDate < new Date(startDate).getTime()) return false\n    if (endDate && rowDate > new Date(endDate + 'T23:59:59').getTime()) return false\n    return true\n  })`
+    ? `  // Filtro de data aplicado no banco via pushdown\n  const filteredRows = denormalizedRows`
+    : `  // Filtro de data via query parameters\n  const filteredRows = denormalizedRows.filter(row => {\n    if (!startDate && !endDate) return true\n    const dateKey = Object.keys(row).find(k => {\n      const kl = k.toLowerCase()\n      return (kl.includes('data') || kl.includes('date') || kl.includes('created')) &&\n        !isNaN(new Date(row[k]).getTime())\n    }) ?? null\n    if (!dateKey) return true\n    const rowDate = new Date(row[dateKey]).getTime()\n    if (isNaN(rowDate)) return true\n    if (startDate && rowDate < new Date(startDate).getTime()) return false\n    if (endDate && rowDate > new Date(endDate + 'T23:59:59').getTime()) return false\n    return true\n  })`
 
   const widgetsJson = JSON.stringify(widgets, null, 2)
   const joinsJson = JSON.stringify(rawJoins, null, 2)
+  const defaultItemsPerPage = route.rawLayoutConfig?.items_per_page || 50
 
   return `import type { Metadata } from 'next'
-import { get${mn}List } from '@/app/actions/${mnLower}'
-${relatedImports}
+import Link from 'next/link'
+import { get${mn}List, delete${mn} } from '@/app/actions/${mnLower}'
+${relatedImports ? `${relatedImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, RotateCcw } from 'lucide-react'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { CustomActionButton } from '@/components/ui/custom-action-button'
+import { LimitSelector } from '@/components/ui/limit-selector'
 import { AnalyticsClient } from './AnalyticsClient'
 
 export const metadata: Metadata = { title: '${route.title || 'Dashboard Analítico'}' }
 
-// Configuração estática dos widgets
+// Configuração estática dos widgets e joins
 const WIDGETS = ${widgetsJson} as const
 const JOINS = ${joinsJson} as const
 
@@ -114,17 +292,29 @@ function getRowField(row: Record<string, any>, colName: string): any {
 
   for (const [k, v] of Object.entries(row)) {
     const kLow = k.toLowerCase()
-    if (kLow === target || kLow === shortTarget) return v
+    if (kLow === target) return v
+    if (kLow === shortTarget) return v
     if (kLow.endsWith('.' + shortTarget)) return v
   }
   return undefined
 }
 
-/**
- * Avalia uma expressão matemática simples de forma segura.
- * ATENÇÃO: new Function é usado aqui intencionalmente após sanitize estrito.
- * Nunca passe input não-sanitizado para esta função.
- */
+function findRowDisplayValue(item: Record<string, any>): string {
+  if (!item) return ''
+  const candidates = ['nome', 'name', 'razao_social', 'razaosocial', 'descricao', 'description', 'titulo', 'title', 'label', 'display_label']
+  for (const c of candidates) {
+    const key = Object.keys(item).find(k => k.toLowerCase() === c)
+    if (key && item[key] != null && item[key] !== '') return String(item[key])
+  }
+  for (const [k, v] of Object.entries(item)) {
+    const kl = k.toLowerCase()
+    if (!kl.includes('id') && !kl.includes('created') && !kl.includes('updated') && typeof v === 'string' && v.trim() !== '') {
+      return v
+    }
+  }
+  return String(Object.values(item)[1] ?? Object.values(item)[0] ?? '')
+}
+
 function safeEvalMath(expr: string): number {
   const sanitized = expr.replace(/[^0-9+\\-*/(). ]/g, '')
   if (!sanitized) return 0
@@ -152,7 +342,7 @@ function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula
     const sortedKeys = [...rowKeys].sort((a, b) => b.length - a.length)
 
     for (const key of sortedKeys) {
-      if (!key) continue
+      if (!key || key.includes('__label')) continue
       const val = Number(row[key]) || 0
       const escaped = key.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&')
       expr = expr.replace(new RegExp(escaped, 'gi'), String(val))
@@ -160,7 +350,7 @@ function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula
 
     for (const key of sortedKeys) {
       const short = key.includes('.') ? key.split('.').pop()! : key
-      if (!short) continue
+      if (!short || short.includes('__label')) continue
       const val = Number(row[key]) || 0
       const escaped = short.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&')
       expr = expr.replace(new RegExp('\\\\b' + escaped + '\\\\b', 'gi'), String(val))
@@ -208,79 +398,122 @@ function buildDenormalizedRows(
   tablesData: Record<string, any[]>
 ): any[] {
   if (!masterData || masterData.length === 0) return []
-  if (!joins || joins.length === 0) {
-    return masterData.map(r => ({ ...r }))
-  }
 
-  // Identifica relações 1:N (tabelas filhas como itens_pedido)
-  const oneToManyJoins = joins.filter(j => {
-    const childTable = j.to.toLowerCase()
-    const parentTable = j.from.toLowerCase()
-    const childFk = (j.foreignKey || '').toLowerCase()
-    return childFk.includes(parentTable) || childFk.endsWith('_id')
+  const masterTbl = masterTable.toLowerCase()
+
+  let currentRows: any[] = masterData.map(masterRow => {
+    const base: Record<string, any> = { ...masterRow }
+    for (const [k, v] of Object.entries(masterRow)) {
+      base[\`\${masterTbl}.\${k.toLowerCase()}\`] = v
+    }
+    return base
   })
 
-  // Identifica relações N:1 (lookups como funcionarios, clientes)
-  const manyToOneJoins = joins.filter(j => !oneToManyJoins.includes(j))
+  if (!joins || joins.length === 0) {
+    return currentRows
+  }
 
-  const results: any[] = []
+  const joinedTables = new Set<string>([masterTbl])
+  const pendingJoins = [...joins]
+  let madeProgress = true
+  let iterations = 0
 
-  for (const masterRow of masterData) {
-    const baseRow: Record<string, any> = { ...masterRow }
+  while (madeProgress && pendingJoins.length > 0 && iterations < 20) {
+    iterations++
+    madeProgress = false
 
-    // Prefixar colunas com o nome da tabela principal
-    for (const [k, v] of Object.entries(masterRow)) {
-      baseRow[\`\${masterTable}.\${k}\`] = v
-    }
+    for (let i = 0; i < pendingJoins.length; i++) {
+      const j = pendingJoins[i]
+      const fromTbl = (j.from || '').toLowerCase()
+      const toTbl = (j.to || '').toLowerCase()
 
-    // Resolver lookups N:1 (ex: pedido -> funcionario, cliente)
-    for (const j of manyToOneJoins) {
-      const lookupTbl = (j.from.toLowerCase() === masterTable ? j.to : j.from).toLowerCase()
-      const lookupData = tablesData[lookupTbl] || []
-      const localKey = j.localKey || 'id'
-      const fk = j.foreignKey || \`\${lookupTbl}_id\`
+      let sourceTbl = ''
+      let targetTbl = ''
+      let sourceCol = ''
+      let targetCol = ''
 
-      const localVal = masterRow[fk] ?? masterRow[localKey]
-      const match = lookupData.find(item => String(item.id ?? item[localKey]) === String(localVal))
-      if (match) {
-        for (const [k, v] of Object.entries(match)) {
-          baseRow[\`\${lookupTbl}.\${k}\`] = v
-          if (baseRow[k] === undefined) baseRow[k] = v
-        }
+      if (joinedTables.has(fromTbl) && !joinedTables.has(toTbl)) {
+        sourceTbl = fromTbl
+        targetTbl = toTbl
+        sourceCol = j.localKey || 'id'
+        targetCol = j.foreignKey || \`\${fromTbl}_id\`
+      } else if (joinedTables.has(toTbl) && !joinedTables.has(fromTbl)) {
+        sourceTbl = toTbl
+        targetTbl = fromTbl
+        sourceCol = j.foreignKey || \`\${fromTbl}_id\`
+        targetCol = j.localKey || 'id'
       }
-    }
 
-    // Resolver 1:N (ex: pedido -> itens_pedido)
-    let hasOneToMany = false
-    for (const j of oneToManyJoins) {
-      const childTbl = j.to.toLowerCase()
-      const childData = tablesData[childTbl] || []
-      const childFk = j.foreignKey || \`\${masterTable}_id\`
-      const masterPk = j.localKey || 'id'
-      const masterPkVal = masterRow[masterPk] ?? masterRow.id
+      if (!sourceTbl || !targetTbl) continue
 
-      const childItems = childData.filter(item => String(item[childFk]) === String(masterPkVal))
-      if (childItems.length > 0) {
-        hasOneToMany = true
-        for (const childItem of childItems) {
-          const flatRow = { ...baseRow, ...childItem }
-          for (const [k, v] of Object.entries(childItem)) {
-            flatRow[\`\${childTbl}.\${k}\`] = v
+      const targetData = tablesData[targetTbl] || []
+      const nextRows: any[] = []
+
+      for (const row of currentRows) {
+        const val = row[\`\${sourceTbl}.\${sourceCol.toLowerCase()}\`] ?? row[sourceCol] ?? row[sourceCol.toLowerCase()]
+
+        const matches = val != null
+          ? targetData.filter(item => {
+              const itemVal = item[targetCol] ?? item[targetCol.toLowerCase()] ?? item.id
+              return String(itemVal) === String(val)
+            })
+          : []
+
+        if (matches.length === 0) {
+          nextRows.push(row)
+        } else if (matches.length === 1) {
+          const match = matches[0]
+          const enriched = { ...row }
+          const displayVal = findRowDisplayValue(match)
+
+          for (const [k, v] of Object.entries(match)) {
+            const kl = k.toLowerCase()
+            enriched[\`\${targetTbl}.\${kl}\`] = v
+            if (enriched[k] === undefined) enriched[k] = v
           }
-          results.push(flatRow)
+          if (displayVal) {
+            enriched[\`\${targetTbl}__label\`] = displayVal
+            enriched[\`\${sourceCol}__label\`] = displayVal
+            enriched[\`\${sourceTbl}.\${sourceCol}__label\`] = displayVal
+          }
+          nextRows.push(enriched)
+        } else {
+          // 1:N (ex: pedido -> itens_pedido)
+          for (const match of matches) {
+            const enriched = { ...row }
+            const displayVal = findRowDisplayValue(match)
+
+            for (const [k, v] of Object.entries(match)) {
+              const kl = k.toLowerCase()
+              enriched[\`\${targetTbl}.\${kl}\`] = v
+              enriched[k] = v
+            }
+            if (displayVal) {
+              enriched[\`\${targetTbl}__label\`] = displayVal
+              enriched[\`\${sourceCol}__label\`] = displayVal
+              enriched[\`\${sourceTbl}.\${sourceCol}__label\`] = displayVal
+            }
+            nextRows.push(enriched)
+          }
         }
       }
-    }
 
-    if (!hasOneToMany) {
-      results.push(baseRow)
+      currentRows = nextRows
+      joinedTables.add(targetTbl)
+      pendingJoins.splice(i, 1)
+      madeProgress = true
+      break
     }
   }
 
-  return results.length > 0 ? results : masterData
+  return currentRows
 }
 
-function calculateWidgetData(widget: AnalyticsWidget, rows: Record<string, any>[]): number | Array<{ name: string; value: number }> {
+function calculateWidgetData(
+  widget: AnalyticsWidget,
+  rows: Record<string, any>[],
+  tablesData?: Record<string, any[]>
+): number | Array<{ name: string; value: number }> {
   const isKpiOrGauge = widget.type === 'kpi' || widget.type === 'gauge'
   const isFormula = !!widget.useFormula || (widget.field && /[+*\\/-]/.test(widget.field))
 
@@ -299,14 +532,58 @@ function calculateWidgetData(widget: AnalyticsWidget, rows: Record<string, any>[
   }
 
   // Gráficos (Bar, Line, Pie) ou KPIs/Gauges agrupados
-  const groupBy = widget.groupBy || ''
+  const groupBy = (widget.groupBy || '').trim()
   const groups: Record<string, { value: number; count: number }> = {}
 
   for (const row of rows) {
-    const rawGroupVal = getRowField(row, groupBy)
-    const groupKey = widget.dateGranularity
-      ? formatDateGranularity(rawGroupVal, widget.dateGranularity)
-      : String(rawGroupVal ?? 'N/A')
+    let groupKey = 'N/A'
+
+    if (groupBy) {
+      const parts = groupBy.split('.')
+      const colName = parts.length > 1 ? parts[1] : groupBy
+      const tblName = parts.length > 1 ? parts[0].toLowerCase() : ''
+
+      let rawGroupVal = getRowField(row, groupBy)
+
+      if (rawGroupVal === undefined && colName) {
+        rawGroupVal = getRowField(row, colName)
+      }
+
+      const labelKeyCandidates = [
+        \`\${groupBy}__label\`,
+        \`\${colName}__label\`,
+        tblName ? \`\${tblName}__label\` : '',
+        colName.endsWith('_id') ? \`\${colName.slice(0, -3)}__label\` : '',
+        \`id_\${colName}__label\`
+      ].filter(Boolean)
+
+      for (const lk of labelKeyCandidates) {
+        if (row[lk] != null && row[lk] !== '') {
+          rawGroupVal = row[lk]
+          break
+        }
+      }
+
+      if (rawGroupVal != null && typeof rawGroupVal === 'string' && tablesData) {
+        const isUuidOrId = /^[0-9a-fA-F-]{8,}$/.test(rawGroupVal) || /^\\d+$/.test(rawGroupVal)
+        if (isUuidOrId) {
+          const targetTable = tblName || (colName.endsWith('_id') ? (colName.slice(0, -3).endsWith('s') ? colName.slice(0, -3) : colName.slice(0, -3) + 's') : '')
+          if (targetTable && tablesData[targetTable]) {
+            const match = tablesData[targetTable].find(item => String(item.id) === String(rawGroupVal))
+            if (match) {
+              const disp = findRowDisplayValue(match)
+              if (disp) rawGroupVal = disp
+            }
+          }
+        }
+      }
+
+      if (rawGroupVal != null) {
+        groupKey = widget.dateGranularity
+          ? formatDateGranularity(rawGroupVal, widget.dateGranularity)
+          : String(rawGroupVal)
+      }
+    }
 
     if (!groups[groupKey]) {
       groups[groupKey] = { value: 0, count: 0 }
@@ -364,13 +641,21 @@ export default async function ${mn}AnalyticsPage({
   const params = await searchParams
   const startDate = params?.start_date
   const endDate = params?.end_date
+  const sortBy = params?.sort_by
+  const sortOrder = params?.sort_order || 'asc'
+  const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
+  const limit = Math.max(1, parseInt(params?.limit || '${defaultItemsPerPage}', 10) || ${defaultItemsPerPage})
 
-  // Busca paralela dos dados no banco via Server Actions (Promise.all evita sequencialidade)
+  // Busca paralela de todos os dados no banco
 ${parallelFetch}
 
   const tablesData: Record<string, any[]> = {
     '${route.modelTable.toLowerCase()}': masterRawData || [],
 ${tablesDataEntries}
+  }
+
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
   }
 
   // Junta dados das tabelas em memória (Server-Side Join)
@@ -381,26 +666,220 @@ ${tablesDataEntries}
     tablesData
   )
 
-
 ${filteredRowsCode}
-
 
   // Agregação de cada widget no Servidor
   const aggregatedData: Record<string, any> = {}
   for (const widget of WIDGETS) {
-    aggregatedData[widget.id] = calculateWidgetData(widget, filteredRows)
+    aggregatedData[widget.id] = calculateWidgetData(widget, filteredRows, tablesData)
+  }
+
+  // Filtros da Grid de Registros
+  const filteredGridData = (masterRawData || []).filter((item: any) => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = params?.['${col}_filter']
+    if (val_${col}) {
+      const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
+      if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
+
+  if (sortBy) {
+    filteredGridData.sort((a: any, b: any) => {
+      const rawCol = sortBy.replace('.', '_')
+      const valA = a[sortBy] ?? a[rawCol] ?? ''
+      const valB = b[sortBy] ?? b[rawCol] ?? ''
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortOrder === 'asc' ? valA - valB : valB - valA
+      }
+      return sortOrder === 'asc'
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA))
+    })
+  }
+
+  const totalRows = filteredGridData.length
+  const totalPages = Math.ceil(totalRows / limit) || 1
+  const paginatedData = filteredGridData.slice((page - 1) * limit, page * limit)
+
+  const makeQuery = (newParams: Record<string, string | number | undefined>) => {
+    const q = new URLSearchParams()
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== '') q.set(k, String(v))
+      }
+    }
+    for (const [k, v] of Object.entries(newParams)) {
+      if (v === undefined || v === '') q.delete(k)
+      else q.set(k, String(v))
+    }
+    const str = q.toString()
+    return str ? ('?' + str) : ''
   }
 
   return (
-    <AnalyticsClient
-      title="${route.title || 'Dashboard'}"
-      icon="${route.icon || 'BarChart3'}"
-      widgets={WIDGETS as any}
-      aggregatedData={aggregatedData}
-      startDate={startDate}
-      endDate={endDate}
-      totalRowsAnalyzed={filteredRows.length}
-    />
+    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Cabeçalho da View (Fiel à Web Produção) */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
+            <DynamicIcon icon="${route.icon || 'LayoutDashboard'}" size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+              ${route.title}
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mt-0.5">
+              ${route.rawLayoutConfig?.form_header_subtitle_field ? `{masterRawData?.[0]?.['${route.rawLayoutConfig.form_header_subtitle_field}'] || 'SISTEMA METABUILDER'}` : 'SISTEMA METABUILDER'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+${headerButtonsHtml}
+        </div>
+      </div>
+
+      {/* Seção BI / Analytics Client */}
+      <AnalyticsClient
+        title="${route.title || 'Dashboard'}"
+        icon="${route.icon || 'BarChart3'}"
+        widgets={WIDGETS as any}
+        aggregatedData={aggregatedData}
+      />
+
+      {/* Grid de Registros e Filtros (quando houver gridFields configurados) */}
+      {route.gridFields.length > 0 && (
+        <div className="space-y-6 pt-4">
+          {/* Filtros da View */}
+          {${filterFields.length > 0} && (
+            <form method="GET" className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+              <div className="flex flex-col sm:flex-row items-end gap-4">
+                <div className="flex-1 grid grid-cols-12 gap-4 w-full">
+${filterInputs}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="h-[42px] px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2 active:scale-95"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    Filtrar
+                  </button>
+                  <Link
+                    href="${route.path}"
+                    className="h-[42px] px-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                    title="Limpar Filtros"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* Tabela de Registros */}
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                    <th className="w-12 px-6 py-4">
+                      <input type="checkbox" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                    </th>
+${thCells}
+                    <th className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap text-right">
+                      AÇÕES
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+                  {paginatedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={${route.gridFields.length + 2}} className="px-6 py-12 text-center text-sm text-neutral-400">
+                        Nenhum registro encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedData.map((item: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors">
+                        <td className="w-12 px-6 py-4">
+                          <input type="checkbox" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                        </td>
+${tdCells}
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={\`${route.path}/\${item['${primaryKey}']}\`}
+                              className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Link>
+                            <DeleteButton
+                              recordName={String(item['${primaryKey}'] ?? '')}
+                              onDelete={async () => {
+                                'use server'
+                                await delete${mn}(item['${primaryKey}'])
+                              }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginação da Tabela */}
+            <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-black uppercase tracking-wider text-neutral-400">
+                  Exibir
+                </span>
+                <LimitSelector currentLimit={limit} />
+                <span className="text-xs font-bold text-neutral-400">
+                  | Total: {totalRows}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Link
+                  href={makeQuery({ page: Math.max(1, page - 1) })}
+                  className={"p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 transition-all " + (page <= 1 ? 'opacity-30 pointer-events-none' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800')}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Link>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const p = i + 1
+                  const isActive = p === page
+                  return (
+                    <Link
+                      key={p}
+                      href={makeQuery({ page: p })}
+                      className={"w-8 h-8 flex items-center justify-center rounded-xl text-xs font-black transition-all " + (isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800')}
+                    >
+                      {p}
+                    </Link>
+                  )
+                })}
+                <Link
+                  href={makeQuery({ page: Math.min(totalPages, page + 1) })}
+                  className={"p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 transition-all " + (page >= totalPages ? 'opacity-30 pointer-events-none' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800')}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 `
@@ -414,7 +893,6 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
   return `'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import {
   ResponsiveContainer,
   BarChart,
@@ -436,15 +914,13 @@ import {
   TrendingUp,
   Activity,
   Gauge as GaugeIcon,
-  Calendar,
-  Filter,
-  RotateCcw,
-  Maximize2,
+  Search,
+  Plus,
   Minimize2,
-  Database,
-  ArrowUpRight,
+  MousePointer2,
+  LayoutGrid,
+  ZoomIn,
 } from 'lucide-react'
-import { DynamicIcon } from '@/app/components/DynamicIcon'
 
 interface AnalyticsWidget {
   id: string
@@ -472,9 +948,6 @@ interface AnalyticsClientProps {
   icon?: string
   widgets: AnalyticsWidget[]
   aggregatedData: Record<string, any>
-  startDate?: string
-  endDate?: string
-  totalRowsAnalyzed: number
 }
 
 const PALETTE = [
@@ -488,44 +961,31 @@ const PALETTE = [
   '#3b82f6',
 ]
 
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(' ')
+}
+
 export function AnalyticsClient({
   title,
   icon = 'BarChart3',
   widgets,
   aggregatedData,
-  startDate = '',
-  endDate = '',
-  totalRowsAnalyzed,
 }: AnalyticsClientProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
   const [mounted, setMounted] = useState(false)
-  const [localStartDate, setLocalStartDate] = useState(startDate)
-  const [localEndDate, setLocalEndDate] = useState(endDate)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
+  const [scale, setScale] = useState(1.0)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const applyDateFilter = (start?: string, end?: string) => {
-    const params = new URLSearchParams(searchParams ? searchParams.toString() : '')
-    if (start) params.set('start_date', start)
-    else params.delete('start_date')
-
-    if (end) params.set('end_date', end)
-    else params.delete('end_date')
-
-    router.push(pathname + '?' + params.toString())
-  }
-
-  const clearFilters = () => {
-    setLocalStartDate('')
-    setLocalEndDate('')
-    router.push(pathname)
-  }
+  const scales = [
+    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: 'Pequeno' },
+    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Normal' },
+    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: 'Grande' },
+    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: 'Extra Grande' },
+  ]
 
   const formatNumber = (val: any) => {
     const num = Number(val)
@@ -672,7 +1132,7 @@ export function AnalyticsClient({
     if (widget.type === 'gauge') return renderGauge(data, widget, isExpanded)
 
     const chartData = Array.isArray(data) ? data : []
-    const height = isExpanded ? 400 : 250
+    const height = isExpanded ? 400 : 220
 
     if (chartData.length === 0) {
       return <div className="flex-1 flex items-center justify-center text-xs font-bold text-neutral-400">Nenhum registro para o período</div>
@@ -708,8 +1168,8 @@ export function AnalyticsClient({
             <PieChart>
               <Pie
                 data={chartData}
-                innerRadius={height * 0.22}
-                outerRadius={height * 0.35}
+                innerRadius={height * 0.24}
+                outerRadius={height * 0.36}
                 paddingAngle={4}
                 dataKey="value"
               >
@@ -733,16 +1193,17 @@ export function AnalyticsClient({
     if (width === 'full') return 'col-span-12'
     if (width === 'half') return 'col-span-12 lg:col-span-6'
     if (width === 'quarter') return 'col-span-12 sm:col-span-6 lg:col-span-3'
-    return 'col-span-12 sm:col-span-6 lg:col-span-4' // 'third' padrão
+    return 'col-span-12 sm:col-span-6 lg:col-span-4'
   }
 
   if (!mounted) {
     return (
-      <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-pulse">
-        <div className="h-12 bg-neutral-200 dark:bg-neutral-800 rounded-2xl w-1/3" />
+      <div className="space-y-6 animate-pulse">
+        <div className="h-6 bg-neutral-200 dark:bg-neutral-800 rounded-xl w-48" />
         <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-6 h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-[2.5rem]" />
-          <div className="col-span-12 lg:col-span-6 h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-[2.5rem]" />
+          <div className="col-span-12 lg:col-span-4 h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-[2.5rem]" />
+          <div className="col-span-12 lg:col-span-4 h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-[2.5rem]" />
+          <div className="col-span-12 lg:col-span-4 h-64 bg-neutral-100 dark:bg-neutral-800/40 rounded-[2.5rem]" />
         </div>
       </div>
     )
@@ -751,126 +1212,114 @@ export function AnalyticsClient({
   const expandedWidget = widgets.find(w => w.id === expandedWidgetId)
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Header com Título e Barra de Filtros */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center gap-4">
-          <div className="p-3.5 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
-            <DynamicIcon icon={icon} size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">
-              {title}
-            </h1>
-            <p className="text-xs font-bold text-neutral-400 mt-0.5 flex items-center gap-2">
-              <Database className="w-3.5 h-3.5 text-indigo-500" />
-              {totalRowsAnalyzed} registros analisados via Server-Side Aggregation
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Subheader da Seção de Indicadores de Desempenho (Fiel à Web Produção) */}
+      <div className="flex justify-between items-center px-2">
+        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-400">
+          Indicadores de Desempenho
+        </h2>
 
-        {/* Filtros de Data Globais */}
-        <div className="flex flex-wrap items-center gap-3 bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-neutral-400 ml-1" />
-            <input
-              type="date"
-              value={localStartDate}
-              onChange={e => setLocalStartDate(e.target.value)}
-              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-indigo-500 shadow-sm"
-              placeholder="Data Inicial"
-            />
-            <span className="text-neutral-400 text-xs font-bold">até</span>
-            <input
-              type="date"
-              value={localEndDate}
-              onChange={e => setLocalEndDate(e.target.value)}
-              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-3 py-1.5 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-indigo-500 shadow-sm"
-              placeholder="Data Final"
-            />
-          </div>
-
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => applyDateFilter(localStartDate, localEndDate)}
-            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95 flex items-center gap-1.5"
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+              isEditMode
+                ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 scale-105"
+                : "bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 shadow-sm active:scale-95"
+            )}
           >
-            <Filter className="w-3.5 h-3.5" />
-            Filtrar
+            <MousePointer2 className="w-3.5 h-3.5" />
+            {isEditMode ? 'Salvar Layout' : 'Organizar Dashboard'}
           </button>
 
-          {(startDate || endDate) && (
-            <button
-              onClick={clearFilters}
-              className="px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1"
-              title="Limpar Filtros"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
-          )}
+          <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+            {scales.map(s => (
+              <button
+                key={s.value}
+                onClick={() => setScale(s.value)}
+                title={s.label}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all",
+                  scale === s.value
+                    ? "bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                )}
+              >
+                {s.icon}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Grid de Widgets */}
-      {widgets.length === 0 ? (
-        <div className="p-12 text-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] shadow-sm">
-          <BarChart3 className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-          <h3 className="text-sm font-black uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
-            Nenhum indicador configurado
-          </h3>
-          <p className="text-xs text-neutral-400 mt-1">
-            Configure widgets no Studio para visualizar gráficos e métricas neste dashboard.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-12 gap-6">
-          {widgets.map(w => {
-            const colSpan = getColSpanClass(w.width)
-            const iconType =
-              w.type === 'kpi' ? <Activity className="w-4 h-4 text-indigo-500" /> :
-              w.type === 'gauge' ? <GaugeIcon className="w-4 h-4 text-cyan-500" /> :
-              w.type === 'line' ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
-              w.type === 'pie' ? <PieChartIcon className="w-4 h-4 text-pink-500" /> :
-              <BarChart3 className="w-4 h-4 text-indigo-500" />
+      <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
+        {widgets.map(w => {
+          const colSpan = getColSpanClass(w.width)
+          const iconType =
+            w.type === 'kpi' ? <Activity className="w-4 h-4 text-indigo-500" /> :
+            w.type === 'gauge' ? <GaugeIcon className="w-4 h-4 text-cyan-500" /> :
+            w.type === 'line' ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
+            w.type === 'pie' ? <PieChartIcon className="w-4 h-4 text-pink-500" /> :
+            <BarChart3 className="w-4 h-4 text-indigo-500" />
 
-            return (
-              <div
-                key={w.id}
-                className={\`\${colSpan} bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden\`}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
+          return (
+            <div
+              key={w.id}
+              className={cn(
+                colSpan,
+                "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden min-h-[340px]"
+              )}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
 
-                <div className="flex items-center justify-between mb-2 relative z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl">
-                      {iconType}
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
-                        {w.title}
-                      </h3>
-                      <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">
-                        {w.calc} {w.field ? \`(\${w.field.split('.').pop()})\` : ''}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl">
+                    {iconType}
                   </div>
-
-                  <button
-                    onClick={() => setExpandedWidgetId(w.id)}
-                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all opacity-0 group-hover:opacity-100"
-                    title="Expandir"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
+                      {w.title}
+                    </h3>
+                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">
+                      {w.calc} {w.field ? \`(\${w.field.split('.').pop()})\` : ''}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex-1 flex flex-col justify-center relative z-10">
-                  {renderChartContent(w)}
-                </div>
+                <button
+                  onClick={() => setExpandedWidgetId(w.id)}
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all"
+                  title="Expandir"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
               </div>
-            )
-          })}
+
+              <div className="flex-1 flex flex-col justify-center relative z-10">
+                {renderChartContent(w)}
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Card Novo Indicador (Fiel à Web Produção) */}
+        <div className="col-span-12 sm:col-span-6 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-all min-h-[340px] cursor-pointer group">
+          <div className="w-14 h-14 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-md shadow-neutral-500/5">
+            <Plus className="w-6 h-6" />
+          </div>
+          <div className="text-center">
+            <span className="text-xs font-black uppercase tracking-widest block text-neutral-600 dark:text-neutral-300 group-hover:text-indigo-600 transition-colors">
+              Novo Indicador
+            </span>
+            <span className="text-[10px] font-bold text-neutral-400 mt-0.5 block">
+              Expandir Dashboard
+            </span>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Modal de Widget Expandido */}
       {expandedWidget && (

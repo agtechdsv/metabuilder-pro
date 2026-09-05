@@ -59,6 +59,12 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       // Dashboard BI / Analytics (Server-Side Aggregation)
       files.set(`${routeDir}/page.tsx`, generateAnalyticsPage(route, ast))
       files.set(`${routeDir}/AnalyticsClient.tsx`, generateAnalyticsClient(route, ast))
+      if (route.gridFields.length > 0) {
+        files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+        files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+        files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+        files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+      }
     } else {
       // Placeholder "Em desenvolvimento" para outros tipos
       files.set(`${routeDir}/page.tsx`, generateWipPage(route))

@@ -21,6 +21,7 @@ import {
   AnalyticsWidget,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
+import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
 
 /**
  * parser.ts
@@ -53,6 +54,66 @@ function mapFieldType(dbType: string): FieldNode['type'] {
   if (t.includes('uuid')) return 'uuid'
   if (t.includes('json')) return 'json'
   return 'string'
+}
+
+function findDisplayColumn(fields: any[]): string {
+  if (!fields || fields.length === 0) return 'id'
+  const candidates = ['nome', 'name', 'razao_social', 'razaosocial', 'descricao', 'description', 'titulo', 'title', 'label', 'display_label']
+  for (const c of candidates) {
+    const found = fields.find((f: any) => (f.db_column_name || f.dbColumn || '').toLowerCase() === c)
+    if (found) return found.db_column_name || found.dbColumn
+  }
+  const strField = fields.find((f: any) => !f.is_primary_key && !f.isPrimary && ['varchar', 'text', 'string'].includes(String(f.data_type || f.type || '').toLowerCase()))
+  if (strField) return strField.db_column_name || strField.dbColumn
+  return fields[1]?.db_column_name || fields[0]?.db_column_name || 'id'
+}
+
+function enrichFieldsWithRelations(
+  fieldsList: ResolvedField[],
+  model: { id: string; dbTable: string },
+  rawRelations: any[],
+  rawModels: any[],
+  rawFields: any[]
+): ResolvedField[] {
+  return fieldsList.map(f => {
+    if (f.config?.relation?.targetTable && f.config?.relation?.displayColumn) {
+      return f
+    }
+    const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+    const fkRel = rawRelations.find((r: any) =>
+      r.from_model_id === model.id && (r.from_field_id === f.id || r.from_column === colOnly)
+    )
+    let targetModel = fkRel ? rawModels.find((m: any) => m.id === fkRel.to_model_id) : null
+    if (!targetModel) {
+      targetModel = rawModels.find((m: any) =>
+        m.id !== model.id &&
+        (colOnly === m.db_table_name ||
+         colOnly === m.db_table_name.slice(0, -1) ||
+         colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
+         colOnly === `${m.db_table_name}_id` ||
+         colOnly === `id_${m.db_table_name}` ||
+         colOnly === `id_${m.db_table_name.slice(0, -1)}`)
+      )
+    }
+    if (targetModel) {
+      const targetFields = rawFields.filter((rf: any) => rf.model_id === targetModel.id)
+      const dispCol = findDisplayColumn(targetFields)
+      const pkCol = targetFields.find((rf: any) => rf.is_primary_key)?.db_column_name || 'id'
+      return {
+        ...f,
+        config: {
+          ...f.config,
+          relation: {
+            targetTable: targetModel.db_table_name,
+            targetModel: toPascalCase(targetModel.db_table_name),
+            displayColumn: dispCol,
+            valueColumn: pkCol,
+          }
+        }
+      }
+    }
+    return f
+  })
 }
 
 /**
@@ -1229,13 +1290,18 @@ export function parseMetaBuilderJSON(
     if (!model) continue
 
     // Etapas 3, 4 e 5: resolve campos por zona
-    const { gridFields, formFields, filterFields, primaryKey } = resolveViewZones(
+    const { gridFields: rawGridFields, formFields: rawFormFields, filterFields: rawFilterFields, primaryKey } = resolveViewZones(
       resolvedView,
       rawModels,
       rawFields,
       byocMap,
       enumsMap
     )
+
+    // Enriquece campos relacionais nas 3 zonas usando catálogo dinâmico de relações
+    const gridFields = enrichFieldsWithRelations(rawGridFields, model, rawRelations, rawModels, rawFields)
+    const formFields = enrichFieldsWithRelations(rawFormFields, model, rawRelations, rawModels, rawFields)
+    const filterFields = enrichFieldsWithRelations(rawFilterFields, model, rawRelations, rawModels, rawFields)
 
     // Buttons (padrão de interface + custom_actions configuradas pelo dev)
     const stdButtons: ViewButton[] = parseButtons(resolvedView.buttons_config || [])
@@ -1409,6 +1475,82 @@ export function parseMetaBuilderJSON(
         // Pushdown: campo de data para filtro no banco (ex: 'data_pedido', 'created_at')
         dateFilterField: ac.date_filter_field || undefined,
       }
+    }
+
+    // Auto-descobre todos os joins necessários usando o resolvedor BFS do Santo Graal
+    const referencedTableNames = new Set<string>()
+    if (analyticsConfig?.widgets) {
+      analyticsConfig.widgets.forEach(w => {
+        if (w.modelId && w.modelId !== model.id) {
+          const m = rawModels.find((rm: any) => rm.id === w.modelId)
+          if (m) referencedTableNames.add(m.db_table_name.toLowerCase())
+        }
+        if (typeof w.field === 'string') {
+          const matches = w.field.match(/[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+/g)
+          if (matches) {
+            matches.forEach(m => referencedTableNames.add(m.split('.')[0].toLowerCase()))
+          } else if (w.field.includes('.')) {
+            referencedTableNames.add(w.field.split('.')[0].toLowerCase())
+          }
+        }
+        if (typeof w.groupBy === 'string') {
+          if (w.groupBy.includes('.')) {
+            referencedTableNames.add(w.groupBy.split('.')[0].toLowerCase())
+          } else {
+            const fld = rawFields.find((rf: any) => rf.model_id === model.id && (rf.db_column_name === w.groupBy || rf.id === w.groupBy))
+            if (fld) {
+              const rel = rawRelations.find((r: any) => r.from_model_id === model.id && (r.from_field_id === fld.id || r.from_column === fld.db_column_name))
+              if (rel) {
+                const targetModel = rawModels.find((m: any) => m.id === rel.to_model_id)
+                if (targetModel) referencedTableNames.add(targetModel.db_table_name.toLowerCase())
+              }
+            }
+          }
+        }
+      })
+    }
+    gridFields.forEach(f => {
+      const relTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+      if (relTable) referencedTableNames.add(relTable.toLowerCase())
+    })
+    filterFields.forEach(f => {
+      const relTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+      if (relTable) referencedTableNames.add(relTable.toLowerCase())
+    })
+
+    const resolvedProjectRelations = resolveRelations(rawRelations, rawModels)
+    const masterTbl = model.dbTable.toLowerCase()
+    referencedTableNames.delete(masterTbl)
+
+    const autoJoinSteps = resolveAllJoins(
+      resolvedProjectRelations,
+      masterTbl,
+      Array.from(referencedTableNames)
+    )
+
+    const existingJoins: Array<{ from: string; localKey?: string; to: string; foreignKey?: string }> =
+      resolvedView.layout_config?.joins || []
+
+    const combinedJoins = [...existingJoins]
+    for (const step of autoJoinSteps) {
+      const exists = combinedJoins.some(
+        j => j.from.toLowerCase() === step.fromTable.toLowerCase() &&
+             j.to.toLowerCase() === step.toTable.toLowerCase() &&
+             j.localKey === step.fromField &&
+             j.foreignKey === step.toField
+      )
+      if (!exists) {
+        combinedJoins.push({
+          from: step.fromTable,
+          localKey: step.fromField,
+          to: step.toTable,
+          foreignKey: step.toField,
+        })
+      }
+    }
+    resolvedView.layout_config = {
+      ...(resolvedView.layout_config || {}),
+      joins: combinedJoins,
     }
 
     routes.push({
