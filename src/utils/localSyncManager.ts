@@ -378,6 +378,19 @@ export class LocalSyncManager {
   }
 
   /**
+   * Completely wipes the local project directory and re-initializes it as a fresh/clean project.
+   */
+  public async resetProjectToCleanState() {
+    if (!isTauri()) throw new Error("Local sync is only available on the Desktop App.");
+    try {
+      await tauriFs.remove(this.projectDir, { recursive: true, baseDir: BaseDirectory.Home });
+    } catch (e) {
+      // Ignore error if directory doesn't exist or was partially removed
+    }
+    await this.initLocalProject();
+  }
+
+  /**
    * Recursively deletes empty directories inside a given path
    */
   private async cleanupEmptyDirectories(path: string) {

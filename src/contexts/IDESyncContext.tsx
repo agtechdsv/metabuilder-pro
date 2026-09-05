@@ -772,6 +772,34 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const handleResetProjectToCleanState = async () => {
+    if (!syncManager || !target) return
+    try {
+      if (devProcess) {
+        try {
+          await devProcess.kill()
+        } catch (e) {}
+        setDevProcess(null)
+      }
+
+      resetTabs()
+      clearConsole()
+      setSandboxMode(false)
+
+      await syncManager.resetProjectToCleanState()
+
+      const { branches, currentBranch } = await syncManager.getBranches()
+      setBranches(branches)
+      setSelectedBranch(currentBranch)
+      await loadFileTree()
+
+      toast(t('ide_git_settings.reset_success', 'Projeto local reiniciado do zero com sucesso!'), 'success')
+      setShowGitSettings(false)
+    } catch (err: any) {
+      toast(`${t('ide_git_settings.reset_error', 'Erro ao reiniciar projeto:')} ${err.message}`, 'error')
+    }
+  }
+
   // ── File Explorer Operations ────────────────────────────────────────────────
 
   const projectDir = target ? `AGTech/MetaBuilderPRO/${target.slug}` : ''
@@ -2389,6 +2417,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         isOpen={showGitSettings} 
         onClose={() => setShowGitSettings(false)} 
         projectSlug={target?.slug || ''} 
+        onResetProject={handleResetProjectToCleanState}
       />
 
       <NativeExportModal

@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react'
-import { X, Save, Cloud, GitBranch, Network, ShieldCheck, Loader2 } from 'lucide-react'
+import { X, Save, Cloud, GitBranch, Network, ShieldCheck, Loader2, AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GitConfigManager, GitConfig } from '@/utils/gitConfigManager'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n'
 
 interface IDEGitSettingsModalProps {
   isOpen: boolean
   onClose: () => void
   projectSlug: string
+  onResetProject?: () => Promise<void>
 }
 
-export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'auth' | 'pipeline'>('auth')
+export function IDEGitSettingsModal({ isOpen, onClose, projectSlug, onResetProject }: IDEGitSettingsModalProps) {
+  const { t } = useI18n()
+  const [activeTab, setActiveTab] = useState<'auth' | 'pipeline' | 'danger'>('auth')
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showConfirmReset, setShowConfirmReset] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const { toast } = useToast()
   
   const [config, setConfig] = useState<GitConfig>({
@@ -27,6 +32,8 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
   useEffect(() => {
     if (isOpen) {
       loadConfig()
+      setShowConfirmReset(false)
+      setIsResetting(false)
     }
   }, [isOpen, projectSlug])
 
@@ -63,6 +70,20 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
     }
   }
 
+  const handleConfirmReset = async () => {
+    if (!onResetProject) return
+    setIsResetting(true)
+    try {
+      await onResetProject()
+      setShowConfirmReset(false)
+      onClose()
+    } catch (e: any) {
+      toast(e.message || t('ide_git_settings.reset_error', 'Erro ao reiniciar projeto:'), 'error')
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -80,8 +101,8 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
               <Network className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Configurações Git Enterprise</h2>
-              <p className="text-xs text-neutral-500">Configure repositórios remotos e pipelines customizados</p>
+              <h2 className="text-lg font-bold text-white">{t('ide_git_settings.modal_title', 'Configurações Git Enterprise')}</h2>
+              <p className="text-xs text-neutral-500">{t('ide_git_settings.modal_desc', 'Configure repositórios remotos e pipelines customizados')}</p>
             </div>
           </div>
           <button 
@@ -98,13 +119,19 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
             onClick={() => setActiveTab('auth')}
             className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'auth' ? 'border-indigo-500 text-white' : 'border-transparent text-neutral-500 hover:text-neutral-300'}`}
           >
-            <Cloud className="w-4 h-4" /> Autenticação e Repositório Remoto
+            <Cloud className="w-4 h-4" /> {t('ide_git_settings.tab_auth', 'Autenticação e Repositório Remoto')}
           </button>
           <button 
             onClick={() => setActiveTab('pipeline')}
             className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'pipeline' ? 'border-indigo-500 text-white' : 'border-transparent text-neutral-500 hover:text-neutral-300'}`}
           >
-            <GitBranch className="w-4 h-4" /> Pipeline de Triangulação (Branches)
+            <GitBranch className="w-4 h-4" /> {t('ide_git_settings.tab_pipeline', 'Pipeline de Triangulação (Branches)')}
+          </button>
+          <button 
+            onClick={() => setActiveTab('danger')}
+            className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'danger' ? 'border-red-500 text-red-400' : 'border-transparent text-neutral-500 hover:text-neutral-300'}`}
+          >
+            <AlertTriangle className="w-4 h-4" /> {t('ide_git_settings.tab_danger', 'Zona de Perigo')}
           </button>
         </div>
 
@@ -116,7 +143,7 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
             </div>
           ) : (
             <AnimatePresence mode="wait">
-              {activeTab === 'auth' ? (
+              {activeTab === 'auth' && (
                 <motion.div 
                   key="auth"
                   initial={{ opacity: 0, x: -10 }}
@@ -152,7 +179,9 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
                     </div>
                   </div>
                 </motion.div>
-              ) : (
+              )}
+
+              {activeTab === 'pipeline' && (
                 <motion.div 
                   key="pipeline"
                   initial={{ opacity: 0, x: 10 }}
@@ -202,27 +231,122 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug }: IDEGitSett
                   </div>
                 </motion.div>
               )}
+
+              {activeTab === 'danger' && (
+                <motion.div 
+                  key="danger"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 text-sm text-red-300 flex gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold text-red-200">{t('ide_git_settings.danger_title', 'Reiniciar Projeto do Zero (Reset de Fábrica)')}</p>
+                      <p className="text-xs text-red-300/80 mt-1">{t('ide_git_settings.danger_warning', 'Atenção: todas as alterações locais não comitadas ou não sincronizadas com a nuvem serão perdidas irreversivelmente.')}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-5 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-400 shrink-0">
+                        <RotateCcw className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white mb-1">{t('ide_git_settings.danger_title', 'Reiniciar Projeto do Zero (Reset de Fábrica)')}</h3>
+                        <p className="text-xs text-neutral-400 leading-relaxed">
+                          {t('ide_git_settings.danger_desc', 'Esta ação apagará permanentemente todos os arquivos locais deste projeto, incluindo o histórico do Git local (.git), branches temporárias e a pasta node_modules. A pasta local será reinicializada no estado virgem, pronta para um novo Ejetar & Sincronizar limpo a partir do Studio.')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {showConfirmReset ? (
+                      <div className="bg-red-950/40 border border-red-800/50 rounded-lg p-4 space-y-3 mt-2">
+                        <div className="flex items-center gap-2 text-red-400 text-sm font-bold">
+                          <AlertTriangle className="w-4 h-4" />
+                          {t('ide_git_settings.confirm_reset_title', 'Confirmar Reinicialização Total')}
+                        </div>
+                        <p className="text-xs text-red-200/90">
+                          {t('ide_git_settings.confirm_reset_desc', 'Tem certeza absoluta que deseja apagar toda a pasta local deste projeto e reiniciá-la do zero? Esta ação é irreversível.')}
+                        </p>
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmReset(false)}
+                            disabled={isResetting}
+                            className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white rounded transition-colors disabled:opacity-50"
+                          >
+                            {t('ide_git_settings.cancel', 'Cancelar')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleConfirmReset}
+                            disabled={isResetting}
+                            className="flex items-center gap-2 px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold transition-all shadow-lg shadow-red-600/30 disabled:opacity-50"
+                          >
+                            {isResetting ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                {t('ide_git_settings.resetting', 'Reiniciando projeto...')}
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-3.5 h-3.5" />
+                                {t('ide_git_settings.confirm_reset_btn', 'Sim, Apagar Tudo e Reiniciar')}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmReset(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg text-xs font-bold transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          {t('ide_git_settings.reset_btn', 'Reiniciar Projeto Local...')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-[#151515] border-t border-neutral-800 flex justify-end gap-3">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
-          >
-            Cancelar
-          </button>
-          <button 
-            onClick={handleSave}
-            disabled={isLoading || isSaving}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salvar Configurações
-          </button>
-        </div>
+        {activeTab === 'danger' ? (
+          <div className="p-4 bg-[#151515] border-t border-neutral-800 flex justify-end">
+            <button 
+              onClick={onClose}
+              disabled={isResetting}
+              className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
+            >
+              {t('ide_git_settings.cancel', 'Fechar')}
+            </button>
+          </div>
+        ) : (
+          <div className="p-4 bg-[#151515] border-t border-neutral-800 flex justify-end gap-3">
+            <button 
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
+            >
+              {t('ide_git_settings.cancel', 'Cancelar')}
+            </button>
+            <button 
+              onClick={handleSave}
+              disabled={isLoading || isSaving}
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? t('ide_git_settings.saving', 'Salvando...') : t('ide_git_settings.save_settings', 'Salvar Configurações')}
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   )

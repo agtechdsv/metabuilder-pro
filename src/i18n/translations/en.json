@@ -3752,5 +3752,25 @@
     "revert_confirm_desc": "Are you sure you want to revert changes in {filepath}? All uncommitted local changes will be lost. This action cannot be undone.",
     "revert_success": "File reverted successfully",
     "revert_error": "Error reverting file"
+  },
+  "ide_git_settings": {
+    "modal_title": "Enterprise Git Settings",
+    "modal_desc": "Configure remote repositories and custom pipelines",
+    "tab_auth": "Authentication & Remote Repository",
+    "tab_pipeline": "Branch Flow Pipeline",
+    "tab_danger": "Danger Zone",
+    "danger_title": "Reset Project to Clean State (Factory Reset)",
+    "danger_desc": "This action will permanently delete all local files of this project, including the local Git repository (.git), temporary branches, and the node_modules folder. The local directory will be re-initialized in a clean state, ready for a fresh Eject & Sync from Studio.",
+    "danger_warning": "Warning: all uncommitted local changes or code not synchronized to the cloud will be irreversibly lost.",
+    "reset_btn": "Reset Local Project...",
+    "confirm_reset_title": "Confirm Complete Reset",
+    "confirm_reset_desc": "Are you absolutely sure you want to delete the entire local project directory and reset it from scratch? This action is irreversible.",
+    "confirm_reset_btn": "Yes, Delete Everything and Reset",
+    "resetting": "Resetting project...",
+    "cancel": "Cancel",
+    "save_settings": "Save Settings",
+    "saving": "Saving...",
+    "reset_success": "Local project reset from scratch successfully!",
+    "reset_error": "Error resetting local project:"
   }
 }

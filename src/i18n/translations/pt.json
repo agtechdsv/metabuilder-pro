@@ -3753,5 +3753,25 @@
     "revert_confirm_desc": "Tem certeza que deseja reverter as modificações no arquivo {filepath}? Todas as alterações locais não commitadas serão perdidas. Esta ação não pode ser desfeita.",
     "revert_success": "Arquivo revertido com sucesso",
     "revert_error": "Erro ao reverter arquivo"
+  },
+  "ide_git_settings": {
+    "modal_title": "Configurações Git Enterprise",
+    "modal_desc": "Configure repositórios remotos e pipelines customizados",
+    "tab_auth": "Autenticação e Repositório Remoto",
+    "tab_pipeline": "Pipeline de Triangulação (Branches)",
+    "tab_danger": "Zona de Perigo",
+    "danger_title": "Reiniciar Projeto do Zero (Reset de Fábrica)",
+    "danger_desc": "Esta ação apagará permanentemente todos os arquivos locais deste projeto, incluindo o histórico do Git local (.git), branches temporárias e a pasta node_modules. A pasta local será reinicializada no estado virgem, pronta para um novo Ejetar & Sincronizar limpo a partir do Studio.",
+    "danger_warning": "Atenção: todas as alterações locais não comitadas ou não sincronizadas com a nuvem serão perdidas irreversivelmente.",
+    "reset_btn": "Reiniciar Projeto Local...",
+    "confirm_reset_title": "Confirmar Reinicialização Total",
+    "confirm_reset_desc": "Tem certeza absoluta que deseja apagar toda a pasta local deste projeto e reiniciá-la do zero? Esta ação é irreversível.",
+    "confirm_reset_btn": "Sim, Apagar Tudo e Reiniciar",
+    "resetting": "Reiniciando projeto...",
+    "cancel": "Cancelar",
+    "save_settings": "Salvar Configurações",
+    "saving": "Salvando...",
+    "reset_success": "Projeto local reiniciado do zero com sucesso!",
+    "reset_error": "Erro ao reiniciar projeto:"
   }
 }
