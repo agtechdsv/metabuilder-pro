@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend 
@@ -103,7 +102,6 @@ export default function AnalyticsDashboard({
     }
   }, [config.widgets])
   
-  const supabase = createClient()
   const { t, language } = useI18n()
 
   const [scale, setScale] = useState(1.0)

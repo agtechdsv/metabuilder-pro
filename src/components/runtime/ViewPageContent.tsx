@@ -411,7 +411,6 @@ export default function ViewPageContent({
     setLocalAnalyticsConfig,
     setEditingWidget,
     setIsWidgetModalOpen,
-    supabase
   });
 
   const { handleSave, handleDelete, getFkErrorMessage } = useMasterData({

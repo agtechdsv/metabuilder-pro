@@ -8,7 +8,6 @@ interface UseAnalyticsRuntimeProps {
   setLocalAnalyticsConfig: React.Dispatch<React.SetStateAction<any>>
   setEditingWidget: React.Dispatch<React.SetStateAction<any>>
   setIsWidgetModalOpen: React.Dispatch<React.SetStateAction<boolean>>
-  supabase: any
 }
 
 export function useAnalyticsRuntime({
@@ -19,7 +18,6 @@ export function useAnalyticsRuntime({
   setLocalAnalyticsConfig,
   setEditingWidget,
   setIsWidgetModalOpen,
-  supabase
 }: UseAnalyticsRuntimeProps) {
   const { toast } = useToast()
 
@@ -59,29 +57,39 @@ export function useAnalyticsRuntime({
     setIsWidgetModalOpen(false)
     setEditingWidget(null)
 
-    // Persistir no banco
     try {
-      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
-      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+      // Lê o layout_config atual via API route (server-side autenticado)
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
+      const { layout_config } = await getRes.json()
+
+      const updatedLayoutConfig = { ...layout_config, analytics_config: newConfig }
 
       // Auto-Discovery: Atualiza tables_config baseado nos widgets do BI para garantir carregamento correto
       const widgetModels = (newWidgets || []).map((w: any) => w.model_id)
-      const joinModels = (viewData?.layout_config?.joins || []).flatMap((j: any) => {
+      const joinModels = (layout_config?.joins || []).flatMap((j: any) => {
         const fromModel = project.models?.find((m: any) => m.db_table_name === j.from)
         const toModel = project.models?.find((m: any) => m.db_table_name === j.to)
         return [fromModel?.id, toModel?.id].filter(Boolean)
       })
       const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean)
 
-      const { error } = await supabase
-        .from('ui_views')
-        .update({ 
-          layout_config: updatedLayoutConfig,
-          tables_config: allInvolved // Sincroniza as tabelas necessárias
+      // Persiste via API route (server-side autenticado)
+      const patchRes = await fetch('/api/runtime/analytics-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          viewId,
+          layoutConfig: updatedLayoutConfig,
+          tablesConfig: allInvolved
         })
-        .eq('id', viewId)
-      
-      if (error) throw error
+      })
+
+      if (!patchRes.ok) {
+        const err = await patchRes.json()
+        throw new Error(err.error || 'Erro ao salvar dashboard')
+      }
+
       toast('Dashboard atualizado com sucesso!', 'success')
     } catch (err: any) {
       console.error('Error persisting dashboard:', err)
@@ -95,15 +103,23 @@ export function useAnalyticsRuntime({
     setLocalAnalyticsConfig(newConfig)
 
     try {
-      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
-      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
+      const { layout_config } = await getRes.json()
 
-      const { error } = await supabase
-        .from('ui_views')
-        .update({ layout_config: updatedLayoutConfig })
-        .eq('id', viewId)
-      
-      if (error) throw error
+      const updatedLayoutConfig = { ...layout_config, analytics_config: newConfig }
+
+      const patchRes = await fetch('/api/runtime/analytics-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ viewId, layoutConfig: updatedLayoutConfig })
+      })
+
+      if (!patchRes.ok) {
+        const err = await patchRes.json()
+        throw new Error(err.error || 'Erro ao salvar layout')
+      }
+
       toast('Layout do dashboard salvo com sucesso!', 'success')
     } catch (err: any) {
       console.error('Error saving dashboard layout:', err)
@@ -119,8 +135,11 @@ export function useAnalyticsRuntime({
     setLocalAnalyticsConfig(newConfig)
 
     try {
-      const { data: viewData } = await supabase.from('ui_views').select('layout_config').eq('id', viewId).single()
-      const updatedLayoutConfig = { ...viewData?.layout_config, analytics_config: newConfig }
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
+      const { layout_config } = await getRes.json()
+
+      const updatedLayoutConfig = { ...layout_config, analytics_config: newConfig }
       
       const widgetModels = (newWidgets || []).map((w: any) => w.model_id)
       const joinModels = (updatedLayoutConfig.joins || []).flatMap((j: any) => {
@@ -130,15 +149,21 @@ export function useAnalyticsRuntime({
       })
       const allInvolved = Array.from(new Set([...widgetModels, ...joinModels])).filter(Boolean)
 
-      const { error } = await supabase
-        .from('ui_views')
-        .update({ 
-          layout_config: updatedLayoutConfig,
-          tables_config: allInvolved
+      const patchRes = await fetch('/api/runtime/analytics-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          viewId,
+          layoutConfig: updatedLayoutConfig,
+          tablesConfig: allInvolved
         })
-        .eq('id', viewId)
-      
-      if (error) throw error
+      })
+
+      if (!patchRes.ok) {
+        const err = await patchRes.json()
+        throw new Error(err.error || 'Erro ao remover indicador')
+      }
+
       toast('Indicador removido.', 'info')
     } catch (err: any) {
       console.error('Error deleting widget:', err)
