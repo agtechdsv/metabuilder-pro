@@ -20,6 +20,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "tailwind-merge": "^2.3.0",
       "framer-motion": "^12.0.0",
       "recharts": "^3.8.1",
+      "react-is": "^19.0.0",
       "@dnd-kit/core": "^6.3.1",
       "@dnd-kit/sortable": "^10.0.0",
       "@dnd-kit/utilities": "^3.2.2",
