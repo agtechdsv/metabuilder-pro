@@ -8,6 +8,7 @@ import { generateSchedulerPage, generateSchedulerClient, generateSchedulerSchema
 import { generateGalleryPage, generateGalleryClient, generateGallerySchema } from './gallery-page'
 import { generateGanttPage, generateGanttClient, generateGanttSchema } from './gantt-page'
 import { generateMapPage, generateMapClient, generateMapSchema } from './map-page'
+import { generateBlueprintPage, generateBlueprintClient, generateBlueprintSchema } from './blueprint-page'
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 
@@ -21,6 +22,7 @@ export * from './scheduler-page'
 export * from './gallery-page'
 export * from './gantt-page'
 export * from './map-page'
+export * from './blueprint-page'
 export * from './analytics-page'
 export * from './wip-page'
 
@@ -102,6 +104,17 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/MapClient.tsx`, generateMapClient(route))
       files.set(`${routeDir}/schema.ts`, generateMapSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no marcador)
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'blueprint') {
+      // Blueprint (Fluxograma de Processos / Nós e Predecessores)
+      files.set(`${routeDir}/page.tsx`, generateBlueprintPage(route))
+      files.set(`${routeDir}/BlueprintClient.tsx`, generateBlueprintClient(route))
+      files.set(`${routeDir}/schema.ts`, generateBlueprintSchema(route))
+      // Mestre-Detalhe + Edição (ao clicar na etapa/nó)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
       files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))

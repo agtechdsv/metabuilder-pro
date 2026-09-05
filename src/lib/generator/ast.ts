@@ -21,6 +21,7 @@ export type LogicType =
   | 'gantt'
   | 'map'
   | 'mapa'
+  | 'blueprint'
   | 'personalizado'
   | 'dashboard_bi'
   | 'analytics'
@@ -235,6 +236,9 @@ export interface RouteNode {
   // ── Configuração específica para Mapa / Visão Geoespacial ──
   mapConfig?: MapConfig
 
+  // ── Configuração específica para Blueprint / Fluxograma de Processos ──
+  blueprintConfig?: BlueprintConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -323,6 +327,16 @@ export interface MapConfig {
   titleField: string          // dbColumn do título/rótulo do marcador (ex: 'nome', 'titulo')
   descField?: string          // dbColumn da descrição ou endereço no popup (opcional)
   zoom?: number               // nível de zoom inicial (default: 13)
+}
+
+export interface BlueprintConfig {
+  titleField: string            // dbColumn do título/nome da etapa/nó (ex: 'nome', 'titulo')
+  predecessorField: string      // dbColumn do nó predecessor/pai (ex: 'predecessor_id', 'parent_id')
+  descField?: string            // dbColumn da descrição da etapa (opcional)
+  statusField?: string          // dbColumn do status da etapa (opcional)
+  scale?: number                // escala do diagrama (default: 1)
+  direction?: 'TB' | 'LR' | 'BT' | 'RL' // direção do layout dagre (default: 'TB')
+  animatedEdges?: boolean       // arestas animadas (default: true)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

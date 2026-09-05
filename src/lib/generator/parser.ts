@@ -23,6 +23,7 @@ import {
   GalleryConfig,
   GanttConfig,
   MapConfig,
+  BlueprintConfig,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
@@ -1756,6 +1757,108 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Blueprint / Fluxograma
+    // ─────────────────────────────────────────────────
+    let blueprintConfig: BlueprintConfig | undefined = undefined
+    if (resolvedView.logic_type === 'blueprint' || resolvedView.layout_config?.blueprint_config) {
+      const bc = resolvedView.layout_config?.blueprint_config || {}
+
+      const resolveBlueprintColumn = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find(
+          (f: any) => f.id === fieldIdOrName
+                   || f.db_column_name === fieldIdOrName
+                   || f.display_name === fieldIdOrName
+                   || f.name === fieldIdOrName
+        )
+        if (!found) return fieldIdOrName
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) return fkField.db_column_name || fkField.dbColumn
+        return found.db_column_name || found.dbColumn || fieldIdOrName
+      }
+
+      // Auto-detecção de Título
+      let autoTitleField = bc.title_field ? resolveBlueprintColumn(bc.title_field) : undefined
+      if (!autoTitleField) {
+        const candidateTitle = gridFields.find(f =>
+          !f.isPrimaryKey &&
+          (f.dbColumn.toLowerCase().includes('nome') ||
+           f.dbColumn.toLowerCase().includes('name') ||
+           f.dbColumn.toLowerCase().includes('titulo') ||
+           f.dbColumn.toLowerCase().includes('title') ||
+           f.dbColumn.toLowerCase().includes('etapa') ||
+           f.dbColumn.toLowerCase().includes('tarefa') ||
+           f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dataType === 'string')
+        )
+        autoTitleField = candidateTitle ? candidateTitle.dbColumn : primaryKey
+      }
+
+      // Auto-detecção de Predecessor / Nó Pai
+      let autoPredField = bc.predecessor_field ? resolveBlueprintColumn(bc.predecessor_field) : undefined
+      if (!autoPredField) {
+        const candidatePred = gridFields.find(f => {
+          const col = f.dbColumn.toLowerCase()
+          return col.includes('predecessor') ||
+                 col.includes('parent') ||
+                 col.includes('pai') ||
+                 col.includes('anterior') ||
+                 col.includes('depende') ||
+                 col.includes('origem') ||
+                 col === 'prev_id' ||
+                 col === 'source_id'
+        })
+        autoPredField = candidatePred ? candidatePred.dbColumn : 'predecessor_id'
+      }
+
+      // Auto-detecção de Descrição
+      let autoDescField = bc.desc_field ? resolveBlueprintColumn(bc.desc_field) : undefined
+      if (!autoDescField) {
+        const candidateDesc = gridFields.find(f =>
+          f.dbColumn !== autoTitleField &&
+          f.dbColumn !== autoPredField &&
+          (f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dbColumn.toLowerCase().includes('description') ||
+           f.dbColumn.toLowerCase().includes('detalhe') ||
+           f.dbColumn.toLowerCase().includes('obs') ||
+           f.dbColumn.toLowerCase().includes('resumo'))
+        )
+        if (candidateDesc) autoDescField = candidateDesc.dbColumn
+      }
+
+      // Auto-detecção de Status
+      let autoStatusField = bc.status_field ? resolveBlueprintColumn(bc.status_field) : undefined
+      if (!autoStatusField) {
+        const candidateStatus = gridFields.find(f => {
+          const col = f.dbColumn.toLowerCase()
+          return col.includes('status') || col.includes('situacao') || col.includes('estado') || col.includes('fase')
+        })
+        if (candidateStatus) autoStatusField = candidateStatus.dbColumn
+      }
+
+      blueprintConfig = {
+        titleField:       autoTitleField,
+        predecessorField: autoPredField,
+        descField:        autoDescField,
+        statusField:      autoStatusField,
+        scale:            typeof bc.scale === 'number' ? bc.scale : 1,
+        direction:        bc.direction || 'TB',
+        animatedEdges:    bc.animated_edges !== false,
+      }
+    }
+
     let analyticsConfig: AnalyticsConfig | undefined = undefined
     if (
       (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
@@ -1926,6 +2029,7 @@ export function parseMetaBuilderJSON(
       galleryConfig,
       ganttConfig,
       mapConfig,
+      blueprintConfig,
       analyticsConfig,
       buttons,
       relationTabs,

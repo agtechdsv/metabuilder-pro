@@ -8,6 +8,7 @@ import { generateTimelineBoardComponent } from './timeline-board'
 import { generateGalleryBoardComponent } from './gallery-board'
 import { generateGanttBoardComponent } from './gantt-board'
 import { generateMapBoardComponent } from './map-board'
+import { generateBlueprintBoardComponent } from './blueprint-board'
 
 export * from './ui-primitives'
 export * from './relation-section'
@@ -18,6 +19,7 @@ export * from './timeline-board'
 export * from './gallery-board'
 export * from './gantt-board'
 export * from './map-board'
+export * from './blueprint-board'
 
 /**
  * generateComponents
@@ -34,4 +36,5 @@ export function generateComponents(ast: AppAST, files: Map<string, string>) {
   generateGalleryBoardComponent(files)
   generateGanttBoardComponent(files)
   generateMapBoardComponent(files)
+  generateBlueprintBoardComponent(files)
 }
