@@ -1,4 +1,31 @@
 {
+  "v1.0.1": {
+    "date": "2026-09-04",
+    "pt": [
+      "Alta Performance em Analytics: Consultas e filtros de data processados diretamente no banco de dados (PostgreSQL, MySQL, Oracle, SQL Server e Supabase), proporcionando carregamento ultrarrápido de dashboards e relatórios.",
+      "Grades de Dados e Filtros Dinâmicos: Suporte a consultas relacionais inteligentes em listas e filtros, permitindo vincular e explorar dados interconectados com facilidade.",
+      "Experiência Aprimorada na Linha do Tempo (Timeline): Visual renovado com conectores fluidos, persistência automática do layout e botão flutuante para carregamento contínuo de eventos.",
+      "Ações Customizadas e Modais Avançados: Novos modais integrados com suporte a iframes e navegação dinâmica orientada a parâmetros de URL.",
+      "Exportação de Projetos (Eject) Ultrarrápida: Instalação de dependências acelerada com acompanhamento de logs em tempo real e arquitetura modular de schemas.",
+      "Ambiente de Desenvolvimento Local Otimizado: Fluxo de trabalho mais estável e mensagens de sistema totalmente localizadas em Português, Inglês e Espanhol."
+    ],
+    "en": [
+      "High-Performance Analytics: Database-level date filtering and query optimization across PostgreSQL, MySQL, Oracle, SQL Server, and Supabase for lightning-fast dashboards.",
+      "Smart Data Grids & Filters: Dynamic relational lookups are now supported across grids and search filters, making cross-table data exploration effortless.",
+      "Enhanced Timeline Experience: Polished visual presentation with smoother animations, persistent layout preferences, and a fixed floating button for continuous record loading.",
+      "Advanced Custom Action Modals: Enhanced modal support featuring embedded iframes and intelligent query-parameter-based routing.",
+      "Accelerated Project Eject: Dramatically faster project export with real-time log streaming and modular, clean code generation schemas.",
+      "Optimized Local Workspace: Smoother developer workflow with refined synchronization checks and native trilingual localized messaging (PT, EN, ES)."
+    ],
+    "es": [
+      "Analytics de Alto Rendimiento: Consultas y filtros de fecha procesados directamente en la base de datos (PostgreSQL, MySQL, Oracle, SQL Server y Supabase) para una carga ultrarrápida de paneles y reportes.",
+      "Tablas de Datos y Filtros Dinámicos: Soporte para búsquedas relacionales inteligentes, facilitando la exploración y el filtrado de registros vinculados.",
+      "Experiencia Mejorada en la Línea de Tiempo (Timeline): Interfaz pulida con animaciones fluidas, persistencia de configuración de diseño y botón flotante para carga continua.",
+      "Acciones Personalizadas Avanzadas: Modales interactivos con soporte para iframes y navegación dinámica mediante parámetros de URL.",
+      "Exportación de Proyectos Acelerada: Proceso de 'Eject' significativamente más rápido con transmisión de logs en vivo y arquitectura modular de código generado.",
+      "Espacio de Trabajo Local Optimizado: Mayor fluidez de desarrollo y soporte trilingüe completo para mensajes del sistema (español, inglés y portugués)."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
