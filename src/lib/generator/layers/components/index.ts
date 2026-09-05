@@ -5,6 +5,7 @@ import { generateMasterFormComponent } from './master-form'
 import { generateByocComponents } from './byoc'
 import { generateKanbanBoardComponent } from './kanban-board'
 import { generateTimelineBoardComponent } from './timeline-board'
+import { generateGalleryBoardComponent } from './gallery-board'
 
 export * from './ui-primitives'
 export * from './relation-section'
@@ -12,6 +13,7 @@ export * from './master-form'
 export * from './byoc'
 export * from './kanban-board'
 export * from './timeline-board'
+export * from './gallery-board'
 
 /**
  * generateComponents
@@ -25,4 +27,5 @@ export function generateComponents(ast: AppAST, files: Map<string, string>) {
   generateByocComponents(ast, files)
   generateKanbanBoardComponent(files)
   generateTimelineBoardComponent(files)
+  generateGalleryBoardComponent(files)
 }
