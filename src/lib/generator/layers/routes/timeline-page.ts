@@ -92,18 +92,33 @@ export function generateTimelinePage(route: RouteNode): string {
   })
 
   return `import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports}
+import { Loader2 } from 'lucide-react'
 import { TimelineClient } from './TimelineClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
-export default async function ${mn}TimelinePage({
-  searchParams,
+function TimelineLoading() {
+  return (
+    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-300">
+      <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
+          <p className="text-sm">Buscando dados no Direct Access...</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+async function ${mn}TimelineContent({
+  params,
 }: {
-  searchParams?: Promise<{ [key: string]: string | undefined }>
+  params: { [key: string]: string | undefined }
 }) {
-  const params = searchParams ? await searchParams : {}
   const rawData = await get${mn}List()
 ${lookupQueries}
 
@@ -117,6 +132,20 @@ ${Array.from(optionsMap.values()).join('\n')}
       relationalOptions={relationalOptions}
       initialParams={params}
     />
+  )
+}
+
+export default async function ${mn}TimelinePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | undefined }>
+}) {
+  const params = searchParams ? await searchParams : {}
+
+  return (
+    <Suspense fallback={<TimelineLoading />}>
+      <${mn}TimelineContent params={params} />
+    </Suspense>
   )
 }
 `

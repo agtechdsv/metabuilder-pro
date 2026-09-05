@@ -138,6 +138,7 @@ export default config;
     // Layout do projeto (sidebar com as rotas dele)
     const routeNav = pApp.routes.map(r => ({ path: r.path, title: r.title }))
     files.set(`app/${pSlug}/layout.tsx`, generateProjectLayout(project.name, pSlug, routeNav))
+    files.set(`app/${pSlug}/loading.tsx`, `'use client'\nimport { Loader2 } from 'lucide-react'\n\nexport default function ProjectLoading() {\n  return (\n    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-300">\n      <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">\n        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />\n        <div className="text-center">\n          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>\n          <p className="text-sm">Buscando dados no Direct Access...</p>\n        </div>\n      </div>\n    </div>\n  )\n}\n`)
 
     // Página índice do projeto (redirect para primeira view)
     const firstRoute = pApp.routes[0]?.path || '/'

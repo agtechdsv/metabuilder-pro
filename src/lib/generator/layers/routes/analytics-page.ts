@@ -316,9 +316,10 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   const defaultItemsPerPage = route.rawLayoutConfig?.items_per_page || 50
 
   return `import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { get${mn}List, delete${mn} } from '@/app/actions/${mnLower}'
-${relatedImports ? `${relatedImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, RotateCcw } from 'lucide-react'
+${relatedImports ? `${relatedImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, RotateCcw, Loader2 } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { CustomActionButton } from '@/components/ui/custom-action-button'
@@ -681,16 +682,27 @@ function calculateWidgetData(
   return result
 }
 
+function AnalyticsLoading() {
+  return (
+    <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+      <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+      <div className="text-center">
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
+        <p className="text-sm">Buscando dados no Direct Access...</p>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Page Server Component
+// Analytics Content Component (Async Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default async function ${mn}AnalyticsPage({
-  searchParams,
+async function ${mn}AnalyticsContent({
+  params,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>
+  params: { [key: string]: string | undefined }
 }) {
-  const params = await searchParams
   const startDate = params?.start_date
   const endDate = params?.end_date
   const sortBy = params?.sort_by
@@ -774,28 +786,7 @@ ${filterFields.map(f => {
   }
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Cabeçalho da View (Fiel à Web Produção) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
-            <DynamicIcon icon="${route.icon || 'LayoutDashboard'}" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              ${route.title}
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mt-0.5">
-              ${route.rawLayoutConfig?.form_header_subtitle_field ? `{masterRawData?.[0]?.['${route.rawLayoutConfig.form_header_subtitle_field}'] || 'SISTEMA METABUILDER'}` : 'SISTEMA METABUILDER'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-${headerButtonsHtml}
-        </div>
-      </div>
-
+    <>
       {/* Seção BI / Analytics Client */}
       <AnalyticsClient
         title="${route.title || 'Dashboard'}"
@@ -805,7 +796,7 @@ ${headerButtonsHtml}
       />
 
       {/* Grid de Registros e Filtros (quando houver gridFields configurados) */}
-      {route.gridFields.length > 0 && (
+      {${route.gridFields.length > 0} && (
         <div className="space-y-6 pt-4">
           {/* Filtros da View */}
           {${filterFields.length > 0} && (
@@ -931,6 +922,46 @@ ${tdCells}
           </div>
         </div>
       )}
+    </>
+  )
+}
+
+export default async function ${mn}AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}) {
+  const params = await searchParams
+
+  return (
+    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Cabeçalho da View (Fiel à Web Produção) */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
+            <DynamicIcon icon="${route.icon || 'LayoutDashboard'}" size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+              ${route.title}
+            </h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mt-0.5">
+              SISTEMA METABUILDER
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+${headerButtonsHtml}
+        </div>
+      </div>
+
+      <Suspense
+        key={JSON.stringify(params)}
+        fallback={<AnalyticsLoading />}
+      >
+        <${mn}AnalyticsContent params={params} />
+      </Suspense>
     </div>
   )
 }
