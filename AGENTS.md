@@ -12,4 +12,4 @@
 - Upon COMPLETING any user request or code modification:
   1. Immediately run `npm run build` to verify there are no compilation or TypeScript errors;
   2. If any build errors occur: diagnose and apply all required fixes until clean;
-  3. If the build succeeds: proactively offer the commands for `git commit` (with semantic message) and `git push`.
+  3. If the build succeeds: proactively offer the git commands formatted as a single one-liner using `;` (Windows PowerShell compatible, e.g. `git add ...; git commit -m "..."; git push`).
