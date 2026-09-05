@@ -20,36 +20,45 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
     'react-dom': '^18.3.0',
     'lucide-react': '^0.360.0',
     'clsx': '^2.1.0',
-    'tailwind-merge': '^2.2.0',
+    'tailwind-merge': '^2.3.0',
     'framer-motion': '^12.0.0',
+    'date-fns': '^4.1.0',
+    'leaflet': '^1.9.4',
+    'react-leaflet': '^5.0.0',
+    '@xyflow/react': '^12.10.2',
+    'dagre': '^0.8.5',
     'recharts': '^3.8.1',
-    'react-is': '^18.3.1 || ^19.0.0',
+    'react-is': '^19.0.0',
     '@dnd-kit/core': '^6.3.1',
     '@dnd-kit/sortable': '^10.0.0',
     '@dnd-kit/utilities': '^3.2.2',
-    '@radix-ui/react-tabs': '^1.0.4',
-    '@radix-ui/react-label': '^2.0.2',
-    '@radix-ui/react-slot': '^1.0.2',
-    'react-hook-form': '^7.51.0',
-    'zod': '^3.22.4',
+    '@radix-ui/react-tabs': '^1.1.0',
+    '@radix-ui/react-label': '^2.1.0',
+    '@radix-ui/react-slot': '^1.1.0',
+    'react-hook-form': '^7.54.0',
+    '@hookform/resolvers': '^3.9.0',
+    'zod': '^3.23.0',
   }
   if (ast.projects.some(p => p.app.dbStack === 'supabase')) {
-    allDeps['@supabase/ssr'] = '^0.3.0'
-    allDeps['@supabase/supabase-js'] = '^2.40.0'
+    allDeps['@supabase/ssr'] = '^0.5.0'
+    allDeps['@supabase/supabase-js'] = '^2.45.0'
   }
-  if (ast.projects.some(p => p.app.dbStack === 'postgres'))   allDeps['pg'] = '^8.11.0'
-  if (ast.projects.some(p => p.app.dbStack === 'mysql'))      allDeps['mysql2'] = '^3.9.0'
-  if (ast.projects.some(p => p.app.dbStack === 'sqlserver'))  allDeps['mssql'] = '^10.0.0'
+  if (ast.projects.some(p => p.app.dbStack === 'postgres'))   allDeps['pg'] = '^8.13.0'
+  if (ast.projects.some(p => p.app.dbStack === 'mysql'))      allDeps['mysql2'] = '^3.11.0'
+  if (ast.projects.some(p => p.app.dbStack === 'sqlserver'))  allDeps['mssql'] = '^11.0.0'
   if (ast.projects.some(p => p.app.dbStack === 'oracle'))     allDeps['oracledb'] = '^6.5.0'
   if (ast.projects.some(p => p.app.authConfig?.hashFormat === 'bcrypt')) allDeps['bcryptjs'] = '^2.4.3'
 
   const devDeps: Record<string, string> = {
-    typescript: '^5.0.0',
-    '@types/node': '^20',
-    '@types/react': '^18',
-    '@types/react-dom': '^18',
+    typescript: '^5.6.0',
+    '@types/node': '^22',
+    '@types/react': '^19',
+    '@types/react-dom': '^19',
+    '@types/leaflet': '^1.9.16',
+    '@types/dagre': '^0.7.54',
     tailwindcss: '^3.4.0',
     postcss: '^8.4.0',
+    autoprefixer: '^10.4.20',
   }
   if (ast.projects.some(p => p.app.dbStack === 'postgres'))   devDeps['@types/pg'] = '^8.11.0'
   if (ast.projects.some(p => p.app.authConfig?.hashFormat === 'bcrypt')) devDeps['@types/bcryptjs'] = '^2.4.6'
