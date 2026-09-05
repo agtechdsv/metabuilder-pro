@@ -22,6 +22,7 @@ export type LogicType =
   | 'map'
   | 'mapa'
   | 'blueprint'
+  | 'mapa_mental'
   | 'personalizado'
   | 'dashboard_bi'
   | 'analytics'
@@ -239,6 +240,9 @@ export interface RouteNode {
   // ── Configuração específica para Blueprint / Fluxograma de Processos ──
   blueprintConfig?: BlueprintConfig
 
+  // ── Configuração específica para Mapa Mental / Níveis Hierárquicos ──
+  mindmapConfig?: MindmapConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -337,6 +341,24 @@ export interface BlueprintConfig {
   scale?: number                // escala do diagrama (default: 1)
   direction?: 'TB' | 'LR' | 'BT' | 'RL' // direção do layout dagre (default: 'TB')
   animatedEdges?: boolean       // arestas animadas (default: true)
+}
+
+export interface MindmapLevel {
+  modelId?: string
+  modelTable?: string
+  titleField: string
+  descField?: string
+  relationType?: 'direct' | 'indirect' | 'multilevel'
+  foreignKey?: string
+  throughTable?: string
+  throughLocalFk?: string
+  throughTargetFk?: string
+}
+
+export interface MindmapConfig {
+  centralFieldId?: string
+  levels?: MindmapLevel[]
+  hierarchyFields?: string[] // dbColumns para agrupamento por colunas (modo pivot)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

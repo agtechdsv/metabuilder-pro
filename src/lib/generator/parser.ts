@@ -24,6 +24,8 @@ import {
   GanttConfig,
   MapConfig,
   BlueprintConfig,
+  MindmapConfig,
+  MindmapLevel,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
@@ -1859,6 +1861,55 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Mapa Mental / Níveis
+    // ─────────────────────────────────────────────────
+    let mindmapConfig: MindmapConfig | undefined = undefined
+    if (resolvedView.logic_type === 'mapa_mental' || resolvedView.layout_config?.mindmap_levels?.length) {
+      const ml = resolvedView.layout_config?.mindmap_levels || []
+      const levels: MindmapLevel[] = []
+
+      for (const lvl of ml) {
+        const lvlModel = models.find((m: any) => m.id === lvl.model_id)
+        const lvlFields = rawFields.filter((f: any) => f.model_id === lvl.model_id)
+
+        const resolveLvlCol = (val?: string): string => {
+          if (!val) return ''
+          const found = lvlFields.find((f: any) => f.id === val || f.db_column_name === val || f.name === val)
+          return found?.db_column_name || val
+        }
+
+        let titleField = resolveLvlCol(lvl.title_field)
+        if (!titleField) {
+          const cand = lvlFields.find((f: any) => !f.is_primary_key && (f.db_column_name.includes('nome') || f.db_column_name.includes('title') || f.db_column_name.includes('descricao')))
+          titleField = cand?.db_column_name || 'id'
+        }
+
+        levels.push({
+          modelId: lvl.model_id,
+          modelTable: lvlModel?.name?.toLowerCase() || '',
+          titleField,
+          descField: lvl.desc_field ? resolveLvlCol(lvl.desc_field) : undefined,
+          relationType: lvl.relation_type || 'direct',
+          foreignKey: lvl.foreign_key ? resolveLvlCol(lvl.foreign_key) : undefined,
+          throughTable: lvl.through_table,
+          throughLocalFk: lvl.through_local_fk,
+          throughTargetFk: lvl.through_target_fk,
+        })
+      }
+
+      // Hierarchy fields para modo pivot / agrupamento por campos
+      const hierarchyFields = gridFields
+        .filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc)
+        .map(f => f.dbColumn)
+
+      mindmapConfig = {
+        centralFieldId: resolvedView.layout_config?.central_field_id,
+        levels: levels.length > 0 ? levels : undefined,
+        hierarchyFields: hierarchyFields.length > 0 ? hierarchyFields : [primaryKey],
+      }
+    }
+
     let analyticsConfig: AnalyticsConfig | undefined = undefined
     if (
       (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
@@ -2030,6 +2081,7 @@ export function parseMetaBuilderJSON(
       ganttConfig,
       mapConfig,
       blueprintConfig,
+      mindmapConfig,
       analyticsConfig,
       buttons,
       relationTabs,

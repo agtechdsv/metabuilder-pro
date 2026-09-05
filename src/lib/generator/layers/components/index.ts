@@ -9,6 +9,7 @@ import { generateGalleryBoardComponent } from './gallery-board'
 import { generateGanttBoardComponent } from './gantt-board'
 import { generateMapBoardComponent } from './map-board'
 import { generateBlueprintBoardComponent } from './blueprint-board'
+import { generateMindMapBoardComponent } from './mindmap-board'
 
 export * from './ui-primitives'
 export * from './relation-section'
@@ -20,6 +21,7 @@ export * from './gallery-board'
 export * from './gantt-board'
 export * from './map-board'
 export * from './blueprint-board'
+export * from './mindmap-board'
 
 /**
  * generateComponents
@@ -37,4 +39,5 @@ export function generateComponents(ast: AppAST, files: Map<string, string>) {
   generateGanttBoardComponent(files)
   generateMapBoardComponent(files)
   generateBlueprintBoardComponent(files)
+  generateMindMapBoardComponent(files)
 }

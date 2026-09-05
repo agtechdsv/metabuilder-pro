@@ -9,6 +9,7 @@ import { generateGalleryPage, generateGalleryClient, generateGallerySchema } fro
 import { generateGanttPage, generateGanttClient, generateGanttSchema } from './gantt-page'
 import { generateMapPage, generateMapClient, generateMapSchema } from './map-page'
 import { generateBlueprintPage, generateBlueprintClient, generateBlueprintSchema } from './blueprint-page'
+import { generateMindMapPage, generateMindMapClient, generateMindMapSchema } from './mindmap-page'
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 
@@ -23,6 +24,7 @@ export * from './gallery-page'
 export * from './gantt-page'
 export * from './map-page'
 export * from './blueprint-page'
+export * from './mindmap-page'
 export * from './analytics-page'
 export * from './wip-page'
 
@@ -115,6 +117,17 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/BlueprintClient.tsx`, generateBlueprintClient(route))
       files.set(`${routeDir}/schema.ts`, generateBlueprintSchema(route))
       // Mestre-Detalhe + Edição (ao clicar na etapa/nó)
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'mapa_mental') {
+      // Mapa Mental (Níveis Hierárquicos / Orbitais Radiais)
+      files.set(`${routeDir}/page.tsx`, generateMindMapPage(route))
+      files.set(`${routeDir}/MindMapClient.tsx`, generateMindMapClient(route))
+      files.set(`${routeDir}/schema.ts`, generateMindMapSchema(route))
+      // Mestre-Detalhe + Edição (ao clicar no nó)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
       files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
