@@ -18,6 +18,7 @@ export type LogicType =
   | 'galeria'
   | 'scheduler'
   | 'timeline'
+  | 'gantt'
   | 'personalizado'
   | 'dashboard_bi'
   | 'analytics'
@@ -226,6 +227,9 @@ export interface RouteNode {
   // ── Configuração específica para Galeria / Vitrine de Catálogo ──
   galleryConfig?: GalleryConfig
 
+  // ── Configuração específica para Gantt / Cronograma de Projetos ──
+  ganttConfig?: GanttConfig
+
   // ── Botões configurados pelo dev ──
   buttons: ViewButton[]
 
@@ -299,6 +303,13 @@ export interface GalleryConfig {
   cardFields?: string[]       // dbColumns adicionais exibidos como metadados no card
   cardFieldsLabels?: Record<string, string> // labels customizados por campo
   clickBehavior?: 'fullscreen' | 'thumbnail' // comportamento de clique (padrão: 'fullscreen')
+}
+
+export interface GanttConfig {
+  titleField: string          // dbColumn do título da tarefa/barra (ex: 'titulo', 'nome')
+  startDateField: string      // dbColumn da data de início (ex: 'data_inicio', 'start_date')
+  endDateField: string        // dbColumn da data de término (ex: 'data_fim', 'end_date')
+  progressField?: string      // dbColumn da porcentagem de conclusão (0-100) (ex: 'progresso')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

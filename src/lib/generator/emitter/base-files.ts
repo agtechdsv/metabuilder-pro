@@ -19,6 +19,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "clsx": "^2.1.1",
       "tailwind-merge": "^2.3.0",
       "framer-motion": "^12.0.0",
+      "date-fns": "^4.1.0",
       "recharts": "^3.8.1",
       "react-is": "^19.0.0",
       "@dnd-kit/core": "^6.3.1",

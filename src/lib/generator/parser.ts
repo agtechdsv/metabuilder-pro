@@ -21,6 +21,7 @@ import {
   AnalyticsWidget,
   SchedulerConfig,
   GalleryConfig,
+  GanttConfig,
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
@@ -1562,6 +1563,104 @@ export function parseMetaBuilderJSON(
       }
     }
 
+    // ─────────────────────────────────────────────────
+    // Configurações específicas de Gantt / Cronograma
+    // ─────────────────────────────────────────────────
+    let ganttConfig: GanttConfig | undefined = undefined
+    if (resolvedView.logic_type === 'gantt') {
+      const gc = resolvedView.layout_config?.gantt_config || {}
+
+      const resolveGanttColumn = (fieldIdOrName?: string): string => {
+        if (!fieldIdOrName) return ''
+        const found = rawFields.find(
+          (f: any) => f.id === fieldIdOrName
+                   || f.db_column_name === fieldIdOrName
+                   || f.display_name === fieldIdOrName
+                   || f.name === fieldIdOrName
+        )
+        if (!found) return fieldIdOrName
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || fieldIdOrName
+        }
+        const foundTargetTable = (found.model_table || '').toLowerCase()
+        const fkField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.foreign_key_target_model === found.model_id ||
+            (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
+            (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
+            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+          )
+        )
+        if (fkField) return fkField.db_column_name || fkField.dbColumn
+        return found.db_column_name || found.dbColumn || fieldIdOrName
+      }
+
+      // Auto-detecção de campo de título se não configurado
+      let autoTitleField = gc.title_field ? resolveGanttColumn(gc.title_field) : undefined
+      if (!autoTitleField) {
+        const candidateTitle = gridFields.find(f =>
+          !f.isPrimaryKey &&
+          (f.dbColumn.toLowerCase().includes('titulo') ||
+           f.dbColumn.toLowerCase().includes('title') ||
+           f.dbColumn.toLowerCase().includes('nome') ||
+           f.dbColumn.toLowerCase().includes('name') ||
+           f.dbColumn.toLowerCase().includes('descricao') ||
+           f.dbColumn.toLowerCase().includes('description') ||
+           f.dataType === 'string')
+        )
+        autoTitleField = candidateTitle ? candidateTitle.dbColumn : primaryKey
+      }
+
+      // Auto-detecção de data de início
+      let autoStartDateField = gc.start_date_field ? resolveGanttColumn(gc.start_date_field) : undefined
+      if (!autoStartDateField) {
+        const candidateStart = gridFields.find(f =>
+          f.dbColumn.toLowerCase().includes('inicio') ||
+          f.dbColumn.toLowerCase().includes('start') ||
+          f.dbColumn.toLowerCase().includes('abertura') ||
+          f.dataType === 'date' ||
+          f.dataType === 'timestamp'
+        )
+        autoStartDateField = candidateStart ? candidateStart.dbColumn : 'created_at'
+      }
+
+      // Auto-detecção de data de término
+      let autoEndDateField = gc.end_date_field ? resolveGanttColumn(gc.end_date_field) : undefined
+      if (!autoEndDateField) {
+        const candidateEnd = gridFields.find(f =>
+          f.dbColumn !== autoStartDateField &&
+          (f.dbColumn.toLowerCase().includes('fim') ||
+           f.dbColumn.toLowerCase().includes('end') ||
+           f.dbColumn.toLowerCase().includes('termino') ||
+           f.dbColumn.toLowerCase().includes('conclusao') ||
+           f.dbColumn.toLowerCase().includes('limite') ||
+           f.dataType === 'date' ||
+           f.dataType === 'timestamp')
+        )
+        autoEndDateField = candidateEnd ? candidateEnd.dbColumn : autoStartDateField
+      }
+
+      // Auto-detecção de campo de progresso (opcional)
+      let autoProgressField = gc.progress_field ? resolveGanttColumn(gc.progress_field) : undefined
+      if (!autoProgressField) {
+        const candidateProg = gridFields.find(f =>
+          f.dbColumn.toLowerCase().includes('progresso') ||
+          f.dbColumn.toLowerCase().includes('progress') ||
+          f.dbColumn.toLowerCase().includes('porcentagem') ||
+          f.dbColumn.toLowerCase().includes('percentual') ||
+          f.dbColumn.toLowerCase().includes('percent')
+        )
+        if (candidateProg) autoProgressField = candidateProg.dbColumn
+      }
+
+      ganttConfig = {
+        titleField:     autoTitleField,
+        startDateField: autoStartDateField,
+        endDateField:   autoEndDateField,
+        progressField:  autoProgressField,
+      }
+    }
+
     let analyticsConfig: AnalyticsConfig | undefined = undefined
     if (
       (resolvedView.logic_type === 'analytics' || resolvedView.logic_type === 'dashboard_bi' || resolvedView.layout_config?.analytics_config) &&
@@ -1730,6 +1829,7 @@ export function parseMetaBuilderJSON(
       timelineConfig,
       schedulerConfig,
       galleryConfig,
+      ganttConfig,
       analyticsConfig,
       buttons,
       relationTabs,

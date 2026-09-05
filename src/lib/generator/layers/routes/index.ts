@@ -6,6 +6,7 @@ import { generateKanbanPage, generateKanbanClient, generateKanbanSchema } from '
 import { generateTimelinePage, generateTimelineClient, generateTimelineSchema } from './timeline-page'
 import { generateSchedulerPage, generateSchedulerClient, generateSchedulerSchema } from './scheduler-page'
 import { generateGalleryPage, generateGalleryClient, generateGallerySchema } from './gallery-page'
+import { generateGanttPage, generateGanttClient, generateGanttSchema } from './gantt-page'
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 
@@ -17,6 +18,7 @@ export * from './kanban-page'
 export * from './timeline-page'
 export * from './scheduler-page'
 export * from './gallery-page'
+export * from './gantt-page'
 export * from './analytics-page'
 export * from './wip-page'
 
@@ -76,6 +78,17 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/GalleryClient.tsx`, generateGalleryClient(route))
       files.set(`${routeDir}/schema.ts`, generateGallerySchema(route))
       // Mestre-Detalhe + Edição (ao clicar no card)
+      files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
+      files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
+      files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
+      // Criação
+      files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
+    } else if (route.logicType === 'gantt') {
+      // Gantt (Cronograma de Projetos)
+      files.set(`${routeDir}/page.tsx`, generateGanttPage(route))
+      files.set(`${routeDir}/GanttClient.tsx`, generateGanttClient(route))
+      files.set(`${routeDir}/schema.ts`, generateGanttSchema(route))
+      // Mestre-Detalhe + Edição (ao clicar na tarefa/barra)
       files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route))
       files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route))
       files.set(`${routeDir}/[id]/schema.ts`, generateDetailSchema(route))
