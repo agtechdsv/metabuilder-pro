@@ -1,5 +1,5 @@
 import { RouteNode, AppAST, AnalyticsWidget } from '../../ast'
-import { renderGridCellValue } from './helpers'
+import { renderGridCellValue, toPascalCase } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics / Dashboard BI Page Generator (Server-Side Aggregation)
@@ -202,7 +202,8 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     .join('\n')
 
   // Filtros da view
-  const filterFields = route.filterFields.length > 0 ? route.filterFields : []
+  const relationalFilterComponents: string[] = []
+  const filterFields = route.filterFields.length > 0 ? route.filterFields : route.gridFields.filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
   const filterInputs = filterFields.map(f => {
     const col = f.dbColumn.replace('.', '_')
     const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
@@ -223,20 +224,50 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
       ]
     }
 
-    if (isRelational) {
+    if (isRelational && targetTable) {
+      const rm = relatedModels.find(m => m.table === targetTable)
+      const modelName = rm ? rm.modelName : toPascalCase(targetTable)
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.descricao ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.descricao ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+
+      relationalFilterComponents.push(`async function Filter_${col}_Select({ defaultValue }: { defaultValue?: string }) {
+  const list = await get${modelName}List().catch(() => [])
+  return (
+    <select
+      name="${col}_filter"
+      defaultValue={defaultValue || ''}
+      className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+    >
+      <option value="">Todos</option>
+      {(list || []).map((r: any, i: number) => {
+        const val = String(${valueExpr})
+        const lbl = String(${labelExpr})
+        return <option key={i} value={val}>{lbl}</option>
+      })}
+    </select>
+  )
+}`)
+
       return `
                 <div className="flex flex-col gap-1.5 ${colSpanClass}">
                   <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
-                  <select
-                    name="${col}_filter"
-                    defaultValue={params?.['${col}_filter'] || ''}
-                    className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+                  <Suspense
+                    fallback={
+                      <select
+                        name="${col}_filter"
+                        defaultValue={params?.['${col}_filter'] || ''}
+                        className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm opacity-60"
+                      >
+                        <option value="">Todos</option>
+                      </select>
+                    }
                   >
-                    <option value="">Todos</option>
-                    {(relationalOptions?.['${f.dbColumn}'] || []).map((opt: any, i: number) => (
-                      <option key={i} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    <Filter_${col}_Select defaultValue={params?.['${col}_filter']} />
+                  </Suspense>
                 </div>`
     }
 
@@ -694,6 +725,8 @@ function AnalyticsLoading() {
   )
 }
 
+${relationalFilterComponents.join('\n\n')}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics Content Component (Async Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -732,10 +765,24 @@ ${buildOptionsCode.join('\n')}
 
 ${filteredRowsCode}
 
+  // Filtros aplicados também nos widgets do dashboard
+  const dashboardRows = filteredRows.filter(row => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = params?.['${col}_filter']
+    if (val_${col}) {
+      const rowVal = String(getRowField(row, '${rawCol}') ?? getRowField(row, '${col}') ?? '').toLowerCase()
+      if (!rowVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
+
   // Agregação de cada widget no Servidor
   const aggregatedData: Record<string, any> = {}
   for (const widget of WIDGETS) {
-    aggregatedData[widget.id] = calculateWidgetData(widget, filteredRows, tablesData)
+    aggregatedData[widget.id] = calculateWidgetData(widget, dashboardRows, tablesData)
   }
 
   // Filtros da Grid de Registros
@@ -795,36 +842,9 @@ ${filterFields.map(f => {
         aggregatedData={aggregatedData}
       />
 
-      {/* Grid de Registros e Filtros (quando houver gridFields configurados) */}
+      {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (
         <div className="space-y-6 pt-4">
-          {/* Filtros da View */}
-          {${filterFields.length > 0} && (
-            <form method="GET" className="p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
-              <div className="flex flex-col sm:flex-row items-end gap-4">
-                <div className="flex-1 grid grid-cols-12 gap-4 w-full">
-${filterInputs}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    className="h-[42px] px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2 active:scale-95"
-                  >
-                    <Filter className="w-3.5 h-3.5" />
-                    Filtrar
-                  </button>
-                  <Link
-                    href="${route.path}"
-                    className="h-[42px] px-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
-                    title="Limpar Filtros"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            </form>
-          )}
-
           {/* Tabela de Registros */}
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -956,6 +976,33 @@ ${headerButtonsHtml}
         </div>
       </div>
 
+      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      ${filterFields.length > 0 ? `
+      <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+        <div className="flex flex-col lg:flex-row items-end gap-6">
+          <div className="flex-1 grid grid-cols-12 gap-4 w-full">
+${filterInputs}
+          </div>
+          <div className="flex items-center gap-3 mb-[1px]">
+            <button
+              type="submit"
+              className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+            >
+              <Search className="w-4 h-4" />
+              Pesquisar
+            </button>
+            <Link
+              href="${route.path}"
+              className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Limpar
+            </Link>
+          </div>
+        </div>
+      </form>` : ''}
+
+      {/* Conteúdo Analítico dentro de Suspense Streaming */}
       <Suspense
         key={JSON.stringify(params)}
         fallback={<AnalyticsLoading />}

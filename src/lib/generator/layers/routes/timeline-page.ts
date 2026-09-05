@@ -91,24 +91,49 @@ export function generateTimelinePage(route: RouteNode): string {
     }
   })
 
+  const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+
+  const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
+    if (b.actionType === 'create') {
+      return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> ${b.label}
+          </Link>`
+    }
+    if (b.actionType === 'export') {
+      return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
+          </button>`
+    }
+    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            ${b.label}
+          </button>`
+  }).join('\n') || `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            <Zap className="w-4 h-4 text-neutral-400" /> Automações
+          </button>
+          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+            <Download className="w-4 h-4 text-neutral-400" /> Exportar
+          </button>${hasCreate ? `
+          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> Novo Registro
+          </Link>` : ''}`
+
   return `import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
-${lookupImports}
-import { Loader2 } from 'lucide-react'
+${lookupImports ? `${lookupImports}\n` : ''}import { Loader2, Plus, Zap, Download } from 'lucide-react'
+import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { TimelineClient } from './TimelineClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
 function TimelineLoading() {
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-300">
-      <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
-          <p className="text-sm">Buscando dados no Direct Access...</p>
-        </div>
+    <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+      <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+      <div className="text-center">
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
+        <p className="text-sm">Buscando dados no Direct Access...</p>
       </div>
     </div>
   )
@@ -143,9 +168,36 @@ export default async function ${mn}TimelinePage({
   const params = searchParams ? await searchParams : {}
 
   return (
-    <Suspense fallback={<TimelineLoading />}>
-      <${mn}TimelineContent params={params} />
-    </Suspense>
+    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Cabeçalho Externo fiel à Web Produção (RuntimeHeader) */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-5">
+          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+            <DynamicIcon icon="${route.icon || 'Clock'}" size={24} />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+              ${route.title}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                TIMELINE • SISTEMA METABUILDER
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+${headerButtonsHtml}
+        </div>
+      </div>
+
+      {/* Conteúdo da Timeline dentro de Suspense Streaming */}
+      <Suspense fallback={<TimelineLoading />}>
+        <${mn}TimelineContent params={params} />
+      </Suspense>
+    </div>
   )
 }
 `
@@ -533,68 +585,7 @@ ${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${t
   const isEdit = modalMode === 'edit'
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
-      {/* Cabeçalho Externo fiel à Web Produção (RuntimeHeader) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex items-center gap-5">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
-            <DynamicIcon icon="${route.icon || 'Clock'}" size={24} />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-                ${route.title}
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[10px] font-black text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 tracking-widest uppercase">
-                {filteredData.length} REG
-              </span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                TIMELINE • SISTEMA METABUILDER
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer"
-          >
-            <Zap className="w-4 h-4 text-neutral-400" /> Automações
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer"
-          >
-            <Download className="w-4 h-4 text-neutral-400" /> Exportar
-          </button>
-${hasCreate ? (isActionModal ? `          <button
-            type="button"
-            onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Novo Registro
-          </button>` : `          <Link
-            href="${route.path}/new"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> Novo Registro
-          </Link>`) : ''}
-          {isEmbedded && (
-            <button 
-              type="button"
-              onClick={() => window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')}
-              className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0 ml-1 cursor-pointer"
-              title="Fechar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="space-y-8 animate-in fade-in duration-300">
 
       {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção */}
       {filterFields.length > 0 && (

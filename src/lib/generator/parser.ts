@@ -534,7 +534,9 @@ function resolveViewZones(
     .filter((c: any) => {
       if (c.is_visible === false) return false
       const zones: string[] = c.config?.zones || []
-      if (!zones.includes('filter')) return false
+      const isExplicitFilterZone = zones.includes('filter')
+      const isExplicitFilterOrder = filterFieldsOrder.includes(c.field_id) || filterFieldsOrder.includes(c.id)
+      if (!isExplicitFilterZone && !isExplicitFilterOrder) return false
       const field = allFields.find((f: any) => f.id === c.field_id)
       if (!field || field.is_searchable === false) return false
       return true
@@ -554,6 +556,17 @@ function resolveViewZones(
     const field = allFields.find((f: any) => f.id === c.field_id)
     if (!field) return []
     return [buildResolvedField(c, field, 'filter', viewModelId, allModels, fieldsMetadata, enumsMap)]
+  })
+
+  // Se algum campo em filterFieldsOrder não estava em filterComponents, adiciona diretamente
+  filterFieldsOrder.forEach((id: string) => {
+    if (!filterFields.find((f) => f.id === id)) {
+      const field = allFields.find((f: any) => f.id === id)
+      if (field) {
+        const dummyComp = { id: `filter_${id}`, field_id: id, config: fieldsMetadata[id] || {} }
+        filterFields.push(buildResolvedField(dummyComp, field, 'filter', viewModelId, allModels, fieldsMetadata, enumsMap))
+      }
+    }
   })
 
   // ── Primary Key ──
