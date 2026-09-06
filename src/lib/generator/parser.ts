@@ -1925,16 +1925,50 @@ export function parseMetaBuilderJSON(
           titleField = cand?.db_column_name || 'id'
         }
 
+        let foreignKey = lvl.foreign_key ? resolveLvlCol(lvl.foreign_key) : undefined
+        if (!foreignKey && levels.length > 0) {
+          const prevLevel = levels[levels.length - 1]
+          const prevModel = models.find((m: any) => m.id === prevLevel.modelId)
+          const prevTable = (prevModel?.dbTable || prevModel?.name || '').toLowerCase()
+          const prevTableSingular = prevTable.endsWith('s') ? prevTable.slice(0, -1) : prevTable
+          const candFk = lvlFields.find((f: any) => {
+            const col = (f.db_column_name || '').toLowerCase()
+            return col === `${prevTable}_id` || col === `${prevTableSingular}_id` || f.foreign_key_target_model === prevLevel.modelId
+          })
+          if (candFk) foreignKey = candFk.db_column_name
+        }
+
+        const lvlPascal = toPascalCase(lvlModel?.name || lvlModel?.dbTable || '')
         levels.push({
           modelId: lvl.model_id,
-          modelTable: lvlModel?.name?.toLowerCase() || '',
+          modelTable: (lvlModel?.dbTable || lvlModel?.name || '').toLowerCase(),
+          modelName: lvlPascal,
           titleField,
           descField: lvl.desc_field ? resolveLvlCol(lvl.desc_field) : undefined,
           relationType: lvl.relation_type || 'direct',
-          foreignKey: lvl.foreign_key ? resolveLvlCol(lvl.foreign_key) : undefined,
+          foreignKey,
           throughTable: lvl.through_table,
           throughLocalFk: lvl.through_local_fk,
           throughTargetFk: lvl.through_target_fk,
+        })
+      }
+
+      if (levels.length === 0 && relationTabs && relationTabs.length > 0) {
+        levels.push({
+          modelId: model.id,
+          modelTable: model.dbTable.toLowerCase(),
+          modelName: model.name,
+          titleField: findDisplayColumn(gridFields),
+          relationType: 'direct',
+        })
+        relationTabs.forEach(tab => {
+          levels.push({
+            modelTable: tab.relatedTable.toLowerCase(),
+            modelName: tab.relatedModelName,
+            titleField: findDisplayColumn(tab.gridFields || tab.formFields || []),
+            foreignKey: tab.foreignKey,
+            relationType: 'direct',
+          })
         })
       }
 

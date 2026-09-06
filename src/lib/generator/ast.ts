@@ -346,6 +346,7 @@ export interface BlueprintConfig {
 export interface MindmapLevel {
   modelId?: string
   modelTable?: string
+  modelName?: string
   titleField: string
   descField?: string
   relationType?: 'direct' | 'indirect' | 'multilevel'

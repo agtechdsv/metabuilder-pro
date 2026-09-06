@@ -367,6 +367,7 @@ export function generateTimelineClient(route: RouteNode): string {
                 updateAction={update${tab.relatedModelName}}
                 deleteAction={delete${tab.relatedModelName}}
                 backPath="${route.path}"
+                hideFooter={true}
               />
             </div>`
       }).join('\n')

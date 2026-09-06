@@ -316,16 +316,22 @@ export function generateMindMapClient(route: RouteNode): string {
     })
   }
 
+  if (route.mindmapConfig?.levels && route.mindmapConfig.levels.length > 1) {
+    route.mindmapConfig.levels.slice(1).forEach(lvl => {
+      if (lvl.modelTable && lvl.modelName) {
+        addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ByField`)
+      }
+    })
+  }
+
   const clientActionImports = Array.from(clientActionsMap.entries())
     .map(([path, fns]) => `import { ${Array.from(fns).join(', ')} } from '${path}'`)
     .join('\n')
 
-  const relationImports = hasRelationTabs && isActionModal
-    ? [
-        `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
-        clientActionImports,
-      ].filter(Boolean).join('\n')
-    : ''
+  const relationImports = [
+    (hasRelationTabs && isActionModal) ? `import { DetailRelationSection } from '@/components/DetailRelationSection'` : '',
+    clientActionImports,
+  ].filter(Boolean).join('\n')
 
   const usedTabPrefixes = new Set<string>()
   const modalTabConstNames: string[] = []
@@ -390,6 +396,7 @@ export function generateMindMapClient(route: RouteNode): string {
                 updateAction={update${tab.relatedModelName}}
                 deleteAction={delete${tab.relatedModelName}}
                 backPath="${route.path}"
+                hideFooter={true}
 ${subActionProps}
               />
             </div>`
@@ -441,11 +448,21 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
     e.preventDefault()
     setIsSaving(true)
     try {
-      const formData = new FormData(e.currentTarget)
+      const masterContainer = document.getElementById('mindmap-master-fields')
       const payload: Record<string, any> = {}
-      formData.forEach((val, key) => {
-        payload[key] = val === '' ? null : val
-      })
+      if (masterContainer) {
+        const inputs = masterContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')
+        inputs.forEach(inp => {
+          if (inp.name) {
+            payload[inp.name] = inp.value === '' ? null : inp.value
+          }
+        })
+      } else {
+        const formData = new FormData(e.currentTarget)
+        formData.forEach((val, key) => {
+          payload[key] = val === '' ? null : val
+        })
+      }
 
       if (modalMode === 'edit' && activeRecord) {
         const recordId = String(activeRecord.${pk} || activeRecord.id)
@@ -457,8 +474,19 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
         const res = await create${mn}(payload)
         if (res) setDataList(prev => [res, ...prev])
       }
+
+      // Salva alterações nas abas de detalhe (relações filhas e sub-itens)
+      if (modalMode === 'edit') {
+        const savePromises: Promise<any>[] = []
+        window.dispatchEvent(new CustomEvent('save-all-relations', { detail: { promises: savePromises } }))
+        if (savePromises.length > 0) {
+          await Promise.all(savePromises)
+        }
+      }
+
       setIsModalOpen(false)
       setActiveRecord(null)
+      setModalRelationItems({})
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
@@ -502,7 +530,7 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
 
             <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
+                <div id="mindmap-master-fields" className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
 ${modalFormFieldsHtml}
                 </div>
 
@@ -534,6 +562,43 @@ ${relationTabPanels}
           </div>
         </div>
       )}` : ''
+
+  const mindmapLevels = route.mindmapConfig?.levels || []
+  const hasMindmapLevels = mindmapLevels.length > 1
+
+  const levelFetchHandlers = hasMindmapLevels
+    ? mindmapLevels.slice(1).map((lvl, idx) => {
+        const lvlIdx = idx + 1
+        const fk = lvl.foreignKey || `${route.modelTable.toLowerCase()}_id`
+        const titleField = lvl.titleField || 'nome'
+        const descExpr = lvl.descField ? `item['${lvl.descField}'] ? String(item['${lvl.descField}']) : undefined` : 'undefined'
+        const hasDeeper = lvlIdx < mindmapLevels.length - 1
+        return `    if (nextLevelIndex === ${lvlIdx}) {
+      const items = await get${lvl.modelName}ByField('${fk}', parentId).catch(() => [])
+      return (items || []).map((item: any) => ({
+        id: String(item.id || item.codigo || item.uuid || Math.random()),
+        name: String(item['${titleField}'] || item.nome || item.name || item.title || item.descricao || 'Sem Título'),
+        desc: ${descExpr},
+        count: 0,
+        level: ${lvlIdx},
+        rawData: item,
+        children: ${hasDeeper ? 'undefined' : '[]'},
+      }))
+    }`
+      }).join('\n')
+    : ''
+
+  const fetchChildrenFn = hasMindmapLevels ? `
+  const handleFetchChildren = async (nextLevelIndex: number, parentNode: any): Promise<any[]> => {
+    const parentRow = parentNode.rawData
+    const parentId = String(parentRow?.${pk} || parentRow?.id || parentNode.id)
+    if (!parentId) return []
+
+${levelFetchHandlers}
+
+    return []
+  }
+` : ''
 
   return `'use client'
 
@@ -601,6 +666,7 @@ ${handleViewBody}
   }
 
 ${modalSaveHandler}
+${fetchChildrenFn}
 
   return (
     <div className="space-y-6">
@@ -609,7 +675,7 @@ ${modalSaveHandler}
         fields={fields}
         mindmapConfig={mindmapConfig}
         relationalOptions={relationalOptions}
-        onView={handleView}
+${hasMindmapLevels ? '        onFetchChildren={handleFetchChildren}\n' : ''}        onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />

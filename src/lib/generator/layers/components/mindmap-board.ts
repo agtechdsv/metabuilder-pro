@@ -21,12 +21,14 @@ import {
   ChevronRight,
   Layers,
   Sparkles,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface MindMapLevel {
   modelId?: string
   modelTable?: string
+  modelName?: string
   titleField: string
   descField?: string
   relationType?: 'direct' | 'indirect' | 'multilevel'
@@ -55,6 +57,7 @@ export interface MindMapBoardProps {
   fields?: any[]
   mindmapConfig?: MindmapConfig
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  onFetchChildren?: (nextLevelIndex: number, parentNode: MindMapNode) => Promise<MindMapNode[]>
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => Promise<void> | void
@@ -65,6 +68,7 @@ export function MindMapBoard({
   fields = [],
   mindmapConfig = {},
   relationalOptions = {},
+  onFetchChildren,
   onView,
   onEdit,
   onDelete,
@@ -72,7 +76,51 @@ export function MindMapBoard({
   const [zoom, setZoom] = useState(1)
   const [currentPath, setCurrentPath] = useState<number[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [loadingNodeId, setLoadingNodeId] = useState<string | null>(null)
   const controls = useAnimation()
+
+  const isRelational = Boolean(mindmapConfig?.levels && mindmapConfig.levels.length > 1)
+  const [relationalTree, setRelationalTree] = useState<MindMapNode[]>([])
+
+  const updateNodeChildren = useCallback((nodes: MindMapNode[], targetId: string, newKids: MindMapNode[]): MindMapNode[] => {
+    return nodes.map(n => {
+      if (n.id === targetId) {
+        return { ...n, children: newKids, count: newKids.length }
+      }
+      if (n.children && n.children.length > 0) {
+        return { ...n, children: updateNodeChildren(n.children, targetId, newKids) }
+      }
+      return n
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!isRelational || !data || data.length === 0) return
+    const rootLvl = mindmapConfig.levels![0]
+    const newNodes: MindMapNode[] = data.map((item, idx) => {
+      const title = rootLvl.titleField ? item[rootLvl.titleField] : (item.nome || item.name || item.title || item.id)
+      const desc = rootLvl.descField ? item[rootLvl.descField] : undefined
+      const id = String(item.id ?? item.uuid ?? ('root-' + idx))
+      return {
+        id,
+        name: String(title || 'Sem Título'),
+        desc: desc ? String(desc) : undefined,
+        count: 0,
+        level: 0,
+        rawData: item,
+        children: undefined,
+      }
+    })
+
+    setRelationalTree(prev => {
+      if (prev.length === 0) return newNodes
+      const prevMap = new Map(prev.map(n => [n.id, n]))
+      return newNodes.map(n => {
+        const old = prevMap.get(n.id)
+        return old && old.children !== undefined ? { ...n, children: old.children, count: old.count } : n
+      })
+    })
+  }, [data, isRelational, mindmapConfig.levels])
 
   const hierarchyFields = useMemo(() => {
     if (mindmapConfig.hierarchyFields && mindmapConfig.hierarchyFields.length > 0) {
@@ -84,8 +132,8 @@ export function MindMapBoard({
     return cols.length > 0 ? cols : ['nome', 'id']
   }, [mindmapConfig, fields])
 
-  // Constrói árvore hierárquica por níveis / agrupamento
-  const rootTree = useMemo(() => {
+  // Constrói árvore hierárquica por níveis / agrupamento (Modo Pivot)
+  const pivotTree = useMemo(() => {
     if (!data || data.length === 0) return []
 
     // Helper para extrair valor amigável
@@ -129,6 +177,8 @@ export function MindMapBoard({
 
     return buildTree(data, 0)
   }, [data, hierarchyFields, relationalOptions])
+
+  const rootTree = isRelational ? relationalTree : pivotTree
 
   // Nó raiz virtual que engloba a base completa
   const virtualRoot: MindMapNode = useMemo(() => ({
@@ -432,7 +482,8 @@ export function MindMapBoard({
                 const x = Math.cos(rad) * radius
                 const y = Math.sin(rad) * radius
 
-                const hasKids = child.children && child.children.length > 0
+                const hasKids = child.children === undefined || (child.children && child.children.length > 0)
+                const isLoadingThis = loadingNodeId === child.id
 
                 return (
                   <motion.div
@@ -447,8 +498,30 @@ export function MindMapBoard({
                       delay: idx * 0.04,
                     }}
                     style={{ position: 'absolute' }}
-                    onClick={() => {
-                      if (hasKids) {
+                    onClick={async () => {
+                      if (child.children === undefined && onFetchChildren) {
+                        setLoadingNodeId(child.id)
+                        try {
+                          const subItems = await onFetchChildren(child.level + 1, child)
+                          const newKids = subItems || []
+                          child.children = newKids
+                          child.count = newKids.length
+                          setRelationalTree(prev => updateNodeChildren(prev, child.id, newKids))
+                          if (newKids.length > 0) {
+                            const originalIndex = (currentNode.children || []).findIndex(c => c.id === child.id)
+                            if (originalIndex !== -1) handleDrillDown(originalIndex)
+                          }
+                        } catch (err) {
+                          console.error('Erro ao buscar subníveis:', err)
+                          child.children = []
+                          setRelationalTree(prev => updateNodeChildren(prev, child.id, []))
+                        } finally {
+                          setLoadingNodeId(null)
+                        }
+                        return
+                      }
+
+                      if (child.children && child.children.length > 0) {
                         const originalIndex = (currentNode.children || []).findIndex(c => c.id === child.id)
                         if (originalIndex !== -1) handleDrillDown(originalIndex)
                       }
@@ -479,7 +552,12 @@ export function MindMapBoard({
 
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-800/60 text-[10px]">
                       <span className="text-neutral-400 font-medium flex items-center gap-1">
-                        {hasKids ? (
+                        {isLoadingThis ? (
+                          <>
+                            <Loader2 className="w-3 h-3 text-purple-500 animate-spin" />
+                            <span>Carregando...</span>
+                          </>
+                        ) : hasKids ? (
                           <>
                             <Sparkles className="w-3 h-3 text-purple-500" />
                             <span>Explorar subníveis</span>

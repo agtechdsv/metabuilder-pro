@@ -47,6 +47,7 @@ export interface DetailRelationSectionProps {
   fields: DetailFieldConfig[]
   subDetails?: SubRelationConfig[]
   backPath?: string
+  hideFooter?: boolean
   createAction: (formData: FormData | Record<string, any>) => Promise<any>
   updateAction: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteAction: (id: string) => Promise<any>
@@ -378,6 +379,7 @@ export function DetailRelationSection({
   fields = [],
   subDetails = [],
   backPath,
+  hideFooter = false,
   createAction,
   updateAction,
   deleteAction,
@@ -517,8 +519,13 @@ export function DetailRelationSection({
   }
 
   useEffect(() => {
-    const handleExternalRelationSave = () => {
-       if (!isSubmitting) handleSaveAll(true)
+    const handleExternalRelationSave = (e: any) => {
+       if (!isSubmitting) {
+         const p = handleSaveAll(true)
+         if (e && e.detail && Array.isArray(e.detail.promises)) {
+           e.detail.promises.push(p)
+         }
+       }
     }
     window.addEventListener('save-all-relations', handleExternalRelationSave)
     return () => window.removeEventListener('save-all-relations', handleExternalRelationSave)
@@ -1327,23 +1334,25 @@ export function DetailRelationSection({
       )}
 
       {/* Footer Global Persistente com Botões Cancelar e Salvar Alterações */}
-      <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
-        <Link
-          href={backPath || '#'}
-          className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-        >
-          Cancelar
-        </Link>
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={handleSaveAll}
-          className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
-        >
-          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-        </button>
-      </div>
+      {!hideFooter && (
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
+          <Link
+            href={backPath || '#'}
+            className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+          >
+            Cancelar
+          </Link>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={handleSaveAll}
+            className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      )}
 
       {/* Modal Mestre-Detalhe de Criação / Edição (com Abas) */}
       {mounted && isModalOpen && createPortal(
