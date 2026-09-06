@@ -709,6 +709,11 @@ export function MindMapClient({
 }) {
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
+  const [iframeModal, setIframeModal] = useState<{ isOpen: boolean; url: string; title: string; mode?: string }>({
+    isOpen: false,
+    url: '',
+    title: '',
+  })
 
 ${modalStateVars}
 
@@ -716,6 +721,27 @@ ${modalStateVars}
     setDataList(initialData)
   }, [initialData])
 ${relationFetchEffect}
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_MODAL' || event.data?.type === 'CLOSE_IFRAME') {
+        setIframeModal({ isOpen: false, url: '', title: '' })
+        router.refresh()
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [router])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && iframeModal.isOpen) {
+        setIframeModal({ isOpen: false, url: '', title: '' })
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [iframeModal.isOpen])
 
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
@@ -728,11 +754,45 @@ ${relationFetchEffect}
 ${handleAddBody}
   }
 
-  const handleEdit = (row: any) => {
+  const handleEdit = (row: any, levelIndex: number = 0) => {
+    const levelConfig = (mindmapConfig as any)?.levels?.[levelIndex]
+    if (levelConfig && (levelConfig.editUsecaseSlug || levelConfig.edit_usecase_slug)) {
+      const targetSlug = levelConfig.editUsecaseSlug || levelConfig.edit_usecase_slug
+      const rowId = String(row?.id ?? row?.ID ?? row?.codigo ?? row?.uuid ?? (row && row['${pk}']) ?? '')
+      const openMode = levelConfig.editUsecaseOpenMode || levelConfig.edit_usecase_open_mode || 'modal'
+      if (openMode === 'page') {
+        router.push(rowId ? \`/\${targetSlug}/\${rowId}\` : \`/\${targetSlug}\`)
+      } else {
+        setIframeModal({
+          isOpen: true,
+          url: rowId ? \`/\${targetSlug}/\${rowId}?embedded=true\` : \`/\${targetSlug}?embedded=true\`,
+          title: 'Editar Registro',
+          mode: openMode,
+        })
+      }
+      return
+    }
 ${handleEditBody}
   }
 
-  const handleView = (row: any) => {
+  const handleView = (row: any, levelIndex: number = 0) => {
+    const levelConfig = (mindmapConfig as any)?.levels?.[levelIndex]
+    if (levelConfig && (levelConfig.editUsecaseSlug || levelConfig.edit_usecase_slug)) {
+      const targetSlug = levelConfig.editUsecaseSlug || levelConfig.edit_usecase_slug
+      const rowId = String(row?.id ?? row?.ID ?? row?.codigo ?? row?.uuid ?? (row && row['${pk}']) ?? '')
+      const openMode = levelConfig.editUsecaseOpenMode || levelConfig.edit_usecase_open_mode || 'modal'
+      if (openMode === 'page') {
+        router.push(rowId ? \`/\${targetSlug}/\${rowId}\` : \`/\${targetSlug}\`)
+      } else {
+        setIframeModal({
+          isOpen: true,
+          url: rowId ? \`/\${targetSlug}/\${rowId}?embedded=true\` : \`/\${targetSlug}?embedded=true\`,
+          title: 'Visualizar Registro',
+          mode: openMode,
+        })
+      }
+      return
+    }
 ${handleViewBody}
   }
 
@@ -751,8 +811,31 @@ ${hasMindmapLevels ? '        onFetchChildren={handleFetchChildren}\n' : ''}    
         onDelete={handleDelete}
       />
 ${modalJsx}
+
+      {/* Modal / Iframe para Edição de Níveis de Mapa Mental com usecase configurado */}
+      {iframeModal.isOpen && (
+        <div
+          className={iframeModal.mode === 'drawer'
+            ? "fixed inset-0 z-[9999] flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            : "fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"}
+          onClick={() => setIframeModal({ isOpen: false, url: '', title: '' })}
+        >
+          <div
+            className={iframeModal.mode === 'drawer'
+              ? "w-full max-w-2xl h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 relative animate-in slide-in-from-right duration-300"
+              : "w-full max-w-[1400px] h-[90vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800 relative animate-in zoom-in-95 duration-200"}
+            onClick={e => e.stopPropagation()}
+          >
+            <iframe
+              src={iframeModal.url}
+              className="w-full h-full border-none"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 `
 }
+

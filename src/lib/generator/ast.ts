@@ -361,6 +361,8 @@ export interface MindmapLevel {
     target_to_field?: string
     target_from_field: string
   }>
+  editUsecaseSlug?: string
+  editUsecaseOpenMode?: 'modal' | 'drawer' | 'page'
 }
 
 export interface MindmapConfig {

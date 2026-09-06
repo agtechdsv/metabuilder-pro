@@ -123,6 +123,11 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
         setToastType('success')
         setToastMessage('Registro atualizado com sucesso!')
         window.dispatchEvent(new CustomEvent('save-all-relations'))
+        if (typeof window !== 'undefined' && window.parent !== window) {
+          setTimeout(() => {
+            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+          }, 800)
+        }
       }
     } catch (err: any) {
       console.error(err)
@@ -144,7 +149,13 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
         <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
           <Link
             href={backPath}
-            className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            onClick={(e) => {
+              if (typeof window !== 'undefined' && window.parent !== window) {
+                e.preventDefault()
+                window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+              }
+            }}
+            className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
             Cancelar
           </Link>

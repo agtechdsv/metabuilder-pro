@@ -276,8 +276,10 @@ ${tabButtons}
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 ${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -392,6 +394,8 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
+  const searchParams = useSearchParams()
+  const isEmbedded = searchParams?.get('embedded') === 'true'
   const [activeTab, setActiveTab] = useState(0)
   const isEdit = true
 
@@ -440,6 +444,7 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
           <Link href={newPath} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 
@@ -463,7 +468,13 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
 
           <Link
             href={backPath}
-            className="flex items-center gap-2 text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors uppercase tracking-widest"
+            onClick={(e) => {
+              if (isEmbedded) {
+                e.preventDefault()
+                window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+              }
+            }}
+            className="flex items-center gap-2 text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors uppercase tracking-widest cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar para Lista
           </Link>

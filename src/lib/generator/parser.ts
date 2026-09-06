@@ -1912,6 +1912,8 @@ export function parseMetaBuilderJSON(
           throughLocalFk: lvl.through_local_fk,
           throughTargetFk: lvl.through_target_fk,
           relationPath: lvl.relation_path,
+          editUsecaseSlug: lvl.edit_usecase_slug,
+          editUsecaseOpenMode: lvl.edit_usecase_open_mode,
         })
       }
 

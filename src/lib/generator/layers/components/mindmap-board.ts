@@ -58,9 +58,9 @@ export interface MindMapBoardProps {
   mindmapConfig?: MindmapConfig
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   onFetchChildren?: (nextLevelIndex: number, parentNode: MindMapNode) => Promise<MindMapNode[]>
-  onView?: (row: any) => void
-  onEdit?: (row: any) => void
-  onDelete?: (row: any) => Promise<void> | void
+  onView?: (row: any, level?: number) => void
+  onEdit?: (row: any, level?: number) => void
+  onDelete?: (row: any, level?: number) => Promise<void> | void
 }
 
 export function MindMapBoard({
@@ -441,7 +441,7 @@ export function MindMapBoard({
                   {onView && (
                     <button
                       type="button"
-                      onClick={() => onView(currentNode.rawData)}
+                      onClick={() => onView(currentNode.rawData, currentNode.level)}
                       className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 transition-colors cursor-pointer"
                       title="Visualizar Detalhes"
                     >
@@ -451,7 +451,7 @@ export function MindMapBoard({
                   {onEdit && (
                     <button
                       type="button"
-                      onClick={() => onEdit(currentNode.rawData)}
+                      onClick={() => onEdit(currentNode.rawData, currentNode.level)}
                       className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-blue-600 transition-colors cursor-pointer"
                       title="Editar Registro"
                     >
@@ -461,7 +461,7 @@ export function MindMapBoard({
                   {onDelete && (
                     <button
                       type="button"
-                      onClick={() => onDelete(currentNode.rawData)}
+                      onClick={() => onDelete(currentNode.rawData, currentNode.level)}
                       className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
                       title="Excluir Registro"
                     >
@@ -578,7 +578,7 @@ export function MindMapBoard({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              onView(child.rawData)
+                              onView(child.rawData, child.level)
                             }}
                             className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-purple-600 transition-colors cursor-pointer"
                             title="Visualizar"
@@ -591,7 +591,7 @@ export function MindMapBoard({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              onEdit(child.rawData)
+                              onEdit(child.rawData, child.level)
                             }}
                             className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-blue-600 transition-colors cursor-pointer"
                             title="Editar"
