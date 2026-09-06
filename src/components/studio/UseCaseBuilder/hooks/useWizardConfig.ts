@@ -123,8 +123,11 @@ export function useWizardConfig({
           master_model_id: sourceData.layout_config?.master_model_id || '',
           detail_display_mode: sourceData.layout_config?.detail_display_mode || 'tabs',
           mindmap_central_field: sourceData.layout_config?.mindmap_central_field || '',
-          mindmap_levels: sourceData.layout_config?.mindmap_levels || [],
-          action_interface_type: sourceData.layout_config?.action_interface_type || 'page',
+          mindmap_levels: (sourceData.layout_config?.mindmap_levels || []).map((lvl: any, i: number) => ({
+            ...lvl,
+            edit_usecase_open_mode: lvl.edit_usecase_open_mode || (i === 0 && sourceData.layout_config?.action_interface_type ? sourceData.layout_config.action_interface_type : 'modal'),
+          })),
+          action_interface_type: sourceData.layout_config?.action_interface_type || (sourceData.logic_type === 'mapa_mental' ? (sourceData.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || 'modal') : 'page'),
           joins: sourceData.layout_config?.joins || [],
           fields_metadata: sourceData.layout_config?.fields_metadata || {},
           analytics_config: sourceData.layout_config?.analytics_config || { widgets: [], allow_runtime_edit: true },

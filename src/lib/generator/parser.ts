@@ -2085,7 +2085,7 @@ export function parseMetaBuilderJSON(
       analyticsConfig,
       buttons,
       relationTabs,
-      actionInterfaceType: resolvedView.layout_config?.action_interface_type || 'page',
+      actionInterfaceType: resolvedView.layout_config?.action_interface_type || resolvedView.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (resolvedView.logic_type === 'mapa_mental' ? 'modal' : 'page'),
       rawLayoutConfig: resolvedView.layout_config,
     })
   }

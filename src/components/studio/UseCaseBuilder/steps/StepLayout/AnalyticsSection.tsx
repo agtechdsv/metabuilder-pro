@@ -324,12 +324,15 @@ export function AnalyticsSection({
                                     setConfig((prev: any) => {
                                       const newLevels = [...(prev.layout_config.mindmap_levels || [])];
                                       newLevels[lIdx].edit_usecase_slug = e.target.value;
+                                      if (!newLevels[lIdx].edit_usecase_open_mode) {
+                                        newLevels[lIdx].edit_usecase_open_mode = 'modal';
+                                      }
                                       return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
                                     });
                                   }}
                                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1"
                                 >
-                                  <option value="">Formulário Padrão (Raiz)</option>
+                                  <option value="">{lIdx === 0 ? 'Formulário Padrão (Raiz)' : 'Nenhum (Selecione um Caso de Uso)'}</option>
                                   {useCases.filter((uc: any) => uc.model_id === level.model_id).map((uc: any) => (
                                     <option key={uc.slug} value={uc.slug}>{uc.name} ({uc.slug})</option>
                                   ))}
@@ -344,10 +347,14 @@ export function AnalyticsSection({
                                     setConfig((prev: any) => {
                                       const newLevels = [...(prev.layout_config.mindmap_levels || [])];
                                       newLevels[lIdx].edit_usecase_open_mode = e.target.value;
-                                      return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
+                                      const updatedLayout = { ...prev.layout_config, mindmap_levels: newLevels };
+                                      if (lIdx === 0) {
+                                        updatedLayout.action_interface_type = e.target.value;
+                                      }
+                                      return { ...prev, layout_config: updatedLayout };
                                     });
                                   }}
-                                  disabled={!level.edit_usecase_slug}
+                                  disabled={lIdx > 0 && !level.edit_usecase_slug}
                                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 outline-none mt-1 disabled:opacity-50"
                                 >
                                   <option value="modal">Modal Centralizado (Recomendado)</option>
@@ -371,6 +378,7 @@ export function AnalyticsSection({
                             ...prev,
                             layout_config: {
                               ...prev.layout_config,
+                              action_interface_type: prev.layout_config?.action_interface_type || 'modal',
                               mindmap_levels: [{
                                 id: Math.random().toString(36).substr(2, 9),
                                 model_id: config.selected_models?.[0] || '',
@@ -380,7 +388,9 @@ export function AnalyticsSection({
                                 through_local_fk: '',
                                 through_target_fk: '',
                                 title_field: '',
-                                desc_field: ''
+                                desc_field: '',
+                                edit_usecase_slug: '',
+                                edit_usecase_open_mode: 'modal'
                               }]
                             }
                           }));
@@ -406,7 +416,9 @@ export function AnalyticsSection({
                             through_local_fk: '',
                             through_target_fk: '',
                             title_field: '',
-                            desc_field: ''
+                            desc_field: '',
+                            edit_usecase_slug: '',
+                            edit_usecase_open_mode: 'modal'
                           });
                           return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
                         });

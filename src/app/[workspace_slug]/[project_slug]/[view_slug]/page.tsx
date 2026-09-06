@@ -1002,7 +1002,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           detailsTabTitles={view.layout_config?.details_tab_titles}
           detailsItemTitles={view.layout_config?.details_item_titles}
           tabsStyleConfig={view.layout_config?.fields_metadata?.['form-TABS'] || view.layout_config?.fields_metadata?.['TABS']}
-          actionInterfaceType={view.layout_config?.action_interface_type}
+          actionInterfaceType={view.layout_config?.action_interface_type || view.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (view.logic_type === 'mapa_mental' ? 'modal' : undefined)}
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
           filterGridColumns={view.layout_config?.filter_grid_columns}

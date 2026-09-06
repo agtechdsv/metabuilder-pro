@@ -362,13 +362,32 @@ export default function ViewPageContent({
     setIsWidgetModalOpen,
   })
 
-  const isModal = actionInterfaceType === 'modal'
-  const isPage = actionInterfaceType === 'page'
+  const rootMindmapOpenMode =
+    (logicType === 'mapa_mental' || (mindmapLevels && mindmapLevels.length > 0))
+      ? (mindmapLevels?.[0]?.edit_usecase_open_mode || 'modal')
+      : undefined
+
+  const effectiveActionInterfaceType = rootMindmapOpenMode || actionInterfaceType || 'drawer'
+
+  const isModal = effectiveActionInterfaceType === 'modal'
+  const isPage = effectiveActionInterfaceType === 'page'
 
   const setOpen = (val: boolean) => {
-    if (isModal) setIsModalOpen(val)
-    else if (isPage) setIsPageVisible(val)
-    else setIsDrawerOpen(val)
+    if (!val) {
+      setIsModalOpen(false)
+      setIsDrawerOpen(false)
+      setIsPageVisible(false)
+      return
+    }
+    if (isModal) {
+      setIsDrawerOpen(false)
+      setIsModalOpen(true)
+    } else if (isPage) {
+      setIsPageVisible(true)
+    } else {
+      setIsModalOpen(false)
+      setIsDrawerOpen(true)
+    }
   }
 
   const { handleSave, handleDelete, getFkErrorMessage } = useMasterData({
@@ -380,7 +399,7 @@ export default function ViewPageContent({
     drawerMode,
     selectedRow,
     isCadastroOnly,
-    isPage: actionInterfaceType === 'page',
+    isPage,
     detailFields,
     projectRelations,
     joins,
@@ -435,7 +454,7 @@ export default function ViewPageContent({
     setOpen(true)
   }
 
-  const handleOpenEdit = async (row: any) => {
+  const handleOpenEdit = async (row: any, forcedMode?: 'modal' | 'drawer' | 'page') => {
     setAutoOpenSlotConfig(null)
     setDrawerMode('edit')
     setIsProcessing(true)
@@ -443,7 +462,21 @@ export default function ViewPageContent({
     setSelectedRow({ ...row, _details: details })
     setIsProcessing(false)
     setActiveTabForMaster('master')
-    setOpen(true)
+
+    const targetMode = forcedMode || (isModal ? 'modal' : isPage ? 'page' : 'drawer')
+    if (targetMode === 'modal') {
+      setIsDrawerOpen(false)
+      setIsPageVisible(false)
+      setIsModalOpen(true)
+    } else if (targetMode === 'page') {
+      setIsModalOpen(false)
+      setIsDrawerOpen(false)
+      setIsPageVisible(true)
+    } else {
+      setIsModalOpen(false)
+      setIsPageVisible(false)
+      setIsDrawerOpen(true)
+    }
   }
 
   const handleEditLevel = (levelIndex: number, row: any) => {
@@ -498,7 +531,8 @@ export default function ViewPageContent({
       }
     } else {
       if (levelIndex === 0) {
-        handleOpenEdit(row)
+        const mode = levelConfig?.edit_usecase_open_mode || (isModal ? 'modal' : isPage ? 'page' : 'drawer')
+        handleOpenEdit(row, mode)
       }
     }
   }
@@ -650,8 +684,8 @@ export default function ViewPageContent({
       </main>
 
       <ViewActionModals
-        isDrawerOpen={isDrawerOpen && !isModal}
-        isModalOpen={isModalOpen && isModal}
+        isDrawerOpen={isDrawerOpen}
+        isModalOpen={isModalOpen}
         isDeleteModalOpen={isDeleteModalOpen}
         isIframeModalOpen={isIframeModalOpen}
         isIframeDrawerOpen={isIframeDrawerOpen}

@@ -589,7 +589,7 @@ export async function buildViewProps(
     detailsInlineTypes: view.layout_config?.details_inline_types,
     detailsItemTitles: view.layout_config?.details_item_titles,
     hiddenDetails: view.layout_config?.hidden_details,
-    actionInterfaceType: view.layout_config?.action_interface_type,
+    actionInterfaceType: view.layout_config?.action_interface_type || view.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (view.logic_type === 'mapa_mental' ? 'modal' : undefined),
     masterModelId: view.layout_config?.master_model_id || view.model_id,
     customSlots: view.layout_config?.custom_slots,
     masterUseCaseSlug: view.layout_config?.master_use_case_slug,

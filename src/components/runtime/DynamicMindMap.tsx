@@ -249,7 +249,7 @@ export default function DynamicMindMap(props: DynamicMindMapProps) {
                           <button onClick={(e) => { e.stopPropagation(); onView({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       )}
-                      {(onEditLevel && mindmapLevels && mindmapLevels[child.level]?.edit_usecase_slug) ? (
+                      {(onEditLevel && mindmapLevels && (child.level === 0 || mindmapLevels[child.level]?.edit_usecase_slug)) ? (
                         <Tooltip text={t('actions.edit', 'Editar')}>
                           <button onClick={(e) => { e.stopPropagation(); onEditLevel(child.level, { ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
