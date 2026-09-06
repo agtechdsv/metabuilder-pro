@@ -18,6 +18,19 @@ export function generateMindMapPage(route: RouteNode): string {
     ...(route.formFields || []),
   ]
 
+  if (route.relationTabs && route.relationTabs.length > 0) {
+    route.relationTabs.forEach(tab => {
+      const tabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
+      if (tabFields) allFields.push(...tabFields)
+      if (tab.subDetails) {
+        tab.subDetails.forEach(sub => {
+          const subFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
+          if (subFields) allFields.push(...subFields)
+        })
+      }
+    })
+  }
+
   allFields.forEach(f => {
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
@@ -178,6 +191,60 @@ export function generateMindMapSchema(route: RouteNode): string {
     return `  ${f.dbColumn}: ${zType},`
   }).join('\n')
 
+  const hasRelationTabs = route.relationTabs && route.relationTabs.length > 0
+
+  const usedTabPrefixes = new Set<string>()
+  const tabConstants: string[] = []
+
+  if (hasRelationTabs) {
+    route.relationTabs.forEach((tab, i) => {
+      const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
+        .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
+
+      const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+      const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+      usedTabPrefixes.add(constPrefix)
+
+      const fieldsConstName = `${constPrefix}_FIELDS`
+      const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+      const mappedFields = tabFields.map(f => ({
+        id: f.id,
+        label: f.label,
+        dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+        dataType: f.dataType,
+        isPrimaryKey: f.isPrimaryKey,
+        config: f.config,
+      }))
+
+      const mappedSubDetails = tab.subDetails && tab.subDetails.length > 0
+        ? tab.subDetails.map(sub => ({
+            relatedTable: sub.relatedTable,
+            relatedModelName: sub.relatedModelName,
+            foreignKey: sub.foreignKey,
+            label: sub.label,
+            fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
+              id: f.id,
+              label: f.label,
+              dbColumn: f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn,
+              dataType: f.dataType,
+              isPrimaryKey: f.isPrimaryKey,
+              config: f.config,
+            }))
+          }))
+        : []
+
+      tabConstants.push(
+        `// Schema de campos da aba "${tab.label}" (${tab.relatedTable})`,
+        `export const ${fieldsConstName} = ${JSON.stringify(mappedFields, null, 2)} as const`,
+        ``,
+        `// Sub-detalhes da aba "${tab.label}" (${tab.relatedTable})`,
+        `export const ${subDetailsConstName} = ${JSON.stringify(mappedSubDetails, null, 2)} as const`,
+        ``
+      )
+    })
+  }
+
   return `// ─────────────────────────────────────────────────────────────────────────────
 // Schemas e configurações declarativas para Mapa Mental de ${route.title}
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,6 +262,8 @@ ${zodFields}
 })
 
 export type ${mn}FormData = z.infer<typeof ${mn}Schema>
+
+${tabConstants.join('\n')}
 `
 }
 
@@ -208,6 +277,7 @@ export function generateMindMapClient(route: RouteNode): string {
   const pk = route.primaryKey || 'id'
   const isActionModal = route.actionInterfaceType === 'modal'
     || route.rawLayoutConfig?.action_interface_type === 'modal'
+  const hasRelationTabs = route.relationTabs && route.relationTabs.length > 0
 
   const modalFormFieldsHtml = route.formFields
     .map(f => renderFormField(f, true, false, 'relationalOptions'))
@@ -221,10 +291,133 @@ export function generateMindMapClient(route: RouteNode): string {
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
 
+  const clientActionsMap = new Map<string, Set<string>>()
+  const addClientAction = (modelLower: string, fn: string) => {
+    const key = `@/app/actions/${modelLower}`
+    if (!clientActionsMap.has(key)) clientActionsMap.set(key, new Set())
+    clientActionsMap.get(key)!.add(fn)
+  }
+
+  if (hasRelationTabs && isActionModal) {
+    route.relationTabs.forEach(t => {
+      const ml = t.relatedTable.toLowerCase()
+      addClientAction(ml, `get${t.relatedModelName}ByField`)
+      addClientAction(ml, `create${t.relatedModelName}`)
+      addClientAction(ml, `update${t.relatedModelName}`)
+      addClientAction(ml, `delete${t.relatedModelName}`)
+      if (t.subDetails) {
+        t.subDetails.forEach(sub => {
+          const sml = sub.relatedTable.toLowerCase()
+          addClientAction(sml, `create${sub.relatedModelName}`)
+          addClientAction(sml, `update${sub.relatedModelName}`)
+          addClientAction(sml, `delete${sub.relatedModelName}`)
+        })
+      }
+    })
+  }
+
+  const clientActionImports = Array.from(clientActionsMap.entries())
+    .map(([path, fns]) => `import { ${Array.from(fns).join(', ')} } from '${path}'`)
+    .join('\n')
+
+  const relationImports = hasRelationTabs && isActionModal
+    ? [
+        `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
+        clientActionImports,
+      ].filter(Boolean).join('\n')
+    : ''
+
+  const usedTabPrefixes = new Set<string>()
+  const modalTabConstNames: string[] = []
+
+  const relationTabPanels = hasRelationTabs && isActionModal
+    ? route.relationTabs.map((tab, i) => {
+        const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+        const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
+        usedTabPrefixes.add(constPrefix)
+
+        const fieldsConstName = `${constPrefix}_FIELDS`
+        const subDetailsConstName = `${constPrefix}_SUB_DETAILS`
+
+        modalTabConstNames.push(fieldsConstName, subDetailsConstName)
+
+        const subActionProps = tab.subDetails && tab.subDetails.length > 0
+          ? [
+              `                createSubAction={create${tab.subDetails[0].relatedModelName}}`,
+              `                updateSubAction={update${tab.subDetails[0].relatedModelName}}`,
+              `                deleteSubAction={delete${tab.subDetails[0].relatedModelName}}`,
+            ].join('\n')
+          : ''
+
+        return `
+            <div key="${tab.relatedTable}" className="space-y-3">
+              <DetailRelationSection
+                label="${tab.label}"
+                relatedTable="${tab.relatedTable}"
+                foreignKey="${tab.foreignKey}"
+                parentId={String(activeRecord?.${pk} || activeRecord?.id || '')}
+                items={modalRelationItems['${tab.relatedTable}'] || []}
+                fields={(${fieldsConstName} as any[]).map((f: any) => {
+                  const opts = relationalOptions?.[f.dbColumn]
+                  if (opts && opts.length > 0) {
+                    return {
+                      ...f,
+                      config: {
+                        ...f.config,
+                        options: opts
+                      }
+                    }
+                  }
+                  return f
+                })}
+                subDetails={(${subDetailsConstName} as any[]).map((sub: any) => ({
+                  ...sub,
+                  fields: (sub.fields || []).map((f: any) => {
+                    const opts = relationalOptions?.[f.dbColumn]
+                    if (opts && opts.length > 0) {
+                      return {
+                        ...f,
+                        config: {
+                          ...f.config,
+                          options: opts
+                        }
+                      }
+                    }
+                    return f
+                  })
+                }))}
+                createAction={create${tab.relatedModelName}}
+                updateAction={update${tab.relatedModelName}}
+                deleteAction={delete${tab.relatedModelName}}
+                backPath="${route.path}"
+${subActionProps}
+              />
+            </div>`
+      }).join('\n')
+    : ''
+
+  const schemaImports = `import { fields, mindmapConfig${modalTabConstNames.length > 0 ? `, ${modalTabConstNames.join(', ')}` : ''} } from './schema'`
+
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})` : ''
+
+  const relationFetchEffect = (hasRelationTabs && isActionModal)
+    ? `
+  // Busca itens relacionados para o registro aberto na modal
+  useEffect(() => {
+    if (activeRecord && (activeRecord.${pk} || activeRecord.id)) {
+      const recId = String(activeRecord.${pk} || activeRecord.id)
+${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.foreignKey}', recId)
+        .then((items: any) => setModalRelationItems(prev => ({ ...prev, '${tab.relatedTable}': items || [] })))
+        .catch(() => {})`).join('\n')}
+    } else {
+      setModalRelationItems({})
+    }
+  }, [activeRecord])`
+    : ''
 
   const handleAddBody = isActionModal
     ? `    setActiveRecord({})
@@ -281,7 +474,7 @@ export function generateMindMapClient(route: RouteNode): string {
   const modalJsx = isActionModal ? `
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full ${hasRelationTabs ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
@@ -300,7 +493,7 @@ export function generateMindMapClient(route: RouteNode): string {
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setActiveRecord(null); setModalRelationItems({}); }}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -309,15 +502,21 @@ export function generateMindMapClient(route: RouteNode): string {
 
             <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
 ${modalFormFieldsHtml}
                 </div>
+
+${hasRelationTabs && isActionModal ? `                {modalMode === 'edit' && activeRecord && (
+                  <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+${relationTabPanels}
+                  </div>
+                )}` : ''}
               </div>
 
               <div className="flex items-center justify-end gap-3 p-6 sm:p-8 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setActiveRecord(null); setModalRelationItems({}); }}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                 >
                   Cancelar
@@ -328,7 +527,7 @@ ${modalFormFieldsHtml}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
-                  {isSaving ? 'Salvando...' : 'Salvar Registro'}
+                  {isSaving ? 'Salvando...' : (modalMode === 'edit' ? 'Salvar Alterações' : 'Salvar Registro')}
                 </button>
               </div>
             </form>
@@ -342,7 +541,7 @@ import React, { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
-import { fields, mindmapConfig } from './schema'
+${relationImports ? `${relationImports}\n` : ''}${schemaImports}
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
@@ -380,6 +579,7 @@ ${modalStateVars}
   useEffect(() => {
     setDataList(initialData)
   }, [initialData])
+${relationFetchEffect}
 
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
