@@ -354,6 +354,13 @@ export interface MindmapLevel {
   throughTable?: string
   throughLocalFk?: string
   throughTargetFk?: string
+  relationPath?: Array<{
+    table: string
+    to_field: string
+    from_field?: string
+    target_to_field?: string
+    target_from_field: string
+  }>
 }
 
 export interface MindmapConfig {

@@ -318,7 +318,25 @@ export function generateMindMapClient(route: RouteNode): string {
 
   if (route.mindmapConfig?.levels && route.mindmapConfig.levels.length > 1) {
     route.mindmapConfig.levels.slice(1).forEach(lvl => {
-      if (lvl.modelTable && lvl.modelName) {
+      if (lvl.relationType === 'multilevel' && lvl.relationPath && lvl.relationPath.length > 0) {
+        lvl.relationPath.forEach(hop => {
+          const hopTable = hop.table.toLowerCase()
+          const hopModel = toPascalCase(hop.table)
+          addClientAction(hopTable, `get${hopModel}ByField`)
+        })
+        if (lvl.modelTable && lvl.modelName) {
+          addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ById`)
+          addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ByField`)
+        }
+      } else if (lvl.relationType === 'indirect' && lvl.throughTable) {
+        const throughTable = lvl.throughTable.toLowerCase()
+        const throughModel = toPascalCase(lvl.throughTable)
+        addClientAction(throughTable, `get${throughModel}ByField`)
+        if (lvl.modelTable && lvl.modelName) {
+          addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ById`)
+          addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ByField`)
+        }
+      } else if (lvl.modelTable && lvl.modelName) {
         addClientAction(lvl.modelTable.toLowerCase(), `get${lvl.modelName}ByField`)
       }
     })
@@ -569,10 +587,63 @@ ${relationTabPanels}
   const levelFetchHandlers = hasMindmapLevels
     ? mindmapLevels.slice(1).map((lvl, idx) => {
         const lvlIdx = idx + 1
-        const fk = lvl.foreignKey || `${route.modelTable.toLowerCase()}_id`
         const titleField = lvl.titleField || 'nome'
         const descExpr = lvl.descField ? `item['${lvl.descField}'] ? String(item['${lvl.descField}']) : undefined` : 'undefined'
         const hasDeeper = lvlIdx < mindmapLevels.length - 1
+
+        if (lvl.relationType === 'multilevel' && lvl.relationPath && lvl.relationPath.length > 0) {
+          const hops = lvl.relationPath
+          return `    if (nextLevelIndex === ${lvlIdx}) {
+      let currentIds = [parentId]
+      ${hops.map((hop, hIdx) => {
+        const hopModel = toPascalCase(hop.table)
+        return `// Hop ${hIdx + 1}: ${hop.table} (${hop.to_field} -> ${hop.target_from_field})
+      const hop${hIdx}Fetches = await Promise.all(
+        currentIds.map(id => get${hopModel}ByField('${hop.to_field}', id).catch(() => []))
+      )
+      const hop${hIdx}Rows = hop${hIdx}Fetches.flat()
+      currentIds = Array.from(new Set(hop${hIdx}Rows.map((r: any) => r['${hop.target_from_field}']).filter(Boolean)))
+      if (currentIds.length === 0) return []`
+      }).join('\n      ')}
+
+      const targetField = '${hops[hops.length - 1].target_to_field || 'id'}'
+      const items = targetField === 'id'
+        ? (await Promise.all(currentIds.map(id => get${lvl.modelName}ById(String(id)).catch(() => null)))).filter(Boolean)
+        : (await Promise.all(currentIds.map(id => get${lvl.modelName}ByField(targetField, id).then(r => Array.isArray(r) ? r[0] : r).catch(() => null)))).filter(Boolean)
+
+      return (items || []).map((item: any) => ({
+        id: String(item.id || item.codigo || item.uuid || Math.random()),
+        name: String(item['${titleField}'] || item.nome || item.name || item.title || item.descricao || 'Sem Título'),
+        desc: ${descExpr},
+        count: 0,
+        level: ${lvlIdx},
+        rawData: item,
+        children: ${hasDeeper ? 'undefined' : '[]'},
+      }))
+    }`
+        }
+
+        if (lvl.relationType === 'indirect' && lvl.throughTable && lvl.throughLocalFk && lvl.throughTargetFk) {
+          const throughModel = toPascalCase(lvl.throughTable)
+          return `    if (nextLevelIndex === ${lvlIdx}) {
+      const junctionItems = await get${throughModel}ByField('${lvl.throughLocalFk}', parentId).catch(() => [])
+      const targetIds = Array.from(new Set((junctionItems || []).map((j: any) => j['${lvl.throughTargetFk}']).filter(Boolean)))
+      const items = targetIds.length > 0
+        ? (await Promise.all(targetIds.map(id => get${lvl.modelName}ById(String(id)).catch(() => null)))).filter(Boolean)
+        : []
+      return (items || []).map((item: any) => ({
+        id: String(item.id || item.codigo || item.uuid || Math.random()),
+        name: String(item['${titleField}'] || item.nome || item.name || item.title || item.descricao || 'Sem Título'),
+        desc: ${descExpr},
+        count: 0,
+        level: ${lvlIdx},
+        rawData: item,
+        children: ${hasDeeper ? 'undefined' : '[]'},
+      }))
+    }`
+        }
+
+        const fk = lvl.foreignKey || `${route.modelTable.toLowerCase()}_id`
         return `    if (nextLevelIndex === ${lvlIdx}) {
       const items = await get${lvl.modelName}ByField('${fk}', parentId).catch(() => [])
       return (items || []).map((item: any) => ({
@@ -591,7 +662,7 @@ ${relationTabPanels}
   const fetchChildrenFn = hasMindmapLevels ? `
   const handleFetchChildren = async (nextLevelIndex: number, parentNode: any): Promise<any[]> => {
     const parentRow = parentNode.rawData
-    const parentId = String(parentRow?.${pk} || parentRow?.id || parentNode.id)
+    const parentId = String(parentRow?.id ?? parentRow?.ID ?? (parentRow && parentRow['${pk}']) ?? parentRow?.uuid ?? parentRow?.codigo ?? parentNode.id)
     if (!parentId) return []
 
 ${levelFetchHandlers}

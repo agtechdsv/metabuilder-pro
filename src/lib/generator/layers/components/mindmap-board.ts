@@ -432,7 +432,7 @@ export function MindMapBoard({
 
               <div className="mt-3 px-3 py-1 bg-purple-500/10 rounded-full border border-purple-500/20">
                 <span className="text-[10px] font-black text-purple-600 dark:text-purple-300 uppercase tracking-widest">
-                  {currentNode.count} {currentNode.count === 1 ? 'item' : 'itens'}
+                  {currentNode.count || currentNode.children?.length || 0} {(currentNode.count || currentNode.children?.length || 0) === 1 ? 'item' : 'itens'}
                 </span>
               </div>
 
@@ -535,6 +535,11 @@ export function MindMapBoard({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
+                        {child.level !== undefined && (
+                          <span className="text-[8px] font-black tracking-widest text-purple-600 dark:text-purple-400 uppercase mb-0.5 block">
+                            Nível {child.level + 1}
+                          </span>
+                        )}
                         <h4 className="text-xs font-bold text-neutral-900 dark:text-white truncate" title={child.name}>
                           {child.name}
                         </h4>
@@ -546,7 +551,7 @@ export function MindMapBoard({
                       </div>
 
                       <span className="px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/60 text-[9px] font-black text-purple-600 dark:text-purple-400 shrink-0">
-                        {child.count}
+                        {child.children === undefined ? '?' : child.count}
                       </span>
                     </div>
 

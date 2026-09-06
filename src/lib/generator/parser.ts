@@ -1887,7 +1887,7 @@ export function parseMetaBuilderJSON(
         }
 
         let foreignKey = lvl.foreign_key ? resolveLvlCol(lvl.foreign_key) : undefined
-        if (!foreignKey && levels.length > 0) {
+        if (!foreignKey && levels.length > 0 && lvl.relation_type !== 'multilevel' && lvl.relation_type !== 'indirect') {
           const prevLevel = levels[levels.length - 1]
           const prevModel = models.find((m: any) => m.id === prevLevel.modelId)
           const prevTable = (prevModel?.dbTable || prevModel?.name || '').toLowerCase()
@@ -1911,6 +1911,7 @@ export function parseMetaBuilderJSON(
           throughTable: lvl.through_table,
           throughLocalFk: lvl.through_local_fk,
           throughTargetFk: lvl.through_target_fk,
+          relationPath: lvl.relation_path,
         })
       }
 
