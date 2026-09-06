@@ -216,11 +216,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   // Cleanup npm process when IDE is fully closed
   useEffect(() => {
-    if (!isOpen && serverState.devProcess) {
-      serverState.devProcess.kill()
-      serverState.setDevProcess(null)
+    if (!isOpen) {
+      serverState.handleStop()
+      if (isTauri()) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('stopcli').catch(() => {})
+        }).catch(() => {})
+      }
     }
-  }, [isOpen, serverState.devProcess])
+  }, [isOpen])
 
   const openIDE = (newTarget: IDETarget) => {
     if (!isTauri()) {
@@ -233,6 +237,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   const closeIDE = () => {
+    // Garante encerramento imediato do servidor local Next.js ao fechar a IDE Local
+    serverState.handleStop()
+    if (isTauri()) {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        invoke('stopcli').catch(() => {})
+      }).catch(() => {})
+    }
+
     setIsOpen(false)
     setIsMinimized(false)
     setTarget(null)
@@ -244,11 +256,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const handleResetProjectToCleanState = async () => {
     if (!syncManager || !target) return
     try {
-      if (serverState.devProcess) {
-        try {
-          await serverState.devProcess.kill()
-        } catch (e) {}
-        serverState.setDevProcess(null)
+      await serverState.handleStop()
+      if (isTauri()) {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('stopcli').catch(() => {})
       }
 
       tabsState.resetTabs()

@@ -73,11 +73,38 @@ export function useIDEServer({
     }
   }
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      invoke('stopcli').catch(() => {})
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      invoke('stopcli').catch(() => {})
+    }
+  }, [])
+
+  const handleStop = async () => {
+    if (isStoppingServer) return
+    setIsStoppingServer(true)
+    try {
+      await invoke('stopcli')
+      addConsoleLog(`■ ${t('workspace_components.ide_local.server_stopped', 'Servidor encerrado.')}`, 'info')
+    } catch (e: any) {
+      addConsoleLog(`✗ Erro ao parar servidor: ${e?.message || e}`, 'error')
+    } finally {
+      setDevProcess(null)
+      setIsStoppingServer(false)
+    }
+  }
+
   const handleStart = async () => {
-    if (!target || devProcess || isInstalling) return
+    if (!target || isInstalling) return
     setShowConsole(true)
     addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_next_server', 'Iniciando servidor Next.js...')}`, 'info')
     try {
+      // Limpeza prévia garantida: se houver qualquer processo anterior ou porta 3000 em uso, mata antes de subir
+      await invoke('stopcli').catch(() => {})
       const projectPath = await getProjectPath()
       await invoke('start_nextjs_server', { projectPath })
 
@@ -124,25 +151,13 @@ export function useIDEServer({
       })
 
       setDevProcess({
-        kill: async () => {
-          setIsStoppingServer(true)
-          await invoke('stopcli')
-          setTimeout(() => {
-            setDevProcess(null)
-            setIsStoppingServer(false)
-          }, 5000)
-        }
+        kill: handleStop
       } as any)
 
     } catch (err: any) {
       addConsoleLog(`✗ Erro ao iniciar servidor: ${err?.message || err}`, 'error')
       toast(`Erro ao iniciar servidor: ${err?.message || err}`, 'error')
     }
-  }
-
-  const handleStop = async () => {
-    if (!devProcess || isStoppingServer) return
-    devProcess.kill()
   }
 
   const handleOpenBrowser = async () => {
