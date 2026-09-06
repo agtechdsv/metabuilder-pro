@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
+import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scheduler Page (Server Component)
@@ -504,6 +504,8 @@ import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import DynamicScheduler from '@/components/DynamicScheduler'
 import { filterFields, fields, schedulerConfig } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Search, RefreshCcw, Pencil, X, Save } from 'lucide-react'
+
+${FORM_INPUT_FORMAT_HELPERS}
 
 export function SchedulerClient({
   initialData,

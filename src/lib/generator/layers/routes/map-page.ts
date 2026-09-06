@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
+import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Map Page (Server Component)
@@ -361,6 +361,8 @@ import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { fields, mapConfig } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
+
+${FORM_INPUT_FORMAT_HELPERS}
 
 // Carregamento dinâmico sem SSR para segurança do Leaflet
 const MapBoard = dynamic(

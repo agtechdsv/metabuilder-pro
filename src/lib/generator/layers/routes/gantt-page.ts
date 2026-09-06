@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
+import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gantt Page (Server Component)
@@ -359,6 +359,8 @@ import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GanttBoard } from '@/components/GanttBoard'
 import { fields, ganttConfig } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
+
+${FORM_INPUT_FORMAT_HELPERS}
 
 export function GanttClient({
   initialData,
