@@ -833,13 +833,46 @@ function resolveRelationTabs(
   const hiddenDetails: string[] = layoutConfig.hidden_details || []
   const tablesConfig: string[] = view.tables_config || []
 
-  // Relações onde esta view é o "pai" (to_model_id = view.model_id)
-  const parentRelations = rawRelations.filter(
-    (r: any) => r.to_model_id === view.model_id
+  const parentModel = allModels.find((m: any) => m.id === view.model_id)
+  const parentTableName = (parentModel?.db_table_name || '').toLowerCase()
+  const parentTableSingular = parentTableName.endsWith('s') ? parentTableName.slice(0, -1) : parentTableName
+
+  // Relações onde esta view é o "pai" (to_model_id = view.model_id ou master_model_id = view.model_id)
+  const parentRelations: any[] = rawRelations.filter(
+    (r: any) => (r.to_model_id && r.to_model_id === view.model_id) || (r.master_model_id && r.master_model_id === view.model_id)
   )
 
+  // Fallback via Heurística: Modelos filhos que possuem chave estrangeira para o pai
+  for (const childModel of allModels) {
+    if (childModel.id === view.model_id) continue
+    const already = parentRelations.some((r: any) => (r.from_model_id || r.detail_model_id) === childModel.id)
+    if (already) continue
+
+    const childFields = allFields.filter((f: any) => f.model_id === childModel.id)
+    const fkField = childFields.find((f: any) => {
+      const col = (f.db_column_name || '').toLowerCase()
+      const fkt = (f.foreign_key_table || '').toLowerCase()
+      return (
+        (fkt && fkt === parentTableName) ||
+        col === `${parentTableName}_id` ||
+        col === `${parentTableSingular}_id` ||
+        (f.config?.relation?.targetTable && f.config.relation.targetTable.toLowerCase() === parentTableName)
+      )
+    })
+
+    if (fkField) {
+      parentRelations.push({
+        from_model_id: childModel.id,
+        to_model_id: view.model_id,
+        from_field_id: fkField.id,
+        to_field_id: parentModel?.fields?.find((f: any) => f.is_primary_key || f.db_column_name === 'id')?.id,
+      })
+    }
+  }
+
   for (const rel of parentRelations) {
-    const childModel = allModels.find((m: any) => m.id === rel.from_model_id)
+    const fromId = rel.from_model_id || rel.detail_model_id
+    const childModel = allModels.find((m: any) => m.id === fromId)
     if (!childModel) continue
 
     // Auto-relacionamentos (ex: tarefa_antecessora -> tarefas) nunca são abas de detalhe
@@ -849,18 +882,25 @@ function resolveRelationTabs(
     if (hiddenDetails.includes(childModel.id)) continue
     if (detailsDisplayMode[childModel.id] === 'hidden') continue
 
-    // Se a view tem joins ou tables_config configurados, só inclui os modelos participantes
+    // Se a view tem joins configurados (e não é mapa_mental), só inclui os modelos participantes
     const isJoined = joins.some((j: any) => j.table === childModel.db_table_name || j.model_id === childModel.id)
-    const isConfiguredTable = tablesConfig.includes(childModel.db_table_name) || tablesConfig.includes(childModel.id)
     const isExplicitTab = detailsDisplayMode[childModel.id] === 'tabs' || detailsDisplayMode[childModel.id] === 'sections'
 
-    // Se o dev configurou joins ou tables_config, respeita a seleção dele:
-    if ((joins.length > 0 || tablesConfig.length > 0) && !isJoined && !isConfiguredTable && !isExplicitTab) {
+    if (joins.length > 0 && !isJoined && !isExplicitTab && view.logic_type !== 'mapa_mental') {
       continue
     }
 
-    const fkFieldRaw = allFields.find((f: any) => f.id === rel.from_field_id)
-    const foreignKey = fkFieldRaw?.db_column_name || ''
+    const fkFieldId = rel.from_field_id || rel.foreign_column_id
+    let fkFieldRaw = allFields.find((f: any) => f.id === fkFieldId)
+    if (!fkFieldRaw) {
+      const childFields = allFields.filter((f: any) => f.model_id === childModel.id)
+      fkFieldRaw = childFields.find((f: any) => {
+        const col = (f.db_column_name || '').toLowerCase()
+        const fkt = (f.foreign_key_table || '').toLowerCase()
+        return (fkt && fkt === parentTableName) || col === `${parentTableName}_id` || col === `${parentTableSingular}_id`
+      })
+    }
+    const foreignKey = fkFieldRaw?.db_column_name || `${parentTableName}_id`
 
     const childModelName = toPascalCase(childModel.db_table_name)
 
@@ -869,7 +909,7 @@ function resolveRelationTabs(
     const childModelFields = allFields.filter((f: any) => f.model_id === childModel.id)
     const childModelFieldIds = new Set(childModelFields.map((f: any) => f.id))
     const childView = allViews.find(
-      (v: any) => v.model_id === rel.from_model_id && v.logic_type !== 'personalizado'
+      (v: any) => (v.model_id === fromId || v.model_id === childModel.id) && v.logic_type !== 'personalizado'
     )
 
     // 1. Prioridade Máxima: Campos configurados diretamente no Use Case atual (layout_config da view pai no Studio)
