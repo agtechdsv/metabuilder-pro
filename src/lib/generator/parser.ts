@@ -64,15 +64,12 @@ function mapFieldType(dbType: string): FieldNode['type'] {
 }
 
 function findDisplayColumn(fields: any[]): string {
-  if (!fields || fields.length === 0) return 'id'
-  const candidates = ['nome', 'name', 'razao_social', 'razaosocial', 'descricao', 'description', 'titulo', 'title', 'label', 'display_label']
-  for (const c of candidates) {
-    const found = fields.find((f: any) => (f.db_column_name || f.dbColumn || '').toLowerCase() === c)
-    if (found) return found.db_column_name || found.dbColumn
-  }
+  if (!fields || fields.length === 0) return ''
   const strField = fields.find((f: any) => !f.is_primary_key && !f.isPrimary && ['varchar', 'text', 'string'].includes(String(f.data_type || f.type || '').toLowerCase()))
-  if (strField) return strField.db_column_name || strField.dbColumn
-  return fields[1]?.db_column_name || fields[0]?.db_column_name || 'id'
+  if (strField) return strField.db_column_name || strField.dbColumn || ''
+  const pkField = fields.find((f: any) => f.is_primary_key || f.isPrimary)
+  if (pkField) return pkField.db_column_name || pkField.dbColumn || ''
+  return fields[0]?.db_column_name || fields[0]?.dbColumn || ''
 }
 
 function enrichFieldsWithRelations(
@@ -89,26 +86,22 @@ function enrichFieldsWithRelations(
     if (f.config?.relation?.targetTable && f.config?.relation?.displayColumn) {
       return f
     }
+    const configuredTarget = f.config?.component?.rel_table || f.config?.rel_table || f.config?.relation?.targetTable
+    const configuredDisplay = f.config?.component?.rel_label || f.config?.rel_label || f.config?.relation?.displayColumn
+    const configuredValue = f.config?.component?.rel_value || f.config?.rel_value || f.config?.relation?.valueColumn
+
     const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
     const fkRel = rawRelations.find((r: any) =>
       r.from_model_id === model.id && (r.from_field_id === f.id || r.from_column === colOnly)
     )
-    let targetModel = fkRel ? rawModels.find((m: any) => m.id === fkRel.to_model_id) : null
-    if (!targetModel) {
-      targetModel = rawModels.find((m: any) =>
-        m.id !== model.id &&
-        (colOnly === m.db_table_name ||
-         colOnly === m.db_table_name.slice(0, -1) ||
-         colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
-         colOnly === `${m.db_table_name}_id` ||
-         colOnly === `id_${m.db_table_name}` ||
-         colOnly === `id_${m.db_table_name.slice(0, -1)}`)
-      )
-    }
+    let targetModel = configuredTarget
+      ? rawModels.find((m: any) => m.db_table_name === configuredTarget)
+      : (fkRel ? rawModels.find((m: any) => m.id === fkRel.to_model_id) : null)
+
     if (targetModel) {
       const targetFields = rawFields.filter((rf: any) => rf.model_id === targetModel.id)
-      const dispCol = findDisplayColumn(targetFields)
-      const pkCol = targetFields.find((rf: any) => rf.is_primary_key)?.db_column_name || 'id'
+      const pkCol = configuredValue || targetFields.find((rf: any) => rf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || ''
+      const dispCol = configuredDisplay || findDisplayColumn(targetFields) || pkCol
       return {
         ...f,
         config: {
@@ -245,16 +238,6 @@ function applyFieldsMeta(
     options = options.map((opt: any) => typeof opt === 'string' ? { label: opt, value: opt } : opt)
   }
 
-  const dispName = (rawField?.display_name || '').toLowerCase()
-  if ((colName === 'status' || dispName === 'status' || colName.endsWith('_status')) && (!options || options.length === 0)) {
-    options = [
-      { label: 'Novo', value: 'Novo' },
-      { label: 'Contactado', value: 'Contactado' },
-      { label: 'Em Negociação', value: 'Em Negociação' },
-      { label: 'Fechado Ganho', value: 'Fechado Ganho' },
-      { label: 'Perdido', value: 'Perdido' }
-    ]
-  }
 
   if (options && Array.isArray(options) && options.length > 0) {
     merged.options = options
@@ -960,7 +943,7 @@ function resolveRelationTabs(
       childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => {
         const dt = (f.data_type || '').toLowerCase()
         const isDate = dt === 'date' || dt.includes('time') || f.db_column_name.includes('data')
-        const isLookup = f.db_column_name.includes('funcionario') || f.db_column_name.includes('cliente') || f.db_column_name.includes('fornecedor')
+        const isLookup = Boolean(f.foreign_key_table || f.is_foreign_key || f.db_column_name.endsWith('_id') || f.db_column_name.startsWith('id_') || f.config?.relation)
         const cols = isDate ? 3 : isLookup ? 9 : 6
         const width = isDate ? '25%' : isLookup ? '75%' : '50%'
 
@@ -980,26 +963,26 @@ function resolveRelationTabs(
       childFormFields = childGridFields
     }
 
-    // Enriquece campos de FK/Lookup com a relação para a tabela destino (ex: funcionario -> funcionarios)
+    // Enriquece campos de FK/Lookup com a relação para a tabela destino respeitando as configs do Studio e dicionário do banco
     const enrichRelationFields = (fieldsList: ResolvedField[]) => {
       return fieldsList.map(f => {
+        const configuredTarget = f.config?.component?.rel_table || f.config?.rel_table || f.config?.relation?.targetTable
+        const configuredDisplay = f.config?.component?.rel_label || f.config?.rel_label || f.config?.relation?.displayColumn
+        const configuredValue = f.config?.component?.rel_value || f.config?.rel_value || f.config?.relation?.valueColumn
+
         const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
         const fkRel = rawRelations.find((r: any) =>
           r.from_model_id === childModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
         )
-        let targetModel = fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null
-        if (!targetModel) {
-          targetModel = allModels.find((m: any) =>
-            m.id !== childModel.id &&
-            (colOnly === m.db_table_name ||
-             colOnly === m.db_table_name.slice(0, -1) ||
-             colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
-             colOnly === `${m.db_table_name}_id` ||
-             colOnly === `id_${m.db_table_name}` ||
-             colOnly === `id_${m.db_table_name.slice(0, -1)}`)
-          )
-        }
+        let targetModel = configuredTarget
+          ? allModels.find((m: any) => m.db_table_name === configuredTarget)
+          : (fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null)
+
         if (targetModel) {
+          const targetFields = allFields.filter((tf: any) => tf.model_id === targetModel.id)
+          const pkCol = configuredValue || targetFields.find((tf: any) => tf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || ''
+          const dispCol = configuredDisplay || findDisplayColumn(targetFields) || pkCol
+
           return {
             ...f,
             config: {
@@ -1007,8 +990,8 @@ function resolveRelationTabs(
               relation: {
                 targetTable: targetModel.db_table_name,
                 targetModel: toPascalCase(targetModel.db_table_name),
-                displayColumn: 'nome',
-                valueColumn: 'id',
+                displayColumn: dispCol,
+                valueColumn: pkCol,
               }
             }
           }
@@ -1033,10 +1016,8 @@ function resolveRelationTabs(
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 
-    // Identifica sub-detalhes (relações 1:N filhas deste modelo, ex: pedidos -> itens_pedido)
-    // Apenas considera se houver campos do sub-modelo explicitamente configurados na tela,
-    // ou se a tabela for explicitamente um item relacional de composição (ex: itens_*, *_itens, parcelas).
-    // Jamais considera tabelas não-relacionadas a itens (ex: pedidos ou entregas apontando para funcionarios).
+    // Identifica sub-detalhes (relações 1:N filhas deste modelo)
+    // Apenas considera se houver campos do sub-modelo explicitamente configurados na tela pelo Studio
     const subRelations = rawRelations.filter((r: any) => {
       if (r.to_model_id !== childModel.id || r.from_model_id === view.model_id) return false
       const subModel = allModels.find((m: any) => m.id === r.from_model_id)
@@ -1052,15 +1033,7 @@ function resolveRelationTabs(
         }
         return false
       })
-      if (hasConfiguredFields) return true
-
-      const tName = (subModel.db_table_name || '').toLowerCase()
-      const cName = (childModel.db_table_name || '').toLowerCase()
-      const isCompositionItem = tName.startsWith('itens_') || tName.startsWith('item_') ||
-                                tName.endsWith('_itens') || tName.endsWith('_items') ||
-                                tName === `itens_${cName}` || tName === `${cName}_itens` ||
-                                tName === 'parcelas'
-      return isCompositionItem
+      return hasConfiguredFields
     })
     const subDetails: SubRelationDetail[] = subRelations.map((sr: any) => {
       const subModel = allModels.find((m: any) => m.id === sr.from_model_id)
@@ -1121,29 +1094,9 @@ function resolveRelationTabs(
           !auditColumns.has(f.db_column_name.toLowerCase())
         )
         subGridFields = subFields.map((f: any): ResolvedField => {
-          let label = f.display_name
-          if (!label || label === f.db_column_name || label.toUpperCase() === f.db_column_name.toUpperCase()) {
-            const map: Record<string, string> = {
-              'produto_id': 'Produto',
-              'produto': 'Produto',
-              'quantidade': 'Quantidade',
-              'qtd': 'Quantidade',
-              'preco_unitario': 'Preço Unitário',
-              'valor_unitario': 'Preço Unitário',
-              'preco': 'Preço Unitário',
-              'total_rs': 'Total R$',
-              'total': 'Total R$',
-              'subtotal': 'Total R$',
-              'motorista_id': 'Motorista',
-              'data_estimada': 'Data Estimada',
-              'lat_atual': 'Lat Atual',
-              'lng_atual': 'Lng Atual',
-              'status': 'Status',
-            }
-            label = map[f.db_column_name.toLowerCase()] || f.db_column_name
-              .replace(/_/g, ' ')
-              .replace(/\b\w/g, (c: string) => c.toUpperCase())
-          }
+          const label = f.display_name || f.db_column_name
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (c: string) => c.toUpperCase())
           return {
             id: f.id,
             dbColumn: f.db_column_name,
@@ -1162,23 +1115,23 @@ function resolveRelationTabs(
 
       const enrichSubFields = (fieldsList: ResolvedField[]) => {
         return fieldsList.map(f => {
+          const configuredTarget = f.config?.component?.rel_table || f.config?.rel_table || f.config?.relation?.targetTable
+          const configuredDisplay = f.config?.component?.rel_label || f.config?.rel_label || f.config?.relation?.displayColumn
+          const configuredValue = f.config?.component?.rel_value || f.config?.rel_value || f.config?.relation?.valueColumn
+
           const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
           const fkRel = rawRelations.find((r: any) =>
             r.from_model_id === subModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
           )
-          let targetModel = fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null
-          if (!targetModel) {
-            targetModel = allModels.find((m: any) =>
-              m.id !== subModel.id &&
-              (colOnly === m.db_table_name ||
-               colOnly === m.db_table_name.slice(0, -1) ||
-               colOnly.startsWith(m.db_table_name.slice(0, -1)) ||
-               colOnly === `${m.db_table_name}_id` ||
-               colOnly === `id_${m.db_table_name}` ||
-               colOnly === `id_${m.db_table_name.slice(0, -1)}`)
-            )
-          }
+          let targetModel = configuredTarget
+            ? allModels.find((m: any) => m.db_table_name === configuredTarget)
+            : (fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null)
+
           if (targetModel) {
+            const targetFields = allFields.filter((tf: any) => tf.model_id === targetModel.id)
+            const pkCol = configuredValue || targetFields.find((tf: any) => tf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || ''
+            const dispCol = configuredDisplay || findDisplayColumn(targetFields) || pkCol
+
             return {
               ...f,
               config: {
@@ -1186,8 +1139,8 @@ function resolveRelationTabs(
                 relation: {
                   targetTable: targetModel.db_table_name,
                   targetModel: toPascalCase(targetModel.db_table_name),
-                  displayColumn: 'nome',
-                  valueColumn: 'id',
+                  displayColumn: dispCol,
+                  valueColumn: pkCol,
                 }
               }
             }
@@ -1930,8 +1883,7 @@ export function parseMetaBuilderJSON(
 
         let titleField = resolveLvlCol(lvl.title_field)
         if (!titleField) {
-          const cand = lvlFields.find((f: any) => !f.is_primary_key && (f.db_column_name.includes('nome') || f.db_column_name.includes('title') || f.db_column_name.includes('descricao')))
-          titleField = cand?.db_column_name || 'id'
+          titleField = findDisplayColumn(lvlFields) || lvlFields.find((f: any) => f.is_primary_key)?.db_column_name || lvlFields[0]?.db_column_name || ''
         }
 
         let foreignKey = lvl.foreign_key ? resolveLvlCol(lvl.foreign_key) : undefined
