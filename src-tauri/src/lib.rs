@@ -123,61 +123,41 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
     Ok("Iniciado com sucesso".to_string())
 }
 
-fn stop_dev_server_internal(state: &CliState) {
+#[command]
+fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
+    // Kill the entire process tree using taskkill so node.js children are also killed
     let pid_opt = {
-        let mut pid_guard = state.dev_pid.lock().unwrap();
-        let val = *pid_guard;
-        *pid_guard = None;
-        val
+        let pid_guard = state.dev_pid.lock().unwrap();
+        *pid_guard
     };
 
     if let Some(pid) = pid_opt {
-        #[cfg(target_os = "windows")]
+        // taskkill /F (force) /T (tree) /PID kills node.js and all children
         let _ = std::process::Command::new("taskkill")
             .args(&["/F", "/T", "/PID", &pid.to_string()])
             .output();
-
-        #[cfg(not(target_os = "windows"))]
-        let _ = std::process::Command::new("kill")
-            .args(&["-9", &pid.to_string()])
-            .output();
     }
 
+    // Also try killing via the child handle as a fallback
     let mut child_guard = state.child.lock().unwrap();
     if let Some(child) = child_guard.take() {
         let _ = child.kill();
     }
 
-    // Limpeza de segurança na porta 3000 para que o próximo Start nunca trave
-    #[cfg(target_os = "windows")]
-    {
-        let _ = std::process::Command::new("cmd")
-            .args(&["/c", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do taskkill /F /PID %a"])
-            .output();
+    // Clear the stored PID
+    let mut pid_guard = state.dev_pid.lock().unwrap();
+    *pid_guard = None;
 
-        let _ = std::process::Command::new("powershell")
-            .args(&["-NoProfile", "-NonInteractive", "-Command", "Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"])
-            .output();
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = std::process::Command::new("sh")
-            .args(&["-c", "lsof -ti:3000 | xargs kill -9 2>/dev/null"])
-            .output();
-    }
-}
+    // Also kill any lingering node processes on port 3000 as a safety net
+    let _ = std::process::Command::new("cmd")
+        .args(&["/c", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %a"])
+        .output();
 
-#[command]
-fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
-    stop_dev_server_internal(&state);
     Ok("Parado com sucesso".to_string())
 }
 
 #[command]
 fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
-    // Limpeza preventiva: garante que porta 3000 esteja 100% liberada
-    stop_dev_server_internal(&state);
-
     let mut child_guard = state.child.lock().unwrap();
     if child_guard.is_some() {
         return Ok("Já está rodando".to_string());
@@ -260,9 +240,6 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
 
 #[command]
 fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
-    // Limpeza preventiva: garante que porta 3000 esteja 100% liberada
-    stop_dev_server_internal(&state);
-
     let mut child_guard = state.child.lock().unwrap();
     if child_guard.is_some() {
         return Ok("Já está rodando".to_string());
@@ -569,14 +546,6 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::Destroyed = event {
-                let app = window.app_handle();
-                if let Some(state) = app.try_state::<CliState>() {
-                    stop_dev_server_internal(&state);
-                }
-            }
-        })
         .setup(|app| {
             #[cfg(all(debug_assertions, windows))]
             app.deep_link().register_all()?;
@@ -668,11 +637,7 @@ pub fn run() {
                                 let _ = window.hide();
                             }
                         }
-                        "quit" => {
-                            let state = app.state::<CliState>();
-                            stop_dev_server_internal(&state);
-                            std::process::exit(0);
-                        },
+                        "quit" => std::process::exit(0),
                         "new_ws" => { let _ = app.emit("tray-event", "new_ws"); },
                         "new_proj" => { let _ = app.emit("tray-event", "new_proj"); },
                         "sync_byoc" => { let _ = app.emit("tray-event", "sync_byoc"); },
