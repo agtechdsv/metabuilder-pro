@@ -966,7 +966,9 @@ export function DetailRelationSection({
 
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
-  const subFields = subConfig?.fields?.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig.foreignKey) || []
+  const rawSubFields = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
+  const subFields = rawSubFields.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig?.foreignKey)
+  const hasSubDetails = Boolean(subConfig && subFields.length > 0)
 
   return (
     <div className={\`relation-section-container relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
@@ -1234,97 +1236,99 @@ export function DetailRelationSection({
                       })}
                     </div>
                     {/* Sub-detalhes inline (ex: ITENS DO DETALHE) */}
-                    <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                          <span className="text-xs font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
-                            ITENS DE {detailSingular.toUpperCase()}
-                          </span>
+                    {hasSubDetails && (
+                      <div className="pt-4 border-t border-neutral-200/60 dark:border-neutral-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                            <span className="text-xs font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">
+                              {subConfig?.label ? subConfig.label.toUpperCase() : \`ITENS DE \${detailSingular.toUpperCase()}\`}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {/* Pill de Expandir/Recolher Todos os Sub-itens */}
+                            {itemChildRecords.length > 0 && (
+                              <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = { ...expandedSubItems }
+                                    itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = true })
+                                    setExpandedSubItems(next)
+                                  }}
+                                  className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                                  title="Expandir Todos"
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = { ...expandedSubItems }
+                                    itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = false })
+                                    setExpandedSubItems(next)
+                                  }}
+                                  className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                                  title="Recolher Todos"
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newSub: any = { id: \`temp-\${Date.now()}\` }
+                                setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
+                              }}
+                              className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+                              title="Adicionar"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(item)}
+                              className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors"
+                              title="Abrir Modal"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          {/* Pill de Expandir/Recolher Todos os Sub-itens */}
-                          {itemChildRecords.length > 0 && (
-                            <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const next = { ...expandedSubItems }
-                                  itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = true })
-                                  setExpandedSubItems(next)
-                                }}
-                                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
-                                title="Expandir Todos"
-                              >
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const next = { ...expandedSubItems }
-                                  itemChildRecords.forEach((_, sIdx) => { next[\`\${item.id || idx}-\${sIdx}\`] = false })
-                                  setExpandedSubItems(next)
-                                }}
-                                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
-                                title="Recolher Todos"
-                              >
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newSub: any = { id: \`temp-\${Date.now()}\` }
-                              setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
-                            }}
-                            className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
-                            title="Adicionar"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(item)}
-                            className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors"
-                            title="Abrir Modal"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+
+                        {isNew || itemChildRecords.length === 0 ? (
+                          <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
+                            <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
+                              Nenhum registro de Itens encontrado.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {itemChildRecords.map((subItem: any, sIdx: number) => {
+                              const subKey = \`\${item.id || idx}-\${sIdx}\`
+                              const isSubExpanded = !!expandedSubItems[subKey]
+
+                              return (
+                                <SubItemAccordion
+                                  key={sIdx}
+                                  subItem={subItem}
+                                  sIdx={sIdx}
+                                  subKey={subKey}
+                                  isSubExpanded={isSubExpanded}
+                                  subFields={subFields}
+                                  toggleSubItem={toggleSubItem}
+                                  formatDateForInput={formatDateForInput}
+                                  onSubItemChange={(field, val) => handleSubItemFieldChange(idx, sIdx, field, val)}
+                                  onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx, subFields })}
+                                  onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx })}
+                                />
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
-
-                      {isNew || itemChildRecords.length === 0 ? (
-                        <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
-                          <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
-                            Nenhum registro de Itens encontrado.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {itemChildRecords.map((subItem: any, sIdx: number) => {
-                            const subKey = \`\${item.id || idx}-\${sIdx}\`
-                            const isSubExpanded = !!expandedSubItems[subKey]
-
-                            return (
-                              <SubItemAccordion
-                                key={sIdx}
-                                subItem={subItem}
-                                sIdx={sIdx}
-                                subKey={subKey}
-                                isSubExpanded={isSubExpanded}
-                                subFields={subFields}
-                                toggleSubItem={toggleSubItem}
-                                formatDateForInput={formatDateForInput}
-                                onSubItemChange={(field, val) => handleSubItemFieldChange(idx, sIdx, field, val)}
-                                onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx, subFields })}
-                                onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx })}
-                              />
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1383,36 +1387,38 @@ export function DetailRelationSection({
             </div>
 
             {/* Abas da Modal: [Mestre] e [Itens do Mestre] */}
-            <div className="flex items-center gap-6 border-b border-neutral-100 dark:border-neutral-800 pb-2">
-              <button
-                type="button"
-                onClick={() => setModalActiveTab('master')}
-                className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
-                  modalActiveTab === 'master'
-                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
-                }\`}
-              >
-                {label}
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalActiveTab('items')}
-                className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
-                  modalActiveTab === 'items'
-                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
-                }\`}
-              >
-                {\`Itens de \${detailSingular}\`}
-              </button>
-            </div>
+            {hasSubDetails && (
+              <div className="flex items-center gap-6 border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setModalActiveTab('master')}
+                  className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
+                    modalActiveTab === 'master'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600'
+                      : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                  }\`}
+                >
+                  {label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalActiveTab('items')}
+                  className={\`text-xs font-bold pb-2 -mb-2.5 transition-all \${
+                    modalActiveTab === 'items'
+                      ? 'text-indigo-600 border-b-2 border-indigo-600'
+                      : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                  }\`}
+                >
+                  {subConfig?.label || \`Itens de \${detailSingular}\`}
+                </button>
+              </div>
+            )}
 
             <form id="modal-master-form" onSubmit={handleFormSubmit} className="space-y-4">
               <input type="hidden" name={foreignKey} value={parentId} />
 
               {/* Conteúdo da Aba Mestre na Modal */}
-              <div className={modalActiveTab === 'master' ? 'block' : 'hidden'}>
+              <div className={(!hasSubDetails || modalActiveTab === 'master') ? 'block' : 'hidden'}>
                 <div className="grid grid-cols-12 gap-5 max-h-[55vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
                     const val = getFieldValue(editingItem, f.dbColumn)
@@ -1428,7 +1434,7 @@ export function DetailRelationSection({
                     const rawCols = f.config?.modalGridSpan ?? comp.modalGridSpan ?? formCfg.modalGridSpan ?? formComp.modalGridSpan ??
                                     f.config?.gridSpan ?? comp.gridSpan ?? formCfg.gridSpan ?? formComp.gridSpan ??
                                     f.config?.columns ?? comp.columns ?? f.config?.col_span ?? comp.col_span ?? f.config?.colSpan
-                    const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\\d+/) ? parseInt(rawCols.match(/\\d+/)![0], 10) : null)
+                    const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                     const rawWidth = String(f.config?.modalWidth || comp.modalWidth || formCfg.modalWidth || formComp.modalWidth ||
                                             f.config?.width || comp.width || formCfg.width || formComp.width || '')
 
@@ -1542,88 +1548,90 @@ export function DetailRelationSection({
               </div>
 
               {/* Conteúdo da Aba Itens do Detalhe na Modal */}
-              <div className={modalActiveTab === 'items' ? 'block space-y-4 max-h-[55vh] overflow-y-auto px-1' : 'hidden'}>
-                <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                  <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
-                  <div className="flex items-center gap-1.5">
-                    {editingItem && getSubRecords(editingItem).length > 0 && (
-                      <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = { ...expandedSubItems }
-                            ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
-                              next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = true
-                            })
-                            setExpandedSubItems(next)
-                          }}
-                          className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
-                          title="Expandir Todos"
-                        >
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = { ...expandedSubItems }
-                            ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
-                              next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = false
-                            })
-                            setExpandedSubItems(next)
-                          }}
-                          className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
-                          title="Recolher Todos"
-                        >
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSub: any = { id: \`temp-\${Date.now()}\` }
-                        const curItems = getSubRecords(editingItem)
-                        setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
-                      }}
-                      className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
-                      title="Adicionar Item"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+              {hasSubDetails && (
+                <div className={modalActiveTab === 'items' ? 'block space-y-4 max-h-[55vh] overflow-y-auto px-1' : 'hidden'}>
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                    <span className="text-xs font-bold text-neutral-500">Lista de Itens</span>
+                    <div className="flex items-center gap-1.5">
+                      {editingItem && getSubRecords(editingItem).length > 0 && (
+                        <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-800/80 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = { ...expandedSubItems }
+                              ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
+                                next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = true
+                              })
+                              setExpandedSubItems(next)
+                            }}
+                            className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                            title="Expandir Todos"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = { ...expandedSubItems }
+                              ;getSubRecords(editingItem).forEach((_: any, sIdx: number) => {
+                                next[\`modal-\${editingItem.id || 'edit'}-\${sIdx}\`] = false
+                              })
+                              setExpandedSubItems(next)
+                            }}
+                            className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded transition-colors"
+                            title="Recolher Todos"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSub: any = { id: \`temp-\${Date.now()}\` }
+                          const curItems = getSubRecords(editingItem)
+                          setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
+                        }}
+                        className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
+                        title="Adicionar Item"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
+
+                  {!editingItem || getSubRecords(editingItem).length === 0 ? (
+                    <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
+                      <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
+                        Nenhum registro de Itens encontrado.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {getSubRecords(editingItem).map((sub: any, sIdx: number) => {
+                        const subKey = \`modal-\${editingItem.id || 'edit'}-\${sIdx}\`
+                        const isSubExpanded = !!expandedSubItems[subKey]
+
+                        return (
+                          <SubItemAccordion
+                            key={sIdx}
+                            subItem={sub}
+                            sIdx={sIdx}
+                            subKey={subKey}
+                            isSubExpanded={isSubExpanded}
+                            subFields={subFields}
+                            toggleSubItem={toggleSubItem}
+                            formatDateForInput={formatDateForInput}
+                            onSubItemChange={(field, val) => handleModalSubItemFieldChange(sIdx, field, val)}
+                            onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit', subFields })}
+                            onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit' })}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-
-                {!editingItem || getSubRecords(editingItem).length === 0 ? (
-                  <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
-                    <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
-                      Nenhum registro de Itens encontrado.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {getSubRecords(editingItem).map((sub: any, sIdx: number) => {
-                      const subKey = \`modal-\${editingItem.id || 'edit'}-\${sIdx}\`
-                      const isSubExpanded = !!expandedSubItems[subKey]
-
-                      return (
-                        <SubItemAccordion
-                          key={sIdx}
-                          subItem={sub}
-                          sIdx={sIdx}
-                          subKey={subKey}
-                          isSubExpanded={isSubExpanded}
-                          subFields={subFields}
-                          toggleSubItem={toggleSubItem}
-                          formatDateForInput={formatDateForInput}
-                          onSubItemChange={(field, val) => handleModalSubItemFieldChange(sIdx, field, val)}
-                          onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit', subFields })}
-                          onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit' })}
-                        />
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Footer Único da Modal */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">

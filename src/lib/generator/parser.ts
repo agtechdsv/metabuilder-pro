@@ -980,24 +980,6 @@ function resolveRelationTabs(
       childFormFields = childGridFields
     }
 
-    // Se o modelo filho possui sub-itens/filhos (ex: Itens do Pedido, Parcelas, etc.) e não possui campo de total,
-    // adiciona um campo virtual para exibir a somatória calculada dinâmica dos sub-itens:
-    const hasSubChildren = rawRelations.some((r: any) => r.to_model_id === childModel.id && r.from_model_id !== view.model_id)
-    if (hasSubChildren && !childFormFields.some(f => f.dbColumn.toLowerCase().includes('total') || f.label.toLowerCase().includes('total'))) {
-      childFormFields.push({
-        id: 'virt_total_geral_rs',
-        dbColumn: 'total_geral_rs',
-        sqlExpression: 'total_geral_rs',
-        label: 'Total Geral R$',
-        dataType: 'numeric',
-        isPrimaryKey: false,
-        isSortable: false,
-        isVirtual: true,
-        isByoc: false,
-        config: { readOnly: true, width: '50%', columns: 6, gridSpan: 6, modalGridSpan: 6, modalWidth: '50%' },
-      })
-    }
-
     // Enriquece campos de FK/Lookup com a relação para a tabela destino (ex: funcionario -> funcionarios)
     const enrichRelationFields = (fieldsList: ResolvedField[]) => {
       return fieldsList.map(f => {
@@ -1052,7 +1034,34 @@ function resolveRelationTabs(
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 
     // Identifica sub-detalhes (relações 1:N filhas deste modelo, ex: pedidos -> itens_pedido)
-    const subRelations = rawRelations.filter((r: any) => r.to_model_id === childModel.id)
+    // Apenas considera se houver campos do sub-modelo explicitamente configurados na tela,
+    // ou se a tabela for explicitamente um item relacional de composição (ex: itens_*, *_itens, parcelas).
+    // Jamais considera tabelas não-relacionadas a itens (ex: pedidos ou entregas apontando para funcionarios).
+    const subRelations = rawRelations.filter((r: any) => {
+      if (r.to_model_id !== childModel.id || r.from_model_id === view.model_id) return false
+      const subModel = allModels.find((m: any) => m.id === r.from_model_id)
+      if (!subModel) return false
+
+      const subModelFields = allFields.filter((f: any) => f.model_id === subModel.id)
+      const subModelFieldIds = new Set(subModelFields.map((f: any) => f.id))
+      const hasConfiguredFields = parentViewFormFieldsOrder.some(fid => {
+        if (subModelFieldIds.has(fid)) return true
+        if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
+          const meta = parentViewFieldsMetadata[fid] || {}
+          return meta.virtual_model_id === subModel.id || meta.byoc_model_id === subModel.id
+        }
+        return false
+      })
+      if (hasConfiguredFields) return true
+
+      const tName = (subModel.db_table_name || '').toLowerCase()
+      const cName = (childModel.db_table_name || '').toLowerCase()
+      const isCompositionItem = tName.startsWith('itens_') || tName.startsWith('item_') ||
+                                tName.endsWith('_itens') || tName.endsWith('_items') ||
+                                tName === `itens_${cName}` || tName === `${cName}_itens` ||
+                                tName === 'parcelas'
+      return isCompositionItem
+    })
     const subDetails: SubRelationDetail[] = subRelations.map((sr: any) => {
       const subModel = allModels.find((m: any) => m.id === sr.from_model_id)
       if (!subModel) return null
