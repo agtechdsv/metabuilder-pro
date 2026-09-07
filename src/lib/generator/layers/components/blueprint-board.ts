@@ -40,6 +40,25 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { DeleteButton } from '@/components/ui/delete-button'
+
+function formatBlueprintValue(v: any): string {
+  if (v === null || v === undefined || v === '') return ''
+  if (v instanceof Date) {
+    return v.toLocaleDateString('pt-BR')
+  }
+  if (typeof v === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}(T.*)?$/.test(v)) {
+      const parts = v.split('T')[0].split('-')
+      if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0]
+    }
+    return v
+  }
+  if (typeof v === 'object') {
+    return ''
+  }
+  return String(v)
+}
 
 export interface BlueprintConfig {
   title_field?: string
@@ -182,17 +201,11 @@ const BlueprintNode = memo(({ data, selected }: NodeProps) => {
             </button>
           )}
           {onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(raw)
-              }}
+            <DeleteButton
+              recordName={title}
+              onDelete={() => onDelete(raw)}
               className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
-              title="Excluir"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            />
           )}
           {customActions.map((action: any) => (
             <button
@@ -313,7 +326,7 @@ function BlueprintFlowContent({
     data.forEach((row, index) => {
       const id = String(row.id ?? index)
       const rawTitle = row[titleCol] ?? row[titleCol.replace(/_/g, '.')] ?? row.nome ?? row.titulo ?? ('Nó #' + id)
-      let title = String(rawTitle || '')
+      let title = formatBlueprintValue(rawTitle)
       if (relationalOptions[titleCol]) {
         const opt = relationalOptions[titleCol].find((o: any) => o.value === String(rawTitle))
         if (opt) title = opt.label
@@ -322,20 +335,24 @@ function BlueprintFlowContent({
       let desc = ''
       if (descCol) {
         const rawDesc = row[descCol] ?? row[descCol.replace(/_/g, '.')]
-        desc = String(rawDesc || '')
         if (relationalOptions[descCol]) {
           const opt = relationalOptions[descCol].find((o: any) => o.value === String(rawDesc))
           if (opt) desc = opt.label
+        }
+        if (!desc) {
+          desc = formatBlueprintValue(rawDesc)
         }
       }
 
       let status = ''
       if (statusCol) {
         const rawStatus = row[statusCol] ?? row[statusCol.replace(/_/g, '.')]
-        status = String(rawStatus || '')
         if (relationalOptions[statusCol]) {
           const opt = relationalOptions[statusCol].find((o: any) => o.value === String(rawStatus))
           if (opt) status = opt.label
+        }
+        if (!status) {
+          status = formatBlueprintValue(rawStatus)
         }
       }
 
@@ -506,8 +523,8 @@ export function BlueprintBoard(props: BlueprintBoardProps) {
     if (!searchTerm.trim()) return data
     const q = searchTerm.toLowerCase().trim()
     return data.filter(r => {
-      const title = String(r[titleCol] ?? r.nome ?? r.titulo ?? '').toLowerCase()
-      const desc = descCol ? String(r[descCol] ?? '').toLowerCase() : ''
+      const title = formatBlueprintValue(r[titleCol] ?? r.nome ?? r.titulo ?? '').toLowerCase()
+      const desc = descCol ? formatBlueprintValue(r[descCol]).toLowerCase() : ''
       return title.includes(q) || desc.includes(q)
     })
   }, [data, searchTerm, titleCol, descCol])
@@ -559,8 +576,8 @@ export function BlueprintBoard(props: BlueprintBoardProps) {
               filteredItems.map(row => {
                 const id = String(row.id)
                 const isSelected = selectedId === id
-                const title = row[titleCol] ?? row.nome ?? row.titulo ?? ('Etapa #' + id)
-                const desc = descCol ? row[descCol] : null
+                const title = formatBlueprintValue(row[titleCol] ?? row.nome ?? row.titulo ?? ('Etapa #' + id))
+                const desc = descCol ? formatBlueprintValue(row[descCol]) : null
 
                 return (
                   <div

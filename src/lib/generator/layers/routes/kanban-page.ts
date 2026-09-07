@@ -117,14 +117,14 @@ export function generateKanbanPage(route: RouteNode): string {
               fallback={
                 <select
                   name="${col}_filter"
-                  defaultValue={params?.['${col}_filter'] || ''}
+                  defaultValue={params?.['${col}_filter'] || params?.['${col}'] || params?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? params?.['${col}'.slice(0, -3)] : params?.['${col}_id']) || ''}
                   className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm opacity-60"
                 >
                   <option value="">Todos</option>
                 </select>
               }
             >
-              <Filter_${col}_Select defaultValue={params?.['${col}_filter']} />
+              <Filter_${col}_Select defaultValue={params?.['${col}_filter'] || params?.['${col}'] || params?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? params?.['${col}'.slice(0, -3)] : params?.['${col}_id'])} />
             </Suspense>
           </div>`
     }
@@ -136,7 +136,7 @@ export function generateKanbanPage(route: RouteNode): string {
             <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
             <select
               name="${col}_filter"
-              defaultValue={params?.['${col}_filter'] || ''}
+              defaultValue={params?.['${col}_filter'] || params?.['${col}'] || params?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? params?.['${col}'.slice(0, -3)] : params?.['${col}_id']) || ''}
               className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
             >
               <option value="">Todos</option>
@@ -155,7 +155,7 @@ export function generateKanbanPage(route: RouteNode): string {
                 type="text"
                 name="${col}_filter"
                 placeholder="Filtrar por ${f.label.toLowerCase()}..."
-                defaultValue={params?.['${col}_filter'] || ''}
+                defaultValue={params?.['${col}_filter'] || params?.['${col}'] || params?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? params?.['${col}'.slice(0, -3)] : params?.['${col}_id']) || ''}
                 className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
               />
             </div>
@@ -363,10 +363,26 @@ export function generateKanbanClient(route: RouteNode): string {
   return `'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { update${mn}, delete${mn} } from '@/app/actions/${mnLower}'
-import { KanbanBoard } from '@/components/KanbanBoard'
 import { fields, cardFields } from './schema'
 import { RefreshCcw } from 'lucide-react'
+
+// Carregamento dinâmico sem SSR para evitar conflito de IDs aria no dnd-kit
+const KanbanBoard = dynamic(
+  () => import('@/components/KanbanBoard').then(mod => mod.KanbanBoard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[600px] flex flex-col items-center justify-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 space-y-4">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+          Carregando Kanban...
+        </p>
+      </div>
+    ),
+  }
+)
 
 export function KanbanClient({
   initialData,
@@ -385,14 +401,34 @@ export function KanbanClient({
     setDataList(initialData)
   }, [initialData])
 
-  // Filtragem de cartões por argumentos/filtros recebidos via searchParams
+  // Filtragem de cartões por argumentos/filtros recebidos via searchParams ou custom actions
   const filteredData = useMemo(() => {
     return dataList.filter(item => {
-      for (const [key, val] of Object.entries(initialParams || {})) {
-        if (!key.endsWith('_filter') || !val || !val.trim()) continue
-        const col = key.replace('_filter', '')
-        const itemVal = item[col] ?? item[col.replace(/_/g, '.')] ?? ''
-        if (!String(itemVal).toLowerCase().includes(val.toLowerCase().trim())) return false
+      for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
+        if (!rawVal || !String(rawVal).trim()) continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to') continue
+        const val = String(rawVal).trim().toLowerCase()
+        const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
+
+        const possibleCols = [
+          col,
+          col.replace(/_/g, '.'),
+          col.endsWith('_id') ? col.slice(0, -3) : (col + '_id'),
+          rawKey,
+        ]
+
+        let matched = false
+        for (const c of possibleCols) {
+          const itemVal = item[c] ?? (item as any)?.[c.toLowerCase()]
+          if (itemVal !== undefined && itemVal !== null) {
+            const strVal = String(itemVal).toLowerCase()
+            if (strVal === val || strVal.includes(val)) {
+              matched = true
+              break
+            }
+          }
+        }
+        if (!matched) return false
       }
       return true
     })

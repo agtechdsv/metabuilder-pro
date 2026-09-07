@@ -69,6 +69,9 @@ export interface KanbanBoardProps {
 
 function formatKanbanValue(v: any, f?: KanbanField): string {
   if (v === null || v === undefined || v === '') return '-'
+  if (v instanceof Date) {
+    return v.toLocaleDateString('pt-BR')
+  }
   if (typeof v === 'number') {
     const colName = (f?.dbColumn || '').toLowerCase()
     const label = (f?.label || '').toLowerCase()
@@ -448,6 +451,7 @@ function BoardCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      suppressHydrationWarning
       {...attributes}
       {...listeners}
       className={cn(

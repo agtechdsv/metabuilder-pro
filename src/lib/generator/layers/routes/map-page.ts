@@ -293,7 +293,7 @@ export function generateMapClient(route: RouteNode): string {
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit'` : ''
+  const isEdit = modalMode === 'edit' || modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
       {isModalOpen && (

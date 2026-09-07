@@ -628,7 +628,7 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
 
   // Atalhos para compatibilidade com renderFormField
   const data = activeRecord
-  const isEdit = modalMode === 'edit'
+  const isEdit = modalMode === 'edit' || modalMode === 'view'
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

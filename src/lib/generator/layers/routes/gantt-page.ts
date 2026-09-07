@@ -345,7 +345,7 @@ export function generateGanttClient(route: RouteNode): string {
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit'
+  const isEdit = modalMode === 'edit' || modalMode === 'view'
   const isView = modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
@@ -366,10 +366,10 @@ export function generateGanttClient(route: RouteNode): string {
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
                     {modalMode === 'view'
-                      ? 'Visualizar Tarefa'
+                      ? 'Visualizar ${route.title}'
                       : modalMode === 'edit'
-                      ? 'Editar Tarefa'
-                      : 'Nova Tarefa no Cronograma'}
+                      ? 'Editar ${route.title}'
+                      : 'Novo Registro no Cronograma'}
                   </h2>
                   <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
                     {modalMode !== 'create'

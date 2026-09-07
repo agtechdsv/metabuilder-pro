@@ -61,11 +61,85 @@ export function generateBlueprintPage(route: RouteNode): string {
     }
   })
 
+  // Filtros
+  const filterFields = (route.filterFields && route.filterFields.length > 0)
+    ? route.filterFields
+    : []
+
+  const filterInputs = filterFields.map(f => {
+    const col = f.dbColumn.replace('.', '_')
+    const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
+    const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const isRelational = targetTable && lookupModels.has(targetTable.toLowerCase())
+
+    let options = f.config?.options
+    const defValExpr = `searchParams?.['${col}_filter'] || searchParams?.['${col}'] || searchParams?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? searchParams?.['${col}'.slice(0, -3)] : searchParams?.['${col}_id']) || ''`
+
+    if (isRelational && targetTable) {
+      const targetListVar = `${targetTable.toLowerCase()}LookupList`
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+            >
+              <option value="">Todos</option>
+              {(${targetListVar} || []).map((r: any, i: number) => (
+                <option key={i} value={String(${valueExpr})}>{String(${labelExpr})}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    if (options && options.length > 0) {
+      const optsCode = JSON.stringify(options)
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+            >
+              <option value="">Todos</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <div className="relative group">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input
+                type="text"
+                name="${col}_filter"
+                placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                defaultValue={${defValExpr}}
+                className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+              />
+            </div>
+          </div>`
+  }).join('\n')
+
   return `import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { BlueprintClient } from './BlueprintClient'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Search, RefreshCcw } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,6 +185,34 @@ ${buildOptionsCode.join('\n')}
           </Link>
         </div>` : ''}
       </div>
+
+      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      ${filterFields.length > 0 ? `
+      <div className="px-6 sm:px-10">
+        <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+          <div className="flex flex-col lg:flex-row items-end gap-6">
+            <div className="flex-1 grid grid-cols-12 gap-4 w-full">
+${filterInputs}
+            </div>
+            <div className="flex items-center gap-3 mb-[1px]">
+              <button
+                type="submit"
+                className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+              >
+                <Search className="w-4 h-4" />
+                Pesquisar
+              </button>
+              <Link
+                href="${route.path}"
+                className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Limpar
+              </Link>
+            </div>
+          </div>
+        </form>
+      </div>` : ''}
 
       {/* Blueprint Interactive Flow Canvas */}
       <div className="px-6 sm:px-10">
@@ -230,7 +332,7 @@ export function generateBlueprintClient(route: RouteNode): string {
     || route.rawLayoutConfig?.action_interface_type === 'modal'
 
   const modalFormFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, false, 'relationalOptions'))
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
@@ -242,7 +344,7 @@ export function generateBlueprintClient(route: RouteNode): string {
     .join('\n')
 
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)` : ''
 
@@ -260,12 +362,15 @@ export function generateBlueprintClient(route: RouteNode): string {
     router.push(\`${route.path}/\${recordId}\`)`
 
   const handleViewBody = isActionModal
-    ? `    handleEdit(row)`
+    ? `    setActiveRecord(row)
+    setModalMode('view')
+    setIsModalOpen(true)`
     : `    const recordId = String(row.${pk} || row.id)
     router.push(\`${route.path}/\${recordId}\`)`
 
   const modalSaveHandler = isActionModal ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (modalMode === 'view') return
     setIsSaving(true)
     try {
       const formData = new FormData(e.currentTarget)
@@ -296,23 +401,34 @@ export function generateBlueprintClient(route: RouteNode): string {
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit'` : ''
+  const isEdit = modalMode === 'edit' || modalMode === 'view'
+  const isView = modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                  <Pencil className="w-5 h-5" />
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-                    {modalMode === 'edit' ? 'Editar Etapa' : 'Nova Etapa no Fluxograma'}
+                    {modalMode === 'view'
+                      ? 'Visualizar Etapa'
+                      : modalMode === 'edit'
+                      ? 'Editar Etapa'
+                      : 'Nova Etapa no Fluxograma'}
                   </h2>
                   <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
-                    {modalMode === 'edit'
+                    {modalMode !== 'create'
                       ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
                       : 'Preencha os dados da etapa'}
                   </p>
@@ -328,28 +444,40 @@ export function generateBlueprintClient(route: RouteNode): string {
             </div>
 
             <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
 ${modalFormFieldsHtml}
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 p-6 sm:p-8 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
+                {modalMode === 'view' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -358,12 +486,12 @@ ${modalFormFieldsHtml}
 
   return `'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { fields, blueprintConfig } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}import { Eye, Pencil, Plus, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 
@@ -401,11 +529,53 @@ ${modalStateVars}
     setDataList(initialData)
   }, [initialData])
 
+  // Filtragem dos nós por argumentos/filtros recebidos via searchParams ou custom actions
+  const filteredData = useMemo(() => {
+    return dataList.filter(item => {
+      for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
+        if (!rawVal || !String(rawVal).trim()) continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to') continue
+        const val = String(rawVal).trim().toLowerCase()
+        const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
+
+        const possibleCols = [
+          col,
+          col.replace(/_/g, '.'),
+          col.endsWith('_id') ? col.slice(0, -3) : (col + '_id'),
+          rawKey,
+        ]
+
+        let matched = false
+        for (const c of possibleCols) {
+          const itemVal = item[c] ?? (item as any)?.[c.toLowerCase()]
+          if (itemVal !== undefined && itemVal !== null) {
+            const strVal = String(itemVal).toLowerCase()
+            if (strVal === val || strVal.includes(val)) {
+              matched = true
+              break
+            }
+          }
+        }
+        if (!matched) return false
+      }
+      return true
+    })
+  }, [dataList, initialParams])
+
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
-    setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
-    await delete${mn}(recordId)
-    router.refresh()
+    try {
+      const res = await delete${mn}(recordId)
+      if (res && (res as any).success === false) {
+        alert('Não foi possível excluir o registro: ' + ((res as any).error || 'Erro no banco de dados'))
+        return
+      }
+      setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
+      router.refresh()
+    } catch (err: any) {
+      console.error('Erro ao excluir registro:', err)
+      alert('Erro ao excluir: ' + (err?.message || err))
+    }
   }
 
   const handleAdd = () => {
@@ -425,7 +595,7 @@ ${modalSaveHandler}
   return (
     <div className="space-y-6">
       <BlueprintBoard
-        data={dataList}
+        data={filteredData}
         fields={fields}
         blueprintConfig={blueprintConfig}
         relationalOptions={relationalOptions}

@@ -516,7 +516,23 @@ export function CustomActionButton({
       return ''
     }).filter(Boolean)
 
-    const extraParams = (action.usecaseParams || '').trim()
+    let extraParams = (action.usecaseParams || '').trim()
+    if (extraParams && item) {
+      extraParams = extraParams.replace(/\\{\\{\\s*([a-zA-Z0-9_]+)\\s*\\}\\}|\\{\\s*([a-zA-Z0-9_]+)\\s*\\}/g, (match, p1, p2) => {
+        const key = p1 || p2
+        let val = item[key]
+        if (val === undefined) {
+          const lKey = key.toLowerCase()
+          for (const k of Object.keys(item)) {
+            if (k.toLowerCase() === lKey) {
+              val = item[k]
+              break
+            }
+          }
+        }
+        return val !== undefined && val !== null ? encodeURIComponent(String(val)) : match
+      })
+    }
     const allParts = [...fieldParamParts]
     if (extraParams) {
       allParts.push(extraParams)

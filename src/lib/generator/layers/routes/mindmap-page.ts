@@ -518,7 +518,7 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit'` : ''
+  const isEdit = modalMode === 'edit' || modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
       {isModalOpen && (
