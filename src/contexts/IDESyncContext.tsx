@@ -222,11 +222,45 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }, [isOpen, serverState.devProcess])
 
+  // Limpa o console quando a IDE fecha ou na descarga/fechamento da janela
+  useEffect(() => {
+    if (!isOpen) {
+      consoleState.clearConsole()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      consoleState.clearConsole()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    let unlistenClose: (() => void) | null = null
+    if (isTauri()) {
+      import('@tauri-apps/api/window')
+        .then(({ getCurrentWindow }) => {
+          return getCurrentWindow().onCloseRequested(() => {
+            consoleState.clearConsole()
+          })
+        })
+        .then(unlisten => {
+          unlistenClose = unlisten
+        })
+        .catch(() => {})
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (unlistenClose) unlistenClose()
+    }
+  }, [])
+
   const openIDE = (newTarget: IDETarget) => {
     if (!isTauri()) {
       toast('A IDE Local está disponível apenas no Desktop App', 'error')
       return
     }
+    consoleState.clearConsole()
     setTarget(newTarget)
     setIsOpen(true)
     setIsMinimized(false)
@@ -239,6 +273,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     fsState.resetFileSystem()
     tabsState.resetTabs()
     gitState.resetGit()
+    consoleState.clearConsole()
   }
 
   const handleResetProjectToCleanState = async () => {
