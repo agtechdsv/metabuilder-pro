@@ -146,7 +146,7 @@ export function getByocComponentName(field: ResolvedField): string {
 export function renderFormField(
   field: ResolvedField,
   isEdit: boolean,
-  readOnly = false,
+  readOnly: boolean | string = false,
   relationalOptionsVar = 'relationalOptions'
 ): string {
   const col = field.dbColumn
@@ -185,14 +185,17 @@ export function renderFormField(
           </div>`
   }
 
-  const isReadOnly = Boolean(
-    readOnly ||
+  const isStaticReadOnly = Boolean(
+    (typeof readOnly === 'boolean' && readOnly) ||
     field.config?.readOnly ||
     field.config?.content?.readonly ||
     field.config?.readonly ||
     field.isVirtual ||
     col.startsWith('virt_')
   )
+
+  const isDynamic = typeof readOnly === 'string' && readOnly.trim() !== ''
+  const readOnlyCond = isDynamic ? `(${readOnly} || ${isStaticReadOnly})` : (isStaticReadOnly ? 'true' : 'false')
 
   const comp = field.config?.form_config?.component || field.config?.component || {}
   const compType = String(comp.type || '').toLowerCase()
@@ -227,9 +230,9 @@ export function renderFormField(
               id="${col}"
               name="${col}"
               ${required ? 'required' : ''}
-              ${isReadOnly ? 'disabled' : ''}
+              disabled={${readOnlyCond}}
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 cursor-pointer"
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50 cursor-pointer")}
             >
               <option value="">Selecione ${label}...</option>
               {(${relationalOptionsVar}?.['${col}'] || ${defaultOpts}).map((opt: any, i: number) => (
@@ -248,9 +251,9 @@ export function renderFormField(
                 id="${col}"
                 name="${col}"
                 type="checkbox"
-                ${isReadOnly ? 'disabled' : ''}
+                disabled={${readOnlyCond}}
                 defaultChecked={isEdit ? Boolean(data?.${col}) : false}
-                className="w-5 h-5 rounded-md border-2 border-neutral-300 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                className={"w-5 h-5 rounded-md border-2 border-neutral-300 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500 " + (${readOnlyCond} ? "cursor-not-allowed opacity-60" : "cursor-pointer")}
               />
               <label htmlFor="${col}" className="text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">${label}</label>
             </div>
@@ -276,9 +279,10 @@ export function renderFormField(
               name="${col}"
               type="date"
               ${required ? 'required' : ''}
-              ${isReadOnly ? 'readOnly disabled' : ''}
+              readOnly={${readOnlyCond}}
+              disabled={${readOnlyCond}}
               defaultValue={isEdit ? formatDateForInput(data?.${col}) : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
   }
@@ -292,9 +296,10 @@ export function renderFormField(
               name="${col}"
               type="datetime-local"
               ${required ? 'required' : ''}
-              ${isReadOnly ? 'readOnly disabled' : ''}
+              readOnly={${readOnlyCond}}
+              disabled={${readOnlyCond}}
               defaultValue={isEdit ? formatDatetimeForInput(data?.${col}) : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60"
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
   }
@@ -309,10 +314,11 @@ export function renderFormField(
               name="${col}"
               rows={${rows}}
               ${required ? 'required' : ''}
-              ${isReadOnly ? 'readOnly disabled' : ''}
+              readOnly={${readOnlyCond}}
+              disabled={${readOnlyCond}}
               placeholder="${placeholder}"
               defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
-              className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all disabled:opacity-60 resize-y min-h-[100px]"
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none resize-y min-h-[100px] transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
   }
@@ -328,11 +334,12 @@ export function renderFormField(
               name="${col}"
               type="${inputType}"
               ${required ? 'required' : ''}
-              ${isReadOnly ? 'readOnly disabled' : ''}
+              readOnly={${readOnlyCond}}
+              disabled={${readOnlyCond}}
               placeholder="${placeholder}"
               defaultValue={isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''}
               ${mask ? `data-mask="${mask}"` : ''}
-              className="w-full ${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
 }

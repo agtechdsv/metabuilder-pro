@@ -276,7 +276,7 @@ export function generateGanttClient(route: RouteNode): string {
     || route.rawLayoutConfig?.action_interface_type === 'modal'
 
   const modalFormFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, false, 'relationalOptions'))
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
@@ -288,7 +288,7 @@ export function generateGanttClient(route: RouteNode): string {
     .join('\n')
 
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)` : ''
 
@@ -306,12 +306,15 @@ export function generateGanttClient(route: RouteNode): string {
     router.push(\`${route.path}/\${recordId}\`)`
 
   const handleViewBody = isActionModal
-    ? `    handleEdit(row)`
+    ? `    setActiveRecord(row)
+    setModalMode('view')
+    setIsModalOpen(true)`
     : `    const recordId = String(row.${pk} || row.id)
     router.push(\`${route.path}/\${recordId}\`)`
 
   const modalSaveHandler = isActionModal ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (modalMode === 'view') return
     setIsSaving(true)
     try {
       const formData = new FormData(e.currentTarget)
@@ -342,23 +345,34 @@ export function generateGanttClient(route: RouteNode): string {
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit'` : ''
+  const isEdit = modalMode === 'edit'
+  const isView = modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-[2.5rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                  <Pencil className="w-5 h-5" />
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-                    {modalMode === 'edit' ? 'Editar Tarefa' : 'Nova Tarefa no Cronograma'}
+                    {modalMode === 'view'
+                      ? 'Visualizar Tarefa'
+                      : modalMode === 'edit'
+                      ? 'Editar Tarefa'
+                      : 'Nova Tarefa no Cronograma'}
                   </h2>
                   <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
-                    {modalMode === 'edit'
+                    {modalMode !== 'create'
                       ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
                       : 'Preencha os dados do registro'}
                   </p>
@@ -374,28 +388,40 @@ export function generateGanttClient(route: RouteNode): string {
             </div>
 
             <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
 ${modalFormFieldsHtml}
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 p-6 sm:p-8 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
+                {modalMode === 'view' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -409,7 +435,7 @@ import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GanttBoard } from '@/components/GanttBoard'
 import { fields, ganttConfig, customActions } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}import { Eye, Pencil, Plus, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 
@@ -433,9 +459,18 @@ ${modalStateVars}
 
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
-    setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
-    await delete${mn}(recordId)
-    router.refresh()
+    try {
+      const res = await delete${mn}(recordId)
+      if (res && (res as any).success === false) {
+        alert('Não foi possível excluir o registro: ' + ((res as any).error || 'Erro no banco de dados'))
+        return
+      }
+      setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
+      router.refresh()
+    } catch (err: any) {
+      console.error('Erro ao excluir registro:', err)
+      alert('Erro ao excluir: ' + (err?.message || err))
+    }
   }
 
   const handleAdd = () => {

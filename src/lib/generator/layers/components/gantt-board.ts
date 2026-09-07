@@ -35,6 +35,7 @@ import { ptBR } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { CustomActionButton } from '@/components/ui/custom-action-button'
+import { DeleteButton } from '@/components/ui/delete-button'
 
 export interface GanttConfig {
   title_field?: string
@@ -384,14 +385,11 @@ export function GanttBoard({
                     </button>
                   )}
                   {onDelete && (
-                    <button
-                      type="button"
-                      onClick={() => onDelete(task.raw)}
+                    <DeleteButton
+                      recordName={task.title}
+                      onDelete={() => onDelete(task.raw)}
                       className="p-1.5 text-neutral-400 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    />
                   )}
                   {customActions.filter(a => {
                     const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : (a.placement ? [a.placement] : ['row']))

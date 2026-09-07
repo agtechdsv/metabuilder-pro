@@ -18,14 +18,14 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
   // Gerar ações de CRUD para cada modelo
   for (const model of ast.models) {
     let actionContent = ast.dbStack === 'supabase'
-      ? generateSupabaseActions(model)
+      ? generateSupabaseActions(model, ast.models)
       : ast.dbStack === 'oracle'
-        ? generateOracleActions(model)
+        ? generateOracleActions(model, ast.models)
         : ast.dbStack === 'mysql'
-          ? generateMysqlActions(model)
+          ? generateMysqlActions(model, ast.models)
           : ast.dbStack === 'sqlserver'
-            ? generateSqlServerActions(model)
-            : generatePgActions(model)
+            ? generateSqlServerActions(model, ast.models)
+            : generatePgActions(model, ast.models)
 
     // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido)
     const aliases = new Set<string>()
@@ -260,12 +260,59 @@ export async function getPool() {
 }
 
 // -----------------------------------------------------------------------------
+// CHILD RELATION CASCADE HELPERS
+// -----------------------------------------------------------------------------
+
+function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Array<{ table: string; column: string }> {
+  const refs: Array<{ table: string; column: string }> = []
+  const modelTable = (model.dbTable || model.name).toLowerCase()
+  const modelName = model.name.toLowerCase()
+  const singularTable = modelTable.endsWith('s') ? modelTable.slice(0, -1) : modelTable
+
+  for (const other of allModels) {
+    if (other === model) continue
+    const otherTable = other.dbTable || other.name
+    for (const f of other.fields) {
+      const targetTable = (
+        (f.relation as any)?.targetTable ||
+        f.config?.relation?.targetTable ||
+        (f.config as any)?.component?.rel_table ||
+        (f.config as any)?.rel_table ||
+        ''
+      ).toLowerCase()
+
+      const targetModel = (
+        f.relation?.targetModel ||
+        f.config?.relation?.targetModel ||
+        ''
+      ).toLowerCase()
+
+      const colLower = f.dbColumn.toLowerCase()
+      const isRefByTarget = targetTable === modelTable || (targetModel && targetModel === modelName)
+      const isRefByColName = colLower === `${modelTable}_id` || colLower === `${singularTable}_id`
+
+      if (isRefByTarget || isRefByColName) {
+        if (!refs.some(r => r.table.toLowerCase() === otherTable.toLowerCase() && r.column.toLowerCase() === f.dbColumn.toLowerCase())) {
+          refs.push({ table: otherTable, column: f.dbColumn })
+        }
+      }
+    }
+  }
+
+  return refs
+}
+
+// -----------------------------------------------------------------------------
 // ACTIONS GENERATORS
 // -----------------------------------------------------------------------------
 
-function generateSupabaseActions(model: ModelNode) {
+function generateSupabaseActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    return `    await supabase.from('${ref.table}').delete().eq('${ref.column}', id).catch(() => {})`
+  }).join('\n')
 
   return `'use server'
 import { createClient } from './db'
@@ -340,20 +387,34 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 }
 
 export async function delete${model.name}(id: string) {
-  const supabase = await createClient()
-  const { error } = await supabase.from('${model.dbTable}').delete().eq('${pk}', id)
-  if (error) throw new Error(error.message)
-  revalidatePath('/${model.name.toLowerCase()}')
+  try {
+    const supabase = await createClient()
+${childCleanups ? `${childCleanups}\n` : ''}    const { error } = await supabase.from('${model.dbTable}').delete().eq('${pk}', id)
+    if (error) throw new Error(error.message)
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
 }
 `
 }
 
-function generatePgActions(model: ModelNode) {
+function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
   const tableRef = model.dbTable.includes('.')
     ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    const childTableRef = ref.table.includes('.')
+      ? ref.table.split('.').map((p: string) => `"${p}"`).join('.')
+      : `"${ref.table}"`
+    return `    await query('DELETE FROM ${childTableRef} WHERE "${ref.column}" = $1', [id]).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
+  }).join('\n')
 
   return `'use server'
 import { query } from './db'
@@ -436,16 +497,27 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 }
 
 export async function delete${model.name}(id: string) {
-  await query('DELETE FROM ${tableRef} WHERE "${pk}" = $1', [id])
-  revalidatePath('/${model.name.toLowerCase()}')
+  try {
+${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM ${tableRef} WHERE "${pk}" = $1', [id])
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    const msg = err?.detail || err?.message || 'Erro ao excluir registro devido a restrições de chave estrangeira.'
+    return { success: false, error: msg }
+  }
 }
 `
 }
 
-function generateOracleActions(model: ModelNode) {
+function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    return `    await query('DELETE FROM "${ref.table}" WHERE "${ref.column}" = :id', { id }).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
+  }).join('\n')
 
   return `'use server'
 import { query } from './db'
@@ -525,16 +597,26 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 }
 
 export async function delete${model.name}(id: string) {
-  await query('DELETE FROM "${model.dbTable}" WHERE "${pk}" = :id', { id })
-  revalidatePath('/${model.name.toLowerCase()}')
+  try {
+${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM "${model.dbTable}" WHERE "${pk}" = :id', { id })
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
 }
 `
 }
 
-function generateMysqlActions(model: ModelNode) {
+function generateMysqlActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    return `    await query('DELETE FROM \\\`${ref.table}\\\` WHERE \\\`${ref.column}\\\` = ?', [id]).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
+  }).join('\n')
 
   return `'use server'
 import { query } from './db'
@@ -616,16 +698,26 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 }
 
 export async function delete${model.name}(id: string) {
-  await query('DELETE FROM \`${model.dbTable}\` WHERE \`${pk}\` = ?', [id])
-  revalidatePath('/${model.name.toLowerCase()}')
+  try {
+${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM \`${model.dbTable}\` WHERE \`${pk}\` = ?', [id])
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
 }
 `
 }
 
-function generateSqlServerActions(model: ModelNode) {
+function generateSqlServerActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    return `    await pool.request().input('cascade_id', id).query('DELETE FROM [${ref.table}] WHERE [${ref.column}] = @cascade_id').catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
+  }).join('\n')
 
   return `'use server'
 import { getPool } from './db'
@@ -717,9 +809,15 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 }
 
 export async function delete${model.name}(id: string) {
-  const pool = await getPool()
-  await pool.request().input('id', id).query('DELETE FROM [${model.dbTable}] WHERE [${pk}] = @id')
-  revalidatePath('/${model.name.toLowerCase()}')
+  try {
+    const pool = await getPool()
+${childCleanups ? `${childCleanups}\n` : ''}    await pool.request().input('id', id).query('DELETE FROM [${model.dbTable}] WHERE [${pk}] = @id')
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
 }
 `
 }

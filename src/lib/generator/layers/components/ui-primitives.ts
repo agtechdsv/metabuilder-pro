@@ -189,10 +189,14 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
   const handleConfirm = () => {
     startTransition(async () => {
       try {
-        await onDelete(id)
+        const res: any = await onDelete(id)
+        if (res && res.success === false) {
+          alert('Não foi possível excluir o registro: ' + (res.error || 'Erro no banco de dados'))
+        }
         setIsOpen(false)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Erro ao excluir registro:', err)
+        alert('Erro ao excluir registro: ' + (err?.message || err))
         setIsOpen(false)
       }
     })
@@ -202,7 +206,10 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
     <>
       <button 
         type="button" 
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen(true)
+        }}
         className={className || "p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center"} 
         title="Excluir" 
       >
