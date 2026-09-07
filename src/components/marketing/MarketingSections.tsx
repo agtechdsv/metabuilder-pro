@@ -359,10 +359,10 @@ export function MarketingSections() {
             <div className="relative p-8 md:p-10 rounded-[2.5rem] bg-white/80 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-xl overflow-hidden flex flex-col justify-between group/card hover:border-amber-500/60 transition-all duration-300">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="h-14 px-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-2.5 shadow-sm">
-                    <img src="/React-Logo.svg" alt="React" className="h-7 w-auto object-contain" />
-                    <span className="text-neutral-300 dark:text-neutral-700 font-light">+</span>
-                    <img src="/Node.js-Logo.svg" alt="Node.js" className="h-6 w-auto object-contain" />
+                  <div className="p-3 px-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-3 shadow-md">
+                    <img src="/React-Logo.svg" alt="React" className="h-10 md:h-12 w-auto object-contain" />
+                    <span className="text-lg font-bold text-neutral-300 dark:text-neutral-700">+</span>
+                    <img src="/Node.js-Logo.svg" alt="Node.js" className="h-9 md:h-11 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
                     Startup-Ready
@@ -415,10 +415,10 @@ export function MarketingSections() {
             <div className="relative p-8 md:p-10 rounded-[2.5rem] bg-white/80 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-xl overflow-hidden flex flex-col justify-between group/card hover:border-emerald-500/60 transition-all duration-300">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="h-14 px-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-2.5 shadow-sm">
-                    <img src="/Spring-Logo.svg" alt="Spring Boot" className="h-6 w-auto object-contain" />
-                    <span className="text-neutral-300 dark:text-neutral-700 font-light">+</span>
-                    <img src="/Java-Logo.svg" alt="Java" className="h-8 w-auto object-contain" />
+                  <div className="p-3 px-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-3 shadow-md">
+                    <img src="/Spring-Logo.svg" alt="Spring Boot" className="h-9 md:h-11 w-auto object-contain max-w-[130px]" />
+                    <span className="text-lg font-bold text-neutral-300 dark:text-neutral-700">+</span>
+                    <img src="/Java-Logo.svg" alt="Java" className="h-11 md:h-13 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
                     Enterprise-Grade
