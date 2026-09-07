@@ -235,23 +235,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
 
-    let unlistenClose: (() => void) | null = null
-    if (isTauri()) {
-      import('@tauri-apps/api/window')
-        .then(({ getCurrentWindow }) => {
-          return getCurrentWindow().onCloseRequested(() => {
-            consoleState.clearConsole()
-          })
-        })
-        .then(unlisten => {
-          unlistenClose = unlisten
-        })
-        .catch(() => {})
-    }
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      if (unlistenClose) unlistenClose()
     }
   }, [])
 
