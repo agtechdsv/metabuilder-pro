@@ -67,6 +67,7 @@ ${lookupImports ? `${lookupImports}\n` : ''}import { GanttClient } from './Gantt
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,6 +75,7 @@ export default async function ${mn}GanttPage(props: {
   searchParams?: Promise<Record<string, string | undefined>>
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
+  const isEmbedded = searchParams?.embedded === 'true'
   const data = await get${mn}List().catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -101,16 +103,17 @@ ${buildOptionsCode.join('\n')}
           </div>
         </div>
 
-        {/* Botão Novo Registro */}
-        ${hasCreate ? `<div className="flex items-center gap-3">
-          <Link
-            href="${route.path}/new"
+        {/* Ações do Header */}
+        <div className="flex items-center gap-3">
+          ${hasCreate ? `<Link
+            href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Novo Registro</span>
-          </Link>
-        </div>` : ''}
+          </Link>` : ''}
+          {isEmbedded && <CloseModalButton />}
+        </div>
       </div>
 
       {/* Gantt Interactive Canvas */}

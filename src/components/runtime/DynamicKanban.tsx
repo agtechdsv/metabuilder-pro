@@ -13,6 +13,7 @@ import {
   DragOverEvent,
   DragEndEvent,
   defaultDropAnimationSideEffects,
+  useDroppable,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -76,11 +77,30 @@ export default function DynamicKanban({
   
   const { extractRawValue } = require('@/lib/field-resolver');
 
-  // Descobrir todos os valores únicos do groupField para criar colunas
+  // Opções pré-configuradas (ex: enum, select ou relação) para garantir exibição de colunas vazias
+  const configuredOptions = useMemo(() => {
+    const rawOpts = relationalOptions[groupColumnName] 
+      || groupField?.config?.options 
+      || groupField?.options 
+      || groupField?.config?.enum_values
+      || groupField?.config?.fixed_options
+    if (Array.isArray(rawOpts) && rawOpts.length > 0) {
+      return rawOpts.map((o: any) => {
+        if (typeof o === 'string') return o
+        return o.value !== undefined ? String(o.value) : (o.label !== undefined ? String(o.label) : String(o.id || o.name || ''))
+      }).filter(Boolean)
+    }
+    return []
+  }, [groupField, relationalOptions, groupColumnName])
+
+  // Descobrir todos os valores únicos do groupField para criar colunas (incluindo colunas vazias configuradas)
   const columns = useMemo(() => {
-    const values = Array.from(new Set(data.map(item => String(extractRawValue(groupColumnName, item, groupField) || 'Unassigned'))))
-    return values.sort()
-  }, [data, groupColumnName, groupField])
+    const valuesFromData = data.map(item => String(extractRawValue(groupColumnName, item, groupField) || 'Unassigned'))
+    const set = new Set<string>([...configuredOptions, ...valuesFromData])
+    const arr = Array.from(set).filter(Boolean)
+    if (arr.length === 0) return ['Unassigned']
+    return arr
+  }, [data, groupColumnName, groupField, configuredOptions])
 
   // Processar kanbanCardFields que podem ser strings JSON ou objetos
   const processedKanbanCardFields = useMemo(() => {
@@ -176,6 +196,22 @@ export default function DynamicKanban({
                   displayTitle = sampleItem[labelField];
                 }
               }
+            } else {
+              // Se a coluna está vazia, busca o label nas opções configuradas
+              const rawOpts = relationalOptions[groupColumnName] 
+                || groupField?.config?.options 
+                || groupField?.options 
+                || groupField?.config?.enum_values
+                || groupField?.config?.fixed_options
+              if (Array.isArray(rawOpts)) {
+                const foundOpt = rawOpts.find((o: any) => {
+                  if (typeof o === 'string') return o === column
+                  return String(o.value ?? o.id ?? o.name ?? '') === column
+                })
+                if (foundOpt && typeof foundOpt === 'object') {
+                  displayTitle = foundOpt.label || foundOpt.nome || foundOpt.name || foundOpt.value || column
+                }
+              }
             }
           }
           return (
@@ -223,8 +259,17 @@ export default function DynamicKanban({
 }
 
 function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, relationalOptions, customActions = [], onCustomAction }: any) {
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id })
+  const { t } = useI18n()
+
   return (
-    <div className="flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full">
+    <div 
+      ref={setDroppableRef}
+      className={cn(
+        "flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full transition-all",
+        isOver && "ring-2 ring-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20"
+      )}
+    >
       {/* Column Header */}
       <div className="flex items-center justify-between px-5 py-4 sticky top-0 bg-white dark:bg-[#0a0a0a] z-30 border-b border-neutral-200 dark:border-neutral-800 shadow-[0_4px_12px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2">
@@ -266,8 +311,10 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, rela
           </AnimatePresence>
           
           {items.length === 0 && (
-            <div className="h-20 flex-shrink-0 flex items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
-              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-300">Empty Column</p>
+            <div className="h-24 flex-shrink-0 flex items-center justify-center border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl">
+              <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+                {t('runtime.empty_column', 'Coluna Vazia')}
+              </p>
             </div>
           )}
         </div>

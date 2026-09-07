@@ -372,12 +372,18 @@ export function generateKanbanClient(route: RouteNode): string {
     || route.rawLayoutConfig?.action_interface_type === 'modal'
   const isActionOverlay = isDrawer || isModal
 
-  const modalFormFieldsHtml = route.formFields
+  const formFieldsToUse = (route.formFields && route.formFields.length > 0)
+    ? route.formFields
+    : (route.gridFields && route.gridFields.length > 0)
+    ? route.gridFields
+    : []
+
+  const modalFormFieldsHtml = formFieldsToUse
     .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
-  const byocImports = route.formFields
+  const byocImports = formFieldsToUse
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
     .map(f => getByocComponentName(f))
     .filter((v, i, a) => v && a.indexOf(v) === i)
@@ -476,7 +482,7 @@ export function generateKanbanClient(route: RouteNode): string {
               </button>
             </div>
 
-            <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+            <form key={activeRecord ? String(activeRecord.${pk} || activeRecord.id || '') : 'new'} onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
 ${modalFormFieldsHtml}
@@ -542,7 +548,7 @@ ${modalFormFieldsHtml}
               </button>
             </div>
 
-            <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+            <form key={activeRecord ? String(activeRecord.${pk} || activeRecord.id || '') : 'new'} onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
 ${modalFormFieldsHtml}

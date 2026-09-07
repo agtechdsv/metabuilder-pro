@@ -1467,9 +1467,36 @@ export function parseMetaBuilderJSON(
       enumsMap
     )
 
+    // Fallback: Se a view não configurou campos na zona form (ex: blueprint, kanban, galeria, etc.),
+    // herda os form_fields de outra view do mesmo modelo ou usa os campos do grid / modelo.
+    let effectiveRawFormFields = rawFormFields
+    if (effectiveRawFormFields.length === 0) {
+      const siblingWithForm = rawViews.find((v: any) =>
+        v.id !== resolvedView.id &&
+        (v.model_id === model.id || v.layout_config?.model_id === model.id) &&
+        (v.layout_config?.form_fields?.length || 0) > 0
+      )
+      if (siblingWithForm) {
+        const siblingZones = resolveViewZones(siblingWithForm, rawModels, rawFields, byocMap, enumsMap)
+        if (siblingZones.formFields.length > 0) {
+          effectiveRawFormFields = siblingZones.formFields
+        }
+      }
+      if (effectiveRawFormFields.length === 0 && rawGridFields.length > 0) {
+        effectiveRawFormFields = rawGridFields
+      }
+      if (effectiveRawFormFields.length === 0) {
+        const modelFields = rawFields.filter((f: any) => f.model_id === model.id && f.is_visible_in_form !== false)
+        effectiveRawFormFields = modelFields.map((f: any) => {
+          const dummyComp = { id: `form_${f.id}`, field_id: f.id, config: {} }
+          return buildResolvedField(dummyComp, f, 'form', model.id, rawModels, {}, enumsMap)
+        })
+      }
+    }
+
     // Enriquece campos relacionais nas 3 zonas usando catálogo dinâmico de relações
     const gridFields = enrichFieldsWithRelations(rawGridFields, model, rawRelations, rawModels, rawFields)
-    const formFields = enrichFieldsWithRelations(rawFormFields, model, rawRelations, rawModels, rawFields)
+    const formFields = enrichFieldsWithRelations(effectiveRawFormFields, model, rawRelations, rawModels, rawFields)
     const filterFields = enrichFieldsWithRelations(rawFilterFields, model, rawRelations, rawModels, rawFields)
 
     // Buttons (padrão de interface + custom_actions configuradas pelo dev)
