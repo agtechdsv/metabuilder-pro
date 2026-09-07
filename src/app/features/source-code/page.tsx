@@ -79,21 +79,21 @@ export default function SourceCodeFeaturePage() {
         <div className="text-center max-w-4xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs uppercase tracking-widest border border-amber-500/20 shadow-sm">
             <Download className="w-4 h-4 text-amber-500" />
-            <span>Eject & Sync Multi-Stack</span>
+            <span>{t('marketing_v2.home.eject_badge', 'Eject & Sync Multi-Stack')}</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-wider ml-1">
-              NOVO
+              {t('marketing_v2.home.eject_badge_new', 'NOVO')}
             </span>
           </div>
 
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
-            Você escolhe a stack de backend. <br />
+            {t('marketing_v2.features.source_code.eject_title_part1', 'Você escolhe a stack de backend.')} <br />
             <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 dark:from-amber-400 dark:via-orange-400 dark:to-emerald-400 bg-clip-text text-transparent">
-              Nós geramos a arquitetura limpa.
+              {t('marketing_v2.features.source_code.eject_title_part2', 'Nós geramos a arquitetura limpa.')}
             </span>
           </h2>
 
           <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-3xl mx-auto font-medium">
-            A maioria das plataformas gera um arquivo gigante, confuso e monolítico. O MetaBuilder gera um projeto completo, organizado por feature, pronto para produção — na linguagem que você escolher.
+            {t('marketing_v2.features.source_code.eject_desc', 'A maioria das plataformas gera um arquivo gigante, confuso e monolítico. O MetaBuilder gera um projeto completo, organizado por feature, pronto para produção — na linguagem que você escolher.')}
           </p>
         </div>
 
@@ -109,39 +109,39 @@ export default function SourceCodeFeaturePage() {
                   <img src="/Node.js-Logo.svg" alt="Node.js" className="h-10 md:h-13 w-auto object-contain" />
                 </div>
                 <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
-                  Modo 1 • Startup-Ready
+                  {t('marketing_v2.multi_stack.mode1_tag', 'Modo 1 • Startup-Ready')}
                 </span>
               </div>
 
               <div>
                 <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
-                  Next.js Full-Stack <span className="text-amber-600 dark:text-amber-400 font-bold">(Node.js)</span>
+                  {t('marketing_v2.multi_stack.mode1_title', 'Next.js Full-Stack')} <span className="text-amber-600 dark:text-amber-400 font-bold">{t('marketing_v2.multi_stack.mode1_tech', '(Node.js)')}</span>
                 </h3>
                 <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                  Frontend React + Backend Node.js no mesmo projeto Next.js
+                  {t('marketing_v2.multi_stack.mode1_subtitle_ide', 'Frontend React + Backend Node.js no mesmo projeto Next.js')}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-200 text-sm font-bold leading-relaxed">
-                "Startup-ready. Deploy rápido. Um projeto, zero configuração."
+                {t('marketing_v2.multi_stack.mode1_quote', '"Startup-ready. Deploy rápido. Um projeto, zero configuração."')}
               </div>
 
               <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <span><strong>Server Actions & API Routes:</strong> Rotas de backend nativas Next.js com tipagem estrita TypeScript.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode1_item1_title', 'Server Actions & API Routes')}:</strong> {t('marketing_v2.multi_stack.mode1_item1_desc_home', 'Rotas de backend nativas Next.js com tipagem estrita TypeScript.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <span><strong>Zero Configuração (<code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">.env.local</code>):</strong> Conexões de banco, chaves e variáveis já configuradas para rodar imediatamente.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode1_item2_title_ide', 'Zero Configuração (.env.local)')}:</strong> {t('marketing_v2.multi_stack.mode1_item2_desc_source', 'Conexões de banco, chaves e variáveis já configuradas para rodar imediatamente.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <span><strong>Deploy Vercel-Ready:</strong> Deploy em 1 clique na Vercel, AWS ou imagem Docker otimizada.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode1_item3_title', 'Deploy Vercel-Ready')}:</strong> {t('marketing_v2.multi_stack.mode1_item3_desc_source', 'Deploy em 1 clique na Vercel, AWS ou imagem Docker otimizada.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <span><strong>Organização Modular:</strong> Telas, componentes e server actions estruturados por feature sem poluição.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode1_item4_title_source', 'Organização Modular')}:</strong> {t('marketing_v2.multi_stack.mode1_item4_desc_source', 'Telas, componentes e server actions estruturados por feature sem poluição.')}</span>
                 </li>
               </ul>
 
@@ -149,20 +149,20 @@ export default function SourceCodeFeaturePage() {
               <div className="rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
                 <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
                   <FileCode2 className="w-3.5 h-3.5 text-amber-400" />
-                  <span>ESTRUTURA DE CÓDIGO EXPORTADA:</span>
+                  <span>{t('marketing_v2.multi_stack.tree_title_code', 'ESTRUTURA DE CÓDIGO EXPORTADA:')}</span>
                 </div>
                 <p className="text-amber-400">📁 meu-projeto-nextjs/</p>
-                <p className="ml-3 text-neutral-400">├── 📁 src/app/api/ <span className="text-neutral-500"># API Routes REST</span></p>
-                <p className="ml-3 text-neutral-400">├── 📁 src/app/(dashboard)/ <span className="text-neutral-500"># Pages & Server Actions</span></p>
-                <p className="ml-3 text-neutral-400">├── 📁 src/components/ <span className="text-neutral-500"># UI Components</span></p>
-                <p className="ml-3 text-neutral-400">├── 📄 .env.local <span className="text-emerald-400"># Conexões automáticas</span></p>
+                <p className="ml-3 text-neutral-400">├── 📁 src/app/api/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_api_alt', '# API Routes REST')}</span></p>
+                <p className="ml-3 text-neutral-400">├── 📁 src/app/(dashboard)/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_pages_alt', '# Pages & Server Actions')}</span></p>
+                <p className="ml-3 text-neutral-400">├── 📁 src/components/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_ui_alt', '# UI Components')}</span></p>
+                <p className="ml-3 text-neutral-400">├── 📄 .env.local <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode1_tree_env_alt', '# Conexões automáticas')}</span></p>
                 <p className="ml-3 text-neutral-400">└── 📄 package.json</p>
               </div>
             </div>
 
             <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
-              <span>📦 Repositório Único</span>
-              <span className="text-amber-600 dark:text-amber-400 font-bold">Node.js / Next.js</span>
+              <span>{t('marketing_v2.multi_stack.mode1_footer_left_source', '📦 Repositório Único')}</span>
+              <span className="text-amber-600 dark:text-amber-400 font-bold">{t('marketing_v2.multi_stack.mode1_footer_right_source', 'Node.js / Next.js')}</span>
             </div>
           </div>
 
@@ -176,39 +176,39 @@ export default function SourceCodeFeaturePage() {
                   <img src="/Java-Logo.svg" alt="Java" className="h-13 md:h-16 w-auto object-contain" />
                 </div>
                 <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
-                  Modo 2 • Enterprise-Grade
+                  {t('marketing_v2.multi_stack.mode2_tag', 'Modo 2 • Enterprise-Grade')}
                 </span>
               </div>
 
               <div>
                 <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
-                  Next.js + Spring Boot <span className="text-emerald-600 dark:text-emerald-400 font-bold">(Java 21)</span>
+                  {t('marketing_v2.multi_stack.mode2_title', 'Next.js + Spring Boot')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('marketing_v2.multi_stack.mode2_tech', '(Java 21)')}</span>
                 </h3>
                 <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                  Frontend Next.js consumindo API REST gerada em Spring Boot 3.x
+                  {t('marketing_v2.multi_stack.mode2_subtitle_home', 'Frontend Next.js consumindo API REST gerada em Spring Boot 3.x')}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-950 dark:text-emerald-200 text-sm font-bold leading-relaxed">
-                "Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."
+                {t('marketing_v2.multi_stack.mode2_quote', '"Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."')}
               </div>
 
               <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>frontend/ + backend/ Desacoplados:</strong> Separação total de código para deploys autônomos e governança corporativa.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode2_item2_title_source', 'frontend/ + backend/ Desacoplados')}:</strong> {t('marketing_v2.multi_stack.mode2_item2_desc_source', 'Separação total de código para deploys autônomos e governança corporativa.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>Virtual Threads (Project Loom):</strong> Java 21 com suporte nativo a milhares de requisições simultâneas e baixíssimo consumo.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode2_item1_title', 'Virtual Threads (Project Loom)')}:</strong> {t('marketing_v2.multi_stack.mode2_item1_desc_source', 'Java 21 com suporte nativo a milhares de requisições simultâneas e baixíssimo consumo.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>pom.xml & Swagger OpenAPI:</strong> Dependências Maven completas com documentação viva gerada automaticamente.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode2_item3_title_source', 'pom.xml & Swagger OpenAPI')}:</strong> {t('marketing_v2.multi_stack.mode2_item3_desc_source', 'Dependências Maven completas com documentação viva gerada automaticamente.')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>CORS e Drivers Nativos:</strong> CORS pré-configurado e suporte a PostgreSQL, Oracle e SQL Server no <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">application.yml</code>.</span>
+                  <span><strong>{t('marketing_v2.multi_stack.mode2_item4_title_ide', 'CORS e Drivers Nativos')}:</strong> {t('marketing_v2.multi_stack.mode2_item4_desc_source', 'CORS pré-configurado e suporte a PostgreSQL, Oracle e SQL Server no application.yml.')}</span>
                 </li>
               </ul>
 
@@ -216,21 +216,21 @@ export default function SourceCodeFeaturePage() {
               <div className="rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
                 <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
                   <Server className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>ESTRUTURA DE CÓDIGO EXPORTADA:</span>
+                  <span>{t('marketing_v2.multi_stack.tree_title_code', 'ESTRUTURA DE CÓDIGO EXPORTADA:')}</span>
                 </div>
                 <p className="text-emerald-400">📁 meu-projeto-enterprise/</p>
-                <p className="ml-3 text-neutral-400">├── 📁 frontend/ <span className="text-neutral-500"># Next.js 15 (Client)</span></p>
+                <p className="ml-3 text-neutral-400">├── 📁 frontend/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_frontend_alt', '# Next.js 15 (Client)')}</span></p>
                 <p className="ml-6 text-neutral-500">└── 📄 package.json</p>
-                <p className="ml-3 text-emerald-300">└── 📁 backend/ <span className="text-neutral-500"># Spring Boot 3.x (Java 21)</span></p>
-                <p className="ml-6 text-neutral-400">├── 📄 pom.xml <span className="text-emerald-400"># Maven & Swagger</span></p>
-                <p className="ml-6 text-neutral-400">├── 📁 src/main/java/ <span className="text-neutral-500"># Clean Architecture</span></p>
-                <p className="ml-6 text-neutral-400">└── 📁 src/main/resources/ <span className="text-emerald-400"># application.yml</span></p>
+                <p className="ml-3 text-emerald-300">└── 📁 backend/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_backend_alt', '# Spring Boot 3.x (Java 21)')}</span></p>
+                <p className="ml-6 text-neutral-400">├── 📄 pom.xml <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode2_tree_maven_alt', '# Maven & Swagger')}</span></p>
+                <p className="ml-6 text-neutral-400">├── 📁 src/main/java/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_java_alt', '# Clean Architecture')}</span></p>
+                <p className="ml-6 text-neutral-400">└── 📁 src/main/resources/ <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode2_tree_resources_alt', '# application.yml')}</span></p>
               </div>
             </div>
 
             <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
-              <span>🏛️ Deploy Desacoplado</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Spring Boot 3.x + Java 21</span>
+              <span>{t('marketing_v2.multi_stack.mode2_footer_left_source', '🏛️ Deploy Desacoplado')}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('marketing_v2.multi_stack.mode2_footer_right_source', 'Spring Boot 3.x + Java 21')}</span>
             </div>
           </div>
         </div>
@@ -240,17 +240,17 @@ export default function SourceCodeFeaturePage() {
           <div className="space-y-1">
             <h4 className="font-bold text-neutral-900 dark:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-500" />
-              Soberania total sobre o seu código fonte
+              {t('marketing_v2.features.source_code.sovereignty_title', 'Soberania total sobre o seu código fonte')}
             </h4>
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Faça o Eject a qualquer momento e continue desenvolvendo no VS Code, IntelliJ IDEA ou Eclipse com total compatibilidade.
+              {t('marketing_v2.features.source_code.sovereignty_desc', 'Faça o Eject a qualquer momento e continue desenvolvendo no VS Code, IntelliJ IDEA ou Eclipse com total compatibilidade.')}
             </p>
           </div>
           <Link
             href="/features/ide"
             className="inline-flex items-center gap-2 px-6 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-transform shrink-0 shadow-lg shadow-black/10 dark:shadow-white/10"
           >
-            <span>Ver Eject na IDE</span>
+            <span>{t('marketing_v2.features.source_code.sovereignty_btn', 'Ver Eject na IDE')}</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

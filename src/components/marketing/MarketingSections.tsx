@@ -337,7 +337,7 @@ export function MarketingSections() {
               <Download className="w-4 h-4 text-amber-500" />
               <span>{t('marketing_v2.home.eject_badge', 'Eject & Sync Multi-Stack')}</span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-wider ml-1">
-                NOVO
+                {t('marketing_v2.home.eject_badge_new', 'NOVO')}
               </span>
             </div>
 
@@ -365,39 +365,39 @@ export function MarketingSections() {
                     <img src="/Node.js-Logo.svg" alt="Node.js" className="h-10 md:h-13 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
-                    Startup-Ready
+                    {t('marketing_v2.multi_stack.mode1_tag_short', 'Startup-Ready')}
                   </span>
                 </div>
 
                 <div>
                   <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white flex items-center gap-2">
-                    Next.js Full-Stack <span className="text-amber-600 dark:text-amber-400 text-xl font-bold">(Node.js)</span>
+                    {t('marketing_v2.multi_stack.mode1_title', 'Next.js Full-Stack')} <span className="text-amber-600 dark:text-amber-400 text-xl font-bold">{t('marketing_v2.multi_stack.mode1_tech', '(Node.js)')}</span>
                   </h3>
                   <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                    Frontend React + Backend Node.js no mesmo projeto unificado
+                    {t('marketing_v2.multi_stack.mode1_subtitle_home', 'Frontend React + Backend Node.js no mesmo projeto unificado')}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-sm font-bold leading-relaxed">
-                  "Startup-ready. Deploy rápido. Um projeto, zero configuração."
+                  {t('marketing_v2.multi_stack.mode1_quote', '"Startup-ready. Deploy rápido. Um projeto, zero configuração."')}
                 </div>
 
                 <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <span><strong>Server Actions & API Routes:</strong> Rotas de backend nativas Next.js com tipagem estrita TypeScript.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode1_item1_title', 'Server Actions & API Routes')}:</strong> {t('marketing_v2.multi_stack.mode1_item1_desc_home', 'Rotas de backend nativas Next.js com tipagem estrita TypeScript.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <span><strong>Configuração Imediata:</strong> Arquivo <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">.env.local</code> pré-configurado com variáveis de banco e autenticação.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode1_item2_title_home', 'Configuração Imediata')}:</strong> {t('marketing_v2.multi_stack.mode1_item2_desc_home', 'Arquivo .env.local pré-configurado com variáveis de banco e autenticação.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <span><strong>Deploy Vercel-Ready:</strong> Suba para produção em segundos na Vercel, AWS ou container Docker leve.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode1_item3_title', 'Deploy Vercel-Ready')}:</strong> {t('marketing_v2.multi_stack.mode1_item3_desc_home', 'Suba para produção em segundos na Vercel, AWS ou container Docker leve.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <span><strong>Estrutura por Feature:</strong> Código limpo, componentizado e modular para iterações ágeis.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode1_item4_title_home', 'Estrutura por Feature')}:</strong> {t('marketing_v2.multi_stack.mode1_item4_desc_home', 'Código limpo, componentizado e modular para iterações ágeis.')}</span>
                   </li>
                 </ul>
               </div>
@@ -405,9 +405,9 @@ export function MarketingSections() {
               <div className="pt-8 border-t border-neutral-200/80 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                 <span className="flex items-center gap-1.5">
                   <FileCode2 className="w-4 h-4 text-amber-500" />
-                  Repositório Único Next.js
+                  {t('marketing_v2.multi_stack.mode1_footer_left_home', 'Repositório Único Next.js')}
                 </span>
-                <span className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Zero Lock-in</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">{t('marketing_v2.multi_stack.mode1_footer_right_home', 'Zero Lock-in')}</span>
               </div>
             </div>
 
@@ -421,39 +421,39 @@ export function MarketingSections() {
                     <img src="/Java-Logo.svg" alt="Java" className="h-13 md:h-16 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
-                    Enterprise-Grade
+                    {t('marketing_v2.multi_stack.mode2_tag_short', 'Enterprise-Grade')}
                   </span>
                 </div>
 
                 <div>
                   <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white flex items-center gap-2">
-                    Next.js + Spring Boot <span className="text-emerald-600 dark:text-emerald-400 text-xl font-bold">(Java 21)</span>
+                    {t('marketing_v2.multi_stack.mode2_title', 'Next.js + Spring Boot')} <span className="text-emerald-600 dark:text-emerald-400 text-xl font-bold">{t('marketing_v2.multi_stack.mode2_tech', '(Java 21)')}</span>
                   </h3>
                   <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                    Frontend Next.js consumindo API REST gerada em Spring Boot 3.x
+                    {t('marketing_v2.multi_stack.mode2_subtitle_home', 'Frontend Next.js consumindo API REST gerada em Spring Boot 3.x')}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200 text-sm font-bold leading-relaxed">
-                  "Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."
+                  {t('marketing_v2.multi_stack.mode2_quote', '"Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."')}
                 </div>
 
                 <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span><strong>Virtual Threads (Project Loom):</strong> Alta concorrência e throughput massivo com consumo mínimo de memória no Java 21.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode2_item1_title', 'Virtual Threads (Project Loom)')}:</strong> {t('marketing_v2.multi_stack.mode2_item1_desc_home', 'Alta concorrência e throughput massivo com consumo mínimo de memória no Java 21.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span><strong>Arquitetura Desacoplada:</strong> Pastas <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">frontend/</code> e <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">backend/</code> separadas para deploys e times independentes.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode2_item2_title_home', 'Arquitetura Desacoplada')}:</strong> {t('marketing_v2.multi_stack.mode2_item2_desc_home', 'Pastas frontend/ e backend/ separadas para deploys e times independentes.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span><strong>Maven + Swagger Automático:</strong> <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">pom.xml</code> com Spring Web, Data JPA, OpenAPI/Swagger 3 e CORS configurado.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode2_item3_title_home', 'Maven + Swagger Automático')}:</strong> {t('marketing_v2.multi_stack.mode2_item3_desc_home', 'pom.xml com Spring Web, Data JPA, OpenAPI/Swagger 3 e CORS configurado.')}</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span><strong>Drivers de Banco Nativos:</strong> PostgreSQL, Oracle e SQL Server prontos com pool HikariCP otimizado.</span>
+                    <span><strong>{t('marketing_v2.multi_stack.mode2_item4_title_home', 'Drivers de Banco Nativos')}:</strong> {t('marketing_v2.multi_stack.mode2_item4_desc_home', 'PostgreSQL, Oracle e SQL Server prontos com pool HikariCP otimizado.')}</span>
                   </li>
                 </ul>
               </div>
@@ -461,9 +461,9 @@ export function MarketingSections() {
               <div className="pt-8 border-t border-neutral-200/80 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                 <span className="flex items-center gap-1.5">
                   <Server className="w-4 h-4 text-emerald-500" />
-                  frontend/ + backend/ Desacoplados
+                  {t('marketing_v2.multi_stack.mode2_footer_left_home', 'frontend/ + backend/ Desacoplados')}
                 </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Enterprise Ready</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">{t('marketing_v2.multi_stack.mode2_footer_right_home', 'Enterprise Ready')}</span>
               </div>
             </div>
           </div>
@@ -471,20 +471,20 @@ export function MarketingSections() {
           {/* Rodapé da seção */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-6 w-full border-t border-neutral-200/80 dark:border-neutral-800/80 z-10">
             <p className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-              Acesse a IDE para experimentar o seletor de backend no fluxo do Eject & Sync.
+              {t('marketing_v2.home.eject_footer_hint', 'Acesse a IDE para experimentar o seletor de backend no fluxo do Eject & Sync.')}
             </p>
             <div className="flex items-center gap-4">
               <Link 
                 href="/features/source-code"
                 className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
-                Ver arquitetura do código →
+                {t('marketing_v2.home.eject_btn_view_arch', 'Ver arquitetura do código →')}
               </Link>
               <Link 
                 href="/features/ide"
                 className="inline-flex items-center gap-2 px-6 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-black/10 dark:shadow-white/10"
               >
-                <span>Conhecer a IDE</span>
+                <span>{t('marketing_v2.home.eject_btn_know_ide', 'Conhecer a IDE')}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

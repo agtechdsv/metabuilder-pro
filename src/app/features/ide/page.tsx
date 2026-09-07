@@ -147,21 +147,21 @@ export default function IDEFeaturePage() {
           <div className="text-center max-w-4xl mx-auto mb-16 space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest border border-indigo-500/20 shadow-sm">
               <Download className="w-4 h-4 text-indigo-500" />
-              <span>Eject & Sync Architecture</span>
+              <span>{t('marketing_v2.features.ide.eject_section_badge', 'Eject & Sync Architecture')}</span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-wider ml-1">
-                Multi-Stack Backend
+                {t('marketing_v2.features.ide.eject_section_badge_tag', 'Multi-Stack Backend')}
               </span>
             </div>
 
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-neutral-900 dark:text-white leading-tight tracking-tight">
-              Eject & Sync — <br className="hidden sm:inline" />
+              {t('marketing_v2.features.ide.eject_section_title_part1', 'Eject & Sync — ')}<br className="hidden sm:inline" />
               <span className="bg-gradient-to-r from-amber-500 via-purple-500 to-emerald-500 bg-clip-text text-transparent">
-                Escolha sua Stack de Backend
+                {t('marketing_v2.features.ide.eject_section_title_part2', 'Escolha sua Stack de Backend')}
               </span>
             </h2>
 
             <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-300 font-medium">
-              Exporte código profissional. Sem lock-in. Sem vendor dependência.
+              {t('marketing_v2.features.ide.eject_section_subtitle', 'Exporte código profissional. Sem lock-in. Sem vendor dependência.')}
             </p>
 
             {/* Destaque Diferencial */}
@@ -172,10 +172,10 @@ export default function IDEFeaturePage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-neutral-900 dark:text-white text-base md:text-lg mb-1">
-                    Diferencial de Engenharia MetaBuilder PRO
+                    {t('marketing_v2.features.ide.eject_diff_title', 'Diferencial de Engenharia MetaBuilder PRO')}
                   </h4>
                   <p className="text-neutral-600 dark:text-neutral-300 text-sm md:text-base leading-relaxed">
-                    A maioria das plataformas gera um arquivo gigante, ilegível e monolítico. O MetaBuilder gera um <strong>projeto completo, modular e organizado por feature</strong>, pronto para produção — na linguagem e arquitetura que sua equipe escolher.
+                    {t('marketing_v2.features.ide.eject_diff_desc', 'A maioria das plataformas gera um arquivo gigante, ilegível e monolítico. O MetaBuilder gera um projeto completo, modular e organizado por feature, pronto para produção — na linguagem e arquitetura que sua equipe escolher.')}
                   </p>
                 </div>
               </div>
@@ -194,43 +194,43 @@ export default function IDEFeaturePage() {
                     <img src="/Node.js-Logo.svg" alt="Node.js" className="h-10 md:h-13 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
-                    Modo 1 • Startup-Ready
+                    {t('marketing_v2.multi_stack.mode1_tag', 'Modo 1 • Startup-Ready')}
                   </span>
                 </div>
 
                 <div>
                   <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
-                    Next.js Full-Stack <span className="text-amber-600 dark:text-amber-400 font-bold">(Node.js)</span>
+                    {t('marketing_v2.multi_stack.mode1_title', 'Next.js Full-Stack')} <span className="text-amber-600 dark:text-amber-400 font-bold">{t('marketing_v2.multi_stack.mode1_tech', '(Node.js)')}</span>
                   </h3>
                   <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                    Frontend React + Backend Node.js no mesmo projeto Next.js
+                    {t('marketing_v2.multi_stack.mode1_subtitle_ide', 'Frontend React + Backend Node.js no mesmo projeto Next.js')}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-200 text-sm font-bold leading-relaxed">
-                  "Startup-ready. Deploy rápido. Um projeto, zero configuração."
+                  {t('marketing_v2.multi_stack.mode1_quote', '"Startup-ready. Deploy rápido. Um projeto, zero configuração."')}
                 </div>
 
                 <div className="space-y-3">
                   <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                    O que é exportado:
+                    {t('marketing_v2.multi_stack.what_is_exported', 'O que é exportado:')}
                   </h5>
                   <ul className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                      <span><strong>Server Actions & API Routes:</strong> Ações de servidor e endpoints HTTP tipados nativos do Next.js App Router.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode1_item1_title', 'Server Actions & API Routes')}:</strong> {t('marketing_v2.multi_stack.mode1_item1_desc_ide', 'Ações de servidor e endpoints HTTP tipados nativos do Next.js App Router.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                      <span><strong>Zero Configuração (<code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">.env.local</code>):</strong> Variáveis de conexão, tokens e segredos gerados automaticamente.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode1_item2_title_ide', 'Zero Configuração (.env.local)')}:</strong> {t('marketing_v2.multi_stack.mode1_item2_desc_ide', 'Variáveis de conexão, tokens e segredos gerados automaticamente.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                      <span><strong>Deploy Vercel-Ready:</strong> Um único comando <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">vercel deploy</code> ou build Docker pronto para nuvem.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode1_item3_title', 'Deploy Vercel-Ready')}:</strong> {t('marketing_v2.multi_stack.mode1_item3_desc_ide', 'Um único comando vercel deploy ou build Docker pronto para nuvem.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                      <span><strong>Ideal para:</strong> Startups, MVPs, provas de conceito e equipes ágeis que preferem JavaScript/TypeScript unificado.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode1_item4_title_ide', 'Ideal para')}:</strong> {t('marketing_v2.multi_stack.mode1_item4_desc_ide', 'Startups, MVPs, provas de conceito e equipes ágeis que preferem JavaScript/TypeScript unificado.')}</span>
                     </li>
                   </ul>
                 </div>
@@ -239,21 +239,21 @@ export default function IDEFeaturePage() {
                 <div className="mt-4 rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
                   <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
                     <FileCode2 className="w-3.5 h-3.5 text-amber-400" />
-                    <span>ESTRUTURA DO PROJETO GERADO:</span>
+                    <span>{t('marketing_v2.multi_stack.tree_title_project', 'ESTRUTURA DO PROJETO GERADO:')}</span>
                   </div>
                   <p className="text-amber-400">📁 meu-app/</p>
-                  <p className="ml-3 text-neutral-400">├── 📁 src/app/api/ <span className="text-neutral-500"># Endpoints REST tipados</span></p>
-                  <p className="ml-3 text-neutral-400">├── 📁 src/app/(dashboard)/ <span className="text-neutral-500"># Telas e Server Actions</span></p>
-                  <p className="ml-3 text-neutral-400">├── 📁 src/components/ui/ <span className="text-neutral-500"># Componentes reutilizáveis</span></p>
-                  <p className="ml-3 text-neutral-400">├── 📁 src/lib/db/ <span className="text-neutral-500"># Client ORM e queries</span></p>
-                  <p className="ml-3 text-neutral-400">├── 📄 .env.local <span className="text-emerald-400"># Conexões pré-configuradas</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/app/api/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_api', '# Endpoints REST tipados')}</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/app/(dashboard)/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_pages', '# Telas e Server Actions')}</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/components/ui/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_components', '# Componentes reutilizáveis')}</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/lib/db/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode1_tree_db', '# Client ORM e queries')}</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📄 .env.local <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode1_tree_env', '# Conexões pré-configuradas')}</span></p>
                   <p className="ml-3 text-neutral-400">└── 📄 package.json</p>
                 </div>
               </div>
 
               <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
-                <span>📦 Projeto Full-Stack Único</span>
-                <span className="text-amber-600 dark:text-amber-400 font-bold">Node.js LTS</span>
+                <span>{t('marketing_v2.multi_stack.mode1_footer_left_ide', '📦 Projeto Full-Stack Único')}</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold">{t('marketing_v2.multi_stack.mode1_footer_right_ide', 'Node.js LTS')}</span>
               </div>
             </div>
 
@@ -267,43 +267,43 @@ export default function IDEFeaturePage() {
                     <img src="/Java-Logo.svg" alt="Java" className="h-13 md:h-16 w-auto object-contain" />
                   </div>
                   <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
-                    Modo 2 • Enterprise-Grade
+                    {t('marketing_v2.multi_stack.mode2_tag', 'Modo 2 • Enterprise-Grade')}
                   </span>
                 </div>
 
                 <div>
                   <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
-                    Next.js + Spring Boot <span className="text-emerald-600 dark:text-emerald-400 font-bold">(Java 21)</span>
+                    {t('marketing_v2.multi_stack.mode2_title', 'Next.js + Spring Boot')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('marketing_v2.multi_stack.mode2_tech', '(Java 21)')}</span>
                   </h3>
                   <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                    Frontend Next.js chamando API REST gerada em Spring Boot 3.x
+                    {t('marketing_v2.multi_stack.mode2_subtitle_ide', 'Frontend Next.js chamando API REST gerada em Spring Boot 3.x')}
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-950 dark:text-emerald-200 text-sm font-bold leading-relaxed">
-                  "Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."
+                  {t('marketing_v2.multi_stack.mode2_quote', '"Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."')}
                 </div>
 
                 <div className="space-y-3">
                   <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                    O que é exportado:
+                    {t('marketing_v2.multi_stack.what_is_exported', 'O que é exportado:')}
                   </h5>
                   <ul className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      <span><strong>Pastas frontend/ e backend/ separadas:</strong> Deploys independentes em servidores, pipelines de CI/CD ou clusters Kubernetes distintos.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode2_item2_title_ide', 'Pastas frontend/ e backend/ separadas')}:</strong> {t('marketing_v2.multi_stack.mode2_item2_desc_ide', 'Deploys independentes em servidores, pipelines de CI/CD ou clusters Kubernetes distintos.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      <span><strong>Virtual Threads (Project Loom):</strong> Suporte nativo a alta concorrência com threads virtuais do Java 21 ativadas.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode2_item1_title', 'Virtual Threads (Project Loom)')}:</strong> {t('marketing_v2.multi_stack.mode2_item1_desc_ide', 'Suporte nativo a alta concorrência com threads virtuais do Java 21 ativadas.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      <span><strong>pom.xml & Swagger OpenAPI 3.0:</strong> Maven configurado com Spring Web, JPA/Hibernate, validações e documentação automática em <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">/swagger-ui.html</code>.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode2_item3_title_ide', 'pom.xml & Swagger OpenAPI 3.0')}:</strong> {t('marketing_v2.multi_stack.mode2_item3_desc_ide', 'Maven configurado com Spring Web, JPA/Hibernate, validações e documentação automática em /swagger-ui.html.')}</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      <span><strong>CORS e Drivers Nativos:</strong> CORS pré-liberado para o Next.js e drivers adequados (PostgreSQL, Oracle, SQL Server) prontos no <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">application.yml</code>.</span>
+                      <span><strong>{t('marketing_v2.multi_stack.mode2_item4_title_ide', 'CORS e Drivers Nativos')}:</strong> {t('marketing_v2.multi_stack.mode2_item4_desc_ide', 'CORS pré-liberado para o Next.js e drivers adequados (PostgreSQL, Oracle, SQL Server) prontos no application.yml.')}</span>
                     </li>
                   </ul>
                 </div>
@@ -312,22 +312,22 @@ export default function IDEFeaturePage() {
                 <div className="mt-4 rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
                   <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
                     <Server className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>ESTRUTURA DO PROJETO GERADO:</span>
+                    <span>{t('marketing_v2.multi_stack.tree_title_project', 'ESTRUTURA DO PROJETO GERADO:')}</span>
                   </div>
                   <p className="text-emerald-400">📁 meu-app-enterprise/</p>
-                  <p className="ml-3 text-neutral-400">├── 📁 frontend/ <span className="text-neutral-500"># Next.js 15 App Router</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 frontend/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_frontend', '# Next.js 15 App Router')}</span></p>
                   <p className="ml-6 text-neutral-500">├── 📁 src/app/ & components/</p>
                   <p className="ml-6 text-neutral-500">└── 📄 package.json</p>
-                  <p className="ml-3 text-emerald-300">└── 📁 backend/ <span className="text-neutral-500"># Spring Boot 3.x + Java 21</span></p>
-                  <p className="ml-6 text-neutral-400">├── 📄 pom.xml <span className="text-emerald-400"># Maven Build + Swagger</span></p>
-                  <p className="ml-6 text-neutral-400">├── 📁 src/main/java/ <span className="text-neutral-500"># Controllers, Services, Entities</span></p>
-                  <p className="ml-6 text-neutral-400">└── 📁 src/main/resources/ <span className="text-emerald-400"># application.yml + Drivers</span></p>
+                  <p className="ml-3 text-emerald-300">└── 📁 backend/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_backend', '# Spring Boot 3.x + Java 21')}</span></p>
+                  <p className="ml-6 text-neutral-400">├── 📄 pom.xml <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode2_tree_maven', '# Maven Build + Swagger')}</span></p>
+                  <p className="ml-6 text-neutral-400">├── 📁 src/main/java/ <span className="text-neutral-500">{t('marketing_v2.multi_stack.mode2_tree_java', '# Controllers, Services, Entities')}</span></p>
+                  <p className="ml-6 text-neutral-400">└── 📁 src/main/resources/ <span className="text-emerald-400">{t('marketing_v2.multi_stack.mode2_tree_resources', '# application.yml + Drivers')}</span></p>
                 </div>
               </div>
 
               <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
-                <span>🏛️ Arquitetura Corporativa Desacoplada</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Java 21 + Spring 3</span>
+                <span>{t('marketing_v2.multi_stack.mode2_footer_left_ide', '🏛️ Arquitetura Corporativa Desacoplada')}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('marketing_v2.multi_stack.mode2_footer_right_ide', 'Java 21 + Spring 3')}</span>
               </div>
             </div>
           </div>
@@ -336,54 +336,54 @@ export default function IDEFeaturePage() {
           <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden bg-white/50 dark:bg-neutral-900/30 backdrop-blur-sm p-6 md:p-8">
             <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-6 flex items-center gap-2">
               <Layers className="w-5 h-5 text-indigo-500" />
-              Comparativo Direto de Capacidades no Eject
+              {t('marketing_v2.features.ide.eject_table_title', 'Comparativo Direto de Capacidades no Eject')}
             </h4>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase tracking-wider">
-                    <th className="pb-4">Característica</th>
+                    <th className="pb-4">{t('marketing_v2.features.ide.eject_table_col_feature', 'Característica')}</th>
                     <th className="pb-4 text-amber-600 dark:text-amber-400">
                       <span className="inline-flex items-center gap-2">
                         <img src="/React-Logo.svg" alt="React" className="h-6 w-auto inline object-contain" />
                         <img src="/Node.js-Logo.svg" alt="Node.js" className="h-5 w-auto inline object-contain" />
-                        <span>Next.js Full-Stack (Node.js)</span>
+                        <span>{t('marketing_v2.multi_stack.mode1_title', 'Next.js Full-Stack')} {t('marketing_v2.multi_stack.mode1_tech', '(Node.js)')}</span>
                       </span>
                     </th>
                     <th className="pb-4 text-emerald-600 dark:text-emerald-400">
                       <span className="inline-flex items-center gap-2">
                         <img src="/Spring-Logo.svg" alt="Spring" className="h-5 w-auto inline object-contain" />
                         <img src="/Java-Logo.svg" alt="Java" className="h-6 w-auto inline object-contain" />
-                        <span>Next.js + Spring Boot (Java 21)</span>
+                        <span>{t('marketing_v2.multi_stack.mode2_title', 'Next.js + Spring Boot')} {t('marketing_v2.multi_stack.mode2_tech', '(Java 21)')}</span>
                       </span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800/60 font-medium">
                   <tr>
-                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Repositório</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Monorepo / Projeto Único</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Pastas frontend/ e backend/ independentes</td>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">{t('marketing_v2.features.ide.eject_table_row_repo', 'Repositório')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_repo_node', 'Monorepo / Projeto Único')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_repo_java', 'Pastas frontend/ e backend/ independentes')}</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Linguagem Backend</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Node.js + TypeScript</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Java 21 LTS (Virtual Threads habilitadas)</td>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">{t('marketing_v2.features.ide.eject_table_row_lang', 'Linguagem Backend')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_lang_node', 'Node.js + TypeScript')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_lang_java', 'Java 21 LTS (Virtual Threads habilitadas)')}</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Documentação de API</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Tipos TypeScript end-to-end</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Swagger / OpenAPI 3.0 interativo automático</td>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">{t('marketing_v2.features.ide.eject_table_row_docs', 'Documentação de API')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_docs_node', 'Tipos TypeScript end-to-end')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_docs_java', 'Swagger / OpenAPI 3.0 interativo automático')}</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Deploy</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Vercel, AWS Amplify, Docker</td>
-                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Vercel (Front) + JAR / Kubernetes / JVM (Back)</td>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">{t('marketing_v2.features.ide.eject_table_row_deploy', 'Deploy')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_deploy_node', 'Vercel, AWS Amplify, Docker')}</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">{t('marketing_v2.features.ide.eject_table_row_deploy_java', 'Vercel (Front) + JAR / Kubernetes / JVM (Back)')}</td>
                   </tr>
                   <tr>
-                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Lock-in</td>
-                    <td className="py-3.5 text-amber-600 dark:text-amber-400 font-bold">Zero Lock-in (Código aberto padrão)</td>
-                    <td className="py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">Zero Lock-in (Maven + Spring padrão)</td>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">{t('marketing_v2.features.ide.eject_table_row_lockin', 'Lock-in')}</td>
+                    <td className="py-3.5 text-amber-600 dark:text-amber-400 font-bold">{t('marketing_v2.features.ide.eject_table_row_lockin_node', 'Zero Lock-in (Código aberto padrão)')}</td>
+                    <td className="py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">{t('marketing_v2.features.ide.eject_table_row_lockin_java', 'Zero Lock-in (Maven + Spring padrão)')}</td>
                   </tr>
                 </tbody>
               </table>
