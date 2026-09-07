@@ -496,9 +496,10 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
       }
 
       // Salva alterações nas abas de detalhe (relações filhas e sub-itens)
-      if (modalMode === 'edit') {
+      if (modalMode === 'edit' && activeRecord) {
+        const recordId = String(activeRecord.${pk} || activeRecord.id)
         const savePromises: Promise<any>[] = []
-        window.dispatchEvent(new CustomEvent('save-all-relations', { detail: { promises: savePromises } }))
+        window.dispatchEvent(new CustomEvent('save-all-relations', { detail: { promises: savePromises, parentId: recordId } }))
         if (savePromises.length > 0) {
           await Promise.all(savePromises)
         }

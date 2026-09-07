@@ -1,7 +1,7 @@
 export function generateRelationSectionComponent(files: Map<string, string>) {
     files.set('components/DetailRelationSection.tsx', `'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
@@ -635,6 +635,7 @@ export function DetailRelationSection({
   deleteSubAction,
   relationalOptions,
 }: DetailRelationSectionProps) {
+  const sectionRef = useRef<HTMLDivElement>(null)
   const subConfig = (subDetails && subDetails[0]) || null
   const subTable = subConfig?.relatedTable || ''
 
@@ -733,7 +734,7 @@ export function DetailRelationSection({
     setLocalItems(prev => {
       const next = [...prev]
       if (!next[itemIdx]) return next
-      const item = { ...next[itemIdx], [fieldName]: val }
+      const item = { ...next[itemIdx], [fieldName]: val, _dirty: true }
 
       // 1. Auto-fill reverse dependencies (parent lookup from chosen child option)
       const fieldConfig = fields.find(f => f.dbColumn === fieldName || (f.dbColumn.includes('.') && f.dbColumn.split('.').pop() === fieldName))
@@ -799,7 +800,7 @@ export function DetailRelationSection({
   const handleModalFieldChange = (fieldName: string, val: any) => {
     setEditingItem((prev: any) => {
       if (!prev) return prev
-      const item = { ...prev, [fieldName]: val }
+      const item = { ...prev, [fieldName]: val, _dirty: true }
 
       // 1. Auto-fill reverse dependencies
       const fieldConfig = fields.find(f => f.dbColumn === fieldName || (f.dbColumn.includes('.') && f.dbColumn.split('.').pop() === fieldName))
@@ -891,6 +892,7 @@ export function DetailRelationSection({
   const handleAddInline = () => {
     const tempItem: any = {
       _isNew: true,
+      _dirty: true,
       id: \`temp-\${Date.now()}\`,
     }
     editableFields.forEach(f => {
@@ -916,7 +918,8 @@ export function DetailRelationSection({
   useEffect(() => {
     const handleExternalRelationSave = (e: any) => {
        if (!isSubmitting) {
-         const p = handleSaveAll(true)
+         const targetPid = e?.detail?.parentId || parentId
+         const p = handleSaveAll(true, targetPid)
          if (e && e.detail && Array.isArray(e.detail.promises)) {
            e.detail.promises.push(p)
          }
@@ -924,41 +927,51 @@ export function DetailRelationSection({
     }
     window.addEventListener('save-all-relations', handleExternalRelationSave)
     return () => window.removeEventListener('save-all-relations', handleExternalRelationSave)
-  }, [isSubmitting, localItems])
+  }, [isSubmitting, localItems, parentId])
 
-  const handleSaveAll = async (silent = false) => {
+  const handleSaveAll = async (silent = false, customParentId?: string) => {
     setIsSubmitting(true)
     if (silent !== true) window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
-      const sectionEl = document.querySelector('.relation-section-container')
+      const targetParentId = customParentId || parentId
+      const sectionEl = sectionRef.current || document.querySelector('.relation-section-container')
 
       for (let idx = 0; idx < localItems.length; idx++) {
         const item = localItems[idx]
-        const rowKey = String(item.id || item.codigo || \`idx-\${idx}\`)
+        const rowKey = String(item.id || item.codigo || \`item-\${idx}\`)
         const rowContainer = sectionEl?.querySelector(\`[data-relation-row="\${rowKey}"]\`) || document.querySelector(\`[data-relation-row="\${rowKey}"]\`)
 
-        const rowData: Record<string, any> = { [foreignKey]: parentId }
+        const rowData: Record<string, any> = { [foreignKey]: targetParentId }
+
+        // 1. Sempre inicializa com os campos do item existentes no estado
+        editableFields.forEach(f => {
+          if (item[f.dbColumn] !== undefined) {
+            rowData[f.dbColumn] = item[f.dbColumn]
+          }
+        })
+
+        // 2. Se a linha estiver expandida com inputs ativos no DOM, atualiza com valores do formulário
+        let hasActiveInputs = false
         if (rowContainer) {
           const parentInputs = rowContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.relation-parent-fields input, .relation-parent-fields select')
-          parentInputs.forEach(inp => {
-            if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
-              const m = inp.getAttribute('data-mask')
-              const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
-              if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
-                rowData[inp.name] = parseAnyNumber(inp.value)
-              } else if (m === '0.000') {
-                rowData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
-              } else if (isNum) {
-                rowData[inp.name] = parseAnyNumber(inp.value)
-              } else {
-                rowData[inp.name] = inp.value
+          if (parentInputs.length > 0) {
+            hasActiveInputs = true
+            parentInputs.forEach(inp => {
+              if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+                const m = inp.getAttribute('data-mask')
+                const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+                if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
+                  rowData[inp.name] = parseAnyNumber(inp.value)
+                } else if (m === '0.000') {
+                  rowData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+                } else if (isNum) {
+                  rowData[inp.name] = parseAnyNumber(inp.value)
+                } else {
+                  rowData[inp.name] = inp.value
+                }
               }
-            }
-          })
-        } else {
-          editableFields.forEach(f => {
-            if (item[f.dbColumn] !== undefined) rowData[f.dbColumn] = item[f.dbColumn]
-          })
+            })
+          }
         }
 
         const fullItem = resolveReverseDependencies({ ...item, ...rowData }, fields, relatedTable, relationalOptions)
@@ -984,7 +997,7 @@ export function DetailRelationSection({
           if (created?.id || created?.codigo) {
             savedParentId = created.id || created.codigo
           }
-        } else if (Object.keys(rowData).length > 1) {
+        } else if (item._dirty || hasActiveInputs || Object.keys(rowData).length > 1) {
           await updateAction(savedParentId, rowData)
         }
 
@@ -1000,33 +1013,37 @@ export function DetailRelationSection({
               subData[subConfig.foreignKey] = savedParentId
             }
 
+            subFields.forEach((sf: any) => {
+              if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
+            })
+
+            let hasSubInputs = false
             if (subContainer) {
               const subInputs = subContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
-              subInputs.forEach(inp => {
-                if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
-                  const m = inp.getAttribute('data-mask')
-                  const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
-                  if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
-                    subData[inp.name] = parseAnyNumber(inp.value)
-                  } else if (m === '0.000') {
-                    subData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
-                  } else if (isNum) {
-                    subData[inp.name] = parseAnyNumber(inp.value)
-                  } else {
-                    subData[inp.name] = inp.value
+              if (subInputs.length > 0) {
+                hasSubInputs = true
+                subInputs.forEach(inp => {
+                  if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
+                    const m = inp.getAttribute('data-mask')
+                    const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+                    if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
+                      subData[inp.name] = parseAnyNumber(inp.value)
+                    } else if (m === '0.000') {
+                      subData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+                    } else if (isNum) {
+                      subData[inp.name] = parseAnyNumber(inp.value)
+                    } else {
+                      subData[inp.name] = inp.value
+                    }
                   }
-                }
-              })
-            } else {
-              subFields.forEach((sf: any) => {
-                if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
-              })
+                })
+              }
             }
 
             const isNewSub = !subItem.id || String(subItem.id).startsWith('temp-')
             if (isNewSub && createSubAction) {
               await createSubAction(subData)
-            } else if (!isNewSub && updateSubAction && subItem.id) {
+            } else if (!isNewSub && updateSubAction && subItem.id && (subItem._dirty || hasSubInputs || subContainer)) {
               await updateSubAction(subItem.id, subData)
             }
           }
@@ -1398,7 +1415,7 @@ export function DetailRelationSection({
   const hasSubDetails = Boolean(subConfig && subFields.length > 0)
 
   return (
-    <div className={\`relation-section-container relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
+    <div ref={sectionRef} className={\`relation-section-container relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
       {/* Barra Superior de Ações da Aba */}
       <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
         <div>

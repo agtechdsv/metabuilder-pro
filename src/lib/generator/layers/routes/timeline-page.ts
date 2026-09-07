@@ -584,8 +584,10 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
           formData.append(input.name, input.value)
         }
       })
+      let savedMasterId: any = null
       if (modalMode === 'edit' && activeRecord) {
         const id = activeRecord.${route.primaryKey} || activeRecord.id
+        savedMasterId = id
         await update${mn}(id, formData)
         const updatedEntries = Object.fromEntries(formData.entries())
         setDataList(prev => prev.map(item =>
@@ -596,11 +598,25 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
       } else {
         const res = await create${mn}(formData)
         if (res) {
+          savedMasterId = res.${route.primaryKey} || res.id
           setDataList(prev => [res, ...prev])
         }
       }
+
+${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações filhas e sub-itens)
+      if (savedMasterId) {
+        const savePromises: Promise<any>[] = []
+        window.dispatchEvent(new CustomEvent('save-all-relations', {
+          detail: { promises: savePromises, parentId: String(savedMasterId) }
+        }))
+        if (savePromises.length > 0) {
+          await Promise.all(savePromises)
+        }
+      }` : ''}
+
       setIsModalOpen(false)
       setActiveRecord(null)
+      setModalRelationItems({})
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
@@ -739,7 +755,11 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setActiveRecord(null)
+                  setModalRelationItems({})
+                }}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                 title="Fechar"
               >
@@ -769,7 +789,11 @@ ${relationTabPanels}
               <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setActiveRecord(null)
+                    setModalRelationItems({})
+                  }}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-400 transition-all active:scale-95 cursor-pointer"
                 >
                   Cancelar
