@@ -148,7 +148,15 @@ function getFieldValue(obj: any, dbCol: string): any {
   if (obj[under] !== undefined && obj[under] !== null) return obj[under]
   const colOnly = dbCol.includes('.') ? dbCol.split('.').pop()! : dbCol
   if (obj[colOnly] !== undefined && obj[colOnly] !== null) return obj[colOnly]
-  const targetKeys = [dbCol.toLowerCase(), under.toLowerCase(), colOnly.toLowerCase()]
+
+  const altId = colOnly.endsWith('_id') ? colOnly.slice(0, -3) : (colOnly + '_id')
+  const targetKeys = [
+    dbCol.toLowerCase(),
+    under.toLowerCase(),
+    colOnly.toLowerCase(),
+    altId.toLowerCase(),
+  ]
+
   for (const k of Object.keys(obj)) {
     const kLower = k.toLowerCase()
     if (targetKeys.includes(kLower)) {
@@ -158,10 +166,82 @@ function getFieldValue(obj: any, dbCol: string): any {
   return ''
 }
 
+function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
+  if (f?.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+    return f.config.options
+  }
+  if (!relationalOptions) return []
+  const colOnly = f?.dbColumn?.includes('.') ? f.dbColumn.split('.').pop()! : (f?.dbColumn || '')
+  const targetTable = f?.config?.relation?.targetTable || f?.config?.component?.rel_table || f?.config?.rel_table || ''
+  
+  const candidateKeys = [
+    f?.dbColumn,
+    colOnly,
+    f?.id,
+    relatedTable + '.' + f?.dbColumn,
+    relatedTable + '.' + colOnly,
+    targetTable,
+    targetTable.toLowerCase(),
+    targetTable.endsWith('s') ? targetTable.slice(0, -1) : (targetTable + 's'),
+  ].filter(Boolean)
+
+  for (const k of candidateKeys) {
+    if (relationalOptions[k] && Array.isArray(relationalOptions[k]) && relationalOptions[k].length > 0) {
+      return relationalOptions[k]
+    }
+  }
+
+  const lowerCandidateKeys = candidateKeys.map(k => k.toLowerCase())
+  for (const [k, v] of Object.entries(relationalOptions)) {
+    if (lowerCandidateKeys.includes(k.toLowerCase()) && Array.isArray(v) && v.length > 0) {
+      return v
+    }
+  }
+
+  return []
+}
+
+function resolveReverseDependencies(
+  row: Record<string, any>,
+  fields: DetailFieldConfig[],
+  relatedTable: string,
+  relationalOptions?: Record<string, any[]>
+): Record<string, any> {
+  if (!row || !fields || !Array.isArray(fields)) return row || {}
+  const enriched = { ...row }
+
+  for (const field of fields) {
+    const comp = field.config?.component || field.config?.form_config?.component || (field as any).widget_options?.component
+    if (comp?.depends_on && comp?.filter_column) {
+      const depName = comp.depends_on
+      const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
+      const fieldBase = field.dbColumn.includes('.') ? field.dbColumn.split('.').pop()! : field.dbColumn
+
+      const rowVal = getFieldValue(enriched, field.dbColumn) || getFieldValue(enriched, fieldBase)
+      if (rowVal !== undefined && rowVal !== null && rowVal !== '') {
+        const currentDep = getFieldValue(enriched, depName) || getFieldValue(enriched, depBase)
+        if (currentDep === undefined || currentDep === null || currentDep === '') {
+          const opts = getRelationalOptionsForField(field, relatedTable, relationalOptions)
+          const opt = opts.find((o: any) => String(o.value ?? o.id) === String(rowVal))
+          if (opt) {
+            const filterVal = opt.filter_value ?? opt[comp.filter_column]
+            if (filterVal !== undefined && filterVal !== null && filterVal !== '') {
+              enriched[depName] = filterVal
+              enriched[depBase] = filterVal
+            }
+          }
+        }
+      }
+    }
+  }
+  return enriched
+}
+
 function evaluateFormula(
   tokens: any[],
   currentRow: Record<string, any>,
-  currentTableName?: string
+  currentTableName?: string,
+  childRecords: any[] = []
 ): any {
   if (!tokens || !Array.isArray(tokens) || tokens.length === 0) return null
   let expression = ''
@@ -193,23 +273,32 @@ function evaluateFormula(
 
       const colOnly = fieldPath.includes('.') ? fieldPath.split('.').pop()! : fieldPath
 
-      let val: any = undefined
-      if (currentRow[fieldPath] !== undefined && currentRow[fieldPath] !== null) {
-        val = currentRow[fieldPath]
-      } else if (currentRow[colOnly] !== undefined && currentRow[colOnly] !== null) {
-        val = currentRow[colOnly]
+      if (fieldPath.includes('.') && childRecords && childRecords.length > 0) {
+        const [tableName, colName] = fieldPath.split('.')
+        context[varName] = childRecords.map((row: any) => {
+          const val = row[colName] ?? row[fieldPath] ?? 0
+          const numVal = parseAnyNumber(val)
+          return isNaN(numVal) ? 0 : numVal
+        })
       } else {
-        const targetKeys = [fieldPath.toLowerCase(), colOnly.toLowerCase()]
-        for (const k of Object.keys(currentRow)) {
-          if (targetKeys.includes(k.toLowerCase())) {
-            val = currentRow[k]
-            break
+        let val: any = undefined
+        if (currentRow[fieldPath] !== undefined && currentRow[fieldPath] !== null) {
+          val = currentRow[fieldPath]
+        } else if (currentRow[colOnly] !== undefined && currentRow[colOnly] !== null) {
+          val = currentRow[colOnly]
+        } else {
+          const targetKeys = [fieldPath.toLowerCase(), colOnly.toLowerCase()]
+          for (const k of Object.keys(currentRow)) {
+            if (targetKeys.includes(k.toLowerCase())) {
+              val = currentRow[k]
+              break
+            }
           }
         }
-      }
 
-      const numVal = parseAnyNumber(val)
-      context[varName] = (val === '' || val === null || val === undefined) ? 0 : (isNaN(numVal) ? val : numVal)
+        const numVal = parseAnyNumber(val)
+        context[varName] = (val === '' || val === null || val === undefined) ? 0 : (isNaN(numVal) ? val : numVal)
+      }
     }
   }
 
@@ -234,41 +323,14 @@ function computeFieldValue(
   if (!row) return { displayVal: '', rawVal: '', isComputed: false }
   const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens || []
   const hasFormula = Array.isArray(tokens) && tokens.length > 0
-  const isCalculatedTotal = f.dbColumn.includes('total') || Boolean(f.label && f.label.toLowerCase().includes('total'))
-  const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || isCalculatedTotal) ? '0.000,00' : '')
+  const mask = f.config?.content?.mask || f.config?.mask || (hasFormula ? '0.000,00' : '')
 
   let computedNum: number | null = null
 
   if (hasFormula) {
-    const res = evaluateFormula(tokens, row, relatedTable)
+    const res = evaluateFormula(tokens, row, relatedTable, childRecords)
     if (res !== null && !isNaN(Number(res))) {
       computedNum = Number(res)
-    }
-  }
-
-  if (computedNum === null && isCalculatedTotal) {
-    let rawQtd: any = undefined
-    let rawPreco: any = undefined
-    for (const k of Object.keys(row)) {
-      const kLower = k.toLowerCase()
-      if (rawQtd === undefined && (kLower.includes('quant') || kLower === 'qtd')) {
-        rawQtd = row[k]
-      }
-      if (rawPreco === undefined && (kLower.includes('preco') || kLower.includes('preço') || (kLower.includes('valor') && !kLower.includes('total')))) {
-        rawPreco = row[k]
-      }
-    }
-    if (rawQtd !== undefined && rawPreco !== undefined) {
-      const q = Number(rawQtd) || 0
-      const p = parseAnyNumber(rawPreco)
-      computedNum = q * p
-    } else if (childRecords && childRecords.length > 0) {
-      const sum = childRecords.reduce((acc: number, sub: any) => {
-        const q = Number(sub.quantidade || sub.qtd || 1)
-        const p = parseAnyNumber(sub.preco_unitario || sub.valor_unitario || sub.preco || 0)
-        return acc + (q * p)
-      }, 0)
-      computedNum = sum
     }
   }
 
@@ -284,7 +346,7 @@ function computeFieldValue(
     return { displayVal: formatted, rawVal: existingVal, isComputed: false }
   }
 
-  return { displayVal: '', rawVal: '', isComputed: hasFormula || isCalculatedTotal }
+  return { displayVal: '', rawVal: '', isComputed: hasFormula }
 }
 
 const SubItemAccordion = React.forwardRef(({
@@ -322,20 +384,6 @@ const SubItemAccordion = React.forwardRef(({
     return ''
   }
 
-  const rawQtd = getSubVal('quantidade') || getSubVal('qtd') || 1
-  const rawPreco = getSubVal('preco_unitario') || getSubVal('valor_unitario') || getSubVal('preco') || 0
-  const parsedPreco = parseAnyNumber(rawPreco)
-
-  const [qtd, setQtd] = useState<number>(Number(rawQtd) || 1)
-  const [preco, setPreco] = useState<number>(parsedPreco)
-
-  useEffect(() => {
-    setQtd(Number(rawQtd) || 1)
-    setPreco(parsedPreco)
-  }, [rawQtd, parsedPreco])
-
-  const total = qtd * preco
-
   let subTitle = ''
   for (const sf of subFields) {
     const val = getSubVal(sf.dbColumn)
@@ -348,7 +396,7 @@ const SubItemAccordion = React.forwardRef(({
     }
   }
   if (!subTitle) {
-    subTitle = String(subItem.produto_nome || subItem.produto || subItem.nome || subItem.descricao || subItem.name || \`Item #\${sIdx + 1}\`)
+    subTitle = String(subItem.display_label || subItem.nome || subItem.descricao || subItem.name || subItem.titulo || subItem.title || subItem.codigo || subItem.id || \`Item #\${sIdx + 1}\`)
   }
 
   return (
@@ -394,9 +442,6 @@ const SubItemAccordion = React.forwardRef(({
             const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
             const isSelect = sf.config?.options && sf.config.options.length > 0
-            const isQtdField = sf.dbColumn.includes('quant') || sf.label.toLowerCase().includes('quant')
-            const isPrecoField = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.label.toLowerCase().includes('preço') || sf.label.toLowerCase().includes('preco')
-            const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
 
             const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
             const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
@@ -418,13 +463,13 @@ const SubItemAccordion = React.forwardRef(({
               colSpanClass = 'col-span-12 md:col-span-9'
             } else if (widthVal.includes('66')) {
               colSpanClass = 'col-span-12 md:col-span-8'
-            } else if (widthVal === '50%' || widthVal === 'w-1/2' || sf.dbColumn.includes('produto')) {
+            } else if (widthVal === '50%' || widthVal === 'w-1/2') {
               colSpanClass = 'col-span-12 md:col-span-6'
             } else if (widthVal === '33%' || widthVal === '33.33%') {
               colSpanClass = 'col-span-12 md:col-span-4'
             } else if (widthVal === '25%' || widthVal === 'w-1/4') {
               colSpanClass = 'col-span-12 md:col-span-3'
-            } else if (widthVal.includes('16') || isQtdField || isPrecoField || isTotalField) {
+            } else if (widthVal.includes('16')) {
               colSpanClass = 'col-span-12 md:col-span-2'
             }
 
@@ -453,7 +498,7 @@ const SubItemAccordion = React.forwardRef(({
             }
 
             const comp = computeFieldValue(sf, subItem, [], '')
-            if (isTotalField || comp.isComputed) {
+            if (comp.isComputed) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                   <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
@@ -463,19 +508,17 @@ const SubItemAccordion = React.forwardRef(({
                     name={sf.dbColumn}
                     type="text"
                     readOnly
-                    value={comp.displayVal || (total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00'))}
+                    value={comp.displayVal || '0,00'}
                     className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 font-semibold rounded-xl px-4 py-2.5 text-sm outline-none cursor-not-allowed"
                   />
                 </div>
               )
             }
 
-            const mask = sf.config?.content?.mask || sf.config?.mask || (isPrecoField ? '0.000,00' : '')
+            const mask = sf.config?.content?.mask || sf.config?.mask || ''
             let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
             if (mask) {
               initialFormatted = applyFieldMask(val, mask)
-            } else if (isPrecoField && val !== undefined && val !== null && val !== '') {
-              initialFormatted = applyFieldMask(val, '0.000,00')
             }
 
             return (
@@ -487,22 +530,15 @@ const SubItemAccordion = React.forwardRef(({
                   key={sf.dbColumn}
                   name={sf.dbColumn}
                   data-mask={mask}
-                  type={isDate ? 'date' : (isNumber && !mask && !isPrecoField) ? 'number' : 'text'}
+                  type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
                   defaultValue={initialFormatted}
                   onChange={(e) => {
                     if (mask) {
                       e.target.value = formatMaskRealtime(e.target.value, mask)
                     }
                     let newVal: any = e.target.value
-                    if (isQtdField) {
-                      const q = Number(e.target.value) || 0
-                      setQtd(q)
-                      newVal = q
-                    }
-                    if (isPrecoField) {
-                      const p = parseAnyNumber(e.target.value)
-                      setPreco(p)
-                      newVal = p
+                    if (isNumber || mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
+                      newVal = parseAnyNumber(e.target.value)
                     }
                     onSubItemChange?.(sf.dbColumn, newVal)
                   }}
@@ -559,8 +595,6 @@ export function DetailRelationSection({
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [editingSubItem, setEditingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string; subFields: DetailFieldConfig[] } | null>(null)
   const [deletingSubItem, setDeletingSubItem] = useState<{ subItem: any; sIdx: number; parentId: string } | null>(null)
-  const [subModalQtd, setSubModalQtd] = useState<number>(1)
-  const [subModalPreco, setSubModalPreco] = useState<number>(0)
   const [isMaximized, setIsMaximized] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>({})
@@ -570,17 +604,6 @@ export function DetailRelationSection({
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    if (editingSubItem) {
-      const it = editingSubItem.subItem
-      const q = it.quantidade || it.qtd || 1
-      const p = it.preco_unitario || it.valor_unitario || it.preco || 0
-      const numP = typeof p === 'number' ? p : (Number(String(p).replace(/\\./g, '').replace(',', '.')) || 0)
-      setSubModalQtd(Number(q) || 1)
-      setSubModalPreco(numP)
-    }
-  }, [editingSubItem])
 
   useEffect(() => {
     if (toastMessage) {
@@ -599,7 +622,17 @@ export function DetailRelationSection({
       const parent = { ...next[parentIdx] }
       const children = [...getSubRecords(parent)]
       if (children[subIdx]) {
-        children[subIdx] = { ...children[subIdx], [field]: val }
+        const updatedSub = { ...children[subIdx], [field]: val }
+        subFields.forEach((sf: any) => {
+          const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          if (Array.isArray(tokens) && tokens.length > 0) {
+            const res = evaluateFormula(tokens, updatedSub)
+            if (res !== null && !isNaN(Number(res))) {
+              updatedSub[sf.dbColumn] = Number(res)
+            }
+          }
+        })
+        children[subIdx] = updatedSub
         parent.items = children
         if (subTable) { parent[subTable] = children }
         next[parentIdx] = parent
@@ -613,7 +646,17 @@ export function DetailRelationSection({
       if (!prev) return prev
       const children = [...getSubRecords(prev)]
       if (children[subIdx]) {
-        children[subIdx] = { ...children[subIdx], [field]: val }
+        const updatedSub = { ...children[subIdx], [field]: val }
+        subFields.forEach((sf: any) => {
+          const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          if (Array.isArray(tokens) && tokens.length > 0) {
+            const res = evaluateFormula(tokens, updatedSub)
+            if (res !== null && !isNaN(Number(res))) {
+              updatedSub[sf.dbColumn] = Number(res)
+            }
+          }
+        })
+        children[subIdx] = updatedSub
       }
       return {
         ...prev,
@@ -626,9 +669,66 @@ export function DetailRelationSection({
   const handleItemFieldChange = (itemIdx: number, fieldName: string, val: any) => {
     setLocalItems(prev => {
       const next = [...prev]
-      if (next[itemIdx]) {
-        next[itemIdx] = { ...next[itemIdx], [fieldName]: val }
+      if (!next[itemIdx]) return next
+      const item = { ...next[itemIdx], [fieldName]: val }
+
+      // 1. Auto-fill reverse dependencies (parent lookup from chosen child option)
+      const fieldConfig = fields.find(f => f.dbColumn === fieldName || (f.dbColumn.includes('.') && f.dbColumn.split('.').pop() === fieldName))
+      const comp = fieldConfig?.config?.component || fieldConfig?.config?.form_config?.component
+      if (comp?.depends_on && comp?.filter_column) {
+        const depName = comp.depends_on
+        const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
+        const opts = getRelationalOptionsForField(fieldConfig, relatedTable, relationalOptions)
+        const chosen = opts.find((o: any) => String(o.value ?? o.id) === String(val) || String(o.label) === String(val))
+        if (chosen) {
+          const filterVal = chosen.filter_value ?? chosen[comp.filter_column]
+          if (filterVal !== undefined && filterVal !== null && filterVal !== '') {
+            item[depName] = filterVal
+            item[depBase] = filterVal
+          }
+          for (const f of fields) {
+            if (f.dbColumn === fieldName || f.dbColumn === depName || f.dbColumn === depBase) continue
+            const fCol = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+            const recordVal = chosen[f.dbColumn] ?? chosen[fCol]
+            if (recordVal !== undefined && recordVal !== null) {
+              item[f.dbColumn] = recordVal
+            }
+          }
+        }
       }
+
+      // 2. Reset dependent children when parent changes
+      for (const otherField of fields) {
+        const otherComp = otherField.config?.component || otherField.config?.form_config?.component
+        if (otherComp?.depends_on && otherComp?.filter_column) {
+          const otherDepBase = otherComp.depends_on.includes('.') ? otherComp.depends_on.split('.').pop()! : otherComp.depends_on
+          const fieldBase = fieldName.includes('.') ? fieldName.split('.').pop()! : fieldName
+          if (otherComp.depends_on === fieldName || otherDepBase === fieldBase) {
+            const currentChildVal = getFieldValue(item, otherField.dbColumn)
+            if (currentChildVal) {
+              const childOpts = getRelationalOptionsForField(otherField, relatedTable, relationalOptions)
+              const chosenChild = childOpts.find((o: any) => String(o.value ?? o.id) === String(currentChildVal))
+              const childFilterVal = chosenChild ? (chosenChild.filter_value ?? chosenChild[otherComp.filter_column]) : ''
+              if (val && childFilterVal && String(childFilterVal) !== String(val)) {
+                item[otherField.dbColumn] = ''
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Evaluate formulas
+      for (const f of fields) {
+        const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        if (Array.isArray(tokens) && tokens.length > 0) {
+          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item))
+          if (res !== null && !isNaN(Number(res))) {
+            item[f.dbColumn] = Number(res)
+          }
+        }
+      }
+
+      next[itemIdx] = item
       return next
     })
   }
@@ -636,13 +736,78 @@ export function DetailRelationSection({
   const handleModalFieldChange = (fieldName: string, val: any) => {
     setEditingItem((prev: any) => {
       if (!prev) return prev
-      return { ...prev, [fieldName]: val }
+      const item = { ...prev, [fieldName]: val }
+
+      // 1. Auto-fill reverse dependencies
+      const fieldConfig = fields.find(f => f.dbColumn === fieldName || (f.dbColumn.includes('.') && f.dbColumn.split('.').pop() === fieldName))
+      const comp = fieldConfig?.config?.component || fieldConfig?.config?.form_config?.component
+      if (comp?.depends_on && comp?.filter_column) {
+        const depName = comp.depends_on
+        const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
+        const opts = getRelationalOptionsForField(fieldConfig, relatedTable, relationalOptions)
+        const chosen = opts.find((o: any) => String(o.value ?? o.id) === String(val) || String(o.label) === String(val))
+        if (chosen) {
+          const filterVal = chosen.filter_value ?? chosen[comp.filter_column]
+          if (filterVal !== undefined && filterVal !== null && filterVal !== '') {
+            item[depName] = filterVal
+            item[depBase] = filterVal
+          }
+          for (const f of fields) {
+            if (f.dbColumn === fieldName || f.dbColumn === depName || f.dbColumn === depBase) continue
+            const fCol = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+            const recordVal = chosen[f.dbColumn] ?? chosen[fCol]
+            if (recordVal !== undefined && recordVal !== null) {
+              item[f.dbColumn] = recordVal
+            }
+          }
+        }
+      }
+
+      // 2. Reset dependent children
+      for (const otherField of fields) {
+        const otherComp = otherField.config?.component || otherField.config?.form_config?.component
+        if (otherComp?.depends_on && otherComp?.filter_column) {
+          const otherDepBase = otherComp.depends_on.includes('.') ? otherComp.depends_on.split('.').pop()! : otherComp.depends_on
+          const fieldBase = fieldName.includes('.') ? fieldName.split('.').pop()! : fieldName
+          if (otherComp.depends_on === fieldName || otherDepBase === fieldBase) {
+            const currentChildVal = getFieldValue(item, otherField.dbColumn)
+            if (currentChildVal) {
+              const childOpts = getRelationalOptionsForField(otherField, relatedTable, relationalOptions)
+              const chosenChild = childOpts.find((o: any) => String(o.value ?? o.id) === String(currentChildVal))
+              const childFilterVal = chosenChild ? (chosenChild.filter_value ?? chosenChild[otherComp.filter_column]) : ''
+              if (val && childFilterVal && String(childFilterVal) !== String(val)) {
+                item[otherField.dbColumn] = ''
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Evaluate formulas
+      for (const f of fields) {
+        const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        if (Array.isArray(tokens) && tokens.length > 0) {
+          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item))
+          if (res !== null && !isNaN(Number(res))) {
+            item[f.dbColumn] = Number(res)
+          }
+        }
+      }
+
+      return item
     })
   }
 
   useEffect(() => {
-    setLocalItems(items)
-  }, [items])
+    if (!items || !Array.isArray(items)) {
+      setLocalItems([])
+      return
+    }
+    const enriched = items.map((it: any) => {
+      return resolveReverseDependencies({ ...it }, fields, relatedTable, relationalOptions)
+    })
+    setLocalItems(enriched)
+  }, [items, fields, relatedTable, relationalOptions])
 
   const allExpanded = localItems.length > 0 && localItems.every((_, idx) => expandedRows[idx])
 
@@ -679,7 +844,8 @@ export function DetailRelationSection({
   }
 
   const handleOpenEditModal = (item: any) => {
-    setEditingItem(item)
+    const copy = resolveReverseDependencies({ ...item }, fields, relatedTable, relationalOptions)
+    setEditingItem(copy)
     setModalActiveTab('master')
     setIsModalOpen(true)
   }
@@ -714,10 +880,13 @@ export function DetailRelationSection({
           parentInputs.forEach(inp => {
             if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
               const m = inp.getAttribute('data-mask')
-              if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+              const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+              if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
                 rowData[inp.name] = parseAnyNumber(inp.value)
               } else if (m === '0.000') {
                 rowData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+              } else if (isNum) {
+                rowData[inp.name] = parseAnyNumber(inp.value)
               } else {
                 rowData[inp.name] = inp.value
               }
@@ -729,8 +898,17 @@ export function DetailRelationSection({
           })
         }
 
+        const fullItem = resolveReverseDependencies({ ...item, ...rowData }, fields, relatedTable, relationalOptions)
         editableFields.forEach(f => {
-          const comp = computeFieldValue(f, item, getSubRecords(item), relatedTable)
+          if (rowData[f.dbColumn] === undefined || rowData[f.dbColumn] === '') {
+            if (fullItem[f.dbColumn] !== undefined && fullItem[f.dbColumn] !== '') {
+              rowData[f.dbColumn] = fullItem[f.dbColumn]
+            }
+          }
+        })
+
+        editableFields.forEach(f => {
+          const comp = computeFieldValue(f, fullItem, getSubRecords(item), relatedTable)
           if (comp.isComputed && comp.rawVal !== '') {
             rowData[f.dbColumn] = comp.rawVal
           }
@@ -764,10 +942,13 @@ export function DetailRelationSection({
               subInputs.forEach(inp => {
                 if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
                   const m = inp.getAttribute('data-mask')
-                  if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+                  const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+                  if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
                     subData[inp.name] = parseAnyNumber(inp.value)
                   } else if (m === '0.000') {
                     subData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
+                  } else if (isNum) {
+                    subData[inp.name] = parseAnyNumber(inp.value)
                   } else {
                     subData[inp.name] = inp.value
                   }
@@ -822,10 +1003,13 @@ export function DetailRelationSection({
         const inp = modalEl?.querySelector<HTMLInputElement | HTMLSelectElement>(\`[name="\${f.dbColumn}"]\`)
         if (inp) {
           const m = inp.getAttribute('data-mask')
-          if (m === '0.000,00' || m === 'currency' || m === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+          const isNum = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal' || inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+          if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
             masterData[f.dbColumn] = parseAnyNumber(inp.value)
-          } else if (m === '0.000') {
+          } else if (m === '0.000' || f.dataType === 'integer') {
             masterData[f.dbColumn] = parseInt(inp.value.replace(/\\D/g, ''), 10) || 0
+          } else if (isNum) {
+            masterData[f.dbColumn] = parseAnyNumber(inp.value)
           } else {
             masterData[f.dbColumn] = inp.value
           }
@@ -834,8 +1018,17 @@ export function DetailRelationSection({
         }
       })
 
+      const fullItem = resolveReverseDependencies({ ...(editingItem || {}), ...masterData }, fields, relatedTable, relationalOptions)
       editableFields.forEach(f => {
-        const comp = computeFieldValue(f, editingItem, getSubRecords(editingItem), relatedTable)
+        if (masterData[f.dbColumn] === undefined || masterData[f.dbColumn] === '') {
+          if (fullItem[f.dbColumn] !== undefined && fullItem[f.dbColumn] !== '') {
+            masterData[f.dbColumn] = fullItem[f.dbColumn]
+          }
+        }
+      })
+
+      editableFields.forEach(f => {
+        const comp = computeFieldValue(f, fullItem, getSubRecords(editingItem), relatedTable)
         if (comp.isComputed && comp.rawVal !== '') {
           masterData[f.dbColumn] = comp.rawVal
         }
@@ -870,10 +1063,13 @@ export function DetailRelationSection({
             subInputs.forEach(inp => {
               if (inp.name && !inp.name.startsWith('$') && !inp.name.startsWith('_')) {
                 const m = inp.getAttribute('data-mask')
-                if (m === '0.000,00' || m === 'currency' || m === 'moeda' || inp.name.includes('preco') || inp.name.includes('valor')) {
+                const isNum = inp.getAttribute('data-type') === 'number' || inp.type === 'number'
+                if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
                   subData[inp.name] = parseAnyNumber(inp.value)
                 } else if (m === '0.000') {
                   subData[inp.name] = parseInt(inp.value.replace(/\\D/g, ''), 10) || 0
+                } else if (isNum) {
+                  subData[inp.name] = parseAnyNumber(inp.value)
                 } else {
                   subData[inp.name] = inp.value
                 }
@@ -973,12 +1169,17 @@ export function DetailRelationSection({
       formData.forEach((v, k) => {
         const matchedField = editingSubItem.subFields.find((f: any) => f.dbColumn === k)
         const m = matchedField?.config?.content?.mask || matchedField?.config?.mask || ''
-        if (m === '0.000,00' || m === 'currency' || m === 'moeda' || k.includes('preco') || k.includes('valor')) {
+        const isNum = matchedField?.dataType === 'integer' || matchedField?.dataType === 'numeric' || matchedField?.dataType === 'float' || matchedField?.dataType === 'decimal'
+        if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
           const parsed = parseAnyNumber(v)
           updatedSub[k] = parsed
           formData.set(k, String(parsed))
-        } else if (m === '0.000') {
+        } else if (m === '0.000' || matchedField?.dataType === 'integer') {
           const parsed = parseInt(String(v).replace(/\\D/g, ''), 10) || 0
+          updatedSub[k] = parsed
+          formData.set(k, String(parsed))
+        } else if (isNum) {
+          const parsed = parseAnyNumber(v)
           updatedSub[k] = parsed
           formData.set(k, String(parsed))
         } else {
@@ -1238,8 +1439,6 @@ export function DetailRelationSection({
             if (!itemTitle) {
               itemTitle = String(
                 item.display_label ||
-                item.produto_nome ||
-                item.produto ||
                 item.descricao ||
                 item.description ||
                 item.nome ||
@@ -1311,16 +1510,36 @@ export function DetailRelationSection({
                   <div className="p-6 bg-slate-50/60 dark:bg-neutral-950/60 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 animate-in slide-in-from-top-2 duration-300 space-y-6 shadow-inner mt-1 mb-2">
                     <div className="relation-parent-fields grid grid-cols-12 gap-4">
                       {editableFields.map(f => {
-                        const val = getFieldValue(item, f.dbColumn)
+                        const resolvedItem = resolveReverseDependencies(item, fields, relatedTable, relationalOptions)
+                        let val = getFieldValue(item, f.dbColumn)
+                        if (val === undefined || val === null || val === '') {
+                          val = getFieldValue(resolvedItem, f.dbColumn)
+                        }
+
                         const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                         const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
-                        const allOptions = (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)
-                          ? f.config.options
-                          : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
-                        const hasOptions = allOptions.length > 0
+                        const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
+
+                        const compConfig = f.config?.component || f.config?.form_config?.component
+                        const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
+                        const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
+                        let displayedOptions = allOptions
+                        if (depName && filterCol) {
+                          const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
+                          const depVal = getFieldValue(item, depName) || getFieldValue(item, depBase) || getFieldValue(resolvedItem, depName) || getFieldValue(resolvedItem, depBase)
+                          if (depVal !== undefined && depVal !== null && depVal !== '') {
+                            displayedOptions = allOptions.filter((o: any) => {
+                              const fVal = o.filter_value ?? o[filterCol]
+                              return String(fVal) === String(depVal)
+                            })
+                          } else {
+                            displayedOptions = []
+                          }
+                        }
+                        const hasOptions = displayedOptions.length > 0
                         const computed = computeFieldValue(f, item, itemChildRecords, relatedTable)
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
-                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || computed.isComputed) ? '0.000,00' : ''))
+                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
                         const displayVal = computed.displayVal
 
                         const widthVal = f.config?.width || f.config?.component?.width || ''
@@ -1355,12 +1574,12 @@ export function DetailRelationSection({
                         }
 
                         if (hasOptions) {
-                          const selectedOpt = allOptions.find((o: any) => {
-                            const oV = typeof o === 'object' ? String(o.value) : String(o)
+                          const selectedOpt = displayedOptions.find((o: any) => {
+                            const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
                             const oL = typeof o === 'object' ? String(o.label) : String(o)
                             return oV === String(val) || oL === String(val)
                           })
-                          const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
+                          const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val || '')
 
                           return (
                             <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -1368,19 +1587,19 @@ export function DetailRelationSection({
                                 {f.label}
                               </label>
                               <select
-                                key={\`\${f.dbColumn}-\${defVal}\`}
+                                key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
                                 name={f.dbColumn}
-                                defaultValue={defVal}
+                                value={defVal}
                                 disabled={isReadOnly}
                                 onChange={(e) => handleItemFieldChange(idx, f.dbColumn, e.target.value)}
                                 className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-white dark:bg-neutral-900'} border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                               >
                                 <option value="">Selecione...</option>
-                                {val && !allOptions.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
+                                {val && !displayedOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
                                   <option value={String(val)}>{String(val)}</option>
                                 )}
-                                {allOptions.map((opt: any, oIdx: number) => {
-                                  const optVal = typeof opt === 'object' ? opt.value : opt
+                                {displayedOptions.map((opt: any, oIdx: number) => {
+                                  const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                                   const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                                   return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                                 })}
@@ -1398,6 +1617,7 @@ export function DetailRelationSection({
                               key={f.dbColumn}
                               name={f.dbColumn}
                               data-mask={mask || undefined}
+                              data-type={isNumber ? 'number' : undefined}
                               type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
@@ -1407,10 +1627,12 @@ export function DetailRelationSection({
                                   e.target.value = formatMaskRealtime(e.target.value, mask)
                                 }
                                 let v: any = e.target.value
-                                if (isNumber || mask === '0.000,00' || mask === 'currency' || mask === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+                                if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
                                   v = parseAnyNumber(e.target.value)
-                                } else if (f.dbColumn.includes('quant') || f.dbColumn === 'qtd') {
-                                  v = Number(e.target.value) || 0
+                                } else if (mask === '0.000' || f.dataType === 'integer') {
+                                  v = parseInt(e.target.value.replace(/\\D/g, ''), 10) || 0
+                                } else if (isNumber) {
+                                  v = parseAnyNumber(e.target.value)
                                 }
                                 handleItemFieldChange(idx, f.dbColumn, v)
                               }}
@@ -1599,25 +1821,45 @@ export function DetailRelationSection({
               </div>
             )}
 
-            <form id="modal-master-form" onSubmit={handleFormSubmit} className="space-y-4">
+<form id="modal-master-form" onSubmit={handleFormSubmit} className="space-y-4">
               <input type="hidden" name={foreignKey} value={parentId} />
 
               {/* Conteúdo da Aba Mestre na Modal */}
               <div className={(!hasSubDetails || modalActiveTab === 'master') ? 'block' : 'hidden'}>
                 <div className="grid grid-cols-12 gap-5 max-h-[55vh] overflow-y-auto px-1 py-1">
                   {editableFields.map(f => {
-                    const val = getFieldValue(editingItem, f.dbColumn)
+                    const resolvedItem = resolveReverseDependencies(editingItem || {}, fields, relatedTable, relationalOptions)
+                    let val = getFieldValue(editingItem, f.dbColumn)
+                    if (val === undefined || val === null || val === '') {
+                      val = getFieldValue(resolvedItem, f.dbColumn)
+                    }
+
                     const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                     const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
-                    const allOptions = (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)
-                      ? f.config.options
-                      : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
-                    const hasOptions = allOptions.length > 0
+                    const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
+
+                    const compConfig = f.config?.component || f.config?.form_config?.component
+                    const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
+                    const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
+                    let displayedOptions = allOptions
+                    if (depName && filterCol) {
+                      const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
+                      const depVal = getFieldValue(editingItem, depName) || getFieldValue(editingItem, depBase) || getFieldValue(resolvedItem, depName) || getFieldValue(resolvedItem, depBase)
+                      if (depVal !== undefined && depVal !== null && depVal !== '') {
+                        displayedOptions = allOptions.filter((o: any) => {
+                          const fVal = o.filter_value ?? o[filterCol]
+                          return String(fVal) === String(depVal)
+                        })
+                      } else {
+                        displayedOptions = []
+                      }
+                    }
+                    const hasOptions = displayedOptions.length > 0
                     const editChildRecords = editingItem ? getSubRecords(editingItem) : []
 
                     const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable)
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
-                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || computed.isComputed) ? '0.000,00' : ''))
+                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
                     const displayVal = computed.displayVal
 
                     const comp = f.config?.component || {}
@@ -1659,12 +1901,12 @@ export function DetailRelationSection({
                     }
 
                     if (hasOptions) {
-                      const selectedOpt = allOptions.find((o: any) => {
-                        const oV = typeof o === 'object' ? String(o.value) : String(o)
+                      const selectedOpt = displayedOptions.find((o: any) => {
+                        const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
                         const oL = typeof o === 'object' ? String(o.label) : String(o)
                         return oV === String(val) || oL === String(val)
                       })
-                      const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value) : String(selectedOpt)) : String(val || '')
+                      const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val || '')
 
                       return (
                         <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -1672,19 +1914,19 @@ export function DetailRelationSection({
                             {f.label}
                           </label>
                           <select
-                            key={\`\${f.dbColumn}-\${defVal}\`}
+                            key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
                             name={f.dbColumn}
-                            defaultValue={defVal}
+                            value={defVal}
                             disabled={isReadOnly}
                             onChange={(e) => handleModalFieldChange(f.dbColumn, e.target.value)}
                             className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                           >
                             <option value="">Selecione...</option>
-                            {val && !allOptions.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
+                            {val && !displayedOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
                               <option value={String(val)}>{String(val)}</option>
                             )}
-                            {allOptions.map((opt: any, oIdx: number) => {
-                              const optVal = typeof opt === 'object' ? opt.value : opt
+                            {displayedOptions.map((opt: any, oIdx: number) => {
+                              const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                               const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                               return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                             })}
@@ -1702,6 +1944,7 @@ export function DetailRelationSection({
                           key={f.dbColumn}
                           name={f.dbColumn}
                           data-mask={mask || undefined}
+                          data-type={isNumber ? 'number' : undefined}
                           type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
@@ -1711,10 +1954,12 @@ export function DetailRelationSection({
                               e.target.value = formatMaskRealtime(e.target.value, mask)
                             }
                             let v: any = e.target.value
-                            if (isNumber || mask === '0.000,00' || mask === 'currency' || mask === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+                            if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
                               v = parseAnyNumber(e.target.value)
-                            } else if (f.dbColumn.includes('quant') || f.dbColumn === 'qtd') {
-                              v = Number(e.target.value) || 0
+                            } else if (mask === '0.000' || f.dataType === 'integer') {
+                              v = parseInt(e.target.value.replace(/\\D/g, ''), 10) || 0
+                            } else if (isNumber) {
+                              v = parseAnyNumber(e.target.value)
                             }
                             handleModalFieldChange(f.dbColumn, v)
                           }}
@@ -1864,7 +2109,7 @@ export function DetailRelationSection({
               <div>
                 <p className="text-sm font-bold">Você tem certeza?</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir "\${String(deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.produto || 'este registro')}".
+                  Você está prestes a excluir "\${String(deletingItem.display_label || deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.descricao || 'este registro')}".
                 </p>
               </div>
             </div>
@@ -1926,9 +2171,9 @@ export function DetailRelationSection({
                   const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                   const isSelect = sf.config?.options && sf.config.options.length > 0
-                  const isQtd = sf.dbColumn.includes('quantidade') || sf.dbColumn.includes('qtd')
-                  const isPreco = sf.dbColumn.includes('preco') || sf.dbColumn.includes('valor') || sf.dbColumn.includes('price')
-                  const isTotalField = sf.dbColumn.includes('total') || sf.label.toLowerCase().includes('total')
+                  const computed = computeFieldValue(sf, editingSubItem.subItem, [], '')
+                  const isReadOnly = Boolean(sf.config?.readOnly || sf.config?.content?.readonly || sf.config?.readonly || computed.isComputed)
+                  const mask = isDate ? '' : (sf.config?.content?.mask || sf.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
 
                   const rawCols = sf.config?.modalGridSpan ?? sf.config?.gridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.gridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
                   const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
@@ -1950,13 +2195,13 @@ export function DetailRelationSection({
                     colSpanClass = 'col-span-12 md:col-span-9'
                   } else if (widthVal.includes('66')) {
                     colSpanClass = 'col-span-12 md:col-span-8'
-                  } else if (widthVal === '50%' || widthVal === 'w-1/2' || sf.dbColumn.includes('produto')) {
+                  } else if (widthVal === '50%' || widthVal === 'w-1/2') {
                     colSpanClass = 'col-span-12 md:col-span-6'
                   } else if (widthVal === '33%' || widthVal === '33.33%') {
                     colSpanClass = 'col-span-12 md:col-span-4'
                   } else if (widthVal === '25%' || widthVal === 'w-1/4') {
                     colSpanClass = 'col-span-12 md:col-span-3'
-                  } else if (widthVal.includes('16') || isQtd || isPreco || isTotalField) {
+                  } else if (widthVal.includes('16')) {
                     colSpanClass = 'col-span-12 md:col-span-2'
                   }
 
@@ -1969,6 +2214,25 @@ export function DetailRelationSection({
                         <select
                           name={sf.dbColumn}
                           defaultValue={String(val ?? '')}
+                          onChange={(e) => {
+                            const newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
+                            const selectedOpt = sf.config.options.find((o: any) => String(o.value ?? o.id) === String(e.target.value))
+                            if (selectedOpt?.label) {
+                              newSub[\`\${sf.dbColumn}_nome\`] = selectedOpt.label
+                              newSub[\`\${sf.dbColumn}_label\`] = selectedOpt.label
+                            }
+                            editingSubItem.subFields.forEach((otherSf: any) => {
+                              const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
+                              const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
+                              if (tokens && Array.isArray(tokens) && tokens.length > 0) {
+                                const evaluated = evaluateFormula(tokens, newSub, '')
+                                if (evaluated !== null && !isNaN(Number(evaluated))) {
+                                  newSub[otherSf.dbColumn] = Number(evaluated)
+                                }
+                              }
+                            })
+                            setEditingSubItem(prev => prev ? { ...prev, subItem: newSub } : null)
+                          }}
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                         >
                           <option value="">Selecione...</option>
@@ -1982,8 +2246,7 @@ export function DetailRelationSection({
                     )
                   }
 
-                  if (isTotalField) {
-                    const subModalTotal = subModalQtd * subModalPreco
+                  if (computed.isComputed) {
                     return (
                       <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                         <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
@@ -1993,19 +2256,16 @@ export function DetailRelationSection({
                           name={sf.dbColumn}
                           type="text"
                           readOnly
-                          value={subModalTotal > 0 ? subModalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00')}
+                          value={computed.displayVal || '0,00'}
                           className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 border border-slate-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none"
                         />
                       </div>
                     )
                   }
 
-                  const mask = sf.config?.content?.mask || sf.config?.mask || (isPreco ? '0.000,00' : '')
                   let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
                   if (mask) {
                     initialFormatted = applyFieldMask(val, mask)
-                  } else if (isPreco && val !== undefined && val !== null && val !== '') {
-                    initialFormatted = applyFieldMask(val, '0.000,00')
                   }
 
                   return (
@@ -2015,18 +2275,34 @@ export function DetailRelationSection({
                       </label>
                       <input
                         name={sf.dbColumn}
-                        data-mask={mask}
-                        type={isDate ? 'date' : (isNumber && !mask && !isPreco) ? 'number' : 'text'}
+                        data-mask={mask || undefined}
+                        data-type={isNumber ? 'number' : undefined}
+                        type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
                         defaultValue={initialFormatted}
                         onChange={(e) => {
                           if (mask) {
                             e.target.value = formatMaskRealtime(e.target.value, mask)
                           }
-                          if (isQtd) setSubModalQtd(Number(e.target.value) || 0)
-                          if (isPreco) {
-                            const cleanVal = parseAnyNumber(e.target.value)
-                            setSubModalPreco(cleanVal)
+                          let cleanVal: any = e.target.value
+                          if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
+                            cleanVal = parseAnyNumber(e.target.value)
+                          } else if (mask === '0.000' || dt.includes('int')) {
+                            cleanVal = parseInt(e.target.value.replace(/\\D/g, ''), 10) || 0
+                          } else if (isNumber) {
+                            cleanVal = parseAnyNumber(e.target.value)
                           }
+                          const newSub = { ...editingSubItem.subItem, [sf.dbColumn]: cleanVal }
+                          editingSubItem.subFields.forEach((otherSf: any) => {
+                            const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
+                            const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
+                            if (tokens && Array.isArray(tokens) && tokens.length > 0) {
+                              const evaluated = evaluateFormula(tokens, newSub, '')
+                              if (evaluated !== null && !isNaN(Number(evaluated))) {
+                                newSub[otherSf.dbColumn] = Number(evaluated)
+                              }
+                            }
+                          })
+                          setEditingSubItem(prev => prev ? { ...prev, subItem: newSub } : null)
                         }}
                         placeholder={sf.config?.placeholder || \`Digite o valor para \${sf.label}...\`}
                         className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -2087,7 +2363,7 @@ export function DetailRelationSection({
               <div>
                 <p className="text-sm font-bold">Você tem certeza?</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir "\${String(deletingSubItem.subItem.id || deletingSubItem.subItem.codigo || deletingSubItem.subItem.produto_nome || deletingSubItem.subItem.produto || 'este registro')}".
+                  Você está prestes a excluir "\${String(deletingSubItem.subItem.display_label || deletingSubItem.subItem.id || deletingSubItem.subItem.codigo || deletingSubItem.subItem.nome || deletingSubItem.subItem.descricao || 'este registro')}".
                 </p>
               </div>
             </div>
