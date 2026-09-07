@@ -103,8 +103,10 @@ export default function SourceCodeFeaturePage() {
           <div className="relative p-8 md:p-10 rounded-[3rem] bg-white dark:bg-neutral-900 border border-amber-500/30 shadow-xl flex flex-col justify-between group hover:border-amber-500 transition-all duration-300">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl shadow-sm">
-                  ⚡
+                <div className="h-14 px-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-2.5 shadow-sm">
+                  <img src="/React-Logo.svg" alt="React" className="h-7 w-auto object-contain" />
+                  <span className="text-neutral-300 dark:text-neutral-700 font-light">+</span>
+                  <img src="/Node.js-Logo.svg" alt="Node.js" className="h-6 w-auto object-contain" />
                 </div>
                 <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
                   Modo 1 • Startup-Ready
@@ -168,8 +170,10 @@ export default function SourceCodeFeaturePage() {
           <div className="relative p-8 md:p-10 rounded-[3rem] bg-white dark:bg-neutral-900 border border-emerald-500/30 shadow-xl flex flex-col justify-between group hover:border-emerald-500 transition-all duration-300">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl shadow-sm">
-                  ☕
+                <div className="h-14 px-3.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center gap-2.5 shadow-sm">
+                  <img src="/Spring-Logo.svg" alt="Spring Boot" className="h-6 w-auto object-contain" />
+                  <span className="text-neutral-300 dark:text-neutral-700 font-light">+</span>
+                  <img src="/Java-Logo.svg" alt="Java" className="h-8 w-auto object-contain" />
                 </div>
                 <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
                   Modo 2 • Enterprise-Grade
