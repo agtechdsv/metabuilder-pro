@@ -138,6 +138,7 @@ export function generateBlueprintPage(route: RouteNode): string {
   return `import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { BlueprintClient } from './BlueprintClient'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 import Link from 'next/link'
 import { Plus, Search, RefreshCcw } from 'lucide-react'
 
@@ -147,6 +148,7 @@ export default async function ${mn}BlueprintPage(props: {
   searchParams?: Promise<Record<string, string | undefined>>
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
+  const isEmbedded = searchParams?.embedded === 'true'
   const data = await get${mn}List().catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -174,16 +176,16 @@ ${buildOptionsCode.join('\n')}
           </div>
         </div>
 
-        {/* Botão Novo Registro */}
-        ${hasCreate ? `<div className="flex items-center gap-3">
-          <Link
-            href="${route.path}/new"
+        <div className="flex items-center gap-3">
+          ${hasCreate ? `<Link
+            href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Etapa</span>
-          </Link>
-        </div>` : ''}
+          </Link>` : ''}
+          {isEmbedded && <CloseModalButton />}
+        </div>
       </div>
 
       {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
@@ -220,6 +222,7 @@ ${filterInputs}
           initialData={data}
           relationalOptions={relationalOptions}
           initialParams={searchParams}
+          isEmbedded={isEmbedded}
         />
       </div>
     </div>
@@ -328,8 +331,11 @@ export function generateBlueprintClient(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey || 'id'
-  const isActionModal = route.actionInterfaceType === 'modal'
+  const isDrawer = route.actionInterfaceType === 'drawer'
+    || route.rawLayoutConfig?.action_interface_type === 'drawer'
+  const isModal = route.actionInterfaceType === 'modal'
     || route.rawLayoutConfig?.action_interface_type === 'modal'
+  const isActionOverlay = isDrawer || isModal
 
   const modalFormFieldsHtml = route.formFields
     .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
@@ -343,32 +349,32 @@ export function generateBlueprintClient(route: RouteNode): string {
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
 
-  const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
+  const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)` : ''
 
-  const handleAddBody = isActionModal
+  const handleAddBody = isActionOverlay
     ? `    setActiveRecord({})
     setModalMode('create')
     setIsModalOpen(true)`
-    : `    router.push('${route.path}/new')`
+    : `    router.push('${route.path}/new' + (isEmbedded ? '?embedded=true' : ''))`
 
-  const handleEditBody = isActionModal
+  const handleEditBody = isActionOverlay
     ? `    setActiveRecord(row)
     setModalMode('edit')
     setIsModalOpen(true)`
     : `    const recordId = String(row.${pk} || row.id)
-    router.push(\`${route.path}/\${recordId}\`)`
+    router.push(\`${route.path}/\${recordId}\` + (isEmbedded ? '?embedded=true' : ''))`
 
-  const handleViewBody = isActionModal
+  const handleViewBody = isActionOverlay
     ? `    setActiveRecord(row)
     setModalMode('view')
     setIsModalOpen(true)`
     : `    const recordId = String(row.${pk} || row.id)
-    router.push(\`${route.path}/\${recordId}\`)`
+    router.push(\`${route.path}/\${recordId}\` + (isEmbedded ? '?embedded=true' : ''))`
 
-  const modalSaveHandler = isActionModal ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
+  const modalSaveHandler = isActionOverlay ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (modalMode === 'view') return
     setIsSaving(true)
@@ -404,7 +410,92 @@ export function generateBlueprintClient(route: RouteNode): string {
   const isEdit = modalMode === 'edit' || modalMode === 'view'
   const isView = modalMode === 'view'` : ''
 
-  const modalJsx = isActionModal ? `
+  const modalJsx = isActionOverlay ? (
+    isDrawer ? `
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-2xl h-full bg-white dark:bg-neutral-900 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                    {modalMode === 'view'
+                      ? 'Visualizar Etapa'
+                      : modalMode === 'edit'
+                      ? 'Editar Etapa'
+                      : 'Nova Etapa no Fluxograma'}
+                  </h2>
+                  <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
+                    {modalMode !== 'create'
+                      ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
+                      : 'Preencha os dados da etapa'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+${modalFormFieldsHtml}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                {modalMode === 'view' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}` : `
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -482,7 +573,8 @@ ${modalFormFieldsHtml}
             </form>
           </div>
         </div>
-      )}` : ''
+      )}`
+  ) : ''
 
   return `'use client'
 
@@ -515,10 +607,12 @@ export function BlueprintClient({
   initialData,
   relationalOptions = {},
   initialParams = {},
+  isEmbedded = false,
 }: {
   initialData: any[]
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   initialParams?: Record<string, string | undefined>
+  isEmbedded?: boolean
 }) {
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
@@ -562,6 +656,17 @@ ${modalStateVars}
     })
   }, [dataList, initialParams])
 
+  const handleMove = async (recordId: string, payload: Record<string, any>) => {
+    setDataList(prev =>
+      prev.map(item =>
+        String(item.${pk} || item.id) === recordId
+          ? { ...item, ...payload }
+          : item
+      )
+    )
+    await update${mn}(recordId, payload)
+  }
+
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
     try {
@@ -602,6 +707,7 @@ ${modalSaveHandler}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onMove={handleMove}
       />
 ${modalJsx}
     </div>

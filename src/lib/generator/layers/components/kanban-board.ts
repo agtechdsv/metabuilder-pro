@@ -65,6 +65,8 @@ export interface KanbanBoardProps {
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   onMove: (recordId: string, newValue: any) => Promise<void> | void
   onDelete?: (recordId: string) => Promise<void> | void
+  onEdit?: (item: any) => void
+  isEmbedded?: boolean
 }
 
 function formatKanbanValue(v: any, f?: KanbanField): string {
@@ -115,6 +117,8 @@ export function KanbanBoard({
   relationalOptions = {},
   onMove,
   onDelete,
+  onEdit,
+  isEmbedded = false,
 }: KanbanBoardProps) {
   const [localData, setLocalData] = useState<any[]>(data)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -288,6 +292,8 @@ export function KanbanBoard({
                 groupColumn={groupColumn}
                 relationalOptions={relationalOptions}
                 onDelete={onDelete}
+                onEdit={onEdit}
+                isEmbedded={isEmbedded}
               />
             )
           })}
@@ -321,6 +327,8 @@ function BoardColumn({
   groupColumn,
   relationalOptions,
   onDelete,
+  onEdit,
+  isEmbedded = false,
 }: {
   id: string
   title: string
@@ -331,6 +339,8 @@ function BoardColumn({
   groupColumn: string
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   onDelete?: (id: string) => Promise<void> | void
+  onEdit?: (item: any) => void
+  isEmbedded?: boolean
 }) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id })
   const itemIds = useMemo(() => {
@@ -358,7 +368,7 @@ function BoardColumn({
         </div>
         {basePath ? (
           <Link
-            href={basePath + '/new?' + groupColumn + '=' + encodeURIComponent(id)}
+            href={basePath + '/new?' + groupColumn + '=' + encodeURIComponent(id) + (isEmbedded ? '&embedded=true' : '')}
             className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 transition-all active:scale-90"
             title="Novo registro nesta coluna"
           >
@@ -383,6 +393,8 @@ function BoardColumn({
                   basePath={basePath}
                   relationalOptions={relationalOptions}
                   onDelete={onDelete}
+                  onEdit={onEdit}
+                  isEmbedded={isEmbedded}
                 />
               )
             })}
@@ -410,6 +422,8 @@ function BoardCard({
   relationalOptions,
   isOverlay = false,
   onDelete,
+  onEdit,
+  isEmbedded = false,
 }: {
   id: string
   item: any
@@ -419,6 +433,8 @@ function BoardCard({
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   isOverlay?: boolean
   onDelete?: (id: string) => Promise<void> | void
+  onEdit?: (item: any) => void
+  isEmbedded?: boolean
 }) {
   const {
     attributes,
@@ -439,7 +455,7 @@ function BoardCard({
   const subField = fields[1]
   const otherFields = fields.slice(2, 5)
 
-  const detailUrl = basePath ? (basePath + '/' + id) : '#'
+  const detailUrl = basePath ? (basePath + '/' + id + (isEmbedded ? '?embedded=true' : '')) : '#'
   const recordTitle = mainField 
     ? resolveDisplayLabel(item[mainField.dbColumn], mainField, relationalOptions) 
     : (item.nome || item.name || item.titulo || item[primaryKey] || 'este registro')
@@ -477,7 +493,20 @@ function BoardCard({
 
           {/* Botões de Ação no Card ao passar o mouse */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
-            {basePath ? (
+            {onEdit ? (
+              <button
+                type="button"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => {
+                  e.stopPropagation()
+                  onEdit(item)
+                }}
+                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-neutral-400 hover:text-blue-500 transition-all cursor-pointer"
+                title="Editar"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            ) : basePath ? (
               <Link
                 href={detailUrl}
                 onPointerDown={e => e.stopPropagation()}
@@ -500,14 +529,29 @@ function BoardCard({
                 />
               </div>
             ) : null}
-            <Link
-              href={detailUrl}
-              onPointerDown={e => e.stopPropagation()}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all"
-              title="Detalhes"
-            >
-              <MoreVertical className="w-3.5 h-3.5" />
-            </Link>
+            {onEdit ? (
+              <button
+                type="button"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => {
+                  e.stopPropagation()
+                  onEdit(item)
+                }}
+                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all cursor-pointer"
+                title="Detalhes"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <Link
+                href={detailUrl}
+                onPointerDown={e => e.stopPropagation()}
+                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all"
+                title="Detalhes"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
         </div>
 

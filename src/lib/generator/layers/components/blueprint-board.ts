@@ -17,6 +17,7 @@ import {
   NodeProps,
   Edge,
   Node,
+  Connection,
   useReactFlow,
   ReactFlowProvider,
 } from '@xyflow/react'
@@ -85,6 +86,7 @@ export interface BlueprintBoardProps {
   onDelete?: (row: any) => Promise<void> | void
   customActions?: any[]
   onCustomAction?: (action: any, row: any) => void
+  onMove?: (recordId: string, payload: Record<string, any>) => Promise<void> | void
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,6 +253,7 @@ function BlueprintFlowContent({
   onDelete,
   customActions,
   onCustomAction,
+  onMove,
   searchTerm,
   selectedId,
   setSelectedId,
@@ -450,6 +453,53 @@ function BlueprintFlowContent({
     }
   }, [selectedId, nodes, setCenter, nodeWidth, nodeHeight])
 
+  // Proteção Anti-Ciclo: Impede que o Target já seja um ancestral do Source
+  const checkForCycle = useCallback((startNodeId: string, targetNodeId: string, visited = new Set<string>()): boolean => {
+    if (startNodeId === targetNodeId) return true
+    if (visited.has(startNodeId)) return false
+    visited.add(startNodeId)
+
+    const outEdges = edges.filter(e => e.source === startNodeId)
+    for (const e of outEdges) {
+      if (checkForCycle(e.target, targetNodeId, visited)) return true
+    }
+    return false
+  }, [edges])
+
+  const onConnect = useCallback((connection: Connection) => {
+    if (!connection.source || !connection.target || connection.source === connection.target) return
+    if (checkForCycle(connection.target, connection.source)) {
+      alert('Operação recusada: Isso criaria uma dependência circular.')
+      return
+    }
+
+    setEdges((eds) => {
+      const filtered = eds.filter(e => e.target !== connection.target)
+      return [
+        ...filtered,
+        {
+          id: 'edge-' + connection.source + '-' + connection.target + '-' + Date.now(),
+          source: connection.source,
+          target: connection.target,
+          animated: animatedEdges,
+          style: { stroke: '#6366f1', strokeWidth: 2 },
+        }
+      ]
+    })
+
+    const targetField = predCol.split('.').pop() || predCol
+    onMove?.(connection.target, { [targetField]: connection.source })
+  }, [edges, animatedEdges, predCol, onMove, setEdges, checkForCycle])
+
+  const onEdgesDelete = useCallback((deletedEdges: Edge[]) => {
+    deletedEdges.forEach(edge => {
+      if (edge.target) {
+        const targetField = predCol.split('.').pop() || predCol
+        onMove?.(edge.target, { [targetField]: null })
+      }
+    })
+  }, [predCol, onMove])
+
   return (
     <div className="flex-1 relative w-full h-full">
       {/* TOOLBAR FLUTUANTE DE CONTROLE DO FLUXOGRAMA */}
@@ -494,6 +544,8 @@ function BlueprintFlowContent({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onEdgesDelete={onEdgesDelete}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}

@@ -633,6 +633,14 @@ export function CustomActionButton({
             className="w-full max-w-2xl h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
             onClick={e => e.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="absolute top-5 right-5 z-50 p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer shadow-sm"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <iframe src={iframeUrl} className="w-full h-full border-none" />
           </div>
         </div>,
@@ -649,6 +657,14 @@ export function CustomActionButton({
             style={customStyle}
             onClick={e => e.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="absolute top-5 right-5 z-50 p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer shadow-sm"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <iframe src={iframeUrl} className="w-full h-full border-none rounded-[2.5rem]" />
           </div>
         </div>,

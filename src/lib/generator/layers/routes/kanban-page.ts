@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { toPascalCase } from './helpers'
+import { toPascalCase, renderFormField, getByocComponentName, FORM_INPUT_FORMAT_HELPERS } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Kanban Page (Server Component)
@@ -192,6 +192,7 @@ import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { Loader2, Plus, Search, RefreshCcw, Zap, Download } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 import { KanbanClient } from './KanbanClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
@@ -212,8 +213,10 @@ ${relationalFilterComponents.join('\n\n')}
 
 async function ${mn}KanbanContent({
   params,
+  isEmbedded = false,
 }: {
   params: { [key: string]: string | undefined }
+  isEmbedded?: boolean
 }) {
   const rawData = await get${mn}List()
 ${lookupQueries}
@@ -227,6 +230,7 @@ ${buildOptionsCode.join('\n')}
       initialData={rawData || []}
       relationalOptions={relationalOptions}
       initialParams={params}
+      isEmbedded={isEmbedded}
     />
   )
 }
@@ -237,6 +241,7 @@ export default async function ${mn}KanbanPage({
   searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
   const params = await searchParams
+  const isEmbedded = params?.embedded === 'true'
 
   return (
     <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -261,6 +266,7 @@ export default async function ${mn}KanbanPage({
 
         <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 
@@ -295,7 +301,7 @@ ${filterInputs}
         key={JSON.stringify(params)}
         fallback={<KanbanLoading />}
       >
-        <${mn}KanbanContent params={params} />
+        <${mn}KanbanContent params={params} isEmbedded={isEmbedded} />
       </Suspense>
     </div>
   )
@@ -357,16 +363,224 @@ export const cardFields = ${cardFieldsData}
 export function generateKanbanClient(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
+  const pk = route.primaryKey || 'id'
   const groupCol = route.kanbanGroupField || 'status'
   const groupDisplayField = route.kanbanGroupDisplayField
+  const isDrawer = route.actionInterfaceType === 'drawer'
+    || route.rawLayoutConfig?.action_interface_type === 'drawer'
+  const isModal = route.actionInterfaceType === 'modal'
+    || route.rawLayoutConfig?.action_interface_type === 'modal'
+  const isActionOverlay = isDrawer || isModal
+
+  const modalFormFieldsHtml = route.formFields
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
+    .filter(Boolean)
+    .join('\n')
+
+  const byocImports = route.formFields
+    .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
+    .map(f => getByocComponentName(f))
+    .filter((v, i, a) => v && a.indexOf(v) === i)
+    .map(name => `import { ${name} } from '@/components/${name}'`)
+    .join('\n')
+
+  const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
+  const [activeRecord, setActiveRecord] = useState<any>(null)
+  const [isSaving, setIsSaving] = useState(false)` : ''
+
+  const handleEditCode = isActionOverlay ? `  const handleEdit = (item: any) => {
+    setActiveRecord(item)
+    setModalMode('edit')
+    setIsModalOpen(true)
+  }` : ''
+
+  const modalSaveHandler = isActionOverlay ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (modalMode === 'view') return
+    setIsSaving(true)
+    try {
+      const formData = new FormData(e.currentTarget)
+      const payload: Record<string, any> = {}
+      formData.forEach((val, key) => {
+        payload[key] = val === '' ? null : val
+      })
+
+      if (modalMode === 'edit' && activeRecord) {
+        const recordId = String(activeRecord.${pk} || activeRecord.id)
+        await update${mn}(recordId, payload)
+        setDataList(prev => prev.map(item =>
+          String(item.${pk} || item.id) === recordId ? { ...item, ...payload } : item
+        ))
+      } else {
+        const res = await create${mn}(payload)
+        if (res) setDataList(prev => [res, ...prev])
+      }
+      setIsModalOpen(false)
+      setActiveRecord(null)
+    } catch (err: any) {
+      console.error('Erro ao salvar registro:', err)
+      alert('Erro ao salvar: ' + (err?.message || err))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const data = activeRecord
+  const isEdit = modalMode === 'edit' || modalMode === 'view'
+  const isView = modalMode === 'view'` : ''
+
+  const overlayJsx = isActionOverlay ? (
+    isDrawer ? `
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-2xl h-full bg-white dark:bg-neutral-900 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                    {modalMode === 'view'
+                      ? 'Visualizar ${route.title}'
+                      : modalMode === 'edit'
+                      ? 'Editar ${route.title}'
+                      : 'Novo Registro'}
+                  </h2>
+                  <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
+                    {modalMode !== 'create'
+                      ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
+                      : 'Preencha os dados do registro'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+${modalFormFieldsHtml}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                {modalMode !== 'view' && (
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}` : `
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                    {modalMode === 'view'
+                      ? 'Visualizar ${route.title}'
+                      : modalMode === 'edit'
+                      ? 'Editar ${route.title}'
+                      : 'Novo Registro'}
+                  </h2>
+                  <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
+                    {modalMode !== 'create'
+                      ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
+                      : 'Preencha os dados do registro'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+${modalFormFieldsHtml}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                {modalMode !== 'view' && (
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}`
+  ) : ''
 
   return `'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { update${mn}, delete${mn} } from '@/app/actions/${mnLower}'
+import { update${mn}, delete${mn}${isActionOverlay ? `, create${mn}` : ''} } from '@/app/actions/${mnLower}'
 import { fields, cardFields } from './schema'
-import { RefreshCcw } from 'lucide-react'
+import { RefreshCcw${isActionOverlay ? ', Eye, Pencil, Plus, X, Save' : ''} } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}
+${isActionOverlay ? FORM_INPUT_FORMAT_HELPERS : ''}
 
 // Carregamento dinâmico sem SSR para evitar conflito de IDs aria no dnd-kit
 const KanbanBoard = dynamic(
@@ -387,15 +601,19 @@ const KanbanBoard = dynamic(
 export function KanbanClient({
   initialData,
   relationalOptions = {},
-  initialParams = {}
+  initialParams = {},
+  isEmbedded = false,
 }: {
   initialData: any[]
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   initialParams?: Record<string, string | undefined>
+  isEmbedded?: boolean
 }) {
   const [dataList, setDataList] = useState<any[]>(initialData)
   const [visibleCount, setVisibleCount] = useState(50)
   const BATCH_SIZE = 50
+
+${modalStateVars}
 
   useEffect(() => {
     setDataList(initialData)
@@ -455,6 +673,9 @@ export function KanbanClient({
     await delete${mn}(recordId)
   }
 
+${handleEditCode}
+${modalSaveHandler}
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Componente KanbanBoard com Drag-and-Drop */}
@@ -469,7 +690,10 @@ export function KanbanClient({
         relationalOptions={relationalOptions}
         onMove={handleMove}
         onDelete={handleDelete}
+        ${isActionOverlay ? 'onEdit={handleEdit}' : ''}
+        isEmbedded={isEmbedded}
       />
+${overlayJsx}
 
       {/* Botão Flutuante de Carregar Mais Registros Fiel à Web Produção */}
       {displayedData.length < filteredData.length && (
