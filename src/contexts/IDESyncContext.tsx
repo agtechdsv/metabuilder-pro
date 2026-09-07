@@ -216,9 +216,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   // Cleanup npm process when IDE is fully closed
   useEffect(() => {
-    if (!isOpen && serverState.devProcess) {
-      serverState.devProcess.kill()
-      serverState.setDevProcess(null)
+    if (!isOpen) {
+      if (serverState.devProcess) {
+        serverState.devProcess.kill()
+        serverState.setDevProcess(null)
+      } else if (isTauri()) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('stopcli').catch(() => {})
+        })
+      }
     }
   }, [isOpen, serverState.devProcess])
 
@@ -232,6 +238,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       consoleState.clearConsole()
+      if (isTauri()) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('stopcli').catch(() => {})
+        })
+      }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
 

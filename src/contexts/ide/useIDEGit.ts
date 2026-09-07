@@ -152,6 +152,10 @@ export function useIDEGit({
     if (!syncManager) return
     setIsDiscarding(true)
     try {
+      if (typeof window !== 'undefined') {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('stopcli').catch(() => {})
+      }
       await syncManager.abortSync()
       setSandboxMode(false)
       const { branches, currentBranch } = await syncManager.getBranches()

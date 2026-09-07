@@ -123,16 +123,48 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
     Ok("Iniciado com sucesso".to_string())
 }
 
-#[command]
-fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
+fn kill_dev_process_tree(state: &CliState) {
+    let mut pid_guard = state.dev_pid.lock().unwrap();
+    if let Some(pid) = pid_guard.take() {
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            let _ = Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(CREATE_NO_WINDOW)
+                .output();
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            use std::process::Command;
+            let _ = Command::new("kill")
+                .args(["-9", &pid.to_string()])
+                .output();
+        }
+    }
+
     let mut child_guard = state.child.lock().unwrap();
     if let Some(child) = child_guard.take() {
         let _ = child.kill();
     }
 
-    let mut pid_guard = state.dev_pid.lock().unwrap();
-    *pid_guard = None;
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let _ = Command::new("cmd")
+            .args(["/c", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :3000 ^| findstr LISTENING') do taskkill /F /PID %a"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+}
 
+#[command]
+fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
+    kill_dev_process_tree(&state);
     Ok("Parado com sucesso".to_string())
 }
 
@@ -187,7 +219,16 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
         .args(vec!["/c", "npm install --prefer-offline --no-audit --no-fund --legacy-peer-deps"])
         .current_dir(&project_path);
 
-    let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+    let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+
+    {
+        let mut pid_guard = state.dev_pid.lock().unwrap();
+        *pid_guard = Some(child.pid());
+    }
+    {
+        let mut child_guard = state.child.lock().unwrap();
+        *child_guard = Some(child);
+    }
 
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -201,6 +242,11 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
                     let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    let state = app_handle.state::<CliState>();
+                    let mut child_guard = state.child.lock().unwrap();
+                    *child_guard = None;
+                    let mut pid_guard = state.dev_pid.lock().unwrap();
+                    *pid_guard = None;
                     let code = payload.code.unwrap_or(-1);
                     if code == 0 {
                         let _ = app_handle.emit("nextjs-dev-log", "[Build] npm install concluído com sucesso!".to_string());
@@ -725,10 +771,7 @@ pub fn run() {
     app.run(|app_handle, event| {
         if let tauri::RunEvent::ExitRequested { .. } = event {
             let state = app_handle.state::<CliState>();
-            let mut guard = state.child.lock().unwrap();
-            if let Some(child) = guard.take() {
-                let _ = child.kill();
-            }
+            kill_dev_process_tree(&state);
         }
     });
 }
