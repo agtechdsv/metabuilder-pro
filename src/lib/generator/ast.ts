@@ -139,6 +139,7 @@ export interface SubRelationDetail {
   relatedModelName: string     // ex: 'ItensPedido'
   foreignKey: string           // ex: 'pedido_id'
   label: string                // ex: 'Itens de Pedido'
+  itemTitleField?: string      // campo configurado no Studio como título do item (details_item_titles)
   gridFields: ResolvedField[]
   formFields?: ResolvedField[]
 }
@@ -151,6 +152,7 @@ export interface RelationTab {
   sourceKey: string            // coluna PK na tabela mãe (geralmente 'id')
   displayMode: 'tab' | 'inline'
   label: string                // label da aba (nome do modelo relacionado)
+  itemTitleField?: string      // campo configurado no Studio como título do item (details_item_titles)
   gridFields: ResolvedField[]  // campos da tabela filha visíveis na aba
   formFields?: ResolvedField[] // campos do formulário da tabela filha
   subDetails?: SubRelationDetail[] // sub-detalhes (ex: itens_pedido para pedidos)

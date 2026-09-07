@@ -35,6 +35,7 @@ export interface SubRelationConfig {
   relatedModelName: string
   foreignKey: string
   label: string
+  itemTitleField?: string
   fields: DetailFieldConfig[]
 }
 
@@ -46,6 +47,7 @@ export interface DetailRelationSectionProps {
   items: any[]
   fields: DetailFieldConfig[]
   subDetails?: SubRelationConfig[]
+  itemTitleField?: string
   backPath?: string
   hideFooter?: boolean
   createAction: (formData: FormData | Record<string, any>) => Promise<any>
@@ -355,6 +357,8 @@ const SubItemAccordion = React.forwardRef(({
   subKey,
   isSubExpanded,
   subFields,
+  itemTitleField,
+  relationalOptions,
   toggleSubItem,
   formatDateForInput,
   onSubItemChange,
@@ -366,6 +370,8 @@ const SubItemAccordion = React.forwardRef(({
   subKey: string
   isSubExpanded: boolean
   subFields: DetailFieldConfig[]
+  itemTitleField?: string
+  relationalOptions?: Record<string, any[]>
   toggleSubItem: (k: string) => void
   formatDateForInput: (v: any) => string
   onSubItemChange?: (field: string, val: any) => void
@@ -385,16 +391,72 @@ const SubItemAccordion = React.forwardRef(({
   }
 
   let subTitle = ''
-  for (const sf of subFields) {
-    const val = getSubVal(sf.dbColumn)
-    if (sf.config?.options && sf.config.options.length > 0) {
-      const opt = sf.config.options.find((o: any) => String(o.value) === String(val))
-      if (opt?.label) {
-        subTitle = opt.label
-        break
+  if (itemTitleField) {
+    const targetField = subFields.find(f =>
+      f.dbColumn === itemTitleField ||
+      f.dbColumn?.toLowerCase() === itemTitleField.toLowerCase() ||
+      f.id === itemTitleField ||
+      f.label?.toLowerCase() === itemTitleField.toLowerCase()
+    )
+    if (targetField) {
+      const val = getSubVal(targetField.dbColumn)
+      if (val !== undefined && val !== null && val !== '') {
+        const opts = getRelationalOptionsForField(targetField, '', relationalOptions)
+        let opt = opts?.find((o: any) => String(o.value ?? o.id ?? o) === String(val))
+        if (!opt && relationalOptions) {
+          for (const key of Object.keys(relationalOptions)) {
+            opt = relationalOptions[key]?.find((o: any) => String(o.value ?? o.id ?? o) === String(val))
+            if (opt) break
+          }
+        }
+        if (opt) {
+          subTitle = String(typeof opt === 'object' ? (opt.label || opt.value) : opt)
+        } else {
+          subTitle = String(val)
+        }
+      }
+    }
+    if (!subTitle) {
+      const directVal = getSubVal(itemTitleField)
+      if (directVal !== undefined && directVal !== null && directVal !== '') {
+        let opt = null
+        if (relationalOptions) {
+          for (const key of Object.keys(relationalOptions)) {
+            opt = relationalOptions[key]?.find((o: any) => String(o.value ?? o.id ?? o) === String(directVal))
+            if (opt) break
+          }
+        }
+        subTitle = opt ? String(typeof opt === 'object' ? (opt.label || opt.value) : opt) : String(directVal)
       }
     }
   }
+
+  if (!subTitle) {
+    const sortedSubFields = [...subFields].sort((a, b) => {
+      const aComp = a.config?.component || a.config || {}
+      const bComp = b.config?.component || b.config || {}
+      const aIsDep = Boolean(aComp.depends_on || aComp.filter_column)
+      const bIsDep = Boolean(bComp.depends_on || bComp.filter_column)
+      if (aIsDep && !bIsDep) return -1
+      if (!aIsDep && bIsDep) return 1
+      return 0
+    })
+
+    for (const sf of sortedSubFields) {
+      const val = getSubVal(sf.dbColumn)
+      if (val !== undefined && val !== null && val !== '') {
+        const opts = getRelationalOptionsForField(sf, '', relationalOptions)
+        if (opts && Array.isArray(opts) && opts.length > 0) {
+          const opt = opts.find((o: any) => String(o.value ?? o.id ?? o) === String(val))
+          if (opt) {
+            subTitle = String(typeof opt === 'object' ? (opt.label || opt.value) : opt)
+            break
+          }
+        }
+      }
+    }
+  }
+
   if (!subTitle) {
     subTitle = String(subItem.display_label || subItem.nome || subItem.descricao || subItem.name || subItem.titulo || subItem.title || subItem.codigo || subItem.id || \`Item #\${sIdx + 1}\`)
   }
@@ -562,6 +624,7 @@ export function DetailRelationSection({
   items = [],
   fields = [],
   subDetails = [],
+  itemTitleField,
   backPath,
   hideFooter = false,
   createAction,
@@ -1421,13 +1484,62 @@ export function DetailRelationSection({
             const isNew = item._isNew || String(item.id || '').startsWith('temp-')
             const itemId = String(item.id || item.codigo || \`idx-\${idx}\`)
             let itemTitle = isNew ? 'Novo Registro' : ''
+            if (!itemTitle && itemTitleField) {
+              const targetField = fields.find(f =>
+                f.dbColumn === itemTitleField ||
+                f.dbColumn?.toLowerCase() === itemTitleField.toLowerCase() ||
+                f.id === itemTitleField ||
+                f.label?.toLowerCase() === itemTitleField.toLowerCase()
+              )
+              if (targetField) {
+                const val = getFieldValue(item, targetField.dbColumn)
+                if (val !== undefined && val !== null && val !== '') {
+                  const opts = getRelationalOptionsForField(targetField, relatedTable, relationalOptions)
+                  let opt = opts && Array.isArray(opts) ? opts.find((o: any) => String(o.value ?? o.id ?? o) === String(val)) : null
+                  if (!opt && relationalOptions) {
+                    for (const key of Object.keys(relationalOptions)) {
+                      opt = relationalOptions[key]?.find((o: any) => String(o.value ?? o.id ?? o) === String(val))
+                      if (opt) break
+                    }
+                  }
+                  if (opt) {
+                    itemTitle = String(typeof opt === 'object' ? (opt.label || opt.value) : opt)
+                  } else {
+                    itemTitle = String(val)
+                  }
+                }
+              }
+              if (!itemTitle) {
+                const directVal = getFieldValue(item, itemTitleField)
+                if (directVal !== undefined && directVal !== null && directVal !== '') {
+                  let opt = null
+                  if (relationalOptions) {
+                    for (const key of Object.keys(relationalOptions)) {
+                      opt = relationalOptions[key]?.find((o: any) => String(o.value ?? o.id ?? o) === String(directVal))
+                      if (opt) break
+                    }
+                  }
+                  itemTitle = opt ? String(typeof opt === 'object' ? (opt.label || opt.value) : opt) : String(directVal)
+                }
+              }
+            }
             if (!itemTitle) {
-              for (const f of fields) {
+              const sortedFields = [...fields].sort((a, b) => {
+                const aComp = a.config?.component || a.config || {}
+                const bComp = b.config?.component || b.config || {}
+                const aIsDep = Boolean(aComp.depends_on || aComp.filter_column)
+                const bIsDep = Boolean(bComp.depends_on || bComp.filter_column)
+                if (aIsDep && !bIsDep) return -1
+                if (!aIsDep && bIsDep) return 1
+                return 0
+              })
+
+              for (const f of sortedFields) {
                 const val = getFieldValue(item, f.dbColumn)
                 if (val !== undefined && val !== null && val !== '') {
-                  const opts = f.config?.options || relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn]
+                  const opts = getRelationalOptionsForField(f, relatedTable, relationalOptions)
                   if (opts && Array.isArray(opts) && opts.length > 0) {
-                    const opt = opts.find((o: any) => String(typeof o === 'object' ? o.value : o) === String(val))
+                    const opt = opts.find((o: any) => String(o.value ?? o.id ?? o) === String(val))
                     if (opt) {
                       itemTitle = String(typeof opt === 'object' ? (opt.label || opt.value) : opt)
                       break
@@ -1724,6 +1836,8 @@ export function DetailRelationSection({
                                   subKey={subKey}
                                   isSubExpanded={isSubExpanded}
                                   subFields={subFields}
+                                  itemTitleField={subConfig?.itemTitleField}
+                                  relationalOptions={relationalOptions}
                                   toggleSubItem={toggleSubItem}
                                   formatDateForInput={formatDateForInput}
                                   onSubItemChange={(field, val) => handleSubItemFieldChange(idx, sIdx, field, val)}
@@ -2044,6 +2158,8 @@ export function DetailRelationSection({
                             subKey={subKey}
                             isSubExpanded={isSubExpanded}
                             subFields={subFields}
+                            itemTitleField={subConfig?.itemTitleField}
+                            relationalOptions={relationalOptions}
                             toggleSubItem={toggleSubItem}
                             formatDateForInput={formatDateForInput}
                             onSubItemChange={(field, val) => handleModalSubItemFieldChange(sIdx, field, val)}

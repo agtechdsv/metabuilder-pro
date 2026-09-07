@@ -45,6 +45,7 @@ export const RELATION_TABS = [] as const
           relatedModelName: sub.relatedModelName,
           foreignKey: sub.foreignKey,
           label: sub.label,
+          itemTitleField: sub.itemTitleField,
           fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
             id: f.id,
             label: f.label,
@@ -219,6 +220,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `              relatedTable="${tab.relatedTable}"`,
           `              foreignKey="${tab.foreignKey}"`,
           `              parentId={id}`,
+          `              itemTitleField="${tab.itemTitleField || ''}"`,
           `              items={${tab.relatedTable}Items || []}`,
           `              fields={(${fieldsConstName} as any[]).map((f: any) => {`,
           `                const targetTable = f.config?.relation?.targetTable`,

@@ -293,6 +293,7 @@ export function generateTimelineSchema(route: RouteNode): string {
             relatedModelName: sub.relatedModelName,
             foreignKey: sub.foreignKey,
             label: sub.label,
+            itemTitleField: sub.itemTitleField,
             fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
               id: f.id,
               label: f.label,
@@ -378,6 +379,7 @@ export function generateTimelineClient(route: RouteNode): string {
                 relatedTable="${tab.relatedTable}"
                 foreignKey="${tab.foreignKey}"
                 parentId={String(activeRecord?.${route.primaryKey} || activeRecord?.id || '')}
+                itemTitleField="${tab.itemTitleField || ''}"
                 items={modalRelationItems['${tab.relatedTable}'] || []}
                 fields={${fieldsConstName} as any}
                 subDetails={${subDetailsConstName} as any}

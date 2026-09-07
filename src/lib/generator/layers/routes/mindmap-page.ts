@@ -223,6 +223,7 @@ export function generateMindMapSchema(route: RouteNode): string {
             relatedModelName: sub.relatedModelName,
             foreignKey: sub.foreignKey,
             label: sub.label,
+            itemTitleField: sub.itemTitleField,
             fields: (sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields).map(f => ({
               id: f.id,
               label: f.label,
@@ -379,6 +380,7 @@ export function generateMindMapClient(route: RouteNode): string {
                 label="${tab.label}"
                 relatedTable="${tab.relatedTable}"
                 foreignKey="${tab.foreignKey}"
+                itemTitleField="${tab.itemTitleField || ''}"
                 parentId={String(activeRecord?.${pk} || activeRecord?.id || '')}
                 items={modalRelationItems['${tab.relatedTable}'] || []}
                 fields={(${fieldsConstName} as any[]).map((f: any) => {

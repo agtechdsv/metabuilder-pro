@@ -839,6 +839,74 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
 }
 
 
+function extractItemTitleField(
+  rawItemTitle: any,
+  localModelId: string,
+  allFields: any[],
+  rawRelations: any[]
+): string {
+  if (!rawItemTitle) return ''
+  let parsed: any = null
+  if (typeof rawItemTitle === 'string' && rawItemTitle.startsWith('{')) {
+    try { parsed = JSON.parse(rawItemTitle) } catch (e) {}
+  } else if (typeof rawItemTitle === 'object' && rawItemTitle !== null) {
+    parsed = rawItemTitle
+  }
+
+  if (parsed) {
+    // 1. Se a configuração tiver relation_path, o campo FK local na tabela filha é foreign_column_id
+    if (parsed.relation_path && parsed.relation_path.length > 0) {
+      const localFkFieldId = parsed.relation_path[0]?.foreign_column_id
+      if (localFkFieldId) {
+        const matchedLocalFk = allFields.find((f: any) => f.id === localFkFieldId)
+        if (matchedLocalFk) {
+          return matchedLocalFk.db_column_name
+        }
+      }
+    }
+
+    // 2. Se o target_field_id pertencer a outro modelo, busca a FK local neste modelo que aponta para ele
+    if (parsed.target_field_id) {
+      const targetField = allFields.find((f: any) => f.id === parsed.target_field_id)
+      if (targetField) {
+        if (targetField.model_id === localModelId) {
+          return targetField.db_column_name
+        }
+        const fkRel = rawRelations.find((r: any) =>
+          r.from_model_id === localModelId && r.to_model_id === targetField.model_id
+        )
+        if (fkRel) {
+          const fkField = allFields.find((f: any) => f.id === fkRel.from_field_id)
+          if (fkField) return fkField.db_column_name
+        }
+      }
+    }
+
+    if (parsed.display_label) {
+      return parsed.display_label.split('.').pop()!
+    }
+  }
+
+  // 3. Fallback: string direta (id, UUID, ou nome de coluna)
+  const matchedField = allFields.find((f: any) => f.id === rawItemTitle)
+  if (matchedField) {
+    if (matchedField.model_id === localModelId) return matchedField.db_column_name
+    const fkRel = rawRelations.find((r: any) =>
+      r.from_model_id === localModelId && r.to_model_id === matchedField.model_id
+    )
+    if (fkRel) {
+      const fkField = allFields.find((f: any) => f.id === fkRel.from_field_id)
+      if (fkField) return fkField.db_column_name
+    }
+    return matchedField.db_column_name
+  }
+
+  if (typeof rawItemTitle === 'string') {
+    return rawItemTitle.split('.').pop()!
+  }
+  return ''
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Relation Tabs — resolve abas de detalhe (relações 1:N)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1078,6 +1146,10 @@ function resolveRelationTabs(
 
     const tabLabel = layoutConfig.details_tab_titles?.[childModel.id] || childModel.display_name || childModelName
 
+    // Identifica o campo configurado no Studio como título do item (details_item_titles)
+    const rawItemTitle = layoutConfig.details_item_titles?.[childModel.id] || layoutConfig.details_item_titles?.[childModel.db_table_name] || ''
+    const itemTitleField = extractItemTitleField(rawItemTitle, childModel.id, allFields, rawRelations)
+
     // Identifica sub-detalhes (relações 1:N filhas deste modelo)
     // Apenas considera se houver campos do sub-modelo explicitamente configurados na tela pelo Studio
     const subRelations = rawRelations.filter((r: any) => {
@@ -1218,12 +1290,16 @@ function resolveRelationTabs(
       subGridFields = uniqueByDbCol(enrichSubFields(subGridFields))
       subFormFields = uniqueByDbCol(enrichSubFields(subFormFields))
 
+      const rawSubItemTitle = layoutConfig.details_item_titles?.[subModel.id] || layoutConfig.details_item_titles?.[subModel.db_table_name] || ''
+      const subItemTitleField = extractItemTitleField(rawSubItemTitle, subModel.id, allFields, rawRelations)
+
       return {
         relatedModelId: subModel.id,
         relatedTable: subModel.db_table_name,
         relatedModelName: subModelName,
         foreignKey: subFkCol,
         label: subModel.display_name || subModelName,
+        itemTitleField: subItemTitleField,
         gridFields: subGridFields,
         formFields: subFormFields,
       }
@@ -1237,6 +1313,7 @@ function resolveRelationTabs(
       sourceKey: 'id',
       displayMode: rel.display_mode || 'tab',
       label: tabLabel,
+      itemTitleField,
       gridFields: childGridFields,
       formFields: childFormFields,
       subDetails,
