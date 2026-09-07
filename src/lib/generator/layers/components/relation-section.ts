@@ -141,6 +141,152 @@ function applyFieldMask(val: any, mask?: string): string {
   return formatMaskRealtime(String(val), mask)
 }
 
+function getFieldValue(obj: any, dbCol: string): any {
+  if (!obj) return ''
+  if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
+  const under = dbCol.replace(/\\./g, '_')
+  if (obj[under] !== undefined && obj[under] !== null) return obj[under]
+  const colOnly = dbCol.includes('.') ? dbCol.split('.').pop()! : dbCol
+  if (obj[colOnly] !== undefined && obj[colOnly] !== null) return obj[colOnly]
+  const targetKeys = [dbCol.toLowerCase(), under.toLowerCase(), colOnly.toLowerCase()]
+  for (const k of Object.keys(obj)) {
+    const kLower = k.toLowerCase()
+    if (targetKeys.includes(kLower)) {
+      return obj[k]
+    }
+  }
+  return ''
+}
+
+function evaluateFormula(
+  tokens: any[],
+  currentRow: Record<string, any>,
+  currentTableName?: string
+): any {
+  if (!tokens || !Array.isArray(tokens) || tokens.length === 0) return null
+  let expression = ''
+  const context: Record<string, any> = {}
+  let contextIdx = 0
+
+  context['SOMA'] = (arr: any[]) => Array.isArray(arr) ? arr.reduce((a, b) => Number(a || 0) + Number(b || 0), 0) : 0
+  context['MEDIA'] = (arr: any[]) => Array.isArray(arr) && arr.length ? context['SOMA'](arr) / arr.length : 0
+  context['COUNT'] = (arr: any[]) => Array.isArray(arr) ? arr.length : 0
+  context['MAXIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.max(...arr.map(v => Number(v) || 0)) : 0
+  context['MINIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.min(...arr.map(v => Number(v) || 0)) : 0
+  context['ARREDONDAR'] = (val: any) => Math.round(Number(val) || 0)
+  context['ABS'] = (val: any) => Math.abs(Number(val) || 0)
+  context['SE'] = (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (!token) continue
+    if (token.type === 'operator' || token.type === 'number') {
+      expression += ' ' + token.value + ' '
+    } else if (token.type === 'string') {
+      expression += ' "' + String(token.value).replace(/"/g, '\\\\"') + '" '
+    } else if (token.type === 'function') {
+      expression += ' ' + token.value
+    } else if (token.type === 'field') {
+      const fieldPath = String(token.value || '')
+      const varName = 'var_' + (contextIdx++)
+      expression += ' ' + varName + ' '
+
+      const colOnly = fieldPath.includes('.') ? fieldPath.split('.').pop()! : fieldPath
+
+      let val: any = undefined
+      if (currentRow[fieldPath] !== undefined && currentRow[fieldPath] !== null) {
+        val = currentRow[fieldPath]
+      } else if (currentRow[colOnly] !== undefined && currentRow[colOnly] !== null) {
+        val = currentRow[colOnly]
+      } else {
+        const targetKeys = [fieldPath.toLowerCase(), colOnly.toLowerCase()]
+        for (const k of Object.keys(currentRow)) {
+          if (targetKeys.includes(k.toLowerCase())) {
+            val = currentRow[k]
+            break
+          }
+        }
+      }
+
+      const numVal = parseAnyNumber(val)
+      context[varName] = (val === '' || val === null || val === undefined) ? 0 : (isNaN(numVal) ? val : numVal)
+    }
+  }
+
+  expression = expression.replace(/ , /g, ',')
+  expression = expression.replace(/([^<>=!])=([^=])/g, '$1===$2')
+
+  try {
+    const fn = new Function(...Object.keys(context), 'return ' + expression)
+    const res = fn(...Object.values(context))
+    return (res === undefined || isNaN(res)) ? null : res
+  } catch (err) {
+    return null
+  }
+}
+
+function computeFieldValue(
+  f: DetailFieldConfig,
+  row: Record<string, any>,
+  childRecords: any[] = [],
+  relatedTable?: string
+): { displayVal: string; rawVal: any; isComputed: boolean } {
+  if (!row) return { displayVal: '', rawVal: '', isComputed: false }
+  const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens || []
+  const hasFormula = Array.isArray(tokens) && tokens.length > 0
+  const isCalculatedTotal = f.dbColumn.includes('total') || Boolean(f.label && f.label.toLowerCase().includes('total'))
+  const mask = f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || isCalculatedTotal) ? '0.000,00' : '')
+
+  let computedNum: number | null = null
+
+  if (hasFormula) {
+    const res = evaluateFormula(tokens, row, relatedTable)
+    if (res !== null && !isNaN(Number(res))) {
+      computedNum = Number(res)
+    }
+  }
+
+  if (computedNum === null && isCalculatedTotal) {
+    let rawQtd: any = undefined
+    let rawPreco: any = undefined
+    for (const k of Object.keys(row)) {
+      const kLower = k.toLowerCase()
+      if (rawQtd === undefined && (kLower.includes('quant') || kLower === 'qtd')) {
+        rawQtd = row[k]
+      }
+      if (rawPreco === undefined && (kLower.includes('preco') || kLower.includes('preço') || (kLower.includes('valor') && !kLower.includes('total')))) {
+        rawPreco = row[k]
+      }
+    }
+    if (rawQtd !== undefined && rawPreco !== undefined) {
+      const q = Number(rawQtd) || 0
+      const p = parseAnyNumber(rawPreco)
+      computedNum = q * p
+    } else if (childRecords && childRecords.length > 0) {
+      const sum = childRecords.reduce((acc: number, sub: any) => {
+        const q = Number(sub.quantidade || sub.qtd || 1)
+        const p = parseAnyNumber(sub.preco_unitario || sub.valor_unitario || sub.preco || 0)
+        return acc + (q * p)
+      }, 0)
+      computedNum = sum
+    }
+  }
+
+  const existingVal = getFieldValue(row, f.dbColumn)
+
+  if (computedNum !== null) {
+    const formatted = mask ? applyFieldMask(computedNum, mask) : computedNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return { displayVal: formatted, rawVal: computedNum, isComputed: true }
+  }
+
+  if (existingVal !== undefined && existingVal !== null && existingVal !== '') {
+    const formatted = mask ? applyFieldMask(existingVal, mask) : String(existingVal)
+    return { displayVal: formatted, rawVal: existingVal, isComputed: false }
+  }
+
+  return { displayVal: '', rawVal: '', isComputed: hasFormula || isCalculatedTotal }
+}
+
 const SubItemAccordion = React.forwardRef(({
   subItem,
   sIdx,
@@ -306,7 +452,8 @@ const SubItemAccordion = React.forwardRef(({
               )
             }
 
-            if (isTotalField) {
+            const comp = computeFieldValue(sf, subItem, [], '')
+            if (isTotalField || comp.isComputed) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                   <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
@@ -316,7 +463,7 @@ const SubItemAccordion = React.forwardRef(({
                     name={sf.dbColumn}
                     type="text"
                     readOnly
-                    value={total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00')}
+                    value={comp.displayVal || (total > 0 ? total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (val ? parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00'))}
                     className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 font-semibold rounded-xl px-4 py-2.5 text-sm outline-none cursor-not-allowed"
                   />
                 </div>
@@ -476,6 +623,23 @@ export function DetailRelationSection({
     })
   }
 
+  const handleItemFieldChange = (itemIdx: number, fieldName: string, val: any) => {
+    setLocalItems(prev => {
+      const next = [...prev]
+      if (next[itemIdx]) {
+        next[itemIdx] = { ...next[itemIdx], [fieldName]: val }
+      }
+      return next
+    })
+  }
+
+  const handleModalFieldChange = (fieldName: string, val: any) => {
+    setEditingItem((prev: any) => {
+      if (!prev) return prev
+      return { ...prev, [fieldName]: val }
+    })
+  }
+
   useEffect(() => {
     setLocalItems(items)
   }, [items])
@@ -564,6 +728,13 @@ export function DetailRelationSection({
             if (item[f.dbColumn] !== undefined) rowData[f.dbColumn] = item[f.dbColumn]
           })
         }
+
+        editableFields.forEach(f => {
+          const comp = computeFieldValue(f, item, getSubRecords(item), relatedTable)
+          if (comp.isComputed && comp.rawVal !== '') {
+            rowData[f.dbColumn] = comp.rawVal
+          }
+        })
 
         let savedParentId = item.id || item.codigo
         const isNewParent = !savedParentId || String(savedParentId).startsWith('temp-')
@@ -660,6 +831,13 @@ export function DetailRelationSection({
           }
         } else if (formData.has(f.dbColumn)) {
           masterData[f.dbColumn] = formData.get(f.dbColumn)
+        }
+      })
+
+      editableFields.forEach(f => {
+        const comp = computeFieldValue(f, editingItem, getSubRecords(editingItem), relatedTable)
+        if (comp.isComputed && comp.rawVal !== '') {
+          masterData[f.dbColumn] = comp.rawVal
         }
       })
 
@@ -949,23 +1127,6 @@ export function DetailRelationSection({
     return s.slice(0, 10)
   }
 
-  const getFieldValue = (obj: any, dbCol: string) => {
-    if (!obj) return ''
-    if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
-    const under = dbCol.replace(/\\./g, '_')
-    if (obj[under] !== undefined && obj[under] !== null) return obj[under]
-    const colOnly = dbCol.includes('.') ? dbCol.split('.').pop()! : dbCol
-    if (obj[colOnly] !== undefined && obj[colOnly] !== null) return obj[colOnly]
-    const targetKeys = [dbCol.toLowerCase(), under.toLowerCase(), colOnly.toLowerCase()]
-    for (const k of Object.keys(obj)) {
-      const kLower = k.toLowerCase()
-      if (targetKeys.includes(kLower)) {
-        return obj[k]
-      }
-    }
-    return ''
-  }
-
   const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
   const rawSubFields = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
@@ -1157,8 +1318,10 @@ export function DetailRelationSection({
                           ? f.config.options
                           : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
                         const hasOptions = allOptions.length > 0
-                        const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
-                        const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
+                        const computed = computeFieldValue(f, item, itemChildRecords, relatedTable)
+                        const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
+                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || computed.isComputed) ? '0.000,00' : ''))
+                        const displayVal = computed.displayVal
 
                         const widthVal = f.config?.width || f.config?.component?.width || ''
                         const rawCols = f.config?.gridSpan ?? f.config?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
@@ -1191,26 +1354,6 @@ export function DetailRelationSection({
                           colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
-                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : ''))
-                        let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
-                        if (isCalculatedTotal && itemChildRecords && itemChildRecords.length > 0) {
-                          const sum = itemChildRecords.reduce((acc: number, sub: any) => {
-                            const q = Number(sub.quantidade || sub.qtd || 1)
-                            const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
-                            const p = parseAnyNumber(rawP)
-                            return acc + (q * p)
-                          }, 0)
-                          if (sum > 0) {
-                            displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          } else if (val && !isNaN(Number(val))) {
-                            displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                          }
-                        } else if (mask) {
-                          displayVal = applyFieldMask(val, mask)
-                        } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
-                          displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        }
-
                         if (hasOptions) {
                           const selectedOpt = allOptions.find((o: any) => {
                             const oV = typeof o === 'object' ? String(o.value) : String(o)
@@ -1229,6 +1372,7 @@ export function DetailRelationSection({
                                 name={f.dbColumn}
                                 defaultValue={defVal}
                                 disabled={isReadOnly}
+                                onChange={(e) => handleItemFieldChange(idx, f.dbColumn, e.target.value)}
                                 className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-white dark:bg-neutral-900'} border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                               >
                                 <option value="">Selecione...</option>
@@ -1254,14 +1398,21 @@ export function DetailRelationSection({
                               key={f.dbColumn}
                               name={f.dbColumn}
                               data-mask={mask || undefined}
-                              type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
+                              type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                              {...(isCalculatedTotal ? { value: displayVal } : { defaultValue: displayVal })}
+                              {...(computed.isComputed ? { value: displayVal } : { defaultValue: displayVal })}
                               onChange={(e) => {
                                 if (!isDate && mask) {
                                   e.target.value = formatMaskRealtime(e.target.value, mask)
                                 }
+                                let v: any = e.target.value
+                                if (isNumber || mask === '0.000,00' || mask === 'currency' || mask === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+                                  v = parseAnyNumber(e.target.value)
+                                } else if (f.dbColumn.includes('quant') || f.dbColumn === 'qtd') {
+                                  v = Number(e.target.value) || 0
+                                }
+                                handleItemFieldChange(idx, f.dbColumn, v)
                               }}
                               className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-neutral-200'} border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                             />
@@ -1462,8 +1613,12 @@ export function DetailRelationSection({
                       ? f.config.options
                       : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
                     const hasOptions = allOptions.length > 0
-                    const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
-                    const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
+                    const editChildRecords = editingItem ? getSubRecords(editingItem) : []
+
+                    const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable)
+                    const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
+                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || computed.isComputed) ? '0.000,00' : ''))
+                    const displayVal = computed.displayVal
 
                     const comp = f.config?.component || {}
                     const formCfg = f.config?.form_config || {}
@@ -1503,27 +1658,6 @@ export function DetailRelationSection({
                       colSpanClass = 'col-span-12 md:col-span-2'
                     }
 
-                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || ((f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) ? '0.000,00' : ''))
-                    const editChildRecords = editingItem ? getSubRecords(editingItem) : []
-                    let displayVal = isDate ? formatDateForInput(val) : String(val ?? '')
-                    if (isCalculatedTotal && editChildRecords && editChildRecords.length > 0) {
-                      const sum = editChildRecords.reduce((acc: number, sub: any) => {
-                        const q = Number(sub.quantidade || sub.qtd || 1)
-                        const rawP = sub.preco_unitario || sub.valor_unitario || sub.preco || 0
-                        const p = parseAnyNumber(rawP)
-                        return acc + (q * p)
-                      }, 0)
-                      if (sum > 0) {
-                        displayVal = sum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      } else if (val && !isNaN(Number(val))) {
-                        displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      }
-                    } else if (mask) {
-                      displayVal = applyFieldMask(val, mask)
-                    } else if (isNumber && val && !isNaN(Number(val)) && (f.dbColumn.includes('preco') || f.dbColumn.includes('valor') || f.dbColumn.includes('total'))) {
-                      displayVal = parseAnyNumber(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    }
-
                     if (hasOptions) {
                       const selectedOpt = allOptions.find((o: any) => {
                         const oV = typeof o === 'object' ? String(o.value) : String(o)
@@ -1542,6 +1676,7 @@ export function DetailRelationSection({
                             name={f.dbColumn}
                             defaultValue={defVal}
                             disabled={isReadOnly}
+                            onChange={(e) => handleModalFieldChange(f.dbColumn, e.target.value)}
                             className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                           >
                             <option value="">Selecione...</option>
@@ -1567,14 +1702,21 @@ export function DetailRelationSection({
                           key={f.dbColumn}
                           name={f.dbColumn}
                           data-mask={mask || undefined}
-                          type={isDate ? 'date' : (isNumber && !mask && !isCalculatedTotal) ? 'number' : 'text'}
+                          type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                          {...(isCalculatedTotal ? { value: displayVal } : { defaultValue: displayVal })}
+                          {...(computed.isComputed ? { value: displayVal } : { defaultValue: displayVal })}
                           onChange={(e) => {
                             if (!isDate && mask) {
                               e.target.value = formatMaskRealtime(e.target.value, mask)
                             }
+                            let v: any = e.target.value
+                            if (isNumber || mask === '0.000,00' || mask === 'currency' || mask === 'moeda' || f.dbColumn.includes('preco') || f.dbColumn.includes('valor')) {
+                              v = parseAnyNumber(e.target.value)
+                            } else if (f.dbColumn.includes('quant') || f.dbColumn === 'qtd') {
+                              v = Number(e.target.value) || 0
+                            }
+                            handleModalFieldChange(f.dbColumn, v)
                           }}
                           className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed text-neutral-800 dark:text-neutral-200 opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                         />

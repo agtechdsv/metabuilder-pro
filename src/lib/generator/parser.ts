@@ -282,6 +282,17 @@ function applyFieldsMeta(
     }
   }
 
+  const formulaTokens =
+    mergedMeta.content?.formula_tokens ||
+    mergedMeta.formula_tokens ||
+    mergedMeta.formulaTokens ||
+    merged.content?.formula_tokens ||
+    merged.formula_tokens ||
+    merged.formulaTokens ||
+    baseFieldConfig?.content?.formula_tokens ||
+    baseFieldConfig?.formula_tokens ||
+    []
+
   return {
     label: mergedMeta.label || merged.label,
     width: mergedMeta.width || mergedMeta.component?.width || merged.width,
@@ -291,6 +302,8 @@ function applyFieldsMeta(
     format: mergedMeta.format || merged.format,
     options,
     relation,
+    formulaTokens,
+    formula_tokens: formulaTokens,
     readOnly: mergedMeta.readOnly || mergedMeta.read_only || mergedMeta.content?.readonly || merged.readOnly || merged.read_only || merged.content?.readonly,
     required: mergedMeta.required || mergedMeta.is_required || mergedMeta.content?.required || merged.required || merged.is_required || merged.content?.required,
     placeholder: mergedMeta.placeholder || mergedMeta.content?.placeholder || merged.placeholder || merged.content?.placeholder,
@@ -299,6 +312,7 @@ function applyFieldsMeta(
     ...merged,
     ...(columns ? { columns, gridSpan: columns } : {}),
     ...(options ? { options } : {}),
+    ...(formulaTokens && formulaTokens.length > 0 ? { formulaTokens, formula_tokens: formulaTokens } : {}),
   }
 }
 
@@ -368,8 +382,11 @@ function buildVirtualField(
   const byocName = isByoc ? id.split('_').slice(2).join('_') : ''
   const labelText = meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado')
 
+  const formulaTokens = meta.content?.formula_tokens || meta.formula_tokens || meta.formulaTokens || []
   const config: ResolvedFieldConfig = {
     ...meta,
+    formulaTokens,
+    formula_tokens: formulaTokens,
     ...(isByoc ? { compiledCode: byocMap[byocName] } : {}),
   }
 
