@@ -293,6 +293,21 @@ function applyFieldsMeta(
     baseFieldConfig?.formula_tokens ||
     []
 
+  const dependsOn =
+    mergedMeta.component?.depends_on ||
+    merged.component?.depends_on ||
+    mergedMeta.depends_on ||
+    merged.depends_on ||
+    baseFieldConfig?.component?.depends_on ||
+    baseFieldConfig?.depends_on
+  const filterColumn =
+    mergedMeta.component?.filter_column ||
+    merged.component?.filter_column ||
+    mergedMeta.filter_column ||
+    merged.filter_column ||
+    baseFieldConfig?.component?.filter_column ||
+    baseFieldConfig?.filter_column
+
   return {
     label: mergedMeta.label || merged.label,
     width: mergedMeta.width || mergedMeta.component?.width || merged.width,
@@ -304,6 +319,10 @@ function applyFieldsMeta(
     relation,
     formulaTokens,
     formula_tokens: formulaTokens,
+    depends_on: dependsOn,
+    dependsOn,
+    filter_column: filterColumn,
+    filterColumn,
     readOnly: mergedMeta.readOnly || mergedMeta.read_only || mergedMeta.content?.readonly || merged.readOnly || merged.read_only || merged.content?.readonly,
     required: mergedMeta.required || mergedMeta.is_required || mergedMeta.content?.required || merged.required || merged.is_required || merged.content?.required,
     placeholder: mergedMeta.placeholder || mergedMeta.content?.placeholder || merged.placeholder || merged.content?.placeholder,
@@ -313,6 +332,8 @@ function applyFieldsMeta(
     ...(columns ? { columns, gridSpan: columns } : {}),
     ...(options ? { options } : {}),
     ...(formulaTokens && formulaTokens.length > 0 ? { formulaTokens, formula_tokens: formulaTokens } : {}),
+    ...(dependsOn ? { depends_on: dependsOn, dependsOn } : {}),
+    ...(filterColumn ? { filter_column: filterColumn, filterColumn } : {}),
   }
 }
 
@@ -383,10 +404,14 @@ function buildVirtualField(
   const labelText = meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado')
 
   const formulaTokens = meta.content?.formula_tokens || meta.formula_tokens || meta.formulaTokens || []
+  const dependsOn = meta.component?.depends_on || meta.depends_on || meta.dependsOn
+  const filterColumn = meta.component?.filter_column || meta.filter_column || meta.filterColumn
   const config: ResolvedFieldConfig = {
     ...meta,
     formulaTokens,
     formula_tokens: formulaTokens,
+    ...(dependsOn ? { depends_on: dependsOn, dependsOn } : {}),
+    ...(filterColumn ? { filter_column: filterColumn, filterColumn } : {}),
     ...(isByoc ? { compiledCode: byocMap[byocName] } : {}),
   }
 
@@ -1007,12 +1032,17 @@ function resolveRelationTabs(
           r.from_model_id === childModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
         )
         let targetModel = configuredTarget
-          ? allModels.find((m: any) => m.db_table_name === configuredTarget)
+          ? allModels.find((m: any) =>
+              m.id === configuredTarget ||
+              m.db_table_name?.toLowerCase() === String(configuredTarget).toLowerCase() ||
+              m.name?.toLowerCase() === String(configuredTarget).toLowerCase()
+            )
           : (fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null)
 
-        if (targetModel) {
-          const targetFields = allFields.filter((tf: any) => tf.model_id === targetModel.id)
-          const pkCol = configuredValue || targetFields.find((tf: any) => tf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || ''
+        const targetTableName = targetModel?.db_table_name || configuredTarget
+        if (targetTableName) {
+          const targetFields = targetModel ? allFields.filter((tf: any) => tf.model_id === targetModel.id) : []
+          const pkCol = configuredValue || targetFields.find((tf: any) => tf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || 'id'
           const dispCol = configuredDisplay || findDisplayColumn(targetFields) || pkCol
 
           return {
@@ -1020,8 +1050,8 @@ function resolveRelationTabs(
             config: {
               ...f.config,
               relation: {
-                targetTable: targetModel.db_table_name,
-                targetModel: toPascalCase(targetModel.db_table_name),
+                targetTable: targetTableName,
+                targetModel: toPascalCase(targetTableName),
                 displayColumn: dispCol,
                 valueColumn: pkCol,
               }
@@ -1156,7 +1186,11 @@ function resolveRelationTabs(
             r.from_model_id === subModel.id && (r.from_field_id === f.id || r.from_column === colOnly)
           )
           let targetModel = configuredTarget
-            ? allModels.find((m: any) => m.db_table_name === configuredTarget)
+            ? allModels.find((m: any) =>
+                m.id === configuredTarget ||
+                m.db_table_name?.toLowerCase() === String(configuredTarget).toLowerCase() ||
+                m.name?.toLowerCase() === String(configuredTarget).toLowerCase()
+              )
             : (fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null)
 
           if (targetModel) {
