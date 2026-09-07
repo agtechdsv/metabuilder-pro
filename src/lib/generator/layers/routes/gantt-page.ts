@@ -193,6 +193,55 @@ export function generateGanttSchema(route: RouteNode): string {
     return `  ${f.dbColumn}: ${zType},`
   }).join('\n')
 
+  const rowCustomActions: any[] = route.buttons
+    .filter(b => b.placement === 'row' && b.actionType === 'custom')
+    .map(b => ({
+      id: b.id,
+      label: b.label,
+      icon: b.icon || 'Receipt',
+      color: b.color || (b as any).color || 'indigo',
+      style: b.style,
+      triggerType: b.triggerType,
+      usecaseSlug: b.usecaseSlug,
+      usecaseOpenMode: b.usecaseOpenMode || 'modal',
+      usecaseModalSize: b.usecaseModalSize || 'full',
+      usecaseModalWidth: b.usecaseModalWidth,
+      usecaseModalHeight: b.usecaseModalHeight,
+      usecaseSelectedFields: b.usecaseSelectedFields || [],
+      usecaseParams: b.usecaseParams || '',
+      linkTarget: b.linkTarget || '',
+    }))
+
+  // Fallback se não vierem de route.buttons: checa rawLayoutConfig.custom_actions
+  if (rowCustomActions.length === 0 && Array.isArray(route.rawLayoutConfig?.custom_actions)) {
+    route.rawLayoutConfig.custom_actions
+      .filter((a: any) => {
+        if (!a || a.enabled === false) return false
+        const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : ['row'])
+        return ctxs.includes('row') || ctxs.includes('row_search')
+      })
+      .forEach((a: any) => {
+        rowCustomActions.push({
+          id: a.id || `custom_act_${(a.label || 'act').toLowerCase().replace(/\s+/g, '_')}`,
+          label: a.label || a.name || 'Ação Customizada',
+          icon: a.icon || a.custom_icon || 'Zap',
+          color: a.color || 'indigo',
+          style: a.style || 'primary',
+          triggerType: a.trigger_type || (a.usecase_slug ? 'usecase' : 'custom'),
+          usecaseSlug: a.usecase_slug || a.target_use_case,
+          usecaseOpenMode: a.usecase_open_mode || 'modal',
+          usecaseModalSize: a.usecaseModalSize || a.usecase_modal_size || 'full',
+          usecaseModalWidth: a.usecase_modal_width,
+          usecaseModalHeight: a.usecase_modal_height,
+          usecaseSelectedFields: a.usecase_selected_fields || [],
+          usecaseParams: a.usecase_params || '',
+          linkTarget: a.linkTarget || a.url || a.target_url || (a.usecase_slug ? `/${a.usecase_slug}` : ''),
+        })
+      })
+  }
+
+  const customActionsData = JSON.stringify(rowCustomActions, null, 2)
+
   return `// ─────────────────────────────────────────────────────────────────────────────
 // Schemas e configurações declarativas para Gantt de ${route.title}
 // ─────────────────────────────────────────────────────────────────────────────
@@ -204,6 +253,8 @@ export const filterFields = ${filterFieldsData}
 export const fields = ${fieldsData}
 
 export const ganttConfig = ${ganttConfigData}
+
+export const customActions = ${customActionsData}
 
 export const ${mn}Schema = z.object({
 ${zodFields}
@@ -357,7 +408,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GanttBoard } from '@/components/GanttBoard'
-import { fields, ganttConfig } from './schema'
+import { fields, ganttConfig, customActions } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
@@ -411,6 +462,7 @@ ${modalSaveHandler}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        customActions={customActions}
       />
 ${modalJsx}
     </div>

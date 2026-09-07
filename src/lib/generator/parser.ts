@@ -792,6 +792,7 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
     const baseButton: Partial<ViewButton> = {
       label,
       icon,
+      color: act.color,
       style: (act.style || 'primary') as ButtonStyle,
       actionType: 'custom',
       confirmationMessage: act.confirmation_message,

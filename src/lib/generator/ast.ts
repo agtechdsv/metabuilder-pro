@@ -112,6 +112,7 @@ export interface ViewButton {
   id: string
   label: string
   icon?: string
+  color?: string
   style: ButtonStyle
   actionType: ButtonActionType
   placement?: 'header' | 'row' | 'form' | 'filter'    // onde o botão aparece

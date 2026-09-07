@@ -34,6 +34,7 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CustomActionButton } from '@/components/ui/custom-action-button'
 
 export interface GanttConfig {
   title_field?: string
@@ -392,22 +393,24 @@ export function GanttBoard({
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  {customActions.map(action => {
+                  {customActions.filter(a => {
+                    const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : (a.placement ? [a.placement] : ['row']))
+                    return ctxs.includes('row') || ctxs.includes('row_search')
+                  }).map(action => {
                     const colors = getActionColorClasses(action.color)
                     return (
-                      <button
+                      <CustomActionButton
                         key={action.id}
-                        type="button"
-                        title={action.label}
-                        onClick={() => onCustomAction?.(action, task.raw)}
+                        action={action}
+                        item={task.raw}
+                        variant="plain"
                         className={cn(
                           "p-1.5 rounded-md transition-all active:scale-90 cursor-pointer",
                           colors.text,
                           colors.hover
                         )}
-                      >
-                        {action.icon ? <DynamicIcon icon={action.icon} size={14} /> : <Zap className="w-3.5 h-3.5" />}
-                      </button>
+                        onClick={onCustomAction ? () => onCustomAction(action, task.raw) : undefined}
+                      />
                     )
                   })}
                 </div>

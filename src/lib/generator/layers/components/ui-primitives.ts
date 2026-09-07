@@ -403,6 +403,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface CustomActionParam {
   source: string
@@ -413,6 +414,7 @@ export interface CustomActionConfig {
   id: string
   label: string
   icon?: string
+  color?: string
   style?: string
   triggerType?: string
   usecaseSlug?: string
@@ -429,10 +431,14 @@ export function CustomActionButton({
   action,
   item,
   variant = 'icon',
+  className,
+  onClick,
 }: {
   action: CustomActionConfig
   item?: any
-  variant?: 'icon' | 'header'
+  variant?: 'icon' | 'header' | 'plain'
+  className?: string
+  onClick?: (action: CustomActionConfig, item: any) => void
 }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -520,6 +526,11 @@ export function CustomActionButton({
     e.preventDefault()
     e.stopPropagation()
 
+    if (onClick) {
+      onClick(action, item)
+      return
+    }
+
     const openMode = action.usecaseOpenMode || 'modal'
 
     if (openMode === 'page') {
@@ -555,17 +566,35 @@ export function CustomActionButton({
         <button
           type="button"
           onClick={handleClick}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer"
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer",
+            className
+          )}
           title={action.label}
         >
           <DynamicIcon icon={action.icon || 'Zap'} size={16} className="text-neutral-400" />
           <span>{action.label}</span>
         </button>
+      ) : variant === 'plain' ? (
+        <button
+          type="button"
+          onClick={handleClick}
+          className={cn(
+            "p-1.5 rounded-md transition-all active:scale-90 flex items-center justify-center cursor-pointer",
+            className
+          )}
+          title={action.label}
+        >
+          <DynamicIcon icon={action.icon || 'Zap'} size={14} />
+        </button>
       ) : (
         <button
           type="button"
           onClick={handleClick}
-          className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center cursor-pointer"
+          className={cn(
+            "p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-indigo-600 hover:border-indigo-500 transition-all active:scale-90 shadow-sm flex items-center justify-center cursor-pointer",
+            className
+          )}
           title={action.label}
         >
           <DynamicIcon icon={action.icon || 'Receipt'} size={14} />
