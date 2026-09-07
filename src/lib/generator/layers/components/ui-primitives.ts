@@ -170,11 +170,14 @@ import { createPortal } from 'react-dom'
 import { Trash2, AlertCircle, X, Loader2 } from 'lucide-react'
 
 interface DeleteButtonProps {
+  id?: string
   recordName?: string
-  onDelete: () => Promise<void>
+  iconOnly?: boolean
+  className?: string
+  onDelete: (id?: string) => Promise<void> | void
 }
 
-export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
+export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: DeleteButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -186,7 +189,7 @@ export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
   const handleConfirm = () => {
     startTransition(async () => {
       try {
-        await onDelete()
+        await onDelete(id)
         setIsOpen(false)
       } catch (err) {
         console.error('Erro ao excluir registro:', err)
@@ -200,7 +203,7 @@ export function DeleteButton({ recordName, onDelete }: DeleteButtonProps) {
       <button 
         type="button" 
         onClick={() => setIsOpen(true)}
-        className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" 
+        className={className || "p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center"} 
         title="Excluir" 
       >
         <Trash2 className="w-3.5 h-3.5" />

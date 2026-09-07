@@ -49,6 +49,7 @@ export interface TimelineBoardProps {
   data: any[]
   timelineConfig: TimelineConfig
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  primaryKeyField?: string
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (id: string) => Promise<void> | void
@@ -65,6 +66,7 @@ export function TimelineBoard({
   data,
   timelineConfig,
   relationalOptions = {},
+  primaryKeyField = 'id',
   onView,
   onEdit,
   onDelete,
@@ -200,7 +202,8 @@ export function TimelineBoard({
     rawDate: any,
     alignRight: boolean = false
   ) => {
-    const primaryKey = item.id || item.ID || item._id
+    const pkField = primaryKeyField || 'id'
+    const primaryKey = item?.[pkField] ?? item?.id ?? item?.ID ?? item?._id ?? item?.codigo
     return (
       <div
         className={cn(
@@ -271,7 +274,10 @@ export function TimelineBoard({
           {onDelete && primaryKey && (
             <DeleteButton
               id={String(primaryKey)}
-              onDelete={onDelete}
+              recordName={title || String(primaryKey)}
+              onDelete={async () => {
+                await onDelete(String(primaryKey))
+              }}
               iconOnly
               className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
             />
@@ -292,7 +298,8 @@ export function TimelineBoard({
     isEven: boolean = false,
     itemColor: string = COLORS[0]
   ) => {
-    const primaryKey = item.id || item.ID || item._id
+    const pkField = primaryKeyField || 'id'
+    const primaryKey = item?.[pkField] ?? item?.id ?? item?.ID ?? item?._id ?? item?.codigo
     const dateStr = formatDate(rawDate)
 
     const dateEl = (
@@ -371,7 +378,10 @@ export function TimelineBoard({
         {onDelete && primaryKey && (
           <DeleteButton
             id={String(primaryKey)}
-            onDelete={onDelete}
+            recordName={title || String(primaryKey)}
+            onDelete={async () => {
+              await onDelete(String(primaryKey))
+            }}
             iconOnly
             className="p-1 text-red-400 hover:text-red-600 transition-colors"
           />

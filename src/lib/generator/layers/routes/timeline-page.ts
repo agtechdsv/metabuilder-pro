@@ -555,7 +555,7 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
   }
 
   const handleDelete = async (recordId: string) => {
-    setDataList(prev => prev.filter(item => String(item.${route.primaryKey} || item.id) !== recordId))
+    setDataList(prev => prev.filter(item => String(item.${route.primaryKey} || item.id) !== String(recordId)))
     await delete${mn}(recordId)
   }
 
@@ -722,6 +722,7 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
         data={displayedData}
         timelineConfig={timelineConfig}
         relationalOptions={relationalOptions}
+        primaryKeyField="${route.primaryKey || 'id'}"
         onView={handleOpenEdit}
         onEdit={handleOpenEdit}
         onDelete={handleDelete}
