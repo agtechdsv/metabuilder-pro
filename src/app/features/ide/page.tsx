@@ -1,6 +1,7 @@
 'use client'
 
-import { Server, Key, Network, Cpu, ArrowRight, Terminal, FileCode2, Database, Download, Lock, Zap } from 'lucide-react'
+import { useState } from 'react'
+import { Server, Key, Network, Cpu, ArrowRight, Terminal, FileCode2, Database, Download, Lock, Zap, CheckCircle2, Layers, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
 import { motion } from 'framer-motion'
@@ -32,7 +33,7 @@ export default function IDEFeaturePage() {
     },
     {
       title: t('marketing_v2.features.ide.eject_title', 'Ejeção de Código Fonte'),
-      desc: t('marketing_v2.features.ide.eject_desc', 'Sem vendor lock-in absoluto. A qualquer momento, gere e faça download do código fonte completo (Next.js / Node.js) da sua aplicação pronta para ser executada onde você quiser.'),
+      desc: t('marketing_v2.features.ide.eject_desc', 'Sem vendor lock-in absoluto. A qualquer momento, gere e faça download do código fonte completo no backend da sua escolha: Next.js (Node.js) ou Next.js + Spring Boot 3.x (Java 21).'),
       icon: <Download className="w-8 h-8 text-purple-500" />,
       color: "from-purple-500/20 to-pink-500/5",
       borderColor: "border-purple-500/20"
@@ -137,6 +138,240 @@ export default function IDEFeaturePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* SEÇÃO DETALHADA: EJECT & SYNC — ESCOLHA SUA STACK DE BACKEND */}
+        <div className="mb-32">
+          {/* Header da Seção */}
+          <div className="text-center max-w-4xl mx-auto mb-16 space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest border border-indigo-500/20 shadow-sm">
+              <Download className="w-4 h-4 text-indigo-500" />
+              <span>Eject & Sync Architecture</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-wider ml-1">
+                Multi-Stack Backend
+              </span>
+            </div>
+
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-neutral-900 dark:text-white leading-tight tracking-tight">
+              Eject & Sync — <br className="hidden sm:inline" />
+              <span className="bg-gradient-to-r from-amber-500 via-purple-500 to-emerald-500 bg-clip-text text-transparent">
+                Escolha sua Stack de Backend
+              </span>
+            </h2>
+
+            <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-300 font-medium">
+              Exporte código profissional. Sem lock-in. Sem vendor dependência.
+            </p>
+
+            {/* Destaque Diferencial */}
+            <div className="p-6 md:p-8 rounded-3xl bg-neutral-100/80 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 text-left relative overflow-hidden shadow-lg">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1">
+                  <Sparkles className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-900 dark:text-white text-base md:text-lg mb-1">
+                    Diferencial de Engenharia MetaBuilder PRO
+                  </h4>
+                  <p className="text-neutral-600 dark:text-neutral-300 text-sm md:text-base leading-relaxed">
+                    A maioria das plataformas gera um arquivo gigante, ilegível e monolítico. O MetaBuilder gera um <strong>projeto completo, modular e organizado por feature</strong>, pronto para produção — na linguagem e arquitetura que sua equipe escolher.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Cards Lado a Lado Comparando as Duas Opções */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+            {/* Opção 1: Next.js Full-Stack (Node.js) */}
+            <div className="relative p-8 md:p-10 rounded-[3rem] bg-gradient-to-b from-amber-500/5 via-white/50 to-white dark:via-neutral-900/50 dark:to-neutral-950 border border-amber-500/30 shadow-xl overflow-hidden flex flex-col justify-between group hover:border-amber-500 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl shadow-sm">
+                    ⚡
+                  </div>
+                  <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
+                    Modo 1 • Startup-Ready
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
+                    Next.js Full-Stack <span className="text-amber-600 dark:text-amber-400 font-bold">(Node.js)</span>
+                  </h3>
+                  <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
+                    Frontend React + Backend Node.js no mesmo projeto Next.js
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-950 dark:text-amber-200 text-sm font-bold leading-relaxed">
+                  "Startup-ready. Deploy rápido. Um projeto, zero configuração."
+                </div>
+
+                <div className="space-y-3">
+                  <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    O que é exportado:
+                  </h5>
+                  <ul className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <span><strong>Server Actions & API Routes:</strong> Ações de servidor e endpoints HTTP tipados nativos do Next.js App Router.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <span><strong>Zero Configuração (<code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">.env.local</code>):</strong> Variáveis de conexão, tokens e segredos gerados automaticamente.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <span><strong>Deploy Vercel-Ready:</strong> Um único comando <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">vercel deploy</code> ou build Docker pronto para nuvem.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <span><strong>Ideal para:</strong> Startups, MVPs, provas de conceito e equipes ágeis que preferem JavaScript/TypeScript unificado.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Estrutura de Arquivos Gerada */}
+                <div className="mt-4 rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
+                  <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
+                    <FileCode2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span>ESTRUTURA DO PROJETO GERADO:</span>
+                  </div>
+                  <p className="text-amber-400">📁 meu-app/</p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/app/api/ <span className="text-neutral-500"># Endpoints REST tipados</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/app/(dashboard)/ <span className="text-neutral-500"># Telas e Server Actions</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/components/ui/ <span className="text-neutral-500"># Componentes reutilizáveis</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📁 src/lib/db/ <span className="text-neutral-500"># Client ORM e queries</span></p>
+                  <p className="ml-3 text-neutral-400">├── 📄 .env.local <span className="text-emerald-400"># Conexões pré-configuradas</span></p>
+                  <p className="ml-3 text-neutral-400">└── 📄 package.json</p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
+                <span>📦 Projeto Full-Stack Único</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold">Node.js LTS</span>
+              </div>
+            </div>
+
+            {/* Opção 2: Next.js + Spring Boot (Java 21) */}
+            <div className="relative p-8 md:p-10 rounded-[3rem] bg-gradient-to-b from-emerald-500/5 via-white/50 to-white dark:via-neutral-900/50 dark:to-neutral-950 border border-emerald-500/30 shadow-xl overflow-hidden flex flex-col justify-between group hover:border-emerald-500 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl shadow-sm">
+                    ☕
+                  </div>
+                  <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
+                    Modo 2 • Enterprise-Grade
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white">
+                    Next.js + Spring Boot <span className="text-emerald-600 dark:text-emerald-400 font-bold">(Java 21)</span>
+                  </h3>
+                  <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
+                    Frontend Next.js chamando API REST gerada em Spring Boot 3.x
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-950 dark:text-emerald-200 text-sm font-bold leading-relaxed">
+                  "Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."
+                </div>
+
+                <div className="space-y-3">
+                  <h5 className="text-xs font-black uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    O que é exportado:
+                  </h5>
+                  <ul className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span><strong>Pastas frontend/ e backend/ separadas:</strong> Deploys independentes em servidores, pipelines de CI/CD ou clusters Kubernetes distintos.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span><strong>Virtual Threads (Project Loom):</strong> Suporte nativo a alta concorrência com threads virtuais do Java 21 ativadas.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span><strong>pom.xml & Swagger OpenAPI 3.0:</strong> Maven configurado com Spring Web, JPA/Hibernate, validações e documentação automática em <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">/swagger-ui.html</code>.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <span><strong>CORS e Drivers Nativos:</strong> CORS pré-liberado para o Next.js e drivers adequados (PostgreSQL, Oracle, SQL Server) prontos no <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded font-mono">application.yml</code>.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Estrutura de Arquivos Gerada */}
+                <div className="mt-4 rounded-2xl bg-[#0d1117] p-5 font-mono text-[11px] text-neutral-300 border border-neutral-800 overflow-x-auto shadow-inner">
+                  <div className="text-neutral-500 mb-2 font-bold flex items-center gap-1.5">
+                    <Server className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>ESTRUTURA DO PROJETO GERADO:</span>
+                  </div>
+                  <p className="text-emerald-400">📁 meu-app-enterprise/</p>
+                  <p className="ml-3 text-neutral-400">├── 📁 frontend/ <span className="text-neutral-500"># Next.js 15 App Router</span></p>
+                  <p className="ml-6 text-neutral-500">├── 📁 src/app/ & components/</p>
+                  <p className="ml-6 text-neutral-500">└── 📄 package.json</p>
+                  <p className="ml-3 text-emerald-300">└── 📁 backend/ <span className="text-neutral-500"># Spring Boot 3.x + Java 21</span></p>
+                  <p className="ml-6 text-neutral-400">├── 📄 pom.xml <span className="text-emerald-400"># Maven Build + Swagger</span></p>
+                  <p className="ml-6 text-neutral-400">├── 📁 src/main/java/ <span className="text-neutral-500"># Controllers, Services, Entities</span></p>
+                  <p className="ml-6 text-neutral-400">└── 📁 src/main/resources/ <span className="text-emerald-400"># application.yml + Drivers</span></p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
+                <span>🏛️ Arquitetura Corporativa Desacoplada</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Java 21 + Spring 3</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabela Comparativa Resumida */}
+          <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 overflow-hidden bg-white/50 dark:bg-neutral-900/30 backdrop-blur-sm p-6 md:p-8">
+            <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-6 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-indigo-500" />
+              Comparativo Direto de Capacidades no Eject
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 text-xs font-bold uppercase tracking-wider">
+                    <th className="pb-4">Característica</th>
+                    <th className="pb-4 text-amber-600 dark:text-amber-400">⚡ Next.js Full-Stack (Node.js)</th>
+                    <th className="pb-4 text-emerald-600 dark:text-emerald-400">☕ Next.js + Spring Boot (Java 21)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800/60 font-medium">
+                  <tr>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Repositório</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Monorepo / Projeto Único</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Pastas frontend/ e backend/ independentes</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Linguagem Backend</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Node.js + TypeScript</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Java 21 LTS (Virtual Threads habilitadas)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Documentação de API</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Tipos TypeScript end-to-end</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Swagger / OpenAPI 3.0 interativo automático</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Deploy</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Vercel, AWS Amplify, Docker</td>
+                    <td className="py-3.5 text-neutral-600 dark:text-neutral-400">Vercel (Front) + JAR / Kubernetes / JVM (Back)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3.5 text-neutral-800 dark:text-neutral-200 font-bold">Lock-in</td>
+                    <td className="py-3.5 text-amber-600 dark:text-amber-400 font-bold">Zero Lock-in (Código aberto padrão)</td>
+                    <td className="py-3.5 text-emerald-600 dark:text-emerald-400 font-bold">Zero Lock-in (Maven + Spring padrão)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

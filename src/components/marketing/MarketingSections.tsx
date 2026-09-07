@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -320,6 +320,170 @@ export function MarketingSections() {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-transparent opacity-60 pointer-events-none"></div>
              </div>
+          </div>
+        </div>
+      </section>
+
+      {/* NOVO: EJECT & SYNC — MULTI-STACK BACKEND */}
+      <section className="max-w-7xl mx-auto mb-32">
+        <div className="relative p-10 md:p-16 rounded-[3rem] bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-emerald-500/5 border border-amber-500/20 dark:border-amber-500/30 overflow-hidden flex flex-col gap-12 group">
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-10">
+            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-amber-500/15 rounded-full blur-[130px] group-hover:bg-amber-500/25 transition-colors duration-700"></div>
+            <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/15 rounded-full blur-[130px] group-hover:bg-emerald-500/25 transition-colors duration-700"></div>
+          </div>
+
+          <div className="space-y-6 z-10 max-w-4xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs uppercase tracking-widest border border-amber-500/20 shadow-sm">
+              <Download className="w-4 h-4 text-amber-500" />
+              <span>{t('marketing_v2.home.eject_badge', 'Eject & Sync Multi-Stack')}</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black tracking-wider ml-1">
+                NOVO
+              </span>
+            </div>
+
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-neutral-900 dark:text-white leading-[1.1]">
+              {t('marketing_v2.home.eject_title_part1', 'Você escolhe a stack.')} <br />
+              <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 dark:from-amber-400 dark:via-orange-400 dark:to-emerald-400 bg-clip-text text-transparent">
+                {t('marketing_v2.home.eject_title_part2', 'Nós geramos o código.')}
+              </span>
+            </h2>
+
+            <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
+              {t('marketing_v2.home.eject_desc', 'A maioria das plataformas gera um arquivo gigante e incompreensível. O MetaBuilder gera um projeto completo, modular e organizado por feature, pronto para produção — na linguagem e arquitetura que você escolher. Sem lock-in, com liberdade total.')}
+            </p>
+          </div>
+
+          {/* Cards lado a lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full z-10">
+            {/* Modo 1 - Node.js */}
+            <div className="relative p-8 md:p-10 rounded-[2.5rem] bg-white/80 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-xl overflow-hidden flex flex-col justify-between group/card hover:border-amber-500/60 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl shadow-sm">
+                    ⚡
+                  </div>
+                  <span className="px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider">
+                    Startup-Ready
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white flex items-center gap-2">
+                    Next.js Full-Stack <span className="text-amber-600 dark:text-amber-400 text-xl font-bold">(Node.js)</span>
+                  </h3>
+                  <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
+                    Frontend React + Backend Node.js no mesmo projeto unificado
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-sm font-bold leading-relaxed">
+                  "Startup-ready. Deploy rápido. Um projeto, zero configuração."
+                </div>
+
+                <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <span><strong>Server Actions & API Routes:</strong> Rotas de backend nativas Next.js com tipagem estrita TypeScript.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <span><strong>Configuração Imediata:</strong> Arquivo <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">.env.local</code> pré-configurado com variáveis de banco e autenticação.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <span><strong>Deploy Vercel-Ready:</strong> Suba para produção em segundos na Vercel, AWS ou container Docker leve.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <span><strong>Estrutura por Feature:</strong> Código limpo, componentizado e modular para iterações ágeis.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-8 border-t border-neutral-200/80 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
+                <span className="flex items-center gap-1.5">
+                  <FileCode2 className="w-4 h-4 text-amber-500" />
+                  Repositório Único Next.js
+                </span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Zero Lock-in</span>
+              </div>
+            </div>
+
+            {/* Modo 2 - Java Spring Boot */}
+            <div className="relative p-8 md:p-10 rounded-[2.5rem] bg-white/80 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-xl overflow-hidden flex flex-col justify-between group/card hover:border-emerald-500/60 transition-all duration-300">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl shadow-sm">
+                    ☕
+                  </div>
+                  <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
+                    Enterprise-Grade
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-black text-neutral-900 dark:text-white flex items-center gap-2">
+                    Next.js + Spring Boot <span className="text-emerald-600 dark:text-emerald-400 text-xl font-bold">(Java 21)</span>
+                  </h3>
+                  <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
+                    Frontend Next.js consumindo API REST gerada em Spring Boot 3.x
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-900 dark:text-emerald-200 text-sm font-bold leading-relaxed">
+                  "Enterprise-grade. Spring Boot 3.x + Java 21 com Virtual Threads. Frontend e backend independentes."
+                </div>
+
+                <ul className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-300">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Virtual Threads (Project Loom):</strong> Alta concorrência e throughput massivo com consumo mínimo de memória no Java 21.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Arquitetura Desacoplada:</strong> Pastas <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">frontend/</code> e <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">backend/</code> separadas para deploys e times independentes.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Maven + Swagger Automático:</strong> <code className="text-xs bg-neutral-200 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono">pom.xml</code> com Spring Web, Data JPA, OpenAPI/Swagger 3 e CORS configurado.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span><strong>Drivers de Banco Nativos:</strong> PostgreSQL, Oracle e SQL Server prontos com pool HikariCP otimizado.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-8 border-t border-neutral-200/80 dark:border-neutral-800/80 mt-8 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono">
+                <span className="flex items-center gap-1.5">
+                  <Server className="w-4 h-4 text-emerald-500" />
+                  frontend/ + backend/ Desacoplados
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Enterprise Ready</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rodapé da seção */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-6 w-full border-t border-neutral-200/80 dark:border-neutral-800/80 z-10">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">
+              Acesse a IDE para experimentar o seletor de backend no fluxo do Eject & Sync.
+            </p>
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/features/source-code"
+                className="text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                Ver arquitetura do código →
+              </Link>
+              <Link 
+                href="/features/ide"
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-transform shadow-lg shadow-black/10 dark:shadow-white/10"
+              >
+                <span>Conhecer a IDE</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
