@@ -125,33 +125,13 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
 
 #[command]
 fn stopcli(state: State<'_, CliState>) -> Result<String, String> {
-    // Kill the entire process tree using taskkill so node.js children are also killed
-    let pid_opt = {
-        let pid_guard = state.dev_pid.lock().unwrap();
-        *pid_guard
-    };
-
-    if let Some(pid) = pid_opt {
-        // taskkill /F (force) /T (tree) /PID kills node.js and all children
-        let _ = std::process::Command::new("taskkill")
-            .args(&["/F", "/T", "/PID", &pid.to_string()])
-            .output();
-    }
-
-    // Also try killing via the child handle as a fallback
     let mut child_guard = state.child.lock().unwrap();
     if let Some(child) = child_guard.take() {
         let _ = child.kill();
     }
 
-    // Clear the stored PID
     let mut pid_guard = state.dev_pid.lock().unwrap();
     *pid_guard = None;
-
-    // Also kill any lingering node processes on port 3000 as a safety net
-    let _ = std::process::Command::new("cmd")
-        .args(&["/c", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :3000') do taskkill /f /pid %a"])
-        .output();
 
     Ok("Parado com sucesso".to_string())
 }

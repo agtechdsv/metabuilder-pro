@@ -862,22 +862,33 @@ function resolveRelationTabs(
     if (childModel.id === view.model_id) continue
 
     // Se o childModel está explicitamente oculto ou não faz parte dos joins/detalhes configurados:
-    if (hiddenDetails.includes(childModel.id)) continue
-    if (detailsDisplayMode[childModel.id] === 'hidden') continue
+    if (hiddenDetails.includes(childModel.id) || (childModel.db_table_name && hiddenDetails.includes(childModel.db_table_name))) continue
+    if (detailsDisplayMode[childModel.id] === 'hidden' || (childModel.db_table_name && detailsDisplayMode[childModel.db_table_name] === 'hidden')) continue
 
-    // Se a view tem joins configurados (e não é mapa_mental), só inclui os modelos participantes
-    const isJoined = joins.some((j: any) => j.table === childModel.db_table_name || j.model_id === childModel.id)
-    const isExplicitTab = detailsDisplayMode[childModel.id] === 'tabs' || detailsDisplayMode[childModel.id] === 'sections'
+    const childModelFields = allFields.filter((f: any) => f.model_id === childModel.id)
+    const childModelFieldIds = new Set(childModelFields.map((f: any) => f.id))
+    const parentViewFormFieldsOrder: string[] = layoutConfig.form_fields || []
 
-    if (joins.length > 0 && !isJoined && !isExplicitTab && view.logic_type !== 'mapa_mental') {
-      continue
+    // Se a view possui tables_config explícito (modelos selecionados no Studio), valida pertinência
+    if (tablesConfig && tablesConfig.length > 0) {
+      const isInTables = tablesConfig.some((t: string) =>
+        t === childModel.id ||
+        t === childModel.db_table_name ||
+        t.toLowerCase() === childModel.db_table_name?.toLowerCase()
+      )
+      const hasConfiguredFields = childModelFields.some((f: any) => parentViewFormFieldsOrder.includes(f.id))
+      const isExplicitTab = detailsDisplayMode[childModel.id] === 'tabs' || detailsDisplayMode[childModel.id] === 'sections'
+      const isJoined = joins.some((j: any) => j.table === childModel.db_table_name || j.model_id === childModel.id)
+
+      if (!isInTables && !hasConfiguredFields && !isExplicitTab && !isJoined) {
+        continue
+      }
     }
 
     const fkFieldId = rel.from_field_id || rel.foreign_column_id
     let fkFieldRaw = allFields.find((f: any) => f.id === fkFieldId)
     if (!fkFieldRaw) {
-      const childFields = allFields.filter((f: any) => f.model_id === childModel.id)
-      fkFieldRaw = childFields.find((f: any) => {
+      fkFieldRaw = childModelFields.find((f: any) => {
         const col = (f.db_column_name || '').toLowerCase()
         const fkt = (f.foreign_key_table || '').toLowerCase()
         return (fkt && fkt === parentTableName) || col === `${parentTableName}_id` || col === `${parentTableSingular}_id`
@@ -888,9 +899,6 @@ function resolveRelationTabs(
     const childModelName = toPascalCase(childModel.db_table_name)
 
     const parentViewFieldsMetadata = layoutConfig.fields_metadata || {}
-    const parentViewFormFieldsOrder: string[] = layoutConfig.form_fields || []
-    const childModelFields = allFields.filter((f: any) => f.model_id === childModel.id)
-    const childModelFieldIds = new Set(childModelFields.map((f: any) => f.id))
     const childView = allViews.find(
       (v: any) => (v.model_id === fromId || v.model_id === childModel.id) && v.logic_type !== 'personalizado'
     )
@@ -940,7 +948,14 @@ function resolveRelationTabs(
       }
     } else {
       // Fallback: usa os campos do modelo filho
-      childGridFields = childModelFields.slice(0, 5).map((f: any): ResolvedField => {
+      const auditColumns = new Set(['criado_em', 'atualizado_em', 'created_at', 'updated_at', 'deleted_at'])
+      const candidateFields = childModelFields.filter((f: any) =>
+        !f.is_primary_key &&
+        f.db_column_name !== foreignKey &&
+        !auditColumns.has(f.db_column_name.toLowerCase())
+      )
+      const listToMap = candidateFields.length > 0 ? candidateFields : childModelFields
+      childGridFields = listToMap.map((f: any): ResolvedField => {
         const dt = (f.data_type || '').toLowerCase()
         const isDate = dt === 'date' || dt.includes('time') || f.db_column_name.includes('data')
         const isLookup = Boolean(f.foreign_key_table || f.is_foreign_key || f.db_column_name.endsWith('_id') || f.db_column_name.startsWith('id_') || f.config?.relation)
@@ -957,7 +972,7 @@ function resolveRelationTabs(
           isSortable: f.is_sortable || false,
           isVirtual: false,
           isByoc: false,
-          config: { columns: cols, width, gridSpan: cols, modalGridSpan: cols, modalWidth: width },
+          config: { columns: cols, width, gridSpan: cols, modalGridSpan: cols, modalWidth: width, ...(f.config || {}) },
         }
       })
       childFormFields = childGridFields
@@ -2123,7 +2138,7 @@ export function parseMetaBuilderJSON(
       analyticsConfig,
       buttons,
       relationTabs,
-      actionInterfaceType: resolvedView.layout_config?.action_interface_type || resolvedView.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (resolvedView.logic_type === 'mapa_mental' ? 'modal' : 'page'),
+      actionInterfaceType: resolvedView.layout_config?.action_interface_type || resolvedView.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (resolvedView.logic_type === 'mapa_mental' || resolvedView.logic_type === 'timeline' ? 'modal' : 'page'),
       rawLayoutConfig: resolvedView.layout_config,
     })
   }

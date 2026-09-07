@@ -54,6 +54,7 @@ export interface DetailRelationSectionProps {
   createSubAction?: (formData: FormData | Record<string, any>) => Promise<any>
   updateSubAction?: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteSubAction?: (id: string) => Promise<any>
+  relationalOptions?: Record<string, Array<{ value: string; label: string }>>
 }
 
 function parseAnyNumber(val: any): number {
@@ -386,6 +387,7 @@ export function DetailRelationSection({
   createSubAction,
   updateSubAction,
   deleteSubAction,
+  relationalOptions,
 }: DetailRelationSectionProps) {
   const subConfig = (subDetails && subDetails[0]) || null
   const subTable = subConfig?.relatedTable || ''
@@ -1056,9 +1058,38 @@ export function DetailRelationSection({
             const isExpanded = !!expandedRows[idx]
             const isNew = item._isNew || String(item.id || '').startsWith('temp-')
             const itemId = String(item.id || item.codigo || \`idx-\${idx}\`)
-            const itemTitle = isNew
-              ? 'Novo Registro'
-              : String(item.nome || item.name || item.titulo || item.title || item.id || item.codigo || \`Registro #\${idx + 1}\`)
+            let itemTitle = isNew ? 'Novo Registro' : ''
+            if (!itemTitle) {
+              for (const f of fields) {
+                const val = getFieldValue(item, f.dbColumn)
+                if (val !== undefined && val !== null && val !== '') {
+                  const opts = f.config?.options || relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn]
+                  if (opts && Array.isArray(opts) && opts.length > 0) {
+                    const opt = opts.find((o: any) => String(typeof o === 'object' ? o.value : o) === String(val))
+                    if (opt) {
+                      itemTitle = String(typeof opt === 'object' ? (opt.label || opt.value) : opt)
+                      break
+                    }
+                  }
+                }
+              }
+            }
+            if (!itemTitle) {
+              itemTitle = String(
+                item.display_label ||
+                item.produto_nome ||
+                item.produto ||
+                item.descricao ||
+                item.description ||
+                item.nome ||
+                item.name ||
+                item.titulo ||
+                item.title ||
+                item.codigo ||
+                item.id ||
+                \`Registro #\${idx + 1}\`
+              )
+            }
             const itemChildRecords: any[] = getSubRecords(item)
 
             return (
@@ -1122,7 +1153,10 @@ export function DetailRelationSection({
                         const val = getFieldValue(item, f.dbColumn)
                         const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                         const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
-                        const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
+                        const allOptions = (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)
+                          ? f.config.options
+                          : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
+                        const hasOptions = allOptions.length > 0
                         const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
@@ -1178,7 +1212,7 @@ export function DetailRelationSection({
                         }
 
                         if (hasOptions) {
-                          const selectedOpt = f.config!.options!.find((o: any) => {
+                          const selectedOpt = allOptions.find((o: any) => {
                             const oV = typeof o === 'object' ? String(o.value) : String(o)
                             const oL = typeof o === 'object' ? String(o.label) : String(o)
                             return oV === String(val) || oL === String(val)
@@ -1198,10 +1232,10 @@ export function DetailRelationSection({
                                 className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-white dark:bg-neutral-900'} border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                               >
                                 <option value="">Selecione...</option>
-                                {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
+                                {val && !allOptions.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
                                   <option value={String(val)}>{String(val)}</option>
                                 )}
-                                {f.config!.options!.map((opt: any, oIdx: number) => {
+                                {allOptions.map((opt: any, oIdx: number) => {
                                   const optVal = typeof opt === 'object' ? opt.value : opt
                                   const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                                   return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
@@ -1424,7 +1458,10 @@ export function DetailRelationSection({
                     const val = getFieldValue(editingItem, f.dbColumn)
                     const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
                     const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
-                    const hasOptions = f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0
+                    const allOptions = (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)
+                      ? f.config.options
+                      : (relationalOptions?.[f.dbColumn] || relationalOptions?.[relatedTable + '.' + f.dbColumn] || [])
+                    const hasOptions = allOptions.length > 0
                     const isCalculatedTotal = f.dbColumn.includes('total') || f.label.toLowerCase().includes('total')
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || isCalculatedTotal)
 
@@ -1488,7 +1525,7 @@ export function DetailRelationSection({
                     }
 
                     if (hasOptions) {
-                      const selectedOpt = f.config!.options!.find((o: any) => {
+                      const selectedOpt = allOptions.find((o: any) => {
                         const oV = typeof o === 'object' ? String(o.value) : String(o)
                         const oL = typeof o === 'object' ? String(o.label) : String(o)
                         return oV === String(val) || oL === String(val)
@@ -1508,10 +1545,10 @@ export function DetailRelationSection({
                             className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                           >
                             <option value="">Selecione...</option>
-                            {val && !f.config!.options!.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
+                            {val && !allOptions.some((o: any) => (o.value || o) === String(val) || (o.label || o) === String(val)) && (
                               <option value={String(val)}>{String(val)}</option>
                             )}
-                            {f.config!.options!.map((opt: any, oIdx: number) => {
+                            {allOptions.map((opt: any, oIdx: number) => {
                               const optVal = typeof opt === 'object' ? opt.value : opt
                               const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                               return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>

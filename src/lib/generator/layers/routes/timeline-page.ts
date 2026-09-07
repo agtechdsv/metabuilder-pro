@@ -22,6 +22,7 @@ export function generateTimelinePage(route: RouteNode): string {
   ]
 
   allTimelineFields.forEach(f => {
+    const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
     if (targetModel && targetTable) {
@@ -29,8 +30,8 @@ export function generateTimelinePage(route: RouteNode): string {
     } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
       const modelName = toPascalCase(targetTable)
       lookupModels.set(targetTable.toLowerCase(), modelName)
-    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
-      const base = f.dbColumn.slice(0, -3)
+    } else if (colOnly.endsWith('_id') && !f.isPrimaryKey) {
+      const base = colOnly.slice(0, -3)
       const table = base.endsWith('s') ? base : (base + 's')
       const modelName = toPascalCase(table)
       lookupModels.set(table.toLowerCase(), modelName)
@@ -50,8 +51,8 @@ export function generateTimelinePage(route: RouteNode): string {
 
   const optionsMap = new Map<string, string>()
   allTimelineFields.forEach(f => {
-    if (optionsMap.has(f.dbColumn)) return
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (colOnly.endsWith('_id') ? (colOnly.slice(0, -3).endsWith('s') ? colOnly.slice(0, -3) : colOnly.slice(0, -3) + 's') : null)
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
@@ -60,23 +61,32 @@ export function generateTimelinePage(route: RouteNode): string {
         ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
         : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-      optionsMap.set(
-        f.dbColumn,
-        `    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`
-      )
+      const mappedCode = `    '${colOnly}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`
+      if (!optionsMap.has(colOnly)) {
+        optionsMap.set(colOnly, mappedCode)
+      }
+      if (f.dbColumn !== colOnly && !optionsMap.has(f.dbColumn)) {
+        optionsMap.set(f.dbColumn, `    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      }
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      optionsMap.set(f.dbColumn, `    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      if (!optionsMap.has(colOnly)) {
+        optionsMap.set(colOnly, `    '${colOnly}': ${JSON.stringify(f.config.options)},`)
+      }
+      if (f.dbColumn !== colOnly && !optionsMap.has(f.dbColumn)) {
+        optionsMap.set(f.dbColumn, `    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      }
     }
   })
 
   // Garante lookups para campos usados na timeline mesmo se não estiverem em filterFields
   const extraLookupCols = [route.timelineConfig?.titleField, route.timelineConfig?.descField, route.timelineConfig?.iconField].filter(Boolean) as string[]
-  extraLookupCols.forEach(col => {
+  extraLookupCols.forEach(rawCol => {
+    const col = rawCol.includes('.') ? rawCol.split('.').pop()! : rawCol
     if (col && col.endsWith('_id') && !optionsMap.has(col)) {
       const base = col.slice(0, -3)
       const t = (base.endsWith('s') ? base : (base + 's')).toLowerCase()
       if (lookupModels.has(t)) {
-        const matchedField = allTimelineFields.find(f => f.dbColumn === col)
+        const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn) === col)
         const relLabel = matchedField?.config?.component?.rel_label || matchedField?.config?.relation?.displayColumn || matchedField?.config?.rel_label
         const relValue = matchedField?.config?.component?.rel_value || matchedField?.config?.relation?.valueColumn || matchedField?.config?.rel_value || 'id'
         const labelExpr = relLabel
@@ -209,7 +219,6 @@ ${headerButtonsHtml}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateTimelineSchema(route: RouteNode): string {
-  const isActionModal = route.actionInterfaceType === 'modal' || route.rawLayoutConfig?.action_interface_type === 'modal'
   const hasRelationTabs = route.relationTabs.length > 0
 
   const rawFilterFields = route.filterFields && route.filterFields.length > 0
@@ -247,7 +256,7 @@ export function generateTimelineSchema(route: RouteNode): string {
   const usedTabPrefixes = new Set<string>()
   const tabConstants: string[] = []
 
-  if (hasRelationTabs && isActionModal) {
+  if (hasRelationTabs) {
     route.relationTabs.forEach((tab, i) => {
       const tabFields = (tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields)
         .filter(f => !f.dbColumn.includes('.') || f.dbColumn.startsWith(tab.relatedTable + '.'))
@@ -314,7 +323,6 @@ export function generateTimelineClient(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
-  const isActionModal = route.actionInterfaceType === 'modal' || route.rawLayoutConfig?.action_interface_type === 'modal'
   const hasRelationTabs = route.relationTabs.length > 0
 
   // Geração de formulário modal de edição/criação
@@ -330,7 +338,7 @@ export function generateTimelineClient(route: RouteNode): string {
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
 
-  const relationImports = hasRelationTabs && isActionModal
+  const relationImports = hasRelationTabs
     ? [
         `import { DetailRelationSection } from '@/components/DetailRelationSection'`,
         ...route.relationTabs.map(t =>
@@ -342,7 +350,7 @@ export function generateTimelineClient(route: RouteNode): string {
   const usedTabPrefixes = new Set<string>()
   const modalTabConstNames: string[] = []
 
-  const relationTabPanels = hasRelationTabs && isActionModal
+  const relationTabPanels = hasRelationTabs
     ? route.relationTabs.map((tab, i) => {
         const basePrefix = tab.relatedTable.toUpperCase().replace(/[^A-Z0-9_]/g, '_')
         const constPrefix = usedTabPrefixes.has(basePrefix) ? `${basePrefix}_${i + 1}` : basePrefix
@@ -368,6 +376,7 @@ export function generateTimelineClient(route: RouteNode): string {
                 deleteAction={delete${tab.relatedModelName}}
                 backPath="${route.path}"
                 hideFooter={true}
+                relationalOptions={relationalOptions}
               />
             </div>`
       }).join('\n')
@@ -489,7 +498,7 @@ export function TimelineClient({
   useEffect(() => {
     if (activeRecord && (activeRecord.${route.primaryKey} || activeRecord.id)) {
       const recId = String(activeRecord.${route.primaryKey} || activeRecord.id)
-${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.foreignKey}', recId)
+${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.foreignKey}', recId)
         .then((items: any) => setModalRelationItems(prev => ({ ...prev, '${tab.relatedTable}': items || [] })))
         .catch(() => {})`).join('\n') : ''}
     } else {
@@ -554,7 +563,15 @@ ${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${t
     e.preventDefault()
     setIsSaving(true)
     try {
-      const formData = new FormData(e.currentTarget)
+      const formEl = e.currentTarget
+      const masterContainer = formEl.querySelector('#timeline-master-fields') || formEl
+      const formData = new FormData()
+      const inputs = masterContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')
+      inputs.forEach(input => {
+        if (input.name && !input.disabled) {
+          formData.append(input.name, input.value)
+        }
+      })
       if (modalMode === 'edit' && activeRecord) {
         const id = activeRecord.${route.primaryKey} || activeRecord.id
         await update${mn}(id, formData)
@@ -677,8 +694,8 @@ ${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${t
         data={displayedData}
         timelineConfig={timelineConfig}
         relationalOptions={relationalOptions}
-        onView={(row) => ${isActionModal ? 'handleOpenEdit(row)' : `router.push(\`${route.path}/\${row.${route.primaryKey} || row.id}\`)`}}
-        onEdit={(row) => ${isActionModal ? 'handleOpenEdit(row)' : `router.push(\`${route.path}/\${row.${route.primaryKey} || row.id}\`)`}}
+        onView={handleOpenEdit}
+        onEdit={handleOpenEdit}
         onDelete={handleDelete}
         onRefresh={() => router.refresh()}
         onLoadMore={() => setVisibleCount(prev => prev + BATCH_SIZE)}
@@ -725,11 +742,11 @@ ${hasRelationTabs && isActionModal ? route.relationTabs.map(tab => `      get${t
               className="flex flex-col flex-1 overflow-hidden"
             >
               <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
+                <div id="timeline-master-fields" className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
 ${modalFormFieldsHtml}
                 </div>
 
-${hasRelationTabs && isActionModal ? `                {modalMode === 'edit' && activeRecord && (
+${hasRelationTabs ? `                {modalMode === 'edit' && activeRecord && (
                   <div className="space-y-6 pt-6 border-t border-neutral-100 dark:border-neutral-800">
 ${relationTabPanels}
                   </div>
