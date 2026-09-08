@@ -411,7 +411,9 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
         clean[k] = isNaN(parsed) ? null : parsed
       } else if (isNumeric || trimmed.includes(',')) {
         // Numérico/decimal ou valor monetário formatado pt-BR
-        const cleanNum = trimmed.replace(/\\./g, '').replace(',', '.')
+        const cleanNum = trimmed.includes(',')
+          ? trimmed.replace(/\\./g, '').replace(',', '.')
+          : trimmed
         const parsed = Number(cleanNum)
         clean[k] = isNaN(parsed) ? trimmed : parsed
       } else if (/^\\d{1,3}(\\.\\d{3})+$/.test(trimmed)) {

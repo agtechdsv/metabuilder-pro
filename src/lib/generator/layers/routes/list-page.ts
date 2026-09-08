@@ -250,6 +250,7 @@ async function ${mn}TableContent({
   const sortOrder = params?.sort_order || 'asc'
   const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
   const limit = Math.max(1, parseInt(params?.limit || '15', 10) || 15)
+  const isEmbedded = params?.embedded === 'true'
 
 ${fetchDataCode}
 
@@ -326,10 +327,10 @@ ${thCells}
 ${tdCells}
                 <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                   <div className="flex items-center justify-end gap-1.5">
-                    <Link href={'${route.path}/' + item.${route.primaryKey}} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
+                    <Link href={'${route.path}/' + item.${route.primaryKey} + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
                       <Search className="w-3.5 h-3.5" />
                     </Link>
-                    <Link href={'${route.path}/' + item.${route.primaryKey}} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
+                    <Link href={'${route.path}/' + item.${route.primaryKey} + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
                       <Pencil className="w-3.5 h-3.5" />
                     </Link>
                     <DeleteButton
@@ -427,8 +428,8 @@ export default async function ${mn}ListPage({
         <div className="flex items-center gap-3">
 ${route.buttons.filter(b => b.placement === 'header').map(b => {
   if (b.actionType === 'create') {
-    return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-            <Plus className="w-4 h-4" /> ${b.label}
+    return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Plus className="w-4 h-4" /> \${b.label}
           </Link>`
   }
   if (b.actionType === 'export') {
@@ -457,7 +458,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
   return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             ${b.label}
           </button>`
-}).join('\n') || (hasCreate ? `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+}).join('\n') || (hasCreate ? `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : '')}
           {isEmbedded && <CloseModalButton />}
@@ -466,6 +467,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
 
       {/* Filtros fiéis ao ViewFilterBar */}
       <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+        {isEmbedded && <input type="hidden" name="embedded" value="true" />}
         <div className="flex flex-col lg:flex-row items-end gap-6">
           <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
@@ -479,7 +481,7 @@ ${filterInputs}
               Pesquisar
             </button>
             <Link
-              href="${route.path}"
+              href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
               className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
             >
               <RefreshCcw className="w-4 h-4" />

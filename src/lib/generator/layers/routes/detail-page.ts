@@ -403,7 +403,17 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
   const searchParams = useSearchParams()
-  const isEmbedded = searchParams?.get('embedded') === 'true'
+  const [isIframe, setIsIframe] = useState(false)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.self !== window.top) {
+        setIsIframe(true)
+      }
+    } catch (e) {
+      setIsIframe(true)
+    }
+  }, [])
+  const isEmbedded = searchParams?.get('embedded') === 'true' || isIframe
   const [activeTab, setActiveTab] = useState(0)
   const isEdit = true
 
@@ -422,39 +432,45 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
   return (
     <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Cabeçalho Externo da View fiel à Web Produção (RuntimeHeader) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex items-center gap-5">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
-            <DynamicIcon icon={icon} size={24} />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-                {title}
-              </h1>
+      {!isEmbedded && (
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+              <DynamicIcon icon={icon} size={24} />
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                SISTEMA METABUILDER
-              </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+                  {title}
+                </h1>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                  SISTEMA METABUILDER
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-            <Zap className="w-4 h-4 text-neutral-400" /> Automações
-          </button>
-          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-            <Download className="w-4 h-4 text-neutral-400" /> Exportar
-          </button>
-          <Link href={newPath + (isEmbedded ? '?embedded=true' : '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-            <Plus className="w-4 h-4" /> Novo Registro
-          </Link>
-          {isEmbedded && <CloseModalButton />}
+          <div className="flex items-center gap-3">
+            <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+              <Zap className="w-4 h-4 text-neutral-400" /> Automações
+            </button>
+            <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+              <Download className="w-4 h-4 text-neutral-400" /> Exportar
+            </button>
+            <Link href={newPath + (isEmbedded ? '?embedded=true' : '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+              <Plus className="w-4 h-4" /> Novo Registro
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
+      {isEmbedded && (
+        <div className="flex justify-end items-center -mb-4">
+          <CloseModalButton />
+        </div>
+      )}
 
       {/* Card Principal de Edição */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden space-y-8">

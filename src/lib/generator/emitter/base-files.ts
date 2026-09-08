@@ -566,7 +566,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   // Protected Layout — usa AppSidebar + Header idêntico ao Runtime
   files.set('app/(protected)/layout.tsx', `'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, Home, ChevronRight } from 'lucide-react'
@@ -582,7 +582,19 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const isEmbedded = searchParams?.get('embedded') === 'true'
+  const [isIframe, setIsIframe] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.self !== window.top) {
+        setIsIframe(true)
+      }
+    } catch (e) {
+      setIsIframe(true)
+    }
+  }, [])
+
+  const isEmbedded = searchParams?.get('embedded') === 'true' || isIframe
 
   if (isEmbedded) {
     return (
