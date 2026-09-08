@@ -23,6 +23,7 @@ import {
   RotateCcw,
   FileText,
   ImageIcon,
+  LayoutGrid,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -525,62 +526,105 @@ export function GalleryBoard({
                   {item.isPdf ? 'PDF' : (item.hasImage ? 'IMAGE' : 'DOC')}
                 </div>
 
-                {/* Overlay no hover com botão de preview fullscreen */}
-                {item.hasImage && (
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
+                {/* Botões de Ação CRUD Superior Direito (Fiel à Web Produção) */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                >
+                  {onView && (
+                    <button
+                      type="button"
+                      onClick={() => onView(item.raw)}
+                      className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 transition-colors shadow-sm cursor-pointer"
+                      title="Ver Detalhes"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(item.raw)}
+                      className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-rose-500 transition-colors shadow-sm cursor-pointer"
+                      title="Editar"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <DeleteButton
+                      recordName={item.title}
+                      className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-red-500 transition-colors shadow-sm cursor-pointer flex items-center justify-center"
+                      onDelete={async () => {
+                        await onDelete(item.raw)
+                      }}
+                    />
+                  )}
+                  {customActions.filter(a => {
+                    const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : (a.placement ? [a.placement] : ['row']))
+                    return ctxs.includes('row') || ctxs.includes('row_search')
+                  }).map(action => {
+                    const colors = getActionColorClasses(action.color)
+                    return (
+                      <CustomActionButton
+                        key={action.id}
+                        action={action}
+                        item={item.raw}
+                        variant="plain"
+                        className={cn(
+                          "p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 shadow-sm transition-colors cursor-pointer",
+                          colors.text,
+                          colors.hover
+                        )}
+                        onClick={onCustomAction ? () => onCustomAction(action, item.raw) : undefined}
+                      />
+                    )
+                  })}
+                </div>
+
+                {/* Overlay de Hover com botão pill VISUALIZAR (Fiel à Web Produção) */}
+                {clickBehavior !== 'thumbnail' && (
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelectedAsset(item)
                       }}
-                      title="Visualizar em tela cheia"
-                      className="w-10 h-10 rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-900 dark:text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+                      className="px-4 py-2 bg-white text-neutral-900 rounded-xl hover:bg-neutral-100 active:scale-95 transition-all shadow-lg flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider cursor-pointer"
                     >
-                      <Maximize2 className="w-4 h-4" />
+                      <Eye className="w-4 h-4 text-rose-500" />
+                      <span>Visualizar</span>
                     </button>
-                    {onView && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onView(item.raw)
-                        }}
-                        title="Ver detalhes"
-                        className="w-10 h-10 rounded-full bg-white/90 dark:bg-neutral-900/90 text-neutral-900 dark:text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
 
               {/* Corpo do Card: Título, Nome do arquivo e Metadados Verticais */}
-              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div className="space-y-3">
+              <div className="p-5 flex-1 flex flex-col justify-between gap-3">
+                <div className="space-y-2">
                   <div>
                     <h3
                       onClick={() => handleCardClick(item)}
                       title={item.title}
-                      className="font-bold text-neutral-900 dark:text-white text-base leading-snug line-clamp-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                      className="font-black text-neutral-800 dark:text-white text-sm leading-snug line-clamp-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
                     >
                       {item.title}
                     </h3>
-                    <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 truncate font-mono mt-0.5" title={item.fileName}>
+                    <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 truncate font-mono mt-0.5" title={item.fileName}>
                       {item.fileName}
                     </p>
                   </div>
 
                   {/* Metadados adicionais em formato vertical fiel ao Studio */}
                   {item.metadata.length > 0 && (
-                    <div className="flex flex-col gap-2.5 pt-1">
+                    <div className="flex flex-col gap-2 pt-1">
                       {item.metadata.map((meta: any, i: number) => (
                         <div key={i} className="flex flex-col gap-0.5">
-                          <span className="font-black text-neutral-400 dark:text-neutral-500 uppercase text-[9px] tracking-widest">
+                          <span className="font-black text-neutral-400 uppercase text-[8px] tracking-widest">
                             {meta.label}
                           </span>
-                          <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 line-clamp-2">
+                          <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 line-clamp-2">
                             {meta.value}
                           </span>
                         </div>
@@ -588,207 +632,111 @@ export function GalleryBoard({
                     </div>
                   )}
                 </div>
-
-                {/* Rodapé do Card com Ações CRUD e Custom Actions */}
-                <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                    Detalhes
-                  </span>
-
-                  <div className="flex items-center gap-1">
-                    {onView && (
-                      <button
-                        type="button"
-                        onClick={() => onView(item.raw)}
-                        title="Visualizar"
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {onEdit && (
-                      <button
-                        type="button"
-                        onClick={() => onEdit(item.raw)}
-                        title="Editar"
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {onDelete && (
-                      <DeleteButton
-                        recordName={item.title}
-                        onDelete={async () => {
-                          await onDelete(item.raw)
-                        }}
-                      />
-                    )}
-
-                    {/* Ações Personalizadas da Linha (Clientes, Pedidos, etc.) */}
-                    {customActions.filter(a => {
-                      const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : (a.placement ? [a.placement] : ['row']))
-                      return ctxs.includes('row') || ctxs.includes('row_search')
-                    }).map(action => {
-                      const colors = getActionColorClasses(action.color)
-                      return (
-                        <CustomActionButton
-                          key={action.id}
-                          action={action}
-                          item={item.raw}
-                          variant="plain"
-                          className={cn(
-                            "p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer",
-                            colors.text,
-                            colors.hover
-                          )}
-                          onClick={onCustomAction ? () => onCustomAction(action, item.raw) : undefined}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal Fullscreen de Visualização do Asset */}
+      {/* Lightbox / Preview Modal (Fiel à Web Produção) */}
       <AnimatePresence>
         {selectedAsset && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="relative w-full max-w-5xl h-[90vh] bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
-              {/* Header do Modal */}
-              <div className="h-16 px-6 border-b border-neutral-800 flex items-center justify-between shrink-0 bg-neutral-900/90 backdrop-blur-sm z-10">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-                    <ImageIcon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-bold text-white truncate max-w-md">
-                      {selectedAsset.title}
-                    </h2>
-                    <span className="text-[10px] text-neutral-400 font-mono">
-                      {selectedAsset.fileName}
-                    </span>
-                  </div>
-                </div>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setSelectedAsset(null)}
+          >
+            <div
+              className="w-full max-w-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-neutral-100 dark:border-neutral-850 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-neutral-450 tracking-widest flex items-center gap-1.5">
+                  <LayoutGrid className="w-3.5 h-3.5 text-rose-500" />
+                  Visualizar Recurso
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedAsset(null)}
+                  className="text-xs font-black text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-100 transition-colors uppercase tracking-wider cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
 
-                {/* Controles do Modal */}
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <button
-                    onClick={() => setPreviewZoom(z => Math.max(0.5, z - 0.25))}
-                    title="Diminuir zoom"
-                    className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <ZoomOut className="w-4 h-4" />
-                  </button>
-                  <span className="text-xs font-mono text-neutral-400 min-w-[3rem] text-center">
-                    {Math.round(previewZoom * 100)}%
-                  </span>
-                  <button
-                    onClick={() => setPreviewZoom(z => Math.min(3.0, z + 0.25))}
-                    title="Aumentar zoom"
-                    className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <ZoomIn className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setPreviewZoom(1.0)}
-                    title="Resetar zoom"
-                    className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-
-                  <div className="h-4 w-px bg-neutral-800 mx-1" />
-
-                  {selectedAsset.imageUrl && (
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/80 flex items-center justify-center relative group">
+                  {selectedAsset.hasImage && selectedAsset.imageUrl ? (
                     <>
-                      <button
-                        onClick={() => handleDownloadImage(selectedAsset.imageUrl, selectedAsset.fileName || 'imagem.png')}
-                        title="Baixar imagem"
-                        className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handlePrintImage(selectedAsset.imageUrl)}
-                        title="Imprimir"
-                        className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
+                      <img src={selectedAsset.imageUrl} alt="" className="w-full h-full object-contain" />
+                      <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadImage(selectedAsset.imageUrl, selectedAsset.fileName || 'imagem.png')}
+                          className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-all shadow-md cursor-pointer"
+                          title="Baixar Imagem"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintImage(selectedAsset.imageUrl)}
+                          className="p-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-all shadow-md cursor-pointer"
+                          title="Imprimir Imagem"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      </div>
                     </>
-                  )}
-
-                  {onEdit && (
-                    <button
-                      onClick={() => {
-                        const raw = selectedAsset.raw
-                        setSelectedAsset(null)
-                        onEdit(raw)
-                      }}
-                      title="Editar registro"
-                      className="p-2 rounded-xl text-neutral-400 hover:text-indigo-400 hover:bg-neutral-800 transition-colors cursor-pointer"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setSelectedAsset(null)}
-                    title="Fechar (Esc)"
-                    className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors ml-1 cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Área Central de Visualização com Zoom */}
-              <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-black/40">
-                {selectedAsset.hasImage ? (
-                  <div
-                    style={{ transform: \`scale(\${previewZoom})\`, transition: 'transform 0.15s ease-out' }}
-                    className="origin-center max-w-full max-h-full flex items-center justify-center"
-                  >
-                    <img
-                      src={selectedAsset.imageUrl}
-                      alt={selectedAsset.title}
-                      className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 text-neutral-500">
-                    <ImageIcon className="w-16 h-16 opacity-30" />
-                    <span className="text-sm">Sem imagem disponível</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Rodapé com Metadados */}
-              {selectedAsset.metadata.length > 0 && (
-                <div className="p-4 px-6 border-t border-neutral-800 bg-neutral-900/90 backdrop-blur-sm flex items-center gap-2 overflow-x-auto">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 shrink-0">
-                    Metadados:
-                  </span>
-                  {selectedAsset.metadata.map((m: any, i: number) => (
-                    <div
-                      key={i}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-neutral-800/80 border border-neutral-700/60 text-xs text-neutral-200 shrink-0"
-                    >
-                      <span className="text-[10px] font-semibold text-neutral-400 uppercase">
-                        {m.label}:
+                  ) : (selectedAsset.isPdf || selectedAsset.isDoc) && selectedAsset.imageUrl ? (
+                    <iframe src={selectedAsset.imageUrl} className="w-full h-full border-0 bg-white" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 select-none text-neutral-400">
+                      <FileText className="w-10 h-10 text-neutral-400" />
+                      <span className="text-[10px] font-mono font-black uppercase bg-neutral-100 dark:bg-neutral-850 px-2.5 py-0.5 rounded">
+                        {selectedAsset.isPdf ? 'PDF' : selectedAsset.isDoc ? 'DOCUMENT' : 'ARQUIVO'}
                       </span>
-                      <span>{m.value}</span>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+
+                <div className="space-y-4">
+                  <div>
+                    <h5 className="font-black text-sm text-neutral-800 dark:text-white leading-snug">
+                      {selectedAsset.title}
+                    </h5>
+                    <p className="text-[10px] text-neutral-400 font-mono mt-1 break-all select-all">
+                      {selectedAsset.fileName}
+                    </p>
+                  </div>
+
+                  {/* Metadata Info Panel */}
+                  <div className="grid grid-cols-2 gap-4 text-[11px] bg-neutral-50/50 dark:bg-neutral-900/60 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-850">
+                    <div>
+                      <span className="text-neutral-400 block text-[8px] font-black uppercase tracking-wider">Formato</span>
+                      <span className="font-bold text-neutral-700 dark:text-neutral-350 uppercase">
+                        {selectedAsset.hasImage ? 'IMAGE (AVIF)' : selectedAsset.isPdf ? 'PDF' : 'DOCUMENT'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block text-[8px] font-black uppercase tracking-wider">Tamanho</span>
+                      <span className="font-bold text-neutral-700 dark:text-neutral-350">N/A</span>
+                    </div>
+
+                    {selectedAsset.metadata && selectedAsset.metadata.length > 0 && (
+                      <div className="col-span-2 border-t border-neutral-200/30 dark:border-neutral-800/50 pt-3 mt-1 grid grid-cols-2 gap-3">
+                        {selectedAsset.metadata.map((meta: any, idx: number) => (
+                          <div key={idx}>
+                            <span className="text-neutral-400 block text-[8px] font-black uppercase tracking-wider">{meta.label}</span>
+                            <span className="font-bold text-neutral-700 dark:text-neutral-300 break-words">{meta.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

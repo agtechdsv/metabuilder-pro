@@ -441,7 +441,7 @@ export function generateGalleryClient(route: RouteNode): string {
     || route.rawLayoutConfig?.action_interface_type === 'modal'
 
   const modalFormFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, false, 'relationalOptions'))
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions', true))
     .filter(Boolean)
     .join('\n')
 
@@ -453,7 +453,7 @@ export function generateGalleryClient(route: RouteNode): string {
     .join('\n')
 
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)` : ''
 
@@ -469,10 +469,15 @@ export function generateGalleryClient(route: RouteNode): string {
     setIsModalOpen(true)`
     : `    router.push('${route.path}/' + (row.${pk} || row.id))`
 
-  const handleViewBody = `    router.push('${route.path}/' + (row.${pk} || row.id))`
+  const handleViewBody = isActionModal
+    ? `    setActiveRecord(row)
+    setModalMode('view')
+    setIsModalOpen(true)`
+    : `    router.push('${route.path}/' + (row.${pk} || row.id))`
 
   const modalSubmitHandler = isActionModal ? `  const handleSubmitModal = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (modalMode === 'view') return
     setIsSaving(true)
     try {
       const formData = new FormData(e.currentTarget)
@@ -501,7 +506,8 @@ export function generateGalleryClient(route: RouteNode): string {
   }
 
   const data = activeRecord
-  const isEdit = modalMode === 'edit' || modalMode === 'view'` : ''
+  const isEdit = modalMode === 'edit' || modalMode === 'view'
+  const isView = modalMode === 'view'` : ''
 
   const modalJsx = isActionModal ? `
       {isModalOpen && (
@@ -510,14 +516,20 @@ export function generateGalleryClient(route: RouteNode): string {
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                  <Pencil className="w-5 h-5" />
+                  {modalMode === 'view' ? (
+                    <Eye className="w-5 h-5" />
+                  ) : modalMode === 'create' ? (
+                    <Plus className="w-5 h-5" />
+                  ) : (
+                    <Pencil className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-                    {modalMode === 'edit' ? 'Editar Registro' : 'Novo Item na Galeria'}
+                    {modalMode === 'view' ? 'Visualizar' : modalMode === 'edit' ? 'Editar Registro' : 'Novo Item na Galeria'}
                   </h2>
                   <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
-                    {modalMode === 'edit'
+                    {modalMode !== 'create'
                       ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
                       : 'Preencha os dados do registro'}
                   </p>
@@ -544,21 +556,33 @@ export function generateGalleryClient(route: RouteNode): string {
               </div>
 
               <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-400 transition-all active:scale-95 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
+                {modalMode === 'view' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-xs font-bold text-neutral-700 dark:text-neutral-300 transition-all active:scale-95 cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-400 transition-all active:scale-95 cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Save className="w-4 h-4" />
+                      {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -572,7 +596,7 @@ import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GalleryBoard } from '@/components/GalleryBoard'
 import { fields, galleryConfig, customActions } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save, Eye, Plus } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 
