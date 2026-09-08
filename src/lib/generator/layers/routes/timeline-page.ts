@@ -483,6 +483,7 @@ export function TimelineClient({
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})
 
   useEffect(() => {
@@ -574,6 +575,7 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
   const handleSubmitModal = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formEl = e.currentTarget
       const masterContainer = formEl.querySelector('#timeline-master-fields') || formEl
@@ -620,7 +622,7 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar registro: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }

@@ -241,7 +241,8 @@ export function generateMapClient(route: RouteNode): string {
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
   const handleAddBody = isActionModal
     ? `    setActiveRecord({})
@@ -264,6 +265,7 @@ export function generateMapClient(route: RouteNode): string {
   const modalSaveHandler = isActionModal ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
@@ -286,7 +288,7 @@ export function generateMapClient(route: RouteNode): string {
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }

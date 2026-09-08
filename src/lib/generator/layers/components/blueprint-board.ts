@@ -469,7 +469,7 @@ function BlueprintFlowContent({
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target || connection.source === connection.target) return
     if (checkForCycle(connection.target, connection.source)) {
-      alert('Operação recusada: Isso criaria uma dependência circular.')
+      console.warn('Operação recusada: Isso criaria uma dependência circular.')
       return
     }
 

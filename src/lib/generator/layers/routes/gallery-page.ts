@@ -455,23 +455,27 @@ export function generateGalleryClient(route: RouteNode): string {
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
   const handleAddBody = isActionModal
     ? `    setActiveRecord(null)
     setModalMode('create')
+    setSaveError(null)
     setIsModalOpen(true)`
     : `    router.push('${route.path}/new')`
 
   const handleEditBody = isActionModal
     ? `    setActiveRecord(row)
     setModalMode('edit')
+    setSaveError(null)
     setIsModalOpen(true)`
     : `    router.push('${route.path}/' + (row.${pk} || row.id))`
 
   const handleViewBody = isActionModal
     ? `    setActiveRecord(row)
     setModalMode('view')
+    setSaveError(null)
     setIsModalOpen(true)`
     : `    router.push('${route.path}/' + (row.${pk} || row.id))`
 
@@ -479,6 +483,7 @@ export function generateGalleryClient(route: RouteNode): string {
     e.preventDefault()
     if (modalMode === 'view') return
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formData = new FormData(e.currentTarget)
       if (modalMode === 'edit' && activeRecord) {
@@ -499,7 +504,7 @@ export function generateGalleryClient(route: RouteNode): string {
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }
@@ -549,6 +554,15 @@ export function generateGalleryClient(route: RouteNode): string {
               onSubmit={handleSubmitModal}
               className="flex flex-col flex-1 overflow-hidden"
             >
+              {saveError && (
+                <div className="mx-6 sm:mx-8 mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-700 dark:text-rose-400 text-xs animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span className="font-medium flex-1">{saveError}</span>
+                  <button type="button" onClick={() => setSaveError(null)} className="hover:opacity-75 cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
                   ${modalFormFieldsHtml}
@@ -596,7 +610,7 @@ import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GalleryBoard } from '@/components/GalleryBoard'
 import { fields, galleryConfig, customActions } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save, Eye, Plus } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save, Eye, Plus, AlertCircle } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 

@@ -181,23 +181,30 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  const handleClose = () => {
+    setIsOpen(false)
+    setErrorMsg(null)
+  }
+
   const handleConfirm = () => {
+    setErrorMsg(null)
     startTransition(async () => {
       try {
         const res: any = await onDelete(id)
         if (res && res.success === false) {
-          alert('Não foi possível excluir o registro: ' + (res.error || 'Erro no banco de dados'))
+          setErrorMsg(res.error || 'Não foi possível excluir o registro.')
+          return
         }
-        setIsOpen(false)
+        handleClose()
       } catch (err: any) {
         console.error('Erro ao excluir registro:', err)
-        alert('Erro ao excluir registro: ' + (err?.message || err))
-        setIsOpen(false)
+        setErrorMsg(err?.message || 'Erro ao excluir registro.')
       }
     })
   }
@@ -208,6 +215,7 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
         type="button" 
         onClick={(e) => {
           e.stopPropagation()
+          setErrorMsg(null)
           setIsOpen(true)
         }}
         className={className || "p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center"} 
@@ -230,12 +238,22 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {errorMsg && (
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-xs flex items-center gap-3 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="font-medium flex-1">{errorMsg}</span>
+                <button type="button" onClick={() => setErrorMsg(null)} className="hover:opacity-75">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
               <div className="p-2 bg-red-500/20 rounded-xl shrink-0">
@@ -252,7 +270,7 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
               >
                 Cancelar

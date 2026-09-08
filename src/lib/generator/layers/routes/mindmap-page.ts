@@ -429,6 +429,7 @@ ${subActionProps}
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})` : ''
 
   const relationFetchEffect = (hasRelationTabs && isActionModal)
@@ -467,6 +468,7 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
   const modalSaveHandler = isActionModal ? `  const handleSaveRecord = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSaving(true)
+    setSaveError(null)
     try {
       const masterContainer = document.getElementById('mindmap-master-fields')
       const payload: Record<string, any> = {}
@@ -511,7 +513,7 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }

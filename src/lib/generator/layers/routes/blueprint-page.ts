@@ -364,7 +364,8 @@ export function generateBlueprintClient(route: RouteNode): string {
   const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
   const handleAddBody = isActionOverlay
     ? `    setActiveRecord({})
@@ -390,6 +391,7 @@ export function generateBlueprintClient(route: RouteNode): string {
     e.preventDefault()
     if (modalMode === 'view') return
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
@@ -412,7 +414,7 @@ export function generateBlueprintClient(route: RouteNode): string {
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }
@@ -684,14 +686,13 @@ ${modalStateVars}
     try {
       const res = await delete${mn}(recordId)
       if (res && (res as any).success === false) {
-        alert('Não foi possível excluir o registro: ' + ((res as any).error || 'Erro no banco de dados'))
+        console.warn('Não foi possível excluir o registro:', (res as any).error)
         return
       }
       setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao excluir registro:', err)
-      alert('Erro ao excluir: ' + (err?.message || err))
     }
   }
 

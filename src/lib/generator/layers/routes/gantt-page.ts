@@ -452,7 +452,8 @@ export function generateGanttClient(route: RouteNode): string {
   const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
   const handleAddBody = isActionModal
     ? `    setActiveRecord({})
@@ -478,6 +479,7 @@ export function generateGanttClient(route: RouteNode): string {
     e.preventDefault()
     if (modalMode === 'view') return
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
@@ -500,7 +502,7 @@ export function generateGanttClient(route: RouteNode): string {
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }
@@ -550,6 +552,15 @@ export function generateGanttClient(route: RouteNode): string {
             </div>
 
             <form onSubmit={handleSaveRecord} className="flex flex-col flex-1 overflow-hidden">
+              {saveError && (
+                <div className="mx-6 sm:mx-8 mt-4 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-center gap-3 text-rose-700 dark:text-rose-400 text-xs animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span className="font-medium flex-1">{saveError}</span>
+                  <button type="button" onClick={() => setSaveError(null)} className="hover:opacity-75 cursor-pointer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
 ${modalFormFieldsHtml}
@@ -597,7 +608,7 @@ import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GanttBoard } from '@/components/GanttBoard'
 import { fields, ganttConfig, customActions } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Eye, Pencil, Plus, X, Save } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}import { Eye, Pencil, Plus, X, Save, AlertCircle } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 
@@ -624,14 +635,13 @@ ${modalStateVars}
     try {
       const res = await delete${mn}(recordId)
       if (res && (res as any).success === false) {
-        alert('Não foi possível excluir o registro: ' + ((res as any).error || 'Erro no banco de dados'))
+        console.warn('Não foi possível excluir o registro:', (res as any).error)
         return
       }
       setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
       router.refresh()
     } catch (err: any) {
       console.error('Erro ao excluir registro:', err)
-      alert('Erro ao excluir: ' + (err?.message || err))
     }
   }
 

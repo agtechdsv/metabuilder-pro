@@ -306,19 +306,14 @@ function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Ar
 // ACTIONS GENERATORS
 // -----------------------------------------------------------------------------
 
-function generateSupabaseActions(model: ModelNode, allModels: ModelNode[] = []) {
-  const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
+function generateParsePayloadCode(model: ModelNode): string {
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
-  const childRefs = getReferencingFields(model, allModels)
-  const childCleanups = childRefs.map(ref => {
-    return `    await supabase.from('${ref.table}').delete().eq('${ref.column}', id).catch(() => {})`
-  }).join('\n')
+  const colTypesCode = JSON.stringify(
+    Object.fromEntries(model.fields.map(f => [f.dbColumn, (f.dataType || f.type || '').toLowerCase()]))
+  )
 
-  return `'use server'
-import { createClient } from './db'
-import { revalidatePath } from 'next/cache'
-
-const allowedColumns = new Set(${allowedColsCode})
+  return `const allowedColumns = new Set(${allowedColsCode})
+const columnTypes: Record<string, string> = ${colTypesCode}
 
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
@@ -331,14 +326,49 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     if (!allowedColumns.has(k)) continue
     if (v === '' || v === undefined) {
       clean[k] = null
-    } else if (typeof v === 'string' && v.includes(',')) {
-      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
+    } else if (typeof v === 'string') {
+      const trimmed = v.trim()
+      const colType = (columnTypes[k] || '').toLowerCase()
+      const isInteger = colType === 'integer' || colType === 'int' || colType === 'int4' || colType === 'int8' || colType === 'bigint' || colType === 'smallint'
+      const isNumeric = isInteger || colType === 'number' || colType === 'numeric' || colType === 'decimal' || colType === 'float' || colType === 'real' || colType === 'double precision'
+
+      if (isInteger) {
+        // Inteiro: remove pontos de milhar, trata vírgulas caso tenha sido digitado decimal
+        const cleanInt = trimmed.replace(/\\./g, '').replace(/,/g, '.')
+        const parsed = parseInt(cleanInt, 10)
+        clean[k] = isNaN(parsed) ? null : parsed
+      } else if (isNumeric || trimmed.includes(',')) {
+        // Numérico/decimal ou valor monetário formatado pt-BR
+        const cleanNum = trimmed.replace(/\\./g, '').replace(',', '.')
+        const parsed = Number(cleanNum)
+        clean[k] = isNaN(parsed) ? trimmed : parsed
+      } else if (/^\\d{1,3}(\\.\\d{3})+$/.test(trimmed)) {
+        // Valor numérico inteiro formatado com pontos de milhar (ex: "1.000", "1.000.000")
+        const parsed = Number(trimmed.replace(/\\./g, ''))
+        clean[k] = isNaN(parsed) ? trimmed : parsed
+      } else {
+        clean[k] = trimmed
+      }
     } else {
       clean[k] = v
     }
   }
   return clean
+}`
 }
+
+function generateSupabaseActions(model: ModelNode, allModels: ModelNode[] = []) {
+  const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
+  const childRefs = getReferencingFields(model, allModels)
+  const childCleanups = childRefs.map(ref => {
+    return `    await supabase.from('${ref.table}').delete().eq('${ref.column}', id).catch(() => {})`
+  }).join('\n')
+
+  return `'use server'
+import { createClient } from './db'
+import { revalidatePath } from 'next/cache'
+
+${generateParsePayloadCode(model)}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const supabase = await createClient()
@@ -420,27 +450,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
-const allowedColumns = new Set(${allowedColsCode})
-
-function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
-  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
-    ? Object.fromEntries((formData as FormData).entries())
-    : (formData && typeof formData === 'object' ? { ...formData } : {})
-
-  const clean: Record<string, any> = {}
-  for (const [k, v] of Object.entries(rawData)) {
-    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
-    if (!allowedColumns.has(k)) continue
-    if (v === '' || v === undefined) {
-      clean[k] = null
-    } else if (typeof v === 'string' && v.includes(',')) {
-      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
-    } else {
-      clean[k] = v
-    }
-  }
-  return clean
-}
+${generateParsePayloadCode(model)}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const conditions: string[] = []
@@ -523,27 +533,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
-const allowedColumns = new Set(${allowedColsCode})
-
-function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
-  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
-    ? Object.fromEntries((formData as FormData).entries())
-    : (formData && typeof formData === 'object' ? { ...formData } : {})
-
-  const clean: Record<string, any> = {}
-  for (const [k, v] of Object.entries(rawData)) {
-    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
-    if (!allowedColumns.has(k)) continue
-    if (v === '' || v === undefined) {
-      clean[k] = null
-    } else if (typeof v === 'string' && v.includes(',')) {
-      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
-    } else {
-      clean[k] = v
-    }
-  }
-  return clean
-}
+${generateParsePayloadCode(model)}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const conditions: string[] = []
@@ -622,27 +612,7 @@ function generateMysqlActions(model: ModelNode, allModels: ModelNode[] = []) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
-const allowedColumns = new Set(${allowedColsCode})
-
-function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
-  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
-    ? Object.fromEntries((formData as FormData).entries())
-    : (formData && typeof formData === 'object' ? { ...formData } : {})
-
-  const clean: Record<string, any> = {}
-  for (const [k, v] of Object.entries(rawData)) {
-    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
-    if (!allowedColumns.has(k)) continue
-    if (v === '' || v === undefined) {
-      clean[k] = null
-    } else if (typeof v === 'string' && v.includes(',')) {
-      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
-    } else {
-      clean[k] = v
-    }
-  }
-  return clean
-}
+${generateParsePayloadCode(model)}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const conditions: string[] = []
@@ -723,27 +693,7 @@ function generateSqlServerActions(model: ModelNode, allModels: ModelNode[] = [])
 import { getPool } from './db'
 import { revalidatePath } from 'next/cache'
 
-const allowedColumns = new Set(${allowedColsCode})
-
-function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
-  const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
-    ? Object.fromEntries((formData as FormData).entries())
-    : (formData && typeof formData === 'object' ? { ...formData } : {})
-
-  const clean: Record<string, any> = {}
-  for (const [k, v] of Object.entries(rawData)) {
-    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
-    if (!allowedColumns.has(k)) continue
-    if (v === '' || v === undefined) {
-      clean[k] = null
-    } else if (typeof v === 'string' && v.includes(',')) {
-      clean[k] = Number(v.replace(/\\./g, '').replace(',', '.'))
-    } else {
-      clean[k] = v
-    }
-  }
-  return clean
-}
+${generateParsePayloadCode(model)}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
   const pool = await getPool()

@@ -393,7 +393,8 @@ export function generateKanbanClient(route: RouteNode): string {
   const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
-  const [isSaving, setIsSaving] = useState(false)` : ''
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
   const handleEditCode = isActionOverlay ? `  const handleEdit = (item: any) => {
     setActiveRecord(item)
@@ -405,6 +406,7 @@ export function generateKanbanClient(route: RouteNode): string {
     e.preventDefault()
     if (modalMode === 'view') return
     setIsSaving(true)
+    setSaveError(null)
     try {
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
@@ -426,7 +428,7 @@ export function generateKanbanClient(route: RouteNode): string {
       setActiveRecord(null)
     } catch (err: any) {
       console.error('Erro ao salvar registro:', err)
-      alert('Erro ao salvar: ' + (err?.message || err))
+      setSaveError(err?.message || String(err) || 'Erro ao salvar registro.')
     } finally {
       setIsSaving(false)
     }
