@@ -1,6 +1,5 @@
 import { RouteNode } from '../../ast'
 import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Gallery Page (Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,6 +33,17 @@ export function generateGalleryPage(route: RouteNode): string {
     }
   })
 
+  // Também adiciona tabelas de campos relacionais de card_fields (ex: "categorias_produtos.nome")
+  const cardFields = route.galleryConfig?.cardFields || []
+  cardFields.forEach(cf => {
+    if (cf.includes('.')) {
+      const [table] = cf.split('.')
+      if (table && !table.includes('-') && table.length < 30) {
+        lookupModels.set(table.toLowerCase(), toPascalCase(table))
+      }
+    }
+  })
+
   // Remove o próprio modelo se acidentalmente incluído
   lookupModels.delete(mnLower)
 
@@ -57,16 +67,116 @@ export function generateGalleryPage(route: RouteNode): string {
         : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
       buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      buildOptionsCode.push(`    '${t}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
       buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
     }
   })
 
+  // Filtros de Pesquisa
+  const filterFields = (route.filterFields && route.filterFields.length > 0)
+    ? route.filterFields
+    : (route.gridFields || []).filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
+
+  const filterInputs = filterFields.map(f => {
+    const col = f.dbColumn.replace('.', '_')
+    const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 4
+    const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 4)}`
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const isRelational = targetTable && lookupModels.has(targetTable.toLowerCase())
+
+    let options = f.config?.options
+    const defValExpr = `searchParams?.['${col}_filter'] || searchParams?.['${col}'] || searchParams?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? searchParams?.['${col}'.slice(0, -3)] : searchParams?.['${col}_id']) || ''`
+
+    if (isRelational && targetTable) {
+      const targetListVar = `${targetTable.toLowerCase()}LookupList`
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
+            >
+              <option value="">Todos</option>
+              {(${targetListVar} || []).map((r: any, i: number) => (
+                <option key={i} value={String(${valueExpr})}>{String(${labelExpr})}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    if (options && options.length > 0) {
+      const optsCode = JSON.stringify(options)
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
+            >
+              <option value="">Todos</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <div className="relative group">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input
+                type="text"
+                name="${col}_filter"
+                placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                defaultValue={${defValExpr}}
+                className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+              />
+            </div>
+          </div>`
+  }).join('\n')
+
+  const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
+    if (b.actionType === 'create') {
+      return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer">
+            <Plus className="w-4 h-4" /> ${b.label}
+          </Link>`
+    }
+    if (b.actionType === 'export') {
+      return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
+          </button>`
+    }
+    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            ${b.label}
+          </button>`
+  }).join('\n') || `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Zap className="w-4 h-4 text-neutral-400" /> Automações
+          </button>
+          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Download className="w-4 h-4 text-neutral-400" /> Exportar
+          </button>${hasCreate ? `
+          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer">
+            <Plus className="w-4 h-4" /> Novo Registro
+          </Link>` : ''}`
+
   return `import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { GalleryClient } from './GalleryClient'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Search, RefreshCcw, Download, Zap } from 'lucide-react'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,11 +184,26 @@ export default async function ${mn}GalleryPage(props: {
   searchParams?: Promise<Record<string, string | undefined>>
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
-  const data = await get${mn}List().catch(() => [])
+  const isEmbedded = searchParams?.embedded === 'true'
+  const rawData = await get${mn}List().catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
   }
+
+  // Filtros dinâmicos da URL
+  const data = (rawData || []).filter((item: any) => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = searchParams?.['${col}_filter'] || searchParams?.['${col}'] || searchParams?.['${f.dbColumn}']
+    if (val_${col}) {
+      const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
+      if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -95,22 +220,47 @@ ${buildOptionsCode.join('\n')}
             <div className="flex items-center gap-2 mt-1">
               <div className="w-8 h-1 bg-indigo-600 rounded-full" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                VITRINE DE CATÁLOGO &bull; {data.length} {data.length === 1 ? 'REGISTRO' : 'REGISTROS'}
+                ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
               </span>
             </div>
           </div>
         </div>
 
+        {/* Ações do Header */}
         <div className="flex items-center gap-3">
-          ${hasCreate ? `
-          <Link
-            href="${route.path}/new"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> Novo Registro
-          </Link>` : ''}
+${headerButtonsHtml}
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
+
+      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      ${filterFields.length > 0 ? `
+      <div className="px-6 sm:px-10">
+        <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+          {isEmbedded && <input type="hidden" name="embedded" value="true" />}
+          <div className="flex flex-col lg:flex-row items-end gap-6">
+            <div className="flex-1 grid grid-cols-12 gap-4 w-full">
+${filterInputs}
+            </div>
+            <div className="flex items-center gap-3 mb-[1px]">
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-6 h-[42px] bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-500/20 active:scale-95 cursor-pointer shrink-0"
+              >
+                <Search className="w-3.5 h-3.5" />
+                Pesquisar
+              </button>
+              <Link
+                href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+                className="flex items-center gap-2 px-5 h-[42px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+              >
+                <RefreshCcw className="w-3.5 h-3.5 text-neutral-400" />
+                Limpar
+              </Link>
+            </div>
+          </div>
+        </form>
+      </div>` : ''}
 
       {/* Conteúdo da Galeria */}
       <div className="px-6 sm:px-10 pb-12">
@@ -150,32 +300,100 @@ export function generateGallerySchema(route: RouteNode): string {
     2
   )
 
-  const fieldsData = JSON.stringify(
-    route.gridFields.map(f => ({
-      id: f.id,
-      dbColumn: f.dbColumn,
-      label: f.label,
-      dataType: f.dataType,
-      config: f.config,
-    })),
-    null,
-    2
-  )
+  // Combina gridFields e formFields para garantir que url_imagem e cardFields estejam presentes
+  const fieldMap = new Map<string, any>()
+  ;[...route.gridFields, ...route.formFields].forEach(f => {
+    if (!fieldMap.has(f.dbColumn)) {
+      fieldMap.set(f.dbColumn, {
+        id: f.id,
+        dbColumn: f.dbColumn,
+        label: f.label,
+        dataType: f.dataType,
+        config: f.config,
+      })
+    }
+  })
+  const fieldsData = JSON.stringify(Array.from(fieldMap.values()), null, 2)
+
+  let resolvedImageField = gc.imageField || (gc as any).image_field || ''
+  if (!resolvedImageField) {
+    const candidate = Array.from(fieldMap.values()).find(f =>
+      f.dataType === 'image' ||
+      f.dataType === 'file' ||
+      f.dbColumn.toLowerCase().includes('foto') ||
+      f.dbColumn.toLowerCase().includes('imagem') ||
+      f.dbColumn.toLowerCase().includes('image') ||
+      f.dbColumn.toLowerCase().includes('avatar') ||
+      f.dbColumn.toLowerCase().includes('capa') ||
+      f.dbColumn.toLowerCase().includes('thumb') ||
+      (f.dbColumn.toLowerCase().includes('url') && !f.dbColumn.toLowerCase().includes('id'))
+    )
+    if (candidate) resolvedImageField = candidate.dbColumn
+  }
 
   const galleryConfigObj = {
-    imageField: gc.imageField || '',
-    titleField: gc.titleField || '',
-    cardFields: gc.cardFields || [],
-    cardFieldsLabels: gc.cardFieldsLabels || {},
-    clickBehavior: gc.clickBehavior || 'fullscreen',
+    imageField: resolvedImageField,
+    titleField: gc.titleField || (gc as any).title_field || '',
+    cardFields: gc.cardFields || (gc as any).card_fields || [],
+    cardFieldsLabels: gc.cardFieldsLabels || (gc as any).card_fields_labels || {},
+    clickBehavior: gc.clickBehavior || (gc as any).click_behavior || 'fullscreen',
     // snake_case aliases para total interoperabilidade
-    image_field: gc.imageField || '',
-    title_field: gc.titleField || '',
-    card_fields: gc.cardFields || [],
-    card_fields_labels: gc.cardFieldsLabels || {},
+    image_field: resolvedImageField,
+    title_field: gc.titleField || (gc as any).title_field || '',
+    card_fields: gc.cardFields || (gc as any).card_fields || [],
+    card_fields_labels: gc.cardFieldsLabels || (gc as any).card_fields_labels || {},
   }
 
   const galleryConfigData = JSON.stringify(galleryConfigObj, null, 2)
+
+  // Extração de Custom Actions (Row context)
+  const rowCustomActions: any[] = route.buttons
+    .filter(b => b.placement === 'row' && b.actionType === 'custom')
+    .map(b => ({
+      id: b.id,
+      label: b.label,
+      icon: b.icon || 'Receipt',
+      color: b.color || (b as any).color || 'indigo',
+      style: b.style,
+      triggerType: b.triggerType,
+      usecaseSlug: b.usecaseSlug,
+      usecaseOpenMode: b.usecaseOpenMode || 'modal',
+      usecaseModalSize: b.usecaseModalSize || '4xl',
+      usecaseModalWidth: b.usecaseModalWidth,
+      usecaseModalHeight: b.usecaseModalHeight,
+      usecaseSelectedFields: b.usecaseSelectedFields || [],
+      usecaseParams: b.usecaseParams || '',
+      linkTarget: b.linkTarget || '',
+    }))
+
+  if (rowCustomActions.length === 0 && Array.isArray(route.rawLayoutConfig?.custom_actions)) {
+    route.rawLayoutConfig.custom_actions
+      .filter((a: any) => {
+        if (!a || a.enabled === false) return false
+        const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : ['row'])
+        return ctxs.includes('row') || ctxs.includes('row_search')
+      })
+      .forEach((a: any) => {
+        rowCustomActions.push({
+          id: a.id || `custom_act_${(a.label || 'act').toLowerCase().replace(/\s+/g, '_')}`,
+          label: a.label || a.name || 'Ação Customizada',
+          icon: a.icon || a.custom_icon || 'Zap',
+          color: a.color || 'indigo',
+          style: a.style || 'primary',
+          triggerType: a.trigger_type || (a.usecase_slug ? 'usecase' : 'custom'),
+          usecaseSlug: a.usecase_slug || a.target_use_case,
+          usecaseOpenMode: a.usecase_open_mode || 'modal',
+          usecaseModalSize: a.usecaseModalSize || a.usecase_modal_size || '4xl',
+          usecaseModalWidth: a.usecase_modal_width,
+          usecaseModalHeight: a.usecase_modal_height,
+          usecaseSelectedFields: a.usecase_selected_fields || [],
+          usecaseParams: a.usecase_params || '',
+          linkTarget: a.linkTarget || a.url || a.target_url || (a.usecase_slug ? `/${a.usecase_slug}` : ''),
+        })
+      })
+  }
+
+  const customActionsData = JSON.stringify(rowCustomActions, null, 2)
 
   const zodFields = route.formFields.map(f => {
     let zType = 'z.any().optional()'
@@ -200,6 +418,8 @@ export const filterFields = ${filterFieldsData}
 export const fields = ${fieldsData}
 
 export const galleryConfig = ${galleryConfigData}
+
+export const customActions = ${customActionsData}
 
 export const ${mn}Schema = z.object({
 ${zodFields}
@@ -351,7 +571,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import { GalleryBoard } from '@/components/GalleryBoard'
-import { fields, galleryConfig } from './schema'
+import { fields, galleryConfig, customActions } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
@@ -402,6 +622,7 @@ ${modalSubmitHandler}
         fields={fields}
         galleryConfig={galleryConfig}
         relationalOptions={relationalOptions}
+        customActions={customActions}
         onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}

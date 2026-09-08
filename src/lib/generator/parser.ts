@@ -1694,16 +1694,32 @@ export function parseMetaBuilderJSON(
       // Auto-detecção de campo de imagem se não configurado
       let autoImageField = gc.image_field ? resolveGalleryColumn(gc.image_field) : undefined
       if (!autoImageField) {
-        const candidateImg = gridFields.find(f =>
+        const allCandidates = [
+          ...gridFields,
+          ...formFields,
+          ...(model.fields || []).map(f => ({
+            id: f.id,
+            dbColumn: f.dbColumn,
+            dataType: f.dataType,
+          })),
+          ...rawFields.map((f: any) => ({
+            id: f.id,
+            dbColumn: f.db_column_name || f.dbColumn,
+            dataType: f.data_type || f.dataType,
+          }))
+        ]
+        const candidateImg = allCandidates.find(f =>
           f.dataType === 'image' ||
           f.dataType === 'file' ||
-          f.dbColumn.toLowerCase().includes('foto') ||
-          f.dbColumn.toLowerCase().includes('imagem') ||
-          f.dbColumn.toLowerCase().includes('image') ||
-          f.dbColumn.toLowerCase().includes('avatar') ||
-          f.dbColumn.toLowerCase().includes('capa') ||
-          f.dbColumn.toLowerCase().includes('thumb') ||
-          f.dbColumn.toLowerCase().includes('url')
+          (f.dbColumn && (
+            f.dbColumn.toLowerCase().includes('foto') ||
+            f.dbColumn.toLowerCase().includes('imagem') ||
+            f.dbColumn.toLowerCase().includes('image') ||
+            f.dbColumn.toLowerCase().includes('avatar') ||
+            f.dbColumn.toLowerCase().includes('capa') ||
+            f.dbColumn.toLowerCase().includes('thumb') ||
+            (f.dbColumn.toLowerCase().includes('url') && !f.dbColumn.toLowerCase().includes('id'))
+          ))
         )
         if (candidateImg) autoImageField = candidateImg.dbColumn
       }
