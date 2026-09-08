@@ -62,11 +62,133 @@ export function generateGanttPage(route: RouteNode): string {
     }
   })
 
+  // Filtros
+  const filterFields = (route.filterFields && route.filterFields.length > 0)
+    ? route.filterFields
+    : (route.gridFields || []).filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
+
+  const filterInputs = filterFields.map(f => {
+    const col = f.dbColumn.replace('.', '_')
+    const gridSpan = f.config?.gridSpan || f.config?.component?.gridSpan || 3
+    const colSpanClass = `col-span-12 md:col-span-${Math.min(12, gridSpan || 3)}`
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const isRelational = targetTable && lookupModels.has(targetTable.toLowerCase())
+
+    let options = f.config?.options
+    const defValExpr = `searchParams?.['${col}_filter'] || searchParams?.['${col}'] || searchParams?.['${f.dbColumn}'] || (('${col}').endsWith('_id') ? searchParams?.['${col}'.slice(0, -3)] : searchParams?.['${col}_id']) || ''`
+
+    if (isRelational && targetTable) {
+      const targetListVar = `${targetTable.toLowerCase()}LookupList`
+      const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
+      const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const labelExpr = relLabel
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
+            >
+              <option value="">Todos</option>
+              {(${targetListVar} || []).map((r: any, i: number) => (
+                <option key={i} value={String(${valueExpr})}>{String(${labelExpr})}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    if (options && options.length > 0) {
+      const optsCode = JSON.stringify(options)
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
+            >
+              <option value="">Todos</option>
+              {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    if (f.dbColumn.toLowerCase().includes('status') || f.label.toLowerCase().includes('status')) {
+      const statusDefaults = [
+        { label: 'Novo', value: 'Novo' },
+        { label: 'Em Andamento', value: 'Em Andamento' },
+        { label: 'Concluído', value: 'Concluído' },
+        { label: 'A Fazer', value: 'A Fazer' },
+        { label: 'Planejado', value: 'Planejado' }
+      ]
+      return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <select
+              name="${col}_filter"
+              defaultValue={${defValExpr}}
+              className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
+            >
+              <option value="">Todos</option>
+              {${JSON.stringify(statusDefaults)}.map((opt, i) => (
+                <option key={i} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>`
+    }
+
+    return `
+          <div className="flex flex-col gap-1.5 ${colSpanClass}">
+            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            <div className="relative group">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
+              <input
+                type="text"
+                name="${col}_filter"
+                placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                defaultValue={${defValExpr}}
+                className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
+              />
+            </div>
+          </div>`
+  }).join('\n')
+
+  const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
+    if (b.actionType === 'create') {
+      return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer">
+            <Plus className="w-4 h-4" /> ${b.label}
+          </Link>`
+    }
+    if (b.actionType === 'export') {
+      return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
+          </button>`
+    }
+    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            ${b.label}
+          </button>`
+  }).join('\n') || `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Zap className="w-4 h-4 text-neutral-400" /> Automações
+          </button>
+          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
+            <Download className="w-4 h-4 text-neutral-400" /> Exportar
+          </button>${hasCreate ? `
+          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer">
+            <Plus className="w-4 h-4" /> Novo Registro
+          </Link>` : ''}`
+
   return `import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { GanttClient } from './GanttClient'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Search, RefreshCcw, Download, Zap } from 'lucide-react'
 import { CloseModalButton } from '@/components/ui/custom-action-button'
 
 export const dynamic = 'force-dynamic'
@@ -76,11 +198,25 @@ export default async function ${mn}GanttPage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
   const isEmbedded = searchParams?.embedded === 'true'
-  const data = await get${mn}List().catch(() => [])
+  const rawData = await get${mn}List().catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
   }
+
+  // Filtros dinâmicos da URL
+  const data = (rawData || []).filter((item: any) => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = searchParams?.['${col}_filter'] || searchParams?.['${col}'] || searchParams?.['${f.dbColumn}']
+    if (val_${col}) {
+      const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
+      if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -97,7 +233,7 @@ ${buildOptionsCode.join('\n')}
             <div className="flex items-center gap-2 mt-1">
               <div className="w-8 h-1 bg-indigo-600 rounded-full" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                CRONOGRAMA DE PROJETOS &bull; {data.length} {data.length === 1 ? 'REGISTRO' : 'REGISTROS'}
+                ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
               </span>
             </div>
           </div>
@@ -105,16 +241,39 @@ ${buildOptionsCode.join('\n')}
 
         {/* Ações do Header */}
         <div className="flex items-center gap-3">
-          ${hasCreate ? `<Link
-            href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Registro</span>
-          </Link>` : ''}
+${headerButtonsHtml}
           {isEmbedded && <CloseModalButton />}
         </div>
       </div>
+
+      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      ${filterFields.length > 0 ? `
+      <div className="px-6 sm:px-10">
+        <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+          {isEmbedded && <input type="hidden" name="embedded" value="true" />}
+          <div className="flex flex-col lg:flex-row items-end gap-6">
+            <div className="flex-1 grid grid-cols-12 gap-4 w-full">
+${filterInputs}
+            </div>
+            <div className="flex items-center gap-3 mb-[1px]">
+              <button
+                type="submit"
+                className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                Pesquisar
+              </button>
+              <Link
+                href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+                className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Limpar
+              </Link>
+            </div>
+          </div>
+        </form>
+      </div>` : ''}
 
       {/* Gantt Interactive Canvas */}
       <div className="px-6 sm:px-10">

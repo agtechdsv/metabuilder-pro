@@ -206,6 +206,7 @@ export interface RouteNode {
   modelTable: string           // nome real da tabela no banco
   modelName: string            // PascalCase do modelo
   title: string                // label exibido na tela e na sidebar
+  description?: string         // descrição/subtítulo exibido no cabeçalho
   icon?: string                // ícone lucide-react da view
   primaryKey: string           // nome da coluna PK (nem sempre 'id')
 
