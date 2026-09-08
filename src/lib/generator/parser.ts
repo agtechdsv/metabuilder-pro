@@ -1695,6 +1695,9 @@ export function parseMetaBuilderJSON(
             )
           )
           if (candidateFk) return candidateFk.db_column_name || candidateFk.dbColumn
+
+          const col = found.db_column_name || found.dbColumn || found.name
+          if (col) return `${foundTargetTable}.${col}`
         }
 
         return found.db_column_name || found.dbColumn || rawId
@@ -1775,6 +1778,9 @@ export function parseMetaBuilderJSON(
             )
           )
           if (candidateFk) return candidateFk.db_column_name || candidateFk.dbColumn
+
+          const col = found.db_column_name || found.dbColumn || found.name
+          if (col) return `${foundTargetTable}.${col}`
         }
 
         return found.db_column_name || found.dbColumn || rawId
@@ -2336,6 +2342,22 @@ export function parseMetaBuilderJSON(
       const relTable = getFieldRelTable(f)
       if (relTable) referencedTableNames.add(relTable)
     })
+
+    if (schedulerConfig?.titleField && schedulerConfig.titleField.includes('.')) {
+      referencedTableNames.add(schedulerConfig.titleField.split('.')[0].toLowerCase())
+    }
+    if (schedulerConfig?.startDateField && schedulerConfig.startDateField.includes('.')) {
+      referencedTableNames.add(schedulerConfig.startDateField.split('.')[0].toLowerCase())
+    }
+    if (schedulerConfig?.colorField && schedulerConfig.colorField.includes('.')) {
+      referencedTableNames.add(schedulerConfig.colorField.split('.')[0].toLowerCase())
+    }
+    if (galleryConfig?.imageField && galleryConfig.imageField.includes('.')) {
+      referencedTableNames.add(galleryConfig.imageField.split('.')[0].toLowerCase())
+    }
+    if (galleryConfig?.titleField && galleryConfig.titleField.includes('.')) {
+      referencedTableNames.add(galleryConfig.titleField.split('.')[0].toLowerCase())
+    }
 
     const resolvedProjectRelations = resolveRelations(rawRelations, rawModels)
     const masterTbl = model.dbTable.toLowerCase()

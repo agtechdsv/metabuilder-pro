@@ -40,6 +40,30 @@ export function generateSchedulerPage(route: RouteNode): string {
     }
   })
 
+  // Adiciona tabelas de joins declarados na view ao lookup
+  const rawJoins: Array<{ from: string; to: string; localKey?: string; foreignKey?: string }> =
+    route.rawLayoutConfig?.joins || []
+
+  rawJoins.forEach(j => {
+    const fromTbl = (j.from || '').toLowerCase()
+    const toTbl = (j.to || '').toLowerCase()
+    if (fromTbl && !fromTbl.includes('-') && fromTbl.length < 30) {
+      lookupModels.set(fromTbl, toPascalCase(fromTbl))
+    }
+    if (toTbl && !toTbl.includes('-') && toTbl.length < 30) {
+      lookupModels.set(toTbl, toPascalCase(toTbl))
+    }
+  })
+
+  schedFieldNames.forEach(name => {
+    if (name.includes('.')) {
+      const tbl = name.split('.')[0].toLowerCase()
+      if (tbl && !tbl.includes('-') && tbl.length < 30) {
+        lookupModels.set(tbl, toPascalCase(tbl))
+      }
+    }
+  })
+
   allSchedulerFields.forEach(f => {
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
@@ -99,6 +123,22 @@ export function generateSchedulerPage(route: RouteNode): string {
         registeredOptionKeys.add(f.dbColumn)
         buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
       }
+    }
+  })
+
+  // Registra opções para todas as tabelas em lookupModels
+  lookupModels.forEach((_modelName, tbl) => {
+    const labelExpr = `r.nome_empresa ?? r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.title ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+    const mappingCode = `(${tbl}LookupList || []).map((r: any) => ({ value: String(r.id ?? Object.values(r)[0] ?? ''), label: String(${labelExpr}) }))`
+    if (!registeredOptionKeys.has(tbl)) {
+      registeredOptionKeys.add(tbl)
+      buildOptionsCode.push(`    '${tbl}': ${mappingCode},`)
+    }
+    const singular = tbl.endsWith('s') ? tbl.slice(0, -1) : tbl
+    const fkCol = `${singular}_id`
+    if (!registeredOptionKeys.has(fkCol)) {
+      registeredOptionKeys.add(fkCol)
+      buildOptionsCode.push(`    '${fkCol}': ${mappingCode},`)
     }
   })
 
@@ -264,13 +304,106 @@ async function ${mn}SchedulerContent({
   const rawData = await get${mn}List({ filters: params }).catch(() => [])
 ${lookupQueries}
 
+  const rawJoins = ${JSON.stringify(rawJoins)}
+  const tablesData: Record<string, any[]> = {
+    ${Array.from(lookupModels.keys()).map(t => `'${t}': ${t}LookupList || [],`).join('\n    ')}
+  }
+
+  const enrichedData = (rawData || []).map((row: any) => {
+    const item: Record<string, any> = { ...row }
+    for (const [tbl, list] of Object.entries(tablesData)) {
+      const singular = tbl.endsWith('s') ? tbl.slice(0, -1) : tbl
+      const fkVal = row[\`\${tbl}_id\`] ?? row[\`\${singular}_id\`] ?? row[\`id_\${tbl}\`] ?? row[\`id_\${singular}\`]
+      if (fkVal != null && Array.isArray(list)) {
+        const match = list.find((r: any) => String(r.id) === String(fkVal))
+        if (match) {
+          item[tbl] = match
+          item[singular] = match
+          for (const [k, v] of Object.entries(match)) {
+            item[\`\${tbl}.\${k}\`] = v
+            item[\`\${singular}.\${k}\`] = v
+          }
+        }
+      }
+    }
+
+    for (const j of rawJoins) {
+      const fromTbl = (j.from || '').toLowerCase()
+      const toTbl = (j.to || '').toLowerCase()
+      const localKey = j.localKey || 'id'
+      const foreignKey = j.foreignKey || \`\${fromTbl}_id\`
+
+      const toObj = item[toTbl] || (toTbl === '${mnLower}' ? item : null)
+      const fromList = tablesData[fromTbl]
+      if (toObj && Array.isArray(fromList) && !item[fromTbl]) {
+        const foreignVal = toObj[foreignKey] ?? item[foreignKey]
+        if (foreignVal != null) {
+          const match = fromList.find((r: any) => String(r[localKey] ?? r.id) === String(foreignVal))
+          if (match) {
+            item[fromTbl] = match
+            const singular = fromTbl.endsWith('s') ? fromTbl.slice(0, -1) : fromTbl
+            item[singular] = match
+            for (const [k, v] of Object.entries(match)) {
+              item[\`\${fromTbl}.\${k}\`] = v
+              item[\`\${singular}.\${k}\`] = v
+            }
+          }
+        }
+      }
+
+      const fromObj = item[fromTbl] || (fromTbl === '${mnLower}' ? item : null)
+      const toList = tablesData[toTbl]
+      if (fromObj && Array.isArray(toList) && !item[toTbl]) {
+        const localVal = fromObj[localKey] ?? item[localKey]
+        if (localVal != null) {
+          const match = toList.find((r: any) => String(r[foreignKey] ?? r.id) === String(localVal))
+          if (match) {
+            item[toTbl] = match
+            const singular = toTbl.endsWith('s') ? toTbl.slice(0, -1) : toTbl
+            item[singular] = match
+            for (const [k, v] of Object.entries(match)) {
+              item[\`\${toTbl}.\${k}\`] = v
+              item[\`\${singular}.\${k}\`] = v
+            }
+          }
+        }
+      }
+    }
+
+    for (const [tbl, obj] of Object.entries(item)) {
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        for (const [k, v] of Object.entries(obj)) {
+          if (k.endsWith('_id') && v != null) {
+            const targetTbl = k.slice(0, -3)
+            const targetList = tablesData[targetTbl] || tablesData[targetTbl + 's'] || (targetTbl.endsWith('s') ? tablesData[targetTbl.slice(0, -1)] : null)
+            const targetKey = tablesData[targetTbl] ? targetTbl : (tablesData[targetTbl + 's'] ? targetTbl + 's' : targetTbl)
+            if (Array.isArray(targetList) && !item[targetKey]) {
+              const subMatch = targetList.find((r: any) => String(r.id) === String(v))
+              if (subMatch) {
+                item[targetKey] = subMatch
+                const subSingular = targetKey.endsWith('s') ? targetKey.slice(0, -1) : targetKey
+                item[subSingular] = subMatch
+                for (const [sk, sv] of Object.entries(subMatch)) {
+                  item[\`\${targetKey}.\${sk}\`] = sv
+                  item[\`\${subSingular}.\${sk}\`] = sv
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return item
+  })
+
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
   }
 
   return (
     <SchedulerClient
-      initialData={rawData || []}
+      initialData={enrichedData}
       relationalOptions={relationalOptions}
       initialParams={params}
     />

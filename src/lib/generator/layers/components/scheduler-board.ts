@@ -129,6 +129,18 @@ function formatTitle(
     }
   }
 
+  if ((val === undefined || val === null || val === '') && row) {
+    if (titleCol && titleCol.includes('.')) {
+      const tbl = titleCol.split('.')[0]
+      if (row[tbl]) val = row[tbl]
+    }
+  }
+
+  if ((val === undefined || val === null || val === '') && row) {
+    const joinedObj = Object.values(row).find(v => v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date))
+    if (joinedObj) val = joinedObj
+  }
+
   if (val === undefined || val === null || val === '') {
     return 'Sem Título'
   }
@@ -136,7 +148,7 @@ function formatTitle(
   if (typeof val === 'object') {
     if (val.label) return String(val.label)
     if (val.name) return String(val.name)
-    const firstStr = Object.values(val).find(v => typeof v === 'string' && (v as string).trim())
+    const firstStr = Object.values(val).find(v => typeof v === 'string' && (v as string).trim() && !String(v).match(/^[0-9a-f]{8}-[0-9a-f]{4}/i))
     if (firstStr) return String(firstStr)
   }
 
