@@ -429,7 +429,7 @@ export default async function ${mn}ListPage({
 ${route.buttons.filter(b => b.placement === 'header').map(b => {
   if (b.actionType === 'create') {
     return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-            <Plus className="w-4 h-4" /> \${b.label}
+            <Plus className="w-4 h-4" /> ${b.label}
           </Link>`
   }
   if (b.actionType === 'export') {
