@@ -1634,28 +1634,70 @@ export function parseMetaBuilderJSON(
     if (resolvedView.logic_type === 'scheduler' && resolvedView.layout_config?.scheduler_config) {
       const sc = resolvedView.layout_config.scheduler_config
 
-      const resolveSchedulerColumn = (fieldIdOrName?: string): string => {
+      const resolveSchedulerColumn = (fieldIdOrName?: string | any): string => {
         if (!fieldIdOrName) return ''
-        const found = rawFields.find(
-          (f: any) => f.id === fieldIdOrName
-                   || f.db_column_name === fieldIdOrName
-                   || f.display_name === fieldIdOrName
-        )
-        if (!found) return fieldIdOrName
-        if (!found.model_id || found.model_id === model.id) {
-          return found.db_column_name || found.dbColumn || fieldIdOrName
+        let rawId = fieldIdOrName
+        if (typeof rawId === 'string' && rawId.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(rawId)
+            rawId = parsed.target_field_id || parsed.relation_path?.[0]?.foreign_column_id || rawId
+          } catch (e) {}
+        } else if (typeof rawId === 'object' && rawId !== null) {
+          rawId = rawId.target_field_id || rawId.relation_path?.[0]?.foreign_column_id || rawId.id || fieldIdOrName
         }
-        const foundTargetTable = (found.model_table || '').toLowerCase()
+
+        const found = rawFields.find(
+          (f: any) => f.id === rawId
+                   || f.db_column_name === rawId
+                   || f.display_name === rawId
+                   || f.name === rawId
+        )
+        if (!found) return typeof rawId === 'string' ? rawId : ''
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || rawId
+        }
+
+        const targetModel = models.find((m: any) => m.id === found.model_id) || rawModels.find((m: any) => m.id === found.model_id)
+        const foundTargetTable = (targetModel?.dbTable || targetModel?.db_table_name || targetModel?.name || found.model_table || '').toLowerCase()
+        const singularTarget = foundTargetTable.endsWith('s') ? foundTargetTable.slice(0, -1) : foundTargetTable
+
         const fkField = rawFields.find((f: any) =>
           f.model_id === model.id && (
             f.foreign_key_target_model === found.model_id ||
+            f.config?.relation?.targetModel === found.model_id ||
+            f.config?.relation?.targetModel === targetModel?.name ||
             (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
             (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
-            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+            (f.db_column_name && foundTargetTable && (
+              f.db_column_name.toLowerCase() === `${foundTargetTable}_id` ||
+              f.db_column_name.toLowerCase() === `${singularTarget}_id` ||
+              f.db_column_name.toLowerCase() === `id_${foundTargetTable}` ||
+              f.db_column_name.toLowerCase() === `id_${singularTarget}` ||
+              f.db_column_name.toLowerCase() === foundTargetTable ||
+              f.db_column_name.toLowerCase() === singularTarget ||
+              f.db_column_name.toLowerCase().startsWith(foundTargetTable) ||
+              f.db_column_name.toLowerCase().startsWith(singularTarget)
+            ))
           )
         )
         if (fkField) return fkField.db_column_name || fkField.dbColumn
-        return found.db_column_name || found.dbColumn || fieldIdOrName
+
+        // Fallback por convenção de nome de FK
+        if (foundTargetTable) {
+          const candidateFk = rawFields.find((f: any) =>
+            f.model_id === model.id && (
+              f.db_column_name?.toLowerCase() === `${singularTarget}_id` ||
+              f.db_column_name?.toLowerCase() === `${foundTargetTable}_id` ||
+              f.db_column_name?.toLowerCase() === `id_${singularTarget}` ||
+              f.db_column_name?.toLowerCase() === `id_${foundTargetTable}` ||
+              f.db_column_name?.toLowerCase() === singularTarget ||
+              f.db_column_name?.toLowerCase() === foundTargetTable
+            )
+          )
+          if (candidateFk) return candidateFk.db_column_name || candidateFk.dbColumn
+        }
+
+        return found.db_column_name || found.dbColumn || rawId
       }
 
       schedulerConfig = {
@@ -1673,29 +1715,69 @@ export function parseMetaBuilderJSON(
     if (resolvedView.logic_type === 'galeria') {
       const gc = resolvedView.layout_config?.gallery_config || {}
 
-      const resolveGalleryColumn = (fieldIdOrName?: string): string => {
+      const resolveGalleryColumn = (fieldIdOrName?: string | any): string => {
         if (!fieldIdOrName) return ''
-        const found = rawFields.find(
-          (f: any) => f.id === fieldIdOrName
-                   || f.db_column_name === fieldIdOrName
-                   || f.display_name === fieldIdOrName
-                   || f.name === fieldIdOrName
-        )
-        if (!found) return fieldIdOrName
-        if (!found.model_id || found.model_id === model.id) {
-          return found.db_column_name || found.dbColumn || fieldIdOrName
+        let rawId = fieldIdOrName
+        if (typeof rawId === 'string' && rawId.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(rawId)
+            rawId = parsed.target_field_id || parsed.relation_path?.[0]?.foreign_column_id || rawId
+          } catch (e) {}
+        } else if (typeof rawId === 'object' && rawId !== null) {
+          rawId = rawId.target_field_id || rawId.relation_path?.[0]?.foreign_column_id || rawId.id || fieldIdOrName
         }
-        const foundTargetTable = (found.model_table || '').toLowerCase()
+
+        const found = rawFields.find(
+          (f: any) => f.id === rawId
+                   || f.db_column_name === rawId
+                   || f.display_name === rawId
+                   || f.name === rawId
+        )
+        if (!found) return typeof rawId === 'string' ? rawId : ''
+        if (!found.model_id || found.model_id === model.id) {
+          return found.db_column_name || found.dbColumn || rawId
+        }
+
+        const targetModel = models.find((m: any) => m.id === found.model_id) || rawModels.find((m: any) => m.id === found.model_id)
+        const foundTargetTable = (targetModel?.dbTable || targetModel?.db_table_name || targetModel?.name || found.model_table || '').toLowerCase()
+        const singularTarget = foundTargetTable.endsWith('s') ? foundTargetTable.slice(0, -1) : foundTargetTable
+
         const fkField = rawFields.find((f: any) =>
           f.model_id === model.id && (
             f.foreign_key_target_model === found.model_id ||
+            f.config?.relation?.targetModel === found.model_id ||
+            f.config?.relation?.targetModel === targetModel?.name ||
             (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
             (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
-            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+            (f.db_column_name && foundTargetTable && (
+              f.db_column_name.toLowerCase() === `${foundTargetTable}_id` ||
+              f.db_column_name.toLowerCase() === `${singularTarget}_id` ||
+              f.db_column_name.toLowerCase() === `id_${foundTargetTable}` ||
+              f.db_column_name.toLowerCase() === `id_${singularTarget}` ||
+              f.db_column_name.toLowerCase() === foundTargetTable ||
+              f.db_column_name.toLowerCase() === singularTarget ||
+              f.db_column_name.toLowerCase().startsWith(foundTargetTable) ||
+              f.db_column_name.toLowerCase().startsWith(singularTarget)
+            ))
           )
         )
         if (fkField) return fkField.db_column_name || fkField.dbColumn
-        return found.db_column_name || found.dbColumn || fieldIdOrName
+
+        if (foundTargetTable) {
+          const candidateFk = rawFields.find((f: any) =>
+            f.model_id === model.id && (
+              f.db_column_name?.toLowerCase() === `${singularTarget}_id` ||
+              f.db_column_name?.toLowerCase() === `${foundTargetTable}_id` ||
+              f.db_column_name?.toLowerCase() === `id_${singularTarget}` ||
+              f.db_column_name?.toLowerCase() === `id_${foundTargetTable}` ||
+              f.db_column_name?.toLowerCase() === singularTarget ||
+              f.db_column_name?.toLowerCase() === foundTargetTable
+            )
+          )
+          if (candidateFk) return candidateFk.db_column_name || candidateFk.dbColumn
+        }
+
+        return found.db_column_name || found.dbColumn || rawId
       }
 
       // Auto-detecção de campo de imagem se não configurado

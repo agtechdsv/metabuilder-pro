@@ -70,8 +70,25 @@ function extractValue(row: any, colName?: string, fields?: any[]): any {
   for (const [k, v] of Object.entries(row)) {
     if (k.toLowerCase() === lower && v !== undefined && v !== null) return v
   }
+  // Se for JSON de configuração (ex: { target_field_id: "..." })
+  if (typeof colName === 'string' && colName.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(colName)
+      const targetId = parsed.target_field_id || parsed.relation_path?.[0]?.foreign_column_id
+      if (targetId) {
+        const val = extractValue(row, targetId, fields)
+        if (val !== undefined && val !== null) return val
+      }
+    } catch (e) {}
+  }
   if (fields) {
-    const fDef = fields.find((f: any) => f.id === colName || f.dbColumn === colName || f.db_column_name === colName)
+    const fDef = fields.find((f: any) =>
+      f.id === colName ||
+      f.dbColumn === colName ||
+      f.db_column_name === colName ||
+      f.label?.toLowerCase() === lower ||
+      f.display_name?.toLowerCase() === lower
+    )
     if (fDef) {
       const col = fDef.dbColumn || fDef.db_column_name
       if (col && row[col] !== undefined && row[col] !== null) return row[col]
@@ -97,16 +114,77 @@ function extractValue(row: any, colName?: string, fields?: any[]): any {
   return undefined
 }
 
-function formatTitle(rawTitle: any, titleCol?: string, relationalOptions?: Record<string, any[]>): string {
-  if (rawTitle === undefined || rawTitle === null || rawTitle === '') return 'Sem Título'
-  const str = String(rawTitle)
-  if (relationalOptions && titleCol) {
-    const opts = relationalOptions[titleCol] || relationalOptions[titleCol.toLowerCase()]
-    if (opts) {
-      const matched = opts.find((o: any) => String(o.value) === str || String(o.id) === str)
-      if (matched) return matched.label || matched.name || str
+function formatTitle(
+  rawTitle: any,
+  titleCol?: string,
+  relationalOptions?: Record<string, any[]>,
+  fields?: any[],
+  row?: any
+): string {
+  let val = rawTitle
+  if ((val === undefined || val === null || val === '') && row && fields) {
+    const fallbackField = fields.find((f: any) => f.isTitle || f.isDisplay || f.config?.isTitle)
+    if (fallbackField) {
+      val = extractValue(row, fallbackField.dbColumn || fallbackField.id, fields)
     }
   }
+
+  if (val === undefined || val === null || val === '') {
+    return 'Sem Título'
+  }
+
+  if (typeof val === 'object') {
+    if (val.label) return String(val.label)
+    if (val.name) return String(val.name)
+    const firstStr = Object.values(val).find(v => typeof v === 'string' && (v as string).trim())
+    if (firstStr) return String(firstStr)
+  }
+
+  const str = String(val)
+
+  if (relationalOptions) {
+    const fDef = fields?.find((f: any) =>
+      f.id === titleCol ||
+      f.dbColumn === titleCol ||
+      f.db_column_name === titleCol ||
+      (f.dbColumn && titleCol && f.dbColumn.toLowerCase() === titleCol.toLowerCase())
+    )
+
+    const targetTable = fDef?.config?.relation?.targetTable 
+      || fDef?.config?.component?.rel_table 
+      || fDef?.config?.rel_table
+
+    const candidateKeys = [
+      titleCol,
+      titleCol ? titleCol.toLowerCase() : undefined,
+      fDef?.dbColumn,
+      fDef?.db_column_name,
+      fDef?.id,
+      targetTable,
+      targetTable ? targetTable.toLowerCase() : undefined,
+    ].filter(Boolean) as string[]
+
+    for (const key of candidateKeys) {
+      const opts = relationalOptions[key]
+      if (Array.isArray(opts)) {
+        const matched = opts.find((o: any) => String(o.value) === str || String(o.id) === str)
+        if (matched) return matched.label || matched.name || str
+      }
+    }
+
+    if (fDef?.config?.options && Array.isArray(fDef.config.options)) {
+      const matched = fDef.config.options.find((o: any) => String(o.value) === str || String(o.id) === str)
+      if (matched) return matched.label || matched.name || str
+    }
+
+    for (const opts of Object.values(relationalOptions)) {
+      if (Array.isArray(opts)) {
+        const matched = opts.find((o: any) => String(o.value) === str || String(o.id) === str)
+        if (matched) return matched.label || matched.name || str
+      }
+    }
+  }
+
   return str
 }
 
@@ -222,7 +300,7 @@ export function DynamicScheduler({
       return {
         raw: item,
         id: String(item.id || item.codigo || item._key || idx),
-        title: formatTitle(rawTitle, titleCol, relationalOptions),
+        title: formatTitle(rawTitle, titleCol, relationalOptions, fields, item),
         start,
         end,
         color: String(rawColor || 'default'),

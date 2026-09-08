@@ -10,9 +10,36 @@ export function generateSchedulerPage(route: RouteNode): string {
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
 
-  // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros e cards
+  // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros, cards e schedulerConfig
   const lookupModels = new Map<string, string>() // table -> modelName
-  const allSchedulerFields = [...(route.filterFields || []), ...(route.gridFields || [])]
+  const allSchedulerFields = [
+    ...(route.filterFields || []),
+    ...(route.gridFields || []),
+    ...(route.formFields || [])
+  ]
+
+  // Garante que campos referenciados pelo schedulerConfig também sejam incluídos nos lookups relacionais
+  const schedFieldNames = [
+    route.schedulerConfig?.titleField,
+    route.schedulerConfig?.startDateField,
+    route.schedulerConfig?.endDateField,
+    route.schedulerConfig?.colorField
+  ].filter(Boolean) as string[]
+
+  schedFieldNames.forEach(name => {
+    if (!allSchedulerFields.some(f => f.dbColumn === name || f.id === name)) {
+      allSchedulerFields.push({
+        id: name,
+        dbColumn: name,
+        label: name,
+        dataType: 'string',
+        isPrimaryKey: false,
+        isVirtual: false,
+        config: {}
+      } as any)
+    }
+  })
+
   allSchedulerFields.forEach(f => {
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
@@ -41,6 +68,7 @@ export function generateSchedulerPage(route: RouteNode): string {
   ).join('\n')
 
   const buildOptionsCode: string[] = []
+  const registeredOptionKeys = new Set<string>()
   allSchedulerFields.forEach(f => {
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
@@ -48,12 +76,29 @@ export function generateSchedulerPage(route: RouteNode): string {
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
       const labelExpr = relLabel
-        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.title ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        : `r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.title ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      
+      const mappingCode = `(${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) }))`
+      
+      if (!registeredOptionKeys.has(f.dbColumn)) {
+        registeredOptionKeys.add(f.dbColumn)
+        buildOptionsCode.push(`    '${f.dbColumn}': ${mappingCode},`)
+      }
+      if (f.id && !registeredOptionKeys.has(f.id)) {
+        registeredOptionKeys.add(f.id)
+        buildOptionsCode.push(`    '${f.id}': ${mappingCode},`)
+      }
+      if (t && !registeredOptionKeys.has(t)) {
+        registeredOptionKeys.add(t)
+        buildOptionsCode.push(`    '${t}': ${mappingCode},`)
+      }
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      if (!registeredOptionKeys.has(f.dbColumn)) {
+        registeredOptionKeys.add(f.dbColumn)
+        buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      }
     }
   })
 
@@ -328,11 +373,19 @@ export function generateSchedulerSchema(route: RouteNode): string {
     2
   )
 
+  const allFields = [
+    ...(route.gridFields || []),
+    ...(route.formFields || []),
+    ...(route.filterFields || [])
+  ].filter((f, idx, arr) => arr.findIndex(x => (x.dbColumn && x.dbColumn === f.dbColumn) || (x.id && x.id === f.id)) === idx)
+
   const fieldsData = JSON.stringify(
-    route.gridFields.map(f => ({
+    allFields.map(f => ({
       id: f.id,
       dbColumn: f.dbColumn,
+      db_column_name: f.dbColumn,
       label: f.label,
+      display_name: f.label,
       dataType: f.dataType,
       config: f.config,
     })),
