@@ -309,20 +309,35 @@ export async function buildViewProps(
       if (idxB === -1) return -1
       return idxA - idxB
     })
-    .map((c: any) => ({
-      id: c.field.id,
-      model_id: c.field.model_id,
-      model_name: tableDictionary[c.field.model_id],
-      display_name: c.label || c.field.display_name || c.field.db_column_name,
-      db_column_name: resolveResultKey(c.field),
-      sql_expression: resolveSqlExpression(c.field),
-      data_type: c.field.data_type,
-      is_primary_key: c.field.is_primary_key,
-      config: Object.keys(c.config || {}).length > 0
+    .map((c: any) => {
+      const fId = c.field.id
+      const fCol = c.field.db_column_name
+      const baseMeta = view.layout_config?.fields_metadata?.[fId] || view.layout_config?.fields_metadata?.[fCol] || {}
+      const specificMeta = view.layout_config?.fields_metadata?.[`form-${fId}`] || view.layout_config?.fields_metadata?.[`form-${fCol}`] || {}
+      const rawCompConfig = Object.keys(c.config || {}).length > 0
         ? { ...(c.field.config || {}), ...(c.config || {}) }
-        : c.field.config,
-      zone: 3
-    }))
+        : (c.field.config || {})
+      const mergedConfig = { ...rawCompConfig, ...baseMeta, ...specificMeta }
+      if (baseMeta.component || specificMeta.component) {
+        mergedConfig.component = {
+          ...(rawCompConfig.component || {}),
+          ...(baseMeta.component || {}),
+          ...(specificMeta.component || {})
+        }
+      }
+      return {
+        id: c.field.id,
+        model_id: c.field.model_id,
+        model_name: tableDictionary[c.field.model_id],
+        display_name: specificMeta.label?.text || baseMeta.label?.text || c.label || c.field.display_name || c.field.db_column_name,
+        db_column_name: resolveResultKey(c.field),
+        sql_expression: resolveSqlExpression(c.field),
+        data_type: c.field.data_type,
+        is_primary_key: c.field.is_primary_key,
+        config: mergedConfig,
+        zone: 3
+      }
+    })
 
   formFieldsOrder
     .filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_'))
@@ -479,7 +494,8 @@ export async function buildViewProps(
   // Busca os formFields do UC filho definido em masterUseCaseSlug (se diferente do próprio slug)
   // OU procura qualquer outro UC do mesmo model com formFields configurados.
   // Isso ocorre quando o slot da 1ª aba aponta para o próprio personalizado (padrão Oracle)
-  if (view.logic_type === 'personalizado' && formFields.length === 0) {
+  // ou quando a view é de outro tipo (blueprint, kanban, etc.) que não tem form_fields próprios
+  if (formFields.length === 0) {
     const masterSlug = view.layout_config?.master_use_case_slug
     let masterView: any = null
 
@@ -527,24 +543,75 @@ export async function buildViewProps(
           if (idxB === -1) return -1
           return idxA - idxB
         })
-        .map((c: any) => ({
-          id: c.field.id,
-          model_id: c.field.model_id,
-          model_name: tableDictionary[c.field.model_id],
-          display_name: c.label || c.field.display_name || c.field.db_column_name,
-          db_column_name: resolveResultKey(c.field),
-          sql_expression: resolveSqlExpression(c.field),
-          data_type: c.field.data_type,
-          is_primary_key: c.field.is_primary_key,
-          config: Object.keys(c.config || {}).length > 0
+        .map((c: any) => {
+          const fId = c.field.id
+          const fCol = c.field.db_column_name
+          const baseMeta = masterView.layout_config?.fields_metadata?.[fId] || masterView.layout_config?.fields_metadata?.[fCol] || {}
+          const specificMeta = masterView.layout_config?.fields_metadata?.[`form-${fId}`] || masterView.layout_config?.fields_metadata?.[`form-${fCol}`] || {}
+          const rawCompConfig = Object.keys(c.config || {}).length > 0
             ? { ...(c.field.config || {}), ...(c.config || {}) }
-            : c.field.config,
-          zone: 3
-        }))
+            : (c.field.config || {})
+          const mergedConfig = { ...rawCompConfig, ...baseMeta, ...specificMeta }
+          if (baseMeta.component || specificMeta.component) {
+            mergedConfig.component = {
+              ...(rawCompConfig.component || {}),
+              ...(baseMeta.component || {}),
+              ...(specificMeta.component || {})
+            }
+          }
+          return {
+            id: c.field.id,
+            model_id: c.field.model_id,
+            model_name: tableDictionary[c.field.model_id],
+            display_name: specificMeta.label?.text || baseMeta.label?.text || c.label || c.field.display_name || c.field.db_column_name,
+            db_column_name: resolveResultKey(c.field),
+            sql_expression: resolveSqlExpression(c.field),
+            data_type: c.field.data_type,
+            is_primary_key: c.field.is_primary_key,
+            config: mergedConfig,
+            zone: 3
+          }
+        })
       
       if (masterFormFields.length > 0) {
         formFields.push(...masterFormFields)
-        console.log(`[buildViewProps] Personalizado "${viewSlug}" sem formFields — usando ${masterFormFields.length} campos do UC "${masterView.slug}" (${masterView.logic_type})`)
+        masterFormFieldsOrder
+          .filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_'))
+          .forEach((id: string) => {
+            const formMeta = masterView.layout_config?.fields_metadata?.[`form-${id}`] || {}
+            const baseMeta = masterView.layout_config?.fields_metadata?.[id] || {}
+            const meta = { ...baseMeta, ...formMeta }
+            const virtualModelId = meta.virtual_model_id || null
+            let virtualModelName = ''
+            if (virtualModelId) {
+              const foundModel = allModels?.find((m: any) => m.id === virtualModelId)
+              if (foundModel) virtualModelName = foundModel.db_table_name
+            }
+            const isByoc = id.startsWith('byoc_')
+            const byocName = isByoc ? id.split('_').slice(2).join('_') : ''
+            formFields.push({
+              id,
+              model_id: virtualModelId,
+              model_name: virtualModelName,
+              display_name: meta.label?.text || (isByoc ? `[BYOC] ${byocName}` : 'Campo Calculado'),
+              db_column_name: id,
+              sql_expression: `NULL AS "${id}"`,
+              data_type: isByoc ? 'byoc' : 'virtual',
+              is_primary_key: false,
+              config: isByoc ? { ...meta, compiled_code: byocMap[byocName] } : meta,
+              zone: 3,
+              is_virtual: !isByoc
+            })
+          })
+        formFields.sort((a: any, b: any) => {
+          const idxA = masterFormFieldsOrder.indexOf(a.id)
+          const idxB = masterFormFieldsOrder.indexOf(b.id)
+          if (idxA === -1 && idxB === -1) return 0
+          if (idxA === -1) return 1
+          if (idxB === -1) return -1
+          return idxA - idxB
+        })
+        console.log(`[buildViewProps] View "${viewSlug}" sem formFields — usando ${formFields.length} campos do UC "${masterView.slug}" (${masterView.logic_type})`)
       }
     }
   }

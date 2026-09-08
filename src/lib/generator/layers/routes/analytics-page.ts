@@ -321,7 +321,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
         triggerType: b.triggerType,
         usecaseSlug: b.usecaseSlug,
         usecaseOpenMode: b.usecaseOpenMode || 'modal',
-        usecaseModalSize: b.usecaseModalSize || 'full',
+        usecaseModalSize: b.usecaseModalSize || '4xl',
         usecaseModalWidth: b.usecaseModalWidth,
         usecaseModalHeight: b.usecaseModalHeight,
         usecaseSelectedFields: b.usecaseSelectedFields || [],

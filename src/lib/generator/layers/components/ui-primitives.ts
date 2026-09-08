@@ -568,14 +568,16 @@ export function CustomActionButton({
   }
 
   const openMode = action.usecaseOpenMode || 'modal'
-  const modalSize = action.usecaseModalSize || 'full'
+  const modalSize = action.usecaseModalSize || '4xl'
   const iframeUrl = buildUrl(true)
 
-  let sizeClasses = 'w-[95vw] h-[90vh] max-w-[95vw]'
+  let sizeClasses = 'w-[80vw] max-w-5xl h-[85vh]'
   if (modalSize === 'sm') sizeClasses = 'w-[90vw] max-w-md h-[500px]'
   else if (modalSize === 'md') sizeClasses = 'w-[90vw] max-w-2xl h-[650px]'
-  else if (modalSize === 'lg') sizeClasses = 'w-[92vw] max-w-5xl h-[80vh]'
-  else if (modalSize === 'full') sizeClasses = 'w-[95vw] h-[90vh] max-w-[95vw]'
+  else if (modalSize === 'lg') sizeClasses = 'w-[90vw] max-w-4xl h-[75vh]'
+  else if (modalSize === 'xl') sizeClasses = 'w-[92vw] max-w-5xl h-[80vh]'
+  else if (modalSize === '4xl') sizeClasses = 'w-[80vw] max-w-5xl h-[85vh]'
+  else if (modalSize === 'full') sizeClasses = 'w-[90vw] max-w-6xl h-[88vh]'
 
   const customStyle: React.CSSProperties = {}
   if (modalSize === 'custom') {
@@ -630,7 +632,7 @@ export function CustomActionButton({
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="w-full max-w-2xl h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            className="w-full max-w-md h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
             onClick={e => e.stopPropagation()}
           >
             <iframe src={iframeUrl} className="w-full h-full border-none" />

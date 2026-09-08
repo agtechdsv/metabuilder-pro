@@ -83,6 +83,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { create${mn}${selfActionImport} } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -176,7 +177,11 @@ function formatWithMask(v: any, mask?: string) {
 
 export const metadata: Metadata = { title: 'Novo — ${route.title}' }
 
-export default async function ${mn}NewPage() {
+export default async function ${mn}NewPage(props: {
+  searchParams?: Promise<Record<string, string | undefined>>
+}) {
+  const searchParams = props.searchParams ? await props.searchParams : {}
+  const isEmbedded = searchParams?.embedded === 'true'
 ${lookupQueries}
 ${selfLookupQuery}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -209,9 +214,10 @@ ${buildOptionsCode.join('\n')}
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href="${route.path}" className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
+          <Link href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             <ArrowLeft className="w-4 h-4" /> Voltar para Lista
           </Link>
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 
@@ -236,8 +242,12 @@ ${buildOptionsCode.join('\n')}
           const payload: Record<string, any> = {}
           formData.forEach((v, k) => { payload[k] = v })
           const result = await create${mn}(payload)
-          if (result?.id) redirect(\`${route.path}/\${result.id}\`)
-          else redirect('${route.path}')
+          const targetUrl = result?.id ? \`${route.path}/\${result.id}\` : '${route.path}'
+          if (isEmbedded) {
+            redirect(targetUrl + (targetUrl.includes('?') ? '&embedded=true' : '?embedded=true'))
+          } else {
+            redirect(targetUrl)
+          }
         }}>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
@@ -245,7 +255,7 @@ ${formFieldsHtml}
 
           <div className="flex justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
             <Link
-              href="${route.path}"
+              href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
               className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
               Cancelar

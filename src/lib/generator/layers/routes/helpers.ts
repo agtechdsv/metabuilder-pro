@@ -58,22 +58,27 @@ export function renderGridCellValue(field: ResolvedField, varName = 'item', rela
 }
 
 /**
- * Gera o trecho JSX para um campo de formulário.
- * Replica o mapeamento de input do Runtime.
+ * Gera o trecho JSX para um campo de formulário respeitando integralmente
+ * as posições, colunas (1 a 12) e larguras visuais configuradas no Studio para cada caso de uso.
  */
-export function getColSpanClass(field: ResolvedField): string {
+export function getColSpanClass(field: ResolvedField, isModal: boolean = false): string {
   const cfg = field.config || {}
   const comp = cfg.component || cfg.form_config?.component || {}
   const layout = cfg.layout || {}
   const layoutPadrao = cfg.layout_padrao || comp.layout_padrao || {}
 
+  // 1. Prioridade às colunas explícitas (1 a 12) configuradas no Studio
+  // Quando em modal/drawer, dá prioridade a modalGridSpan se configurado
   const rawCols =
+    (isModal ? (comp.modalGridSpan ?? cfg.modalGridSpan ?? (field as any).modalGridSpan) : null) ??
     comp.gridSpan ??
-    comp.modalGridSpan ??
     cfg.gridSpan ??
-    cfg.grid_span ??
+    comp.modalGridSpan ??
     cfg.modalGridSpan ??
+    (field as any).gridSpan ??
+    (field as any).columns ??
     comp.columns ??
+    cfg.columns ??
     comp.col_span ??
     comp.colunas ??
     comp.ocupar_colunas ??
@@ -82,7 +87,6 @@ export function getColSpanClass(field: ResolvedField): string {
     layout.col_span ??
     layoutPadrao.colunas ??
     layoutPadrao.ocupar_colunas ??
-    cfg.columns ??
     cfg.col_span ??
     cfg.colSpan ??
     cfg.colunas ??
@@ -101,26 +105,51 @@ export function getColSpanClass(field: ResolvedField): string {
     return `col-span-12 md:col-span-${numCols}`
   }
 
+  // 2. Componentes multiline, textarea ou BYOC ocupam linha inteira se não houver coluna definida
   if (cfg.multiline || comp.type === 'textarea' || field.isByoc || field.isVirtual) {
     return 'col-span-12'
   }
 
-  const w = String(cfg.width || comp.width || '').trim()
-  if (w === '50%' || w === '50' || w === 'w-1/2' || w === '6' || w === '6 col') {
+  // 3. Largura visual configurada no Studio (ex: "50%", "33%", "25%", "6col", "4col", etc.)
+  const rawWidth = isModal
+    ? (comp.modalWidth || cfg.modalWidth || comp.width || cfg.width || '')
+    : (comp.width || cfg.width || '')
+  const w = String(rawWidth).trim().toLowerCase()
+
+  if (w.endsWith('col')) {
+    const c = parseInt(w.replace('col', '').trim(), 10)
+    if (!isNaN(c) && c > 0) {
+      if (c >= 12) return 'col-span-12'
+      return `col-span-12 md:col-span-${c}`
+    }
+  }
+
+  if (w === '50%' || w === '50' || w === 'w-1/2' || w === '6') {
     return 'col-span-12 md:col-span-6'
   }
-  if (w === '33%' || w === '33.33%' || w === '33.33' || w === '4' || w === '4 col') {
+  if (w === '33%' || w === '33.33%' || w === '33.33' || w === 'w-1/3' || w === '4') {
     return 'col-span-12 md:col-span-4'
   }
-  if (w === '25%' || w === '25' || w === 'w-1/4' || w === '3' || w === '3 col') {
+  if (w === '25%' || w === '25' || w === 'w-1/4' || w === '3') {
     return 'col-span-12 md:col-span-3'
   }
-  if (w === '100%' || w === '100' || w === 'w-full' || w === '12' || w === '12 col') {
+  if (w === '16.6%' || w === '16.66%' || w === '16.67%' || w === '2') {
+    return 'col-span-12 md:col-span-2'
+  }
+  if (w === '8.33%' || w === '1') {
+    return 'col-span-12 md:col-span-1'
+  }
+  if (w === '66.6%' || w === '66.66%' || w === '66.67%' || w === 'w-2/3' || w === '8') {
+    return 'col-span-12 md:col-span-8'
+  }
+  if (w === '75%' || w === '75' || w === 'w-3/4' || w === '9') {
+    return 'col-span-12 md:col-span-9'
+  }
+  if (w === '100%' || w === '100' || w === 'w-full' || w === '12') {
     return 'col-span-12'
   }
 
-  // Padrão alinhado ao Runtime do Studio (RecordForm.tsx line 441):
-  // Se o campo não tiver gridSpan configurado, a largura padrão é 12 (linha inteira).
+  // 4. Fallback padrão quando o campo não possui configuração de colunas ou largura no Studio
   return 'col-span-12'
 }
 
@@ -147,14 +176,15 @@ export function renderFormField(
   field: ResolvedField,
   isEdit: boolean,
   readOnly: boolean | string = false,
-  relationalOptionsVar = 'relationalOptions'
+  relationalOptionsVar = 'relationalOptions',
+  isModal = false
 ): string {
   const col = field.dbColumn
   const label = field.label
   const dt = (field.dataType || '').toLowerCase()
   const required = field.config?.required || false
   const placeholder = field.config?.placeholder || `Digite ${label}...`
-  const colSpanClass = getColSpanClass(field)
+  const colSpanClass = getColSpanClass(field, isModal)
 
   if (field.isByoc || field.dataType === 'byoc' || field.id.startsWith('byoc_')) {
     const byocComponentName = getByocComponentName(field)

@@ -207,7 +207,7 @@ export function generateGanttSchema(route: RouteNode): string {
       triggerType: b.triggerType,
       usecaseSlug: b.usecaseSlug,
       usecaseOpenMode: b.usecaseOpenMode || 'modal',
-      usecaseModalSize: b.usecaseModalSize || 'full',
+      usecaseModalSize: b.usecaseModalSize || '4xl',
       usecaseModalWidth: b.usecaseModalWidth,
       usecaseModalHeight: b.usecaseModalHeight,
       usecaseSelectedFields: b.usecaseSelectedFields || [],
@@ -233,7 +233,7 @@ export function generateGanttSchema(route: RouteNode): string {
           triggerType: a.trigger_type || (a.usecase_slug ? 'usecase' : 'custom'),
           usecaseSlug: a.usecase_slug || a.target_use_case,
           usecaseOpenMode: a.usecase_open_mode || 'modal',
-          usecaseModalSize: a.usecaseModalSize || a.usecase_modal_size || 'full',
+          usecaseModalSize: a.usecaseModalSize || a.usecase_modal_size || '4xl',
           usecaseModalWidth: a.usecase_modal_width,
           usecaseModalHeight: a.usecase_modal_height,
           usecaseSelectedFields: a.usecase_selected_fields || [],
@@ -279,7 +279,7 @@ export function generateGanttClient(route: RouteNode): string {
     || route.rawLayoutConfig?.action_interface_type === 'modal'
 
   const modalFormFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions', true))
     .filter(Boolean)
     .join('\n')
 
