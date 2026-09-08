@@ -7,6 +7,7 @@ import { generateKanbanBoardComponent } from './kanban-board'
 import { generateTimelineBoardComponent } from './timeline-board'
 import { generateGalleryBoardComponent } from './gallery-board'
 import { generateGanttBoardComponent } from './gantt-board'
+import { generateSchedulerBoardComponent } from './scheduler-board'
 import { generateMapBoardComponent } from './map-board'
 import { generateBlueprintBoardComponent } from './blueprint-board'
 import { generateMindMapBoardComponent } from './mindmap-board'
@@ -19,6 +20,7 @@ export * from './kanban-board'
 export * from './timeline-board'
 export * from './gallery-board'
 export * from './gantt-board'
+export * from './scheduler-board'
 export * from './map-board'
 export * from './blueprint-board'
 export * from './mindmap-board'
@@ -37,6 +39,7 @@ export function generateComponents(ast: AppAST, files: Map<string, string>) {
   generateTimelineBoardComponent(files)
   generateGalleryBoardComponent(files)
   generateGanttBoardComponent(files)
+  generateSchedulerBoardComponent(files)
   generateMapBoardComponent(files)
   generateBlueprintBoardComponent(files)
   generateMindMapBoardComponent(files)

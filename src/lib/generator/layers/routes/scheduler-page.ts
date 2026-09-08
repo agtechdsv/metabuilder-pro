@@ -164,7 +164,7 @@ export function generateSchedulerPage(route: RouteNode): string {
 
   const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
     if (b.actionType === 'create') {
-      return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+      return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> ${b.label}
           </Link>`
     }
@@ -182,7 +182,7 @@ export function generateSchedulerPage(route: RouteNode): string {
           <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             <Download className="w-4 h-4 text-neutral-400" /> Exportar
           </button>${hasCreate ? `
-          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : ''}`
 
@@ -192,6 +192,7 @@ import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { Loader2, Plus, Search, RefreshCcw, Zap, Download, Calendar } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 import { SchedulerClient } from './SchedulerClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
@@ -215,7 +216,7 @@ async function ${mn}SchedulerContent({
 }: {
   params: { [key: string]: string | undefined }
 }) {
-  const rawData = await get${mn}List()
+  const rawData = await get${mn}List({ filters: params }).catch(() => [])
 ${lookupQueries}
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -234,9 +235,10 @@ ${buildOptionsCode.join('\n')}
 export default async function ${mn}SchedulerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>
+  searchParams?: Promise<{ [key: string]: string | undefined }>
 }) {
-  const params = await searchParams
+  const params = searchParams ? await searchParams : {}
+  const isEmbedded = params?.embedded === 'true'
 
   return (
     <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -261,12 +263,14 @@ export default async function ${mn}SchedulerPage({
 
         <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 
       {/* Barra de Filtros / Argumentos da View */}
       ${filterFields.length > 0 ? `
-      <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
+      <form method="GET" className="p-6 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm">
+        {isEmbedded && <input type="hidden" name="embedded" value="true" />}
         <div className="flex flex-col lg:flex-row items-end gap-6">
           <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
@@ -274,14 +278,14 @@ ${filterInputs}
           <div className="flex items-center gap-3 mb-[1px]">
             <button
               type="submit"
-              className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+              className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
             >
               <Search className="w-4 h-4" />
               Pesquisar
             </button>
             <Link
-              href="${route.path}"
-              className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
+              href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+              className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
             >
               <RefreshCcw className="w-4 h-4" />
               Limpar
@@ -504,8 +508,8 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import DynamicScheduler from '@/components/DynamicScheduler'
-import { filterFields, fields, schedulerConfig } from './schema'
-${byocImports ? `${byocImports}\n` : ''}import { Search, RefreshCcw, Pencil, X, Save } from 'lucide-react'
+import { fields, schedulerConfig } from './schema'
+${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
 
@@ -520,19 +524,8 @@ export function SchedulerClient({
 }) {
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
-
-  const [filterValues, setFilterValues] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {}
-    if (initialParams) {
-      for (const [k, v] of Object.entries(initialParams)) {
-        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to') {
-          init[k] = v
-        }
-      }
-    }
-    return init
-  })
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>(filterValues)
+  const [visibleCount, setVisibleCount] = useState(50)
+  const BATCH_SIZE = 50
 
 ${modalStateVars}
 
@@ -540,19 +533,9 @@ ${modalStateVars}
     setDataList(initialData)
   }, [initialData])
 
-  const filteredData = useMemo(() => {
-    return dataList.filter(item => {
-      for (const [col, val] of Object.entries(activeFilters)) {
-        if (!val || !val.trim()) continue
-        const itemVal = item[col]
-        if (itemVal === null || itemVal === undefined) return false
-        const strItemVal = String(itemVal).toLowerCase().trim()
-        const strFilterVal = val.toLowerCase().trim()
-        if (strItemVal !== strFilterVal && !strItemVal.includes(strFilterVal)) return false
-      }
-      return true
-    })
-  }, [dataList, activeFilters])
+  const displayedData = useMemo(() => {
+    return dataList.slice(0, visibleCount)
+  }, [dataList, visibleCount])
 
   const handleMove = async (recordId: string, updates: Record<string, any>) => {
     setDataList(prev =>
@@ -579,99 +562,12 @@ ${handleAddBody}
 ${handleEditBody}
   }
 
-  const handleSearch = (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    setActiveFilters({ ...filterValues })
-  }
-
-  const handleClear = () => {
-    setFilterValues({})
-    setActiveFilters({})
-  }
-
 ${modalSubmitHandler}
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {filterFields.length > 0 && (
-        <form onSubmit={handleSearch} className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm space-y-4">
-          <div className="grid grid-cols-12 gap-4">
-            {filterFields.map((f: any) => {
-              const gridSpan = f.config?.filter_config?.component?.gridSpan || f.config?.gridSpan || 3
-              const colSpanClass = 'col-span-12 sm:col-span-6 md:col-span-' + Math.min(12, gridSpan)
-              const options = relationalOptions?.[f.dbColumn] || f.config?.options || []
-              const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'timestamptz' || f.dbColumn.includes('data')
-
-              if (options && options.length > 0) {
-                return (
-                  <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
-                    <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">{f.label}</label>
-                    <select
-                      value={filterValues[f.dbColumn] || ''}
-                      onChange={e => setFilterValues(prev => ({ ...prev, [f.dbColumn]: e.target.value }))}
-                      className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm cursor-pointer"
-                    >
-                      <option value="">Todos</option>
-                      {options.map((opt: any, i: number) => (
-                        <option key={i} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              }
-
-              if (isDate) {
-                return (
-                  <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
-                    <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">{f.label}</label>
-                    <input
-                      type="date"
-                      value={filterValues[f.dbColumn] || ''}
-                      onChange={e => setFilterValues(prev => ({ ...prev, [f.dbColumn]: e.target.value }))}
-                      className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
-                    />
-                  </div>
-                )
-              }
-
-              return (
-                <div key={f.dbColumn} className={'flex flex-col gap-1.5 ' + colSpanClass}>
-                  <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">{f.label}</label>
-                  <div className="relative group">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <input
-                      type="text"
-                      placeholder={'Filtrar por ' + f.label + '...'}
-                      value={filterValues[f.dbColumn] || ''}
-                      onChange={e => setFilterValues(prev => ({ ...prev, [f.dbColumn]: e.target.value }))}
-                      className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleClear}
-              className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-all cursor-pointer"
-            >
-              Limpar
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95 cursor-pointer"
-            >
-              <Search className="w-3.5 h-3.5" /> Pesquisar
-            </button>
-          </div>
-        </form>
-      )}
-
       <DynamicScheduler
-        data={filteredData}
+        data={displayedData}
         fields={fields}
         schedulerConfig={schedulerConfig}
         onMove={handleMove}
@@ -681,6 +577,9 @@ ${modalSubmitHandler}
         onDelete={handleDelete}
         relationalOptions={relationalOptions}
         dictionary={{}}
+        hasMore={visibleCount < dataList.length}
+        totalRecords={dataList.length}
+        onLoadMore={() => setVisibleCount(prev => prev + BATCH_SIZE)}
       />
 ${modalJsx}
     </div>
