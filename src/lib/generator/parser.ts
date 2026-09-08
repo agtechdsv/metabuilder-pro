@@ -1092,6 +1092,13 @@ function resolveRelationTabs(
     // Enriquece campos de FK/Lookup com a relação para a tabela destino respeitando as configs do Studio e dicionário do banco
     const enrichRelationFields = (fieldsList: ResolvedField[]) => {
       return fieldsList.map(f => {
+        if (f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration') {
+          return f
+        }
+        if (f.config?.relation?.targetTable && f.config?.relation?.displayColumn) {
+          return f
+        }
+
         const configuredTarget = f.config?.component?.rel_table || f.config?.rel_table || f.config?.relation?.targetTable
         const configuredDisplay = f.config?.component?.rel_label || f.config?.rel_label || f.config?.relation?.displayColumn
         const configuredValue = f.config?.component?.rel_value || f.config?.rel_value || f.config?.relation?.valueColumn
@@ -1108,9 +1115,9 @@ function resolveRelationTabs(
             )
           : (fkRel ? allModels.find((m: any) => m.id === fkRel.to_model_id) : null)
 
-        const targetTableName = targetModel?.db_table_name || configuredTarget
-        if (targetTableName) {
-          const targetFields = targetModel ? allFields.filter((tf: any) => tf.model_id === targetModel.id) : []
+        if (targetModel && targetModel.db_table_name) {
+          const targetTableName = targetModel.db_table_name
+          const targetFields = allFields.filter((tf: any) => tf.model_id === targetModel.id)
           const pkCol = configuredValue || targetFields.find((tf: any) => tf.is_primary_key)?.db_column_name || targetFields[0]?.db_column_name || 'id'
           const dispCol = configuredDisplay || findDisplayColumn(targetFields) || pkCol
 

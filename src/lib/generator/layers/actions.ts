@@ -302,6 +302,78 @@ function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Ar
   return refs
 }
 
+interface SchemaRelationEdge {
+  fromTable: string
+  fromCol: string
+  toTable: string
+  toCol: string
+}
+
+function buildSchemaRelations(allModels: ModelNode[]): SchemaRelationEdge[] {
+  const edges: SchemaRelationEdge[] = []
+  const edgeKey = (e: SchemaRelationEdge) => `${e.fromTable}.${e.fromCol}->${e.toTable}.${e.toCol}`
+  const seen = new Set<string>()
+
+  for (const m of allModels) {
+    const fromTable = (m.dbTable || m.name).toLowerCase()
+    for (const f of m.fields) {
+      let toTable = ''
+      let toCol = 'id'
+
+      const rel = f.relation as any
+      const cfgRel = f.config?.relation
+      const compRel = (f.config as any)?.component
+
+      if (rel?.targetTable) {
+        toTable = String(rel.targetTable).toLowerCase()
+        toCol = rel.targetCol || 'id'
+      } else if (cfgRel?.targetTable) {
+        toTable = String(cfgRel.targetTable).toLowerCase()
+        toCol = cfgRel.valueColumn || 'id'
+      } else if (compRel?.rel_table) {
+        toTable = String(compRel.rel_table).toLowerCase()
+        toCol = compRel.rel_value || 'id'
+      } else if ((f.config as any)?.rel_table) {
+        toTable = String((f.config as any).rel_table).toLowerCase()
+        toCol = (f.config as any).rel_value || 'id'
+      } else if (rel?.targetModel || cfgRel?.targetModel) {
+        const targetModelName = String(rel?.targetModel || cfgRel?.targetModel).toLowerCase()
+        const targetModel = allModels.find(om => om.name.toLowerCase() === targetModelName || (om.dbTable && om.dbTable.toLowerCase() === targetModelName))
+        if (targetModel) {
+          toTable = (targetModel.dbTable || targetModel.name).toLowerCase()
+          toCol = targetModel.fields.find(x => x.isPrimary)?.dbColumn || 'id'
+        }
+      } else if (f.dbColumn.endsWith('_id') && !f.isPrimary) {
+        const base = f.dbColumn.slice(0, -3).toLowerCase()
+        const targetModel = allModels.find(om => {
+          const t = (om.dbTable || om.name).toLowerCase()
+          return t === base || t === base + 's' || t.replace(/s$/, '') === base
+        })
+        if (targetModel) {
+          toTable = (targetModel.dbTable || targetModel.name).toLowerCase()
+          toCol = targetModel.fields.find(x => x.isPrimary)?.dbColumn || 'id'
+        }
+      }
+
+      if (toTable && toTable !== fromTable && !toTable.includes('-')) {
+        const edge: SchemaRelationEdge = {
+          fromTable,
+          fromCol: f.dbColumn,
+          toTable,
+          toCol,
+        }
+        const k = edgeKey(edge)
+        if (!seen.has(k)) {
+          seen.add(k)
+          edges.push(edge)
+        }
+      }
+    }
+  }
+
+  return edges
+}
+
 // -----------------------------------------------------------------------------
 // ACTIONS GENERATORS
 // -----------------------------------------------------------------------------
@@ -370,11 +442,25 @@ import { revalidatePath } from 'next/cache'
 
 ${generateParsePayloadCode(model)}
 
-export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const supabase = await createClient()
   let q = supabase.from('${model.dbTable}').select('*').order('${pk}', { ascending: false })
   if (opts?.dateField && opts.startDate) q = q.gte(opts.dateField, opts.startDate)
   if (opts?.dateField && opts.endDate) q = q.lte(opts.dateField, opts.endDate + 'T23:59:59')
+  if (opts?.filters && typeof opts.filters === 'object') {
+    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'layout', 'search'])
+    for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue
+      const key = rawKey.trim()
+      if (ignoredKeys.has(key.toLowerCase())) continue
+      if (allowedColumns.has(key)) {
+        q = q.eq(key, rawVal)
+      } else if (key.endsWith('_filter')) {
+        const col = key.slice(0, -7)
+        if (allowedColumns.has(col)) q = q.ilike(col, '%' + rawVal + '%')
+      }
+    }
+  }
   if (opts?.limit) q = q.limit(opts.limit)
   const { data, error } = await q
   if (error) throw new Error(error.message)
@@ -436,6 +522,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
   const tableRef = model.dbTable.includes('.')
     ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
+  const modelTableLower = (model.dbTable || model.name).toLowerCase()
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   const childRefs = getReferencingFields(model, allModels)
@@ -446,13 +533,49 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
     return `    await query('DELETE FROM ${childTableRef} WHERE "${ref.column}" = $1', [id]).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
   }).join('\n')
 
+  const schemaRelations = buildSchemaRelations(allModels)
+
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
 ${generateParsePayloadCode(model)}
 
-export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+const schemaRelations = ${JSON.stringify(schemaRelations)}
+
+function findRelationPath(startTable: string, targetTable: string): Array<{ table: string; on: string }> | null {
+  if (startTable === targetTable) return []
+  const queue: Array<{ current: string; path: Array<{ table: string; on: string }> }> = [
+    { current: startTable, path: [] }
+  ]
+  const visited = new Set<string>([startTable])
+
+  while (queue.length > 0) {
+    const item = queue.shift()
+    if (!item) break
+    const { current, path } = item
+    if (current === targetTable) return path
+
+    for (const edge of schemaRelations) {
+      if (edge.fromTable === current && !visited.has(edge.toTable)) {
+        visited.add(edge.toTable)
+        queue.push({
+          current: edge.toTable,
+          path: [...path, { table: edge.toTable, on: \`"\${edge.toTable}"."\${edge.toCol}" = "\${edge.fromTable}"."\${edge.fromCol}"\` }]
+        })
+      } else if (edge.toTable === current && !visited.has(edge.fromTable)) {
+        visited.add(edge.fromTable)
+        queue.push({
+          current: edge.fromTable,
+          path: [...path, { table: edge.fromTable, on: \`"\${edge.fromTable}"."\${edge.fromCol}" = "\${edge.toTable}"."\${edge.toCol}"\` }]
+        })
+      }
+    }
+  }
+  return null
+}
+
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const conditions: string[] = []
   const params: any[] = []
   if (opts?.dateField && opts.startDate) {
@@ -462,6 +585,41 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   if (opts?.dateField && opts.endDate) {
     params.push(opts.endDate + 'T23:59:59')
     conditions.push(\`"\${opts.dateField}" <= $\${params.length}\`)
+  }
+  if (opts?.filters && typeof opts.filters === 'object') {
+    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'layout', 'search'])
+    for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue
+      const key = rawKey.trim()
+      if (ignoredKeys.has(key.toLowerCase())) continue
+
+      if (key.includes('.')) {
+        const [targetTable, targetCol] = key.split('.')
+        const tTable = targetTable.toLowerCase()
+        const tCol = targetCol.toLowerCase()
+        if (tTable === '${modelTableLower}') {
+          params.push(rawVal)
+          conditions.push(\`"\${tCol}"::text = $\${params.length}::text\`)
+        } else {
+          const path = findRelationPath('${modelTableLower}', tTable)
+          if (path && path.length > 0) {
+            params.push(rawVal)
+            const fromClause = \`"\${path[0].table}"\`
+            const joinClauses = path.slice(1).map(p => \`JOIN "\${p.table}" ON \${p.on}\`).join(' ')
+            const whereOn = path[0].on
+            const whereTarget = \`"\${tTable}"."\${tCol}"::text = $\${params.length}::text\`
+            conditions.push(\`EXISTS (SELECT 1 FROM \${fromClause}\${joinClauses ? ' ' + joinClauses : ''} WHERE \${whereOn} AND \${whereTarget})\`)
+          }
+        }
+      } else if (key.endsWith('_filter')) {
+        const col = key.slice(0, -7)
+        params.push('%' + rawVal + '%')
+        conditions.push(\`"\${col}"::text ILIKE $\${params.length}\`)
+      } else if (allowedColumns.has(key)) {
+        params.push(rawVal)
+        conditions.push(\`"\${key}"::text = $\${params.length}::text\`)
+      }
+    }
   }
   const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
   const limitClause = opts?.limit ? \` LIMIT \${opts.limit}\` : ''
@@ -535,7 +693,7 @@ import { revalidatePath } from 'next/cache'
 
 ${generateParsePayloadCode(model)}
 
-export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const conditions: string[] = []
   const params: Record<string, any> = {}
   if (opts?.dateField && opts.startDate) {
@@ -614,7 +772,7 @@ import { revalidatePath } from 'next/cache'
 
 ${generateParsePayloadCode(model)}
 
-export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const conditions: string[] = []
   const params: any[] = []
   if (opts?.dateField && opts.startDate) {
@@ -695,7 +853,7 @@ import { revalidatePath } from 'next/cache'
 
 ${generateParsePayloadCode(model)}
 
-export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number }) {
+export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const pool = await getPool()
   const request = pool.request()
   const conditions: string[] = []

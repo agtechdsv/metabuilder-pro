@@ -38,8 +38,8 @@ export function generateListPage(route: RouteNode): string {
 
   const hasLookups = lookupModels.size > 0
   const fetchDataCode = hasLookups
-    ? `  const [rawData, ${Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')}] = await Promise.all([\n    get${mn}List(),\n    ${Array.from(lookupModels.values()).map(m => `get${m}List().catch(() => [])`).join(',\n    ')}\n  ])`
-    : `  const rawData = await get${mn}List()`
+    ? `  const [rawData, ${Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')}] = await Promise.all([\n    get${mn}List({ filters: params }),\n    ${Array.from(lookupModels.values()).map(m => `get${m}List().catch(() => [])`).join(',\n    ')}\n  ])`
+    : `  const rawData = await get${mn}List({ filters: params })`
 
   const buildOptionsCode: string[] = []
   allListFields.forEach(f => {
@@ -262,7 +262,7 @@ ${buildOptionsCode.join('\n')}
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn
-  return `    const val_${col} = params?.['${col}_filter']
+  return `    const val_${col} = params?.['${col}_filter'] || params?.['${col}'] || params?.['${rawCol}']
     if (val_${col}) {
       const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
       if (!itemVal.includes(String(val_${col}).toLowerCase())) return false

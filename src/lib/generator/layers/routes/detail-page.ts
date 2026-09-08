@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName } from './helpers'
+import { renderFormField, getByocComponentName, isValidIdentifier } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Declarative Schema para Abas de Relacionamento ([id]/schema.ts)
@@ -111,16 +111,20 @@ export function generateDetailTabsClient(route: RouteNode): string {
     route.relationTabs.forEach(tab => {
       const allTabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
       allTabFields.forEach(f => {
-        if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
-          lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+        const tTable = f.config?.relation?.targetTable
+        const tModel = f.config?.relation?.targetModel
+        if (tTable && tModel && isValidIdentifier(tTable) && isValidIdentifier(tModel)) {
+          lookupModels.set(tTable, tModel)
         }
       })
       if (tab.subDetails) {
         tab.subDetails.forEach(sub => {
           const allSubFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
           allSubFields.forEach(f => {
-            if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
-              lookupModels.set(f.config.relation.targetTable, f.config.relation.targetModel)
+            const tTable = f.config?.relation?.targetTable
+            const tModel = f.config?.relation?.targetModel
+            if (tTable && tModel && isValidIdentifier(tTable) && isValidIdentifier(tModel)) {
+              lookupModels.set(tTable, tModel)
             }
           })
         })
@@ -133,7 +137,9 @@ export function generateDetailTabsClient(route: RouteNode): string {
     route.relationTabs.forEach(tab => {
       if (tab.subDetails) {
         tab.subDetails.forEach(sub => {
-          subDetailModels.set(sub.relatedTable, sub.relatedModelName)
+          if (isValidIdentifier(sub.relatedTable) && isValidIdentifier(sub.relatedModelName)) {
+            subDetailModels.set(sub.relatedTable, sub.relatedModelName)
+          }
         })
       }
     })
@@ -522,16 +528,20 @@ export function generateDetailPage(route: RouteNode): string {
   route.formFields.forEach(f => {
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
-    if (targetModel && targetTable) {
+    if (targetModel && targetTable && isValidIdentifier(targetTable) && isValidIdentifier(targetModel)) {
       lookupModels.set(targetTable.toLowerCase(), targetModel)
-    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
+    } else if (targetTable && isValidIdentifier(targetTable) && targetTable.length < 30) {
       const modelName = targetTable.charAt(0).toUpperCase() + targetTable.slice(1)
-      lookupModels.set(targetTable.toLowerCase(), modelName)
+      if (isValidIdentifier(modelName)) {
+        lookupModels.set(targetTable.toLowerCase(), modelName)
+      }
     } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
       const base = f.dbColumn.slice(0, -3)
       const table = base.endsWith('s') ? base : (base + 's')
       const modelName = table.charAt(0).toUpperCase() + table.slice(1)
-      lookupModels.set(table.toLowerCase(), modelName)
+      if (isValidIdentifier(table) && isValidIdentifier(modelName)) {
+        lookupModels.set(table.toLowerCase(), modelName)
+      }
     }
   })
 
@@ -540,7 +550,8 @@ export function generateDetailPage(route: RouteNode): string {
     route.relationTabs.forEach(tab => {
       const allTabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
       allTabFields.forEach(f => {
-        if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
+        if (f.config?.relation?.targetTable && f.config?.relation?.targetModel &&
+            isValidIdentifier(f.config.relation.targetTable) && isValidIdentifier(f.config.relation.targetModel)) {
           lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
         }
       })
@@ -548,7 +559,8 @@ export function generateDetailPage(route: RouteNode): string {
         tab.subDetails.forEach(sub => {
           const allSubFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
           allSubFields.forEach(f => {
-            if (f.config?.relation?.targetTable && f.config?.relation?.targetModel) {
+            if (f.config?.relation?.targetTable && f.config?.relation?.targetModel &&
+                isValidIdentifier(f.config.relation.targetTable) && isValidIdentifier(f.config.relation.targetModel)) {
               lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
             }
           })
@@ -563,6 +575,7 @@ export function generateDetailPage(route: RouteNode): string {
   })
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) => {
+    if (!isValidIdentifier(table) || !isValidIdentifier(modelName)) return ''
     if (table === mnLower) {
       return `  const ${table}LookupList = await get${mn}List().catch(() => [])\n`
     }
@@ -576,7 +589,7 @@ export function generateDetailPage(route: RouteNode): string {
   const buildOptionsCode: string[] = []
   route.formFields.forEach(f => {
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
-    if (targetTable && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
+    if (targetTable && isValidIdentifier(targetTable) && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
@@ -595,7 +608,9 @@ export function generateDetailPage(route: RouteNode): string {
     route.relationTabs.forEach(tab => {
       if (tab.subDetails) {
         tab.subDetails.forEach(sub => {
-          subDetailModels.set(sub.relatedTable, sub.relatedModelName)
+          if (isValidIdentifier(sub.relatedTable) && isValidIdentifier(sub.relatedModelName)) {
+            subDetailModels.set(sub.relatedTable, sub.relatedModelName)
+          }
         })
       }
     })
@@ -603,6 +618,7 @@ export function generateDetailPage(route: RouteNode): string {
 
   const serverActionsMap = new Map<string, Set<string>>()
   const addServerAction = (modelLower: string, fn: string) => {
+    if (!isValidIdentifier(modelLower)) return
     const key = `@/app/actions/${modelLower}`
     if (!serverActionsMap.has(key)) serverActionsMap.set(key, new Set())
     serverActionsMap.get(key)!.add(fn)
@@ -616,22 +632,26 @@ export function generateDetailPage(route: RouteNode): string {
   }
 
   lookupModels.forEach((modelName, table) => {
-    if (table !== mnLower) {
+    if (table !== mnLower && isValidIdentifier(modelName)) {
       addServerAction(modelName.toLowerCase(), `get${modelName}List`)
     }
   })
   subDetailModels.forEach((modelName) => {
-    addServerAction(modelName.toLowerCase(), `get${modelName}List`)
-    addServerAction(modelName.toLowerCase(), `create${modelName}`)
-    addServerAction(modelName.toLowerCase(), `update${modelName}`)
-    addServerAction(modelName.toLowerCase(), `delete${modelName}`)
+    if (isValidIdentifier(modelName)) {
+      addServerAction(modelName.toLowerCase(), `get${modelName}List`)
+      addServerAction(modelName.toLowerCase(), `create${modelName}`)
+      addServerAction(modelName.toLowerCase(), `update${modelName}`)
+      addServerAction(modelName.toLowerCase(), `delete${modelName}`)
+    }
   })
   if (hasRelationTabs) {
     route.relationTabs.forEach(t => {
-      addServerAction(t.relatedModelName.toLowerCase(), `get${t.relatedModelName}ByField`)
-      addServerAction(t.relatedModelName.toLowerCase(), `create${t.relatedModelName}`)
-      addServerAction(t.relatedModelName.toLowerCase(), `update${t.relatedModelName}`)
-      addServerAction(t.relatedModelName.toLowerCase(), `delete${t.relatedModelName}`)
+      if (isValidIdentifier(t.relatedModelName)) {
+        addServerAction(t.relatedModelName.toLowerCase(), `get${t.relatedModelName}ByField`)
+        addServerAction(t.relatedModelName.toLowerCase(), `create${t.relatedModelName}`)
+        addServerAction(t.relatedModelName.toLowerCase(), `update${t.relatedModelName}`)
+        addServerAction(t.relatedModelName.toLowerCase(), `delete${t.relatedModelName}`)
+      }
     })
   }
 

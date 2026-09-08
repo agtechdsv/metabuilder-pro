@@ -12,6 +12,10 @@ export function toPascalCase(str: string): string {
     .replace(/^[a-z]/, (m) => m.toUpperCase())
 }
 
+export function isValidIdentifier(str?: string): boolean {
+  return Boolean(str && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(str) && !str.includes('-'))
+}
+
 /**
  * Gera o trecho JSX para renderizar o valor de um campo na tabela de listagem.
  * Replica a lógica de renderização do Runtime ViewPageContent.
@@ -215,13 +219,17 @@ export function renderFormField(
           </div>`
   }
 
+  const formulaTokens = field.config?.formulaTokens || field.config?.formula_tokens || field.config?.content?.formula_tokens || (field as any).formulaTokens || []
+  const hasFormula = Array.isArray(formulaTokens) && formulaTokens.length > 0
+
   const isStaticReadOnly = Boolean(
     (typeof readOnly === 'boolean' && readOnly) ||
     field.config?.readOnly ||
     field.config?.content?.readonly ||
     field.config?.readonly ||
     field.isVirtual ||
-    col.startsWith('virt_')
+    col.startsWith('virt_') ||
+    hasFormula
   )
 
   const isDynamic = typeof readOnly === 'string' && readOnly.trim() !== ''
@@ -353,8 +361,14 @@ export function renderFormField(
           </div>`
   }
 
-  const mask = field.config?.mask || field.config?.content?.mask || (col.toLowerCase().includes('cnpj') ? '00.000.000/0000-00' : col.toLowerCase().includes('cpf') ? '000.000.000-00' : col.toLowerCase().includes('cep') ? '00000-000' : (col.toLowerCase().includes('telefone') || col.toLowerCase().includes('phone')) ? '(00) 00000-0000' : (col.toLowerCase().includes('preco') || col.toLowerCase().includes('valor') || col.toLowerCase().includes('price')) ? '0.000,00' : '')
+  const mask = field.config?.mask || field.config?.content?.mask || (hasFormula ? '0.000,00' : '') || (col.toLowerCase().includes('cnpj') ? '00.000.000/0000-00' : col.toLowerCase().includes('cpf') ? '000.000.000-00' : col.toLowerCase().includes('cep') ? '00000-000' : (col.toLowerCase().includes('telefone') || col.toLowerCase().includes('phone')) ? '(00) 00000-0000' : (col.toLowerCase().includes('preco') || col.toLowerCase().includes('valor') || col.toLowerCase().includes('price') || col.toLowerCase().includes('total')) ? '0.000,00' : '')
   const inputType = mask ? 'text' : (dt === 'integer' || dt === 'numeric' || dt === 'float' || dt === 'double precision' || dt === 'decimal') ? 'number' : 'text'
+
+  const formulaAttr = hasFormula ? ` data-formula={${JSON.stringify(JSON.stringify(formulaTokens))}}` : ''
+  const defaultValueExpr = hasFormula
+    ? `isEdit ? (formatWithMask(evaluateFormula(${JSON.stringify(formulaTokens)}, data), '${mask}')) : ''`
+    : `isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''`
+  const placeholderText = hasFormula ? 'Calculado automaticamente' : placeholder
 
   return `
           <div className="space-y-1.5 ${colSpanClass}">
@@ -364,12 +378,12 @@ export function renderFormField(
               name="${col}"
               type="${inputType}"
               ${required ? 'required' : ''}
-              readOnly={${readOnlyCond}}
-              disabled={${readOnlyCond}}
-              placeholder="${placeholder}"
-              defaultValue={isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''}
-              ${mask ? `data-mask="${mask}"` : ''}
-              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
+              readOnly={${hasFormula ? 'true' : readOnlyCond}}
+              disabled={${hasFormula ? 'false' : readOnlyCond}}
+              placeholder="${placeholderText}"
+              defaultValue={${defaultValueExpr}}
+              ${mask ? `data-mask="${mask}"` : ''}${formulaAttr}
+              className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${hasFormula ? 'true' : readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
 }
@@ -404,6 +418,114 @@ function formatDatetimeForInput(v: any) {
     }
   } catch (e) {}
   return String(v).slice(0, 16)
+}
+
+function parseAnyNumber(val: any): number {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val
+  if (!val) return 0
+  const s = String(val).trim()
+  if (s.includes(',')) {
+    return parseFloat(s.replace(/\\./g, '').replace(',', '.')) || 0
+  }
+  const n = parseFloat(s)
+  return isNaN(n) ? 0 : n
+}
+
+function evaluateFormula(tokens: any[], currentRow: Record<string, any> = {}): any {
+  if (!tokens || !Array.isArray(tokens) || tokens.length === 0) return null
+  let expression = ''
+  const context: Record<string, any> = {}
+  let contextIdx = 0
+
+  context['SOMA'] = (arr: any[]) => Array.isArray(arr) ? arr.reduce((a, b) => Number(a || 0) + Number(b || 0), 0) : 0
+  context['MEDIA'] = (arr: any[]) => Array.isArray(arr) && arr.length ? context['SOMA'](arr) / arr.length : 0
+  context['COUNT'] = (arr: any[]) => Array.isArray(arr) ? arr.length : 0
+  context['MAXIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.max(...arr.map(v => Number(v) || 0)) : 0
+  context['MINIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.min(...arr.map(v => Number(v) || 0)) : 0
+  context['ARREDONDAR'] = (val: any) => Math.round(Number(val) || 0)
+  context['ABS'] = (val: any) => Math.abs(Number(val) || 0)
+  context['SE'] = (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal
+
+  const synonyms: Record<string, string[]> = {
+    quantidade: ['estoque_atual', 'estoque', 'qtd', 'quantidade'],
+    estoque_atual: ['quantidade', 'estoque', 'qtd'],
+    preco_unitario: ['preco_base', 'preco', 'valor_unitario', 'valor_base', 'valor'],
+    preco_base: ['preco_unitario', 'preco', 'valor_base', 'valor_unitario', 'valor'],
+  }
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (!token) continue
+    if (token.type === 'operator' || token.type === 'number') {
+      expression += ' ' + token.value + ' '
+    } else if (token.type === 'string') {
+      expression += ' "' + String(token.value).replace(/"/g, '\\\\"') + '" '
+    } else if (token.type === 'function') {
+      expression += ' ' + token.value
+    } else if (token.type === 'field') {
+      const fieldPath = String(token.value || '')
+      const varName = 'var_' + (contextIdx++)
+      expression += ' ' + varName + ' '
+
+      const colOnly = fieldPath.includes('.') ? fieldPath.split('.').pop()! : fieldPath
+
+      let val: any = undefined
+      if (currentRow) {
+        if (currentRow[fieldPath] !== undefined && currentRow[fieldPath] !== null) val = currentRow[fieldPath]
+        else if (currentRow[colOnly] !== undefined && currentRow[colOnly] !== null) val = currentRow[colOnly]
+        else {
+          const checkKeys = [fieldPath.toLowerCase(), colOnly.toLowerCase(), ...(synonyms[fieldPath.toLowerCase()] || []), ...(synonyms[colOnly.toLowerCase()] || [])]
+          for (const k of Object.keys(currentRow)) {
+            if (checkKeys.includes(k.toLowerCase())) {
+              val = currentRow[k]
+              break
+            }
+          }
+        }
+      }
+
+      const numVal = parseAnyNumber(val)
+      context[varName] = (val === '' || val === null || val === undefined) ? 0 : (isNaN(numVal) ? val : numVal)
+    }
+  }
+
+  expression = expression.replace(/ , /g, ',')
+  expression = expression.replace(/([^<>=!])=([^=])/g, '$1===$2')
+
+  try {
+    const fn = new Function(...Object.keys(context), 'return ' + expression)
+    const res = fn(...Object.values(context))
+    return (res === undefined || isNaN(res)) ? null : res
+  } catch (err) {
+    return null
+  }
+}
+
+function recalculateFormulas(container: HTMLElement | null) {
+  if (!container) return
+  const rowData: Record<string, any> = {}
+  const inputs = container.querySelectorAll('input, select, textarea')
+  inputs.forEach((el: any) => {
+    const name = el.name || el.id
+    if (name) {
+      rowData[name] = el.value
+      rowData[name.toLowerCase()] = el.value
+    }
+  })
+
+  const formulaInputs = container.querySelectorAll('[data-formula]')
+  formulaInputs.forEach((el: any) => {
+    try {
+      const rawFormula = el.getAttribute('data-formula')
+      if (!rawFormula) return
+      const tokens = JSON.parse(rawFormula)
+      const res = evaluateFormula(tokens, rowData)
+      if (res !== null && !isNaN(Number(res))) {
+        const mask = el.getAttribute('data-mask') || '0.000,00'
+        el.value = formatWithMask(Number(res), mask)
+      }
+    } catch (e) {}
+  })
 }
 
 function formatWithMask(v: any, mask?: string) {

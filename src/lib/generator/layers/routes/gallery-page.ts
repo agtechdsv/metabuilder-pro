@@ -185,7 +185,7 @@ export default async function ${mn}GalleryPage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
   const isEmbedded = searchParams?.embedded === 'true'
-  const rawData = await get${mn}List().catch(() => [])
+  const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
@@ -456,7 +456,14 @@ export function generateGalleryClient(route: RouteNode): string {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)` : ''
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const formRef = React.useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (isModalOpen && formRef.current) {
+      recalculateFormulas(formRef.current)
+    }
+  }, [isModalOpen, activeRecord])` : ''
 
   const handleAddBody = isActionModal
     ? `    setActiveRecord(null)
@@ -550,8 +557,10 @@ export function generateGalleryClient(route: RouteNode): string {
             </div>
 
             <form
+              ref={formRef}
               key={modalMode + '-' + (activeRecord?.${pk} || activeRecord?.id || 'new')}
               onSubmit={handleSubmitModal}
+              onInput={(e) => recalculateFormulas(e.currentTarget)}
               className="flex flex-col flex-1 overflow-hidden"
             >
               {saveError && (
