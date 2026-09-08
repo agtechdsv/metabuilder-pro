@@ -198,7 +198,7 @@ export default async function ${mn}GanttPage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
   const isEmbedded = searchParams?.embedded === 'true'
-  const rawData = await get${mn}List().catch(() => [])
+  const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}

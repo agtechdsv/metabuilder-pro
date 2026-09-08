@@ -218,7 +218,7 @@ async function ${mn}KanbanContent({
   params: { [key: string]: string | undefined }
   isEmbedded?: boolean
 }) {
-  const rawData = await get${mn}List()
+  const rawData = await get${mn}List({ filters: params }).catch(() => [])
 ${lookupQueries}
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -633,6 +633,7 @@ ${modalStateVars}
       for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
         if (!rawVal || !String(rawVal).trim()) continue
         if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to') continue
+        if (rawKey.includes('.')) continue // Filtros relacionais são resolvidos no banco de dados
         const val = String(rawVal).trim().toLowerCase()
         const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
 

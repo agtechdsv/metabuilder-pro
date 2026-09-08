@@ -115,7 +115,7 @@ export function generateTimelinePage(route: RouteNode): string {
 
   const headerButtonsHtml = route.buttons.filter(b => b.placement === 'header').map(b => {
     if (b.actionType === 'create') {
-      return `          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+      return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> ${b.label}
           </Link>`
     }
@@ -133,7 +133,7 @@ export function generateTimelinePage(route: RouteNode): string {
           <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             <Download className="w-4 h-4 text-neutral-400" /> Exportar
           </button>${hasCreate ? `
-          <Link href="${route.path}/new" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : ''}`
 
@@ -143,6 +143,7 @@ import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { Loader2, Plus, Zap, Download } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CloseModalButton } from '@/components/ui/custom-action-button'
 import { TimelineClient } from './TimelineClient'
 
 export const metadata: Metadata = { title: '${route.title}' }
@@ -164,7 +165,7 @@ async function ${mn}TimelineContent({
 }: {
   params: { [key: string]: string | undefined }
 }) {
-  const rawData = await get${mn}List()
+  const rawData = await get${mn}List({ filters: params }).catch(() => [])
 ${lookupQueries}
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -186,6 +187,7 @@ export default async function ${mn}TimelinePage({
   searchParams?: Promise<{ [key: string]: string | undefined }>
 }) {
   const params = searchParams ? await searchParams : {}
+  const isEmbedded = params?.embedded === 'true'
 
   return (
     <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -210,6 +212,7 @@ export default async function ${mn}TimelinePage({
 
         <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+          {isEmbedded && <CloseModalButton />}
         </div>
       </div>
 
@@ -455,7 +458,7 @@ export function TimelineClient({
     const init: Record<string, string> = {}
     if (initialParams) {
       for (const [k, v] of Object.entries(initialParams)) {
-        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to') {
+        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to' && !k.includes('.')) {
           init[k] = v
         }
       }
@@ -467,7 +470,7 @@ export function TimelineClient({
     const init: Record<string, string> = {}
     if (initialParams) {
       for (const [k, v] of Object.entries(initialParams)) {
-        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to') {
+        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to' && !k.includes('.')) {
           init[k] = v
         }
       }
@@ -489,10 +492,10 @@ export function TimelineClient({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
-      if (sp.get('embedded') === 'true') setIsEmbedded(true)
+      if (sp.get('embedded') === 'true' || window.self !== window.top) setIsEmbedded(true)
       const fromUrl: Record<string, string> = {}
       sp.forEach((val, key) => {
-        if (key !== 'embedded' && key !== 'preview' && key !== 'return_to') {
+        if (key !== 'embedded' && key !== 'preview' && key !== 'return_to' && !key.includes('.')) {
           fromUrl[key] = val
         }
       })
@@ -524,7 +527,8 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
     return dataList.filter(item => {
       for (const [col, val] of Object.entries(activeFilters)) {
         if (!val || !val.trim()) continue
-        const itemVal = item[col]
+        if (col.includes('.')) continue // Filtros relacionais são resolvidos no banco de dados
+        const itemVal = item[col] ?? (item as any)?.[col.toLowerCase()]
         if (itemVal === null || itemVal === undefined) return false
 
         // Comparação flexível para IDs e strings
