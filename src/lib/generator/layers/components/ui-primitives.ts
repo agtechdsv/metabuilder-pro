@@ -571,13 +571,15 @@ export function CustomActionButton({
   const modalSize = action.usecaseModalSize || '4xl'
   const iframeUrl = buildUrl(true)
 
-  let sizeClasses = 'w-[80vw] max-w-5xl h-[85vh]'
+  let sizeClasses = 'w-[88vw] max-w-[1600px] h-[88vh]'
   if (modalSize === 'sm') sizeClasses = 'w-[90vw] max-w-md h-[500px]'
   else if (modalSize === 'md') sizeClasses = 'w-[90vw] max-w-2xl h-[650px]'
   else if (modalSize === 'lg') sizeClasses = 'w-[90vw] max-w-4xl h-[75vh]'
-  else if (modalSize === 'xl') sizeClasses = 'w-[92vw] max-w-5xl h-[80vh]'
-  else if (modalSize === '4xl') sizeClasses = 'w-[80vw] max-w-5xl h-[85vh]'
-  else if (modalSize === 'full') sizeClasses = 'w-[90vw] max-w-6xl h-[88vh]'
+  else if (modalSize === 'xl') sizeClasses = 'w-[90vw] max-w-5xl h-[82vh]'
+  else if (modalSize === '2xl') sizeClasses = 'w-[90vw] max-w-6xl h-[85vh]'
+  else if (modalSize === '4xl') sizeClasses = 'w-[88vw] max-w-[1600px] h-[88vh]'
+  else if (modalSize === '5xl') sizeClasses = 'w-[92vw] max-w-[1700px] h-[90vh]'
+  else if (modalSize === 'full') sizeClasses = 'w-[95vw] max-w-[1850px] h-[92vh]'
 
   const customStyle: React.CSSProperties = {}
   if (modalSize === 'custom') {
@@ -632,7 +634,7 @@ export function CustomActionButton({
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="w-full max-w-md h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            className="w-full max-w-lg h-full bg-white dark:bg-neutral-950 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
             onClick={e => e.stopPropagation()}
           >
             <iframe src={iframeUrl} className="w-full h-full border-none" />
