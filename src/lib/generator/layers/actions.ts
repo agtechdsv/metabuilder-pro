@@ -455,7 +455,13 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
       if (rawVal === undefined || rawVal === null || rawVal === '') continue
       const key = rawKey.trim()
       if (ignoredKeys.has(key.toLowerCase())) continue
-      if (allowedColumns.has(key)) {
+      if (key.includes('.')) {
+        const [targetTable, targetCol] = key.split('.')
+        const tTable = targetTable.toLowerCase()
+        if ((tTable === '${model.dbTable.toLowerCase()}' || tTable.replace(/s$/, '') === '${model.dbTable.toLowerCase()}'.replace(/s$/, '')) && allowedColumns.has(targetCol)) {
+          q = q.eq(targetCol, rawVal)
+        }
+      } else if (allowedColumns.has(key)) {
         q = q.eq(key, rawVal)
       } else if (key.endsWith('_filter')) {
         const col = key.slice(0, -7)
@@ -546,7 +552,7 @@ ${generateParsePayloadCode(model)}
 const schemaRelations = ${JSON.stringify(schemaRelations)}
 
 function findRelationPath(startTable: string, targetTable: string): Array<{ table: string; on: string }> | null {
-  if (startTable === targetTable) return []
+  if (startTable === targetTable || startTable.replace(/s$/, '') === targetTable.replace(/s$/, '')) return []
   const queue: Array<{ current: string; path: Array<{ table: string; on: string }> }> = [
     { current: startTable, path: [] }
   ]
@@ -556,7 +562,7 @@ function findRelationPath(startTable: string, targetTable: string): Array<{ tabl
     const item = queue.shift()
     if (!item) break
     const { current, path } = item
-    if (current === targetTable) return path
+    if (current === targetTable || current.replace(/s$/, '') === targetTable.replace(/s$/, '')) return path
 
     for (const edge of schemaRelations) {
       if (edge.fromTable === current && !visited.has(edge.toTable)) {
@@ -599,7 +605,7 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
         const [targetTable, targetCol] = key.split('.')
         const tTable = targetTable.toLowerCase()
         const tCol = targetCol.toLowerCase()
-        if (tTable === '${modelTableLower}') {
+        if (tTable === '${modelTableLower}' || tTable.replace(/s$/, '') === '${modelTableLower}'.replace(/s$/, '')) {
           params.push(rawVal)
           conditions.push(\`"\${tCol}"::text = $\${params.length}::text\`)
         } else {
@@ -609,7 +615,8 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
             const fromClause = \`"\${path[0].table}"\`
             const joinClauses = path.slice(1).map(p => \`JOIN "\${p.table}" ON \${p.on}\`).join(' ')
             const whereOn = path[0].on
-            const whereTarget = \`"\${tTable}"."\${tCol}"::text = $\${params.length}::text\`
+            const actualTargetTable = path[path.length - 1].table
+            const whereTarget = \`"\${actualTargetTable}"."\${tCol}"::text = $\${params.length}::text\`
             conditions.push(\`EXISTS (SELECT 1 FROM \${fromClause}\${joinClauses ? ' ' + joinClauses : ''} WHERE \${whereOn} AND \${whereTarget})\`)
           }
         }

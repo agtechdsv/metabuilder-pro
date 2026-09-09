@@ -44,6 +44,21 @@ export function generateGalleryPage(route: RouteNode): string {
     }
   })
 
+  // Adiciona tabelas de joins declarados na view ao lookup
+  const rawJoins: Array<{ from: string; to: string; localKey?: string; foreignKey?: string }> =
+    route.rawLayoutConfig?.joins || []
+
+  rawJoins.forEach(j => {
+    const fromTbl = (j.from || '').toLowerCase()
+    const toTbl = (j.to || '').toLowerCase()
+    if (fromTbl && !fromTbl.includes('-') && fromTbl.length < 30) {
+      lookupModels.set(fromTbl, toPascalCase(fromTbl))
+    }
+    if (toTbl && !toTbl.includes('-') && toTbl.length < 30) {
+      lookupModels.set(toTbl, toPascalCase(toTbl))
+    }
+  })
+
   // Remove o próprio modelo se acidentalmente incluído
   lookupModels.delete(mnLower)
 
@@ -187,12 +202,80 @@ export default async function ${mn}GalleryPage(props: {
   const isEmbedded = searchParams?.embedded === 'true'
   const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
+  const rawJoins = ${JSON.stringify(rawJoins)}
+  const tablesData: Record<string, any[]> = {
+    ${Array.from(lookupModels.keys()).map(t => `'${t}': ${t}LookupList || [],`).join('\n    ')}
+  }
+
+  const enrichedData = (rawData || []).map((row: any) => {
+    const item: Record<string, any> = { ...row }
+    for (const [tbl, list] of Object.entries(tablesData)) {
+      const singular = tbl.endsWith('s') ? tbl.slice(0, -1) : tbl
+      const fkVal = row[tbl + '_id'] ?? row[singular + '_id'] ?? row['id_' + tbl] ?? row['id_' + singular]
+      if (fkVal != null && Array.isArray(list)) {
+        const match = list.find((r: any) => String(r.id) === String(fkVal))
+        if (match) {
+          item[tbl] = match
+          item[singular] = match
+          for (const [k, v] of Object.entries(match)) {
+            item[tbl + '.' + k] = v
+            item[singular + '.' + k] = v
+          }
+        }
+      }
+    }
+
+    for (const j of rawJoins) {
+      const fromTbl = (j.from || '').toLowerCase()
+      const toTbl = (j.to || '').toLowerCase()
+      const localKey = j.localKey || 'id'
+      const foreignKey = j.foreignKey || (fromTbl + '_id')
+
+      const toObj = item[toTbl] || (toTbl === '${mnLower}' ? item : null)
+      const fromList = tablesData[fromTbl]
+      if (toObj && Array.isArray(fromList) && !item[fromTbl]) {
+        const foreignVal = toObj[foreignKey] ?? item[foreignKey]
+        if (foreignVal != null) {
+          const match = fromList.find((r: any) => String(r[localKey] ?? r.id) === String(foreignVal))
+          if (match) {
+            item[fromTbl] = match
+            const singular = fromTbl.endsWith('s') ? fromTbl.slice(0, -1) : fromTbl
+            item[singular] = match
+            for (const [k, v] of Object.entries(match)) {
+              item[fromTbl + '.' + k] = v
+              item[singular + '.' + k] = v
+            }
+          }
+        }
+      }
+
+      const fromObj = item[fromTbl] || (fromTbl === '${mnLower}' ? item : null)
+      const toList = tablesData[toTbl]
+      if (fromObj && Array.isArray(toList) && !item[toTbl]) {
+        const localVal = fromObj[localKey] ?? item[localKey]
+        if (localVal != null) {
+          const match = toList.find((r: any) => String(r[foreignKey] ?? r.id) === String(localVal))
+          if (match) {
+            item[toTbl] = match
+            const singular = toTbl.endsWith('s') ? toTbl.slice(0, -1) : toTbl
+            item[singular] = match
+            for (const [k, v] of Object.entries(match)) {
+              item[toTbl + '.' + k] = v
+              item[singular + '.' + k] = v
+            }
+          }
+        }
+      }
+    }
+    return item
+  })
+
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
   }
 
   // Filtros dinâmicos da URL
-  const data = (rawData || []).filter((item: any) => {
+  const data = (enrichedData || []).filter((item: any) => {
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn
@@ -203,15 +286,80 @@ ${filterFields.map(f => {
     }`
 }).join('\n')}
     for (const [paramKey, paramVal] of Object.entries(searchParams || {})) {
-      if (!paramVal || paramKey === 'embedded' || paramKey.endsWith('_filter')) continue
-      const cleanKey = paramKey.includes('.') ? paramKey.split('.').pop()! : paramKey
-      const val = item[paramKey] ?? item[cleanKey] ?? (paramKey.endsWith('_id') ? item[paramKey.slice(0, -3)] : undefined)
-      if (val !== undefined && val !== null) {
-        if (typeof val === 'object') {
-          const subVal = String(val.id ?? Object.values(val)[0] ?? '')
-          if (subVal.toLowerCase() !== String(paramVal).toLowerCase()) return false
-        } else if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) {
-          return false
+      if (!paramVal || paramKey === 'embedded' || paramKey.endsWith('_filter') || paramKey === 'page' || paramKey === 'limit' || paramKey === 'sort_by' || paramKey === 'sort_order' || paramKey === 'view_mode' || paramKey === 'layout') continue
+
+      if (paramKey.includes('.')) {
+        const [targetTable, targetCol] = paramKey.split('.')
+        const tTable = targetTable.toLowerCase()
+        if (tTable === '${mnLower}' || tTable.replace(/s$/, '') === '${mnLower}'.replace(/s$/, '')) {
+          const val = item[targetCol] ?? item[paramKey]
+          if (val !== undefined && val !== null) {
+            if (typeof val === 'object') {
+              const subVal = String(val.id ?? Object.values(val)[0] ?? '')
+              if (subVal.toLowerCase() !== String(paramVal).toLowerCase()) return false
+            } else if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) {
+              return false
+            }
+          }
+        } else {
+          // Filtro por tabela relacionada (ex: pedidos.id)
+          const val = item[paramKey] ?? (item[tTable] ? (item[tTable][targetCol] ?? item[tTable].id) : undefined)
+          if (val !== undefined && val !== null) {
+            if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) return false
+          } else if (tablesData[tTable] && tablesData[tTable].length > 0) {
+            let hasLink = false
+            for (const j of rawJoins) {
+              const fromT = (j.from || '').toLowerCase()
+              const toT = (j.to || '').toLowerCase()
+              const lKey = j.localKey || 'id'
+              const fKey = j.foreignKey || (fromT + '_id')
+
+              if (toT === '${mnLower}' && tablesData[fromT]) {
+                const intermediateList = tablesData[fromT]
+                const itemVal = item[lKey] ?? item.id
+                const matchingRows = intermediateList.filter((r: any) => String(r[fKey] ?? r['${mnLower}_id'] ?? r.produto_id) === String(itemVal))
+                for (const mRow of matchingRows) {
+                  const directTarget = mRow[tTable + '_id'] ?? mRow[targetCol] ?? mRow.pedido_id
+                  if (directTarget != null && String(directTarget).toLowerCase() === String(paramVal).toLowerCase()) {
+                    hasLink = true
+                    break
+                  }
+                }
+              } else if (fromT === '${mnLower}' && tablesData[toT]) {
+                const intermediateList = tablesData[toT]
+                const itemVal = item[lKey] ?? item.id
+                const matchingRows = intermediateList.filter((r: any) => String(r[fKey] ?? r['${mnLower}_id'] ?? r.produto_id) === String(itemVal))
+                for (const mRow of matchingRows) {
+                  const directTarget = mRow[tTable + '_id'] ?? mRow[targetCol] ?? mRow.pedido_id
+                  if (directTarget != null && String(directTarget).toLowerCase() === String(paramVal).toLowerCase()) {
+                    hasLink = true
+                    break
+                  }
+                }
+              }
+              if (hasLink) break
+            }
+            if (!hasLink) {
+              const targetList = tablesData[tTable]
+              const targetRow = targetList.find((r: any) => String(r[targetCol] ?? r.id).toLowerCase() === String(paramVal).toLowerCase())
+              if (targetRow) {
+                const fkVal = targetRow['${mnLower}_id'] ?? targetRow.produto_id
+                if (fkVal != null && String(fkVal).toLowerCase() !== String(item.id).toLowerCase()) {
+                  return false
+                }
+              }
+            }
+          }
+        }
+      } else {
+        const val = item[paramKey] ?? (paramKey.endsWith('_id') ? item[paramKey.slice(0, -3)] : undefined)
+        if (val !== undefined && val !== null) {
+          if (typeof val === 'object') {
+            const subVal = String(val.id ?? Object.values(val)[0] ?? '')
+            if (subVal.toLowerCase() !== String(paramVal).toLowerCase()) return false
+          } else if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) {
+            return false
+          }
         }
       }
     }
