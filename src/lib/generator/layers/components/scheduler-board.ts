@@ -24,8 +24,12 @@ import {
   ZoomIn,
   RefreshCcw,
   Zap,
+  X,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
+import { CustomActionButton } from '@/components/ui/custom-action-button'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -287,6 +291,8 @@ export function DynamicScheduler({
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [scale, setScale] = useState(1.0)
+  const [deleteRecord, setDeleteRecord] = useState<any>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const scales = [
     { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: 'Pequeno' },
@@ -640,7 +646,7 @@ export function DynamicScheduler({
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      onDelete(evt.raw)
+                                      setDeleteRecord(evt)
                                     }}
                                     className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer"
                                     title="Excluir"
@@ -648,6 +654,23 @@ export function DynamicScheduler({
                                     <Trash2 className="w-2.5 h-2.5 text-rose-500" />
                                   </button>
                                 )}
+                                {customActions.map(action => {
+                                  const colors = getActionColorClasses(action.color)
+                                  return (
+                                    <CustomActionButton
+                                      key={action.id}
+                                      action={action}
+                                      item={evt.raw}
+                                      variant="plain"
+                                      className={cn(
+                                        "p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer transition-colors [&_svg]:w-2.5 [&_svg]:h-2.5",
+                                        colors.text,
+                                        colors.hover
+                                      )}
+                                      onClick={onCustomAction ? () => onCustomAction(action, evt.raw) : undefined}
+                                    />
+                                  )
+                                })}
                               </div>
                             </div>
                           )
@@ -749,13 +772,31 @@ export function DynamicScheduler({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    onDelete(evt.raw)
+                                    setDeleteRecord(evt)
                                   }}
                                   className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-rose-500 cursor-pointer"
+                                  title="Excluir"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
                               )}
+                              {customActions.map(action => {
+                                const colors = getActionColorClasses(action.color)
+                                return (
+                                  <CustomActionButton
+                                    key={action.id}
+                                    action={action}
+                                    item={evt.raw}
+                                    variant="plain"
+                                    className={cn(
+                                      "p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg cursor-pointer transition-colors [&_svg]:w-3 [&_svg]:h-3",
+                                      colors.text,
+                                      colors.hover
+                                    )}
+                                    onClick={onCustomAction ? () => onCustomAction(action, evt.raw) : undefined}
+                                  />
+                                )
+                              })}
                             </div>
                           </div>
                         )
@@ -850,7 +891,7 @@ export function DynamicScheduler({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              onDelete(evt.raw)
+                              setDeleteRecord(evt)
                             }}
                             className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg text-rose-500 cursor-pointer"
                             title="Excluir"
@@ -858,6 +899,23 @@ export function DynamicScheduler({
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        {customActions.map(action => {
+                          const colors = getActionColorClasses(action.color)
+                          return (
+                            <CustomActionButton
+                              key={action.id}
+                              action={action}
+                              item={evt.raw}
+                              variant="plain"
+                              className={cn(
+                                "p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg cursor-pointer transition-colors [&_svg]:w-3.5 [&_svg]:h-3.5",
+                                colors.text,
+                                colors.hover
+                              )}
+                              onClick={onCustomAction ? () => onCustomAction(action, evt.raw) : undefined}
+                            />
+                          )
+                        })}
                       </div>
                     </div>
                   )
@@ -886,6 +944,73 @@ export function DynamicScheduler({
             <RefreshCcw className="w-3.5 h-3.5 text-indigo-500" />
             Carregar mais {Math.min(50, (totalRecords || 0) - (data?.length || 0))} registros... ({data?.length || 0} de {totalRecords || 0})
           </button>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão Fiel à Web Produção */}
+      {deleteRecord && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                  Excluir Registro
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteRecord(null)}
+                className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400">
+              <div className="p-2 bg-red-500/20 rounded-xl shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Você está prestes a excluir {deleteRecord.title ? ('"' + deleteRecord.title + '"') : (deleteRecord.id ? ('"' + deleteRecord.id + '"') : 'este registro')}.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteRecord(null)}
+                className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  if (!deleteRecord) return
+                  setIsDeleting(true)
+                  try {
+                    if (onDelete) await onDelete(deleteRecord.raw)
+                    setDeleteRecord(null)
+                  } catch (err) {
+                    console.error('Erro ao excluir registro:', err)
+                  } finally {
+                    setIsDeleting(false)
+                  }
+                }}
+                className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

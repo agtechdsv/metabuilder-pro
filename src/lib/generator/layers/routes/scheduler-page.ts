@@ -540,6 +540,63 @@ export function generateSchedulerSchema(route: RouteNode): string {
 
   const schedulerConfigData = JSON.stringify(schedulerConfigObj, null, 2)
 
+  const rowCustomActions: any[] = route.buttons
+    .filter(b => b.actionType === 'custom' && (b.placement === 'row' || (b as any).placement === 'card'))
+    .map(b => ({
+      id: b.id,
+      label: b.label,
+      icon: b.icon,
+      color: b.color || 'indigo',
+      style: b.style || 'primary',
+      triggerType: b.triggerType || (b.usecaseSlug ? 'usecase' : 'custom'),
+      usecaseSlug: b.usecaseSlug || '',
+      usecaseOpenMode: b.usecaseOpenMode || 'modal',
+      usecaseModalSize: b.usecaseModalSize || '4xl',
+      usecaseModalWidth: b.usecaseModalWidth,
+      usecaseModalHeight: b.usecaseModalHeight,
+      usecaseSelectedFields: b.usecaseSelectedFields || [],
+      usecaseParams: b.usecaseParams || '',
+      linkTarget: b.linkTarget || '',
+    }))
+
+  if (Array.isArray(route.rawLayoutConfig?.custom_actions)) {
+    route.rawLayoutConfig.custom_actions
+      .filter((a: any) => {
+        if (!a || a.enabled === false) return false
+        const actId = a.id || `custom_act_${(a.label || a.name || 'act').toLowerCase().replace(/\s+/g, '_')}`
+        if (rowCustomActions.some(existing => existing.id === actId || existing.label === (a.label || a.name))) {
+          return false
+        }
+        const hasPlacementCard = a.placements && Array.isArray(a.placements) && a.placements.some((p: any) =>
+          ['scheduler', 'calendar', 'search', 'board'].includes(p.location) ||
+          (p.contexts && p.contexts.some((c: string) => ['row', 'card', 'row_search', 'item'].includes(c)))
+        )
+        const ctxs = a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : (a.context ? [a.context] : ['row'])
+        const hasContextCard = ctxs.some((c: string) => ['row', 'row_search', 'card', 'item'].includes(c))
+        return hasPlacementCard || hasContextCard || !a.placements
+      })
+      .forEach((a: any) => {
+        rowCustomActions.push({
+          id: a.id || `custom_act_${(a.label || a.name || 'act').toLowerCase().replace(/\s+/g, '_')}`,
+          label: a.label || a.name || 'Ação Customizada',
+          icon: a.icon || a.custom_icon || 'Zap',
+          color: a.color || 'indigo',
+          style: a.style || 'primary',
+          triggerType: a.trigger_type || (a.usecase_slug ? 'usecase' : 'custom'),
+          usecaseSlug: a.usecase_slug || a.target_use_case,
+          usecaseOpenMode: a.usecase_open_mode || 'modal',
+          usecaseModalSize: a.usecaseModalSize || a.usecase_modal_size || '4xl',
+          usecaseModalWidth: a.usecase_modal_width,
+          usecaseModalHeight: a.usecase_modal_height,
+          usecaseSelectedFields: a.usecase_selected_fields || [],
+          usecaseParams: a.usecase_params || '',
+          linkTarget: a.linkTarget || a.url || a.target_url || (a.usecase_slug ? `/${a.usecase_slug}` : ''),
+        })
+      })
+  }
+
+  const customActionsData = JSON.stringify(rowCustomActions, null, 2)
+
   return `// ─────────────────────────────────────────────────────────────────────────────
 // Schemas e configurações declarativas para Scheduler de ${route.title}
 // ─────────────────────────────────────────────────────────────────────────────
@@ -549,6 +606,8 @@ export const filterFields = ${filterFieldsData}
 export const fields = ${fieldsData}
 
 export const schedulerConfig = ${schedulerConfigData}
+
+export const customActions = ${customActionsData}
 `
 }
 
@@ -560,40 +619,49 @@ export function generateSchedulerClient(route: RouteNode): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey || 'id'
-  const isActionModal = route.actionInterfaceType === 'modal'
+  const isDrawer = route.actionInterfaceType === 'drawer'
+    || route.rawLayoutConfig?.action_interface_type === 'drawer'
+  const isModal = route.actionInterfaceType === 'modal'
     || route.rawLayoutConfig?.action_interface_type === 'modal'
+  const isActionOverlay = isDrawer || isModal
 
-  const modalFormFieldsHtml = route.formFields
+  const formFieldsToUse = (route.formFields && route.formFields.length > 0)
+    ? route.formFields
+    : (route.gridFields && route.gridFields.length > 0)
+    ? route.gridFields
+    : []
+
+  const modalFormFieldsHtml = formFieldsToUse
     .map(f => renderFormField(f, true, false, 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
-  const byocImports = route.formFields
+  const byocImports = formFieldsToUse
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
     .map(f => getByocComponentName(f))
     .filter((v, i, a) => v && a.indexOf(v) === i)
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
 
-  const modalStateVars = isActionModal ? `  const [isModalOpen, setIsModalOpen] = useState(false)
+  const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)` : ''
 
-  const handleAddBody = isActionModal
+  const handleAddBody = isActionOverlay
     ? `    setActiveRecord(initialData || null)
     setModalMode('create')
     setIsModalOpen(true)`
     : `    router.push('${route.path}/new')`
 
-  const handleEditBody = isActionModal
+  const handleEditBody = isActionOverlay
     ? `    setActiveRecord(row)
     setModalMode('edit')
     setIsModalOpen(true)`
     : `    router.push('${route.path}/' + (row.${pk} || row.id))`
 
-  const modalSubmitHandler = isActionModal ? `  const handleSubmitModal = async (e: React.FormEvent<HTMLFormElement>) => {
+  const modalSubmitHandler = isActionOverlay ? `  const handleSubmitModal = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSaving(true)
     setSaveError(null)
@@ -626,7 +694,74 @@ export function generateSchedulerClient(route: RouteNode): string {
   const data = activeRecord
   const isEdit = modalMode === 'edit' || modalMode === 'view'` : ''
 
-  const modalJsx = isActionModal ? `
+  const modalJsx = isActionOverlay ? (
+    isDrawer ? `
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-end animate-in fade-in duration-200"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-lg h-full bg-white dark:bg-neutral-900 shadow-2xl border-l border-neutral-200 dark:border-neutral-800 flex flex-col animate-in slide-in-from-right duration-300 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                    {modalMode === 'edit' ? 'Editar Registro' : 'Novo Agendamento'}
+                  </h2>
+                  <p className="text-xs font-medium text-neutral-400 mt-0.5 font-mono">
+                    {modalMode === 'edit'
+                      ? ('Registro #' + (activeRecord?.${pk} || activeRecord?.id || ''))
+                      : 'Preencha os dados do agendamento'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              key={modalMode + '-' + (activeRecord?.${pk} || activeRecord?.id || 'new')}
+              onSubmit={handleSubmitModal}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-5">
+                  ${modalFormFieldsHtml}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-bold text-neutral-600 dark:text-neutral-400 transition-all active:scale-95 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}` : `
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -686,7 +821,8 @@ export function generateSchedulerClient(route: RouteNode): string {
             </form>
           </div>
         </div>
-      )}` : ''
+      )}`
+  ) : ''
 
   return `'use client'
 
@@ -694,7 +830,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { update${mn}, delete${mn}, create${mn} } from '@/app/actions/${mnLower}'
 import DynamicScheduler from '@/components/DynamicScheduler'
-import { fields, schedulerConfig } from './schema'
+import { fields, schedulerConfig, customActions } from './schema'
 ${byocImports ? `${byocImports}\n` : ''}import { Pencil, X, Save } from 'lucide-react'
 
 ${FORM_INPUT_FORMAT_HELPERS}
@@ -763,6 +899,7 @@ ${modalSubmitHandler}
         onDelete={handleDelete}
         relationalOptions={relationalOptions}
         dictionary={{}}
+        customActions={customActions}
         hasMore={visibleCount < dataList.length}
         totalRecords={dataList.length}
         onLoadMore={() => setVisibleCount(prev => prev + BATCH_SIZE)}

@@ -202,6 +202,19 @@ ${filterFields.map(f => {
       if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
     }`
 }).join('\n')}
+    for (const [paramKey, paramVal] of Object.entries(searchParams || {})) {
+      if (!paramVal || paramKey === 'embedded' || paramKey.endsWith('_filter')) continue
+      const cleanKey = paramKey.includes('.') ? paramKey.split('.').pop()! : paramKey
+      const val = item[paramKey] ?? item[cleanKey] ?? (paramKey.endsWith('_id') ? item[paramKey.slice(0, -3)] : undefined)
+      if (val !== undefined && val !== null) {
+        if (typeof val === 'object') {
+          const subVal = String(val.id ?? Object.values(val)[0] ?? '')
+          if (subVal.toLowerCase() !== String(paramVal).toLowerCase()) return false
+        } else if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) {
+          return false
+        }
+      }
+    }
     return true
   })
 

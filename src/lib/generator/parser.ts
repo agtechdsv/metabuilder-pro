@@ -786,7 +786,12 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
     const usecaseSelectedFields = act.usecase_selected_fields || []
     const usecaseParams = act.usecase_params || ''
 
-    const searchContexts = getActionContexts(act, 'search')
+    const searchContexts = [
+      ...getActionContexts(act, 'search'),
+      ...getActionContexts(act, 'scheduler'),
+      ...getActionContexts(act, 'calendar'),
+      ...getActionContexts(act, 'board'),
+    ]
     const masterContexts = getActionContexts(act, 'master')
 
     const baseButton: Partial<ViewButton> = {
@@ -808,8 +813,8 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
       usecaseParams,
     }
 
-    // 1. Linha do Grid de Pesquisa
-    if (searchContexts.includes('row')) {
+    // 1. Linha do Grid de Pesquisa / Card de Agenda / Kanban / Galeria
+    if (searchContexts.includes('row') || searchContexts.includes('card') || searchContexts.includes('item')) {
       buttons.push({
         ...baseButton,
         id: act.id || `custom_act_${label.toLowerCase().replace(/\s+/g, '_')}`,

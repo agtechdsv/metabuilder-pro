@@ -495,10 +495,10 @@ export function CustomActionButton({
   }, [isOpen])
 
   const buildUrl = (isEmbedded: boolean) => {
-    const slug = action.usecaseSlug || (action.linkTarget ? action.linkTarget.replace(/^\\//, '') : '')
+    const slug = action.usecaseSlug || (action as any).usecase_slug || (action as any).target_use_case || (action.linkTarget ? action.linkTarget.replace(/^\\//, '') : '')
     if (!slug) return '#'
 
-    const selectedFields = action.usecaseSelectedFields || []
+    const selectedFields = action.usecaseSelectedFields || (action as any).usecase_selected_fields || []
     const fieldParamParts = selectedFields.map(f => {
       if (typeof f === 'string') {
         const cleanKey = f.includes('.') ? f.split('.').pop()! : f
@@ -512,13 +512,19 @@ export function CustomActionButton({
             }
           }
         }
+        if (val !== undefined && val !== null && typeof val === 'object') {
+          val = val.id ?? Object.values(val)[0]
+        }
         if (val === undefined || val === null || val === '') return ''
         return \`\${encodeURIComponent(cleanKey)}=\${encodeURIComponent(val)}\`
-      } else if (f && typeof f === 'object' && f.source && f.target) {
-        const cleanSource = f.source.includes('.') ? f.source.split('.').pop()! : f.source
-        let val = item?.[f.source] !== undefined ? item[f.source] : item?.[cleanSource]
+      } else if (f && typeof f === 'object') {
+        const sourceField = (f as any).source || (f as any).source_field || (f as any).sourceField || (f as any).local_field || (f as any).localField || (f as any).from
+        const targetField = (f as any).target || (f as any).target_field || (f as any).targetField || (f as any).foreign_field || (f as any).foreignField || (f as any).to
+        if (!sourceField || !targetField) return ''
+        const cleanSource = sourceField.includes('.') ? sourceField.split('.').pop()! : sourceField
+        let val = item?.[sourceField] !== undefined ? item[sourceField] : item?.[cleanSource]
         if (val === undefined && item) {
-          const lSource = f.source.toLowerCase()
+          const lSource = sourceField.toLowerCase()
           const lClean = cleanSource.toLowerCase()
           for (const k of Object.keys(item)) {
             const lk = k.toLowerCase()
@@ -528,13 +534,16 @@ export function CustomActionButton({
             }
           }
         }
+        if (val !== undefined && val !== null && typeof val === 'object') {
+          val = val.id ?? Object.values(val)[0]
+        }
         if (val === undefined || val === null || val === '') return ''
-        return \`\${encodeURIComponent(f.target)}=\${encodeURIComponent(val)}\`
+        return \`\${encodeURIComponent(targetField)}=\${encodeURIComponent(val)}\`
       }
       return ''
     }).filter(Boolean)
 
-    let extraParams = (action.usecaseParams || '').trim()
+    let extraParams = (action.usecaseParams || (action as any).usecase_params || '').trim()
     if (extraParams && item) {
       extraParams = extraParams.replace(/\\{\\{\\s*([a-zA-Z0-9_]+)\\s*\\}\\}|\\{\\s*([a-zA-Z0-9_]+)\\s*\\}/g, (match, p1, p2) => {
         const key = p1 || p2
@@ -572,7 +581,7 @@ export function CustomActionButton({
       return
     }
 
-    const openMode = action.usecaseOpenMode || 'modal'
+    const openMode = action.usecaseOpenMode || (action as any).usecase_open_mode || 'modal'
 
     if (openMode === 'page') {
       const url = buildUrl(false)
@@ -585,8 +594,8 @@ export function CustomActionButton({
     setIsOpen(true)
   }
 
-  const openMode = action.usecaseOpenMode || 'modal'
-  const modalSize = action.usecaseModalSize || '4xl'
+  const openMode = action.usecaseOpenMode || (action as any).usecase_open_mode || 'modal'
+  const modalSize = action.usecaseModalSize || (action as any).usecase_modal_size || '4xl'
   const iframeUrl = buildUrl(true)
 
   let sizeClasses = 'w-[88vw] max-w-[1600px] h-[88vh]'
@@ -601,8 +610,10 @@ export function CustomActionButton({
 
   const customStyle: React.CSSProperties = {}
   if (modalSize === 'custom') {
-    if (action.usecaseModalWidth) customStyle.width = action.usecaseModalWidth
-    if (action.usecaseModalHeight) customStyle.height = action.usecaseModalHeight
+    const w = action.usecaseModalWidth || (action as any).usecase_modal_width
+    const h = action.usecaseModalHeight || (action as any).usecase_modal_height
+    if (w) customStyle.width = w
+    if (h) customStyle.height = h
   }
 
   return (
