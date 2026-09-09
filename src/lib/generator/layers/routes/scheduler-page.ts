@@ -605,7 +605,7 @@ export const filterFields = ${filterFieldsData}
 
 export const fields = ${fieldsData}
 
-export const schedulerConfig = ${schedulerConfigData}
+export const schedulerConfig = ${schedulerConfigData} as any
 
 export const customActions = ${customActionsData}
 `
@@ -644,7 +644,7 @@ export function generateSchedulerClient(route: RouteNode): string {
     .join('\n')
 
   const modalStateVars = isActionOverlay ? `  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)` : ''
@@ -891,7 +891,7 @@ ${modalSubmitHandler}
       <DynamicScheduler
         data={displayedData}
         fields={fields}
-        schedulerConfig={schedulerConfig}
+        schedulerConfig={schedulerConfig as any}
         onMove={handleMove}
         onAdd={handleAdd}
         onView={handleEdit}

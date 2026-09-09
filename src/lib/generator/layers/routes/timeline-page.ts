@@ -325,7 +325,7 @@ export function generateTimelineSchema(route: RouteNode): string {
 
 export const filterFields = ${filterFieldsData}
 
-export const timelineConfig = ${timelineConfigData}
+export const timelineConfig = ${timelineConfigData} as any
 ${tabConstants.length > 0 ? `\n${tabConstants.join('\n')}\n` : ''}`
 }
 
@@ -483,7 +483,7 @@ export function TimelineClient({
 
   // Estado da Modal de Ação (quando configurada no Studio como 'modal')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit')
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('edit')
   const [activeRecord, setActiveRecord] = useState<any>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -726,7 +726,7 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
       {/* Componente TimelineBoard com Direção, Estilos e Controles */}
       <TimelineBoard
         data={displayedData}
-        timelineConfig={timelineConfig}
+        timelineConfig={timelineConfig as any}
         relationalOptions={relationalOptions}
         primaryKeyField="${route.primaryKey || 'id'}"
         onView={handleOpenEdit}

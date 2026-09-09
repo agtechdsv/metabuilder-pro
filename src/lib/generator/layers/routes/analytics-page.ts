@@ -146,10 +146,13 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
 
   // Gera mapa de relationalOptions para os campos de lookup da grid e filtros
   const buildOptionsCode: string[] = []
+  const registeredOptionKeys = new Set<string>()
   allListFields.forEach(f => {
+    if (registeredOptionKeys.has(f.dbColumn)) return
     const isEnum = f.config?.component?.options_type === 'enumeration' || f.config?.options_type === 'enumeration'
     if (isEnum || (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0)) {
       if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+        registeredOptionKeys.add(f.dbColumn)
         buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
       }
       return
@@ -157,6 +160,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
 
     const targetTable = getFieldRelTable(f)
     if (targetTable && referencedTables.has(targetTable) && relatedModels.some(rm => rm.table === targetTable)) {
+      registeredOptionKeys.add(f.dbColumn)
       const t = targetTable
       const varName = `${t.replace(/[^a-zA-Z0-9_]/g, '_')}Data`
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
@@ -478,7 +482,7 @@ function formatDateGranularity(rawVal: any, granularity?: string): string {
 function buildDenormalizedRows(
   masterTable: string,
   masterData: any[],
-  joins: typeof JOINS,
+  joins: readonly any[],
   tablesData: Record<string, any[]>
 ): any[] {
   if (!masterData || masterData.length === 0) return []
@@ -594,7 +598,7 @@ function buildDenormalizedRows(
 }
 
 function calculateWidgetData(
-  widget: AnalyticsWidget,
+  widget: any,
   rows: Record<string, any>[],
   tablesData?: Record<string, any[]>
 ): number | Array<{ name: string; value: number }> {

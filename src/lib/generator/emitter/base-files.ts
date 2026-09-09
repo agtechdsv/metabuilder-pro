@@ -36,8 +36,11 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@radix-ui/react-slot": "^1.1.0",
       "@radix-ui/react-tabs": "^1.1.0",
       ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "bcryptjs": "^2.4.3" } : {}),
-      ...(ast.dbStack === 'supabase'
+      ...(ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)
           ? { "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.45.0" }
+          : {}),
+      ...(ast.dbStack === 'supabase'
+          ? {}
           : ast.dbStack === 'oracle'
             ? { "oracledb": "^6.5.0" }
             : ast.dbStack === 'mysql'
@@ -574,7 +577,7 @@ import { AppSidebar } from '@/app/components/AppSidebar'
 import { HeaderControls } from '@/app/components/HeaderControls'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 
-const NAV_ITEMS = ${navItemsJson}
+const NAV_ITEMS = ${navItemsJson} as any
 const PROJECT_SLUG = '${ast.projectSlug}'
 const PROJECT_NAME = '${ast.projectName}'
 
@@ -617,7 +620,7 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
       <AppSidebar
         projectName={PROJECT_NAME}
         projectSlug={PROJECT_SLUG}
-        navItems={NAV_ITEMS}
+        navItems={NAV_ITEMS as any}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
       />
@@ -751,4 +754,91 @@ ${navCards}
   )
 }
 `)
+
+  // Suporte a Casos de Uso gerados por IA (AI Builder)
+  if (ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)) {
+    files.set('utils/supabase/client.ts', `import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  )
 }
+`)
+  }
+
+  // Toast Component compatível com useToast() e addToast()
+  files.set('components/ui/Toast.tsx', `'use client'
+
+import React, { createContext, useContext, useState, useCallback } from 'react'
+
+interface ToastContextType {
+  toast: (message: any, type?: string) => void
+  addToast: (toast: { title?: string; description?: string; type?: string }) => void
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined)
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<any[]>([])
+
+  const addToast = useCallback((t: any) => {
+    const id = Math.random().toString(36).substring(2, 9)
+    const item = typeof t === 'string' ? { id, title: t, type: 'info' } : { id, ...t }
+    setToasts((prev) => [...prev, item])
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((x) => x.id !== id))
+    }, 4000)
+  }, [])
+
+  const toast = useCallback((msg: any, type?: string) => {
+    if (typeof msg === 'object' && msg !== null) {
+      addToast(msg)
+    } else {
+      addToast({ title: msg, type: type || 'info' })
+    }
+  }, [addToast])
+
+  return (
+    <ToastContext.Provider value={{ toast, addToast }}>
+      {children}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            style={{
+              pointerEvents: 'auto',
+              minWidth: 280,
+              maxWidth: 400,
+              padding: '12px 16px',
+              borderRadius: 8,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              backgroundColor: t.type === 'danger' || t.type === 'error' ? '#ef4444' : t.type === 'warning' ? '#f59e0b' : t.type === 'success' ? '#10b981' : '#2563eb',
+              color: '#ffffff',
+              fontSize: 14,
+              fontFamily: 'system-ui, sans-serif'
+            }}
+          >
+            {t.title && <div style={{ fontWeight: 600 }}>{t.title}</div>}
+            {t.description && <div style={{ fontSize: 12, opacity: 0.9 }}>{t.description}</div>}
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
+}
+
+export function useToast() {
+  const context = useContext(ToastContext)
+  if (!context) {
+    return {
+      toast: (msg: any) => console.log('[Toast]', msg),
+      addToast: (t: any) => console.log('[Toast]', t),
+    }
+  }
+  return context
+}
+`)
+}
+

@@ -12,6 +12,7 @@ import { generateBlueprintPage, generateBlueprintClient, generateBlueprintSchema
 import { generateMindMapPage, generateMindMapClient, generateMindMapSchema } from './mindmap-page'
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
+import { generateAiPage } from './ai-page'
 
 export * from './helpers'
 export * from './list-page'
@@ -27,6 +28,7 @@ export * from './blueprint-page'
 export * from './mindmap-page'
 export * from './analytics-page'
 export * from './wip-page'
+export * from './ai-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point para geração de rotas
@@ -35,6 +37,11 @@ export * from './wip-page'
 export function generateRoutes(ast: AppAST, files: Map<string, string>) {
   for (const route of ast.routes) {
     const routeDir = `app/(protected)${route.path}`
+
+    if (route.isAiGenerated && route.componentCode) {
+      files.set(`${routeDir}/page.tsx`, generateAiPage(route, ast))
+      continue
+    }
 
     if (route.logicType === 'pesquisa_cadastro' || route.logicType === 'personalizado') {
       // Listagem

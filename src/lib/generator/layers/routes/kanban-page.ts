@@ -41,9 +41,12 @@ export function generateKanbanPage(route: RouteNode): string {
   ).join('\n')
 
   const buildOptionsCode: string[] = []
+  const registeredOptionKeys = new Set<string>()
   allKanbanFields.forEach(f => {
+    if (registeredOptionKeys.has(f.dbColumn)) return
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
+      registeredOptionKeys.add(f.dbColumn)
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
@@ -53,6 +56,7 @@ export function generateKanbanPage(route: RouteNode): string {
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
       buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
+      registeredOptionKeys.add(f.dbColumn)
       buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
     }
   })

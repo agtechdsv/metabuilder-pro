@@ -71,6 +71,7 @@ export function generateGalleryPage(route: RouteNode): string {
   ).join('\n')
 
   const buildOptionsCode: string[] = []
+  const registeredOptionKeys = new Set<string>()
   allGalleryFields.forEach(f => {
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
@@ -81,10 +82,19 @@ export function generateGalleryPage(route: RouteNode): string {
         ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
         : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
-      buildOptionsCode.push(`    '${t}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      if (!registeredOptionKeys.has(f.dbColumn)) {
+        registeredOptionKeys.add(f.dbColumn)
+        buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      }
+      if (!registeredOptionKeys.has(t)) {
+        registeredOptionKeys.add(t)
+        buildOptionsCode.push(`    '${t}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+      }
     } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      if (!registeredOptionKeys.has(f.dbColumn)) {
+        registeredOptionKeys.add(f.dbColumn)
+        buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      }
     }
   })
 

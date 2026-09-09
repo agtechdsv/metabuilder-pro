@@ -258,6 +258,10 @@ export interface RouteNode {
 
   // ── Raw layout_config (para features futuras / fallback) ──
   rawLayoutConfig?: any
+
+  // ── Casos de Uso Gerados por IA (AI Builder) ──
+  isAiGenerated?: boolean
+  componentCode?: string
 }
 
 export interface AnalyticsWidget {
@@ -419,6 +423,7 @@ export interface NavigationItem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface AppAST {
+  projectId?: string
   projectName: string
   projectSlug: string          // ex: 'crm' — usado como sub-rota no workspace
   projectDescription?: string   // ex: 'CRM COMPLETO'

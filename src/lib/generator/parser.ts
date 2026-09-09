@@ -1459,6 +1459,39 @@ export function parseMetaBuilderJSON(
       rv.ui_components = rawComponents.filter((c: any) => c.view_id === rv.id)
     }
 
+    // Suporte a Casos de Uso gerados por IA (AI Builder) com component_code
+    const isAiGenerated =
+      rv.view_type === 'advanced_use_case' ||
+      rv.layout_config?.generated_by_ai === true ||
+      Boolean(rv.layout_config?.component_code || rv.draft_config?.component_code)
+
+    if (isAiGenerated && (rv.layout_config?.component_code || rv.draft_config?.component_code)) {
+      const code = rv.layout_config?.component_code || rv.draft_config?.component_code || ''
+      const navIcon = findNavIcon(navigation, rv) || 'Sparkles'
+      routes.push({
+        path: `/${rv.slug}`,
+        viewSlug: rv.slug,
+        logicType: 'personalizado',
+        modelId: rv.model_id || '',
+        modelTable: '',
+        modelName: toPascalCase(rv.slug),
+        title: rv.name || toPascalCase(rv.slug),
+        description: rv.layout_config?.description || '',
+        icon: rv.icon || navIcon,
+        primaryKey: 'id',
+        gridFields: [],
+        formFields: [],
+        filterFields: [],
+        displayType: 'list',
+        buttons: [],
+        relationTabs: [],
+        isAiGenerated: true,
+        componentCode: code,
+        rawLayoutConfig: rv.layout_config || rv.draft_config,
+      })
+      continue
+    }
+
     // Etapa 2: Resolve 'personalizado'
     const resolvedView =
       rv.logic_type === 'personalizado' ? resolvePersonalizadoView(rv, rawViews) : rv
@@ -2463,6 +2496,7 @@ export function parseMetaBuilderJSON(
     'CRM COMPLETO'
 
   return {
+    projectId: rawJson.project?.id || rawJson.id,
     projectName: rawJson.project?.name || rawJson.name || 'CRM',
     projectSlug: rawJson.project?.slug || rawJson.slug || 'app',
     projectDescription: projectDesc,
