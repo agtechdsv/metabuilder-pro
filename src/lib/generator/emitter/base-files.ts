@@ -197,12 +197,13 @@ body {
 a { text-decoration: none; color: inherit; }
 `)
 
+  const hasAiOrToast = ast.routes.some(r => r.isAiGenerated) || ast.dbStack === 'supabase'
   // Root Layout — apenas html/body/globals, SEM sidebar
   files.set('app/layout.tsx', `import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Suspense } from 'react'
 import { TopProgressBar } from '@/components/TopProgressBar'
-import './globals.css'
+${hasAiOrToast ? "import { ToastProvider } from '@/components/ui/Toast'\n" : ''}import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -236,7 +237,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <TopProgressBar />
         </Suspense>
-        {children}
+        ${hasAiOrToast ? '<ToastProvider>\n          {children}\n        </ToastProvider>' : '{children}'}
       </body>
     </html>
   )
@@ -780,12 +781,336 @@ export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!url || !key) {
-    // Fallback seguro caso as variáveis não tenham sido definidas no .env.local
-    return createBrowserClient('https://placeholder.supabase.co', 'placeholder')
+  if (url && key && !url.includes('placeholder')) {
+    return createBrowserClient(url, key)
   }
 
-  return createBrowserClient(url, key)
+  // Fallback para Banco Local Relacional (PostgreSQL / MySQL / etc.)
+  return createLocalDbClient()
+}
+
+function createLocalDbClient() {
+  return {
+    from: (table: string) => {
+      const currentQuery = {
+        table,
+        action: 'select',
+        selectCols: '*',
+        filters: [] as Array<{ col: string; op: string; val: any }>,
+        orders: [] as Array<{ col: string; asc: boolean }>,
+        isSingle: false,
+        limitCount: undefined as number | undefined,
+        mutationPayload: null as any,
+      }
+
+      const execute = async () => {
+        try {
+          const res = await fetch('/api/ai-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentQuery),
+          })
+          const json = await res.json()
+          if (!res.ok || json.error) {
+            return { data: null, error: new Error(json.error || 'Erro na requisição') }
+          }
+          return { data: json.data, error: null }
+        } catch (err: any) {
+          return { data: null, error: err }
+        }
+      }
+
+      const chain: any = {
+        select: (cols: string = '*') => {
+          if (currentQuery.action !== 'insert' && currentQuery.action !== 'update' && currentQuery.action !== 'delete') {
+            currentQuery.action = 'select'
+          }
+          currentQuery.selectCols = cols
+          return chain
+        },
+        insert: (payload: any) => {
+          currentQuery.action = 'insert'
+          currentQuery.mutationPayload = payload
+          return chain
+        },
+        update: (payload: any) => {
+          currentQuery.action = 'update'
+          currentQuery.mutationPayload = payload
+          return chain
+        },
+        delete: () => {
+          currentQuery.action = 'delete'
+          return chain
+        },
+        eq: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '=', val })
+          return chain
+        },
+        neq: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '!=', val })
+          return chain
+        },
+        gt: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '>', val })
+          return chain
+        },
+        gte: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '>=', val })
+          return chain
+        },
+        lt: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '<', val })
+          return chain
+        },
+        lte: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: '<=', val })
+          return chain
+        },
+        like: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: 'LIKE', val })
+          return chain
+        },
+        ilike: (col: string, val: any) => {
+          currentQuery.filters.push({ col, op: 'ILIKE', val })
+          return chain
+        },
+        in: (col: string, vals: any[]) => {
+          currentQuery.filters.push({ col, op: 'IN', val: vals })
+          return chain
+        },
+        order: (col: string, options?: { ascending?: boolean }) => {
+          currentQuery.orders.push({ col, asc: options?.ascending !== false })
+          return chain
+        },
+        limit: (count: number) => {
+          currentQuery.limitCount = count
+          return chain
+        },
+        single: () => {
+          currentQuery.isSingle = true
+          return chain
+        },
+        maybeSingle: () => {
+          currentQuery.isSingle = true
+          return chain
+        },
+        then: (onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) => {
+          return execute().then(onfulfilled, onrejected)
+        }
+      }
+
+      return chain
+    }
+  }
+}
+`)
+
+    // Rota API local de ponte com o banco relacional para componentes de IA (/api/ai-db)
+    files.set('app/api/ai-db/route.ts', `import { NextResponse } from 'next/server'
+import { query } from '@/app/actions/db'
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { table, action, selectCols = '*', filters = [], orders = [], isSingle, limitCount, mutationPayload } = body
+
+    if (!table) {
+      return NextResponse.json({ data: null, error: 'Table name is required' }, { status: 400 })
+    }
+
+    const cleanTable = String(table).replace(/[^a-zA-Z0-9_]/g, '')
+    const validFilters = (filters || []).filter((f: any) => f.col && f.col !== 'project_id')
+
+    // ── SELECT ─────────────────────────────────────────────────────────
+    if (action === 'select') {
+      const isProdutos = cleanTable.toLowerCase() === 'produtos'
+      const hasCatJoin = String(selectCols).includes('categorias_produtos')
+
+      let sql = ''
+      const params: any[] = []
+
+      if (isProdutos && hasCatJoin) {
+        sql = \`SELECT p.*, c.nome AS categoria_nome FROM "\${cleanTable}" p LEFT JOIN "categorias_produtos" c ON p.categoria_id = c.id\`
+        if (validFilters.length > 0) {
+          const wheres = validFilters.map((f: any) => {
+            params.push(f.val)
+            const op = f.op === '=' ? '=' : f.op === '!=' ? '!=' : f.op === '>' ? '>' : f.op === '>=' ? '>=' : f.op === '<' ? '<' : f.op === '<=' ? '<=' : f.op
+            return \`p."\${f.col.replace(/[^a-zA-Z0-9_]/g, '')}" \${op} $\${params.length}\`
+          })
+          sql += \` WHERE \` + wheres.join(' AND ')
+        }
+        if (orders && orders.length > 0) {
+          const orderClauses = orders.map((o: any) => {
+            const col = o.col.replace(/[^a-zA-Z0-9_]/g, '')
+            return \`p."\${col}" \${o.asc ? 'ASC' : 'DESC'}\`
+          })
+          sql += \` ORDER BY \` + orderClauses.join(', ')
+        }
+      } else {
+        sql = \`SELECT * FROM "\${cleanTable}"\`
+        if (validFilters.length > 0) {
+          const wheres = validFilters.map((f: any) => {
+            params.push(f.val)
+            const op = f.op === '=' ? '=' : f.op === '!=' ? '!=' : f.op === '>' ? '>' : f.op === '>=' ? '>=' : f.op === '<' ? '<' : f.op === '<=' ? '<=' : f.op
+            return \`"\${f.col.replace(/[^a-zA-Z0-9_]/g, '')}" \${op} $\${params.length}\`
+          })
+          sql += \` WHERE \` + wheres.join(' AND ')
+        }
+        if (orders && orders.length > 0) {
+          const orderClauses = orders.map((o: any) => {
+            const col = o.col.replace(/[^a-zA-Z0-9_]/g, '')
+            return \`"\${col}" \${o.asc ? 'ASC' : 'DESC'}\`
+          })
+          sql += \` ORDER BY \` + orderClauses.join(', ')
+        }
+      }
+
+      if (isSingle) {
+        sql += \` LIMIT 1\`
+      } else if (limitCount && Number(limitCount) > 0) {
+        sql += \` LIMIT \${Number(limitCount)}\`
+      }
+
+      const res = await query(sql, params)
+      let rows: any[] = res?.rows || (Array.isArray(res) ? res : [])
+
+      if (isProdutos) {
+        rows = rows.map((r: any) => ({
+          ...r,
+          preco_unitario: Number(r.preco_unitario ?? r.preco_base ?? 0),
+          preco_base: Number(r.preco_base ?? r.preco_unitario ?? 0),
+          quantidade: Number(r.quantidade ?? r.estoque_atual ?? 0),
+          estoque_atual: Number(r.estoque_atual ?? r.quantidade ?? 0),
+          categorias_produtos: r.categoria_nome ? { nome: r.categoria_nome } : (r.categorias_produtos || null)
+        }))
+      }
+
+      return NextResponse.json({ data: isSingle ? (rows[0] || null) : rows, error: null })
+    }
+
+    // ── INSERT ─────────────────────────────────────────────────────────
+    if (action === 'insert') {
+      const payload = Array.isArray(mutationPayload) ? { ...mutationPayload[0] } : { ...mutationPayload }
+      delete payload.project_id
+
+      let realCols: string[] = []
+      try {
+        const colRes = await query(
+          \`SELECT column_name FROM information_schema.columns WHERE table_name = $1\`,
+          [cleanTable.toLowerCase()]
+        )
+        const cRows = colRes?.rows || (Array.isArray(colRes) ? colRes : [])
+        realCols = cRows.map((r: any) => r.column_name.toLowerCase())
+      } catch {}
+
+      if (cleanTable.toLowerCase() === 'produtos' && realCols.length > 0) {
+        if (!realCols.includes('preco_unitario') && realCols.includes('preco_base') && payload.preco_unitario !== undefined) {
+          payload.preco_base = payload.preco_unitario
+          delete payload.preco_unitario
+        }
+        if (!realCols.includes('quantidade') && realCols.includes('estoque_atual') && payload.quantidade !== undefined) {
+          payload.estoque_atual = payload.quantidade
+          delete payload.quantidade
+        }
+      }
+
+      const validKeys = realCols.length > 0
+        ? Object.keys(payload).filter(k => realCols.includes(k.toLowerCase()))
+        : Object.keys(payload)
+
+      if (validKeys.length === 0) {
+        return NextResponse.json({ data: null, error: 'Nenhum dado válido para inserção' }, { status: 400 })
+      }
+
+      const params = validKeys.map(k => payload[k])
+      const colNames = validKeys.map(k => \`"\${k}"\`).join(', ')
+      const placeholders = validKeys.map((_, i) => \`$\${i + 1}\`).join(', ')
+
+      const insertSql = \`INSERT INTO "\${cleanTable}" (\${colNames}) VALUES (\${placeholders}) RETURNING *\`
+      const res = await query(insertSql, params)
+      const insertedRows = res?.rows || (Array.isArray(res) ? res : [])
+      const inserted = insertedRows[0] || payload
+
+      return NextResponse.json({ data: isSingle ? inserted : [inserted], error: null })
+    }
+
+    // ── UPDATE ─────────────────────────────────────────────────────────
+    if (action === 'update') {
+      const payload = { ...mutationPayload }
+      delete payload.project_id
+
+      let realCols: string[] = []
+      try {
+        const colRes = await query(
+          \`SELECT column_name FROM information_schema.columns WHERE table_name = $1\`,
+          [cleanTable.toLowerCase()]
+        )
+        const cRows = colRes?.rows || (Array.isArray(colRes) ? colRes : [])
+        realCols = cRows.map((r: any) => r.column_name.toLowerCase())
+      } catch {}
+
+      if (cleanTable.toLowerCase() === 'produtos' && realCols.length > 0) {
+        if (!realCols.includes('preco_unitario') && realCols.includes('preco_base') && payload.preco_unitario !== undefined) {
+          payload.preco_base = payload.preco_unitario
+          delete payload.preco_unitario
+        }
+        if (!realCols.includes('quantidade') && realCols.includes('estoque_atual') && payload.quantidade !== undefined) {
+          payload.estoque_atual = payload.quantidade
+          delete payload.quantidade
+        }
+      }
+
+      const validKeys = realCols.length > 0
+        ? Object.keys(payload).filter(k => realCols.includes(k.toLowerCase()))
+        : Object.keys(payload)
+
+      const params: any[] = []
+      const setClauses = validKeys.map(k => {
+        params.push(payload[k])
+        return \`"\${k}" = $\${params.length}\`
+      })
+
+      if (setClauses.length === 0) {
+        return NextResponse.json({ data: null, error: 'Nenhum campo para atualizar' }, { status: 400 })
+      }
+
+      let updateSql = \`UPDATE "\${cleanTable}" SET \` + setClauses.join(', ')
+      if (validFilters.length > 0) {
+        const wheres = validFilters.map((f: any) => {
+          params.push(f.val)
+          return \`"\${f.col.replace(/[^a-zA-Z0-9_]/g, '')}" \${f.op === '=' ? '=' : f.op} $\${params.length}\`
+        })
+        updateSql += \` WHERE \` + wheres.join(' AND ')
+      }
+      updateSql += \` RETURNING *\`
+
+      const res = await query(updateSql, params)
+      const updatedRows = res?.rows || (Array.isArray(res) ? res : [])
+
+      return NextResponse.json({ data: isSingle ? (updatedRows[0] || null) : updatedRows, error: null })
+    }
+
+    // ── DELETE ─────────────────────────────────────────────────────────
+    if (action === 'delete') {
+      const params: any[] = []
+      let deleteSql = \`DELETE FROM "\${cleanTable}"\`
+      if (validFilters.length > 0) {
+        const wheres = validFilters.map((f: any) => {
+          params.push(f.val)
+          return \`"\${f.col.replace(/[^a-zA-Z0-9_]/g, '')}" \${f.op === '=' ? '=' : f.op} $\${params.length}\`
+        })
+        deleteSql += \` WHERE \` + wheres.join(' AND ')
+      }
+
+      await query(deleteSql, params)
+      return NextResponse.json({ data: null, error: null })
+    }
+
+    return NextResponse.json({ data: null, error: \`Ação não suportada: \${action}\` }, { status: 400 })
+  } catch (err: any) {
+    console.error('[ai-db] Erro:', err)
+    return NextResponse.json({ data: null, error: err.message || 'Erro no banco' }, { status: 500 })
+  }
 }
 `)
   }

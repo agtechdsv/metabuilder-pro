@@ -16,9 +16,9 @@ export function generateAiPage(route: RouteNode, ast: AppAST): string {
   const projectIdVal = ast.projectId || ''
 
   // Substitui declaração global de PROJECT_ID por constante real
-  if (/declare\s+global\s*\{[\s\S]*?PROJECT_ID[\s\S]*?\}/.test(code)) {
+  if (/declare\s+global\s*\{[\s\S]*?\bPROJECT_ID\b[\s\S]*?\}/.test(code)) {
     code = code.replace(
-      /declare\s+global\s*\{[\s\S]*?const\s+PROJECT_ID\s*:\s*string;?[\s\S]*?\}/g,
+      /declare\s+global\s*\{[\s\S]*?\bPROJECT_ID\b[\s\S]*?\}/g,
       `const PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID || '${projectIdVal}';`
     )
   } else if (code.includes('PROJECT_ID') && !code.includes('const PROJECT_ID')) {

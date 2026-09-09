@@ -39,7 +39,7 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
     '@hookform/resolvers': '^3.9.0',
     'zod': '^3.23.0',
   }
-  if (ast.projects.some(p => p.app.dbStack === 'supabase')) {
+  if (ast.projects.some(p => p.app.dbStack === 'supabase' || p.app.routes.some(r => r.isAiGenerated))) {
     allDeps['@supabase/ssr'] = '^0.5.0'
     allDeps['@supabase/supabase-js'] = '^2.45.0'
   }
@@ -75,13 +75,17 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   // 3. .env.local com credenciais do workspace
   const supaUrl = ast.supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const supaKey = ast.supabaseAnonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  const firstProjectId = ast.projects.find(p => p.app.projectId)?.app.projectId || ''
 
   if (ast.dbStack === 'supabase') {
-    files.set('.env.local', `NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"\nNEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
+    const lines = [`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`, `NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`]
+    if (firstProjectId) lines.push(`NEXT_PUBLIC_PROJECT_ID="${firstProjectId}"`)
+    files.set('.env.local', lines.join('\n'))
   } else {
     const lines = [`DATABASE_URL="${ast.dbConnectionString || ''}"`]
     if (supaUrl) lines.push(`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`)
     if (supaKey) lines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
+    if (firstProjectId) lines.push(`NEXT_PUBLIC_PROJECT_ID="${firstProjectId}"`)
     files.set('.env.local', lines.join('\n'))
   }
 

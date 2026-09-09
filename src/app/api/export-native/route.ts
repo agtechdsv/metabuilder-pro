@@ -76,7 +76,11 @@ export async function POST(request: Request) {
     // --- CLEAN CODE GENERATOR ---
 
     // Parse (com as credenciais reais para gerar .env.local pré-preenchido)
-    const ast = parseMetaBuilderJSON(rawJson, dbStack, { dbConnectionString, supabaseUrl, supabaseAnonKey })
+    const ast = parseMetaBuilderJSON(rawJson, dbStack, {
+      dbConnectionString,
+      supabaseUrl: supabaseUrl || project.supabase_url || process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: supabaseAnonKey || project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    })
     
     // Emit
     const generatedFiles = generateNativeProject(ast)
