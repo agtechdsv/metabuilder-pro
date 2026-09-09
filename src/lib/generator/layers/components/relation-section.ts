@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Layers,
   CheckCircle,
+  Eye,
   Loader2
 } from 'lucide-react'
 
@@ -50,6 +51,8 @@ export interface DetailRelationSectionProps {
   itemTitleField?: string
   backPath?: string
   hideFooter?: boolean
+  readOnly?: boolean
+  isView?: boolean
   createAction: (formData: FormData | Record<string, any>) => Promise<any>
   updateAction: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteAction: (id: string) => Promise<any>
@@ -364,6 +367,7 @@ const SubItemAccordion = React.forwardRef(({
   onSubItemChange,
   onEditSubItem,
   onDeleteSubItem,
+  isReadOnlyMode = false,
 }: {
   subItem: any
   sIdx: number
@@ -377,6 +381,7 @@ const SubItemAccordion = React.forwardRef(({
   onSubItemChange?: (field: string, val: any) => void
   onEditSubItem?: (item: any, sIdx: number) => void
   onDeleteSubItem?: (item: any, sIdx: number) => void
+  isReadOnlyMode?: boolean
 }, ref: any) => {
   const getSubVal = (col: string) => {
     if (!subItem) return ''
@@ -476,28 +481,41 @@ const SubItemAccordion = React.forwardRef(({
           >
             {isSubExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-          <button
-            type="button"
-            onClick={() => onEditSubItem && onEditSubItem(subItem, sIdx)}
-            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-            title="Editar Item"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDeleteSubItem && onDeleteSubItem(subItem, sIdx)}
-            className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            title="Excluir Item"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          {isReadOnlyMode ? (
+            <button
+              type="button"
+              onClick={() => onEditSubItem && onEditSubItem(subItem, sIdx)}
+              className="p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+              title="Visualizar Item"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onEditSubItem && onEditSubItem(subItem, sIdx)}
+                className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                title="Editar Item"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDeleteSubItem && onDeleteSubItem(subItem, sIdx)}
+                className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                title="Excluir Item"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Campos do Sub-Item Expandido */}
       {isSubExpanded && subFields.length > 0 && (
-        <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-12 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900">
+        <fieldset disabled={isReadOnlyMode} className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-12 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900 border-0 m-0">
           {subFields.map((sf: any) => {
             const val = getSubVal(sf.dbColumn)
             const dt = (sf.dataType || '').toLowerCase()
@@ -610,7 +628,7 @@ const SubItemAccordion = React.forwardRef(({
               </div>
             )
           })}
-        </div>
+        </fieldset>
       )}
     </div>
   )
@@ -627,6 +645,8 @@ export function DetailRelationSection({
   itemTitleField,
   backPath,
   hideFooter = false,
+  readOnly = false,
+  isView = false,
   createAction,
   updateAction,
   deleteAction,
@@ -635,6 +655,7 @@ export function DetailRelationSection({
   deleteSubAction,
   relationalOptions,
 }: DetailRelationSectionProps) {
+  const isReadOnlyMode = Boolean(readOnly || isView)
   const sectionRef = useRef<HTMLDivElement>(null)
   const subConfig = (subDetails && subDetails[0]) || null
   const subTable = subConfig?.relatedTable || ''
@@ -1450,21 +1471,23 @@ export function DetailRelationSection({
           </div>
 
           {/* Adicionar Registro (+) */}
-          <button
-            type="button"
-            onClick={handleAddInline}
-            className="p-2 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all active:scale-95 shadow-sm flex items-center justify-center"
-            title={\`Adicionar \${label}\`}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          {!isReadOnlyMode && (
+            <button
+              type="button"
+              onClick={handleAddInline}
+              className="p-2 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all active:scale-95 shadow-sm flex items-center justify-center"
+              title={\`Adicionar \${label}\`}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* Abrir Modal (ExternalLink) */}
+          {/* Abrir Modal (ExternalLink / Visualizar) */}
           <button
             type="button"
             onClick={handleOpenAddModal}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-xl transition-all active:scale-95 flex items-center justify-center"
-            title="Abrir em Modal"
+            title={isReadOnlyMode ? 'Visualizar em Modal' : 'Abrir em Modal'}
           >
             <ExternalLink className="w-4 h-4" />
           </button>
@@ -1477,22 +1500,24 @@ export function DetailRelationSection({
           <p className="text-sm text-neutral-400 dark:text-neutral-500 py-4">
             Nenhum registro de <strong>{label}</strong> vinculado a este registro.
           </p>
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <button
-              type="button"
-              onClick={handleAddInline}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" /> Adicionar na Lista
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenAddModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-xs hover:bg-neutral-50 transition-colors shadow-sm"
-            >
-              <ExternalLink className="w-3.5 h-3.5" /> Abrir Modal
-            </button>
-          </div>
+          {!isReadOnlyMode && (
+            <div className="flex items-center justify-center gap-3 mt-2">
+              <button
+                type="button"
+                onClick={handleAddInline}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" /> Adicionar na Lista
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold rounded-xl text-xs hover:bg-neutral-50 transition-colors shadow-sm"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir Modal
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -1601,7 +1626,7 @@ export function DetailRelationSection({
                     </span>
                   </div>
 
-                  {/* Ações da Linha: Expandir, Editar na Modal, Excluir */}
+                  {/* Ações da Linha: Expandir, Editar/Visualizar na Modal, Excluir */}
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -1615,22 +1640,35 @@ export function DetailRelationSection({
                     >
                       <ChevronDown className={\`w-3.5 h-3.5 transition-transform duration-300 \${isExpanded ? 'rotate-180' : ''}\`} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(item)}
-                      className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
-                      title="Editar na Modal (Mestre/Detalhe)"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeletingItem(item)}
-                      className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {isReadOnlyMode ? (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(item)}
+                        className="p-1.5 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 shadow-sm transition-all"
+                        title="Visualizar na Modal"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(item)}
+                          className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 shadow-sm transition-all"
+                          title="Editar na Modal (Mestre/Detalhe)"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingItem(item)}
+                          className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1811,17 +1849,19 @@ export function DetailRelationSection({
                                 </button>
                               </div>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newSub: any = { id: \`temp-\${Date.now()}\` }
-                                setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
-                              }}
-                              className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
-                              title="Adicionar"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
+                            {!isReadOnlyMode && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newSub: any = { id: \`temp-\${Date.now()}\` }
+                                  setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
+                                }}
+                                className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
+                                title="Adicionar"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(item)}
@@ -1857,6 +1897,7 @@ export function DetailRelationSection({
                                   relationalOptions={relationalOptions}
                                   toggleSubItem={toggleSubItem}
                                   formatDateForInput={formatDateForInput}
+                                  isReadOnlyMode={isReadOnlyMode}
                                   onSubItemChange={(field, val) => handleSubItemFieldChange(idx, sIdx, field, val)}
                                   onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx, subFields })}
                                   onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: item.id || idx })}
@@ -1882,17 +1923,19 @@ export function DetailRelationSection({
             href={backPath || '#'}
             className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
           >
-            Cancelar
+            {isReadOnlyMode ? 'Voltar' : 'Cancelar'}
           </Link>
-          <button
-            type="button"
-            disabled={isSubmitting}
-            onClick={handleSaveAll}
-            className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
+          {!isReadOnlyMode && (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleSaveAll}
+              className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          )}
         </div>
       )}
 
@@ -1904,11 +1947,11 @@ export function DetailRelationSection({
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
-                  {editingItem ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {isReadOnlyMode ? <Eye className="w-5 h-5" /> : (editingItem ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />)}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                    {editingItem ? 'Editar Registro' : 'Novo Registro'}
+                    {isReadOnlyMode ? 'Visualizar Registro' : (editingItem ? 'Editar Registro' : 'Novo Registro')}
                   </h3>
                   <p className="text-xs text-neutral-400">
                     {editingItem ? \`Registro \${editingItem.id || editingItem.codigo || ''}\` : 'Novo Item'}
@@ -1952,8 +1995,9 @@ export function DetailRelationSection({
               </div>
             )}
 
-<form id="modal-master-form" onSubmit={handleFormSubmit} className="space-y-4">
+<form id="modal-master-form" onSubmit={isReadOnlyMode ? (e) => e.preventDefault() : handleFormSubmit} className="space-y-4">
               <input type="hidden" name={foreignKey} value={parentId} />
+              <fieldset disabled={isReadOnlyMode} className="contents border-0 p-0 m-0 min-w-0">
 
               {/* Conteúdo da Aba Mestre na Modal */}
               <div className={(!hasSubDetails || modalActiveTab === 'master') ? 'block' : 'hidden'}>
@@ -2140,18 +2184,20 @@ export function DetailRelationSection({
                           </button>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newSub: any = { id: \`temp-\${Date.now()}\` }
-                          const curItems = getSubRecords(editingItem)
-                          setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
-                        }}
-                        className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
-                        title="Adicionar Item"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                      {!isReadOnlyMode && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newSub: any = { id: \`temp-\${Date.now()}\` }
+                            const curItems = getSubRecords(editingItem)
+                            setEditingSubItem({ subItem: newSub, sIdx: curItems.length, parentId: editingItem?.id || editingItem?.codigo || 'edit', subFields })
+                          }}
+                          className="p-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors"
+                          title="Adicionar Item"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -2179,6 +2225,7 @@ export function DetailRelationSection({
                             relationalOptions={relationalOptions}
                             toggleSubItem={toggleSubItem}
                             formatDateForInput={formatDateForInput}
+                            isReadOnlyMode={isReadOnlyMode}
                             onSubItemChange={(field, val) => handleModalSubItemFieldChange(sIdx, field, val)}
                             onEditSubItem={(sub, sIndex) => setEditingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit', subFields })}
                             onDeleteSubItem={(sub, sIndex) => setDeletingSubItem({ subItem: sub, sIdx: sIndex, parentId: editingItem.id || editingItem.codigo || 'edit' })}
@@ -2191,21 +2238,24 @@ export function DetailRelationSection({
               )}
 
               {/* Footer Único da Modal */}
+              </fieldset>
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  Cancelar
+                  {isReadOnlyMode ? 'Fechar' : 'Cancelar'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
-                >
-                  <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
+                {!isReadOnlyMode && (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+                  >
+                    <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

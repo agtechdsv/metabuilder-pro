@@ -70,7 +70,7 @@ function formatWithMask(value: string, mask?: string): string {
   return value
 }
 
-export function DetailMasterForm({ id, backPath, title, updateAction, children }: DetailMasterFormProps) {
+export function DetailMasterForm({ id, backPath, title, updateAction, children, isView }: DetailMasterFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -89,6 +89,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
 
   useEffect(() => {
     const handleExternalSave = () => {
+      if (isView) return
       const form = document.getElementById('master-detail-form') as HTMLFormElement
       if (form && form.requestSubmit) {
         // We use a custom flag on the event to identify it as silent
@@ -99,9 +100,10 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
     }
     window.addEventListener('save-master-form', handleExternalSave)
     return () => window.removeEventListener('save-master-form', handleExternalSave)
-  }, [])
+  }, [isView])
 
   const handleInput = (e: React.FormEvent<HTMLFormElement>) => {
+    if (isView) return
     const target = e.target as HTMLInputElement
     const mask = target?.getAttribute?.('data-mask')
     if (mask) {
@@ -111,6 +113,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
 
   const handleSubmit = async (e: any) => {
     e.preventDefault()
+    if (isView) return
     const silent = e.nativeEvent?.isSilentSave || e.isSilentSave
     setIsSubmitting(true)
     if (!silent) window.dispatchEvent(new CustomEvent('page-progress-start'))
@@ -144,7 +147,9 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
   return (
     <>
       <form id="master-detail-form" onSubmit={handleSubmit} onInput={handleInput} className="relative z-10 space-y-6">
-        {children}
+        <fieldset disabled={isView} className="contents border-0 p-0 m-0 min-w-0">
+          {children}
+        </fieldset>
 
         <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-8">
           <Link
@@ -157,16 +162,18 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children }
             }}
             className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            Cancelar
+            {isView ? 'Voltar' : 'Cancelar'}
           </Link>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
+          {!isView && (
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          )}
         </div>
       </form>
 

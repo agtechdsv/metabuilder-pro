@@ -86,7 +86,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
   const backPath = route.path
 
   const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, false, 'relationalOptions'))
+    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
     .filter(Boolean)
     .join('\n')
 
@@ -245,6 +245,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `              updateAction={update${tab.relatedModelName}}`,
           `              deleteAction={delete${tab.relatedModelName}}`,
           `              backPath={backPath}`,
+          `              readOnly={isView}`,
           subActionProps,
           `            />`,
           `          </div>`,
@@ -288,7 +289,7 @@ import { useSearchParams } from 'next/navigation'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { CloseModalButton } from '@/components/ui/custom-action-button'
-${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Download, Zap } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''
@@ -390,6 +391,7 @@ export function ${mn}DetailTabsClient({
   icon,
   newPath,
   relationalOptions = {},
+  initialMode,
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,`).join('\n') : ''}
 }: {
   id: string
@@ -400,6 +402,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
   icon: string
   newPath: string
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  initialMode?: 'edit' | 'view'
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
   const searchParams = useSearchParams()
@@ -414,6 +417,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
     }
   }, [])
   const isEmbedded = searchParams?.get('embedded') === 'true' || isIframe
+  const isView = (searchParams?.get('mode') === 'view') || initialMode === 'view'
   const [activeTab, setActiveTab] = useState(0)
   const isEdit = true
 
@@ -478,11 +482,11 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-              <Pencil className="w-5 h-5" />
+              {isView ? <Eye className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
             </div>
             <div>
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-                {title.endsWith('s') ? title.slice(0, -1) : title}
+                {(isView ? 'Visualizar ' : 'Editar ') + (title.endsWith('s') ? title.slice(0, -1) : title)}
               </h2>
               <p className="text-xs font-medium text-neutral-400 mt-0.5">
                 {${route.rawLayoutConfig?.form_header_subtitle_field ? `String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')` : `String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')`}}
@@ -507,7 +511,7 @@ ${tabsHeader}
 
         {/* Formulário com Suporte a Abas (Renderizados simultaneamente, alternados via CSS para não perder estado) */}
         <div className={(!${hasRelationTabs} || activeTab === 0) ? 'block' : 'hidden'}>
-          <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction}>
+          <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView}>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
             </div>
@@ -808,14 +812,27 @@ function formatWithMask(v: any, mask?: string) {
   return s
 }
 
-export const metadata: Metadata = { title: 'Editar \u2014 ${route.title}' }
+export async function generateMetadata({
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ mode?: string; embedded?: string }>
+}): Promise<Metadata> {
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const isView = resolvedSearchParams?.mode === 'view'
+  return { title: (isView ? 'Visualizar' : 'Editar') + ' \u2014 ${route.title}' }
+}
 
 export default async function ${mn}DetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams?: Promise<{ mode?: string; embedded?: string }>
 }) {
   const resolvedParams = await params
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const initialMode = resolvedSearchParams?.mode === 'view' ? 'view' : 'edit'
   const data = await get${mn}ById(resolvedParams.id)
 
   if (!data) notFound()
@@ -835,6 +852,7 @@ ${buildOptionsCode.join('\n')}
       icon="${route.icon || 'Users'}"
       newPath="${route.path}/new"
       relationalOptions={relationalOptions}
+      initialMode={initialMode}
 ${hasRelationTabs ? route.relationTabs.map((tab) => `      ${tab.relatedTable}Items={${tab.relatedTable}List || []}`).join('\n') : ''}
     />
   )

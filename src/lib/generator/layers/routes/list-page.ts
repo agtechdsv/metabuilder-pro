@@ -331,7 +331,7 @@ ${thCells}
 ${tdCells}
                 <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                   <div className="flex items-center justify-end gap-1.5">
-                    <Link href={'${route.path}/' + item.${route.primaryKey} + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
+                    <Link href={'${route.path}/' + item.${route.primaryKey} + '?mode=view' + (isEmbedded ? '&embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
                       <Search className="w-3.5 h-3.5" />
                     </Link>
                     <Link href={'${route.path}/' + item.${route.primaryKey} + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
