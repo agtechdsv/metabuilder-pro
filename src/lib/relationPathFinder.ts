@@ -393,3 +393,79 @@ export function getModelsWithRelations(
   });
   return uniqueResult;
 }
+
+/**
+ * Resolves a relational filter across tables dynamically using the BFS path.
+ * If targetTable is separated by 1 or more hops from modelName, it traverses
+ * backwards from targetTable to modelName querying intermediate foreign keys.
+ */
+export async function resolveRelationalFilter(
+  supabaseClient: any,
+  relations: ResolvedRelation[],
+  modelName: string,
+  targetTable: string,
+  targetCol: string,
+  targetVal: any
+): Promise<{ type: 'eq'; column: string; value: any } | { type: 'in'; column: string; values: any[] } | { type: 'empty' } | null> {
+  const path = findJoinPath(relations, modelName, targetTable)
+  if (!path || path.length === 0) {
+    // Dynamic fallback if relations graph has no explicit entry
+    const cleanModel = modelName.toLowerCase()
+    const modelSingular = cleanModel.endsWith('s') ? cleanModel.slice(0, -1) : cleanModel
+    const possibleFkOnTarget = [cleanModel + '_id', modelSingular + '_id']
+
+    for (const fk of possibleFkOnTarget) {
+      try {
+        const { data: targetRows } = await supabaseClient
+          .from(targetTable)
+          .select(fk)
+          .eq(targetCol, targetVal)
+        if (targetRows && targetRows.length > 0) {
+          const ids = Array.from(new Set(targetRows.map((r: any) => r[fk]).filter(Boolean)))
+          if (ids.length === 0) return { type: 'empty' }
+          return { type: 'in', column: 'id', values: ids }
+        }
+      } catch (_) {}
+    }
+
+    return null
+  }
+
+  // 1-step direct relationship
+  if (path.length === 1) {
+    const step = path[0]
+    if (step.toField === targetCol) {
+      return { type: 'eq', column: step.fromField, value: targetVal }
+    }
+  }
+
+  // Multi-step traversal backwards from targetTable to modelName
+  let currentValues = [targetVal]
+
+  for (let i = path.length - 1; i >= 1; i--) {
+    const currentStep = path[i]
+    const prevStep = path[i - 1]
+
+    const queryTable = currentStep.fromTable
+    const matchCol = currentStep.fromField
+    const extractCol = prevStep.toField
+
+    const { data, error } = await supabaseClient
+      .from(queryTable)
+      .select(extractCol)
+      .in(matchCol, currentValues)
+
+    if (error || !data || data.length === 0) {
+      return { type: 'empty' }
+    }
+
+    currentValues = Array.from(new Set(data.map((r: any) => r[extractCol]).filter(Boolean)))
+    if (currentValues.length === 0) {
+      return { type: 'empty' }
+    }
+  }
+
+  const masterCol = path[0].fromField
+  return { type: 'in', column: masterCol, values: currentValues }
+}
+

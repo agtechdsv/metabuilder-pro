@@ -11,10 +11,10 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
     const model = models.find(m => m.id === view.model_id)
     if (!model) return
 
-    const modelName = model.table_name
+    const modelName = model.table_name || model.db_table_name || model.name
     const layoutConfig = view.layout_config || {}
     const fields = model.ui_fields || []
-    const allFields = models.flatMap(m => (m.ui_fields || []).map((f: any) => ({ ...f, model_id: m.id, model_name: m.table_name, display_model_name: m.name })))
+    const allFields = models.flatMap(m => (m.ui_fields || []).map((f: any) => ({ ...f, model_id: m.id, model_name: m.table_name || m.db_table_name || m.name, display_model_name: m.name })))
 
     // Reconstruct display fields
     let displayFields = fields.filter((f: any) => f.list_visible !== false)
@@ -40,7 +40,7 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
              virtualModelId = (vMatch[1] as any)?.virtual_model_id || (vMatch[1] as any)?.byoc_model_id || (vMatch[1] as any)?.model_id;
              if (virtualModelId) {
                const foundModel = models.find(m => m.id === virtualModelId);
-               if (foundModel) virtualModelName = foundModel.table_name;
+               if (foundModel) virtualModelName = foundModel.table_name || foundModel.db_table_name || foundModel.name;
              }
           }
 
@@ -85,7 +85,7 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
              virtualModelId = (vMatch[1] as any)?.virtual_model_id || (vMatch[1] as any)?.byoc_model_id || (vMatch[1] as any)?.model_id;
              if (virtualModelId) {
                const foundModel = models.find(m => m.id === virtualModelId);
-               if (foundModel) virtualModelName = foundModel.table_name;
+               if (foundModel) virtualModelName = foundModel.table_name || foundModel.db_table_name || foundModel.name;
              }
           }
 
@@ -250,8 +250,8 @@ export default function ${view.slug.replace(/-/g, '')}Page() {
   // This ensures ALL data access goes through the server — no direct browser calls to Supabase.
   if (dbType === 'supabase') {
     models.forEach(model => {
-      if (!model.table_name) return
-      const modelName = model.table_name
+      const modelName = model.table_name || model.db_table_name || model.name
+      if (!modelName) return
       const apiFolder = appFolder.folder('api')?.folder(modelName)
       if (apiFolder) {
         apiFolder.file('route.ts', `import { NextResponse } from 'next/server'
@@ -358,8 +358,8 @@ export async function DELETE(request: Request) {
   // Generate API Routes for Postgres for ALL models (not just ones with views)
   if (dbType === 'postgres') {
     models.forEach(model => {
-      if (!model.table_name) return
-      const modelName = model.table_name
+      const modelName = model.table_name || model.db_table_name || model.name
+      if (!modelName) return
       const apiFolder = appFolder.folder('api')?.folder(modelName)
       if (apiFolder) {
         apiFolder.file('route.ts', `import { NextResponse } from 'next/server'

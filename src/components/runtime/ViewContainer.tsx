@@ -297,9 +297,10 @@ export default function ViewContainer({
 
   // Efeitos para Sincronizar Fetch com Filtros e Eventos
   const isFirstRender = useRef(true)
+  const isTunnelMode = Boolean(tunnelChannel)
 
   useEffect(() => {
-    if (!isTunnelReady) return
+    if (isTunnelMode && !isTunnelReady) return
 
     if (isFirstRender.current) {
       // already managed mostly by hook init, debounce to fetch fresh
@@ -314,7 +315,7 @@ export default function ViewContainer({
   }, [projectId, modelName, isTunnelReady, JSON.stringify(filterValues)])
 
   useEffect(() => {
-    if (isTunnelReady && tunnelChannel && !hasFetchedInitial && data.length === 0) {
+    if ((!isTunnelMode || (isTunnelReady && tunnelChannel)) && !hasFetchedInitial && data.length === 0) {
       setHasFetchedInitial(true)
       fetchData(filterValues)
     }
@@ -326,7 +327,7 @@ export default function ViewContainer({
       isFirstRenderPag.current = false
       return
     }
-    if (isTunnelReady) {
+    if (!isTunnelMode || isTunnelReady) {
       fetchData(filterValues, true)
     }
   }, [currentPage, itemsPerPage, timelineDirection])
@@ -349,7 +350,7 @@ export default function ViewContainer({
     const currentStr = JSON.stringify(externalFilters || {})
     if (prevExternalFiltersStr.current !== currentStr) {
       prevExternalFiltersStr.current = currentStr
-      if (hasFetchedInitial && isTunnelReady) {
+      if (hasFetchedInitial && (!isTunnelMode || isTunnelReady)) {
         const newFilterValues = { ...(externalFilters || {}), ...internalFilters }
         fetchData(newFilterValues, true)
       }

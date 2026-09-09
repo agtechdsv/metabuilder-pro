@@ -134,8 +134,7 @@ export function useViewFilters({
               const res = await fetch(`/api/${comp.rel_table}?limit=1000`)
               const json = await res.json()
               if (json.data) data = json.data
-            } else if (projectId) {
-              if (!tunnelChannel || !isTunnelReady) continue;
+            } else if (tunnelChannel && isTunnelReady) {
               const queryId = crypto.randomUUID()
               const colsToSelect = Array.from(new Set([`"${comp.rel_label}"`, `"${comp.rel_value}"`, comp.filter_column ? `"${comp.filter_column}"` : null].filter(Boolean))).join(', ')
               const rawQuery = `SELECT ${colsToSelect} FROM "${comp.rel_table}"`
