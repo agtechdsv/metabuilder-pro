@@ -77,9 +77,11 @@ export async function POST(request: Request) {
 
     // Resolver credenciais de conexão
     const resolvedStack: DbType = (legacyDriver as DbType) || (dataMode as DbType) || 'postgres'
-    const options = dbConfig?.url
-      ? { dbConnectionString: dbConfig.url }
-      : {}
+    const options = {
+      dbConnectionString: dbConfig?.url,
+      supabaseUrl: project.supabase_url || process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    }
 
     // --- CLEAN CODE GENERATOR ---
     const ast = parseMetaBuilderJSON(rawJson, resolvedStack, options)

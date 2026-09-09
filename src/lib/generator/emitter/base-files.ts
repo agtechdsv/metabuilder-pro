@@ -64,17 +64,34 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
   }, null, 2))
 
   // .env.local
+  const envLines: string[] = []
   if (ast.dbStack === 'supabase') {
-    files.set('.env.local', `NEXT_PUBLIC_SUPABASE_URL="${ast.supabaseUrl || ''}"\nNEXT_PUBLIC_SUPABASE_ANON_KEY="${ast.supabaseAnonKey || ''}"`)
+    envLines.push(`NEXT_PUBLIC_SUPABASE_URL="${ast.supabaseUrl || ''}"`)
+    envLines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${ast.supabaseAnonKey || ''}"`)
   } else if (ast.dbStack === 'oracle') {
-    files.set('.env.local', `DB_CONNECTION_STRING="${ast.dbConnectionString || 'localhost:1521/XEPDB1'}"\nDB_USER="admin"\nDB_PASSWORD="password"`)
+    envLines.push(`DB_CONNECTION_STRING="${ast.dbConnectionString || 'localhost:1521/XEPDB1'}"`)
+    envLines.push(`DB_USER="admin"`)
+    envLines.push(`DB_PASSWORD="password"`)
   } else if (ast.dbStack === 'mysql') {
-    files.set('.env.local', `DATABASE_URL="${ast.dbConnectionString || 'mysql://user:password@localhost:3306/db_name'}"`)
+    envLines.push(`DATABASE_URL="${ast.dbConnectionString || 'mysql://user:password@localhost:3306/db_name'}"`)
   } else if (ast.dbStack === 'sqlserver') {
-    files.set('.env.local', `DATABASE_URL="${ast.dbConnectionString || 'Server=localhost,1433;Database=db_name;User Id=user;Password=password;Encrypt=true'}"`)
+    envLines.push(`DATABASE_URL="${ast.dbConnectionString || 'Server=localhost,1433;Database=db_name;User Id=user;Password=password;Encrypt=true'}"`)
   } else {
-    files.set('.env.local', `DATABASE_URL="${ast.dbConnectionString || 'postgres://user:pass@localhost:5432/db'}"`)
+    envLines.push(`DATABASE_URL="${ast.dbConnectionString || 'postgres://user:pass@localhost:5432/db'}"`)
   }
+
+  const supaUrl = ast.supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supaKey = ast.supabaseAnonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
+  if (ast.dbStack !== 'supabase' && (ast.routes.some(r => r.isAiGenerated) || ast.supabaseUrl)) {
+    if (supaUrl) envLines.push(`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`)
+    if (supaKey) envLines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
+  }
+  if (ast.projectId) {
+    envLines.push(`NEXT_PUBLIC_PROJECT_ID="${ast.projectId}"`)
+  }
+
+  files.set('.env.local', envLines.join('\n'))
 
   // .gitignore
   files.set('.gitignore', `# dependencies
@@ -760,10 +777,15 @@ ${navCards}
     files.set('utils/supabase/client.ts', `import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    // Fallback seguro caso as variáveis não tenham sido definidas no .env.local
+    return createBrowserClient('https://placeholder.supabase.co', 'placeholder')
+  }
+
+  return createBrowserClient(url, key)
 }
 `)
   }

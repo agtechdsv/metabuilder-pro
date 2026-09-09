@@ -73,10 +73,16 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
   }, null, 2))
 
   // 3. .env.local com credenciais do workspace
+  const supaUrl = ast.supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supaKey = ast.supabaseAnonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
   if (ast.dbStack === 'supabase') {
-    files.set('.env.local', `NEXT_PUBLIC_SUPABASE_URL="${ast.supabaseUrl || ''}"\nNEXT_PUBLIC_SUPABASE_ANON_KEY="${ast.supabaseAnonKey || ''}"`)
+    files.set('.env.local', `NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"\nNEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
   } else {
-    files.set('.env.local', `DATABASE_URL="${ast.dbConnectionString || ''}"`)
+    const lines = [`DATABASE_URL="${ast.dbConnectionString || ''}"`]
+    if (supaUrl) lines.push(`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`)
+    if (supaKey) lines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
+    files.set('.env.local', lines.join('\n'))
   }
 
   // .gitignore

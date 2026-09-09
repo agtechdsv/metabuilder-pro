@@ -49,9 +49,11 @@ export async function POST(request: Request) {
     // 4. Resolver credenciais de conexão
     // A IDE Local pode enviar dbConfig com a connection string já configurada
     const resolvedStack: DbType = (legacyDriver as DbType) || (dbStack as DbType) || 'postgres'
-    const options = dbConfig?.url
-      ? { dbConnectionString: dbConfig.url }
-      : {}
+    const options = {
+      dbConnectionString: dbConfig?.url,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    }
 
     // 5. Parser → AST
     const ast = parseWorkspaceJSON(workspace, rawProjects, resolvedStack, options)
