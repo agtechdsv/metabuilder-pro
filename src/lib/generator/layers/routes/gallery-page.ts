@@ -301,56 +301,10 @@ ${filterFields.map(f => {
               return false
             }
           }
-        } else {
-          // Filtro por tabela relacionada (ex: pedidos.id)
-          const val = item[paramKey] ?? (item[tTable] ? (item[tTable][targetCol] ?? item[tTable].id) : undefined)
-          if (val !== undefined && val !== null) {
-            if (String(val).toLowerCase() !== String(paramVal).toLowerCase()) return false
-          } else if (tablesData[tTable] && tablesData[tTable].length > 0) {
-            let hasLink = false
-            for (const j of rawJoins) {
-              const fromT = (j.from || '').toLowerCase()
-              const toT = (j.to || '').toLowerCase()
-              const lKey = j.localKey || 'id'
-              const fKey = j.foreignKey || (fromT + '_id')
-
-              if (toT === '${mnLower}' && tablesData[fromT]) {
-                const intermediateList = tablesData[fromT]
-                const itemVal = item[lKey] ?? item.id
-                const matchingRows = intermediateList.filter((r: any) => String(r[fKey] ?? r['${mnLower}_id'] ?? r.produto_id) === String(itemVal))
-                for (const mRow of matchingRows) {
-                  const directTarget = mRow[tTable + '_id'] ?? mRow[targetCol] ?? mRow.pedido_id
-                  if (directTarget != null && String(directTarget).toLowerCase() === String(paramVal).toLowerCase()) {
-                    hasLink = true
-                    break
-                  }
-                }
-              } else if (fromT === '${mnLower}' && tablesData[toT]) {
-                const intermediateList = tablesData[toT]
-                const itemVal = item[lKey] ?? item.id
-                const matchingRows = intermediateList.filter((r: any) => String(r[fKey] ?? r['${mnLower}_id'] ?? r.produto_id) === String(itemVal))
-                for (const mRow of matchingRows) {
-                  const directTarget = mRow[tTable + '_id'] ?? mRow[targetCol] ?? mRow.pedido_id
-                  if (directTarget != null && String(directTarget).toLowerCase() === String(paramVal).toLowerCase()) {
-                    hasLink = true
-                    break
-                  }
-                }
-              }
-              if (hasLink) break
-            }
-            if (!hasLink) {
-              const targetList = tablesData[tTable]
-              const targetRow = targetList.find((r: any) => String(r[targetCol] ?? r.id).toLowerCase() === String(paramVal).toLowerCase())
-              if (targetRow) {
-                const fkVal = targetRow['${mnLower}_id'] ?? targetRow.produto_id
-                if (fkVal != null && String(fkVal).toLowerCase() !== String(item.id).toLowerCase()) {
-                  return false
-                }
-              }
-            }
-          }
         }
+        // Filtros relacionais externos (ex: pedidos.id) são avaliados diretamente na consulta do banco
+        // pelo get${mn}List através do grafo de relações (query EXISTS / JOIN). Registros retornados
+        // pelo banco já foram validados relacionalmente e não devem ser descartados em memória.
       } else {
         const val = item[paramKey] ?? (paramKey.endsWith('_id') ? item[paramKey.slice(0, -3)] : undefined)
         if (val !== undefined && val !== null) {

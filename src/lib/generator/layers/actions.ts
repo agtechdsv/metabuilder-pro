@@ -460,6 +460,12 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
         const tTable = targetTable.toLowerCase()
         if ((tTable === '${model.dbTable.toLowerCase()}' || tTable.replace(/s$/, '') === '${model.dbTable.toLowerCase()}'.replace(/s$/, '')) && allowedColumns.has(targetCol)) {
           q = q.eq(targetCol, rawVal)
+        } else {
+          const singular = tTable.endsWith('s') ? tTable.slice(0, -1) : tTable
+          const candidateFk = [tTable + '_id', singular + '_id', 'id_' + tTable, 'id_' + singular].find(c => allowedColumns.has(c))
+          if (candidateFk) {
+            q = q.eq(candidateFk, rawVal)
+          }
         }
       } else if (allowedColumns.has(key)) {
         q = q.eq(key, rawVal)
