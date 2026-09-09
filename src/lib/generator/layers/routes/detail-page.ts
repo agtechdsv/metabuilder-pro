@@ -6,7 +6,8 @@ import { renderFormField, getByocComponentName, isValidIdentifier } from './help
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateDetailSchema(route: RouteNode): string {
-  const hasRelationTabs = route.relationTabs.length > 0
+  const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
+  const hasRelationTabs = !hasCustomSlots && route.relationTabs.length > 0
   if (!hasRelationTabs) {
     return `// ─────────────────────────────────────────────────────────────────────────────
 // Schemas e configurações declarativas da rota ${route.title}
@@ -90,21 +91,39 @@ export function generateDetailTabsClient(route: RouteNode): string {
     .filter(Boolean)
     .join('\n')
 
-  const hasRelationTabs = route.relationTabs.length > 0
+  const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
+  const hasRelationTabs = !hasCustomSlots && route.relationTabs.length > 0
+  const hasAnyTabs = hasCustomSlots ? route.customSlots!.length > 1 : hasRelationTabs
 
-  const tabButtons = hasRelationTabs
-    ? route.relationTabs.map((tab, i) => [
+  const masterSlot = hasCustomSlots ? route.customSlots![0] : undefined
+  const detailSlots = hasCustomSlots ? route.customSlots!.slice(1) : []
+
+  const tabButtons = hasCustomSlots
+    ? detailSlots.map((slot, i) => [
         `            <button`,
         `              type="button"`,
-        `              onClick={() => setActiveTab(${i + 1})}`,
+        `              onClick={() => { setActiveTab(${i + 1}); setVisitedTabs(p => ({ ...p, [${i + 1}]: true })) }}`,
         `              className={activeTab === ${i + 1}`,
-        `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all'`,
-        `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all'}`,
+        `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'`,
+        `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'}`,
         `            >`,
-        `              ${tab.label}`,
+        slot.icon ? `              <DynamicIcon icon="${slot.icon}" size={16} />` : '',
+        `              <span>${slot.title}</span>`,
         `            </button>`,
-      ].join('\n')).join('\n')
-    : ''
+      ].filter(Boolean).join('\n')).join('\n')
+    : (hasRelationTabs
+        ? route.relationTabs.map((tab, i) => [
+            `            <button`,
+            `              type="button"`,
+            `              onClick={() => { setActiveTab(${i + 1}); setVisitedTabs(p => ({ ...p, [${i + 1}]: true })) }}`,
+            `              className={activeTab === ${i + 1}`,
+            `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'`,
+            `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'}`,
+            `            >`,
+            `              <span>${tab.label}</span>`,
+            `            </button>`,
+          ].join('\n')).join('\n')
+        : '')
 
   const lookupModels = new Map<string, string>()
   if (hasRelationTabs) {
@@ -253,18 +272,39 @@ export function generateDetailTabsClient(route: RouteNode): string {
       }).join('\n')
     : ''
 
-  const tabsHeader = hasRelationTabs
+  const customTabPanels = hasCustomSlots
+    ? detailSlots.map((slot, i) => {
+        const fkParam = slot.foreignKey ? `${slot.foreignKey}=\${id}` : `parent_id=\${id}`
+        return [
+          `          <div className={activeTab === ${i + 1} ? 'block w-full' : 'hidden'}>`,
+          `            {visitedTabs[${i + 1}] && (`,
+          `              <iframe`,
+          `                src={\`/${slot.useCaseSlug}?embedded=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
+          `                className="w-full min-h-[750px] border-0 rounded-2xl bg-transparent transition-opacity duration-300"`,
+          `                title="${slot.title}"`,
+          `              />`,
+          `            )}`,
+          `          </div>`,
+        ].join('\n')
+      }).join('\n')
+    : ''
+
+  const masterTitle = hasCustomSlots ? (masterSlot?.title || title) : title
+  const masterIcon = hasCustomSlots ? masterSlot?.icon : undefined
+
+  const tabsHeader = hasAnyTabs
     ? `
           {/* Barra de Abas no Topo do Card */}
-          <div className="flex items-center gap-8 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-8 relative z-10">
+          <div className="flex items-center gap-8 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-8 relative z-10 overflow-x-auto">
             <button
               type="button"
-              onClick={() => setActiveTab(0)}
+              onClick={() => { setActiveTab(0); setVisitedTabs(p => ({ ...p, 0: true })) }}
               className={activeTab === 0
-                ? "text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all"
-                : "text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all"}
+                ? "text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0"
+                : "text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0"}
             >
-              {title}
+              ${masterIcon ? `<DynamicIcon icon="${masterIcon}" size={16} />` : ''}
+              <span>${masterTitle}</span>
             </button>
 ${tabButtons}
           </div>`
@@ -419,6 +459,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
   const isEmbedded = searchParams?.get('embedded') === 'true' || isIframe
   const isView = (searchParams?.get('mode') === 'view') || initialMode === 'view'
   const [activeTab, setActiveTab] = useState(0)
+  const [visitedTabs, setVisitedTabs] = useState<Record<number, boolean>>({ 0: true })
   const isEdit = true
 
 ${Array.from(lookupModels.entries()).map(([tTable]) => `  const [${tTable}LookupList, set${tTable}LookupList] = useState<any[]>(cached${tTable}LookupList)`).join('\n')}
@@ -510,7 +551,7 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
 ${tabsHeader}
 
         {/* Formulário com Suporte a Abas (Renderizados simultaneamente, alternados via CSS para não perder estado) */}
-        <div className={(!${hasRelationTabs} || activeTab === 0) ? 'block' : 'hidden'}>
+        <div className={(!${hasAnyTabs} || activeTab === 0) ? 'block' : 'hidden'}>
           <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView}>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
@@ -518,9 +559,9 @@ ${formFieldsHtml}
           </DetailMasterForm>
         </div>
         
-        {${hasRelationTabs} && (
+        {${hasAnyTabs} && (
           <div className={activeTab !== 0 ? 'block space-y-6' : 'hidden'}>
-${tabPanels}
+${hasCustomSlots ? customTabPanels : tabPanels}
           </div>
         )}
       </div>
@@ -540,7 +581,8 @@ export function generateDetailPage(route: RouteNode): string {
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey
 
-  const hasRelationTabs = route.relationTabs.length > 0
+  const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
+  const hasRelationTabs = !hasCustomSlots && route.relationTabs.length > 0
 
   const lookupModels = new Map<string, string>()
 

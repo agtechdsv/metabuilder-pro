@@ -331,32 +331,33 @@ ${filterFields.map(f => {
   })
 
   return (
-    <div className="space-y-6">
+    <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "space-y-6"}>
       {/* Header Fiel ao Padrão MetaBuilder RuntimeHeader */}
-      <div className="px-6 sm:px-10 py-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="flex items-center gap-5">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
-            <DynamicIcon icon="${route.icon || 'LayoutGrid'}" size={24} />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              ${route.title}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
-              </span>
+      {!isEmbedded && (
+        <div className="px-6 sm:px-10 py-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+              <DynamicIcon icon="${route.icon || 'LayoutGrid'}" size={24} />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+                ${route.title}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                  ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Ações do Header */}
-        <div className="flex items-center gap-3">
+          {/* Ações do Header */}
+          <div className="flex items-center gap-3">
 ${headerButtonsHtml}
-          {isEmbedded && <CloseModalButton />}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
       ${filterFields.length > 0 ? `

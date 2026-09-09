@@ -145,6 +145,24 @@ export interface SubRelationDetail {
   formFields?: ResolvedField[]
 }
 
+export interface CustomSlotTab {
+  id: string
+  title: string
+  icon?: string
+  useCaseSlug: string
+  widgetType: string
+  targetModelId?: string
+  targetModelTable?: string
+  targetModelName?: string
+  foreignKey?: string
+  relationPath?: string[]
+  canView?: boolean
+  canAdd?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  renderMode?: 'tab' | 'button' | 'both'
+}
+
 export interface RelationTab {
   relatedModelId: string
   relatedTable: string         // nome real da tabela filha no banco
@@ -252,6 +270,9 @@ export interface RouteNode {
 
   // ── Relacionamentos mestre-detalhe (abas) ──
   relationTabs: RelationTab[]
+
+  // ── Abas de Layout Personalizado (custom_slots do Studio) ──
+  customSlots?: CustomSlotTab[]
 
   // ── Interface de Ação (page, drawer, modal) ──
   actionInterfaceType?: 'page' | 'drawer' | 'modal'

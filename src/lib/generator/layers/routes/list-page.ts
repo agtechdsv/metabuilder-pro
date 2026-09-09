@@ -409,27 +409,28 @@ export default async function ${mn}ListPage({
   const isEmbedded = params?.embedded === 'true'
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500"}>
       {/* Cabeçalho fiel à Web Produção (RuntimeHeader) */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex items-center gap-5">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
-            <DynamicIcon icon="${route.icon || 'Users'}" size={24} />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              ${route.title}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                ${route.logicType.replace(/_/g, ' ')}
-              </span>
+      {!isEmbedded && (
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+              <DynamicIcon icon="${route.icon || 'Users'}" size={24} />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+                ${route.title}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                  ${route.logicType.replace(/_/g, ' ')}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
 ${route.buttons.filter(b => b.placement === 'header').map(b => {
   if (b.actionType === 'create') {
     return `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
@@ -468,6 +469,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
           {isEmbedded && <CloseModalButton />}
         </div>
       </div>
+      )}
 
       {/* Filtros fiéis ao ViewFilterBar */}
       <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">

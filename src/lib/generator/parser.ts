@@ -10,6 +10,7 @@ import {
   ResolvedField,
   ResolvedFieldConfig,
   ViewButton,
+  CustomSlotTab,
   RelationTab,
   SubRelationDetail,
   NavigationItem,
@@ -617,7 +618,9 @@ function resolveViewZones(
 // ─────────────────────────────────────────────────────────────────────────────
 
 function resolvePersonalizadoView(view: any, allViews: any[]): any {
-  const masterSlug: string | undefined = view.layout_config?.master_use_case_slug
+  const masterSlug: string | undefined =
+    view.layout_config?.master_use_case_slug ||
+    view.layout_config?.custom_slots?.[0]?.use_case_slug
   let resolvedMasterView: any = null
 
   // Tenta pelo slug configurado (evita auto-referência)
@@ -661,6 +664,7 @@ function resolvePersonalizadoView(view: any, allViews: any[]): any {
   // Herda campos e configurações do mestre (mesma lógica do Runtime)
   return {
     ...view,
+    model_id: view.model_id || resolvedMasterView.model_id,
     ui_components: resolvedMasterView.ui_components,
     layout_config: {
       ...view.layout_config,
@@ -2432,6 +2436,57 @@ export function parseMetaBuilderJSON(
       joins: combinedJoins,
     }
 
+    // ── Custom Slots (para logic_type === 'personalizado' ou views com layout_config.custom_slots configurado no Studio) ──
+    const rawSlots = resolvedView.layout_config?.custom_slots || rv.layout_config?.custom_slots
+    let customSlots: CustomSlotTab[] | undefined = undefined
+
+    if (Array.isArray(rawSlots) && rawSlots.length > 0) {
+      customSlots = rawSlots.map((slot: any) => {
+        const targetView = rawViews.find((v: any) => v.slug === slot.use_case_slug)
+        const targetModel = targetView ? (models.find((m: any) => m.id === targetView.model_id) || rawModels.find((m: any) => m.id === targetView.model_id)) : undefined
+
+        let fk = ''
+        if (targetModel && model) {
+          const mTableName = (model.dbTable || model.name || '').toLowerCase()
+          const mSingular = mTableName.endsWith('s') ? mTableName.slice(0, -1) : mTableName
+          const fkField = rawFields.find((f: any) => {
+            if (f.model_id !== targetModel.id) return false
+            const col = (f.db_column_name || f.dbColumn || '').toLowerCase()
+            const fkt = (f.foreign_key_table || '').toLowerCase()
+            return (
+              (fkt && fkt === mTableName) ||
+              col === `${mTableName}_id` ||
+              col === `${mSingular}_id` ||
+              col === `id_${mTableName}` ||
+              col === `id_${mSingular}` ||
+              (f.config?.relation?.targetTable && f.config.relation.targetTable.toLowerCase() === mTableName)
+            )
+          })
+          if (fkField) {
+            fk = fkField.db_column_name || fkField.dbColumn
+          }
+        }
+
+        return {
+          id: slot.id,
+          title: slot.title || targetView?.name || slot.use_case_slug,
+          icon: slot.icon || targetView?.icon,
+          useCaseSlug: slot.use_case_slug,
+          widgetType: slot.type || targetView?.logic_type || 'form',
+          targetModelId: targetModel?.id,
+          targetModelTable: targetModel?.dbTable || (targetModel as any)?.db_table_name,
+          targetModelName: targetModel?.name,
+          foreignKey: fk,
+          relationPath: slot.relation_path,
+          canView: slot.can_view !== false,
+          canAdd: slot.can_add !== false,
+          canEdit: slot.can_edit !== false,
+          canDelete: slot.can_delete !== false,
+          renderMode: slot.render_mode || 'tab',
+        }
+      })
+    }
+
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
       viewSlug: rv.slug || '',
@@ -2460,6 +2515,7 @@ export function parseMetaBuilderJSON(
       analyticsConfig,
       buttons,
       relationTabs,
+      customSlots,
       actionInterfaceType: resolvedView.layout_config?.action_interface_type || resolvedView.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (resolvedView.logic_type === 'mapa_mental' || resolvedView.logic_type === 'timeline' ? 'modal' : 'page'),
       rawLayoutConfig: resolvedView.layout_config,
     })
