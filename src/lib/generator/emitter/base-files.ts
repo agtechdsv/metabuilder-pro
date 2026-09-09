@@ -83,7 +83,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
   const supaUrl = ast.supabaseUrl || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const supaKey = ast.supabaseAnonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-  if (ast.dbStack !== 'supabase' && (ast.routes.some(r => r.isAiGenerated) || ast.supabaseUrl)) {
+  if (ast.dbStack === 'supabase') {
     if (supaUrl) envLines.push(`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`)
     if (supaKey) envLines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
   }
@@ -778,6 +778,7 @@ ${navCards}
     files.set('utils/supabase/client.ts', `import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
+  ${ast.dbStack === 'supabase' ? `
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -785,8 +786,11 @@ export function createClient() {
     return createBrowserClient(url, key)
   }
 
-  // Fallback para Banco Local Relacional (PostgreSQL / MySQL / etc.)
   return createLocalDbClient()
+  ` : `
+  // Banco Relacional Local (${ast.dbStack}): roteia chamadas de IA diretamente para o banco local via /api/ai-db
+  return createLocalDbClient()
+  `}
 }
 
 function createLocalDbClient() {
@@ -830,12 +834,30 @@ function createLocalDbClient() {
         },
         insert: (payload: any) => {
           currentQuery.action = 'insert'
-          currentQuery.mutationPayload = payload
+          if (Array.isArray(payload)) {
+            currentQuery.mutationPayload = payload.map((p: any) => {
+              const copy = { ...p }
+              delete copy.project_id
+              return copy
+            })
+          } else if (payload && typeof payload === 'object') {
+            const copy = { ...payload }
+            delete copy.project_id
+            currentQuery.mutationPayload = copy
+          } else {
+            currentQuery.mutationPayload = payload
+          }
           return chain
         },
         update: (payload: any) => {
           currentQuery.action = 'update'
-          currentQuery.mutationPayload = payload
+          if (payload && typeof payload === 'object') {
+            const copy = { ...payload }
+            delete copy.project_id
+            currentQuery.mutationPayload = copy
+          } else {
+            currentQuery.mutationPayload = payload
+          }
           return chain
         },
         delete: () => {
@@ -843,11 +865,15 @@ function createLocalDbClient() {
           return chain
         },
         eq: (col: string, val: any) => {
-          currentQuery.filters.push({ col, op: '=', val })
+          if (col !== 'project_id') {
+            currentQuery.filters.push({ col, op: '=', val })
+          }
           return chain
         },
         neq: (col: string, val: any) => {
-          currentQuery.filters.push({ col, op: '!=', val })
+          if (col !== 'project_id') {
+            currentQuery.filters.push({ col, op: '!=', val })
+          }
           return chain
         },
         gt: (col: string, val: any) => {

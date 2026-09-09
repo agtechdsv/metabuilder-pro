@@ -25,5 +25,11 @@ export function generateAiPage(route: RouteNode, ast: AppAST): string {
     code = `const PROJECT_ID = process.env.NEXT_PUBLIC_PROJECT_ID || '${projectIdVal}';\n\n` + code
   }
 
+  // Em bancos relacionais locais (PostgreSQL, MySQL, etc.), limpa referências RLS de project_id
+  if (ast.dbStack !== 'supabase') {
+    code = code.replace(/\.eq\(\s*['"]project_id['"]\s*,\s*[^)]+\)/g, '')
+    code = code.replace(/\bproject_id\s*:\s*PROJECT_ID\s*,?/g, '')
+  }
+
   return `"use client";\n\n${code}\n`
 }

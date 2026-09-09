@@ -83,8 +83,6 @@ export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string>
     files.set('.env.local', lines.join('\n'))
   } else {
     const lines = [`DATABASE_URL="${ast.dbConnectionString || ''}"`]
-    if (supaUrl) lines.push(`NEXT_PUBLIC_SUPABASE_URL="${supaUrl}"`)
-    if (supaKey) lines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${supaKey}"`)
     if (firstProjectId) lines.push(`NEXT_PUBLIC_PROJECT_ID="${firstProjectId}"`)
     files.set('.env.local', lines.join('\n'))
   }
