@@ -35,6 +35,9 @@ export function useIDEServer({
   const [isStoppingSpring, setIsStoppingSpring] = useState(false)
   const [springPort, setSpringPort] = useState(8080)
 
+  // ── Modals State ──
+  const [nodePromptResolver, setNodePromptResolver] = useState<{ resolve: (val: boolean) => void } | null>(null)
+
   const getProjectPath = async () => {
     const home = await homeDir()
     return `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${target!.slug}`
@@ -45,7 +48,11 @@ export function useIDEServer({
       await invoke('check_node_available')
       return true
     } catch (e) {
-      if (window.confirm('O Node.js (v20+) é necessário para rodar o frontend.\n\nDeseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)')) {
+      const userWantsToInstall = await new Promise<boolean>((resolve) => {
+        setNodePromptResolver({ resolve })
+      })
+
+      if (userWantsToInstall) {
         try {
           addConsoleLog('▶ Iniciando download do Node.js Portátil...', 'info')
           const { Command } = await import('@tauri-apps/plugin-shell')
@@ -420,6 +427,8 @@ export function useIDEServer({
     handleOpenBrowser,
     getProjectPath,
     isJavaSpringProject,
+    nodePromptResolver,
+    setNodePromptResolver,
     // Spring Boot
     springProcess,
     isStartingSpring,

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Package, Play, Square, AppWindow, Trash2, X, Coffee, BookOpen } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { ConsoleLog } from '@/contexts/ide/useIDEConsole'
+import { Modal } from '@/components/ui/Modal'
 
 export interface IDEConsolePanelProps {
   showConsole: boolean
@@ -33,6 +34,9 @@ export interface IDEConsolePanelProps {
   clearConsole: () => void
   consoleLogs: ConsoleLog[]
   consoleEndRef: React.RefObject<HTMLDivElement | null>
+  // Prompt Node
+  nodePromptResolver: { resolve: (val: boolean) => void } | null
+  setNodePromptResolver: React.Dispatch<React.SetStateAction<{ resolve: (val: boolean) => void } | null>>
 }
 
 export function IDEConsolePanel({
@@ -59,6 +63,8 @@ export function IDEConsolePanel({
   clearConsole,
   consoleLogs,
   consoleEndRef,
+  nodePromptResolver,
+  setNodePromptResolver,
 }: IDEConsolePanelProps) {
   const { t } = useI18n()
 
@@ -309,6 +315,42 @@ export function IDEConsolePanel({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Node.js Portable Prompt */}
+      <Modal
+        isOpen={!!nodePromptResolver}
+        onClose={() => {
+          nodePromptResolver?.resolve(false)
+          setNodePromptResolver(null)
+        }}
+        title="MetaBuilder Pro"
+        size="md"
+      >
+        <div className="flex flex-col gap-4 text-sm text-neutral-300">
+          <p>O Node.js (v20+) é necessário para rodar o frontend.</p>
+          <p>Deseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)</p>
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              onClick={() => {
+                nodePromptResolver?.resolve(false)
+                setNodePromptResolver(null)
+              }}
+              className="px-4 py-2 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                nodePromptResolver?.resolve(true)
+                setNodePromptResolver(null)
+              }}
+              className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors shadow-sm"
+            >
+              Baixar e Instalar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }

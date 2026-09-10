@@ -349,6 +349,13 @@ fn check_node_available(app: tauri::AppHandle) -> Result<(), String> {
     }
 
     // 2. Verifica Node global
+    #[cfg(target_os = "windows")]
+    let output = std::process::Command::new("cmd")
+        .args(["/c", "node -v"])
+        .output()
+        .map_err(|_| "node not found".to_string())?;
+
+    #[cfg(not(target_os = "windows"))]
     let output = std::process::Command::new("node")
         .arg("-v")
         .output()

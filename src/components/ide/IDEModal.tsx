@@ -201,6 +201,8 @@ export function IDEModal({
               handleStopSpring={server.handleStopSpring}
               handleOpenSpringSwagger={server.handleOpenSpringSwagger}
               springPort={server.springPort}
+              nodePromptResolver={server.nodePromptResolver}
+              setNodePromptResolver={server.setNodePromptResolver}
             />
           </div>
         </motion.div>
