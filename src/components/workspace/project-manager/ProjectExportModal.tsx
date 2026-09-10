@@ -7,7 +7,9 @@ import {
   CheckCircle,
   X,
   FolderOpen,
-  Copy
+  Copy,
+  Server,
+  Coffee
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isTauri } from '@/utils/tauriUtils'
@@ -23,7 +25,10 @@ interface ProjectExportModalProps {
     authStrategy: string,
     legacyDriver: string,
     dbConfig?: any,
-    authConfig?: any
+    authConfig?: any,
+    backendStack?: string,
+    javaGroupId?: string,
+    javaPort?: number
   ) => void
   exportModels: any[]
 }
@@ -34,7 +39,10 @@ export function ProjectExportModal({
   onStartExport,
   exportModels
 }: ProjectExportModalProps) {
-  const [exportTab, setExportTab] = useState<'database' | 'auth'>('database')
+  const [exportTab, setExportTab] = useState<'backend' | 'database' | 'auth'>('backend')
+  const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
+  const [javaGroupId, setJavaGroupId] = useState('com.app')
+  const [javaPort, setJavaPort] = useState(8080)
   const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>('supabase')
   const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>('none')
   const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>('supabase')
@@ -103,7 +111,10 @@ export function ProjectExportModal({
             db_user_role_column: 'id',
             db_password_hash: exportAuthHash
           }
-        : null
+        : null,
+      backendStack,
+      javaGroupId,
+      javaPort
     )
   }
 
@@ -140,6 +151,17 @@ export function ProjectExportModal({
               <div className="flex border-b border-neutral-200 dark:border-neutral-800">
                 <button
                   type="button"
+                  onClick={() => setExportTab('backend')}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
+                    exportTab === 'backend'
+                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                  }`}
+                >
+                  Backend & API
+                </button>
+                <button
+                  type="button"
                   onClick={() => setExportTab('database')}
                   className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
                     exportTab === 'database'
@@ -161,6 +183,86 @@ export function ProjectExportModal({
                   Autenticação (Login)
                 </button>
               </div>
+
+              {/* Backend Tab */}
+              {exportTab === 'backend' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setBackendStack('nodejs')}
+                      className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                        backendStack === 'nodejs'
+                          ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${backendStack === 'nodejs' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'}`}>
+                        {backendStack === 'nodejs' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                      </div>
+                      <div className="flex flex-col flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">Next.js Full-Stack (Node.js)</p>
+                          <span className="text-green-400 font-bold text-xs">Node</span>
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          App Router + React Server Components + Server Actions diretas ao banco.
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBackendStack('java-spring')}
+                      className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                        backendStack === 'java-spring'
+                          ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${backendStack === 'java-spring' ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'}`}>
+                        {backendStack === 'java-spring' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                      </div>
+                      <div className="flex flex-col flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">Next.js + Spring Boot 3 (Java 21)</p>
+                          <Coffee className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          Frontend Next.js chamando API REST Spring Boot — estrutura dual frontend/backend.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
+                  {backendStack === 'java-spring' && (
+                    <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração Maven / Spring</p>
+                      <div className="space-y-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-neutral-500 font-sans text-xs">Maven Group ID</span>
+                          <input
+                            type="text"
+                            value={javaGroupId}
+                            onChange={(e) => setJavaGroupId(e.target.value)}
+                            className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-1.5 outline-none focus:border-indigo-500"
+                            placeholder="com.app"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-neutral-500 font-sans text-xs">Porta Spring Boot</span>
+                          <input
+                            type="number"
+                            value={javaPort}
+                            onChange={(e) => setJavaPort(Number(e.target.value))}
+                            className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg px-3 py-1.5 outline-none focus:border-indigo-500"
+                            placeholder="8080"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Database Tab */}
               {exportTab === 'database' && (

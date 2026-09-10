@@ -4,9 +4,12 @@ import React from 'react'
 import {
   FolderGit2, XCircle, Loader2, CheckCircle2, DownloadCloud,
   Save, UploadCloud, Download, History, Settings, Package,
-  PanelBottomOpen, PanelLeftOpen, Minimize2, X
+  PanelBottomOpen, PanelLeftOpen, Minimize2, X,
+  Server, Coffee
 } from 'lucide-react'
+import { useState } from 'react'
 import { useI18n } from '@/i18n'
+import { Modal } from '@/components/ui/Modal'
 
 export interface IDEHeaderProps {
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string }
@@ -15,7 +18,7 @@ export interface IDEHeaderProps {
   isDiscarding: boolean
   isConfirming: boolean
   handleOpenCommitModal: (mode: 'commit' | 'merge') => void
-  handleSyncFromWeb: () => void
+  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number) => void
   isSyncing: boolean
   selectedBranch: string
   handleBranchChange: (branch: string) => void
@@ -66,6 +69,15 @@ export function IDEHeader({
   closeIDE
 }: IDEHeaderProps) {
   const { t } = useI18n()
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
+  const [javaGroupId, setJavaGroupId] = useState('com.app')
+  const [javaPort, setJavaPort] = useState(8080)
+
+  const confirmSync = () => {
+    setIsSyncModalOpen(false)
+    handleSyncFromWeb(backendStack, javaGroupId, javaPort)
+  }
 
   return (
     <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-center justify-between px-4 py-2 shrink-0 shadow-lg relative">
@@ -107,7 +119,7 @@ export function IDEHeader({
             </>
           ) : (
             <button
-              onClick={handleSyncFromWeb}
+              onClick={() => setIsSyncModalOpen(true)}
               disabled={isSyncing}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
             >
@@ -233,6 +245,52 @@ export function IDEHeader({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Sync Modal */}
+      <Modal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Configuração de Sincronização">
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-neutral-400">
+            Selecione a stack de Backend para gerar o código na IDE Local.
+          </p>
+          <div className="grid grid-cols-1 gap-2">
+            <label className={`flex items-center gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${
+              backendStack === 'nodejs' ? 'border-indigo-500 bg-indigo-600/10' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-800/50'
+            }`}>
+              <input type="radio" checked={backendStack === 'nodejs'} onChange={() => setBackendStack('nodejs')} className="w-4 h-4 accent-indigo-500" />
+              <div className="flex flex-col">
+                <span className="font-semibold text-neutral-100 text-sm">Next.js Full-Stack (Node.js)</span>
+              </div>
+            </label>
+            <label className={`flex items-center gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${
+              backendStack === 'java-spring' ? 'border-indigo-500 bg-indigo-600/10' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-800/50'
+            }`}>
+              <input type="radio" checked={backendStack === 'java-spring'} onChange={() => setBackendStack('java-spring')} className="w-4 h-4 accent-indigo-500" />
+              <div className="flex flex-col">
+                <span className="font-semibold text-neutral-100 text-sm">Next.js + Spring Boot 3 (Java 21)</span>
+              </div>
+            </label>
+          </div>
+          
+          {backendStack === 'java-spring' && (
+            <div className="p-3 bg-black/20 border border-neutral-800 rounded-lg space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Maven Group ID</label>
+                <input type="text" value={javaGroupId} onChange={e => setJavaGroupId(e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-neutral-400 mb-1">Porta do Spring Boot</label>
+                <input type="number" value={javaPort} onChange={e => setJavaPort(Number(e.target.value))} className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-end pt-2">
+            <button onClick={confirmSync} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-500 transition-colors">
+              Sincronizar Agora
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

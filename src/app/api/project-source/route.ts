@@ -10,6 +10,9 @@ export async function POST(request: Request) {
     const dataMode = payload.dataMode
     const legacyDriver = payload.legacyDriver
     const dbConfig = payload.dbConfig
+    const backendStack = payload.backendStack || 'nodejs'
+    const javaGroupId = payload.javaGroupId
+    const javaPort = payload.javaPort
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -81,6 +84,9 @@ export async function POST(request: Request) {
       dbConnectionString: dbConfig?.url,
       supabaseUrl: project.supabase_url || process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      backendStack,
+      javaGroupId,
+      javaPort
     }
 
     // --- CLEAN CODE GENERATOR ---

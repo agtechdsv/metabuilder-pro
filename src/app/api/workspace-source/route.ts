@@ -15,7 +15,15 @@ import { DbType } from '@/lib/generator/ast'
  */
 export async function POST(request: Request) {
   try {
-    const { workspaceId, dbStack = 'postgres', dbConfig, legacyDriver } = await request.json()
+    const {
+      workspaceId,
+      dbStack = 'postgres',
+      dbConfig,
+      legacyDriver,
+      backendStack = 'nodejs',
+      javaGroupId,
+      javaPort
+    } = await request.json()
     const supabase = await createClient()
 
     // 1. Autenticação
@@ -53,6 +61,9 @@ export async function POST(request: Request) {
       dbConnectionString: dbConfig?.url,
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      backendStack,
+      javaGroupId,
+      javaPort
     }
 
     // 5. Parser → AST

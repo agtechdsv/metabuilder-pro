@@ -13,7 +13,13 @@ import JSZip from 'jszip'
  */
 export async function POST(request: Request) {
   try {
-    const { workspaceId, dbStack = 'postgres' } = await request.json()
+    const {
+      workspaceId,
+      dbStack = 'postgres',
+      backendStack = 'nodejs',
+      javaGroupId,
+      javaPort
+    } = await request.json()
     const supabase = await createClient()
 
     // 1. Autenticação
@@ -45,7 +51,11 @@ export async function POST(request: Request) {
     }
 
     // 4. Parser → AST
-    const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType)
+    const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType, {
+      backendStack,
+      javaGroupId,
+      javaPort
+    })
 
     // 5. Emitter → File Map
     const fileMap = generateWorkspaceProject(ast)
@@ -65,7 +75,7 @@ export async function POST(request: Request) {
     return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${workspace.slug || 'workspace'}-native-source.zip"`,
+        'Content-Disposition': `attachment; filename="${workspace.slug || 'workspace'}-${backendStack === 'java-spring' ? 'java-spring' : 'nodejs'}-source.zip"`,
         'Content-Length': zipBuffer.length.toString()
       }
     })

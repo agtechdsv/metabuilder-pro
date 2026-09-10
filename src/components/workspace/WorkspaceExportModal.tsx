@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { DownloadCloud, Loader2, Code2, Database, CheckCircle2, Layers } from 'lucide-react'
-import { DbType } from '@/lib/generator/ast'
+import { DownloadCloud, Loader2, Code2, Database, CheckCircle2, Layers, Coffee, Server } from 'lucide-react'
+import { DbType, BackendStack } from '@/lib/generator/ast'
 import { useToast } from '@/components/ui/Toast'
 
 interface WorkspaceExportModalProps {
@@ -12,6 +12,21 @@ interface WorkspaceExportModalProps {
   workspaceId: string
   projectCount: number
 }
+
+const BACKEND_OPTIONS: { value: BackendStack; label: string; description: string; icon: React.ReactNode }[] = [
+  {
+    value: 'nodejs',
+    label: 'Next.js Full-Stack (Node.js)',
+    description: 'App Router + React Server Components + Server Actions diretas ao banco',
+    icon: <span className="text-green-400 font-bold text-xs">Node</span>,
+  },
+  {
+    value: 'java-spring',
+    label: 'Next.js + Spring Boot 3 (Java 21)',
+    description: 'Frontend Next.js chamando API REST Spring Boot — estrutura dual frontend/backend',
+    icon: <Coffee className="w-4 h-4 text-amber-400" />,
+  },
+]
 
 const DB_OPTIONS: { value: DbType; label: string; description: string }[] = [
   { value: 'postgres', label: 'PostgreSQL (pg)', description: 'Queries parametrizadas diretas ($1, $2...)' },
@@ -27,6 +42,9 @@ export function WorkspaceExportModal({
   const { toast } = useToast()
   const [isExporting, setIsExporting] = useState(false)
   const [dbStack, setDbStack] = useState<DbType>('postgres')
+  const [backendStack, setBackendStack] = useState<BackendStack>('nodejs')
+  const [javaGroupId, setJavaGroupId] = useState('com.app')
+  const [javaPort, setJavaPort] = useState(8080)
   const [done, setDone] = useState(false)
 
   if (!isOpen) return null
@@ -37,7 +55,14 @@ export function WorkspaceExportModal({
       const res = await fetch('/api/export-workspace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId, dbStack })
+        body: JSON.stringify({ 
+          workspaceId, 
+          dbStack,
+          backendStack,
+          javaGroupId: backendStack === 'java-spring' ? javaGroupId : undefined,
+          javaPort: backendStack === 'java-spring' ? javaPort : undefined,
+          javaVersion: 21,
+        })
       })
 
       if (!res.ok) {
@@ -49,7 +74,7 @@ export function WorkspaceExportModal({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${workspaceSlug}-native-source.zip`
+      a.download = `${workspaceSlug}-${backendStack === 'java-spring' ? 'java-spring' : 'nodejs'}-source.zip`
       a.click()
       URL.revokeObjectURL(url)
 
@@ -64,6 +89,10 @@ export function WorkspaceExportModal({
 
   const handleClose = () => {
     setDone(false)
+    setBackendStack('nodejs')
+    setDbStack('postgres')
+    setJavaGroupId('com.app')
+    setJavaPort(8080)
     onClose()
   }
 
@@ -84,20 +113,87 @@ export function WorkspaceExportModal({
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <CheckCircle2 className="w-12 h-12 text-green-400" />
               <p className="text-white font-semibold">Workspace exportado com sucesso!</p>
-              <p className="text-neutral-400 text-sm">
-                O ZIP contém um único projeto <strong className="text-white">Next.js</strong> com um
-                portal de entrada e <strong className="text-white">{projectCount} sub-rota{projectCount !== 1 ? 's' : ''}</strong>.
-                <br />Extraia, rode <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-indigo-300">npm install</code> e depois <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-indigo-300">npm run dev</code>.
-              </p>
+              {backendStack === 'java-spring' ? (
+                <p className="text-neutral-400 text-sm">
+                  Estrutura dual gerada: <strong className="text-white">frontend/</strong> (Next.js multi-projeto) e{' '}
+                  <strong className="text-white">backend/</strong> (Spring Boot).
+                </p>
+              ) : (
+                <p className="text-neutral-400 text-sm">
+                  O ZIP contém um único projeto <strong className="text-white">Next.js</strong> com um
+                  portal de entrada e <strong className="text-white">{projectCount} sub-rota{projectCount !== 1 ? 's' : ''}</strong>.
+                  <br />Extraia, rode <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-indigo-300">npm install</code> e depois <code className="bg-neutral-800 px-1.5 py-0.5 rounded text-indigo-300">npm run dev</code>.
+                </p>
+              )}
             </div>
           ) : (
             <>
               <p className="text-sm text-neutral-400">
-                Gera um único projeto <strong className="text-white">Next.js App Router</strong> com um
-                portal de entrada e um projeto por sub-rota. Cada projeto mantém seu próprio sistema de login.
+                Gera a estrutura completa do Workspace, com um portal de entrada e um projeto por sub-rota. Cada projeto mantém seu próprio sistema de login.
               </p>
 
               <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200 mb-3">
+                  <Server className="w-4 h-4 text-indigo-400" />
+                  Stack de Backend & API
+                </label>
+                <div className="grid grid-cols-1 gap-2 mb-6">
+                  {BACKEND_OPTIONS.map(opt => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${
+                        backendStack === opt.value
+                          ? 'border-indigo-500 bg-indigo-600/10'
+                          : 'border-neutral-700 hover:border-neutral-500 bg-neutral-800/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="wsBackendStack"
+                        checked={backendStack === opt.value}
+                        onChange={() => setBackendStack(opt.value)}
+                        className="w-4 h-4 accent-indigo-500"
+                      />
+                      <div className="flex items-center justify-center w-8 h-8 rounded bg-neutral-900 border border-neutral-700 shrink-0">
+                        {opt.icon}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-neutral-100 text-sm">{opt.label}</span>
+                        <span className="text-xs text-neutral-500">{opt.description}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                {backendStack === 'java-spring' && (
+                  <div className="mb-6 p-4 bg-black/20 border border-neutral-800 rounded-lg space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-400 mb-1">
+                        Maven Group ID
+                      </label>
+                      <input
+                        type="text"
+                        value={javaGroupId}
+                        onChange={e => setJavaGroupId(e.target.value)}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+                        placeholder="com.app"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-400 mb-1">
+                        Porta do Spring Boot
+                      </label>
+                      <input
+                        type="number"
+                        value={javaPort}
+                        onChange={e => setJavaPort(Number(e.target.value))}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono"
+                        placeholder="8080"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200 mb-3">
                   <Database className="w-4 h-4 text-indigo-400" />
                   Stack de Banco de Dados

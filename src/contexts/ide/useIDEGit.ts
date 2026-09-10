@@ -66,7 +66,7 @@ export function useIDEGit({
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
 
-  const handleSyncFromWeb = async () => {
+  const handleSyncFromWeb = async (backendStack: string = 'nodejs', javaGroupId?: string, javaPort?: number) => {
     if (!syncManager || !target) return
     setIsSyncing(true)
     try {
@@ -75,6 +75,12 @@ export function useIDEGit({
 
       const apiRoute = target.type === 'project' ? '/api/project-source' : '/api/workspace-source'
       let payload: any = target.type === 'project' ? { projectId: target.id } : { workspaceId: target.id }
+      
+      payload.backendStack = backendStack
+      if (backendStack === 'java-spring') {
+        payload.javaGroupId = javaGroupId
+        payload.javaPort = javaPort
+      }
 
       try {
         const configStr = await tauriFs.readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData })

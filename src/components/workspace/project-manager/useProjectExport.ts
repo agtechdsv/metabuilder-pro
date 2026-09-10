@@ -62,7 +62,10 @@ export function useProjectExport() {
     authStrategy: string,
     legacyDriver: string,
     dbConfig?: any,
-    authConfig?: any
+    authConfig?: any,
+    backendStack: string = 'nodejs',
+    javaGroupId?: string,
+    javaPort?: number
   ) => {
     setDownloadModal({
       open: true,
@@ -100,7 +103,11 @@ export function useProjectExport() {
           supabaseUrl: dbConfig?.supabaseUrl,
           supabaseAnonKey: dbConfig?.supabaseAnonKey,
           authStrategy,
-          authConfig
+          authConfig,
+          backendStack,
+          javaGroupId: backendStack === 'java-spring' ? javaGroupId : undefined,
+          javaPort: backendStack === 'java-spring' ? javaPort : undefined,
+          javaVersion: 21
         })
       })
       if (!res.ok) {
