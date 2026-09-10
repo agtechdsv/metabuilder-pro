@@ -98,28 +98,49 @@ export function generateDetailTabsClient(route: RouteNode): string {
   const masterSlot = hasCustomSlots ? route.customSlots![0] : undefined
   const detailSlots = hasCustomSlots ? route.customSlots!.slice(1) : []
 
+  const getSlotIconName = (icon?: string, widgetType?: string): string => {
+    if (icon && icon.trim() !== '') return icon
+    switch (widgetType) {
+      case 'timeline': return 'Clock'
+      case 'scheduler': return 'Calendar'
+      case 'galeria': return 'Image'
+      case 'kanban': return 'Activity'
+      case 'mapa_mental': return 'Settings'
+      case 'analytics': return 'BarChart3'
+      case 'grid': return 'Grid'
+      case 'form':
+      case 'pesquisa_cadastro':
+      default:
+        return 'AlignJustify'
+    }
+  }
+
   const tabButtons = hasCustomSlots
-    ? detailSlots.map((slot, i) => [
-        `            <button`,
-        `              type="button"`,
-        `              onClick={() => { setActiveTab(${i + 1}); setVisitedTabs(p => ({ ...p, [${i + 1}]: true })) }}`,
-        `              className={activeTab === ${i + 1}`,
-        `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'`,
-        `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'}`,
-        `            >`,
-        slot.icon ? `              <DynamicIcon icon="${slot.icon}" size={16} />` : '',
-        `              <span>${slot.title}</span>`,
-        `            </button>`,
-      ].filter(Boolean).join('\n')).join('\n')
+    ? detailSlots.map((slot, i) => {
+        const iconName = getSlotIconName(slot.icon, slot.widgetType)
+        return [
+          `            <button`,
+          `              type="button"`,
+          `              onClick={() => { setActiveTab(${i + 1}); setVisitedTabs(p => ({ ...p, [${i + 1}]: true })) }}`,
+          `              className={activeTab === ${i + 1}`,
+          `                ? 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-indigo-600 text-indigo-600'`,
+          `                : 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`,
+          `            >`,
+          `              <DynamicIcon icon="${iconName}" size={14} />`,
+          `              <span>${slot.title}</span>`,
+          `            </button>`,
+        ].join('\n')
+      }).join('\n')
     : (hasRelationTabs
         ? route.relationTabs.map((tab, i) => [
             `            <button`,
             `              type="button"`,
             `              onClick={() => { setActiveTab(${i + 1}); setVisitedTabs(p => ({ ...p, [${i + 1}]: true })) }}`,
             `              className={activeTab === ${i + 1}`,
-            `                ? 'text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'`,
-            `                : 'text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0'}`,
+            `                ? 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-indigo-600 text-indigo-600'`,
+            `                : 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`,
             `            >`,
+            `              <DynamicIcon icon="List" size={14} />`,
             `              <span>${tab.label}</span>`,
             `            </button>`,
           ].join('\n')).join('\n')
@@ -278,11 +299,23 @@ export function generateDetailTabsClient(route: RouteNode): string {
         return [
           `          <div className={activeTab === ${i + 1} ? 'block w-full' : 'hidden'}>`,
           `            {visitedTabs[${i + 1}] && (`,
-          `              <iframe`,
-          `                src={\`/${slot.useCaseSlug}?embedded=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
-          `                className="w-full min-h-[750px] border-0 rounded-2xl bg-transparent transition-opacity duration-300"`,
-          `                title="${slot.title}"`,
-          `              />`,
+          `              <div className="relative w-full min-h-[400px]">`,
+          `                {!loadedIframes[${i + 1}] && (`,
+          `                  <div className="py-24 flex flex-col items-center justify-center gap-3 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-3xl animate-in fade-in duration-200">`,
+          `                    <Loader2 className="w-9 h-9 animate-spin text-indigo-500" />`,
+          `                    <div className="text-center">`,
+          `                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>`,
+          `                      <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Buscando dados via Túnel Seguro</p>`,
+          `                    </div>`,
+          `                  </div>`,
+          `                )}`,
+          `                <iframe`,
+          `                  src={\`/${slot.useCaseSlug}?embedded=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
+          `                  className={\`w-full border-0 bg-transparent transition-opacity duration-300 \${!loadedIframes[${i + 1}] ? 'opacity-0 h-0 min-h-0 overflow-hidden' : 'min-h-[800px] opacity-100'}\`}`,
+          `                  title="${slot.title}"`,
+          `                  onLoad={() => setLoadedIframes(p => ({ ...p, [${i + 1}]: true }))}`,
+          `                />`,
+          `              </div>`,
           `            )}`,
           `          </div>`,
         ].join('\n')
@@ -290,23 +323,25 @@ export function generateDetailTabsClient(route: RouteNode): string {
     : ''
 
   const masterTitle = hasCustomSlots ? (masterSlot?.title || title) : title
-  const masterIcon = hasCustomSlots ? masterSlot?.icon : undefined
+  const masterIconName = getSlotIconName(masterSlot?.icon, masterSlot?.widgetType || 'form')
 
   const tabsHeader = hasAnyTabs
     ? `
-          {/* Barra de Abas no Topo do Card */}
-          <div className="flex items-center gap-8 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-8 relative z-10 overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => { setActiveTab(0); setVisitedTabs(p => ({ ...p, 0: true })) }}
-              className={activeTab === 0
-                ? "text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0"
-                : "text-sm font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 pb-3 -mb-3.5 tracking-wide transition-all flex items-center gap-2 shrink-0"}
-            >
-              ${masterIcon ? `<DynamicIcon icon="${masterIcon}" size={16} />` : ''}
-              <span>${masterTitle}</span>
-            </button>
+          {/* Custom Tabs Header fiel à Web Produção */}
+          <div className="px-6 pt-2 border-b border-neutral-100 dark:border-neutral-800">
+            <div className="flex gap-1 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => { setActiveTab(0); setVisitedTabs(p => ({ ...p, 0: true })) }}
+                className={activeTab === 0
+                  ? "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-indigo-600 text-indigo-600"
+                  : "flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"}
+              >
+                <DynamicIcon icon="${masterIconName}" size={14} />
+                <span>${masterTitle}</span>
+              </button>
 ${tabButtons}
+            </div>
           </div>`
     : ''
 
@@ -329,7 +364,7 @@ import { useSearchParams } from 'next/navigation'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { CloseModalButton } from '@/components/ui/custom-action-button'
-${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap } from 'lucide-react'
+${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap, Loader2 } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''
@@ -460,6 +495,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
   const isView = (searchParams?.get('mode') === 'view') || initialMode === 'view'
   const [activeTab, setActiveTab] = useState(0)
   const [visitedTabs, setVisitedTabs] = useState<Record<number, boolean>>({ 0: true })
+  const [loadedIframes, setLoadedIframes] = useState<Record<number, boolean>>({})
   const isEdit = true
 
 ${Array.from(lookupModels.entries()).map(([tTable]) => `  const [${tTable}LookupList, set${tTable}LookupList] = useState<any[]>(cached${tTable}LookupList)`).join('\n')}
@@ -518,19 +554,25 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
       )}
 
       {/* Card Principal de Edição */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden space-y-8">
-        {/* Cabeçalho Interno do Card */}
-        <div className="flex items-center justify-between">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm flex flex-col">
+        {/* Cabeçalho Interno do Card fiel à Web Produção */}
+        <div className="flex items-center justify-between p-8 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
               {isView ? <Eye className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-                {(isView ? 'Visualizar ' : 'Editar ') + (title.endsWith('s') ? title.slice(0, -1) : title)}
-              </h2>
-              <p className="text-xs font-medium text-neutral-400 mt-0.5">
-                {${route.rawLayoutConfig?.form_header_subtitle_field ? `String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')` : `String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')`}}
+              <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                ${hasCustomSlots
+                  ? `{(isView ? 'Visualizar Item' : 'Editar Item')}`
+                  : `{(isView ? 'Visualizar ' : 'Editar ') + (title.endsWith('s') ? title.slice(0, -1) : title)}`}
+              </h3>
+              <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400 mt-0.5">
+                ${hasCustomSlots
+                  ? `{\`Registro #\${data?.id ?? data?.${pk} ?? id ?? 'N/A'}\`}`
+                  : (route.rawLayoutConfig?.form_header_subtitle_field
+                      ? `String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')`
+                      : `String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')`)}
               </p>
             </div>
           </div>
@@ -543,27 +585,29 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
                 window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
               }
             }}
-            className="flex items-center gap-2 text-xs font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors uppercase tracking-widest cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all uppercase cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Voltar para Lista
           </Link>
         </div>
 ${tabsHeader}
 
-        {/* Formulário com Suporte a Abas (Renderizados simultaneamente, alternados via CSS para não perder estado) */}
-        <div className={(!${hasAnyTabs} || activeTab === 0) ? 'block' : 'hidden'}>
-          <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView}>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
+        <div className="p-8">
+          {/* Formulário com Suporte a Abas */}
+          <div className={(!${hasAnyTabs} || activeTab === 0) ? 'block' : 'hidden'}>
+            <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView}>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
-            </div>
-          </DetailMasterForm>
-        </div>
-        
-        {${hasAnyTabs} && (
-          <div className={activeTab !== 0 ? 'block space-y-6' : 'hidden'}>
-${hasCustomSlots ? customTabPanels : tabPanels}
+              </div>
+            </DetailMasterForm>
           </div>
-        )}
+          
+          {${hasAnyTabs} && (
+            <div className={activeTab !== 0 ? 'block w-full' : 'hidden'}>
+${hasCustomSlots ? customTabPanels : tabPanels}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
