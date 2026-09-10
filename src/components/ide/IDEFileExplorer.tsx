@@ -4,7 +4,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Network, Trash2, Undo, UnfoldVertical, FoldVertical,
-  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical
+  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical, Coffee
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { FileNode } from '@/contexts/ide/useIDEFileSystem'
@@ -29,6 +29,8 @@ export interface IDEFileExplorerProps {
   setDeleteConfirm: (val: any) => void
   setCtxMenu: (val: any) => void
   isResizingExplorer: React.MutableRefObject<boolean>
+  /** Detectado via detectBackendStack(fileTree). Mostra badge Java no header. */
+  isJavaSpringProject?: boolean
 }
 
 export function IDEFileExplorer({
@@ -50,7 +52,8 @@ export function IDEFileExplorer({
   handleCopyPasteNode,
   setDeleteConfirm,
   setCtxMenu,
-  isResizingExplorer
+  isResizingExplorer,
+  isJavaSpringProject = false,
 }: IDEFileExplorerProps) {
   const { t } = useI18n()
 
@@ -198,6 +201,12 @@ export function IDEFileExplorer({
                   <Trash2 className="w-3 h-3" /> {t('workspace_components.ide_local.trash', 'Lixeira')}
                 </button>
               </div>
+              {/* Badge stack de backend */}
+              {isJavaSpringProject && (
+                <span className="ml-2 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5">
+                  <Coffee className="w-2.5 h-2.5" /> Spring
+                </span>
+              )}
               <div className="flex items-center gap-0.5 px-2">
                 {explorerActiveTab === 'trash' &&
                   (fileTree.find(n => n.name === '.trash')?.children?.length || 0) > 0 && (

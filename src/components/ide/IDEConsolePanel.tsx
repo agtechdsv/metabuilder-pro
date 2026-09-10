@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Package, Play, Square, AppWindow, Trash2, X } from 'lucide-react'
+import { Loader2, Package, Play, Square, AppWindow, Trash2, X, Coffee, BookOpen } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { ConsoleLog } from '@/contexts/ide/useIDEConsole'
 
@@ -11,6 +11,7 @@ export interface IDEConsolePanelProps {
   setShowConsole: React.Dispatch<React.SetStateAction<boolean>>
   consoleHeight: number
   isResizingConsole: React.MutableRefObject<boolean>
+  // Node.js
   handleInstall: () => Promise<void>
   isInstalling: boolean
   devProcess: any
@@ -19,6 +20,16 @@ export interface IDEConsolePanelProps {
   handleStop: () => Promise<void>
   isStoppingServer: boolean
   handleOpenBrowser: () => Promise<void>
+  // Spring Boot (opcionais — ausentes = modo Node.js puro)
+  isJavaSpringProject?: boolean
+  springProcess?: any
+  isStartingSpring?: boolean
+  isStoppingSpring?: boolean
+  handleStartSpring?: () => Promise<void>
+  handleStopSpring?: () => Promise<void>
+  handleOpenSpringSwagger?: () => Promise<void>
+  springPort?: number
+  // Console
   clearConsole: () => void
   consoleLogs: ConsoleLog[]
   consoleEndRef: React.RefObject<HTMLDivElement | null>
@@ -37,15 +48,23 @@ export function IDEConsolePanel({
   handleStop,
   isStoppingServer,
   handleOpenBrowser,
+  isJavaSpringProject = false,
+  springProcess,
+  isStartingSpring,
+  isStoppingSpring,
+  handleStartSpring,
+  handleStopSpring,
+  handleOpenSpringSwagger,
+  springPort = 8080,
   clearConsole,
   consoleLogs,
-  consoleEndRef
+  consoleEndRef,
 }: IDEConsolePanelProps) {
   const { t } = useI18n()
 
   return (
     <>
-      {/* Vertical Drag Handle (Editor vs Console) */}
+      {/* Drag Handle */}
       {showConsole && (
         <div
           className="h-1 cursor-row-resize hover:bg-indigo-500/50 transition-colors shrink-0 z-10"
@@ -69,67 +88,176 @@ export function IDEConsolePanel({
           >
             {/* Console toolbar */}
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800 shrink-0 bg-[#141414]">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mr-2">
                   Console
                 </span>
 
-                {/* Build */}
-                <button
-                  onClick={handleInstall}
-                  disabled={isInstalling || !!devProcess || isSyncing}
-                  title="Build (npm install)"
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
-                >
-                  {isInstalling ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Package className="w-3.5 h-3.5" />
-                  )}
-                  <span className="hidden sm:inline">Build</span>
-                </button>
+                {/* ── Node.js controls (sempre visíveis se não for java-spring) ── */}
+                {!isJavaSpringProject && (
+                  <>
+                    {/* Build */}
+                    <button
+                      onClick={handleInstall}
+                      disabled={isInstalling || !!devProcess || isSyncing}
+                      title="Build (npm install)"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
+                    >
+                      {isInstalling ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Package className="w-3.5 h-3.5" />
+                      )}
+                      <span className="hidden sm:inline">Build</span>
+                    </button>
 
-                {/* Start / Stop toggle */}
-                {!devProcess ? (
-                  <button
-                    onClick={handleStart}
-                    disabled={isInstalling || isSyncing}
-                    title="Start (npm run dev)"
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
-                  >
-                    <Play className="w-3.5 h-3.5 text-green-400" />
-                    <span className="hidden sm:inline">Start</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleStop}
-                    disabled={isStoppingServer}
-                    title={t('ide.tooltip.stop_server', 'Stop servidor')}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
-                  >
-                    {isStoppingServer ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    {/* Start / Stop Next.js */}
+                    {!devProcess ? (
+                      <button
+                        onClick={handleStart}
+                        disabled={isInstalling || isSyncing}
+                        title="Start (npm run dev)"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
+                      >
+                        <Play className="w-3.5 h-3.5 text-green-400" />
+                        <span className="hidden sm:inline">Start</span>
+                      </button>
                     ) : (
-                      <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />
+                      <button
+                        onClick={handleStop}
+                        disabled={isStoppingServer}
+                        title={t('ide.tooltip.stop_server', 'Stop servidor')}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
+                      >
+                        {isStoppingServer ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {isStoppingServer
+                            ? t('workspace_components.ide_local.stopping', 'Parando...')
+                            : t('workspace_components.ide_local.stop', 'Stop')}
+                        </span>
+                      </button>
                     )}
-                    <span className="hidden sm:inline">
-                      {isStoppingServer
-                        ? t('workspace_components.ide_local.stopping', 'Parando...')
-                        : t('workspace_components.ide_local.stop', 'Stop')}
-                    </span>
-                  </button>
+
+                    {/* Open Browser */}
+                    <button
+                      onClick={handleOpenBrowser}
+                      disabled={!devProcess}
+                      title={t('ide.tooltip.open_browser', 'Abrir no Browser')}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
+                    >
+                      <AppWindow className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Browser</span>
+                    </button>
+                  </>
                 )}
 
-                {/* Open Browser */}
-                <button
-                  onClick={handleOpenBrowser}
-                  disabled={!devProcess}
-                  title={t('ide.tooltip.open_browser', 'Abrir no Browser')}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
-                >
-                  <AppWindow className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Browser</span>
-                </button>
+                {/* ── Spring Boot controls ── */}
+                {isJavaSpringProject && (
+                  <>
+                    {/* Separador visual */}
+                    <span className="w-px h-4 bg-neutral-700 mx-1" />
+                    <span className="text-[10px] text-amber-500/70 font-semibold flex items-center gap-1">
+                      <Coffee className="w-3 h-3" /> Spring Boot :{springPort}
+                    </span>
+
+                    {/* Start / Stop Spring Boot */}
+                    {!springProcess ? (
+                      <button
+                        onClick={handleStartSpring}
+                        disabled={!!isStartingSpring || isSyncing}
+                        title="Start Spring Boot (mvn spring-boot:run)"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
+                      >
+                        {isStartingSpring ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 text-amber-400" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {isStartingSpring ? 'Iniciando...' : 'Start Java'}
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStopSpring}
+                        disabled={!!isStoppingSpring}
+                        title="Stop Spring Boot"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
+                      >
+                        {isStoppingSpring ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {isStoppingSpring ? 'Parando...' : 'Stop Java'}
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Swagger UI */}
+                    <button
+                      onClick={handleOpenSpringSwagger}
+                      disabled={!springProcess}
+                      title={`Abrir Swagger UI (localhost:${springPort})`}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Swagger</span>
+                    </button>
+
+                    {/* Frontend Node.js (também presente no modo dual) */}
+                    <span className="w-px h-4 bg-neutral-700 mx-1" />
+                    <span className="text-[10px] text-green-500/70 font-semibold">Next.js :3000</span>
+
+                    {/* Build frontend */}
+                    <button
+                      onClick={handleInstall}
+                      disabled={isInstalling || !!devProcess || isSyncing}
+                      title="npm install (frontend)"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
+                    >
+                      {isInstalling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Package className="w-3.5 h-3.5" />}
+                      <span className="hidden sm:inline">Build</span>
+                    </button>
+
+                    {!devProcess ? (
+                      <button
+                        onClick={handleStart}
+                        disabled={isInstalling || isSyncing}
+                        title="Start Next.js frontend"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
+                      >
+                        <Play className="w-3.5 h-3.5 text-green-400" />
+                        <span className="hidden sm:inline">Frontend</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStop}
+                        disabled={isStoppingServer}
+                        title="Stop Next.js frontend"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
+                      >
+                        {isStoppingServer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
+                        <span className="hidden sm:inline">Stop FE</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleOpenBrowser}
+                      disabled={!devProcess}
+                      title="Abrir frontend no browser"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
+                    >
+                      <AppWindow className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Browser</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { homeDir } from '@tauri-apps/api/path'
 import { useToast } from '@/components/ui/Toast'
@@ -10,13 +10,16 @@ export interface UseIDEServerProps {
   addConsoleLog: (text: string, type?: 'info' | 'error' | 'warn' | 'stdout') => void
   setShowConsole: React.Dispatch<React.SetStateAction<boolean>>
   isSyncing: boolean
+  /** Stack detectada no fileTree (Módulo 9.2 / 10.4). Default: 'nodejs'. */
+  isJavaSpringProject?: boolean
 }
 
 export function useIDEServer({
   target,
   addConsoleLog,
   setShowConsole,
-  isSyncing
+  isSyncing,
+  isJavaSpringProject = false,
 }: UseIDEServerProps) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -26,10 +29,20 @@ export function useIDEServer({
   const [isStoppingServer, setIsStoppingServer] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
 
+  // ── Spring Boot state (separado do Node.js) ──
+  const [springProcess, setSpringProcess] = useState<any>(null)
+  const [isStartingSpring, setIsStartingSpring] = useState(false)
+  const [isStoppingSpring, setIsStoppingSpring] = useState(false)
+  const [springPort, setSpringPort] = useState(8080)
+
   const getProjectPath = async () => {
     const home = await homeDir()
     return `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${target!.slug}`
   }
+
+  // ──────────────────────────────────────────────────────
+  // Node.js handlers (idênticos ao original — zero regressão)
+  // ──────────────────────────────────────────────────────
 
   const handleInstall = async () => {
     if (!target || isInstalling || devProcess) return
@@ -93,7 +106,6 @@ export function useIDEServer({
           serverReady = true
           addConsoleLog(`⚙ ${t('workspace_components.ide_local.compiling_app', 'Compilando a aplicação... Aguardando primeira resposta.')}`, 'info')
 
-          // Warm-up: wait for first successful HTTP response before enabling open-in-browser
           const warmUp = async () => {
             for (let i = 0; i < 40; i++) {
               try {
@@ -102,7 +114,6 @@ export function useIDEServer({
                   signal: AbortSignal.timeout(8000),
                   cache: 'no-store'
                 })
-                // mode: 'no-cors' returns an opaque response with status 0, which means the server responded!
                 if (res.status === 0 || res.status < 500) {
                   addConsoleLog(`✓ ${t('workspace_components.ide_local.app_ready', 'Aplicação pronta em localhost:3000')}`, 'info')
                   toast(t('workspace_components.ide_local.server_ready_toast', 'Servidor pronto!'), 'success')
@@ -154,7 +165,107 @@ export function useIDEServer({
     })
   }
 
+  // ──────────────────────────────────────────────────────
+  // Spring Boot handlers (Módulo 9.4)
+  // ──────────────────────────────────────────────────────
+
+  const handleCheckJava = async (): Promise<boolean> => {
+    try {
+      await invoke('check_java_available')
+      return true
+    } catch (err: any) {
+      addConsoleLog(`✗ JDK não encontrado: ${err?.message || err}`, 'error')
+      toast('JDK 21 não encontrado no PATH. Instale o Adoptium Temurin 21.', 'error')
+      return false
+    }
+  }
+
+  const handleStartSpring = async () => {
+    if (!target || springProcess || isStartingSpring) return
+    setShowConsole(true)
+    setIsStartingSpring(true)
+
+    addConsoleLog('▶ Verificando JDK...', 'info')
+    const javaOk = await handleCheckJava()
+    if (!javaOk) {
+      setIsStartingSpring(false)
+      return
+    }
+
+    addConsoleLog('▶ Iniciando Spring Boot backend...', 'info')
+    try {
+      const baseProjectPath = await getProjectPath()
+      // Em modo java-spring, o backend fica em <project>/backend/
+      const projectPath = `${baseProjectPath}/backend`
+
+      const { listen } = await import('@tauri-apps/api/event')
+      let springReady = false
+
+      const unlisten = await listen<string>('spring-boot-log', (event) => {
+        const text = event.payload
+        const lower = text.toLowerCase()
+        // Maven emite muito na stderr — classificar corretamente
+        const isError = lower.includes('build failure') || lower.includes('error]')
+        const isWarn = lower.includes('warn')
+        const type = isError ? 'error' : isWarn ? 'warn' : 'stdout'
+        addConsoleLog(text, type)
+
+        // Detectar que o Spring Boot está pronto
+        if (!springReady && (lower.includes('started') && lower.includes('seconds'))) {
+          springReady = true
+          setIsStartingSpring(false)
+          addConsoleLog(`✓ Spring Boot pronto em http://localhost:${springPort}`, 'info')
+          addConsoleLog(`✓ Swagger UI: http://localhost:${springPort}/swagger-ui.html`, 'info')
+          toast('Spring Boot pronto!', 'success')
+        }
+
+        if (text.includes('Encerrado com código')) {
+          setSpringProcess(null)
+          setIsStoppingSpring(false)
+          setIsStartingSpring(false)
+          addConsoleLog('■ Spring Boot encerrado.', 'info')
+          unlisten()
+        }
+      })
+
+      await invoke('start_spring_boot', { projectPath })
+
+      setSpringProcess({
+        kill: async () => {
+          setIsStoppingSpring(true)
+          await invoke('stop_spring_boot')
+          setTimeout(() => {
+            setSpringProcess(null)
+            setIsStoppingSpring(false)
+          }, 5000)
+        }
+      } as any)
+
+    } catch (err: any) {
+      addConsoleLog(`✗ Erro ao iniciar Spring Boot: ${err?.message || err}`, 'error')
+      toast(`Erro ao iniciar Spring Boot: ${err?.message || err}`, 'error')
+    } finally {
+      setIsStartingSpring(false)
+    }
+  }
+
+  const handleStopSpring = async () => {
+    if (!springProcess || isStoppingSpring) return
+    springProcess.kill()
+  }
+
+  const handleOpenSpringSwagger = async () => {
+    const url = `http://localhost:${springPort}/swagger-ui.html`
+    addConsoleLog(`↗ Abrindo Swagger UI em ${url}`, 'info')
+    import('@tauri-apps/plugin-shell').then(({ open }) => {
+      open(url)
+    }).catch(() => {
+      openPreview(url, 'Swagger UI')
+    })
+  }
+
   return {
+    // Node.js
     devProcess,
     setDevProcess,
     isStoppingServer,
@@ -163,6 +274,15 @@ export function useIDEServer({
     handleStart,
     handleStop,
     handleOpenBrowser,
-    getProjectPath
+    getProjectPath,
+    // Spring Boot
+    springProcess,
+    isStartingSpring,
+    isStoppingSpring,
+    springPort,
+    setSpringPort,
+    handleStartSpring,
+    handleStopSpring,
+    handleOpenSpringSwagger,
   }
 }
