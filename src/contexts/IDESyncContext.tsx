@@ -84,7 +84,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     moveToTrash: fsState.moveToTrash
   })
 
-  const isJavaSpringProject = fsState.fileTree.some(f => f.name === 'backend' || f.name === 'pom.xml')
+  const isJavaSpringProject = fsState.fileTree.some(f => 
+    f.name === 'pom.xml' || 
+    (f.name === 'backend' && f.children?.some(c => c.name === 'pom.xml' || c.name === 'mvnw'))
+  )
 
   const serverState = useIDEServer({
     target,
