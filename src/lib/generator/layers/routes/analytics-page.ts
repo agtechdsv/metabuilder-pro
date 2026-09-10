@@ -956,10 +956,12 @@ export default async function ${mn}AnalyticsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>
 }) {
   const params = await searchParams
+  const isEmbedded = params?.embedded === 'true'
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500"}>
       {/* Cabeçalho da View (Fiel à Web Produção) */}
+      {!isEmbedded && (
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
@@ -979,6 +981,7 @@ export default async function ${mn}AnalyticsPage({
 ${headerButtonsHtml}
         </div>
       </div>
+      )}
 
       {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
