@@ -352,6 +352,15 @@ fn start_spring_boot(
     let mvnw_path = std::path::Path::new(&project_path).join("mvnw.cmd");
     let mvnw_unix = std::path::Path::new(&project_path).join("mvnw");
 
+    // Auto-inject Maven Wrapper se não existir
+    if !mvnw_path.exists() && !mvnw_unix.exists() {
+        let _ = std::fs::write(&mvnw_path, include_str!("maven_wrapper/mvnw.cmd"));
+        let _ = std::fs::write(&mvnw_unix, include_str!("maven_wrapper/mvnw"));
+        let mvn_dir = std::path::Path::new(&project_path).join(".mvn").join("wrapper");
+        let _ = std::fs::create_dir_all(&mvn_dir);
+        let _ = std::fs::write(mvn_dir.join("maven-wrapper.properties"), include_str!("maven_wrapper/maven-wrapper.properties"));
+    }
+
     let (cmd, cmd_args): (&str, Vec<&str>) = if mvnw_path.exists() {
         ("cmd", vec!["/c", "mvnw.cmd spring-boot:run"])
     } else if mvnw_unix.exists() {
@@ -361,9 +370,17 @@ fn start_spring_boot(
         ("cmd", vec!["/c", "mvn spring-boot:run"])
     };
 
-    let sidecar_command = app.shell().command(cmd)
+    let mut sidecar_command = app.shell().command(cmd)
         .args(cmd_args)
         .current_dir(&project_path);
+
+    // Injetar o Portable JDK 21 se existir na máquina do cliente
+    if let Ok(home) = app.path().home_dir() {
+        let jdk_path = home.join(".metabuilder").join("jdk21");
+        if jdk_path.exists() {
+            sidecar_command = sidecar_command.env("JAVA_HOME", jdk_path.to_string_lossy().to_string());
+        }
+    }
 
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
 

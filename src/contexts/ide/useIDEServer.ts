@@ -194,8 +194,71 @@ export function useIDEServer({
     addConsoleLog('▶ Verificando JDK...', 'info')
     const javaOk = await handleCheckJava()
     if (!javaOk) {
-      setIsStartingSpring(false)
-      return
+      if (window.confirm('O Java 21 é necessário para rodar o backend.\n\nDeseja que o MetaBuilder baixe e configure uma versão portátil do Java automaticamente? (Aprox. 190MB)')) {
+        try {
+          addConsoleLog('▶ Iniciando download do Java 21 Portátil...', 'info')
+          const { Command } = await import('@tauri-apps/plugin-shell')
+          const psCommand = Command.create('powershell', [
+            '-NoProfile', '-Command',
+            `
+            $ProgressPreference = 'SilentlyContinue';
+            $url = 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.4_7.zip';
+            $dir = "$env:USERPROFILE\\.metabuilder";
+            if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+            if (Test-Path "$dir\\jdk21") { Remove-Item -Recurse -Force "$dir\\jdk21" }
+            $zip = "$dir\\jdk21.zip";
+            Write-Output 'Baixando JDK 21... isso pode demorar alguns minutos dependendo da sua internet.';
+            Invoke-WebRequest -Uri $url -OutFile $zip;
+            Write-Output 'Download concluído. Extraindo arquivos...';
+            Expand-Archive -Path $zip -DestinationPath $dir -Force;
+            Remove-Item $zip;
+            $extractedDir = Get-ChildItem -Path $dir -Directory -Filter 'jdk-21*';
+            Rename-Item -Path $extractedDir.FullName -NewName 'jdk21';
+            Write-Output '✓ JDK 21 Portable instalado com sucesso no MetaBuilder!';
+            `
+          ])
+          
+          psCommand.on('close', async (data) => {
+             if (data.code === 0) {
+                toast('Java instalado com sucesso!', 'success')
+                // Tenta iniciar o Spring novamente agora que o Java está instalado
+                setIsStartingSpring(false)
+                handleStartSpring()
+             } else {
+                addConsoleLog(`✗ Falha ao instalar o Java (Código ${data.code})`, 'error')
+                toast('Falha ao instalar o Java', 'error')
+                setIsStartingSpring(false)
+             }
+          })
+
+          psCommand.on('error', error => {
+             addConsoleLog(`✗ Erro no script de instalação: ${error}`, 'error')
+             setIsStartingSpring(false)
+          })
+
+          const child = await psCommand.spawn()
+          
+          const { listen } = await import('@tauri-apps/api/event')
+          const unlistenStdout = await listen<string>('plugin:shell://stdout', (e) => {
+             // O payload pode vir num formato diferente se não usarmos stdout/stderr nativo, 
+             // mas o tauri_plugin_shell Command também emite eventos 'out' e 'err' direto no objeto js
+          })
+          
+          // O objeto CommandChild do Tauri já recebe os eventos .on('close') definidos acima, 
+          // mas para ver o output no console:
+          psCommand.stdout.on('data', line => addConsoleLog(line, 'stdout'))
+          psCommand.stderr.on('data', line => addConsoleLog(line, 'error'))
+          
+          return
+        } catch (e: any) {
+          addConsoleLog(`✗ Falha ao agendar instalação do Java: ${e?.message || e}`, 'error')
+          setIsStartingSpring(false)
+          return
+        }
+      } else {
+        setIsStartingSpring(false)
+        return
+      }
     }
 
     addConsoleLog('▶ Iniciando Spring Boot backend...', 'info')
