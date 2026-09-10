@@ -3,10 +3,31 @@ import { createClient } from '@/utils/supabase/server'
 import JSZip from 'jszip'
 import { parseMetaBuilderJSON } from '@/lib/generator/parser'
 import { generateNativeProject } from '@/lib/generator/emitter'
+import type { BackendStack, JavaVersion } from '@/lib/generator/ast'
 
 export async function POST(request: Request) {
   try {
-    const { projectId, dbStack = 'postgres', dbConnectionString, supabaseUrl, supabaseAnonKey } = await request.json()
+    const {
+      projectId,
+      dbStack = 'postgres',
+      dbConnectionString,
+      supabaseUrl,
+      supabaseAnonKey,
+      backendStack = 'nodejs' as BackendStack,   // NOVO: 'nodejs' | 'java-spring'
+      javaVersion = 21 as JavaVersion,            // NOVO: 17 | 21
+      javaGroupId,                                // NOVO: ex: 'com.empresa'
+      javaArtifactId,                             // NOVO: ex: 'crm-backend'
+      javaPort = 8080                             // NOVO: porta Spring Boot
+    } = await request.json()
+
+    // Validar backendStack — tratar valores inválidos como 'nodejs' (GAP edge case)
+    const resolvedBackendStack: BackendStack =
+      backendStack === 'java-spring' ? 'java-spring' : 'nodejs'
+
+    // Validar javaPort — clampar entre 1 e 65535
+    const resolvedJavaPort = (Number.isInteger(javaPort) && javaPort >= 1 && javaPort <= 65535)
+      ? javaPort
+      : 8080
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -80,6 +101,11 @@ export async function POST(request: Request) {
       dbConnectionString,
       supabaseUrl: supabaseUrl || project.supabase_url || process.env.NEXT_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: supabaseAnonKey || project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      backendStack: resolvedBackendStack,
+      javaVersion,
+      javaGroupId,
+      javaArtifactId,
+      javaPort: resolvedJavaPort,
     })
     
     // Emit
@@ -98,7 +124,7 @@ export async function POST(request: Request) {
     return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-native-source.zip"`,
+        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-${resolvedBackendStack === 'java-spring' ? 'java-spring' : 'nodejs'}-source.zip"`,
         'Content-Length': zipBuffer.length.toString()
       }
     })
