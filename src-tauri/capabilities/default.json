@@ -71,6 +71,11 @@
     "resize-pty",
     "update-tray-menu",
     "open-devtools",
-    "open-in-explorer"
+    "open-in-explorer",
+    "check-node-available",
+    "check-java-available",
+    "start-spring-boot",
+    "stop-spring-boot",
+    "compile-java-workspace"
   ]
 }
