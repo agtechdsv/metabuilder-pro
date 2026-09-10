@@ -255,35 +255,61 @@ function generateApplicationProperties(ast: AppAST): string {
   const javaVersion = ast.javaVersion ?? 21
   const dbConn = ast.dbConnectionString
 
-  // GAP 5: se dbConnectionString já começa com 'jdbc:', usar como está
-  const buildJdbcUrl = (): string => {
-    if (!dbConn) return '' // placeholder abaixo
-    if (dbConn.startsWith('jdbc:')) return dbConn
+  let jdbcUrl = ''
+  let username = ''
+  let password = ''
 
-    // Tentar derivar URL JDBC do connection string simples
-    switch (ast.dbStack) {
-      case 'postgres':
-        return `jdbc:postgresql://${dbConn}`
-      case 'supabase':
-        return `jdbc:postgresql://${dbConn}?sslmode=require`
-      case 'mysql':
-        return `jdbc:mysql://${dbConn}?useSSL=false&allowPublicKeyRetrieval=true`
-      case 'sqlserver':
-        return `jdbc:sqlserver://${dbConn}`
-      case 'oracle':
-        return `jdbc:oracle:thin:@//${dbConn}`
-      default:
-        return `jdbc:postgresql://${dbConn}`
+  if (dbConn) {
+    try {
+      const uriStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
+      // Garante que tenha protocolo para o URL parser funcionar (ex: postgresql://)
+      const parseableUri = uriStr.includes('://') ? uriStr : `postgresql://${uriStr}`
+      const uri = new URL(parseableUri)
+      
+      const host = uri.hostname
+      const portNum = uri.port
+      const dbName = uri.pathname
+      username = uri.username
+      password = uri.password
+      
+      const portStr = portNum ? `:${portNum}` : ''
+      
+      switch (ast.dbStack) {
+        case 'postgres':
+        case 'supabase':
+          jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}${ast.dbStack === 'supabase' ? '?sslmode=require' : ''}`
+          break
+        case 'mysql':
+          jdbcUrl = `jdbc:mysql://${host}${portStr}${dbName}?useSSL=false&allowPublicKeyRetrieval=true`
+          break
+        case 'sqlserver':
+          jdbcUrl = `jdbc:sqlserver://${host}${portStr}${dbName}`
+          break
+        case 'oracle':
+          jdbcUrl = `jdbc:oracle:thin:@//${host}${portStr}${dbName}`
+          break
+        default:
+          jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}`
+      }
+    } catch (e) {
+      // Fallback
+      const dbStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
+      switch (ast.dbStack) {
+        case 'postgres': jdbcUrl = `jdbc:postgresql://${dbStr}`; break
+        case 'supabase': jdbcUrl = `jdbc:postgresql://${dbStr}?sslmode=require`; break
+        case 'mysql': jdbcUrl = `jdbc:mysql://${dbStr}?useSSL=false&allowPublicKeyRetrieval=true`; break
+        case 'sqlserver': jdbcUrl = `jdbc:sqlserver://${dbStr}`; break
+        case 'oracle': jdbcUrl = `jdbc:oracle:thin:@//${dbStr}`; break
+        default: jdbcUrl = `jdbc:postgresql://${dbStr}`
+      }
     }
   }
-
-  const jdbcUrl = buildJdbcUrl()
 
   const datasourceLines = jdbcUrl
     ? [
         `spring.datasource.url=${jdbcUrl}`,
-        `spring.datasource.username=# PREENCHER: usuário do banco`,
-        `spring.datasource.password=# PREENCHER: senha do banco`,
+        `spring.datasource.username=${username || '# PREENCHER: usuário do banco'}`,
+        `spring.datasource.password=${password || '# PREENCHER: senha do banco'}`,
       ]
     : [
         `# PREENCHER: configure a URL JDBC do banco de dados`,
@@ -422,6 +448,38 @@ public class OpenApiConfig {
 // 5.5 — Entity.java
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface InverseRelation {
+  sourceModel: string
+  sourceTable: string
+  foreignKey: string
+  propertyName: string
+}
+
+function getInverseRelations(model: ModelNode, ast: AppAST): InverseRelation[] {
+  const inverses: InverseRelation[] = []
+  for (const m of ast.models) {
+    if (m.id === model.id) continue
+    for (const f of m.fields) {
+      const rel = f.config?.relation || f.relation
+      if (rel) {
+        const targetTbl = ('targetTable' in rel ? (rel.targetTable || '') : '').toLowerCase()
+        const targetModelName = rel.targetModel || ''
+        if (targetTbl === model.dbTable.toLowerCase() || targetModelName === model.name) {
+          const camelName = toCamelCase(f.dbColumn)
+          const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
+          inverses.push({
+            sourceModel: m.name,
+            sourceTable: m.dbTable,
+            foreignKey: f.dbColumn,
+            propertyName: propName
+          })
+        }
+      }
+    }
+  }
+  return inverses
+}
+
 function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): string {
   const javaTypes = new Set<string>()
 
@@ -433,7 +491,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
 
   for (const field of entityFields) {
     const jt = toJavaType(field.dataType)
-    javaTypes.add(jt)
+    if (!javaTypes.has(jt) && jt.includes('java.util.')) javaTypes.add(jt)
     const camelName = toCamelCase(field.dbColumn)
 
     if (field.isPrimary && !pkGenerated) {
@@ -443,9 +501,28 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
     } else {
-      fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-      fieldLines.push(`    private ${jt} ${camelName};`)
+      const rel = field.config?.relation || field.relation
+      if (rel && !field.isPrimary) {
+        const targetTblStr = 'targetTable' in rel ? rel.targetTable : ''
+        const targetPascal = rel.targetModel || toPascalCaseJava(targetTblStr || '')
+        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
+        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${targetPascal} ${propName};`)
+      } else {
+        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${jt} ${camelName};`)
+      }
     }
+    fieldLines.push(``)
+  }
+
+  const inverseRels = getInverseRelations(model, ast)
+  for (const inv of inverseRels) {
+    const listProp = toCamelCase(inv.sourceTable)
+    fieldLines.push(`    @OneToMany(mappedBy = "${inv.propertyName}", cascade = CascadeType.ALL, orphanRemoval = true)`)
+    fieldLines.push(`    @com.fasterxml.jackson.annotation.JsonIgnore`)
+    fieldLines.push(`    private java.util.List<${inv.sourceModel}> ${listProp} = new java.util.ArrayList<>();`)
     fieldLines.push(``)
   }
 

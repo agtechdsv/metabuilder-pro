@@ -69,9 +69,10 @@ export function IDEHeader({
   closeIDE
 }: IDEHeaderProps) {
   const { t } = useI18n()
+  const defaultGroupId = `com.${target.slug.replace(/-/g, '').toLowerCase() || 'app'}`
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
-  const [javaGroupId, setJavaGroupId] = useState('com.app')
+  const [javaGroupId, setJavaGroupId] = useState(defaultGroupId)
   const [javaPort, setJavaPort] = useState(8080)
 
   const confirmSync = () => {
@@ -248,45 +249,58 @@ export function IDEHeader({
 
       {/* Sync Modal */}
       <Modal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Configuração de Sincronização">
-        <div className="p-4 space-y-4">
+        <div className="p-6 space-y-6 bg-[#1a1b1e] rounded-b-xl border-t border-neutral-800">
           <p className="text-sm text-neutral-400">
-            Selecione a stack de Backend para gerar o código na IDE Local.
+            Selecione a stack de Backend para gerar o código fonte nativo e sincronizar na árvore do seu projeto atual.
           </p>
-          <div className="grid grid-cols-1 gap-2">
-            <label className={`flex items-center gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${
-              backendStack === 'nodejs' ? 'border-indigo-500 bg-indigo-600/10' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-800/50'
-            }`}>
-              <input type="radio" checked={backendStack === 'nodejs'} onChange={() => setBackendStack('nodejs')} className="w-4 h-4 accent-indigo-500" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-neutral-100 text-sm">Next.js Full-Stack (Node.js)</span>
-              </div>
-            </label>
-            <label className={`flex items-center gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${
-              backendStack === 'java-spring' ? 'border-indigo-500 bg-indigo-600/10' : 'border-neutral-700 hover:border-neutral-500 bg-neutral-800/50'
-            }`}>
-              <input type="radio" checked={backendStack === 'java-spring'} onChange={() => setBackendStack('java-spring')} className="w-4 h-4 accent-indigo-500" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-neutral-100 text-sm">Next.js + Spring Boot 3 (Java 21)</span>
-              </div>
-            </label>
+          
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Stack de Tecnologia</h4>
+            <div className="grid grid-cols-1 gap-3">
+              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${
+                backendStack === 'nodejs' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
+              }`}>
+                <input type="radio" checked={backendStack === 'nodejs'} onChange={() => setBackendStack('nodejs')} className="mt-1 w-4 h-4 accent-indigo-500" />
+                <div className="flex flex-col gap-1">
+                  <span className={`font-bold text-sm ${backendStack === 'nodejs' ? 'text-indigo-400' : 'text-neutral-200'}`}>Next.js Full-Stack (Node.js)</span>
+                  <span className="text-xs text-neutral-500 leading-relaxed">Gera a aplicação inteira em um único repositório Next.js com App Router e Server Actions.</span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${
+                backendStack === 'java-spring' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
+              }`}>
+                <input type="radio" checked={backendStack === 'java-spring'} onChange={() => setBackendStack('java-spring')} className="mt-1 w-4 h-4 accent-indigo-500" />
+                <div className="flex flex-col gap-1">
+                  <span className={`font-bold text-sm ${backendStack === 'java-spring' ? 'text-indigo-400' : 'text-neutral-200'}`}>Next.js + Spring Boot 3 (Java 21)</span>
+                  <span className="text-xs text-neutral-500 leading-relaxed">Gera um monorepo com pastas independentes `frontend` (Next.js) e `backend` (Java Spring Boot API).</span>
+                </div>
+              </label>
+            </div>
           </div>
           
           {backendStack === 'java-spring' && (
-            <div className="p-3 bg-black/20 border border-neutral-800 rounded-lg space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1">Maven Group ID</label>
-                <input type="text" value={javaGroupId} onChange={e => setJavaGroupId(e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-400 mb-1">Porta do Spring Boot</label>
-                <input type="number" value={javaPort} onChange={e => setJavaPort(Number(e.target.value))} className="w-full bg-neutral-900 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+            <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                <Coffee className="w-3.5 h-3.5" /> Propriedades do Spring Boot
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-neutral-400">Maven Group ID</label>
+                  <input type="text" value={javaGroupId} onChange={e => setJavaGroupId(e.target.value)} className="w-full bg-black/40 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-neutral-600" placeholder="ex: com.app" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-neutral-400">Porta (Server Port)</label>
+                  <input type="number" value={javaPort} onChange={e => setJavaPort(Number(e.target.value))} className="w-full bg-black/40 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all" />
+                </div>
               </div>
             </div>
           )}
           
-          <div className="flex justify-end pt-2">
-            <button onClick={confirmSync} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-500 transition-colors">
-              Sincronizar Agora
+          <div className="flex justify-end pt-4 border-t border-neutral-800">
+            <button onClick={confirmSync} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[#1a1b1e]">
+              <DownloadCloud className="w-4 h-4" />
+              Sincronizar Repositório
             </button>
           </div>
         </div>
