@@ -48,6 +48,10 @@ export function IDEEditorArea({
   handleMonacoBeforeMount
 }: IDEEditorAreaProps) {
   const { t } = useI18n()
+  const fileContentsRef = React.useRef(fileContents)
+  React.useEffect(() => {
+    fileContentsRef.current = fileContents
+  }, [fileContents])
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -208,7 +212,7 @@ export function IDEEditorArea({
                     const model = editor.getModel();
                     const word = model?.getWordAtPosition(position);
                     if (word && word.word) {
-                       const targetFile = Object.keys(fileContents).find(f => f.endsWith(`/${word.word}.java`) || f.endsWith(`/${word.word}.ts`) || f.endsWith(`/${word.word}.tsx`));
+                       const targetFile = Object.keys(fileContentsRef.current).find(f => f.endsWith(`/${word.word}.java`) || f.endsWith(`/${word.word}.ts`) || f.endsWith(`/${word.word}.tsx`));
                        if (targetFile) {
                           setActiveFile(targetFile);
                        }

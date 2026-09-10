@@ -4,7 +4,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Network, Trash2, Undo, UnfoldVertical, FoldVertical,
-  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical, Coffee
+  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical, Coffee, ListTree
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { FileNode } from '@/contexts/ide/useIDEFileSystem'
@@ -56,6 +56,17 @@ export function IDEFileExplorer({
   isJavaSpringProject = false,
 }: IDEFileExplorerProps) {
   const { t } = useI18n()
+  const [compactFolders, setCompactFolders] = React.useState(true)
+
+  const getCompactNode = (node: FileNode): { mergedName: string, targetNode: FileNode } => {
+    let current = node
+    let mergedName = current.name
+    while (current.isDirectory && current.children?.length === 1 && current.children[0].isDirectory) {
+      current = current.children[0]
+      mergedName += '/' + current.name
+    }
+    return { mergedName, targetNode: current }
+  }
 
   const renderTree = (nodes: FileNode[], depth: number = 0): React.ReactNode => {
     let visibleNodes = nodes
@@ -68,10 +79,19 @@ export function IDEFileExplorer({
       }
     }
 
-    return visibleNodes.map(node => {
+    return visibleNodes.map(originalNode => {
+      let node = originalNode
+      const isTrashNode = originalNode.name === '.trash'
+      let displayNodeName = isTrashNode ? '🗑️ Lixeira' : node.name
+
+      if (compactFolders && node.isDirectory && !isTrashNode) {
+        const compact = getCompactNode(node)
+        node = compact.targetNode
+        displayNodeName = compact.mergedName
+      }
+
       const isSelected = selectedPaths.has(node.path)
-      const isTrashNode = node.name === '.trash'
-      const displayNodeName = isTrashNode ? '🗑️ Lixeira' : node.name
+
       return (
         <div key={node.path} className={depth === 0 ? '' : 'ml-4'}>
           {node.isDirectory ? (
@@ -227,6 +247,13 @@ export function IDEFileExplorer({
                     <Undo className="w-3.5 h-3.5" />
                   </button>
                 )}
+                <button
+                  onClick={() => setCompactFolders(!compactFolders)}
+                  title="Agrupar pastas vazias"
+                  className={`flex items-center justify-center w-5 h-5 rounded hover:bg-neutral-700 transition-colors mr-1 ${compactFolders ? 'text-indigo-400' : 'text-neutral-500'}`}
+                >
+                  <ListTree className="w-3.5 h-3.5" />
+                </button>
                 <button
                   onClick={expandAll}
                   title={t('workspace_components.ide_local.expand_all', 'Expandir tudo')}
