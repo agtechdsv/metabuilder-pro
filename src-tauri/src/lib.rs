@@ -18,6 +18,12 @@ struct CliState {
     dev_pid: Mutex<Option<u32>>,
 }
 
+// ── Spring Boot state (separado do CliState — nunca compartilhar) ──
+struct SpringState {
+    child: Mutex<Option<CommandChild>>,
+    spring_pid: Mutex<Option<u32>>,
+}
+
 #[derive(serde::Deserialize)]
 struct WorkspaceInfo {
     name: String,
@@ -307,6 +313,134 @@ fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, projec
     Ok("Servidor iniciado".to_string())
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Módulo 9.5 — Comandos Spring Boot
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Verifica se o JDK está disponível no PATH.
+/// IMPORTANTE: `java -version` imprime na stderr — checar stderr, não stdout.
+#[command]
+fn check_java_available() -> Result<(), String> {
+    let output = std::process::Command::new("java")
+        .arg("-version")
+        .output()
+        .map_err(|_| "java not found — JDK não encontrado no PATH".to_string())?;
+
+    // java -version sempre imprime na stderr (comportamento padrão do JVM)
+    // A presença de qualquer output na stderr indica que Java existe
+    if !output.stderr.is_empty() || output.status.success() {
+        Ok(())
+    } else {
+        Err("java not found — verifique se o JDK 21 está instalado e no PATH".to_string())
+    }
+}
+
+/// Inicia o backend Spring Boot via `mvn spring-boot:run` (ou `mvnw` se disponível).
+/// Emite logs no canal 'spring-boot-log', análogo ao 'nextjs-dev-log'.
+#[command]
+fn start_spring_boot(
+    app: tauri::AppHandle,
+    state: State<'_, SpringState>,
+    project_path: String
+) -> Result<String, String> {
+    let mut child_guard = state.child.lock().unwrap();
+    if child_guard.is_some() {
+        return Ok("Spring Boot já está rodando".to_string());
+    }
+
+    // Verificar se existe Maven Wrapper (mvnw) na pasta do projeto — preferir sobre mvn global
+    let mvnw_path = std::path::Path::new(&project_path).join("mvnw.cmd");
+    let mvnw_unix = std::path::Path::new(&project_path).join("mvnw");
+
+    let (cmd, cmd_args): (&str, Vec<&str>) = if mvnw_path.exists() {
+        ("cmd", vec!["/c", "mvnw.cmd spring-boot:run"])
+    } else if mvnw_unix.exists() {
+        ("bash", vec!["-c", "./mvnw spring-boot:run"])
+    } else {
+        // Fallback: mvn global
+        ("cmd", vec!["/c", "mvn spring-boot:run"])
+    };
+
+    let sidecar_command = app.shell().command(cmd)
+        .args(cmd_args)
+        .current_dir(&project_path);
+
+    let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
+
+    {
+        let mut pid_guard = state.spring_pid.lock().unwrap();
+        *pid_guard = Some(child.pid());
+    }
+    *child_guard = Some(child);
+
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
+                    let text = String::from_utf8_lossy(&line).to_string();
+                    let _ = app_handle.emit("spring-boot-log", text);
+                }
+                tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
+                    // Spring Boot / Maven emitem bastante na stderr — não é necessariamente erro
+                    let text = String::from_utf8_lossy(&line).to_string();
+                    let _ = app_handle.emit("spring-boot-log", text);
+                }
+                tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
+                    let _ = app_handle.emit(
+                        "spring-boot-log",
+                        format!("Encerrado com código {:?}", payload.code)
+                    );
+                    let state = app_handle.state::<SpringState>();
+                    let mut child_guard = state.child.lock().unwrap();
+                    *child_guard = None;
+                    let mut pid_guard = state.spring_pid.lock().unwrap();
+                    *pid_guard = None;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok("Spring Boot iniciado".to_string())
+}
+
+/// Para o processo Spring Boot (análogo a stopcli / kill_dev_process_tree).
+#[command]
+fn stop_spring_boot(state: State<'_, SpringState>) -> Result<String, String> {
+    // Matar pelo PID (processo tree completo)
+    {
+        let mut pid_guard = state.spring_pid.lock().unwrap();
+        if let Some(pid) = pid_guard.take() {
+            #[cfg(target_os = "windows")]
+            {
+                use std::process::Command;
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x08000000;
+                let _ = Command::new("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .output();
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                use std::process::Command;
+                let _ = Command::new("kill")
+                    .args(["-9", &pid.to_string()])
+                    .output();
+            }
+        }
+    }
+
+    // Matar o CommandChild do tauri-plugin-shell (fallback)
+    let mut child_guard = state.child.lock().unwrap();
+    if let Some(child) = child_guard.take() {
+        let _ = child.kill();
+    }
+
+    Ok("Spring Boot parado".to_string())
+}
+
 #[command]
 fn open_devtools(window: tauri::WebviewWindow) {
     window.open_devtools();
@@ -586,6 +720,13 @@ pub fn run() {
                 pty_writer: Mutex::new(None),
             });
 
+            // Spring Boot state — separado do CliState, nunca compartilhar
+            app.manage(SpringState {
+                child: Mutex::new(None),
+                spring_pid: Mutex::new(None),
+            });
+
+
             // Set up Global Shortcut
             let shortcut = Shortcut::from_str("ctrl+shift+m").unwrap();
             let _ = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
@@ -763,7 +904,10 @@ pub fn run() {
             resize_pty,
             update_tray_menu,
             open_devtools,
-            open_in_explorer
+            open_in_explorer,
+            check_java_available,
+            start_spring_boot,
+            stop_spring_boot
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
