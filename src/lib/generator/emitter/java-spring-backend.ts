@@ -455,16 +455,37 @@ interface InverseRelation {
   propertyName: string
 }
 
+function resolveFieldRelation(field: FieldNode, ast: AppAST): { targetModel: string, targetTable: string } | null {
+  const rel = field.config?.relation || field.relation
+  if (rel) {
+    const targetTbl = ('targetTable' in rel ? (rel.targetTable || '') : '').toLowerCase()
+    const targetModelName = rel.targetModel || ''
+    return { targetModel: targetModelName, targetTable: targetTbl }
+  }
+  
+  if (field.isPrimary) return null
+
+  // Fallback: tenta deduzir FK pelo nome (ex: cliente_id -> clientes)
+  const col = field.dbColumn.toLowerCase()
+  if (col.endsWith('_id') || col.startsWith('id_')) {
+    const base = col.endsWith('_id') ? col.slice(0, -3) : col.slice(3)
+    const candidates = [base, `${base}s`]
+    for (const cand of candidates) {
+      const match = ast.models.find(m => m.dbTable.toLowerCase() === cand || m.name.toLowerCase() === cand)
+      if (match) return { targetModel: match.name, targetTable: match.dbTable }
+    }
+  }
+  return null
+}
+
 function getInverseRelations(model: ModelNode, ast: AppAST): InverseRelation[] {
   const inverses: InverseRelation[] = []
   for (const m of ast.models) {
     if (m.id === model.id) continue
     for (const f of m.fields) {
-      const rel = f.config?.relation || f.relation
+      const rel = resolveFieldRelation(f, ast)
       if (rel) {
-        const targetTbl = ('targetTable' in rel ? (rel.targetTable || '') : '').toLowerCase()
-        const targetModelName = rel.targetModel || ''
-        if (targetTbl === model.dbTable.toLowerCase() || targetModelName === model.name) {
+        if (rel.targetTable.toLowerCase() === model.dbTable.toLowerCase() || rel.targetModel === model.name) {
           const camelName = toCamelCase(f.dbColumn)
           const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
           inverses.push({
@@ -501,10 +522,9 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
     } else {
-      const rel = field.config?.relation || field.relation
+      const rel = resolveFieldRelation(field, ast)
       if (rel && !field.isPrimary) {
-        const targetTblStr = 'targetTable' in rel ? rel.targetTable : ''
-        const targetPascal = rel.targetModel || toPascalCaseJava(targetTblStr || '')
+        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
         const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
         fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
         fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
