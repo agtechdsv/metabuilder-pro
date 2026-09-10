@@ -12,6 +12,12 @@
 
 export type DbType = 'postgres' | 'supabase' | 'oracle' | 'mysql' | 'sqlserver'
 
+/** Stack de backend para o Eject & Sync */
+export type BackendStack = 'nodejs' | 'java-spring'
+
+/** Versão do JDK para projetos java-spring */
+export type JavaVersion = 17 | 21
+
 export type LogicType =
   | 'pesquisa_cadastro'
   | 'kanban'
@@ -458,6 +464,18 @@ export interface AppAST {
   models: ModelNode[]
   routes: RouteNode[]
   actions: ActionNode[]
+
+  // ── Multi-Backend Eject & Sync ──
+  /** Stack de backend escolhida no Eject. Default: 'nodejs'. */
+  backendStack: BackendStack
+  /** Versão do JDK (só relevante quando backendStack = 'java-spring'). Default: 21. */
+  javaVersion?: JavaVersion
+  /** Maven groupId (ex: 'com.empresa'). Default: 'com.app'. */
+  javaGroupId?: string
+  /** Maven artifactId (ex: 'crm-backend'). Derivado de projectSlug se ausente. */
+  javaArtifactId?: string
+  /** Porta do servidor Spring Boot. Default: 8080. */
+  javaPort?: number
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -479,4 +497,6 @@ export interface WorkspaceAST {
   supabaseUrl?: string
   supabaseAnonKey?: string
   projects: WorkspaceProjectNode[]
+  /** Stack de backend padrão do workspace (GAP 2: propagado de AppAST). */
+  backendStack?: BackendStack
 }

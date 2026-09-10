@@ -1,26 +1,23 @@
 import { AppAST } from '../ast'
-import { generateRoutes } from '../layers/routes'
-import { generateActions } from '../layers/actions'
-import { generateComponents } from '../layers/components'
-import { generateBaseFiles } from './base-files'
-import { generateLoginPage, generateDownloadsPage } from './auth-flow'
+import { generateNodeProject } from './node-project'
+import { generateJavaSpringProject } from './java-spring-project'
 
+/**
+ * single-project.ts — Dispatcher (Módulo 2 do plano Multi-Backend Eject & Sync)
+ *
+ * Mantém a MESMA assinatura pública de sempre: generateNativeProject(ast).
+ * Delega para o gerador correto baseado em ast.backendStack.
+ *
+ * O emitter/index.ts continua re-exportando generateNativeProject sem alteração
+ * — zero breaking change para os consumers existentes.
+ */
 export function generateNativeProject(ast: AppAST): Map<string, string> {
-  const files = new Map<string, string>()
+  if (ast.backendStack === 'java-spring') {
+    return generateJavaSpringProject(ast)
+  }
 
-  // 1. Arquivos Base do Projeto
-  generateBaseFiles(ast, files)
-
-  // 2. Geração das Camadas
-  generateRoutes(ast, files)
-  generateActions(ast, files)
-  generateComponents(ast, files)
-
-  // 3. Página de Login
-  generateLoginPage(ast, files)
-
-  // 4. Página de Downloads
-  generateDownloadsPage(ast, files)
-
-  return files
+  // backendStack = 'nodejs' (default) — comportamento 100% idêntico ao original
+  return generateNodeProject(ast)
 }
+
+

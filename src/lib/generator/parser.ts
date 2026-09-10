@@ -1,5 +1,7 @@
 import {
   AppAST,
+  BackendStack,
+  JavaVersion,
   DbType,
   WorkspaceAST,
   WorkspaceProjectNode,
@@ -1341,13 +1343,34 @@ function resolveRelationTabs(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Parse Options
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Opções do parser — estendidas para suportar multi-backend Eject & Sync */
+export interface ParseOptions {
+  dbConnectionString?: string
+  supabaseUrl?: string
+  supabaseAnonKey?: string
+  /** Stack de backend do projeto ejetado. Default: 'nodejs'. */
+  backendStack?: BackendStack
+  /** Versão do JDK quando backendStack = 'java-spring'. Default: 21. */
+  javaVersion?: JavaVersion
+  /** Maven groupId (ex: 'com.empresa'). Default: 'com.app'. */
+  javaGroupId?: string
+  /** Maven artifactId (ex: 'crm-backend'). Derivado do projectSlug se ausente. */
+  javaArtifactId?: string
+  /** Porta do Spring Boot. Default: 8080. */
+  javaPort?: number
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Parser
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function parseMetaBuilderJSON(
   rawJson: any,
   dbStack: DbType,
-  options?: { dbConnectionString?: string; supabaseUrl?: string; supabaseAnonKey?: string }
+  options?: ParseOptions
 ): AppAST {
   const rawModels: any[] = rawJson.models || []
   const rawViews: any[] = rawJson.views || rawJson.ui_views || []
@@ -2553,6 +2576,13 @@ export function parseMetaBuilderJSON(
     rawJson.project?.subtitle ||
     'CRM COMPLETO'
 
+  // Sanitizar javaGroupId: apenas letras minúsculas, números e pontos
+  const rawGroupId = (options?.javaGroupId ?? 'com.app').toLowerCase().replace(/[^a-z0-9.]/g, '.')
+
+  // Derivar javaArtifactId do projectSlug se não fornecido
+  const projectSlugSanitized = (rawJson.project?.slug || rawJson.slug || 'app').replace(/[^a-z0-9-]/g, '-')
+  const resolvedArtifactId = options?.javaArtifactId ?? `${projectSlugSanitized}-backend`
+
   return {
     projectId: rawJson.project?.id || rawJson.id,
     projectName: rawJson.project?.name || rawJson.name || 'CRM',
@@ -2568,6 +2598,12 @@ export function parseMetaBuilderJSON(
     models,
     routes,
     actions,
+    // Multi-Backend Eject & Sync
+    backendStack: options?.backendStack ?? 'nodejs',
+    javaVersion: options?.javaVersion ?? 21,
+    javaGroupId: rawGroupId,
+    javaArtifactId: resolvedArtifactId,
+    javaPort: options?.javaPort ?? 8080,
   }
 }
 
@@ -2579,7 +2615,7 @@ export function parseWorkspaceJSON(
   rawWorkspace: any,
   rawProjects: any[],
   dbStack: DbType,
-  options?: { dbConnectionString?: string; supabaseUrl?: string; supabaseAnonKey?: string }
+  options?: ParseOptions
 ): WorkspaceAST {
   const projects: WorkspaceProjectNode[] = rawProjects.map((p) => ({
     slug: p.slug || p.id,
@@ -2596,6 +2632,7 @@ export function parseWorkspaceJSON(
     supabaseUrl: options?.supabaseUrl,
     supabaseAnonKey: options?.supabaseAnonKey,
     projects,
+    backendStack: options?.backendStack ?? 'nodejs',
   }
 }
 
