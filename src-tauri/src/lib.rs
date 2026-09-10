@@ -213,7 +213,12 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
                     let _ = app_handle.emit("nextjs-dev-log", String::from_utf8_lossy(&line).to_string());
                 }
                 tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                    let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
+                    let text = String::from_utf8_lossy(&line).to_string();
+                    if text.contains("npm notice") || text.contains("npm WARN") {
+                        let _ = app_handle.emit("nextjs-dev-log", text);
+                    } else {
+                        let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", text));
+                    }
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
                     let _ = app_handle.emit("nextjs-dev-log", format!("Encerrado com código {:?}", payload.code));
@@ -265,7 +270,12 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
                     let _ = app_handle.emit("nextjs-dev-log", String::from_utf8_lossy(&line).to_string());
                 }
                 tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                    let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
+                    let text = String::from_utf8_lossy(&line).to_string();
+                    if text.contains("npm notice") || text.contains("npm WARN") {
+                        let _ = app_handle.emit("nextjs-dev-log", text);
+                    } else {
+                        let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", text));
+                    }
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
                     let state = app_handle.state::<CliState>();
