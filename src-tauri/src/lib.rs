@@ -181,9 +181,19 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
         return Ok("Já está rodando".to_string());
     }
 
-    let sidecar_command = app.shell().command("cmd")
+    let mut sidecar_command = app.shell().command("cmd")
         .args(vec!["/c", "set \"DATABASE_URL=\" && set \"NEXT_PUBLIC_SUPABASE_URL=\" && set \"SUPABASE_SERVICE_ROLE_KEY=\" && call npm install && npm run dev"])
         .current_dir(&project_path);
+
+    // Injetar o Portable Node.js se existir na máquina do cliente
+    if let Ok(home) = app.path().home_dir() {
+        let node_path = home.join(".metabuilder").join("node20");
+        if node_path.exists() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let new_path = format!("{};{}", node_path.to_string_lossy(), current_path);
+            sidecar_command = sidecar_command.env("PATH", new_path);
+        }
+    }
 
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
 
@@ -221,9 +231,19 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
 
 #[command]
 fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_path: String) -> Result<String, String> {
-    let sidecar_command = app.shell().command("cmd")
+    let mut sidecar_command = app.shell().command("cmd")
         .args(vec!["/c", "npm install --prefer-offline --no-audit --no-fund --legacy-peer-deps"])
         .current_dir(&project_path);
+
+    // Injetar o Portable Node.js se existir na máquina do cliente
+    if let Ok(home) = app.path().home_dir() {
+        let node_path = home.join(".metabuilder").join("node20");
+        if node_path.exists() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let new_path = format!("{};{}", node_path.to_string_lossy(), current_path);
+            sidecar_command = sidecar_command.env("PATH", new_path);
+        }
+    }
 
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
 
@@ -316,6 +336,30 @@ fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, projec
 // ─────────────────────────────────────────────────────────────────────────────
 // Módulo 9.5 — Comandos Spring Boot
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Verifica se o Node está disponível (via Portable ou Global).
+#[command]
+fn check_node_available(app: tauri::AppHandle) -> Result<(), String> {
+    // 1. Verifica portable Node
+    if let Ok(home) = app.path().home_dir() {
+        let node_path = home.join(".metabuilder").join("node20");
+        if node_path.exists() {
+            return Ok(());
+        }
+    }
+
+    // 2. Verifica Node global
+    let output = std::process::Command::new("node")
+        .arg("-v")
+        .output()
+        .map_err(|_| "node not found".to_string())?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err("node failed".to_string())
+    }
+}
 
 /// Verifica se o JDK está disponível no PATH.
 /// IMPORTANTE: `java -version` imprime na stderr — checar stderr, não stdout.
@@ -456,6 +500,48 @@ fn stop_spring_boot(state: State<'_, SpringState>) -> Result<String, String> {
     }
 
     Ok("Spring Boot parado".to_string())
+}
+
+/// Dispara a compilação de um arquivo Java em background para gatilho do Hot-Reload (DevTools)
+#[command]
+fn compile_java_workspace(app: tauri::AppHandle, project_path: String) -> Result<String, String> {
+    let mvnw_path = std::path::Path::new(&project_path).join("mvnw.cmd");
+    let mvnw_unix = std::path::Path::new(&project_path).join("mvnw");
+
+    let (cmd, cmd_args): (&str, Vec<&str>) = if mvnw_path.exists() {
+        ("cmd", vec!["/c", "mvnw.cmd compile"])
+    } else if mvnw_unix.exists() {
+        ("bash", vec!["-c", "./mvnw compile"])
+    } else {
+        ("cmd", vec!["/c", "mvn compile"])
+    };
+
+    let mut sidecar_command = app.shell().command(cmd)
+        .args(cmd_args)
+        .current_dir(&project_path);
+
+    if let Ok(home) = app.path().home_dir() {
+        let jdk_path = home.join(".metabuilder").join("jdk21");
+        if jdk_path.exists() {
+            sidecar_command = sidecar_command.env("JAVA_HOME", jdk_path.to_string_lossy().to_string());
+        }
+    }
+
+    let app_clone = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Ok((mut rx, _)) = sidecar_command.spawn() {
+            while let Some(event) = rx.recv().await {
+                if let tauri_plugin_shell::process::CommandEvent::Stderr(line) = event {
+                    let text = String::from_utf8_lossy(&line).to_string();
+                    if text.to_lowercase().contains("error") || text.to_lowercase().contains("failure") {
+                       let _ = app_clone.emit("spring-boot-log", format!("[HOT-RELOAD ERROR]: {}", text));
+                    }
+                }
+            }
+        }
+    });
+
+    Ok("Compiling...".to_string())
 }
 
 #[command]
@@ -922,9 +1008,11 @@ pub fn run() {
             update_tray_menu,
             open_devtools,
             open_in_explorer,
+            check_node_available,
             check_java_available,
             start_spring_boot,
-            stop_spring_boot
+            stop_spring_boot,
+            compile_java_workspace
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import * as tauriFs from '@tauri-apps/plugin-fs'
-import { BaseDirectory } from '@tauri-apps/api/path'
+import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
+import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '@/components/ui/Toast'
 
 export interface UseIDETabsProps {
@@ -131,6 +132,18 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
         return curr
       })
       toast('Salvo com sucesso', 'success')
+      
+      // Java Hot Reload
+      if (targetPath.endsWith('.java')) {
+        try {
+          const home = await homeDir()
+          const baseProjectPath = `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${targetSlug}`
+          const backendPath = `${baseProjectPath}/backend`
+          await invoke('compile_java_workspace', { projectPath: backendPath })
+        } catch (e) {
+          console.error('Failed to trigger java compile', e)
+        }
+      }
     } catch (err) {
       toast('Erro ao salvar arquivo', 'error')
     }
@@ -138,6 +151,7 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
 
   const handleSaveAll = async () => {
     let savedCount = 0
+    let triggerJavaCompile = false
     for (const path of openFiles) {
       if (isDirty(path)) {
         try {
@@ -145,6 +159,9 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
           await tauriFs.writeTextFile(path, value, { baseDir: BaseDirectory.Home })
           setOriginalFileContents(prev => ({ ...prev, [path]: value }))
           savedCount++
+          if (path.endsWith('.java')) {
+             triggerJavaCompile = true
+          }
         } catch (err) {
           toast(`Erro ao salvar ${path}`, 'error')
         }
@@ -152,6 +169,16 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
     }
     if (savedCount > 0) {
       toast(`${savedCount} arquivo(s) salvo(s) com sucesso!`, 'success')
+    }
+    if (triggerJavaCompile) {
+      try {
+        const home = await homeDir()
+        const baseProjectPath = `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${targetSlug}`
+        const backendPath = `${baseProjectPath}/backend`
+        await invoke('compile_java_workspace', { projectPath: backendPath })
+      } catch (e) {
+        console.error('Failed to trigger java compile', e)
+      }
     }
   }
 

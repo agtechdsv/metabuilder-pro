@@ -40,6 +40,63 @@ export function useIDEServer({
     return `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${target!.slug}`
   }
 
+  const handleCheckNode = async (retryAction: () => void): Promise<boolean> => {
+    try {
+      await invoke('check_node_available')
+      return true
+    } catch (e) {
+      if (window.confirm('O Node.js (v20+) é necessário para rodar o frontend.\n\nDeseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)')) {
+        try {
+          addConsoleLog('▶ Iniciando download do Node.js Portátil...', 'info')
+          const { Command } = await import('@tauri-apps/plugin-shell')
+          const psCommand = Command.create('powershell', [
+            '-NoProfile', '-Command',
+            `
+            $ProgressPreference = 'SilentlyContinue';
+            $url = 'https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip';
+            $dir = "$env:USERPROFILE\\.metabuilder";
+            if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+            if (Test-Path "$dir\\node20") { Remove-Item -Recurse -Force "$dir\\node20" }
+            $zip = "$dir\\node20.zip";
+            Write-Output 'Baixando Node.js v20... isso pode demorar alguns segundos dependendo da sua internet.';
+            Invoke-WebRequest -Uri $url -OutFile $zip;
+            Write-Output 'Download concluído. Extraindo arquivos...';
+            Expand-Archive -Path $zip -DestinationPath $dir -Force;
+            Remove-Item $zip;
+            $extractedDir = Get-ChildItem -Path $dir -Directory -Filter 'node-v20*';
+            Rename-Item -Path $extractedDir.FullName -NewName 'node20';
+            Write-Output '✓ Node.js Portable instalado com sucesso no MetaBuilder!';
+            `
+          ])
+          
+          psCommand.on('close', async (data) => {
+             if (data.code === 0) {
+                toast('Node.js instalado com sucesso!', 'success')
+                retryAction()
+             } else {
+                addConsoleLog(`✗ Falha ao instalar o Node (Código ${data.code})`, 'error')
+                toast('Falha ao instalar o Node', 'error')
+             }
+          })
+
+          psCommand.on('error', error => {
+             addConsoleLog(`✗ Erro no script de instalação: ${error}`, 'error')
+          })
+
+          await psCommand.spawn()
+          psCommand.stdout.on('data', line => addConsoleLog(line, 'stdout'))
+          psCommand.stderr.on('data', line => addConsoleLog(line, 'error'))
+          
+          return false
+        } catch (err: any) {
+          addConsoleLog(`✗ Falha ao agendar instalação do Node: ${err?.message || err}`, 'error')
+          return false
+        }
+      }
+      return false
+    }
+  }
+
   // ──────────────────────────────────────────────────────
   // Node.js handlers (idênticos ao original — zero regressão)
   // ──────────────────────────────────────────────────────
@@ -48,6 +105,17 @@ export function useIDEServer({
     if (!target || isInstalling || devProcess) return
     setIsInstalling(true)
     setShowConsole(true)
+    
+    addConsoleLog('▶ Verificando Node.js...', 'info')
+    const nodeOk = await handleCheckNode(() => {
+      setIsInstalling(false)
+      handleInstall()
+    })
+    if (!nodeOk) {
+      setIsInstalling(false)
+      return
+    }
+
     addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_npm_install', 'Iniciando npm install...')}`, 'info')
     try {
       let projectPath = await getProjectPath()
@@ -92,6 +160,13 @@ export function useIDEServer({
   const handleStart = async () => {
     if (!target || devProcess || isInstalling) return
     setShowConsole(true)
+
+    addConsoleLog('▶ Verificando Node.js...', 'info')
+    const nodeOk = await handleCheckNode(() => {
+      handleStart()
+    })
+    if (!nodeOk) return
+
     addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_next_server', 'Iniciando servidor Next.js...')}`, 'info')
     try {
       let projectPath = await getProjectPath()
