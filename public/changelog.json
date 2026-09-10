@@ -1,4 +1,16 @@
 {
+  "v1.0.5": {
+    "date": "2026-09-10",
+    "pt": [
+      "Suporte aprimorado para execução de ferramentas e comandos Node.js e Java diretamente no ambiente da IDE, garantindo maior estabilidade e fluidez no seu fluxo de desenvolvimento."
+    ],
+    "en": [
+      "Enhanced support for running Node.js and Java commands directly within the IDE, ensuring greater stability and a smoother development workflow."
+    ],
+    "es": [
+      "Soporte mejorado para la ejecución de herramientas y comandos de Node.js y Java directamente en el IDE, garantizando mayor estabilidad y fluidez en su flujo de desarrollo."
+    ]
+  },
   "v1.0.4": {
     "date": "2026-09-10",
     "pt": [
