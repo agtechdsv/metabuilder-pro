@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "check-java-available",
+      "description": "allow check_java_available",
+      "commands": {
+        "allow": [
+          "check_java_available"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

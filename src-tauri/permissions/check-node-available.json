@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "check-node-available",
+      "description": "allow check_node_available",
+      "commands": {
+        "allow": [
+          "check_node_available"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

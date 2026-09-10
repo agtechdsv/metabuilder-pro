@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "compile-java-workspace",
+      "description": "allow compile_java_workspace",
+      "commands": {
+        "allow": [
+          "compile_java_workspace"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

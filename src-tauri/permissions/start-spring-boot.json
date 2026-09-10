@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "start-spring-boot",
+      "description": "allow start_spring_boot",
+      "commands": {
+        "allow": [
+          "start_spring_boot"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}

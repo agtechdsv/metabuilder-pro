@@ -1,0 +1,15 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "stop-spring-boot",
+      "description": "allow stop_spring_boot",
+      "commands": {
+        "allow": [
+          "stop_spring_boot"
+        ],
+        "deny": []
+      }
+    }
+  ]
+}
