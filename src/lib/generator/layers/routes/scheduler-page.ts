@@ -446,10 +446,10 @@ ${headerButtonsHtml}
         </div>
       )}
 
-      {/* Barra de Filtros / Argumentos da View */}
+      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
+      {!isEmbedded && (
       <form method="GET" className="p-6 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm">
-        {isEmbedded && <input type="hidden" name="embedded" value="true" />}
         <div className="flex flex-col lg:flex-row items-end gap-6">
           <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
@@ -463,7 +463,7 @@ ${filterInputs}
               Pesquisar
             </button>
             <Link
-              href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+              href="${route.path}"
               className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
             >
               <RefreshCcw className="w-4 h-4" />
@@ -471,7 +471,8 @@ ${filterInputs}
             </Link>
           </div>
         </div>
-      </form>` : ''}
+      </form>
+      )}` : ''}
 
       {/* Calendário dentro de Suspense Streaming */}
       <Suspense
