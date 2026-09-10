@@ -4,6 +4,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronLeft, ChevronRight, X, Save, CopyCheck } from 'lucide-react'
 import { useI18n } from '@/i18n'
+import { getLanguageFromPath } from './ideUtils'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
 
@@ -177,13 +178,7 @@ export function IDEEditorArea({
           </div>
         ) : activeFile ? (
           <MonacoEditor
-            language={
-              activeFile.endsWith('.tsx') || activeFile.endsWith('.ts')
-                ? 'typescript'
-                : activeFile.endsWith('.json')
-                ? 'json'
-                : 'javascript'
-            }
+            language={getLanguageFromPath(activeFile)}
             theme="vs-dark"
             beforeMount={handleMonacoBeforeMount}
             path={activeFile}
@@ -203,6 +198,23 @@ export function IDEEditorArea({
               monacoRef.current = monaco
               editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
                 handleSaveFile(editor.getValue(), activeFileRef.current || undefined)
+              })
+              
+              // Go to Definition (Ctrl+Click)
+              editor.onMouseDown((e) => {
+                if (e.event.ctrlKey || e.event.metaKey) {
+                  const position = e.target.position;
+                  if (position) {
+                    const model = editor.getModel();
+                    const word = model?.getWordAtPosition(position);
+                    if (word && word.word) {
+                       const targetFile = Object.keys(fileContents).find(f => f.endsWith(`/${word.word}.java`) || f.endsWith(`/${word.word}.ts`) || f.endsWith(`/${word.word}.tsx`));
+                       if (targetFile) {
+                          setActiveFile(targetFile);
+                       }
+                    }
+                  }
+                }
               })
             }}
           />

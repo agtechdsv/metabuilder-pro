@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n'
-import { handleMonacoBeforeMount } from './ideUtils'
+import { handleMonacoBeforeMount, getLanguageFromPath } from './ideUtils'
 
 const MonacoDiffEditor = dynamic(
   () => import('@monaco-editor/react').then(mod => mod.DiffEditor),
@@ -501,13 +501,7 @@ export function IDECommitModal({
                       <MonacoDiffEditor
                         original={diffOriginalContent}
                         modified={diffLocalContent}
-                        language={
-                          diffActiveFile.split('.').pop() === 'tsx' || diffActiveFile.split('.').pop() === 'ts'
-                            ? 'typescript'
-                            : diffActiveFile.split('.').pop() === 'css'
-                            ? 'css'
-                            : 'javascript'
-                        }
+                        language={getLanguageFromPath(diffActiveFile)}
                         theme="vs-dark"
                         beforeMount={handleMonacoBeforeMount}
                         options={{

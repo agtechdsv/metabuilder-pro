@@ -86,6 +86,9 @@ function getJavaImports(types: Set<string>): string[] {
     LocalDateTime: 'java.time.LocalDateTime',
     OffsetDateTime: 'java.time.OffsetDateTime',
     UUID: 'java.util.UUID',
+    List: 'java.util.List',
+    ArrayList: 'java.util.ArrayList',
+    JsonIgnore: 'com.fasterxml.jackson.annotation.JsonIgnore',
     Float: '',  // java.lang — não precisa importar
     Double: '', // java.lang — não precisa importar
   }
@@ -539,10 +542,13 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
 
   const inverseRels = getInverseRelations(model, ast)
   for (const inv of inverseRels) {
+    javaTypes.add('List')
+    javaTypes.add('ArrayList')
+    javaTypes.add('JsonIgnore')
     const listProp = toCamelCase(inv.sourceTable)
     fieldLines.push(`    @OneToMany(mappedBy = "${inv.propertyName}", cascade = CascadeType.ALL, orphanRemoval = true)`)
-    fieldLines.push(`    @com.fasterxml.jackson.annotation.JsonIgnore`)
-    fieldLines.push(`    private java.util.List<${inv.sourceModel}> ${listProp} = new java.util.ArrayList<>();`)
+    fieldLines.push(`    @JsonIgnore`)
+    fieldLines.push(`    private List<${inv.sourceModel}> ${listProp} = new ArrayList<>();`)
     fieldLines.push(``)
   }
 
