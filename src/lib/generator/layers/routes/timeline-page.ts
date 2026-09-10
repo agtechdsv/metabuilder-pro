@@ -640,8 +640,8 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
 
-      {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção */}
-      {filterFields.length > 0 && (
+      {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção (Oculta em modo embutido) */}
+      {!isEmbedded && filterFields.length > 0 && (
         <form onSubmit={handleSearch} className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm space-y-4">
           <div className="grid grid-cols-12 gap-4">
             {filterFields.map((f: any) => {

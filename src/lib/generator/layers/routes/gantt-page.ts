@@ -250,11 +250,11 @@ ${headerButtonsHtml}
         </div>
       </div>
 
-      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
+      {!isEmbedded && (
       <div className="px-6 sm:px-10">
         <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
-          {isEmbedded && <input type="hidden" name="embedded" value="true" />}
           <div className="flex flex-col lg:flex-row items-end gap-6">
             <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
@@ -268,7 +268,7 @@ ${filterInputs}
                 Pesquisar
               </button>
               <Link
-                href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+                href="${route.path}"
                 className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0 cursor-pointer"
               >
                 <RefreshCcw className="w-4 h-4" />
@@ -277,7 +277,8 @@ ${filterInputs}
             </div>
           </div>
         </form>
-      </div>` : ''}
+      </div>
+      )}` : ''}
 
       {/* Gantt Interactive Canvas */}
       <div className="px-6 sm:px-10">

@@ -188,8 +188,9 @@ ${buildOptionsCode.join('\n')}
         </div>
       </div>
 
-      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
+      {!isEmbedded && (
       <div className="px-6 sm:px-10">
         <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">
@@ -214,7 +215,8 @@ ${filterInputs}
             </div>
           </div>
         </form>
-      </div>` : ''}
+      </div>
+      )}` : ''}
 
       {/* Blueprint Interactive Flow Canvas */}
       <div className="px-6 sm:px-10">
@@ -642,7 +644,7 @@ ${modalStateVars}
     return dataList.filter(item => {
       for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
         if (!rawVal || !String(rawVal).trim()) continue
-        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to') continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode' || rawKey.includes('.')) continue
         const val = String(rawVal).trim().toLowerCase()
         const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
 

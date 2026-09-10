@@ -359,11 +359,11 @@ ${headerButtonsHtml}
         </div>
       )}
 
-      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
+      {!isEmbedded && (
       <div className="px-6 sm:px-10">
         <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
-          {isEmbedded && <input type="hidden" name="embedded" value="true" />}
           <div className="flex flex-col lg:flex-row items-end gap-6">
             <div className="flex-1 grid grid-cols-12 gap-4 w-full">
 ${filterInputs}
@@ -377,7 +377,7 @@ ${filterInputs}
                 Pesquisar
               </button>
               <Link
-                href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
+                href="${route.path}"
                 className="flex items-center gap-2 px-5 h-[42px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
               >
                 <RefreshCcw className="w-3.5 h-3.5 text-neutral-400" />
@@ -386,7 +386,8 @@ ${filterInputs}
             </div>
           </div>
         </form>
-      </div>` : ''}
+      </div>
+      )}` : ''}
 
       {/* Conteúdo da Galeria */}
       <div className="px-6 sm:px-10 pb-12">

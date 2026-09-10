@@ -295,7 +295,11 @@ export function generateDetailTabsClient(route: RouteNode): string {
 
   const customTabPanels = hasCustomSlots
     ? detailSlots.map((slot, i) => {
-        const fkParam = slot.foreignKey ? `${slot.foreignKey}=\${id}` : `parent_id=\${id}`
+        const masterTable = (route.modelTable || route.modelName || '').toLowerCase()
+        const masterPk = route.primaryKey || 'id'
+        const fkParam = slot.foreignKey
+          ? `${slot.foreignKey}=\${id}`
+          : (masterTable ? `${masterTable}.${masterPk}=\${id}` : `parent_id=\${id}`)
         return [
           `          <div className={activeTab === ${i + 1} ? 'block w-full' : 'hidden'}>`,
           `            {visitedTabs[${i + 1}] && (`,

@@ -980,8 +980,9 @@ ${headerButtonsHtml}
         </div>
       </div>
 
-      {/* Barra de Filtros / Argumentos da View (Fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
       ${filterFields.length > 0 ? `
+      {!isEmbedded && (
       <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
         <div className="flex flex-col lg:flex-row items-end gap-6">
           <div className="flex-1 grid grid-cols-12 gap-4 w-full">
@@ -1004,7 +1005,8 @@ ${filterInputs}
             </Link>
           </div>
         </div>
-      </form>` : ''}
+      </form>
+      )}` : ''}
 
       {/* Conteúdo Analítico dentro de Suspense Streaming */}
       <Suspense

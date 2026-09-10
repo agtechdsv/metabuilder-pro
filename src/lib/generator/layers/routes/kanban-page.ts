@@ -639,7 +639,7 @@ ${modalStateVars}
     return dataList.filter(item => {
       for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
         if (!rawVal || !String(rawVal).trim()) continue
-        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to') continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode') continue
         if (rawKey.includes('.')) continue // Filtros relacionais são resolvidos no banco de dados
         const val = String(rawVal).trim().toLowerCase()
         const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey

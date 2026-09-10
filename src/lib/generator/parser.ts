@@ -2464,6 +2464,8 @@ export function parseMetaBuilderJSON(
           })
           if (fkField) {
             fk = fkField.db_column_name || fkField.dbColumn
+          } else {
+            fk = `${mTableName}.${primaryKey || 'id'}`
           }
         }
 
