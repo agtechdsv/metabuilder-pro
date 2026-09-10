@@ -47,7 +47,8 @@ export function useIDEServer({
     try {
       await invoke('check_node_available')
       return true
-    } catch (e) {
+    } catch (e: any) {
+      addConsoleLog(`[Node Check] fallback para portatil: ${e}`, 'warn')
       const userWantsToInstall = await new Promise<boolean>((resolve) => {
         setNodePromptResolver({ resolve })
       })

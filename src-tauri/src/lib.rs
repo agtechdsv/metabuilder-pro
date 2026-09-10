@@ -350,21 +350,27 @@ fn check_node_available(app: tauri::AppHandle) -> Result<(), String> {
 
     // 2. Verifica Node global
     #[cfg(target_os = "windows")]
-    let output = std::process::Command::new("cmd")
-        .args(["/c", "node -v"])
-        .output()
-        .map_err(|_| "node not found".to_string())?;
+    let output = match std::process::Command::new("cmd")
+        .args(["/c", "npm -v"])
+        .output() {
+            Ok(o) => o,
+            Err(e) => return Err(format!("Falha ao executar cmd: {}", e)),
+        };
 
     #[cfg(not(target_os = "windows"))]
-    let output = std::process::Command::new("node")
+    let output = match std::process::Command::new("npm")
         .arg("-v")
-        .output()
-        .map_err(|_| "node not found".to_string())?;
+        .output() {
+            Ok(o) => o,
+            Err(e) => return Err(format!("Falha ao executar npm: {}", e)),
+        };
 
     if output.status.success() {
         Ok(())
     } else {
-        Err("node failed".to_string())
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Err(format!("npm check falhou: code={:?} stderr={} stdout={}", output.status.code(), stderr, stdout))
     }
 }
 

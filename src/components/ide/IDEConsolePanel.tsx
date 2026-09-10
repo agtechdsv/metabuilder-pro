@@ -326,7 +326,7 @@ export function IDEConsolePanel({
         title="MetaBuilder Pro"
         size="md"
       >
-        <div className="flex flex-col gap-4 text-sm text-neutral-300">
+        <div className="flex flex-col gap-4 text-sm text-neutral-600 dark:text-neutral-300">
           <p>O Node.js (v20+) é necessário para rodar o frontend.</p>
           <p>Deseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)</p>
           <div className="flex justify-end gap-2 mt-2">
@@ -335,7 +335,7 @@ export function IDEConsolePanel({
                 nodePromptResolver?.resolve(false)
                 setNodePromptResolver(null)
               }}
-              className="px-4 py-2 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 font-medium transition-colors"
+              className="px-4 py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-medium transition-colors"
             >
               Cancelar
             </button>
