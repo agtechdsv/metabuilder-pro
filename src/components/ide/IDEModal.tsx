@@ -193,6 +193,14 @@ export function IDEModal({
               clearConsole={consoleState.clearConsole}
               consoleLogs={consoleState.consoleLogs}
               consoleEndRef={consoleState.consoleEndRef}
+              isJavaSpringProject={server.isJavaSpringProject}
+              springProcess={server.springProcess}
+              isStartingSpring={server.isStartingSpring}
+              isStoppingSpring={server.isStoppingSpring}
+              handleStartSpring={server.handleStartSpring}
+              handleStopSpring={server.handleStopSpring}
+              handleOpenSpringSwagger={server.handleOpenSpringSwagger}
+              springPort={server.springPort}
             />
           </div>
         </motion.div>

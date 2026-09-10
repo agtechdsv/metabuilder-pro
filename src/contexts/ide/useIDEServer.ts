@@ -50,7 +50,10 @@ export function useIDEServer({
     setShowConsole(true)
     addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_npm_install', 'Iniciando npm install...')}`, 'info')
     try {
-      const projectPath = await getProjectPath()
+      let projectPath = await getProjectPath()
+      if (isJavaSpringProject) {
+        projectPath = `${projectPath}/frontend`
+      }
       const { listen } = await import('@tauri-apps/api/event')
 
       await new Promise<void>(async (resolve, reject) => {
@@ -91,7 +94,10 @@ export function useIDEServer({
     setShowConsole(true)
     addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_next_server', 'Iniciando servidor Next.js...')}`, 'info')
     try {
-      const projectPath = await getProjectPath()
+      let projectPath = await getProjectPath()
+      if (isJavaSpringProject) {
+        projectPath = `${projectPath}/frontend`
+      }
       await invoke('start_nextjs_server', { projectPath })
 
       const { listen } = await import('@tauri-apps/api/event')
@@ -275,6 +281,7 @@ export function useIDEServer({
     handleStop,
     handleOpenBrowser,
     getProjectPath,
+    isJavaSpringProject,
     // Spring Boot
     springProcess,
     isStartingSpring,

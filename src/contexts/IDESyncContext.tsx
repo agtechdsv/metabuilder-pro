@@ -84,11 +84,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     moveToTrash: fsState.moveToTrash
   })
 
+  const isJavaSpringProject = fsState.fileTree.some(f => f.name === 'backend' || f.name === 'pom.xml')
+
   const serverState = useIDEServer({
     target,
     addConsoleLog: consoleState.addConsoleLog,
     setShowConsole: consoleState.setShowConsole,
-    isSyncing: gitState.isSyncing
+    isSyncing: gitState.isSyncing,
+    isJavaSpringProject
   })
 
   // IDE UI State
