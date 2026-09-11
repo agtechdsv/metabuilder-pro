@@ -644,7 +644,7 @@ ${modalStateVars}
     return dataList.filter(item => {
       for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
         if (!rawVal || !String(rawVal).trim()) continue
-        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode' || rawKey.includes('.')) continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode' || rawKey === 'view_mode' || rawKey === 'tab' || rawKey === 'layout' || rawKey.includes('.')) continue
         const val = String(rawVal).trim().toLowerCase()
         const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
 

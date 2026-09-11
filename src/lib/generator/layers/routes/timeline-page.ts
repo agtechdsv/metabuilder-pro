@@ -456,12 +456,19 @@ export function TimelineClient({
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
   const [isEmbedded, setIsEmbedded] = useState(initialParams?.embedded === 'true')
+  const [isTab, setIsTab] = useState(initialParams?.tab === 'true' || initialParams?.view_mode === 'tab')
+
+  const IGNORED_FILTER_KEYS = useMemo(() => new Set([
+    'embedded', 'preview', 'return_to', 'tab', 'view_mode', 'mode', 'layout',
+    'sort_by', 'sort_order', 'page', 'limit', 'search', 'parent_id', 'id'
+  ]), [])
 
   const [filterValues, setFilterValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     if (initialParams) {
+      const ignored = new Set(['embedded', 'preview', 'return_to', 'tab', 'view_mode', 'mode', 'layout', 'sort_by', 'sort_order', 'page', 'limit', 'search', 'parent_id', 'id'])
       for (const [k, v] of Object.entries(initialParams)) {
-        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to' && !k.includes('.')) {
+        if (v && !ignored.has(k.toLowerCase()) && !k.includes('.')) {
           init[k] = v
         }
       }
@@ -472,8 +479,9 @@ export function TimelineClient({
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     if (initialParams) {
+      const ignored = new Set(['embedded', 'preview', 'return_to', 'tab', 'view_mode', 'mode', 'layout', 'sort_by', 'sort_order', 'page', 'limit', 'search', 'parent_id', 'id'])
       for (const [k, v] of Object.entries(initialParams)) {
-        if (v && k !== 'embedded' && k !== 'preview' && k !== 'return_to' && !k.includes('.')) {
+        if (v && !ignored.has(k.toLowerCase()) && !k.includes('.')) {
           init[k] = v
         }
       }
@@ -492,16 +500,15 @@ export function TimelineClient({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})
 
-  const [isTab, setIsTab] = useState(false)
-
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
       if (sp.get('embedded') === 'true' || window.self !== window.top) setIsEmbedded(true)
       if (sp.get('tab') === 'true' || sp.get('view_mode') === 'tab') setIsTab(true)
       const fromUrl: Record<string, string> = {}
+      const ignored = new Set(['embedded', 'preview', 'return_to', 'tab', 'view_mode', 'mode', 'layout', 'sort_by', 'sort_order', 'page', 'limit', 'search', 'parent_id', 'id'])
       sp.forEach((val, key) => {
-        if (key !== 'embedded' && key !== 'preview' && key !== 'return_to' && !key.includes('.')) {
+        if (!ignored.has(key.toLowerCase()) && !key.includes('.')) {
           fromUrl[key] = val
         }
       })
@@ -530,11 +537,29 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
 
   // Filtragem de registros conforme a barra de argumentos/filtros
   const filteredData = useMemo(() => {
+    // Quando em modo aba (ex: Personalizado), a filtragem por relação é resolvida exclusivamente no banco
+    if (isTab) return dataList
+
     return dataList.filter(item => {
       for (const [col, val] of Object.entries(activeFilters)) {
         if (!val || !val.trim()) continue
+        if (IGNORED_FILTER_KEYS.has(col.toLowerCase())) continue
         if (col.includes('.')) continue // Filtros relacionais são resolvidos no banco de dados
-        const itemVal = item[col] ?? (item as any)?.[col.toLowerCase()]
+
+        const possibleCols = [
+          col,
+          col.toLowerCase(),
+          col.endsWith('_id') ? col.slice(0, -3) : (col + '_id'),
+        ]
+
+        let itemVal: any = undefined
+        for (const c of possibleCols) {
+          if (item[c] !== undefined && item[c] !== null) {
+            itemVal = item[c]
+            break
+          }
+        }
+
         if (itemVal === null || itemVal === undefined) return false
 
         // Comparação flexível para IDs e strings
@@ -546,7 +571,7 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
       }
       return true
     })
-  }, [dataList, activeFilters])
+  }, [dataList, activeFilters, isTab, IGNORED_FILTER_KEYS])
 
   // Paginação dinâmica por etapas (batching) idêntica à Web Produção
   const displayedData = useMemo(() => {
