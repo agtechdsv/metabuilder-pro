@@ -323,29 +323,31 @@ ${thCells}
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((item: any, idx: number) => (
-              <tr key={item.${route.primaryKey} || idx} className={"group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors " + (idx % 2 === 0 ? "" : "bg-neutral-50/50 dark:bg-neutral-900/20")}>
+            {paginatedData.map((item: any, idx: number) => {
+              const itemId = item.${route.primaryKey} ?? (item as any)?.[${JSON.stringify(route.primaryKey.toLowerCase())}] ?? (item as any)?.[${JSON.stringify(route.primaryKey.toUpperCase())}] ?? item.id ?? item.ID ?? item._id
+              return (
+              <tr key={itemId || idx} className={"group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors " + (idx % 2 === 0 ? "" : "bg-neutral-50/50 dark:bg-neutral-900/20")}>
                 <td className="px-4 py-4 w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50">
                   <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{(page - 1) * limit + idx + 1}</span>
                 </td>
 ${tdCells}
                 <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                   <div className="flex items-center justify-end gap-1.5">
-                    <Link href={'${route.path}/' + item.${route.primaryKey} + '?mode=view' + (isEmbedded ? '&embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
+                    <Link href={'${route.path}/' + itemId + '?mode=view' + (isEmbedded ? '&embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
                       <Search className="w-3.5 h-3.5" />
                     </Link>
-                    <Link href={'${route.path}/' + item.${route.primaryKey} + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
+                    <Link href={'${route.path}/' + itemId + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
                       <Pencil className="w-3.5 h-3.5" />
                     </Link>
                     <DeleteButton
-                      recordName={String(item[${JSON.stringify(route.gridFields.find(f => !f.isPrimaryKey && !f.hidden)?.dbColumn || route.primaryKey)}] || item.${route.primaryKey})}
-                      onDelete={async () => { 'use server'; await delete${mn}(item.${route.primaryKey}) }}
+                      recordName={String(item[${JSON.stringify(route.gridFields.find(f => !f.isPrimaryKey && !f.hidden)?.dbColumn || route.primaryKey)}] || itemId)}
+                      onDelete={async () => { 'use server'; await delete${mn}(itemId) }}
                     />
 ${rowButtonsHtml}
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
             {paginatedData.length === 0 && (
               <tr>
                 <td colSpan={${route.gridFields.filter(f => !f.hidden).length + 2}} className="h-48 text-center">

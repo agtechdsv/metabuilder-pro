@@ -235,11 +235,17 @@ export async function query(text: string, params: any = {}) {
     const config = getOracleConfig()
     connection = await oracledb.getConnection(config);
 
-    const result = await connection.execute(text, params, { 
-      outFormat: oracledb.OUT_FORMAT_OBJECT,
-      autoCommit: true 
+    const rawRows = (result.rows || []) as any[];
+    const rows = rawRows.map((row: any) => {
+      if (!row || typeof row !== 'object') return row;
+      const normalized: Record<string, any> = { ...row };
+      for (const [k, v] of Object.entries(row)) {
+        normalized[k.toLowerCase()] = v;
+        normalized[k.toUpperCase()] = v;
+      }
+      return normalized;
     });
-    return result.rows || [];
+    return rows;
   } catch (err) {
     console.error('Database query error', err);
     throw err;
