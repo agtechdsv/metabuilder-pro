@@ -127,8 +127,21 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
         setToastMessage('Registro atualizado com sucesso!')
         window.dispatchEvent(new CustomEvent('save-all-relations'))
         if (typeof window !== 'undefined' && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'RECORD_SAVED',
+            action: 'update',
+            id: String(id),
+            payload,
+            updatedRecord: { ...payload, id },
+          }, '*')
           setTimeout(() => {
-            window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+            window.parent.postMessage({
+              type: 'CLOSE_MODAL',
+              action: 'update',
+              id: String(id),
+              payload,
+              updatedRecord: { ...payload, id },
+            }, '*')
           }, 800)
         }
       }

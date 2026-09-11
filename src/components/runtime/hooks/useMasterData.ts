@@ -521,7 +521,13 @@ export function useMasterData({
       const isEmbedded = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === 'true'
 
       if (isEmbedded) {
-        window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')
+        window.parent.postMessage({
+          type: 'CLOSE_MODAL',
+          action,
+          id: String(selectedRow?.id || formData?.id || ''),
+          payload: formData,
+          updatedRecord: { ...formData, id: selectedRow?.id || formData?.id },
+        }, '*')
       } else if (isCadastroOnly) {
         if (action === 'insert') {
           setSelectedRow(null)

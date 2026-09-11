@@ -5,7 +5,7 @@ export function generateMindMapBoardComponent(files: Map<string, string>) {
 function generateMindMapBoardCode(): string {
   return `'use client'
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import {
   ArrowLeft,
@@ -57,6 +57,9 @@ export interface MindMapBoardProps {
   fields?: any[]
   mindmapConfig?: MindmapConfig
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  updatedNode?: { id: string; data: Record<string, any> } | null
+  deletedNodeId?: string | null
+  refreshTrigger?: number
   onFetchChildren?: (nextLevelIndex: number, parentNode: MindMapNode) => Promise<MindMapNode[]>
   onView?: (row: any, level?: number) => void
   onEdit?: (row: any, level?: number) => void
@@ -68,6 +71,9 @@ export function MindMapBoard({
   fields = [],
   mindmapConfig = {},
   relationalOptions = {},
+  updatedNode,
+  deletedNodeId,
+  refreshTrigger,
   onFetchChildren,
   onView,
   onEdit,
@@ -85,8 +91,18 @@ export function MindMapBoard({
 
   const updateNodeChildren = useCallback((nodes: MindMapNode[], targetId: string, newKids: MindMapNode[]): MindMapNode[] => {
     return nodes.map(n => {
-      if (n.id === targetId) {
-        return { ...n, children: newKids, count: newKids.length }
+      const nRaw = n.rawData || {}
+      const rawId = String(nRaw.id ?? nRaw.ID ?? nRaw.codigo ?? nRaw.uuid ?? '')
+      const isMatch = String(n.id) === String(targetId) || (rawId && rawId === String(targetId))
+      if (isMatch) {
+        const existingKidsMap = new Map((n.children || []).map(k => [String(k.id), k]))
+        const mergedKids = newKids.map(k => {
+          const oldKid = existingKidsMap.get(String(k.id))
+          return oldKid && oldKid.children !== undefined
+            ? { ...k, children: oldKid.children, count: oldKid.count }
+            : k
+        })
+        return { ...n, children: mergedKids, count: mergedKids.length }
       }
       if (n.children && n.children.length > 0) {
         return { ...n, children: updateNodeChildren(n.children, targetId, newKids) }
@@ -94,6 +110,97 @@ export function MindMapBoard({
       return n
     })
   }, [])
+
+  const updateTreeNode = useCallback((
+    nodes: MindMapNode[],
+    targetId: string,
+    newData: Record<string, any>
+  ): MindMapNode[] => {
+    return nodes.map(node => {
+      const nodeRaw = node.rawData || {}
+      const rawId = String(nodeRaw.id ?? nodeRaw.ID ?? nodeRaw.codigo ?? nodeRaw.uuid ?? '')
+      const isMatch = String(node.id) === String(targetId) || (rawId && rawId === String(targetId))
+
+      let updated = node
+      if (isMatch) {
+        const mergedRaw = { ...nodeRaw, ...newData }
+        const lvlConfig = mindmapConfig?.levels?.[node.level]
+        const titleField = lvlConfig?.titleField || 'nome'
+        const descField = lvlConfig?.descField
+
+        const val = mergedRaw[titleField]
+        const fallback = mergedRaw.nome || mergedRaw.name || mergedRaw.title || mergedRaw.razao_social || mergedRaw.descricao || node.name
+        const newTitle = String(val !== undefined && val !== null && String(val).trim() !== '' ? val : fallback)
+
+        let newDesc = node.desc
+        if (descField && mergedRaw[descField] !== undefined && mergedRaw[descField] !== null) {
+          newDesc = String(mergedRaw[descField])
+        }
+
+        updated = {
+          ...node,
+          name: newTitle,
+          desc: newDesc,
+          rawData: mergedRaw,
+        }
+      }
+
+      if (updated.children && updated.children.length > 0) {
+        return {
+          ...updated,
+          children: updateTreeNode(updated.children, targetId, newData),
+        }
+      }
+
+      return updated
+    })
+  }, [mindmapConfig?.levels])
+
+  const removeTreeNode = useCallback((
+    nodes: MindMapNode[],
+    targetId: string
+  ): MindMapNode[] => {
+    return nodes
+      .filter(node => {
+        const nodeRaw = node.rawData || {}
+        const rawId = String(nodeRaw.id ?? nodeRaw.ID ?? nodeRaw.codigo ?? nodeRaw.uuid ?? '')
+        return String(node.id) !== String(targetId) && (!rawId || rawId !== String(targetId))
+      })
+      .map(node => {
+        if (node.children && node.children.length > 0) {
+          const newKids = removeTreeNode(node.children, targetId)
+          return { ...node, children: newKids, count: newKids.length }
+        }
+        return node
+      })
+  }, [])
+
+  // Atualiza nó otimisticamente quando prop updatedNode for recebida
+  useEffect(() => {
+    if (!updatedNode || !updatedNode.id) return
+    setRelationalTree(prev => updateTreeNode(prev, updatedNode.id, updatedNode.data))
+  }, [updatedNode, updateTreeNode])
+
+  // Remove nó quando prop deletedNodeId for recebida
+  useEffect(() => {
+    if (!deletedNodeId) return
+    setRelationalTree(prev => removeTreeNode(prev, deletedNodeId))
+  }, [deletedNodeId, removeTreeNode])
+
+  // Ouve eventos de janela (postMessage do iframe) para sincronização imediata em tempo real
+  useEffect(() => {
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'CLOSE_MODAL' || event.data?.type === 'CLOSE_IFRAME' || event.data?.type === 'RECORD_SAVED') {
+        const id = event.data?.id
+        const payload = event.data?.payload || event.data?.updatedRecord
+        if (id && payload) {
+          setRelationalTree(prev => updateTreeNode(prev, String(id), payload))
+        }
+      }
+    }
+    window.addEventListener('message', handleWindowMessage)
+    return () => window.removeEventListener('message', handleWindowMessage)
+  }, [updateTreeNode])
 
   useEffect(() => {
     if (!isRelational || !data || data.length === 0) return
@@ -201,6 +308,27 @@ export function MindMapBoard({
     }
     return node
   }, [virtualRoot, currentPath])
+
+  // Re-sincroniza os nós do nível atual com o backend quando acionado refresh
+  const currentNodeRef = useRef(currentNode)
+  currentNodeRef.current = currentNode
+
+  useEffect(() => {
+    if (!refreshTrigger || refreshTrigger <= 0) return
+    const activeNode = currentNodeRef.current
+    if (!activeNode) return
+
+    // Se o nó ativo no centro tiver filhos carregados, re-sincroniza com o backend
+    if (onFetchChildren && activeNode.children !== undefined && activeNode.level >= 0) {
+      onFetchChildren(activeNode.level + 1, activeNode)
+        .then(newKids => {
+          if (newKids) {
+            setRelationalTree(prev => updateNodeChildren(prev, activeNode.id, newKids))
+          }
+        })
+        .catch(err => console.error('Erro ao revalidar nós do mapa mental:', err))
+    }
+  }, [refreshTrigger, onFetchChildren, updateNodeChildren])
 
   // Breadcrumbs para navegação
   const breadcrumbTrail = useMemo(() => {

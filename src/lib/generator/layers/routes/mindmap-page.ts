@@ -496,9 +496,14 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
         setDataList(prev => prev.map(item =>
           String(item.${pk} || item.id) === recordId ? { ...item, ...payload } : item
         ))
+        setUpdatedNode({ id: recordId, data: payload })
+        setRefreshTrigger(prev => prev + 1)
       } else {
         const res = await create${mn}(payload)
-        if (res) setDataList(prev => [res, ...prev])
+        if (res) {
+          setDataList(prev => [res, ...prev])
+          setRefreshTrigger(prev => prev + 1)
+        }
       }
 
       // Salva alterações nas abas de detalhe (relações filhas e sub-itens)
@@ -718,6 +723,9 @@ export function MindMapClient({
 }) {
   const router = useRouter()
   const [dataList, setDataList] = useState<any[]>(initialData)
+  const [updatedNode, setUpdatedNode] = useState<{ id: string; data: Record<string, any> } | null>(null)
+  const [deletedNodeId, setDeletedNodeId] = useState<string | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [iframeModal, setIframeModal] = useState<{ isOpen: boolean; url: string; title: string; mode?: string }>({
     isOpen: false,
     url: '',
@@ -735,7 +743,22 @@ ${relationFetchEffect}
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'CLOSE_MODAL' || event.data?.type === 'CLOSE_IFRAME') {
         setIframeModal({ isOpen: false, url: '', title: '' })
+        const id = event.data?.id
+        const payload = event.data?.payload || event.data?.updatedRecord
+        if (id && payload) {
+          setDataList(prev => prev.map(item => String(item.${pk} || item.id) === String(id) ? { ...item, ...payload } : item))
+          setUpdatedNode({ id: String(id), data: payload })
+        }
+        setRefreshTrigger(prev => prev + 1)
         router.refresh()
+      } else if (event.data?.type === 'RECORD_SAVED') {
+        const id = event.data?.id
+        const payload = event.data?.payload || event.data?.updatedRecord
+        if (id && payload) {
+          setDataList(prev => prev.map(item => String(item.${pk} || item.id) === String(id) ? { ...item, ...payload } : item))
+          setUpdatedNode({ id: String(id), data: payload })
+          setRefreshTrigger(prev => prev + 1)
+        }
       }
     }
     window.addEventListener('message', handleMessage)
@@ -755,7 +778,9 @@ ${relationFetchEffect}
   const handleDelete = async (row: any) => {
     const recordId = String(row.${pk} || row.id)
     setDataList(prev => prev.filter(item => String(item.${pk} || item.id) !== recordId))
-    await delete${mn}(recordId)
+    setDeletedNodeId(recordId)
+    setRefreshTrigger(prev => prev + 1)
+    await delete${mn}(recordId).catch(() => null)
     router.refresh()
   }
 
@@ -815,6 +840,9 @@ ${fetchChildrenFn}
         fields={fields}
         mindmapConfig={mindmapConfig as any}
         relationalOptions={relationalOptions}
+        updatedNode={updatedNode}
+        deletedNodeId={deletedNodeId}
+        refreshTrigger={refreshTrigger}
 ${hasMindmapLevels ? '        onFetchChildren={handleFetchChildren}\n' : ''}        onView={handleView}
         onEdit={handleEdit}
         onDelete={handleDelete}
