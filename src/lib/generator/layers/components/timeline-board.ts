@@ -157,7 +157,10 @@ export function TimelineBoard({
       const opts = relationalOptions[colName] ?? relationalOptions[colName.toLowerCase()] ?? relationalOptions[colName.toUpperCase()]
       if (opts && Array.isArray(opts)) {
         const match = opts.find(o => String(o.value) === String(val))
-        if (match) return match.label
+        if (match) {
+          const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label
+          return matchVal || match.label
+        }
       }
       return String(val)
     }
@@ -168,11 +171,12 @@ export function TimelineBoard({
       const rowVal = row[optKey] ?? row[optKey.toLowerCase()] ?? row[optKey.toUpperCase()]
       if (rowVal !== undefined && rowVal !== null && rowVal !== '') {
         const match = opts.find(o => String(o.value) === String(rowVal))
-        if (match && match.label) {
+        if (match) {
           const lowerCol = colName.toLowerCase()
           const lowerKey = optKey.toLowerCase().replace('_id', '')
           if (lowerKey.includes(lowerCol) || lowerCol.includes(lowerKey)) {
-            return match.label
+            const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label
+            return matchVal || match.label
           }
         }
       }
@@ -552,7 +556,8 @@ export function TimelineBoard({
               {sortedData.map((item, index) => {
                 const isEven = index % 2 === 0
                 const primaryKey = item.id || item.ID || item._id || index
-                const rawDate = item[timelineConfig.dateField]
+                const dateKey = timelineConfig.dateField
+                const rawDate = dateKey ? (item[dateKey] ?? item[dateKey.toLowerCase()] ?? item[dateKey.toUpperCase()]) : null
                 const title = resolveFieldValue(item, timelineConfig.titleField) || 'Sem Título'
                 const desc = resolveFieldValue(item, timelineConfig.descField)
                 const iconStatus = resolveFieldValue(item, timelineConfig.iconField)
@@ -749,7 +754,8 @@ export function TimelineBoard({
               {sortedData.map((item, index) => {
                 const isEven = index % 2 === 0
                 const primaryKey = item.id || item.ID || item._id || index
-                const rawDate = item[timelineConfig.dateField]
+                const dateKey = timelineConfig.dateField
+                const rawDate = dateKey ? (item[dateKey] ?? item[dateKey.toLowerCase()] ?? item[dateKey.toUpperCase()]) : null
                 const title = resolveFieldValue(item, timelineConfig.titleField) || 'Sem Título'
                 const desc = resolveFieldValue(item, timelineConfig.descField)
                 const iconStatus = resolveFieldValue(item, timelineConfig.iconField)

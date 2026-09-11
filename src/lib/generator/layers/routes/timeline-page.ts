@@ -39,6 +39,33 @@ export function generateTimelinePage(route: RouteNode): string {
     }
   })
 
+  // Garante inclusão de modelos relacionados a campos da timeline (com metadados ou heurística *_id)
+  const extraLookupCols = [route.timelineConfig?.titleField, route.timelineConfig?.descField, route.timelineConfig?.iconField].filter(Boolean) as string[]
+  extraLookupCols.forEach(rawCol => {
+    const colOnly = rawCol.includes('.') ? rawCol.split('.').pop()! : rawCol
+    const colLower = colOnly.toLowerCase()
+    const matchedField = allTimelineFields.find(f => 
+      (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn).toLowerCase() === colLower || 
+      f.id === rawCol
+    )
+    const targetModel = matchedField?.config?.relation?.targetModel || (matchedField as any)?.relation?.targetModel
+    const targetTable = matchedField?.config?.relation?.targetTable || matchedField?.config?.component?.rel_table || matchedField?.config?.rel_table
+
+    if (targetTable) {
+      const modelName = targetModel || toPascalCase(targetTable)
+      if (!lookupModels.has(targetTable.toLowerCase())) {
+        lookupModels.set(targetTable.toLowerCase(), modelName)
+      }
+    } else if (colLower.endsWith('_id')) {
+      const base = colOnly.slice(0, -3)
+      const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
+      const modelName = toPascalCase(table)
+      if (!lookupModels.has(table.toLowerCase())) {
+        lookupModels.set(table.toLowerCase(), modelName)
+      }
+    }
+  })
+
   // Remove o próprio modelo se acidentalmente incluído
   lookupModels.delete(mnLower)
 
@@ -92,15 +119,18 @@ export function generateTimelinePage(route: RouteNode): string {
   })
 
   // Garante lookups para campos usados na timeline mesmo se não estiverem em filterFields
-  const extraLookupCols = [route.timelineConfig?.titleField, route.timelineConfig?.descField, route.timelineConfig?.iconField].filter(Boolean) as string[]
   extraLookupCols.forEach(rawCol => {
     const col = rawCol.includes('.') ? rawCol.split('.').pop()! : rawCol
     const colLower = col.toLowerCase()
-    if (col && colLower.endsWith('_id') && !optionsMap.has(col) && !optionsMap.has(colLower)) {
-      const base = col.slice(0, -3)
-      const t = (base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's'))
-      if (lookupModels.has(t)) {
-        const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn).toLowerCase() === colLower)
+    if (col && !optionsMap.has(col) && !optionsMap.has(colLower)) {
+      const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn).toLowerCase() === colLower || f.id === rawCol)
+      const targetTable = matchedField?.config?.relation?.targetTable || matchedField?.config?.component?.rel_table || matchedField?.config?.rel_table
+      let t = targetTable ? targetTable.toLowerCase() : null
+      if (!t && colLower.endsWith('_id')) {
+        const base = col.slice(0, -3)
+        t = (base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's'))
+      }
+      if (t && lookupModels.has(t)) {
         const relLabel = matchedField?.config?.component?.rel_label || matchedField?.config?.relation?.displayColumn || matchedField?.config?.rel_label
         const relValue = matchedField?.config?.component?.rel_value || matchedField?.config?.relation?.valueColumn || matchedField?.config?.rel_value || 'id'
         const filterCol = matchedField?.config?.component?.filter_column || matchedField?.config?.filter_column || matchedField?.config?.filterColumn || ''

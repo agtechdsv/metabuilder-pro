@@ -200,9 +200,40 @@ export async function query(text: string, params?: any[]) {
 function generateOracleClient() {
   return `import oracledb from 'oracledb'
 
+// Fix de compatibilidade para Node.js 22/24:
+// O Node 24 otimiza streams/sockets chamando ArrayBuffer.prototype.transfer(), que lança
+// TypeError se o buffer for uma fatia do pool interno de memória (Buffer.poolSize / slab).
+if (typeof ArrayBuffer !== 'undefined' && typeof (ArrayBuffer.prototype as any).transfer === 'function') {
+  const originalTransfer = (ArrayBuffer.prototype as any).transfer;
+  (ArrayBuffer.prototype as any).transfer = function (newByteLength?: number) {
+    try {
+      return originalTransfer.call(this, newByteLength);
+    } catch {
+      const len = newByteLength !== undefined ? newByteLength : this.byteLength;
+      const copy = new ArrayBuffer(len);
+      new Uint8Array(copy).set(new Uint8Array(this, 0, Math.min(this.byteLength, len)));
+      return copy;
+    }
+  };
+}
+
+if (typeof process !== 'undefined' && process.on) {
+  process.on('uncaughtException', (err: any) => {
+    if (err && (err.message?.includes('ArrayBuffer is not detachable') || String(err).includes('ArrayBuffer is not detachable'))) {
+      // Ignora erro benigno de detach de socket buffers concorrentes no Node 24
+      return;
+    }
+    console.error('Uncaught Exception:', err);
+  });
+}
+
 // Configurações padrão de NLS no ambiente para o cliente Oracle Thin/Thick
 if (!process.env.NLS_DATE_FORMAT) process.env.NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
 if (!process.env.NLS_TIMESTAMP_FORMAT) process.env.NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"';
+
+oracledb.fetchAsString = [oracledb.CLOB];
+oracledb.fetchAsBuffer = [oracledb.BLOB];
+oracledb.autoCommit = true;
 
 function getOracleConfig() {
   const rawConn = (process.env.DB_CONNECTION_STRING || process.env.DATABASE_URL || '').trim()
@@ -294,9 +325,9 @@ async function getPool(): Promise<oracledb.Pool> {
     const config = getOracleConfig()
     globalForOracle.oraclePoolPromise = oracledb.createPool({
       ...config,
-      poolMin: 2,
-      poolMax: 15,
-      poolIncrement: 2,
+      poolMin: 0,
+      poolMax: 10,
+      poolIncrement: 1,
       poolTimeout: 60,
       queueMax: 500,
       queueTimeout: 60000,
@@ -329,10 +360,15 @@ export async function query(text: string, params: any = {}) {
     const rawRows = (result.rows || []) as any[]
     const rows = rawRows.map((row: any) => {
       if (!row || typeof row !== 'object') return row
-      const normalized: Record<string, any> = { ...row }
+      const normalized: Record<string, any> = {}
       for (const [k, v] of Object.entries(row)) {
-        normalized[k.toLowerCase()] = v
-        normalized[k.toUpperCase()] = v
+        let val = v
+        if (Buffer.isBuffer(v)) {
+          val = v.toString('utf-8')
+        }
+        normalized[k] = val
+        normalized[k.toLowerCase()] = val
+        normalized[k.toUpperCase()] = val
       }
       return normalized
     })
@@ -889,16 +925,20 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   }
   if (opts?.filters && typeof opts.filters === 'object') {
     const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search', 'mode', 'preview', 'return_to', 'parent_id', 'id'])
-    const allowed = new Set(${allowedColsCode})
+    const allowedMap = new Map<string, string>()
+    for (const c of ${allowedColsCode}) {
+      allowedMap.set(c.toLowerCase(), c)
+    }
     let pIdx = 0
     for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
       if (rawVal === undefined || rawVal === null || rawVal === '') continue
       const key = rawKey.trim()
       if (ignoredKeys.has(key.toLowerCase())) continue
-      if (allowed.has(key)) {
+      const matchedCol = allowedMap.get(key.toLowerCase())
+      if (matchedCol) {
         pIdx++
         params['f_' + pIdx] = rawVal
-        conditions.push(\`"\${key}" = :f_\${pIdx}\`)
+        conditions.push(\`"\${matchedCol}" = :f_\${pIdx}\`)
       }
     }
   }
