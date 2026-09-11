@@ -850,6 +850,11 @@ export function DetailRelationSection({
   const sectionRef = useRef<HTMLDivElement>(null)
   const subConfig = (subDetails && subDetails[0]) || null
   const subTable = subConfig?.relatedTable || ''
+  const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
+  const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
+  const rawSubFields = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
+  const subFields = rawSubFields.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig?.foreignKey)
+  const hasSubDetails = Boolean(subConfig && subFields.length > 0)
 
   const getSubRecords = (item: any): any[] => {
     if (!item) return []
@@ -1719,36 +1724,6 @@ export function DetailRelationSection({
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
     }
   }
-
-  const formatDateForInput = (v: any) => {
-    if (!v) return ''
-    const s = String(v).trim()
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s
-    if (/^\\d{4}-\\d{2}-\\d{2}[T\\s]/.test(s)) return s.slice(0, 10)
-    if (/^\\d{4}-\\d{2}-\\d{2}/.test(s)) return s.slice(0, 10)
-    if (s.includes('/')) {
-      const parts = s.split('/')
-      if (parts.length === 3) {
-        return \`\${parts[2].slice(0, 4)}-\${parts[1].padStart(2, '0')}-\${parts[0].padStart(2, '0')}\`
-      }
-    }
-    try {
-      const d = new Date(v)
-      if (!isNaN(d.getTime())) {
-        const year = d.getFullYear()
-        const month = String(d.getMonth() + 1).padStart(2, '0')
-        const day = String(d.getDate()).padStart(2, '0')
-        return \`\${year}-\${month}-\${day}\`
-      }
-    } catch (e) {}
-    return s.slice(0, 10)
-  }
-
-  const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
-  const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
-  const rawSubFields = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
-  const subFields = rawSubFields.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig?.foreignKey)
-  const hasSubDetails = Boolean(subConfig && subFields.length > 0)
 
   return (
     <div ref={sectionRef} className={\`relation-section-container relative z-10 transition-all \${isMaximized ? 'fixed inset-4 z-50 bg-white dark:bg-neutral-900 p-8 rounded-[2rem] shadow-2xl overflow-y-auto' : 'space-y-4'}\`}>
