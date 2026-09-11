@@ -188,11 +188,12 @@ export default async function ${mn}TimelinePage({
 }) {
   const params = searchParams ? await searchParams : {}
   const isEmbedded = params?.embedded === 'true'
+  const isTab = params?.tab === 'true' || params?.view_mode === 'tab'
 
   return (
     <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500"}>
       {/* Cabeçalho Externo fiel à Web Produção (RuntimeHeader) */}
-      {!isEmbedded && (
+      {!isTab && (
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div className="flex items-center gap-5">
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
@@ -213,6 +214,7 @@ export default async function ${mn}TimelinePage({
 
           <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+            {isEmbedded && <CloseModalButton />}
           </div>
         </div>
       )}
@@ -490,10 +492,13 @@ export function TimelineClient({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})
 
+  const [isTab, setIsTab] = useState(false)
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
       if (sp.get('embedded') === 'true' || window.self !== window.top) setIsEmbedded(true)
+      if (sp.get('tab') === 'true' || sp.get('view_mode') === 'tab') setIsTab(true)
       const fromUrl: Record<string, string> = {}
       sp.forEach((val, key) => {
         if (key !== 'embedded' && key !== 'preview' && key !== 'return_to' && !key.includes('.')) {
@@ -640,8 +645,8 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
 
-      {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção (Oculta em modo embutido) */}
-      {!isEmbedded && filterFields.length > 0 && (
+      {/* Barra de Argumentos / Filtros Dinâmicos Fiel à Web Produção (Oculta apenas em abas de Personalizado) */}
+      {!isTab && filterFields.length > 0 && (
         <form onSubmit={handleSearch} className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm space-y-4">
           <div className="grid grid-cols-12 gap-4">
             {filterFields.map((f: any) => {

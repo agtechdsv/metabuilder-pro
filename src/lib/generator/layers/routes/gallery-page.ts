@@ -210,6 +210,7 @@ export default async function ${mn}GalleryPage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
   const isEmbedded = searchParams?.embedded === 'true'
+  const isTab = searchParams?.tab === 'true' || searchParams?.view_mode === 'tab'
   const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const rawJoins = ${JSON.stringify(rawJoins)}
@@ -296,7 +297,7 @@ ${filterFields.map(f => {
     }`
 }).join('\n')}
     for (const [paramKey, paramVal] of Object.entries(searchParams || {})) {
-      if (!paramVal || paramKey === 'embedded' || paramKey.endsWith('_filter') || paramKey === 'page' || paramKey === 'limit' || paramKey === 'sort_by' || paramKey === 'sort_order' || paramKey === 'view_mode' || paramKey === 'layout') continue
+      if (!paramVal || paramKey === 'embedded' || paramKey.endsWith('_filter') || paramKey === 'page' || paramKey === 'limit' || paramKey === 'sort_by' || paramKey === 'sort_order' || paramKey === 'view_mode' || paramKey === 'tab' || paramKey === 'layout') continue
 
       if (paramKey.includes('.')) {
         const [targetTable, targetCol] = paramKey.split('.')
@@ -333,7 +334,7 @@ ${filterFields.map(f => {
   return (
     <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "space-y-6"}>
       {/* Header Fiel ao Padrão MetaBuilder RuntimeHeader */}
-      {!isEmbedded && (
+      {!isTab && (
         <div className="px-6 sm:px-10 py-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
           <div className="flex items-center gap-5">
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
@@ -355,13 +356,14 @@ ${filterFields.map(f => {
           {/* Ações do Header */}
           <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+            {isEmbedded && <CloseModalButton />}
           </div>
         </div>
       )}
 
-      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta apenas em abas de Personalizado) */}
       ${filterFields.length > 0 ? `
-      {!isEmbedded && (
+      {!isTab && (
       <div className="px-6 sm:px-10">
         <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">

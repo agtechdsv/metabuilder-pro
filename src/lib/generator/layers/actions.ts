@@ -450,7 +450,7 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   if (opts?.dateField && opts.startDate) q = q.gte(opts.dateField, opts.startDate)
   if (opts?.dateField && opts.endDate) q = q.lte(opts.dateField, opts.endDate + 'T23:59:59')
   if (opts?.filters && typeof opts.filters === 'object') {
-    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'layout', 'search'])
+    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search'])
     for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
       if (rawVal === undefined || rawVal === null || rawVal === '') continue
       const key = rawKey.trim()
@@ -601,7 +601,7 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
     conditions.push(\`"\${opts.dateField}" <= $\${params.length}\`)
   }
   if (opts?.filters && typeof opts.filters === 'object') {
-    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'layout', 'search'])
+    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search'])
     for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
       if (rawVal === undefined || rawVal === null || rawVal === '') continue
       const key = rawKey.trim()

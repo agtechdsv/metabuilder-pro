@@ -284,7 +284,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `                  </div>`,
           `                )}`,
           `                <iframe`,
-          `                  src={\`/${slot.useCaseSlug}?embedded=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
+          `                  src={\`/${slot.useCaseSlug}?embedded=true&view_mode=tab&tab=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
           `                  className={\`w-full border-0 bg-transparent transition-opacity duration-300 \${!loadedIframes[${i + 1}] ? 'opacity-0 h-0 min-h-0 overflow-hidden' : 'min-h-[800px] opacity-100'}\`}`,
           `                  title="${slot.title}"`,
           `                  onLoad={() => setLoadedIframes(p => ({ ...p, [${i + 1}]: true }))}`,

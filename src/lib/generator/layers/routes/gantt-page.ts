@@ -202,6 +202,7 @@ export default async function ${mn}GanttPage(props: {
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
   const isEmbedded = searchParams?.embedded === 'true'
+  const isTab = searchParams?.tab === 'true' || searchParams?.view_mode === 'tab'
   const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
@@ -225,34 +226,36 @@ ${filterFields.map(f => {
   return (
     <div className="space-y-6">
       {/* Header Fiel ao Padrão MetaBuilder RuntimeHeader */}
-      <div className="px-6 sm:px-10 py-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="flex items-center gap-5">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
-            <DynamicIcon icon="${route.icon || 'LayoutList'}" size={24} />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              ${route.title}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-1 bg-indigo-600 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
-              </span>
+      {!isTab && (
+        <div className="px-6 sm:px-10 py-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
+              <DynamicIcon icon="${route.icon || 'LayoutList'}" size={24} />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+                ${route.title}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-1 bg-indigo-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+                  ${route.description ? route.description.toUpperCase() : 'SISTEMA METABUILDER'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Ações do Header */}
-        <div className="flex items-center gap-3">
+          {/* Ações do Header */}
+          <div className="flex items-center gap-3">
 ${headerButtonsHtml}
-          {isEmbedded && <CloseModalButton />}
+            {isEmbedded && <CloseModalButton />}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Barra de Filtros / Argumentos da View (Oculta em modo embutido fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta apenas em abas de Personalizado) */}
       ${filterFields.length > 0 ? `
-      {!isEmbedded && (
+      {!isTab && (
       <div className="px-6 sm:px-10">
         <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
           <div className="flex flex-col lg:flex-row items-end gap-6">

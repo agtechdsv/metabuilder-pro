@@ -246,11 +246,12 @@ export default async function ${mn}KanbanPage({
 }) {
   const params = await searchParams
   const isEmbedded = params?.embedded === 'true'
+  const isTab = params?.tab === 'true' || params?.view_mode === 'tab'
 
   return (
     <div className={isEmbedded ? "p-2 sm:p-4 w-full space-y-6 animate-in fade-in duration-300" : "p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500"}>
       {/* Cabeçalho Externo fiel à Web Produção (RuntimeHeader) */}
-      {!isEmbedded && (
+      {!isTab && (
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div className="flex items-center gap-5">
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20 text-white shrink-0">
@@ -271,13 +272,14 @@ export default async function ${mn}KanbanPage({
 
           <div className="flex items-center gap-3">
 ${headerButtonsHtml}
+            {isEmbedded && <CloseModalButton />}
           </div>
         </div>
       )}
 
-      {/* Barra de Filtros / Argumentos da View (Oculta em abas/modo embutido fiel à Web Produção) */}
+      {/* Barra de Filtros / Argumentos da View (Oculta apenas em abas de caso de uso Personalizado) */}
       ${filterFields.length > 0 ? `
-      {!isEmbedded && (
+      {!isTab && (
       <form method="GET" className="p-6 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-inner">
         <div className="flex flex-col lg:flex-row items-end gap-6">
           <div className="flex-1 grid grid-cols-12 gap-4 w-full">
@@ -639,7 +641,7 @@ ${modalStateVars}
     return dataList.filter(item => {
       for (const [rawKey, rawVal] of Object.entries(initialParams || {})) {
         if (!rawVal || !String(rawVal).trim()) continue
-        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode') continue
+        if (rawKey === 'embedded' || rawKey === 'preview' || rawKey === 'return_to' || rawKey === 'parent_id' || rawKey === 'mode' || rawKey === 'view_mode' || rawKey === 'tab') continue
         if (rawKey.includes('.')) continue // Filtros relacionais são resolvidos no banco de dados
         const val = String(rawVal).trim().toLowerCase()
         const col = rawKey.endsWith('_filter') ? rawKey.replace(/_filter$/, '') : rawKey
