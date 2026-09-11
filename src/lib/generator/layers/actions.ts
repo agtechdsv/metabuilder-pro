@@ -200,16 +200,45 @@ export async function query(text: string, params?: any[]) {
 function generateOracleClient() {
   return `import oracledb from 'oracledb'
 
+function getOracleConfig() {
+  const rawConn = (process.env.DB_CONNECTION_STRING || process.env.DATABASE_URL || '').trim()
+  let connectionString = rawConn
+  let user = process.env.DB_USER || ''
+  let password = process.env.DB_PASSWORD || ''
+
+  if (connectionString.startsWith('oracle://') || connectionString.startsWith('oracledb://')) {
+    connectionString = connectionString.replace(/^oracle(db)?:\\/\\//, '')
+  }
+
+  if (connectionString.includes('@')) {
+    const [authPart, hostPart] = connectionString.split('@')
+    connectionString = hostPart
+    if (authPart.includes(':')) {
+      const [u, ...pParts] = authPart.split(':')
+      if (!user) user = decodeURIComponent(u)
+      if (!password) password = decodeURIComponent(pParts.join(':'))
+    } else if (!user) {
+      user = decodeURIComponent(authPart)
+    }
+  }
+
+  return {
+    user: user || process.env.DB_USER,
+    password: password || process.env.DB_PASSWORD,
+    connectionString: connectionString || process.env.DB_CONNECTION_STRING
+  }
+}
+
 export async function query(text: string, params: any = {}) {
   let connection;
   try {
-    connection = await oracledb.getConnection({
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      connectionString: process.env.DB_CONNECTION_STRING
-    });
+    const config = getOracleConfig()
+    connection = await oracledb.getConnection(config);
 
-    const result = await connection.execute(text, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    const result = await connection.execute(text, params, { 
+      outFormat: oracledb.OUT_FORMAT_OBJECT,
+      autoCommit: true 
+    });
     return result.rows || [];
   } catch (err) {
     console.error('Database query error', err);
@@ -718,6 +747,21 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   if (opts?.dateField && opts.endDate) {
     params['p_endDate'] = opts.endDate + 'T23:59:59'
     conditions.push(\`"\${opts.dateField}" <= :p_endDate\`)
+  }
+  if (opts?.filters && typeof opts.filters === 'object') {
+    const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search', 'mode', 'preview', 'return_to', 'parent_id', 'id'])
+    const allowed = new Set(${allowedColsCode})
+    let pIdx = 0
+    for (const [rawKey, rawVal] of Object.entries(opts.filters)) {
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue
+      const key = rawKey.trim()
+      if (ignoredKeys.has(key.toLowerCase())) continue
+      if (allowed.has(key)) {
+        pIdx++
+        params['f_' + pIdx] = rawVal
+        conditions.push(\`"\${key}" = :f_\${pIdx}\`)
+      }
+    }
   }
   const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
   const fetchFirst = opts?.limit ? \` FETCH FIRST \${opts.limit} ROWS ONLY\` : ''

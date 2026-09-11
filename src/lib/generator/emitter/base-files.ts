@@ -69,9 +69,27 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
     envLines.push(`NEXT_PUBLIC_SUPABASE_URL="${ast.supabaseUrl || ''}"`)
     envLines.push(`NEXT_PUBLIC_SUPABASE_ANON_KEY="${ast.supabaseAnonKey || ''}"`)
   } else if (ast.dbStack === 'oracle') {
-    envLines.push(`DB_CONNECTION_STRING="${ast.dbConnectionString || 'localhost:1521/XEPDB1'}"`)
-    envLines.push(`DB_USER="admin"`)
-    envLines.push(`DB_PASSWORD="password"`)
+    let connStr = (ast.dbConnectionString || '').trim()
+    let dbUser = 'admin'
+    let dbPass = 'password'
+
+    if (connStr.startsWith('oracle://') || connStr.startsWith('oracledb://')) {
+      connStr = connStr.replace(/^oracle(db)?:\/\//, '')
+    }
+    if (connStr.includes('@')) {
+      const [authPart, hostPart] = connStr.split('@')
+      connStr = hostPart
+      if (authPart.includes(':')) {
+        const [u, ...pParts] = authPart.split(':')
+        dbUser = decodeURIComponent(u)
+        dbPass = decodeURIComponent(pParts.join(':'))
+      } else {
+        dbUser = decodeURIComponent(authPart)
+      }
+    }
+    envLines.push(`DB_CONNECTION_STRING="${connStr || 'localhost:1521/XEPDB1'}"`)
+    envLines.push(`DB_USER="${dbUser}"`)
+    envLines.push(`DB_PASSWORD="${dbPass}"`)
   } else if (ast.dbStack === 'mysql') {
     envLines.push(`DATABASE_URL="${ast.dbConnectionString || 'mysql://user:password@localhost:3306/db_name'}"`)
   } else if (ast.dbStack === 'sqlserver') {
