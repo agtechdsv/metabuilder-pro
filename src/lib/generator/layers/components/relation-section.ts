@@ -1,7 +1,7 @@
 export function generateRelationSectionComponent(files: Map<string, string>) {
     files.set('components/DetailRelationSection.tsx', `'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
@@ -322,6 +322,7 @@ function getFieldMask(f: any, isComputed: boolean = false): string {
 
 function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
   if (!f) return []
+  const comp = f?.config?.form_config?.component || f?.config?.component || (f as any)?.component || {}
   const isDate = isDateField(f)
   const hasFormula = getFieldFormulaTokens(f).length > 0
   if (isDate || hasFormula) return []
@@ -931,15 +932,17 @@ export function DetailRelationSection({
 }: DetailRelationSectionProps) {
   const isReadOnlyMode = Boolean(readOnly || isView)
   const sectionRef = useRef<HTMLDivElement>(null)
-  const subConfig = (subDetails && subDetails[0]) || null
+  const subConfig = useMemo(() => (subDetails && subDetails[0]) || null, [subDetails])
   const subTable = subConfig?.relatedTable || ''
-  const editableFields = fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey)
+  const editableFields = useMemo(() => fields.filter(f => !f.isPrimaryKey && f.dbColumn !== foreignKey), [fields, foreignKey])
   const detailSingular = label.endsWith('s') ? label.slice(0, -1) : label
-  const rawSubFields = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
-  const subFields = rawSubFields.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig?.foreignKey)
+  const subFields = useMemo(() => {
+    const raw = subConfig?.fields || (subConfig as any)?.formFields || (subConfig as any)?.gridFields || []
+    return raw.filter((f: any) => !f.isPrimaryKey && f.dbColumn !== subConfig?.foreignKey)
+  }, [subConfig])
   const hasSubDetails = Boolean(subConfig && subFields.length > 0)
 
-  const getSubRecords = (item: any): any[] => {
+  const getSubRecords = useCallback((item: any): any[] => {
     if (!item) return []
     if (Array.isArray(item.items)) return item.items
     if (subTable && Array.isArray(item[subTable])) return item[subTable]
@@ -948,9 +951,45 @@ export function DetailRelationSection({
       if (Array.isArray(item[key]) && key !== 'items') return item[key]
     }
     return []
-  }
+  }, [subTable])
 
-  const [localItems, setLocalItems] = useState<any[]>(items)
+  const enrichItems = useCallback((rawList: any[]) => {
+    if (!rawList || !Array.isArray(rawList)) return []
+    return rawList.map((it: any) => {
+      const copy = resolveReverseDependencies({ ...it }, fields, relatedTable, relationalOptions)
+      const children = getSubRecords(copy)
+      if (hasSubDetails && children.length > 0) {
+        const enrichedChildren = children.map((sub: any) => {
+          const updatedSub = { ...sub }
+          subFields.forEach((sf: any) => {
+            const subTokens = getFieldFormulaTokens(sf)
+            if (Array.isArray(subTokens) && subTokens.length > 0) {
+              const res = evaluateFormula(subTokens, updatedSub, '', [], [])
+              if (res !== null && !isNaN(Number(res))) {
+                updatedSub[sf.dbColumn] = Number(res)
+              }
+            }
+          })
+          return updatedSub
+        })
+        copy.items = enrichedChildren
+        if (subTable) { copy[subTable] = enrichedChildren }
+      }
+      fields.forEach((f: any) => {
+        const fTokens = getFieldFormulaTokens(f)
+        if (Array.isArray(fTokens) && fTokens.length > 0) {
+          const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
+          if (res !== null && !isNaN(Number(res))) {
+            copy[f.dbColumn] = Number(res)
+          }
+        }
+      })
+      return copy
+    })
+  }, [fields, relatedTable, relationalOptions, hasSubDetails, subFields, subTable, getSubRecords])
+
+  const [localItems, setLocalItems] = useState<any[]>(() => enrichItems(items))
+  const prevItemsRef = useRef(items)
   const [mounted, setMounted] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -1188,43 +1227,11 @@ export function DetailRelationSection({
   }
 
   useEffect(() => {
-    if (!items || !Array.isArray(items)) {
-      setLocalItems([])
-      return
+    if (prevItemsRef.current !== items) {
+      prevItemsRef.current = items
+      setLocalItems(enrichItems(items))
     }
-    const enriched = items.map((it: any) => {
-      const copy = resolveReverseDependencies({ ...it }, fields, relatedTable, relationalOptions)
-      const children = getSubRecords(copy)
-      if (hasSubDetails && children.length > 0) {
-        const enrichedChildren = children.map((sub: any) => {
-          const updatedSub = { ...sub }
-          subFields.forEach((sf: any) => {
-            const subTokens = getFieldFormulaTokens(sf)
-            if (Array.isArray(subTokens) && subTokens.length > 0) {
-              const res = evaluateFormula(subTokens, updatedSub, '', [], [])
-              if (res !== null && !isNaN(Number(res))) {
-                updatedSub[sf.dbColumn] = Number(res)
-              }
-            }
-          })
-          return updatedSub
-        })
-        copy.items = enrichedChildren
-        if (subTable) { copy[subTable] = enrichedChildren }
-      }
-      fields.forEach((f: any) => {
-        const fTokens = getFieldFormulaTokens(f)
-        if (Array.isArray(fTokens) && fTokens.length > 0) {
-          const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
-          if (res !== null && !isNaN(Number(res))) {
-            copy[f.dbColumn] = Number(res)
-          }
-        }
-      })
-      return copy
-    })
-    setLocalItems(enriched)
-  }, [items, fields, relatedTable, relationalOptions, hasSubDetails, subFields, subTable])
+  }, [items, enrichItems])
 
   const allExpanded = localItems.length > 0 && localItems.every((_, idx) => expandedRows[idx])
 

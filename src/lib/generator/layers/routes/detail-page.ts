@@ -192,9 +192,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
     clientActionsMap.get(key)!.add(fn)
   }
 
-  lookupModels.forEach((modelName) => {
-    addClientAction(modelName.toLowerCase(), `get${modelName}List`)
-  })
+
   subDetailModels.forEach((modelName) => {
     addClientAction(modelName.toLowerCase(), `create${modelName}`)
     addClientAction(modelName.toLowerCase(), `update${modelName}`)
@@ -241,24 +239,6 @@ export function generateDetailTabsClient(route: RouteNode): string {
             ].join('\n')
           : ''
 
-        const lookupMappingCode = Array.from(lookupModels.entries()).map(([tTable]) => [
-          `                if (targetTable === '${tTable}') {`,
-          `                  return {`,
-          `                    ...f,`,
-          `                    config: {`,
-          `                      ...f.config,`,
-          `                      options: (${tTable}LookupList || []).map((r: any) => {`,
-          `                        const relLbl = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label`,
-          `                        return {`,
-          `                          value: String(r.id ?? r.codigo ?? r.uuid ?? Object.values(r)[0] ?? ''),`,
-          `                          label: String(relLbl ? (r[relLbl] ?? r[relLbl.toLowerCase()] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? '') : (r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? '')),`,
-          `                        }`,
-          `                      })`,
-          `                    }`,
-          `                  }`,
-          `                }`,
-        ].join('\n')).join('\n')
-
         return [
           `          <div className={activeTab === ${i + 1} ? 'block' : 'hidden'}>`,
           `            <DetailRelationSection`,
@@ -268,19 +248,8 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `              parentId={id}`,
           `              itemTitleField="${tab.itemTitleField || ''}"`,
           `              items={${tab.relatedTable}Items || []}`,
-          `              fields={(${fieldsConstName} as unknown as any[]).map((f: any) => {`,
-          `                const targetTable = f.config?.relation?.targetTable`,
-          lookupMappingCode,
-          `                return f`,
-          `              })}`,
-          `              subDetails={(${subDetailsConstName} as unknown as any[]).map((sub: any) => ({`,
-          `                ...sub,`,
-          `                fields: (sub.fields || []).map((f: any) => {`,
-          `                  const targetTable = f.config?.relation?.targetTable`,
-          lookupMappingCode,
-          `                  return f`,
-          `                })`,
-          `              }))}`,
+          `              fields={${fieldsConstName} as unknown as any[]}`,
+          `              subDetails={${subDetailsConstName} as unknown as any[]}`,
           `              createAction={create${tab.relatedModelName}}`,
           `              updateAction={update${tab.relatedModelName}}`,
           `              deleteAction={delete${tab.relatedModelName}}`,
@@ -460,7 +429,7 @@ function formatWithMask(v: any, mask?: string) {
   return s
 }
 
-${Array.from(lookupModels.entries()).map(([tTable]) => `let cached${tTable}LookupList: any[] = []`).join('\n')}
+
 
 export function ${mn}DetailTabsClient({
   id,
@@ -503,17 +472,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
   const [loadedIframes, setLoadedIframes] = useState<Record<number, boolean>>({})
   const isEdit = true
 
-${Array.from(lookupModels.entries()).map(([tTable]) => `  const [${tTable}LookupList, set${tTable}LookupList] = useState<any[]>(cached${tTable}LookupList)`).join('\n')}
 
-  useEffect(() => {
-${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
-    if (cached${tTable}LookupList.length === 0) {
-      get${mName}List().then(list => {
-        cached${tTable}LookupList = list
-        set${tTable}LookupList(list)
-      }).catch(console.error)
-    }`).join('\n')}
-  }, [])
 
   return (
     <div className="p-6 sm:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
