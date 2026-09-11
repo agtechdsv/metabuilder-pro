@@ -147,7 +147,7 @@ function applyFieldMask(val: any, mask?: string): string {
 }
 
 function getFieldValue(obj: any, dbCol: string): any {
-  if (!obj) return ''
+  if (!obj || !dbCol) return ''
   if (obj[dbCol] !== undefined && obj[dbCol] !== null) return obj[dbCol]
   const under = dbCol.replace(/\\./g, '_')
   if (obj[under] !== undefined && obj[under] !== null) return obj[under]
@@ -155,29 +155,118 @@ function getFieldValue(obj: any, dbCol: string): any {
   if (obj[colOnly] !== undefined && obj[colOnly] !== null) return obj[colOnly]
 
   const altId = colOnly.endsWith('_id') ? colOnly.slice(0, -3) : (colOnly + '_id')
-  const targetKeys = [
+  const stripped = colOnly.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
+
+  const targetKeys = new Set([
     dbCol.toLowerCase(),
     under.toLowerCase(),
     colOnly.toLowerCase(),
     altId.toLowerCase(),
-  ]
+    stripped,
+  ])
 
   for (const k of Object.keys(obj)) {
     const kLower = k.toLowerCase()
-    if (targetKeys.includes(kLower)) {
-      return obj[k]
+    const kStripped = kLower.replace(/[^a-zA-Z0-9]/g, '')
+    if (targetKeys.has(kLower) || targetKeys.has(kStripped)) {
+      if (obj[k] !== undefined && obj[k] !== null) {
+        return obj[k]
+      }
     }
   }
+
   return ''
 }
 
-function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
-  if (f?.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-    return f.config.options
+function parseOptions(raw: any): any[] {
+  if (!raw) return []
+  if (Array.isArray(raw)) {
+    return raw.map((item: any) => {
+      if (typeof item === 'object' && item !== null) {
+        const val = item.value ?? item.id ?? item.val ?? item.name ?? ''
+        const lbl = item.label ?? item.title ?? item.name ?? val
+        return { label: String(lbl), value: String(val) }
+      }
+      return { label: String(item), value: String(item) }
+    })
   }
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parseOptions(parsed)
+    } catch (_) {}
+    return raw
+      .split(/[\\n,]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+      .map((s: string) => {
+        if (s.includes(':')) {
+          const [l, v] = s.split(':').map((p: string) => p.trim())
+          return { label: l || v, value: v || l }
+        }
+        return { label: s, value: s }
+      })
+  }
+  return []
+}
+
+function formatDateForInput(v: any): string {
+  if (v === null || v === undefined || v === '') return ''
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const y = v.getFullYear()
+    const m = String(v.getMonth() + 1).padStart(2, '0')
+    const d = String(v.getDate()).padStart(2, '0')
+    return \`\${y}-\${m}-\${d}\`
+  }
+  const s = String(v).trim().replace(/^["']|["']$/g, '')
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s
+  if (/^\\d{4}-\\d{2}-\\d{2}[T\\s]/.test(s)) return s.slice(0, 10)
+  if (/^\\d{4}-\\d{2}-\\d{2}/.test(s)) return s.slice(0, 10)
+  if (s.includes('/')) {
+    const parts = s.split('/')
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return \`\${parts[0]}-\${parts[1].padStart(2, '0')}-\${parts[2].padStart(2, '0')}\`
+      }
+      return \`\${parts[2].slice(0, 4)}-\${parts[1].padStart(2, '0')}-\${parts[0].padStart(2, '0')}\`
+    }
+  }
+  const timestamp = Number(s)
+  if (!isNaN(timestamp) && timestamp > 100000000000) {
+    const d = new Date(timestamp)
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return \`\${y}-\${m}-\${day}\`
+    }
+  }
+  try {
+    const d = new Date(s)
+    if (!isNaN(d.getTime())) {
+      const y = d.getUTCFullYear()
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return \`\${y}-\${m}-\${day}\`
+    }
+  } catch (e) {}
+  return s.slice(0, 10)
+}
+
+function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
+  const comp = f?.config?.form_config?.component || f?.config?.component || {}
+  const rawOpts = f?.config?.options || comp.options || f?.options || f?.config?.form_config?.options
+  const parsedOpts = parseOptions(rawOpts)
+  if (parsedOpts.length > 0) return parsedOpts
+
+  const rawFixed = f?.config?.fixed_options || comp.fixed_options || f?.config?.form_config?.fixed_options || (f as any)?.fixed_options || comp.enum_values || f?.config?.enum_values
+  const parsedFixed = parseOptions(rawFixed)
+  if (parsedFixed.length > 0) return parsedFixed
+
   if (!relationalOptions) return []
   const colOnly = f?.dbColumn?.includes('.') ? f.dbColumn.split('.').pop()! : (f?.dbColumn || '')
-  const targetTable = f?.config?.relation?.targetTable || f?.config?.component?.rel_table || f?.config?.rel_table || ''
+  const targetTable = f?.config?.relation?.targetTable || comp.rel_table || f?.config?.rel_table || comp.relation_table || ''
+  const targetModel = f?.config?.relation?.targetModel || comp.rel_model || ''
   
   const candidateKeys = [
     f?.dbColumn,
@@ -188,6 +277,8 @@ function getRelationalOptionsForField(f: any, relatedTable: string, relationalOp
     targetTable,
     targetTable.toLowerCase(),
     targetTable.endsWith('s') ? targetTable.slice(0, -1) : (targetTable + 's'),
+    targetModel,
+    targetModel.toLowerCase(),
   ].filter(Boolean)
 
   for (const k of candidateKeys) {
@@ -246,21 +337,59 @@ function evaluateFormula(
   tokens: any[],
   currentRow: Record<string, any>,
   currentTableName?: string,
-  childRecords: any[] = []
+  childRecords: any[] = [],
+  subFields: DetailFieldConfig[] = []
 ): any {
   if (!tokens || !Array.isArray(tokens) || tokens.length === 0) return null
   let expression = ''
   const context: Record<string, any> = {}
   let contextIdx = 0
 
-  context['SOMA'] = (arr: any[]) => Array.isArray(arr) ? arr.reduce((a, b) => Number(a || 0) + Number(b || 0), 0) : 0
-  context['MEDIA'] = (arr: any[]) => Array.isArray(arr) && arr.length ? context['SOMA'](arr) / arr.length : 0
-  context['COUNT'] = (arr: any[]) => Array.isArray(arr) ? arr.length : 0
-  context['MAXIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.max(...arr.map(v => Number(v) || 0)) : 0
-  context['MINIMO'] = (arr: any[]) => Array.isArray(arr) && arr.length ? Math.min(...arr.map(v => Number(v) || 0)) : 0
-  context['ARREDONDAR'] = (val: any) => Math.round(Number(val) || 0)
-  context['ABS'] = (val: any) => Math.abs(Number(val) || 0)
-  context['SE'] = (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal
+  const sumFn = (...args: any[]) => {
+    const flat = args.flat(Infinity)
+    return flat.reduce((acc, v) => acc + (Number(parseAnyNumber(v)) || 0), 0)
+  }
+  const avgFn = (...args: any[]) => {
+    const flat = args.flat(Infinity)
+    return flat.length ? sumFn(flat) / flat.length : 0
+  }
+  const countFn = (...args: any[]) => {
+    const flat = args.flat(Infinity)
+    return flat.length
+  }
+  const maxFn = (...args: any[]) => {
+    const flat = args.flat(Infinity).map(v => Number(parseAnyNumber(v)) || 0)
+    return flat.length ? Math.max(...flat) : 0
+  }
+  const minFn = (...args: any[]) => {
+    const flat = args.flat(Infinity).map(v => Number(parseAnyNumber(v)) || 0)
+    return flat.length ? Math.min(...flat) : 0
+  }
+  const roundFn = (val: any, decimals = 0) => {
+    const num = Number(parseAnyNumber(val)) || 0
+    const factor = Math.pow(10, decimals)
+    return Math.round(num * factor) / factor
+  }
+  const absFn = (val: any) => Math.abs(Number(parseAnyNumber(val)) || 0)
+  const ifFn = (cond: boolean, trueVal: any, falseVal: any) => cond ? trueVal : falseVal
+
+  context['SOMA'] = sumFn
+  context['SUM'] = sumFn
+  context['MEDIA'] = avgFn
+  context['AVG'] = avgFn
+  context['PROMEDIO'] = avgFn
+  context['COUNT'] = countFn
+  context['CONTAGEM'] = countFn
+  context['MAXIMO'] = maxFn
+  context['MAX'] = maxFn
+  context['MINIMO'] = minFn
+  context['MIN'] = minFn
+  context['ARREDONDAR'] = roundFn
+  context['ROUND'] = roundFn
+  context['ABS'] = absFn
+  context['SE'] = ifFn
+  context['IF'] = ifFn
+  context['SI'] = ifFn
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]
@@ -268,7 +397,7 @@ function evaluateFormula(
     if (token.type === 'operator' || token.type === 'number') {
       expression += ' ' + token.value + ' '
     } else if (token.type === 'string') {
-      expression += ' "' + String(token.value).replace(/"/g, '\\\\"') + '" '
+      expression += ' "' + String(token.value).replace(/"/g, '\\"') + '" '
     } else if (token.type === 'function') {
       expression += ' ' + token.value
     } else if (token.type === 'field') {
@@ -278,22 +407,66 @@ function evaluateFormula(
 
       const colOnly = fieldPath.includes('.') ? fieldPath.split('.').pop()! : fieldPath
 
-      if (fieldPath.includes('.') && childRecords && childRecords.length > 0) {
-        const [tableName, colName] = fieldPath.split('.')
+      const isChildField = (fieldPath.includes('.') && childRecords && childRecords.length > 0) ||
+        (childRecords && childRecords.length > 0 && (
+          getFieldValue(currentRow, fieldPath) === '' &&
+          (childRecords.some(r => getFieldValue(r, colOnly) !== '') || (subFields && subFields.some(sf => sf.dbColumn === colOnly || sf.dbColumn.endsWith('.' + colOnly))))
+        ))
+
+      if (isChildField && childRecords && childRecords.length > 0) {
+        if (subFields && subFields.length > 0) {
+          childRecords.forEach((r: any) => {
+            subFields.forEach((sf: any) => {
+              const sfTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+              if (Array.isArray(sfTokens) && sfTokens.length > 0) {
+                const sfVal = evaluateFormula(sfTokens, r, '', [], [])
+                if (sfVal !== null && !isNaN(Number(sfVal))) {
+                  const num = Number(sfVal)
+                  r[sf.dbColumn] = num
+                  if (sf.id) r[sf.id] = num
+                  const sfCol = sf.dbColumn.includes('.') ? sf.dbColumn.split('.').pop()! : sf.dbColumn
+                  r[sfCol] = num
+                  if (sf.label) {
+                    const slug = sf.label.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+                    r[slug] = num
+                  }
+                }
+              }
+            })
+          })
+        }
+
         context[varName] = childRecords.map((row: any) => {
-          const val = row[colName] ?? row[fieldPath] ?? 0
+          let val = getFieldValue(row, colOnly) || getFieldValue(row, fieldPath)
+          if ((val === '' || val === null || val === undefined || val === 0) && subFields && subFields.length > 0) {
+            const matchingSf = subFields.find(sf =>
+              sf.dbColumn === colOnly ||
+              sf.dbColumn === fieldPath ||
+              sf.dbColumn?.toLowerCase() === colOnly.toLowerCase() ||
+              sf.id === colOnly ||
+              sf.id === fieldPath ||
+              sf.dbColumn?.endsWith('.' + colOnly) ||
+              fieldPath.endsWith('.' + sf.dbColumn) ||
+              (sf.label && colOnly && sf.label.toLowerCase().replace(/[^a-z0-9]/g, '') === colOnly.toLowerCase().replace(/[^a-z0-9]/g, ''))
+            )
+            if (matchingSf) {
+              val = row[matchingSf.dbColumn] ?? (matchingSf.id ? row[matchingSf.id] : undefined) ?? getFieldValue(row, matchingSf.dbColumn)
+              if (val === '' || val === null || val === undefined || val === 0) {
+                const subTokens = matchingSf?.config?.content?.formula_tokens || matchingSf?.config?.formula_tokens || matchingSf?.config?.formulaTokens
+                if (Array.isArray(subTokens) && subTokens.length > 0) {
+                  val = evaluateFormula(subTokens, row, '', [], [])
+                }
+              }
+            }
+          }
           const numVal = parseAnyNumber(val)
           return isNaN(numVal) ? 0 : numVal
         })
       } else {
-        let val: any = undefined
-        if (currentRow[fieldPath] !== undefined && currentRow[fieldPath] !== null) {
-          val = currentRow[fieldPath]
-        } else if (currentRow[colOnly] !== undefined && currentRow[colOnly] !== null) {
-          val = currentRow[colOnly]
-        } else {
+        let val: any = getFieldValue(currentRow, fieldPath) || getFieldValue(currentRow, colOnly)
+        if (val === '' || val === null || val === undefined) {
           const targetKeys = [fieldPath.toLowerCase(), colOnly.toLowerCase()]
-          for (const k of Object.keys(currentRow)) {
+          for (const k of Object.keys(currentRow || {})) {
             if (targetKeys.includes(k.toLowerCase())) {
               val = currentRow[k]
               break
@@ -323,7 +496,8 @@ function computeFieldValue(
   f: DetailFieldConfig,
   row: Record<string, any>,
   childRecords: any[] = [],
-  relatedTable?: string
+  relatedTable?: string,
+  subFields: DetailFieldConfig[] = []
 ): { displayVal: string; rawVal: any; isComputed: boolean } {
   if (!row) return { displayVal: '', rawVal: '', isComputed: false }
   const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens || []
@@ -333,7 +507,7 @@ function computeFieldValue(
   let computedNum: number | null = null
 
   if (hasFormula) {
-    const res = evaluateFormula(tokens, row, relatedTable, childRecords)
+    const res = evaluateFormula(tokens, row, relatedTable, childRecords, subFields)
     if (res !== null && !isNaN(Number(res))) {
       computedNum = Number(res)
     }
@@ -351,7 +525,7 @@ function computeFieldValue(
     return { displayVal: formatted, rawVal: existingVal, isComputed: false }
   }
 
-  return { displayVal: '', rawVal: '', isComputed: hasFormula }
+  return { displayVal: hasFormula ? (mask ? applyFieldMask(0, mask) : '0,00') : '', rawVal: hasFormula ? 0 : '', isComputed: hasFormula }
 }
 
 const SubItemAccordion = React.forwardRef(({
@@ -518,11 +692,15 @@ const SubItemAccordion = React.forwardRef(({
         <fieldset disabled={isReadOnlyMode} className="p-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-12 gap-4 animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-neutral-900 border-0 m-0">
           {subFields.map((sf: any) => {
             const val = getSubVal(sf.dbColumn)
+            const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
+            const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
+            const sfOptsType = String(sfComp.options_type || sf.config?.options_type || '').toLowerCase()
             const dt = (sf.dataType || '').toLowerCase()
-            const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+            const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || sfCompType === 'date' || sf.config?.type === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+            const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
             const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
-            const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0)
+            const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType
             const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
 
             const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
@@ -556,19 +734,29 @@ const SubItemAccordion = React.forwardRef(({
             }
 
             if (isSelect) {
+              const selectedOpt = finalOptions.find((o: any) => {
+                const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
+                const oL = typeof o === 'object' ? String(o.label) : String(o)
+                return oV === String(val) || oL === String(val)
+              })
+              const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val ?? '')
+
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                   <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                     {sf.label}
                   </label>
                   <select
-                    key={sf.dbColumn}
+                    key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
                     name={sf.dbColumn}
-                    value={String(val ?? '')}
+                    value={defVal}
                     onChange={(e) => onSubItemChange?.(sf.dbColumn, e.target.value)}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Selecione...</option>
+                    {val && !finalOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
+                      <option value={String(val)}>{String(val)}</option>
+                    )}
                     {finalOptions.map((opt: any, oIdx: number) => {
                       const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                       const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
@@ -710,11 +898,12 @@ export function DetailRelationSection({
       const parent = { ...next[parentIdx] }
       const children = [...getSubRecords(parent)]
       if (children[subIdx]) {
-        const updatedSub = { ...children[subIdx], [field]: val }
+        let updatedSub = { ...children[subIdx], [field]: val }
+        updatedSub = resolveReverseDependencies(updatedSub, subFields, subTable || '', relationalOptions)
         subFields.forEach((sf: any) => {
           const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
           if (Array.isArray(tokens) && tokens.length > 0) {
-            const res = evaluateFormula(tokens, updatedSub)
+            const res = evaluateFormula(tokens, updatedSub, '', [], [])
             if (res !== null && !isNaN(Number(res))) {
               updatedSub[sf.dbColumn] = Number(res)
             }
@@ -723,6 +912,17 @@ export function DetailRelationSection({
         children[subIdx] = updatedSub
         parent.items = children
         if (subTable) { parent[subTable] = children }
+
+        fields.forEach((f: any) => {
+          const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+          if (Array.isArray(fTokens) && fTokens.length > 0) {
+            const res = evaluateFormula(fTokens, parent, relatedTable, children, subFields)
+            if (res !== null && !isNaN(Number(res))) {
+              parent[f.dbColumn] = Number(res)
+            }
+          }
+        })
+
         next[parentIdx] = parent
       }
       return next
@@ -734,11 +934,12 @@ export function DetailRelationSection({
       if (!prev) return prev
       const children = [...getSubRecords(prev)]
       if (children[subIdx]) {
-        const updatedSub = { ...children[subIdx], [field]: val }
+        let updatedSub = { ...children[subIdx], [field]: val }
+        updatedSub = resolveReverseDependencies(updatedSub, subFields, subTable || '', relationalOptions)
         subFields.forEach((sf: any) => {
           const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
           if (Array.isArray(tokens) && tokens.length > 0) {
-            const res = evaluateFormula(tokens, updatedSub)
+            const res = evaluateFormula(tokens, updatedSub, '', [], [])
             if (res !== null && !isNaN(Number(res))) {
               updatedSub[sf.dbColumn] = Number(res)
             }
@@ -746,11 +947,23 @@ export function DetailRelationSection({
         })
         children[subIdx] = updatedSub
       }
-      return {
+      const updatedParent = {
         ...prev,
         items: children,
         ...(subTable ? { [subTable]: children } : {})
       }
+
+      fields.forEach((f: any) => {
+        const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        if (Array.isArray(fTokens) && fTokens.length > 0) {
+          const res = evaluateFormula(fTokens, updatedParent, relatedTable, children, subFields)
+          if (res !== null && !isNaN(Number(res))) {
+            updatedParent[f.dbColumn] = Number(res)
+          }
+        }
+      })
+
+      return updatedParent
     })
   }
 
@@ -809,7 +1022,7 @@ export function DetailRelationSection({
       for (const f of fields) {
         const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
         if (Array.isArray(tokens) && tokens.length > 0) {
-          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item))
+          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item), subFields)
           if (res !== null && !isNaN(Number(res))) {
             item[f.dbColumn] = Number(res)
           }
@@ -875,7 +1088,7 @@ export function DetailRelationSection({
       for (const f of fields) {
         const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
         if (Array.isArray(tokens) && tokens.length > 0) {
-          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item))
+          const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item), subFields)
           if (res !== null && !isNaN(Number(res))) {
             item[f.dbColumn] = Number(res)
           }
@@ -892,10 +1105,38 @@ export function DetailRelationSection({
       return
     }
     const enriched = items.map((it: any) => {
-      return resolveReverseDependencies({ ...it }, fields, relatedTable, relationalOptions)
+      const copy = resolveReverseDependencies({ ...it }, fields, relatedTable, relationalOptions)
+      const children = getSubRecords(copy)
+      if (hasSubDetails && children.length > 0) {
+        const enrichedChildren = children.map((sub: any) => {
+          const updatedSub = { ...sub }
+          subFields.forEach((sf: any) => {
+            const subTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+            if (Array.isArray(subTokens) && subTokens.length > 0) {
+              const res = evaluateFormula(subTokens, updatedSub, '', [], [])
+              if (res !== null && !isNaN(Number(res))) {
+                updatedSub[sf.dbColumn] = Number(res)
+              }
+            }
+          })
+          return updatedSub
+        })
+        copy.items = enrichedChildren
+        if (subTable) { copy[subTable] = enrichedChildren }
+      }
+      fields.forEach((f: any) => {
+        const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        if (Array.isArray(fTokens) && fTokens.length > 0) {
+          const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
+          if (res !== null && !isNaN(Number(res))) {
+            copy[f.dbColumn] = Number(res)
+          }
+        }
+      })
+      return copy
     })
     setLocalItems(enriched)
-  }, [items, fields, relatedTable, relationalOptions])
+  }, [items, fields, relatedTable, relationalOptions, hasSubDetails, subFields, subTable])
 
   const allExpanded = localItems.length > 0 && localItems.every((_, idx) => expandedRows[idx])
 
@@ -934,6 +1175,33 @@ export function DetailRelationSection({
 
   const handleOpenEditModal = (item: any) => {
     const copy = resolveReverseDependencies({ ...item }, fields, relatedTable, relationalOptions)
+    const children = getSubRecords(copy)
+    if (hasSubDetails && children.length > 0) {
+      const enrichedChildren = children.map((sub: any) => {
+        const updatedSub = { ...sub }
+        subFields.forEach((sf: any) => {
+          const subTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          if (Array.isArray(subTokens) && subTokens.length > 0) {
+            const res = evaluateFormula(subTokens, updatedSub, '', [], [])
+            if (res !== null && !isNaN(Number(res))) {
+              updatedSub[sf.dbColumn] = Number(res)
+            }
+          }
+        })
+        return updatedSub
+      })
+      copy.items = enrichedChildren
+      if (subTable) { copy[subTable] = enrichedChildren }
+    }
+    fields.forEach((f: any) => {
+      const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+      if (Array.isArray(fTokens) && fTokens.length > 0) {
+        const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
+        if (res !== null && !isNaN(Number(res))) {
+          copy[f.dbColumn] = Number(res)
+        }
+      }
+    })
     setEditingItem(copy)
     setModalActiveTab('master')
     setIsModalOpen(true)
@@ -1289,18 +1557,21 @@ export function DetailRelationSection({
         } else {
           updatedSub[k] = v
         }
-        if (matchedField?.config?.options) {
-          const selectedOpt = matchedField.config.options.find((o: any) => String(o.value ?? o.id) === String(v))
+        const fieldOpts = matchedField ? getRelationalOptionsForField(matchedField, subKey || '', relationalOptions || {}) : []
+        if (fieldOpts && fieldOpts.length > 0) {
+          const selectedOpt = fieldOpts.find((o: any) => String(o.value ?? o.id) === String(v) || String(o.label) === String(v))
           if (selectedOpt?.label) {
             updatedSub[\`\${k}_nome\`] = selectedOpt.label
             updatedSub[\`\${k}_label\`] = selectedOpt.label
-            const displayCol = matchedField.config?.component?.rel_label || matchedField.config?.displayColumn
+            const displayCol = matchedField?.config?.component?.rel_label || matchedField?.config?.displayColumn
             if (displayCol) {
               updatedSub[displayCol] = selectedOpt.label
             }
           }
         }
       })
+      const resolvedSub = resolveReverseDependencies(updatedSub, editingSubItem.subFields, subKey || '', relationalOptions)
+      Object.assign(updatedSub, resolvedSub)
       if (subConfig?.foreignKey) {
         if (!updatedSub[subConfig.foreignKey]) {
           updatedSub[subConfig.foreignKey] = editingSubItem.parentId
@@ -1323,12 +1594,22 @@ export function DetailRelationSection({
         if (isParent) {
           const children = getSubRecords(it)
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-          return {
+          const updatedParent = {
             ...it,
             items: nextChildren,
             ...(subTable ? { [subTable]: nextChildren } : {}),
             __v: (it.__v || 0) + 1
           }
+          fields.forEach((f: any) => {
+            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            if (Array.isArray(fTokens) && fTokens.length > 0) {
+              const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
+              if (res !== null && !isNaN(Number(res))) {
+                updatedParent[f.dbColumn] = Number(res)
+              }
+            }
+          })
+          return updatedParent
         }
         return it
       }))
@@ -1339,11 +1620,21 @@ export function DetailRelationSection({
         if (isParent) {
           const children = getSubRecords(editingItem)
           const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
-          setEditingItem({
+          const updatedParent = {
             ...editingItem,
             items: nextChildren,
             ...(subTable ? { [subTable]: nextChildren } : {})
+          }
+          fields.forEach((f: any) => {
+            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            if (Array.isArray(fTokens) && fTokens.length > 0) {
+              const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
+              if (res !== null && !isNaN(Number(res))) {
+                updatedParent[f.dbColumn] = Number(res)
+              }
+            }
           })
+          setEditingItem(updatedParent)
         }
       }
       setToastType('success')
@@ -1374,12 +1665,22 @@ export function DetailRelationSection({
         if (isParent) {
           const children = getSubRecords(it)
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-          return {
+          const updatedParent = {
             ...it,
             items: nextChildren,
             ...(subTable ? { [subTable]: nextChildren } : {}),
             __v: (it.__v || 0) + 1
           }
+          fields.forEach((f: any) => {
+            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            if (Array.isArray(fTokens) && fTokens.length > 0) {
+              const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
+              if (res !== null && !isNaN(Number(res))) {
+                updatedParent[f.dbColumn] = Number(res)
+              }
+            }
+          })
+          return updatedParent
         }
         return it
       }))
@@ -1389,11 +1690,21 @@ export function DetailRelationSection({
         if (isParent) {
           const children = getSubRecords(editingItem)
           const nextChildren = children.filter((_: any, idx: number) => idx !== deletingSubItem.sIdx)
-          setEditingItem({
+          const updatedParent = {
             ...editingItem,
             items: nextChildren,
             ...(subTable ? { [subTable]: nextChildren } : {})
+          }
+          fields.forEach((f: any) => {
+            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            if (Array.isArray(fTokens) && fTokens.length > 0) {
+              const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
+              if (res !== null && !isNaN(Number(res))) {
+                updatedParent[f.dbColumn] = Number(res)
+              }
+            }
           })
+          setEditingItem(updatedParent)
         }
       }
       setToastType('success')
@@ -1413,7 +1724,8 @@ export function DetailRelationSection({
     if (!v) return ''
     const s = String(v).trim()
     if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s
-    if (/^\\d{4}-\\d{2}-\\d{2}T/.test(s)) return s.slice(0, 10)
+    if (/^\\d{4}-\\d{2}-\\d{2}[T\\s]/.test(s)) return s.slice(0, 10)
+    if (/^\\d{4}-\\d{2}-\\d{2}/.test(s)) return s.slice(0, 10)
     if (s.includes('/')) {
       const parts = s.split('/')
       if (parts.length === 3) {
@@ -1423,9 +1735,9 @@ export function DetailRelationSection({
     try {
       const d = new Date(v)
       if (!isNaN(d.getTime())) {
-        const year = d.getUTCFullYear()
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0')
-        const day = String(d.getUTCDate()).padStart(2, '0')
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
         return \`\${year}-\${month}-\${day}\`
       }
     } catch (e) {}
@@ -1686,11 +1998,15 @@ export function DetailRelationSection({
                           val = getFieldValue(resolvedItem, f.dbColumn)
                         }
 
-                        const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
-                        const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
+                        const compConfig = f.config?.component || f.config?.form_config?.component || {}
+                        const compType = String(compConfig.type || f.config?.type || '').toLowerCase()
+                        const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
+                        const dt = (f.dataType || '').toLowerCase()
+                        const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || compType === 'date' || f.config?.type === 'date' || f.dbColumn.includes('data') || f.dbColumn.includes('date')
+                        const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                         const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
+                        const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
 
-                        const compConfig = f.config?.component || f.config?.form_config?.component
                         const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
                         const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
                         let displayedOptions = allOptions
@@ -1707,7 +2023,8 @@ export function DetailRelationSection({
                           }
                         }
                         const hasOptions = displayedOptions.length > 0
-                        const computed = computeFieldValue(f, item, itemChildRecords, relatedTable)
+                        const isSelect = hasOptions || isSelectComp
+                        const computed = computeFieldValue(f, item, itemChildRecords, relatedTable, subFields)
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
                         const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
                         const displayVal = computed.displayVal
@@ -1743,7 +2060,7 @@ export function DetailRelationSection({
                           colSpanClass = 'col-span-12 md:col-span-2'
                         }
 
-                        if (hasOptions) {
+                        if (isSelect) {
                           const selectedOpt = displayedOptions.find((o: any) => {
                             const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
                             const oL = typeof o === 'object' ? String(o.label) : String(o)
@@ -1778,6 +2095,8 @@ export function DetailRelationSection({
                           )
                         }
 
+                        const dateInputVal = isDate ? formatDateForInput(val ?? displayVal) : ''
+
                         return (
                           <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                             <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
@@ -1791,12 +2110,17 @@ export function DetailRelationSection({
                               type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                              {...(computed.isComputed ? { value: displayVal } : { defaultValue: displayVal })}
+                              {...(computed.isComputed ? { value: displayVal } : isDate ? { value: dateInputVal } : { defaultValue: displayVal })}
                               onChange={(e) => {
-                                if (!isDate && mask) {
-                                  e.target.value = formatMaskRealtime(e.target.value, mask)
-                                }
                                 let v: any = e.target.value
+                                if (isDate) {
+                                  handleItemFieldChange(idx, f.dbColumn, v)
+                                  return
+                                }
+                                if (mask) {
+                                  e.target.value = formatMaskRealtime(e.target.value, mask)
+                                  v = e.target.value
+                                }
                                 if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
                                   v = parseAnyNumber(e.target.value)
                                 } else if (mask === '0.000' || f.dataType === 'integer') {
@@ -2012,11 +2336,15 @@ export function DetailRelationSection({
                       val = getFieldValue(resolvedItem, f.dbColumn)
                     }
 
-                    const isDate = f.dataType === 'date' || f.dataType === 'timestamp' || f.dataType === 'datetime' || f.dbColumn.includes('data')
-                    const isNumber = f.dataType === 'integer' || f.dataType === 'numeric' || f.dataType === 'float' || f.dataType === 'decimal'
+                    const compConfig = f.config?.component || f.config?.form_config?.component || {}
+                    const compType = String(compConfig.type || f.config?.type || '').toLowerCase()
+                    const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
+                    const dt = (f.dataType || '').toLowerCase()
+                    const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || compType === 'date' || f.config?.type === 'date' || f.dbColumn.includes('data') || f.dbColumn.includes('date')
+                    const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                     const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
+                    const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
 
-                    const compConfig = f.config?.component || f.config?.form_config?.component
                     const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
                     const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
                     let displayedOptions = allOptions
@@ -2033,9 +2361,10 @@ export function DetailRelationSection({
                       }
                     }
                     const hasOptions = displayedOptions.length > 0
+                    const isSelect = hasOptions || isSelectComp
                     const editChildRecords = editingItem ? getSubRecords(editingItem) : []
 
-                    const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable)
+                    const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable, subFields)
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
                     const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
                     const displayVal = computed.displayVal
@@ -2078,7 +2407,7 @@ export function DetailRelationSection({
                       colSpanClass = 'col-span-12 md:col-span-2'
                     }
 
-                    if (hasOptions) {
+                    if (isSelect) {
                       const selectedOpt = displayedOptions.find((o: any) => {
                         const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
                         const oL = typeof o === 'object' ? String(o.label) : String(o)
@@ -2113,6 +2442,8 @@ export function DetailRelationSection({
                       )
                     }
 
+                    const dateInputVal = isDate ? formatDateForInput(val ?? displayVal) : ''
+
                     return (
                       <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                         <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
@@ -2126,12 +2457,17 @@ export function DetailRelationSection({
                           type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
-                          {...(computed.isComputed ? { value: displayVal } : { defaultValue: displayVal })}
+                          {...(computed.isComputed ? { value: displayVal } : isDate ? { value: dateInputVal } : { defaultValue: displayVal })}
                           onChange={(e) => {
-                            if (!isDate && mask) {
-                              e.target.value = formatMaskRealtime(e.target.value, mask)
-                            }
                             let v: any = e.target.value
+                            if (isDate) {
+                              handleModalFieldChange(f.dbColumn, v)
+                              return
+                            }
+                            if (mask) {
+                              e.target.value = formatMaskRealtime(e.target.value, mask)
+                              v = e.target.value
+                            }
                             if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
                               v = parseAnyNumber(e.target.value)
                             } else if (mask === '0.000' || f.dataType === 'integer') {
@@ -2354,10 +2690,14 @@ export function DetailRelationSection({
                 {editingSubItem.subFields.map(sf => {
                   const val = editingSubItem.subItem[sf.dbColumn] ?? editingSubItem.subItem[sf.dbColumn.split('.').pop()!]
                   const dt = (sf.dataType || '').toLowerCase()
-                  const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+                  const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
+                  const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
+                  const sfOptsType = String(sfComp.options_type || sf.config?.options_type || sf.config?.optionsType || '').toLowerCase()
+                  const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || sfCompType === 'date' || sf.config?.type === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
+                  const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
                   const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
-                  const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0)
+                  const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType
                   const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
                   const childRecords = Object.values(editingSubItem.subItem || {}).filter(Array.isArray).flat()
                   const computed = computeFieldValue(sf, editingSubItem.subItem, childRecords, '')
@@ -2395,21 +2735,30 @@ export function DetailRelationSection({
                   }
 
                   if (isSelect) {
+                    const selectedOpt = finalOptions.find((o: any) => {
+                      const oV = typeof o === 'object' ? String(o.value ?? o.id) : String(o)
+                      const oL = typeof o === 'object' ? String(o.label) : String(o)
+                      return oV === String(val) || oL === String(val)
+                    })
+                    const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val ?? '')
+
                     return (
                       <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                         <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                           {sf.label}
                         </label>
                         <select
+                          key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
                           name={sf.dbColumn}
-                          value={String(val ?? '')}
+                          value={defVal}
                           onChange={(e) => {
-                            const newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
-                            const selectedOpt = finalOptions.find((o: any) => String(o.value ?? o.id) === String(e.target.value))
-                            if (selectedOpt?.label) {
-                              newSub[\`\${sf.dbColumn}_nome\`] = selectedOpt.label
-                              newSub[\`\${sf.dbColumn}_label\`] = selectedOpt.label
+                            let newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
+                            const chosenOpt = finalOptions.find((o: any) => String(o.value ?? o.id ?? o) === String(e.target.value))
+                            if (chosenOpt?.label) {
+                              newSub[\`\${sf.dbColumn}_nome\`] = chosenOpt.label
+                              newSub[\`\${sf.dbColumn}_label\`] = chosenOpt.label
                             }
+                            newSub = resolveReverseDependencies(newSub, editingSubItem.subFields, subKey || '', relationalOptions)
                             editingSubItem.subFields.forEach((otherSf: any) => {
                               const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
                               const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
@@ -2426,6 +2775,9 @@ export function DetailRelationSection({
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                         >
                           <option value="">Selecione...</option>
+                          {val && !finalOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
+                            <option value={String(val)}>{String(val)}</option>
+                          )}
                           {finalOptions.map((opt: any, oIdx: number) => {
                             const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                             const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt

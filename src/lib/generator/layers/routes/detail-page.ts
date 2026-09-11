@@ -286,6 +286,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `              deleteAction={delete${tab.relatedModelName}}`,
           `              backPath={backPath}`,
           `              readOnly={isView}`,
+          `              relationalOptions={relationalOptions}`,
           subActionProps,
           `            />`,
           `          </div>`,
@@ -575,8 +576,8 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
                 ${hasCustomSlots
                   ? `{\`Registro #\${data?.id ?? data?.${pk} ?? id ?? 'N/A'}\`}`
                   : (route.rawLayoutConfig?.form_header_subtitle_field
-                      ? `{String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')}`
-                      : `{String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')}`)}
+                      ? `{String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.display_label ?? data?.${pk} ?? '')}`
+                      : `{String(data?.display_label ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.titulo ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')}`)}
               </p>
             </div>
           </div>
@@ -697,7 +698,23 @@ export function generateDetailPage(route: RouteNode): string {
     : ''
 
   const buildOptionsCode: string[] = []
-  route.formFields.forEach(f => {
+  const allCandidateFields: Array<{ f: any; table: string }> = []
+  route.formFields.forEach(f => allCandidateFields.push({ f, table: mnLower }))
+  if (hasRelationTabs) {
+    route.relationTabs.forEach(tab => {
+      const tabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
+      tabFields.forEach(f => allCandidateFields.push({ f, table: tab.relatedTable.toLowerCase() }))
+      if (tab.subDetails) {
+        tab.subDetails.forEach(sub => {
+          const subFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
+          subFields.forEach(f => allCandidateFields.push({ f, table: sub.relatedTable.toLowerCase() }))
+        })
+      }
+    })
+  }
+
+  const addedOptionKeys = new Set<string>()
+  allCandidateFields.forEach(({ f, table }) => {
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
     if (targetTable && isValidIdentifier(targetTable) && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
       const t = targetTable.toLowerCase()
@@ -707,9 +724,45 @@ export function generateDetailPage(route: RouteNode): string {
         ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
         : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-      buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
-    } else if (f.config?.options && Array.isArray(f.config.options) && f.config.options.length > 0) {
-      buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(f.config.options)},`)
+      if (!addedOptionKeys.has(f.dbColumn)) {
+        buildOptionsCode.push(`    '${f.dbColumn}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+        addedOptionKeys.add(f.dbColumn)
+      }
+      const fullKey = `${table}.${f.dbColumn}`
+      if (!addedOptionKeys.has(fullKey)) {
+        buildOptionsCode.push(`    '${fullKey}': (${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) })),`)
+        addedOptionKeys.add(fullKey)
+      }
+    } else {
+      const rawOpts = f.config?.options || f.config?.component?.options || f.config?.form_config?.options || f.options
+      const rawFixed = f.config?.fixed_options || f.config?.component?.fixed_options || f.config?.form_config?.fixed_options || f.config?.enum_values || f.config?.component?.enum_values
+      let parsed: any[] = []
+      if (Array.isArray(rawOpts) && rawOpts.length > 0) {
+        parsed = rawOpts
+      } else if (rawFixed) {
+        if (typeof rawFixed === 'string') {
+          parsed = rawFixed.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean).map((s: string) => {
+            if (s.includes(':')) {
+              const [l, v] = s.split(':').map((p: string) => p.trim())
+              return { label: l || v, value: v || l }
+            }
+            return { label: s, value: s }
+          })
+        } else if (Array.isArray(rawFixed)) {
+          parsed = rawFixed
+        }
+      }
+      if (parsed.length > 0) {
+        if (!addedOptionKeys.has(f.dbColumn)) {
+          buildOptionsCode.push(`    '${f.dbColumn}': ${JSON.stringify(parsed)},`)
+          addedOptionKeys.add(f.dbColumn)
+        }
+        const fullKey = `${table}.${f.dbColumn}`
+        if (!addedOptionKeys.has(fullKey)) {
+          buildOptionsCode.push(`    '${fullKey}': ${JSON.stringify(parsed)},`)
+          addedOptionKeys.add(fullKey)
+        }
+      }
     }
   })
 

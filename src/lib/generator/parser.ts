@@ -929,7 +929,8 @@ function resolveRelationTabs(
   rawRelations: any[],
   allModels: any[],
   allFields: any[],
-  byocMap: Record<string, string>
+  byocMap: Record<string, string>,
+  enumsMap: Record<string, Array<{ label: string; value: string }>> = {}
 ): RelationTab[] {
   const tabs: RelationTab[] = []
   const layoutConfig = view.layout_config || {}
@@ -1020,10 +1021,13 @@ function resolveRelationTabs(
 
     const childModelName = toPascalCase(childModel.db_table_name)
 
-    const parentViewFieldsMetadata = layoutConfig.fields_metadata || {}
     const childView = allViews.find(
       (v: any) => (v.model_id === fromId || v.model_id === childModel.id) && v.logic_type !== 'personalizado'
     )
+    const parentViewFieldsMetadata = {
+      ...(childView?.layout_config?.fields_metadata || {}),
+      ...(layoutConfig.fields_metadata || {}),
+    }
 
     // 1. Prioridade Máxima: Campos configurados diretamente no Use Case atual (layout_config da view pai no Studio)
     const configuredChildFieldIds = parentViewFormFieldsOrder.filter(fid => {
@@ -1035,6 +1039,11 @@ function resolveRelationTabs(
       return false
     })
 
+    const childViewFieldsMetadata = {
+      ...(childView?.layout_config?.fields_metadata || {}),
+      ...parentViewFieldsMetadata,
+    }
+
     let childGridFields: ResolvedField[] = []
     let childFormFields: ResolvedField[] = []
 
@@ -1045,11 +1054,11 @@ function resolveRelationTabs(
       })
       childFormFields = configuredChildFieldIds.map(fid => {
         if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
-          return buildVirtualField(fid, 'form', parentViewFieldsMetadata, byocMap)
+          return buildVirtualField(fid, 'form', childViewFieldsMetadata, byocMap)
         }
         const field = allFields.find((f: any) => f.id === fid)
         const comp = formComponents.find((c: any) => c.field_id === fid) || { field_id: fid, config: {} }
-        return buildResolvedField(comp, field, 'form', childModel.id, allModels, parentViewFieldsMetadata)
+        return buildResolvedField(comp, field, 'form', childModel.id, allModels, childViewFieldsMetadata, enumsMap)
       })
       childGridFields = childFormFields.slice(0, 6)
     } else if (childView) {
@@ -1213,6 +1222,11 @@ function resolveRelationTabs(
       let subGridFields: ResolvedField[] = []
       let subFormFields: ResolvedField[] = []
 
+      const subViewFieldsMetadata = {
+        ...(subView?.layout_config?.fields_metadata || {}),
+        ...parentViewFieldsMetadata,
+      }
+
       if (configuredSubFieldIds.length > 0) {
         const subComponents = (view.ui_components || []).filter((c: any) => {
           const field = allFields.find((f: any) => f.id === c.field_id)
@@ -1220,11 +1234,11 @@ function resolveRelationTabs(
         })
         subFormFields = configuredSubFieldIds.map(fid => {
           if (fid.startsWith('virt_') || fid.startsWith('byoc_')) {
-            return buildVirtualField(fid, 'form', parentViewFieldsMetadata, byocMap)
+            return buildVirtualField(fid, 'form', subViewFieldsMetadata, byocMap)
           }
           const field = allFields.find((f: any) => f.id === fid)
           const comp = subComponents.find((c: any) => c.field_id === fid) || { field_id: fid, config: {} }
-          return buildResolvedField(comp, field, 'form', subModel.id, allModels, parentViewFieldsMetadata)
+          return buildResolvedField(comp, field, 'form', subModel.id, allModels, subViewFieldsMetadata, enumsMap)
         })
         subGridFields = subFormFields
       } else if (subView) {
@@ -1583,7 +1597,8 @@ export function parseMetaBuilderJSON(
       rawRelations,
       rawModels,
       rawFields,
-      byocMap
+      byocMap,
+      enumsMap
     )
 
     // Encontra ícone do nav item correspondente
