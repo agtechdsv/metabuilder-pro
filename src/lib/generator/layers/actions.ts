@@ -200,6 +200,10 @@ export async function query(text: string, params?: any[]) {
 function generateOracleClient() {
   return `import oracledb from 'oracledb'
 
+// Configurações padrão de NLS no ambiente para o cliente Oracle Thin/Thick
+if (!process.env.NLS_DATE_FORMAT) process.env.NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS';
+if (!process.env.NLS_TIMESTAMP_FORMAT) process.env.NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"';
+
 function getOracleConfig() {
   const rawConn = (process.env.DB_CONNECTION_STRING || process.env.DATABASE_URL || '').trim()
   let connectionString = rawConn
@@ -229,13 +233,53 @@ function getOracleConfig() {
   }
 }
 
+function normalizeOracleParams(params: any): any {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) {
+    return params;
+  }
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (typeof v === 'string') {
+      const trimmed = v.trim();
+      if (/^\\d{4}-\\d{2}-\\d{2}$/.test(trimmed)) {
+        const [y, m, d] = trimmed.split('-').map(Number);
+        clean[k] = new Date(y, m - 1, d, 12, 0, 0);
+      } else if (/^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,6})?)?(Z|[+-]\\d{2}:?\\d{2})?$/.test(trimmed)) {
+        const parsed = new Date(trimmed);
+        clean[k] = isNaN(parsed.getTime()) ? trimmed : parsed;
+      } else if (/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.test(trimmed)) {
+        const match = trimmed.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+        if (match) {
+          clean[k] = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12, 0, 0);
+        } else {
+          clean[k] = trimmed;
+        }
+      } else if (/^(\\d{2})\\/(\\d{2})\\/(\\d{4}) (\\d{2}):(\\d{2})(?::(\\d{2}))?$/.test(trimmed)) {
+        const match = trimmed.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4}) (\\d{2}):(\\d{2})(?::(\\d{2}))?/);
+        if (match) {
+          clean[k] = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), Number(match[6] || 0));
+        } else {
+          clean[k] = trimmed;
+        }
+      } else {
+        clean[k] = trimmed;
+      }
+    } else {
+      clean[k] = v;
+    }
+  }
+  return clean;
+}
+
 export async function query(text: string, params: any = {}) {
   let connection;
   try {
-    const config = getOracleConfig()
+    const config = getOracleConfig();
     connection = await oracledb.getConnection(config);
 
-    const result = await connection.execute(text, params, { 
+    const safeParams = normalizeOracleParams(params);
+
+    const result = await connection.execute(text, safeParams, { 
       outFormat: oracledb.OUT_FORMAT_OBJECT,
       autoCommit: true 
     });
@@ -418,11 +462,53 @@ function buildSchemaRelations(allModels: ModelNode[]): SchemaRelationEdge[] {
 // ACTIONS GENERATORS
 // -----------------------------------------------------------------------------
 
-function generateParsePayloadCode(model: ModelNode): string {
+function generateParsePayloadCode(model: ModelNode, dbStack: string = 'postgres'): string {
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
   const colTypesCode = JSON.stringify(
     Object.fromEntries(model.fields.map(f => [f.dbColumn, (f.dataType || f.type || '').toLowerCase()]))
   )
+  const isOracle = dbStack === 'oracle'
+
+  const columnResolution = isOracle
+    ? `let k = rawKey
+    if (!allowedColumns.has(k)) {
+      const found = Array.from(allowedColumns).find(c => c.toLowerCase() === rawKey.toLowerCase())
+      if (found) {
+        k = found
+      } else {
+        continue
+      }
+    }`
+    : `const k = rawKey
+    if (!allowedColumns.has(k)) continue`
+
+  const dateBlock = isOracle
+    ? `} else if (isDate && !isText) {
+        // Data/Hora exclusiva para Oracle: converte para Date nativo para evitar erro de NLS_DATE_FORMAT no banco (ex: ORA-01843)
+        if (/^\\d{4}-\\d{2}-\\d{2}$/.test(trimmed)) {
+          const [y, m, d] = trimmed.split('-').map(Number)
+          clean[k] = new Date(y, m - 1, d, 12, 0, 0)
+        } else if (/^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,6})?)?(Z|[+-]\\d{2}:?\\d{2})?$/.test(trimmed)) {
+          const parsed = new Date(trimmed)
+          clean[k] = isNaN(parsed.getTime()) ? trimmed : parsed
+        } else if (/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.test(trimmed)) {
+          const match = trimmed.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/)
+          if (match) {
+            clean[k] = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12, 0, 0)
+          } else {
+            clean[k] = trimmed
+          }
+        } else if (/^(\\d{2})\\/(\\d{2})\\/(\\d{4}) (\\d{2}):(\\d{2})(?::(\\d{2}))?$/.test(trimmed)) {
+          const match = trimmed.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4}) (\\d{2}):(\\d{2})(?::(\\d{2}))?/)
+          if (match) {
+            clean[k] = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), Number(match[6] || 0))
+          } else {
+            clean[k] = trimmed
+          }
+        } else {
+          clean[k] = trimmed
+        }`
+    : ''
 
   return `const allowedColumns = new Set(${allowedColsCode})
 const columnTypes: Record<string, string> = ${colTypesCode}
@@ -433,16 +519,16 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
     : (formData && typeof formData === 'object' ? { ...formData } : {})
 
   const clean: Record<string, any> = {}
-  for (const [k, v] of Object.entries(rawData)) {
-    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
-    if (!allowedColumns.has(k)) continue
+  for (const [rawKey, v] of Object.entries(rawData)) {
+    if (rawKey.startsWith('$') || rawKey.startsWith('__rsc') || rawKey.startsWith('_next')) continue
+    ${columnResolution}
     if (v === '' || v === undefined) {
       clean[k] = null
     } else if (typeof v === 'string') {
       const trimmed = v.trim()
       const colType = (columnTypes[k] || '').toLowerCase()
       const isInteger = colType === 'integer' || colType === 'int' || colType === 'int4' || colType === 'int8' || colType === 'bigint' || colType === 'smallint'
-      const isNumeric = isInteger || colType === 'number' || colType === 'numeric' || colType === 'decimal' || colType === 'float' || colType === 'real' || colType === 'double precision'
+      const isNumeric = isInteger || colType === 'number' || colType === 'numeric' || colType === 'decimal' || colType === 'float' || colType === 'real' || colType === 'double precision'${isOracle ? `\n      const isDate = colType.includes('date') || colType.includes('time') || /(_at|_em|data|date|criado|created|atualizado|updated)$/i.test(k)\n      const isText = colType.includes('char') || colType.includes('text') || colType.includes('string')` : ''}
 
       if (isInteger) {
         // Inteiro: remove pontos de milhar, trata vírgulas caso tenha sido digitado decimal
@@ -460,7 +546,7 @@ function parsePayload(formData: FormData | Record<string, any>): Record<string, 
         // Valor numérico inteiro formatado com pontos de milhar (ex: "1.000", "1.000.000")
         const parsed = Number(trimmed.replace(/\\./g, ''))
         clean[k] = isNaN(parsed) ? trimmed : parsed
-      } else {
+      ${dateBlock}} else {
         clean[k] = trimmed
       }
     } else {
@@ -746,7 +832,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
 
-${generateParsePayloadCode(model)}
+${generateParsePayloadCode(model, 'oracle')}
 
 export async function get${model.name}List(opts?: { dateField?: string; startDate?: string; endDate?: string; limit?: number; filters?: Record<string, any> }) {
   const conditions: string[] = []
@@ -803,6 +889,9 @@ export async function create${model.name}(formData: FormData | Record<string, an
 
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
   const clean = parsePayload(formData)
+  delete clean['${pk}']
+  delete clean['${pk.toLowerCase()}']
+  delete clean['${pk.toUpperCase()}']
   const keys = Object.keys(clean)
   if (keys.length === 0) {
     revalidatePath('/${model.name.toLowerCase()}')
