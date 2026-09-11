@@ -1,13 +1,42 @@
-import { RouteNode } from '../../ast'
+import { RouteNode, AppAST } from '../../ast'
 import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Timeline Page (Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateTimelinePage(route: RouteNode): string {
+export function generateTimelinePage(route: RouteNode, ast?: AppAST): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
+
+  const resolveTarget = (rawTable?: string, rawModel?: string): { table: string; modelName: string } | null => {
+    if (!rawTable) return null
+    let t = rawTable.trim()
+    let m = rawModel?.trim()
+
+    // Se t for um UUID ou contiver traços ou começar com número, tenta achar o modelo real no AST
+    if (t.includes('-') || /^[0-9]/.test(t) || !/^[a-zA-Z_]/.test(t)) {
+      const found = ast?.models.find(mod => mod.id === t || mod.dbTable === t || mod.name === t)
+      if (found && found.dbTable) {
+        t = found.dbTable
+        m = found.name || toPascalCase(found.dbTable)
+      } else {
+        // Se for um UUID e não existir no AST como tabela/modelo, descarta para não quebrar a sintaxe JS
+        return null
+      }
+    }
+
+    const cleanTable = t.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '')
+    if (!cleanTable || /^[0-9]/.test(cleanTable)) return null
+
+    const modelName = (m && /^[a-zA-Z_]/.test(m))
+      ? m.replace(/[^a-zA-Z0-9_]/g, '')
+      : toPascalCase(cleanTable)
+
+    if (!modelName || /^[0-9]/.test(modelName)) return null
+
+    return { table: cleanTable, modelName }
+  }
 
   // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros, campos da timeline e abas
   const lookupModels = new Map<string, string>() // table -> modelName
@@ -26,16 +55,17 @@ export function generateTimelinePage(route: RouteNode): string {
     const colLower = colOnly.toLowerCase()
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
-    if (targetModel && targetTable) {
-      lookupModels.set(targetTable.toLowerCase(), targetModel)
-    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
-      const modelName = toPascalCase(targetTable)
-      lookupModels.set(targetTable.toLowerCase(), modelName)
+
+    const resolved = resolveTarget(targetTable, targetModel)
+    if (resolved) {
+      lookupModels.set(resolved.table, resolved.modelName)
     } else if (colLower.endsWith('_id') && !f.isPrimaryKey) {
       const base = colOnly.slice(0, -3)
       const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
-      const modelName = toPascalCase(table)
-      lookupModels.set(table.toLowerCase(), modelName)
+      const resolvedFk = resolveTarget(table)
+      if (resolvedFk) {
+        lookupModels.set(resolvedFk.table, resolvedFk.modelName)
+      }
     }
   })
 
@@ -51,17 +81,17 @@ export function generateTimelinePage(route: RouteNode): string {
     const targetModel = matchedField?.config?.relation?.targetModel || (matchedField as any)?.relation?.targetModel
     const targetTable = matchedField?.config?.relation?.targetTable || matchedField?.config?.component?.rel_table || matchedField?.config?.rel_table
 
-    if (targetTable) {
-      const modelName = targetModel || toPascalCase(targetTable)
-      if (!lookupModels.has(targetTable.toLowerCase())) {
-        lookupModels.set(targetTable.toLowerCase(), modelName)
+    const resolved = resolveTarget(targetTable, targetModel)
+    if (resolved) {
+      if (!lookupModels.has(resolved.table)) {
+        lookupModels.set(resolved.table, resolved.modelName)
       }
     } else if (colLower.endsWith('_id')) {
       const base = colOnly.slice(0, -3)
       const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
-      const modelName = toPascalCase(table)
-      if (!lookupModels.has(table.toLowerCase())) {
-        lookupModels.set(table.toLowerCase(), modelName)
+      const resolvedFk = resolveTarget(table)
+      if (resolvedFk && !lookupModels.has(resolvedFk.table)) {
+        lookupModels.set(resolvedFk.table, resolvedFk.modelName)
       }
     }
   })
@@ -85,8 +115,10 @@ export function generateTimelinePage(route: RouteNode): string {
     const fkBase = isFk ? colOnly.slice(0, -3) : ''
     const fkTable = isFk ? (fkBase.toLowerCase().endsWith('s') ? fkBase.toLowerCase() : fkBase.toLowerCase() + 's') : null
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || fkTable
-    if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
-      const t = targetTable.toLowerCase()
+    const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
+    const resolved = resolveTarget(targetTable, targetModel)
+    const t = resolved?.table || (fkTable ? resolveTarget(fkTable)?.table : null)
+    if (t && lookupModels.has(t)) {
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
       const filterCol = f.config?.component?.filter_column || f.config?.filter_column || f.config?.filterColumn || ''
@@ -124,11 +156,14 @@ export function generateTimelinePage(route: RouteNode): string {
     const colLower = col.toLowerCase()
     if (col && !optionsMap.has(col) && !optionsMap.has(colLower)) {
       const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn).toLowerCase() === colLower || f.id === rawCol)
+      const targetModel = matchedField?.config?.relation?.targetModel || (matchedField as any)?.relation?.targetModel
       const targetTable = matchedField?.config?.relation?.targetTable || matchedField?.config?.component?.rel_table || matchedField?.config?.rel_table
-      let t = targetTable ? targetTable.toLowerCase() : null
+      const resolved = resolveTarget(targetTable, targetModel)
+      let t = resolved?.table
       if (!t && colLower.endsWith('_id')) {
         const base = col.slice(0, -3)
-        t = (base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's'))
+        const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
+        t = resolveTarget(table)?.table
       }
       if (t && lookupModels.has(t)) {
         const relLabel = matchedField?.config?.component?.rel_label || matchedField?.config?.relation?.displayColumn || matchedField?.config?.rel_label

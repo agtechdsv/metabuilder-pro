@@ -65,7 +65,7 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else if (route.logicType === 'timeline') {
       // Timeline Listagem
-      files.set(`${routeDir}/page.tsx`, generateTimelinePage(route))
+      files.set(`${routeDir}/page.tsx`, generateTimelinePage(route, ast))
       files.set(`${routeDir}/TimelineClient.tsx`, generateTimelineClient(route))
       files.set(`${routeDir}/schema.ts`, generateTimelineSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no nó/card)
