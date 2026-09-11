@@ -320,6 +320,36 @@ function getFieldMask(f: any, isComputed: boolean = false): string {
   return ''
 }
 
+function isSelectField(f: any, options: any[] = [], isComputed: boolean = false): boolean {
+  if (!f) return false
+  if (isComputed) return false
+  if (isDateField(f)) return false
+  if (getFieldFormulaTokens(f).length > 0) return false
+
+  const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
+  const compType = String(comp.type || f.config?.type || '').toLowerCase()
+
+  const isExplicitSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType)
+  const isRelationalField = Boolean(
+    (f.config?.relation?.targetTable && String(f.config.relation.targetTable).trim() !== '') ||
+    (comp.rel_table && String(comp.rel_table).trim() !== '') ||
+    (f.config?.rel_table && String(f.config.rel_table).trim() !== '') ||
+    (f.config?.relation_table && String(f.config.relation_table).trim() !== '') ||
+    (f.dbColumn && f.dbColumn.endsWith('_id') && !f.isPrimaryKey)
+  )
+
+  const rawFixedOpts = f.config?.options || comp.options || f.config?.fixed_options || comp.fixed_options || f.config?.enum_values || comp.enum_values
+  const parsedFixedOpts = parseOptions(rawFixedOpts)
+  const hasExplicitFixedOpts = parsedFixedOpts.length > 0
+
+  return (
+    options.length > 0 ||
+    isExplicitSelectComp ||
+    isRelationalField ||
+    hasExplicitFixedOpts
+  )
+}
+
 function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
   if (!f) return []
   const comp = f?.config?.form_config?.component || f?.config?.component || (f as any)?.component || {}
@@ -778,17 +808,17 @@ const SubItemAccordion = React.forwardRef(({
           {subFields.map((sf: any) => {
             const val = getSubVal(sf.dbColumn)
             const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
-            const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
-            const sfOptsType = String(sfComp.options_type || sf.config?.options_type || '').toLowerCase()
             const dt = (sf.dataType || '').toLowerCase()
             const isDate = isDateField(sf)
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-            const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
             const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+            const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
+            const parsedFixedOpts = parseOptions(rawFixedOpts)
+            const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : parsedFixedOpts
+
             const childRecords = Object.values(subItem || {}).filter(Array.isArray).flat()
             const comp = computeFieldValue(sf, subItem, childRecords, '')
-            const isSelect = !isDate && !comp.isComputed && (dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType)
-            const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
+            const isSelect = isSelectField(sf, finalOptions, comp.isComputed)
 
             const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
             const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
@@ -837,7 +867,7 @@ const SubItemAccordion = React.forwardRef(({
                     name={sf.dbColumn}
                     value={defVal}
                     onChange={(e) => onSubItemChange?.(sf.dbColumn, e.target.value)}
-                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                   >
                     <option value="">Selecione...</option>
                     {val && !finalOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
@@ -2064,17 +2094,16 @@ export function DetailRelationSection({
                         }
 
                         const compConfig = f.config?.component || f.config?.form_config?.component || {}
-                        const compType = String(compConfig.type || f.config?.type || '').toLowerCase()
-                        const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
                         const dt = (f.dataType || '').toLowerCase()
                         const isDate = isDateField(f)
                         const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                         const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
-                        const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
+                        const rawFixedOpts = f.config?.options || compConfig.options || f.config?.fixed_options || compConfig.fixed_options || f.config?.enum_values || compConfig.enum_values
+                        const parsedFixedOpts = parseOptions(rawFixedOpts)
 
                         const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
                         const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
-                        let displayedOptions = allOptions
+                        let displayedOptions = allOptions.length > 0 ? allOptions : parsedFixedOpts
                         if (depName && filterCol) {
                           const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
                           const depVal = getFieldValue(item, depName) || getFieldValue(item, depBase) || getFieldValue(resolvedItem, depName) || getFieldValue(resolvedItem, depBase)
@@ -2087,9 +2116,8 @@ export function DetailRelationSection({
                             displayedOptions = []
                           }
                         }
-                        const hasOptions = displayedOptions.length > 0
                         const computed = computeFieldValue(f, item, itemChildRecords, relatedTable, subFields)
-                        const isSelect = !isDate && !computed.isComputed && (hasOptions || isSelectComp)
+                        const isSelect = isSelectField(f, displayedOptions, computed.isComputed)
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
                         const mask = isDate ? '' : getFieldMask(f, computed.isComputed)
                         const displayVal = computed.displayVal
@@ -2408,11 +2436,12 @@ export function DetailRelationSection({
                     const isDate = isDateField(f)
                     const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                     const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
-                    const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
+                    const rawFixedOpts = f.config?.options || compConfig.options || f.config?.fixed_options || compConfig.fixed_options || f.config?.enum_values || compConfig.enum_values
+                    const parsedFixedOpts = parseOptions(rawFixedOpts)
 
                     const depName = compConfig?.depends_on || f.config?.depends_on || f.config?.dependsOn
                     const filterCol = compConfig?.filter_column || f.config?.filter_column || f.config?.filterColumn
-                    let displayedOptions = allOptions
+                    let displayedOptions = allOptions.length > 0 ? allOptions : parsedFixedOpts
                     if (depName && filterCol) {
                       const depBase = depName.includes('.') ? depName.split('.').pop()! : depName
                       const depVal = getFieldValue(editingItem, depName) || getFieldValue(editingItem, depBase) || getFieldValue(resolvedItem, depName) || getFieldValue(resolvedItem, depBase)
@@ -2425,10 +2454,9 @@ export function DetailRelationSection({
                         displayedOptions = []
                       }
                     }
-                    const hasOptions = displayedOptions.length > 0
                     const editChildRecords = editingItem ? getSubRecords(editingItem) : []
                     const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable, subFields)
-                    const isSelect = !isDate && !computed.isComputed && (hasOptions || isSelectComp)
+                    const isSelect = isSelectField(f, displayedOptions, computed.isComputed)
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
                     const mask = isDate ? '' : getFieldMask(f, computed.isComputed)
                     const displayVal = computed.displayVal
@@ -2755,16 +2783,16 @@ export function DetailRelationSection({
                   const val = editingSubItem.subItem[sf.dbColumn] ?? editingSubItem.subItem[sf.dbColumn.split('.').pop()!]
                   const dt = (sf.dataType || '').toLowerCase()
                   const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
-                  const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
-                  const sfOptsType = String(sfComp.options_type || sf.config?.options_type || sf.config?.optionsType || '').toLowerCase()
                   const isDate = isDateField(sf)
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-                  const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
                   const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+                  const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
+                  const parsedFixedOpts = parseOptions(rawFixedOpts)
+                  const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : parsedFixedOpts
+
                   const childRecords = Object.values(editingSubItem.subItem || {}).filter(Array.isArray).flat()
                   const computed = computeFieldValue(sf, editingSubItem.subItem, childRecords, '')
-                  const isSelect = !isDate && !computed.isComputed && (dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType)
-                  const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
+                  const isSelect = isSelectField(sf, finalOptions, computed.isComputed)
                   const isReadOnly = Boolean(sf.config?.readOnly || sf.config?.content?.readonly || sf.config?.readonly || computed.isComputed)
                   const mask = isDate ? '' : getFieldMask(sf, computed.isComputed)
 
@@ -2835,7 +2863,7 @@ export function DetailRelationSection({
                             })
                             setEditingSubItem(prev => prev ? { ...prev, subItem: newSub } : null)
                           }}
-                          className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
+                          className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                         >
                           <option value="">Selecione...</option>
                           {val && !finalOptions.some((o: any) => String(o.value ?? o.id ?? o) === String(val) || String(o.label ?? o) === String(val)) && (
