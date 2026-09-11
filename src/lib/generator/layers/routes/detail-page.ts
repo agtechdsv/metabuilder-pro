@@ -575,8 +575,8 @@ ${Array.from(lookupModels.entries()).map(([tTable, mName]) => `
                 ${hasCustomSlots
                   ? `{\`Registro #\${data?.id ?? data?.${pk} ?? id ?? 'N/A'}\`}`
                   : (route.rawLayoutConfig?.form_header_subtitle_field
-                      ? `String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')`
-                      : `String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')`)}
+                      ? `{String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.${pk} ?? '')}`
+                      : `{String(data?.display_label ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')}`)}
               </p>
             </div>
           </div>

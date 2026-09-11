@@ -521,7 +521,9 @@ const SubItemAccordion = React.forwardRef(({
             const dt = (sf.dataType || '').toLowerCase()
             const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-            const isSelect = sf.config?.options && sf.config.options.length > 0
+            const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+            const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0)
+            const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
 
             const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
             const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
@@ -562,12 +564,12 @@ const SubItemAccordion = React.forwardRef(({
                   <select
                     key={sf.dbColumn}
                     name={sf.dbColumn}
-                    defaultValue={String(val ?? '')}
+                    value={String(val ?? '')}
                     onChange={(e) => onSubItemChange?.(sf.dbColumn, e.target.value)}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Selecione...</option>
-                    {sf.config.options.map((opt: any, oIdx: number) => {
+                    {finalOptions.map((opt: any, oIdx: number) => {
                       const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                       const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                       return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
@@ -577,7 +579,8 @@ const SubItemAccordion = React.forwardRef(({
               )
             }
 
-            const comp = computeFieldValue(sf, subItem, [], '')
+            const childRecords = Object.values(subItem || {}).filter(Array.isArray).flat()
+            const comp = computeFieldValue(sf, subItem, childRecords, '')
             if (comp.isComputed) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -611,7 +614,7 @@ const SubItemAccordion = React.forwardRef(({
                   name={sf.dbColumn}
                   data-mask={mask}
                   type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
-                  defaultValue={initialFormatted}
+                  value={initialFormatted || ''}
                   onChange={(e) => {
                     if (mask) {
                       e.target.value = formatMaskRealtime(e.target.value, mask)
@@ -2353,8 +2356,11 @@ export function DetailRelationSection({
                   const dt = (sf.dataType || '').toLowerCase()
                   const isDate = dt === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-                  const isSelect = sf.config?.options && sf.config.options.length > 0
-                  const computed = computeFieldValue(sf, editingSubItem.subItem, [], '')
+                  const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+                  const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0)
+                  const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
+                  const childRecords = Object.values(editingSubItem.subItem || {}).filter(Array.isArray).flat()
+                  const computed = computeFieldValue(sf, editingSubItem.subItem, childRecords, '')
                   const isReadOnly = Boolean(sf.config?.readOnly || sf.config?.content?.readonly || sf.config?.readonly || computed.isComputed)
                   const mask = isDate ? '' : (sf.config?.content?.mask || sf.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
 
@@ -2396,10 +2402,10 @@ export function DetailRelationSection({
                         </label>
                         <select
                           name={sf.dbColumn}
-                          defaultValue={String(val ?? '')}
+                          value={String(val ?? '')}
                           onChange={(e) => {
                             const newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
-                            const selectedOpt = sf.config.options.find((o: any) => String(o.value ?? o.id) === String(e.target.value))
+                            const selectedOpt = finalOptions.find((o: any) => String(o.value ?? o.id) === String(e.target.value))
                             if (selectedOpt?.label) {
                               newSub[\`\${sf.dbColumn}_nome\`] = selectedOpt.label
                               newSub[\`\${sf.dbColumn}_label\`] = selectedOpt.label
@@ -2408,7 +2414,8 @@ export function DetailRelationSection({
                               const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
                               const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
                               if (tokens && Array.isArray(tokens) && tokens.length > 0) {
-                                const evaluated = evaluateFormula(tokens, newSub, '')
+                                const childRecs = Object.values(newSub || {}).filter(Array.isArray).flat()
+                                const evaluated = evaluateFormula(tokens, newSub, '', childRecs)
                                 if (evaluated !== null && !isNaN(Number(evaluated))) {
                                   newSub[otherSf.dbColumn] = Number(evaluated)
                                 }
@@ -2419,7 +2426,7 @@ export function DetailRelationSection({
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer"
                         >
                           <option value="">Selecione...</option>
-                          {sf.config.options.map((opt: any, oIdx: number) => {
+                          {finalOptions.map((opt: any, oIdx: number) => {
                             const optVal = typeof opt === 'object' ? (opt.value ?? opt.id) : opt
                             const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt
                             return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
@@ -2461,7 +2468,7 @@ export function DetailRelationSection({
                         data-mask={mask || undefined}
                         data-type={isNumber ? 'number' : undefined}
                         type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
-                        defaultValue={initialFormatted}
+                        value={initialFormatted || ''}
                         onChange={(e) => {
                           if (mask) {
                             e.target.value = formatMaskRealtime(e.target.value, mask)
@@ -2479,7 +2486,8 @@ export function DetailRelationSection({
                             const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
                             const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
                             if (tokens && Array.isArray(tokens) && tokens.length > 0) {
-                              const evaluated = evaluateFormula(tokens, newSub, '')
+                              const childRecs = Object.values(newSub || {}).filter(Array.isArray).flat()
+                              const evaluated = evaluateFormula(tokens, newSub, '', childRecs)
                               if (evaluated !== null && !isNaN(Number(evaluated))) {
                                 newSub[otherSf.dbColumn] = Number(evaluated)
                               }
