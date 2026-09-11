@@ -1295,7 +1295,7 @@ export function DetailRelationSection({
   }
 
   const handleOpenAddModal = () => {
-    setEditingItem(null)
+    setEditingItem({ id: \`temp-\${Date.now()}\`, _isNew: true, items: [] })
     setModalActiveTab('master')
     setIsModalOpen(true)
   }
@@ -1557,6 +1557,10 @@ export function DetailRelationSection({
             subData[subConfig.foreignKey] = savedParentId
           }
 
+          subFields.forEach((sf: any) => {
+            if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
+          })
+
           if (subContainer) {
             const subInputs = subContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input, select')
             subInputs.forEach(inp => {
@@ -1566,17 +1570,13 @@ export function DetailRelationSection({
                 if (m === '0.000,00' || m === 'currency' || m === 'moeda') {
                   subData[inp.name] = parseAnyNumber(inp.value)
                 } else if (m === '0.000') {
-                  subData[inp.name] = parseInt(inp.value.replace(/\\D/g, ''), 10) || 0
+                  subData[inp.name] = parseInt(inp.value.replace(/\D/g, ''), 10) || 0
                 } else if (isNum) {
                   subData[inp.name] = parseAnyNumber(inp.value)
                 } else {
                   subData[inp.name] = inp.value
                 }
               }
-            })
-          } else {
-            subFields.forEach((sf: any) => {
-              if (subItem[sf.dbColumn] !== undefined) subData[sf.dbColumn] = subItem[sf.dbColumn]
             })
           }
 
@@ -1596,13 +1596,16 @@ export function DetailRelationSection({
       }
 
       if (isNewParent) {
-        setLocalItems(prev => [{
-          ...masterData,
-          id: savedParentId,
-          items: updatedChildRecords,
-          ...(subTable ? { [subTable]: updatedChildRecords } : {}),
-          __v: 1
-        }, ...prev])
+        setLocalItems(prev => {
+          const filtered = prev.filter(it => it.id !== editingItem?.id && it.codigo !== editingItem?.codigo)
+          return [{
+            ...masterData,
+            id: savedParentId,
+            items: updatedChildRecords,
+            ...(subTable ? { [subTable]: updatedChildRecords } : {}),
+            __v: 1
+          }, ...filtered]
+        })
       } else {
         setLocalItems(prev => prev.map(it => {
           const isMatch = (it.id && it.id === savedParentId) || (it.codigo && it.codigo === savedParentId)
@@ -1699,6 +1702,15 @@ export function DetailRelationSection({
       })
       const resolvedSub = resolveReverseDependencies(updatedSub, editingSubItem.subFields, subTable || '', relationalOptions)
       Object.assign(updatedSub, resolvedSub)
+      const parentIdStr = String(editingSubItem.parentId || '')
+      const isParentPersisted = Boolean(
+        editingSubItem.parentId &&
+        parentIdStr !== '' &&
+        parentIdStr !== 'edit' &&
+        !parentIdStr.startsWith('temp-') &&
+        !parentIdStr.startsWith('item-')
+      )
+
       if (subConfig?.foreignKey) {
         if (!updatedSub[subConfig.foreignKey]) {
           updatedSub[subConfig.foreignKey] = editingSubItem.parentId
@@ -1708,11 +1720,18 @@ export function DetailRelationSection({
         }
       }
 
-      if (updateSubAction && updatedSub.id && !String(updatedSub.id).startsWith('temp-')) {
-        await updateSubAction(updatedSub.id, formData)
-      } else if (createSubAction && (!updatedSub.id || String(updatedSub.id).startsWith('temp-'))) {
-        const created = await createSubAction(formData)
-        if (created?.id) updatedSub.id = created.id
+      if (isParentPersisted) {
+        if (updateSubAction && updatedSub.id && !String(updatedSub.id).startsWith('temp-')) {
+          await updateSubAction(updatedSub.id, formData)
+        } else if (createSubAction && (!updatedSub.id || String(updatedSub.id).startsWith('temp-'))) {
+          const created = await createSubAction(formData)
+          if (created?.id) updatedSub.id = created.id
+        }
+      } else {
+        if (!updatedSub.id) {
+          updatedSub.id = \`temp-\${Date.now()}\`
+        }
+        updatedSub._dirty = true
       }
 
       setLocalItems(prev => prev.map((it, itIdx) => {
@@ -1720,7 +1739,9 @@ export function DetailRelationSection({
         const isParent = itId === editingSubItem.parentId || String(itIdx) === String(editingSubItem.parentId) || String(it.id) === String(editingSubItem.parentId)
         if (isParent) {
           const children = getSubRecords(it)
-          const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+          const nextChildren = editingSubItem.sIdx < children.length
+            ? children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+            : [...children, updatedSub]
           const updatedParent = {
             ...it,
             items: nextChildren,
@@ -1741,14 +1762,17 @@ export function DetailRelationSection({
         return it
       }))
 
-      if (editingItem) {
-        const itId = editingItem.id || editingItem.codigo
-        const isParent = itId === editingSubItem.parentId || String(editingSubItem.parentId) === 'edit' || (editingSubItem.subItem && itId === editingSubItem.subItem[subConfig?.foreignKey || ''])
+      if (editingItem || String(editingSubItem.parentId) === 'edit') {
+        const it = editingItem || { id: \`temp-\${Date.now()}\`, _isNew: true, items: [] }
+        const itId = it.id || it.codigo
+        const isParent = !editingItem || itId === editingSubItem.parentId || String(editingSubItem.parentId) === 'edit' || (editingSubItem.subItem && itId === editingSubItem.subItem[subConfig?.foreignKey || ''])
         if (isParent) {
-          const children = getSubRecords(editingItem)
-          const nextChildren = children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+          const children = getSubRecords(it)
+          const nextChildren = editingSubItem.sIdx < children.length
+            ? children.map((sub: any, idx: number) => idx === editingSubItem.sIdx ? updatedSub : sub)
+            : [...children, updatedSub]
           const updatedParent = {
-            ...editingItem,
+            ...it,
             items: nextChildren,
             ...(subTable ? { [subTable]: nextChildren } : {})
           }
@@ -1782,7 +1806,16 @@ export function DetailRelationSection({
     setIsSubmitting(true)
     window.dispatchEvent(new CustomEvent('page-progress-start'))
     try {
-      if (deleteSubAction && deletingSubItem.subItem.id && !String(deletingSubItem.subItem.id).startsWith('temp-')) {
+      const parentIdStr = String(deletingSubItem.parentId || '')
+      const isParentPersisted = Boolean(
+        deletingSubItem.parentId &&
+        parentIdStr !== '' &&
+        parentIdStr !== 'edit' &&
+        !parentIdStr.startsWith('temp-') &&
+        !parentIdStr.startsWith('item-')
+      )
+
+      if (isParentPersisted && deleteSubAction && deletingSubItem.subItem.id && !String(deletingSubItem.subItem.id).startsWith('temp-')) {
         await deleteSubAction(deletingSubItem.subItem.id)
       }
 
@@ -2370,20 +2403,23 @@ export function DetailRelationSection({
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
-                  {isReadOnlyMode ? <Eye className="w-5 h-5" /> : (editingItem ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />)}
+                  {isReadOnlyMode ? <Eye className="w-5 h-5" /> : ((editingItem && !editingItem._isNew && !String(editingItem.id || '').startsWith('temp-')) ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />)}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                    {isReadOnlyMode ? 'Visualizar Registro' : (editingItem ? 'Editar Registro' : 'Novo Registro')}
+                    {isReadOnlyMode ? 'Visualizar Registro' : ((editingItem && !editingItem._isNew && !String(editingItem.id || '').startsWith('temp-')) ? 'Editar Registro' : 'Novo Registro')}
                   </h3>
-                  <p className="text-xs text-neutral-400">
-                    {editingItem ? \`Registro \${editingItem.id || editingItem.codigo || ''}\` : 'Novo Item'}
+                  <p className="text-xs text-neutral-400 font-mono">
+                    {(editingItem && !editingItem._isNew && !String(editingItem.id || '').startsWith('temp-')) ? \`Registro #\${editingItem.id || editingItem.codigo || ''}\` : 'Novo Registro'}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingItem(null)
+                }}
                 className="p-2 rounded-xl text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -2677,7 +2713,10 @@ export function DetailRelationSection({
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setEditingItem(null)
+                  }}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
                   {isReadOnlyMode ? 'Fechar' : 'Cancelar'}
@@ -2761,14 +2800,14 @@ export function DetailRelationSection({
             <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center">
-                  <Pencil className="w-5 h-5" />
+                  {(editingSubItem.subItem.id && !String(editingSubItem.subItem.id).startsWith('temp-')) ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                    Editar Registro
+                    {(editingSubItem.subItem.id && !String(editingSubItem.subItem.id).startsWith('temp-')) ? 'Editar Registro' : 'Novo Registro'}
                   </h3>
                   <p className="text-xs text-neutral-400 font-mono">
-                    Registro #\${editingSubItem.subItem.id || editingSubItem.subItem.codigo || ''}
+                    {(editingSubItem.subItem.id && !String(editingSubItem.subItem.id).startsWith('temp-')) ? \`Registro #\${editingSubItem.subItem.id || editingSubItem.subItem.codigo || ''}\` : 'Novo Item'}
                   </p>
                 </div>
               </div>
