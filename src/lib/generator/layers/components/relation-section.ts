@@ -647,6 +647,7 @@ const SubItemAccordion = React.forwardRef(({
   subItem,
   sIdx,
   subKey,
+  subTable,
   isSubExpanded,
   subFields,
   itemTitleField,
@@ -661,6 +662,7 @@ const SubItemAccordion = React.forwardRef(({
   subItem: any
   sIdx: number
   subKey: string
+  subTable?: string
   isSubExpanded: boolean
   subFields: DetailFieldConfig[]
   itemTitleField?: string
@@ -811,7 +813,7 @@ const SubItemAccordion = React.forwardRef(({
             const dt = (sf.dataType || '').toLowerCase()
             const isDate = isDateField(sf)
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-            const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+            const dynamicOptions = getRelationalOptionsForField(sf, subTable || '', relationalOptions || {})
             const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
             const parsedFixedOpts = parseOptions(rawFixedOpts)
             const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : parsedFixedOpts
@@ -1682,12 +1684,12 @@ export function DetailRelationSection({
         } else {
           updatedSub[k] = v
         }
-        const fieldOpts = matchedField ? getRelationalOptionsForField(matchedField, subKey || '', relationalOptions || {}) : []
+        const fieldOpts = matchedField ? getRelationalOptionsForField(matchedField, subTable || '', relationalOptions || {}) : []
         if (fieldOpts && fieldOpts.length > 0) {
           const selectedOpt = fieldOpts.find((o: any) => String(o.value ?? o.id) === String(v) || String(o.label) === String(v))
           if (selectedOpt?.label) {
-            updatedSub[\`\${k}_nome\`] = selectedOpt.label
-            updatedSub[\`\${k}_label\`] = selectedOpt.label
+            updatedSub[k + '_nome'] = selectedOpt.label
+            updatedSub[k + '_label'] = selectedOpt.label
             const displayCol = matchedField?.config?.component?.rel_label || matchedField?.config?.displayColumn
             if (displayCol) {
               updatedSub[displayCol] = selectedOpt.label
@@ -1695,7 +1697,7 @@ export function DetailRelationSection({
           }
         }
       })
-      const resolvedSub = resolveReverseDependencies(updatedSub, editingSubItem.subFields, subKey || '', relationalOptions)
+      const resolvedSub = resolveReverseDependencies(updatedSub, editingSubItem.subFields, subTable || '', relationalOptions)
       Object.assign(updatedSub, resolvedSub)
       if (subConfig?.foreignKey) {
         if (!updatedSub[subConfig.foreignKey]) {
@@ -2311,6 +2313,7 @@ export function DetailRelationSection({
                                   subItem={subItem}
                                   sIdx={sIdx}
                                   subKey={subKey}
+                                  subTable={subTable}
                                   isSubExpanded={isSubExpanded}
                                   subFields={subFields}
                                   itemTitleField={subConfig?.itemTitleField}
@@ -2650,6 +2653,7 @@ export function DetailRelationSection({
                             subItem={sub}
                             sIdx={sIdx}
                             subKey={subKey}
+                            subTable={subTable}
                             isSubExpanded={isSubExpanded}
                             subFields={subFields}
                             itemTitleField={subConfig?.itemTitleField}
@@ -2785,7 +2789,7 @@ export function DetailRelationSection({
                   const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
                   const isDate = isDateField(sf)
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
-                  const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
+                  const dynamicOptions = getRelationalOptionsForField(sf, subTable || '', relationalOptions || {})
                   const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
                   const parsedFixedOpts = parseOptions(rawFixedOpts)
                   const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : parsedFixedOpts
@@ -2850,7 +2854,7 @@ export function DetailRelationSection({
                               newSub[sf.dbColumn + '_nome'] = chosenOpt.label
                               newSub[sf.dbColumn + '_label'] = chosenOpt.label
                             }
-                            newSub = resolveReverseDependencies(newSub, editingSubItem.subFields, subKey || '', relationalOptions)
+                            newSub = resolveReverseDependencies(newSub, editingSubItem.subFields, subTable || '', relationalOptions)
                             editingSubItem.subFields.forEach((otherSf: any) => {
                               const tokens = getFieldFormulaTokens(otherSf)
                               if (tokens && Array.isArray(tokens) && tokens.length > 0) {
