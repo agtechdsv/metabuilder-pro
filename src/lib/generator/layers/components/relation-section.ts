@@ -244,17 +244,88 @@ function formatDateForInput(v: any): string {
   try {
     const d = new Date(s)
     if (!isNaN(d.getTime())) {
-      const y = d.getUTCFullYear()
-      const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-      const day = String(d.getUTCDate()).padStart(2, '0')
-      return \`\${y}-\${m}-\${day}\`
+      if (s.includes('Z')) {
+        const y = d.getUTCFullYear()
+        const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(d.getUTCDate()).padStart(2, '0')
+        return \`\${y}-\${m}-\${day}\`
+      } else {
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return \`\${y}-\${m}-\${day}\`
+      }
     }
   } catch (e) {}
   return s.slice(0, 10)
 }
 
+function isDateField(f: any): boolean {
+  if (!f) return false
+  const dt = (f.dataType || '').toLowerCase()
+  const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
+  const compType = String(comp.type || f.config?.type || f.config?.content?.type || '').toLowerCase()
+  const mask = f.config?.content?.mask || f.config?.mask || comp.mask || ''
+  const format = String(f.config?.format || f.format || '').toLowerCase()
+
+  return (
+    dt.includes('date') ||
+    dt.includes('time') ||
+    dt.includes('timestamp') ||
+    compType === 'date' ||
+    compType === 'datetime' ||
+    compType === 'datetime-local' ||
+    compType === 'time' ||
+    format === 'date' ||
+    format === 'datetime' ||
+    mask === '00/00/0000'
+  )
+}
+
+function getFieldFormulaTokens(f: any): any[] {
+  if (!f) return []
+  const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
+  const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens || comp.formula_tokens || comp.formulaTokens || (f as any).formulaTokens || []
+  return Array.isArray(tokens) ? tokens : []
+}
+
+function getFieldMask(f: any, isComputed: boolean = false): string {
+  if (!f) return ''
+  if (isDateField(f)) return ''
+
+  const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
+  const explicitMask = f.config?.content?.mask || f.config?.mask || comp.mask || f.config?.form_config?.content?.mask || ''
+  if (explicitMask) return explicitMask
+
+  const dt = (f.dataType || '').toLowerCase()
+  const compType = String(comp.type || f.config?.type || f.config?.content?.type || '').toLowerCase()
+  const format = String(f.config?.format || f.format || '').toLowerCase()
+  const hasFormula = isComputed || getFieldFormulaTokens(f).length > 0
+
+  const isNumericDecimal =
+    dt.includes('float') ||
+    dt.includes('decimal') ||
+    dt.includes('double') ||
+    dt.includes('numeric') ||
+    dt.includes('real') ||
+    dt.includes('money') ||
+    dt.includes('currency') ||
+    format === 'currency' ||
+    compType === 'currency'
+
+  if (hasFormula || isNumericDecimal) {
+    return '0.000,00'
+  }
+
+  return ''
+}
+
 function getRelationalOptionsForField(f: any, relatedTable: string, relationalOptions?: Record<string, any[]>): any[] {
-  const comp = f?.config?.form_config?.component || f?.config?.component || {}
+  if (!f) return []
+  const isDate = isDateField(f)
+  const hasFormula = getFieldFormulaTokens(f).length > 0
+  if (isDate || hasFormula) return []
+
   const rawOpts = f?.config?.options || comp.options || f?.options || f?.config?.form_config?.options
   const parsedOpts = parseOptions(rawOpts)
   if (parsedOpts.length > 0) return parsedOpts
@@ -268,18 +339,20 @@ function getRelationalOptionsForField(f: any, relatedTable: string, relationalOp
   const targetTable = f?.config?.relation?.targetTable || comp.rel_table || f?.config?.rel_table || comp.relation_table || ''
   const targetModel = f?.config?.relation?.targetModel || comp.rel_model || ''
   
+  const isSelfTable = Boolean(targetTable && relatedTable && targetTable.toLowerCase() === relatedTable.toLowerCase() && !f?.dbColumn?.endsWith('_id'))
+
   const candidateKeys = [
     f?.dbColumn,
     colOnly,
     f?.id,
     relatedTable + '.' + f?.dbColumn,
     relatedTable + '.' + colOnly,
-    targetTable,
-    targetTable.toLowerCase(),
-    targetTable.endsWith('s') ? targetTable.slice(0, -1) : (targetTable + 's'),
+    !isSelfTable ? targetTable : null,
+    !isSelfTable ? targetTable.toLowerCase() : null,
+    !isSelfTable ? (targetTable.endsWith('s') ? targetTable.slice(0, -1) : (targetTable + 's')) : null,
     targetModel,
     targetModel.toLowerCase(),
-  ].filter(Boolean)
+  ].filter(Boolean) as string[]
 
   for (const k of candidateKeys) {
     if (relationalOptions[k] && Array.isArray(relationalOptions[k]) && relationalOptions[k].length > 0) {
@@ -417,7 +490,7 @@ function evaluateFormula(
         if (subFields && subFields.length > 0) {
           childRecords.forEach((r: any) => {
             subFields.forEach((sf: any) => {
-              const sfTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+              const sfTokens = getFieldFormulaTokens(sf)
               if (Array.isArray(sfTokens) && sfTokens.length > 0) {
                 const sfVal = evaluateFormula(sfTokens, r, '', [], [])
                 if (sfVal !== null && !isNaN(Number(sfVal))) {
@@ -452,7 +525,7 @@ function evaluateFormula(
             if (matchingSf) {
               val = row[matchingSf.dbColumn] ?? (matchingSf.id ? row[matchingSf.id] : undefined) ?? getFieldValue(row, matchingSf.dbColumn)
               if (val === '' || val === null || val === undefined || val === 0) {
-                const subTokens = matchingSf?.config?.content?.formula_tokens || matchingSf?.config?.formula_tokens || matchingSf?.config?.formulaTokens
+                const subTokens = getFieldFormulaTokens(matchingSf)
                 if (Array.isArray(subTokens) && subTokens.length > 0) {
                   val = evaluateFormula(subTokens, row, '', [], [])
                 }
@@ -500,9 +573,11 @@ function computeFieldValue(
   subFields: DetailFieldConfig[] = []
 ): { displayVal: string; rawVal: any; isComputed: boolean } {
   if (!row) return { displayVal: '', rawVal: '', isComputed: false }
-  const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens || []
+  const tokens = getFieldFormulaTokens(f)
   const hasFormula = Array.isArray(tokens) && tokens.length > 0
-  const mask = f.config?.content?.mask || f.config?.mask || (hasFormula ? '0.000,00' : '')
+  const dt = (f.dataType || '').toLowerCase()
+  const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double') || dt.includes('money') || dt.includes('currency')
+  const mask = getFieldMask(f, hasFormula)
 
   let computedNum: number | null = null
 
@@ -521,7 +596,16 @@ function computeFieldValue(
   }
 
   if (existingVal !== undefined && existingVal !== null && existingVal !== '') {
-    const formatted = mask ? applyFieldMask(existingVal, mask) : String(existingVal)
+    let formatted: string
+    if (mask) {
+      formatted = applyFieldMask(existingVal, mask)
+    } else if (typeof existingVal === 'number') {
+      formatted = (isNumber && (dt.includes('float') || dt.includes('decimal')))
+        ? existingVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : String(existingVal)
+    } else {
+      formatted = String(existingVal)
+    }
     return { displayVal: formatted, rawVal: existingVal, isComputed: false }
   }
 
@@ -696,11 +780,13 @@ const SubItemAccordion = React.forwardRef(({
             const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
             const sfOptsType = String(sfComp.options_type || sf.config?.options_type || '').toLowerCase()
             const dt = (sf.dataType || '').toLowerCase()
-            const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || sfCompType === 'date' || sf.config?.type === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+            const isDate = isDateField(sf)
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
             const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
             const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
-            const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType
+            const childRecords = Object.values(subItem || {}).filter(Array.isArray).flat()
+            const comp = computeFieldValue(sf, subItem, childRecords, '')
+            const isSelect = !isDate && !comp.isComputed && (dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType)
             const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
 
             const rawCols = sf.config?.gridSpan ?? sf.config?.modalGridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.gridSpan ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
@@ -740,8 +826,7 @@ const SubItemAccordion = React.forwardRef(({
                 return oV === String(val) || oL === String(val)
               })
               const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val ?? '')
-
-              return (
+              return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                   <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                     {sf.label}
@@ -767,8 +852,6 @@ const SubItemAccordion = React.forwardRef(({
               )
             }
 
-            const childRecords = Object.values(subItem || {}).filter(Array.isArray).flat()
-            const comp = computeFieldValue(sf, subItem, childRecords, '')
             if (comp.isComputed) {
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -786,7 +869,7 @@ const SubItemAccordion = React.forwardRef(({
               )
             }
 
-            const mask = sf.config?.content?.mask || sf.config?.mask || ''
+            const mask = getFieldMask(sf, comp.isComputed)
             let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
             if (mask) {
               initialFormatted = applyFieldMask(val, mask)
@@ -906,7 +989,7 @@ export function DetailRelationSection({
         let updatedSub = { ...children[subIdx], [field]: val }
         updatedSub = resolveReverseDependencies(updatedSub, subFields, subTable || '', relationalOptions)
         subFields.forEach((sf: any) => {
-          const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          const tokens = getFieldFormulaTokens(sf)
           if (Array.isArray(tokens) && tokens.length > 0) {
             const res = evaluateFormula(tokens, updatedSub, '', [], [])
             if (res !== null && !isNaN(Number(res))) {
@@ -919,7 +1002,7 @@ export function DetailRelationSection({
         if (subTable) { parent[subTable] = children }
 
         fields.forEach((f: any) => {
-          const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+          const fTokens = getFieldFormulaTokens(f)
           if (Array.isArray(fTokens) && fTokens.length > 0) {
             const res = evaluateFormula(fTokens, parent, relatedTable, children, subFields)
             if (res !== null && !isNaN(Number(res))) {
@@ -942,7 +1025,7 @@ export function DetailRelationSection({
         let updatedSub = { ...children[subIdx], [field]: val }
         updatedSub = resolveReverseDependencies(updatedSub, subFields, subTable || '', relationalOptions)
         subFields.forEach((sf: any) => {
-          const tokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          const tokens = getFieldFormulaTokens(sf)
           if (Array.isArray(tokens) && tokens.length > 0) {
             const res = evaluateFormula(tokens, updatedSub, '', [], [])
             if (res !== null && !isNaN(Number(res))) {
@@ -959,7 +1042,7 @@ export function DetailRelationSection({
       }
 
       fields.forEach((f: any) => {
-        const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        const fTokens = getFieldFormulaTokens(f)
         if (Array.isArray(fTokens) && fTokens.length > 0) {
           const res = evaluateFormula(fTokens, updatedParent, relatedTable, children, subFields)
           if (res !== null && !isNaN(Number(res))) {
@@ -1025,7 +1108,7 @@ export function DetailRelationSection({
 
       // 3. Evaluate formulas
       for (const f of fields) {
-        const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        const tokens = getFieldFormulaTokens(f)
         if (Array.isArray(tokens) && tokens.length > 0) {
           const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item), subFields)
           if (res !== null && !isNaN(Number(res))) {
@@ -1091,7 +1174,7 @@ export function DetailRelationSection({
 
       // 3. Evaluate formulas
       for (const f of fields) {
-        const tokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        const tokens = getFieldFormulaTokens(f)
         if (Array.isArray(tokens) && tokens.length > 0) {
           const res = evaluateFormula(tokens, item, relatedTable, getSubRecords(item), subFields)
           if (res !== null && !isNaN(Number(res))) {
@@ -1116,7 +1199,7 @@ export function DetailRelationSection({
         const enrichedChildren = children.map((sub: any) => {
           const updatedSub = { ...sub }
           subFields.forEach((sf: any) => {
-            const subTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+            const subTokens = getFieldFormulaTokens(sf)
             if (Array.isArray(subTokens) && subTokens.length > 0) {
               const res = evaluateFormula(subTokens, updatedSub, '', [], [])
               if (res !== null && !isNaN(Number(res))) {
@@ -1130,7 +1213,7 @@ export function DetailRelationSection({
         if (subTable) { copy[subTable] = enrichedChildren }
       }
       fields.forEach((f: any) => {
-        const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+        const fTokens = getFieldFormulaTokens(f)
         if (Array.isArray(fTokens) && fTokens.length > 0) {
           const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
           if (res !== null && !isNaN(Number(res))) {
@@ -1185,7 +1268,7 @@ export function DetailRelationSection({
       const enrichedChildren = children.map((sub: any) => {
         const updatedSub = { ...sub }
         subFields.forEach((sf: any) => {
-          const subTokens = sf.config?.content?.formula_tokens || sf.config?.formula_tokens || sf.config?.formulaTokens
+          const subTokens = getFieldFormulaTokens(sf)
           if (Array.isArray(subTokens) && subTokens.length > 0) {
             const res = evaluateFormula(subTokens, updatedSub, '', [], [])
             if (res !== null && !isNaN(Number(res))) {
@@ -1199,7 +1282,7 @@ export function DetailRelationSection({
       if (subTable) { copy[subTable] = enrichedChildren }
     }
     fields.forEach((f: any) => {
-      const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+      const fTokens = getFieldFormulaTokens(f)
       if (Array.isArray(fTokens) && fTokens.length > 0) {
         const res = evaluateFormula(fTokens, copy, relatedTable, getSubRecords(copy), subFields)
         if (res !== null && !isNaN(Number(res))) {
@@ -1606,7 +1689,7 @@ export function DetailRelationSection({
             __v: (it.__v || 0) + 1
           }
           fields.forEach((f: any) => {
-            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            const fTokens = getFieldFormulaTokens(f)
             if (Array.isArray(fTokens) && fTokens.length > 0) {
               const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
               if (res !== null && !isNaN(Number(res))) {
@@ -1631,7 +1714,7 @@ export function DetailRelationSection({
             ...(subTable ? { [subTable]: nextChildren } : {})
           }
           fields.forEach((f: any) => {
-            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            const fTokens = getFieldFormulaTokens(f)
             if (Array.isArray(fTokens) && fTokens.length > 0) {
               const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
               if (res !== null && !isNaN(Number(res))) {
@@ -1677,7 +1760,7 @@ export function DetailRelationSection({
             __v: (it.__v || 0) + 1
           }
           fields.forEach((f: any) => {
-            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            const fTokens = getFieldFormulaTokens(f)
             if (Array.isArray(fTokens) && fTokens.length > 0) {
               const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
               if (res !== null && !isNaN(Number(res))) {
@@ -1701,7 +1784,7 @@ export function DetailRelationSection({
             ...(subTable ? { [subTable]: nextChildren } : {})
           }
           fields.forEach((f: any) => {
-            const fTokens = f.config?.content?.formula_tokens || f.config?.formula_tokens || f.config?.formulaTokens
+            const fTokens = getFieldFormulaTokens(f)
             if (Array.isArray(fTokens) && fTokens.length > 0) {
               const res = evaluateFormula(fTokens, updatedParent, relatedTable, nextChildren, subFields)
               if (res !== null && !isNaN(Number(res))) {
@@ -1977,7 +2060,7 @@ export function DetailRelationSection({
                         const compType = String(compConfig.type || f.config?.type || '').toLowerCase()
                         const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
                         const dt = (f.dataType || '').toLowerCase()
-                        const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || compType === 'date' || f.config?.type === 'date' || f.dbColumn.includes('data') || f.dbColumn.includes('date')
+                        const isDate = isDateField(f)
                         const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                         const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
                         const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
@@ -1998,10 +2081,10 @@ export function DetailRelationSection({
                           }
                         }
                         const hasOptions = displayedOptions.length > 0
-                        const isSelect = hasOptions || isSelectComp
                         const computed = computeFieldValue(f, item, itemChildRecords, relatedTable, subFields)
+                        const isSelect = !isDate && !computed.isComputed && (hasOptions || isSelectComp)
                         const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
-                        const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
+                        const mask = isDate ? '' : getFieldMask(f, computed.isComputed)
                         const displayVal = computed.displayVal
 
                         const widthVal = f.config?.width || f.config?.component?.width || ''
@@ -2315,7 +2398,7 @@ export function DetailRelationSection({
                     const compType = String(compConfig.type || f.config?.type || '').toLowerCase()
                     const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
                     const dt = (f.dataType || '').toLowerCase()
-                    const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || compType === 'date' || f.config?.type === 'date' || f.dbColumn.includes('data') || f.dbColumn.includes('date')
+                    const isDate = isDateField(f)
                     const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                     const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
                     const isSelectComp = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(compType) || ['fixed', 'enumeration', 'relational'].includes(optsType)
@@ -2336,12 +2419,11 @@ export function DetailRelationSection({
                       }
                     }
                     const hasOptions = displayedOptions.length > 0
-                    const isSelect = hasOptions || isSelectComp
                     const editChildRecords = editingItem ? getSubRecords(editingItem) : []
-
                     const computed = computeFieldValue(f, editingItem, editChildRecords, relatedTable, subFields)
+                    const isSelect = !isDate && !computed.isComputed && (hasOptions || isSelectComp)
                     const isReadOnly = Boolean(f.config?.readOnly || f.config?.content?.readonly || f.config?.readonly || computed.isComputed)
-                    const mask = isDate ? '' : (f.config?.content?.mask || f.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
+                    const mask = isDate ? '' : getFieldMask(f, computed.isComputed)
                     const displayVal = computed.displayVal
 
                     const comp = f.config?.component || {}
@@ -2668,16 +2750,16 @@ export function DetailRelationSection({
                   const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
                   const sfCompType = String(sfComp.type || sf.config?.type || '').toLowerCase()
                   const sfOptsType = String(sfComp.options_type || sf.config?.options_type || sf.config?.optionsType || '').toLowerCase()
-                  const isDate = dt === 'date' || dt === 'timestamp' || dt === 'datetime' || dt === 'timestamptz' || sfCompType === 'date' || sf.config?.type === 'date' || sf.dbColumn.includes('data') || sf.dbColumn.includes('date')
+                  const isDate = isDateField(sf)
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                   const sfIsSelectType = ['select', 'combo', 'combobox', 'combo (select)', 'dropdown', 'radio', 'radio buttons', 'radiobutton'].includes(sfCompType) || ['fixed', 'enumeration', 'relational'].includes(sfOptsType)
                   const dynamicOptions = getRelationalOptionsForField(sf, subKey || '', relationalOptions || {})
-                  const isSelect = dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType
-                  const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
                   const childRecords = Object.values(editingSubItem.subItem || {}).filter(Array.isArray).flat()
                   const computed = computeFieldValue(sf, editingSubItem.subItem, childRecords, '')
+                  const isSelect = !isDate && !computed.isComputed && (dynamicOptions.length > 0 || (sf.config?.options && sf.config.options.length > 0) || sfIsSelectType)
+                  const finalOptions = dynamicOptions.length > 0 ? dynamicOptions : (sf.config?.options || [])
                   const isReadOnly = Boolean(sf.config?.readOnly || sf.config?.content?.readonly || sf.config?.readonly || computed.isComputed)
-                  const mask = isDate ? '' : (sf.config?.content?.mask || sf.config?.mask || (computed.isComputed && isNumber ? '0.000,00' : ''))
+                  const mask = isDate ? '' : getFieldMask(sf, computed.isComputed)
 
                   const rawCols = sf.config?.modalGridSpan ?? sf.config?.gridSpan ?? sf.config?.columns ?? sf.config?.col_span ?? sf.config?.component?.modalGridSpan ?? sf.config?.component?.gridSpan ?? sf.config?.component?.columns ?? sf.config?.component?.col_span ?? sf.config?.colSpan
                   const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
@@ -2730,13 +2812,12 @@ export function DetailRelationSection({
                             let newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
                             const chosenOpt = finalOptions.find((o: any) => String(o.value ?? o.id ?? o) === String(e.target.value))
                             if (chosenOpt?.label) {
-                              newSub[\`\${sf.dbColumn}_nome\`] = chosenOpt.label
-                              newSub[\`\${sf.dbColumn}_label\`] = chosenOpt.label
+                              newSub[sf.dbColumn + '_nome'] = chosenOpt.label
+                              newSub[sf.dbColumn + '_label'] = chosenOpt.label
                             }
                             newSub = resolveReverseDependencies(newSub, editingSubItem.subFields, subKey || '', relationalOptions)
                             editingSubItem.subFields.forEach((otherSf: any) => {
-                              const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
-                              const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
+                              const tokens = getFieldFormulaTokens(otherSf)
                               if (tokens && Array.isArray(tokens) && tokens.length > 0) {
                                 const childRecs = Object.values(newSub || {}).filter(Array.isArray).flat()
                                 const evaluated = evaluateFormula(tokens, newSub, '', childRecs)
@@ -2804,14 +2885,13 @@ export function DetailRelationSection({
                           if (mask === '0.000,00' || mask === 'currency' || mask === 'moeda') {
                             cleanVal = parseAnyNumber(e.target.value)
                           } else if (mask === '0.000' || dt.includes('int')) {
-                            cleanVal = parseInt(e.target.value.replace(/\\D/g, ''), 10) || 0
+                            cleanVal = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0
                           } else if (isNumber) {
                             cleanVal = parseAnyNumber(e.target.value)
                           }
                           const newSub = { ...editingSubItem.subItem, [sf.dbColumn]: cleanVal }
                           editingSubItem.subFields.forEach((otherSf: any) => {
-                            const compCfg = otherSf.config?.component || otherSf.config?.form_config?.component
-                            const tokens = compCfg?.formula_tokens || otherSf.config?.formula_tokens || otherSf.config?.formulaTokens
+                            const tokens = getFieldFormulaTokens(otherSf)
                             if (tokens && Array.isArray(tokens) && tokens.length > 0) {
                               const childRecs = Object.values(newSub || {}).filter(Array.isArray).flat()
                               const evaluated = evaluateFormula(tokens, newSub, '', childRecs)

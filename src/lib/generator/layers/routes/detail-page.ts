@@ -661,18 +661,38 @@ export function generateDetailPage(route: RouteNode): string {
     route.relationTabs.forEach(tab => {
       const allTabFields = tab.formFields && tab.formFields.length > 0 ? tab.formFields : tab.gridFields
       allTabFields.forEach(f => {
-        if (f.config?.relation?.targetTable && f.config?.relation?.targetModel &&
-            isValidIdentifier(f.config.relation.targetTable) && isValidIdentifier(f.config.relation.targetModel)) {
-          lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
+        const comp = f.config?.component || f.config?.form_config?.component || {}
+        let relTable = f.config?.relation?.targetTable || comp.rel_table
+        let relModel = f.config?.relation?.targetModel || comp.rel_model
+        if (!relTable && f.dbColumn.endsWith('_id') && !f.isPrimaryKey && f.dbColumn !== tab.foreignKey) {
+          const base = f.dbColumn.slice(0, -3)
+          relTable = base.endsWith('s') ? base : (base + 's')
+          relModel = relTable.charAt(0).toUpperCase() + relTable.slice(1)
+        }
+        if (relTable && relTable.toLowerCase() !== tab.relatedTable.toLowerCase() && isValidIdentifier(relTable)) {
+          const modelName = relModel && isValidIdentifier(relModel) ? relModel : (relTable.charAt(0).toUpperCase() + relTable.slice(1))
+          if (isValidIdentifier(modelName)) {
+            lookupModels.set(relTable.toLowerCase(), modelName)
+          }
         }
       })
       if (tab.subDetails) {
         tab.subDetails.forEach(sub => {
           const allSubFields = sub.formFields && sub.formFields.length > 0 ? sub.formFields : sub.gridFields
           allSubFields.forEach(f => {
-            if (f.config?.relation?.targetTable && f.config?.relation?.targetModel &&
-                isValidIdentifier(f.config.relation.targetTable) && isValidIdentifier(f.config.relation.targetModel)) {
-              lookupModels.set(f.config.relation.targetTable.toLowerCase(), f.config.relation.targetModel)
+            const comp = f.config?.component || f.config?.form_config?.component || {}
+            let relTable = f.config?.relation?.targetTable || comp.rel_table
+            let relModel = f.config?.relation?.targetModel || comp.rel_model
+            if (!relTable && f.dbColumn.endsWith('_id') && !f.isPrimaryKey && f.dbColumn !== sub.foreignKey) {
+              const base = f.dbColumn.slice(0, -3)
+              relTable = base.endsWith('s') ? base : (base + 's')
+              relModel = relTable.charAt(0).toUpperCase() + relTable.slice(1)
+            }
+            if (relTable && relTable.toLowerCase() !== sub.relatedTable.toLowerCase() && isValidIdentifier(relTable)) {
+              const modelName = relModel && isValidIdentifier(relModel) ? relModel : (relTable.charAt(0).toUpperCase() + relTable.slice(1))
+              if (isValidIdentifier(modelName)) {
+                lookupModels.set(relTable.toLowerCase(), modelName)
+              }
             }
           })
         })
@@ -715,7 +735,51 @@ export function generateDetailPage(route: RouteNode): string {
 
   const addedOptionKeys = new Set<string>()
   allCandidateFields.forEach(({ f, table }) => {
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (f.dbColumn.endsWith('_id') ? (f.dbColumn.slice(0, -3).endsWith('s') ? f.dbColumn.slice(0, -3) : f.dbColumn.slice(0, -3) + 's') : null)
+    const dt = (f.dataType || '').toLowerCase()
+    const comp = f.config?.component || f.config?.form_config?.component || {}
+    const compType = String(comp.type || f.config?.type || f.config?.content?.type || '').toLowerCase()
+    const mask = f.config?.content?.mask || f.config?.mask || comp.mask || ''
+    const format = String(f.config?.format || f.format || '').toLowerCase()
+    const isDate =
+      dt.includes('date') ||
+      dt.includes('time') ||
+      dt.includes('timestamp') ||
+      compType === 'date' ||
+      compType === 'datetime' ||
+      compType === 'datetime-local' ||
+      compType === 'time' ||
+      format === 'date' ||
+      format === 'datetime' ||
+      mask === '00/00/0000'
+    const hasFormula = Boolean(
+      comp.formula_tokens?.length ||
+      comp.formulaTokens?.length ||
+      f.config?.formula_tokens?.length ||
+      f.config?.formulaTokens?.length ||
+      f.config?.content?.formula_tokens?.length
+    )
+    if (isDate || hasFormula) {
+      return
+    }
+
+    let targetTable: string | null = null
+    const isExplicitRel = f.config?.relation?.targetTable || comp.options_type === 'relational' || f.config?.options_type === 'relational' || ['select', 'combo', 'combobox', 'lookup'].includes(compType)
+
+    if (f.config?.relation?.targetTable) {
+      targetTable = f.config.relation.targetTable
+    } else if (comp.rel_table && (isExplicitRel || comp.rel_table.toLowerCase() !== table.toLowerCase())) {
+      targetTable = comp.rel_table
+    } else if (f.config?.rel_table && isExplicitRel && f.config.rel_table.toLowerCase() !== table.toLowerCase()) {
+      targetTable = f.config.rel_table
+    } else if (f.dbColumn.endsWith('_id')) {
+      const base = f.dbColumn.slice(0, -3)
+      targetTable = base.endsWith('s') ? base : (base + 's')
+    }
+
+    if (targetTable && targetTable.toLowerCase() === table.toLowerCase() && !f.dbColumn.endsWith('_id')) {
+      targetTable = null
+    }
+
     if (targetTable && isValidIdentifier(targetTable) && (lookupModels.has(targetTable.toLowerCase()) || targetTable.toLowerCase() === mnLower)) {
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
