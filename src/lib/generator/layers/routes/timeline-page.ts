@@ -23,6 +23,7 @@ export function generateTimelinePage(route: RouteNode): string {
 
   allTimelineFields.forEach(f => {
     const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
+    const colLower = colOnly.toLowerCase()
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
     if (targetModel && targetTable) {
@@ -30,9 +31,9 @@ export function generateTimelinePage(route: RouteNode): string {
     } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
       const modelName = toPascalCase(targetTable)
       lookupModels.set(targetTable.toLowerCase(), modelName)
-    } else if (colOnly.endsWith('_id') && !f.isPrimaryKey) {
+    } else if (colLower.endsWith('_id') && !f.isPrimaryKey) {
       const base = colOnly.slice(0, -3)
-      const table = base.endsWith('s') ? base : (base + 's')
+      const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
       const modelName = toPascalCase(table)
       lookupModels.set(table.toLowerCase(), modelName)
     }
@@ -52,22 +53,26 @@ export function generateTimelinePage(route: RouteNode): string {
   const optionsMap = new Map<string, string>()
   allTimelineFields.forEach(f => {
     const colOnly = f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn
-    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || (colOnly.endsWith('_id') ? (colOnly.slice(0, -3).endsWith('s') ? colOnly.slice(0, -3) : colOnly.slice(0, -3) + 's') : null)
+    const colLower = colOnly.toLowerCase()
+    const isFk = colLower.endsWith('_id')
+    const fkBase = isFk ? colOnly.slice(0, -3) : ''
+    const fkTable = isFk ? (fkBase.toLowerCase().endsWith('s') ? fkBase.toLowerCase() : fkBase.toLowerCase() + 's') : null
+    const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table || fkTable
     if (targetTable && lookupModels.has(targetTable.toLowerCase())) {
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
       const filterCol = f.config?.component?.filter_column || f.config?.filter_column || f.config?.filterColumn || ''
       const labelExpr = relLabel
-        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
         : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-      const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? ''` : `''`
-      const altCol = colOnly.endsWith('_id') ? colOnly.slice(0, -3) : (colOnly + '_id')
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r[${JSON.stringify(relValue.toUpperCase())}] ?? r.id ?? r.ID ?? Object.values(r)[0] ?? ''`
+      const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? r[${JSON.stringify(filterCol.toLowerCase())}] ?? r[${JSON.stringify(filterCol.toUpperCase())}] ?? ''` : `''`
+      const altCol = isFk ? colOnly.slice(0, -3) : (colOnly + '_id')
       const tSingular = t.endsWith('s') ? t.slice(0, -1) : t
       const tPlural = t.endsWith('s') ? t : (t + 's')
 
-      const allKeys = [colOnly, f.dbColumn, f.id, altCol, t, tSingular, tPlural].filter(Boolean)
+      const allKeys = [colOnly, colOnly.toLowerCase(), colOnly.toUpperCase(), f.dbColumn, f.dbColumn.toLowerCase(), f.dbColumn.toUpperCase(), f.id, altCol, altCol.toLowerCase(), altCol.toUpperCase(), t, tSingular, tPlural].filter(Boolean)
       allKeys.forEach(k => {
         if (!optionsMap.has(k)) {
           optionsMap.set(k, `    '${k}': (${t}LookupList || []).map((r: any) => ({ ...r, value: String(${valueExpr}), label: String(${labelExpr}), filter_value: String(${filterExpr}) })),`)
@@ -90,23 +95,24 @@ export function generateTimelinePage(route: RouteNode): string {
   const extraLookupCols = [route.timelineConfig?.titleField, route.timelineConfig?.descField, route.timelineConfig?.iconField].filter(Boolean) as string[]
   extraLookupCols.forEach(rawCol => {
     const col = rawCol.includes('.') ? rawCol.split('.').pop()! : rawCol
-    if (col && col.endsWith('_id') && !optionsMap.has(col)) {
+    const colLower = col.toLowerCase()
+    if (col && colLower.endsWith('_id') && !optionsMap.has(col) && !optionsMap.has(colLower)) {
       const base = col.slice(0, -3)
-      const t = (base.endsWith('s') ? base : (base + 's')).toLowerCase()
+      const t = (base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's'))
       if (lookupModels.has(t)) {
-        const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn) === col)
+        const matchedField = allTimelineFields.find(f => (f.dbColumn.includes('.') ? f.dbColumn.split('.').pop()! : f.dbColumn).toLowerCase() === colLower)
         const relLabel = matchedField?.config?.component?.rel_label || matchedField?.config?.relation?.displayColumn || matchedField?.config?.rel_label
         const relValue = matchedField?.config?.component?.rel_value || matchedField?.config?.relation?.valueColumn || matchedField?.config?.rel_value || 'id'
         const filterCol = matchedField?.config?.component?.filter_column || matchedField?.config?.filter_column || matchedField?.config?.filterColumn || ''
         const labelExpr = relLabel
-          ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+          ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
           : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-        const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
-        const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? ''` : `''`
-        optionsMap.set(
-          col,
-          `    '${col}': (${t}LookupList || []).map((r: any) => ({ ...r, value: String(${valueExpr}), label: String(${labelExpr}), filter_value: String(${filterExpr}) })),`
-        )
+        const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r[${JSON.stringify(relValue.toUpperCase())}] ?? r.id ?? r.ID ?? Object.values(r)[0] ?? ''`
+        const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? r[${JSON.stringify(filterCol.toLowerCase())}] ?? r[${JSON.stringify(filterCol.toUpperCase())}] ?? ''` : `''`
+        const mapEntry = `    '${col}': (${t}LookupList || []).map((r: any) => ({ ...r, value: String(${valueExpr}), label: String(${labelExpr}), filter_value: String(${filterExpr}) })),`
+        optionsMap.set(col, mapEntry)
+        if (colLower !== col) optionsMap.set(colLower, mapEntry)
+        if (col.toUpperCase() !== col) optionsMap.set(col.toUpperCase(), mapEntry)
       }
     }
   })

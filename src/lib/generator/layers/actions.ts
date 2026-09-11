@@ -271,39 +271,81 @@ function normalizeOracleParams(params: any): any {
   return clean;
 }
 
-export async function query(text: string, params: any = {}) {
-  let connection;
-  try {
-    const config = getOracleConfig();
-    connection = await oracledb.getConnection(config);
+// Cache do pool para evitar reconexões pesadas ou erros de pool duplo no Next.js (Fast Refresh)
+const globalForOracle = globalThis as unknown as {
+  oraclePool?: oracledb.Pool
+  oraclePoolPromise?: Promise<oracledb.Pool>
+}
 
-    const safeParams = normalizeOracleParams(params);
+async function getPool(): Promise<oracledb.Pool> {
+  if (globalForOracle.oraclePool) {
+    return globalForOracle.oraclePool
+  }
+
+  try {
+    const existing = oracledb.getPool()
+    if (existing) {
+      globalForOracle.oraclePool = existing
+      return existing
+    }
+  } catch (_) {}
+
+  if (!globalForOracle.oraclePoolPromise) {
+    const config = getOracleConfig()
+    globalForOracle.oraclePoolPromise = oracledb.createPool({
+      ...config,
+      poolMin: 2,
+      poolMax: 15,
+      poolIncrement: 2,
+      poolTimeout: 60,
+      queueMax: 500,
+      queueTimeout: 60000,
+    }).then(p => {
+      globalForOracle.oraclePool = p
+      return p
+    }).catch(err => {
+      globalForOracle.oraclePoolPromise = undefined
+      console.error('Erro ao inicializar Oracle Connection Pool:', err)
+      throw err
+    })
+  }
+
+  return globalForOracle.oraclePoolPromise
+}
+
+export async function query(text: string, params: any = {}) {
+  let connection: oracledb.Connection | undefined
+  try {
+    const pool = await getPool()
+    connection = await pool.getConnection()
+
+    const safeParams = normalizeOracleParams(params)
 
     const result = await connection.execute(text, safeParams, { 
       outFormat: oracledb.OUT_FORMAT_OBJECT,
       autoCommit: true 
-    });
+    })
 
-    const rawRows = (result.rows || []) as any[];
+    const rawRows = (result.rows || []) as any[]
     const rows = rawRows.map((row: any) => {
-      if (!row || typeof row !== 'object') return row;
-      const normalized: Record<string, any> = { ...row };
+      if (!row || typeof row !== 'object') return row
+      const normalized: Record<string, any> = { ...row }
       for (const [k, v] of Object.entries(row)) {
-        normalized[k.toLowerCase()] = v;
-        normalized[k.toUpperCase()] = v;
+        normalized[k.toLowerCase()] = v
+        normalized[k.toUpperCase()] = v
       }
-      return normalized;
-    });
-    return rows;
+      return normalized
+    })
+    return rows
   } catch (err) {
-    console.error('Database query error', err);
-    throw err;
+    console.error('Database query error', err)
+    throw err
   } finally {
     if (connection) {
       try {
-        await connection.close();
+        await connection.close()
       } catch (err) {
-        console.error('Error closing connection', err);
+        console.error('Error closing connection', err)
       }
     }
   }
