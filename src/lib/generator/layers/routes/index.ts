@@ -76,7 +76,7 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       files.set(`${routeDir}/new/page.tsx`, generateNewPage(route))
     } else if (route.logicType === 'scheduler') {
       // Scheduler Listagem
-      files.set(`${routeDir}/page.tsx`, generateSchedulerPage(route))
+      files.set(`${routeDir}/page.tsx`, generateSchedulerPage(route, ast))
       files.set(`${routeDir}/SchedulerClient.tsx`, generateSchedulerClient(route))
       files.set(`${routeDir}/schema.ts`, generateSchedulerSchema(route))
       // Mestre-Detalhe + Edição (ao clicar no evento)
