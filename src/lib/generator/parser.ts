@@ -1519,8 +1519,17 @@ export function parseMetaBuilderJSON(
   // ── Etapa 1: Constrói Models & Fields ──
   const models: ModelNode[] = rawModels.map((rm: any) => {
     const mFields = rawFields.filter((f: any) => f.model_id === rm.id)
-    const fields: FieldNode[] = mFields.map((f: any): FieldNode => ({
-      id: f.id,
+    const fields: FieldNode[] = mFields.map((f: any): FieldNode => {
+      const explicitRel = (rawJson.relations || []).find((r: any) => r.from_field_id === f.id)
+      const targetModelObj = explicitRel ? rawModels.find((rm: any) => rm.id === explicitRel.to_model_id) : undefined
+      const relationData = explicitRel && targetModelObj
+        ? { targetModel: toPascalCase(targetModelObj.display_name || targetModelObj.db_table_name), foreignKey: f.db_column_name }
+        : (f.is_foreign_key
+          ? { targetModel: f.foreign_key_target_model, foreignKey: f.foreign_key_column }
+          : undefined)
+
+      return {
+        id: f.id,
       name: f.display_name || f.db_column_name,
       dbColumn: f.db_column_name,
       type: mapFieldType(f.data_type, f.ui_widget),
@@ -1532,10 +1541,9 @@ export function parseMetaBuilderJSON(
       isSearchable: f.is_searchable !== false,
       isSortable: f.is_sortable !== false,
       config: f.config || {},
-      relation: f.is_foreign_key
-        ? { targetModel: f.foreign_key_target_model, foreignKey: f.foreign_key_column }
-        : undefined,
-    }))
+        relation: relationData,
+      }
+    })
 
     return {
       id: rm.id,
