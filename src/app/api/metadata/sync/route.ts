@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { generateParityReport, type IntrospectedField } from '@/lib/generator/parityAudit'
 
 // O CLI não é um usuário logado no sentido tradicional.
 // Ele é um serviço externo, por isso usamos a Service Role Key para ignorar RLS e validar o token.
@@ -250,11 +251,68 @@ export async function POST(request: Request) {
       })
       .eq('id', projectId);
 
+    // ── Gera o Relatório de Paridade ──────────────────────────────────────────
+    // O payload do CLI contém os tipos reais do banco (introspectados).
+    // Comparamos com os fields.data_type armazenados no Supabase para detectar divergências.
+    let parityReport = null
+    try {
+      // Monta lista de campos introspectados a partir do payload do CLI
+      const introspectedFields: IntrospectedField[] = []
+      for (const table of metadata) {
+        for (const col of table.columns) {
+          introspectedFields.push({
+            tableName: table.name,
+            columnName: col.name,
+            dbType: col.type,
+          })
+        }
+      }
+
+      // Busca models e fields do Supabase para comparação
+      const { data: sbModels } = await supabase
+        .from('models')
+        .select('id, db_table_name')
+        .eq('project_id', projectId)
+        .eq('db_schema_name', targetSchema)
+
+      const sbModelIds = (sbModels || []).map(m => m.id)
+      const { data: sbFields } = sbModelIds.length > 0
+        ? await supabase
+            .from('fields')
+            .select('id, model_id, db_column_name, data_type, ui_widget')
+            .in('model_id', sbModelIds)
+        : { data: [] }
+
+      if (introspectedFields.length > 0 && sbModels && sbFields) {
+        const report = generateParityReport(projectId, introspectedFields, sbModels, sbFields)
+        // Só inclui no response se houver issues relevantes (warning ou critical)
+        if (report.summary.warning > 0 || report.summary.critical > 0) {
+          parityReport = report
+          // Persiste no projeto para o Studio fazer polling
+          await supabase
+            .from('projects')
+            .update({ last_parity_report: report })
+            .eq('id', projectId)
+        } else {
+          // Limpa relatório anterior se agora está tudo ok
+          await supabase
+            .from('projects')
+            .update({ last_parity_report: null })
+            .eq('id', projectId)
+        }
+      }
+    } catch (parityErr) {
+      // Erro no relatório de paridade não deve falhar o sync
+      console.warn('[sync] Erro ao gerar relatório de paridade:', parityErr)
+    }
+
     return NextResponse.json({ 
       success: true, 
       draftCreated: false,
-      message: `${metadata.length} models processados e sincronizados com sucesso (Fast-Path).` 
+      message: `${metadata.length} models processados e sincronizados com sucesso (Fast-Path).`,
+      parityReport,
     })
+
 
   } catch (error: any) {
     console.error('Erro na sincronização de metadados:', error)

@@ -73,6 +73,8 @@ import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySett
 import ProjectLogsTab from '@/components/studio/ProjectLogs/ProjectLogsTab'
 import { AIBuilderChat } from '@/components/studio/AIBuilder/AIBuilderChat'
 import { AIBuilderSettings } from '@/components/workspace/AIBuilderSettings'
+import { ParityReportModal } from '@/components/studio/ParityReportModal'
+import type { ParityReport } from '@/lib/generator/parityAudit'
 
 const RETENTION_OPTIONS = [
   { value: '', labelKey: 'dashboard.projects.studio.stats.retention.forever' },
@@ -262,6 +264,44 @@ export function StudioDashboardClient({
   const [isBpmConfigModalOpen, setIsBpmConfigModalOpen] = useState(false)
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false)
   const [bpmConfig, setBpmConfig] = useState<any>(automationsView?.layout_config || { default_auto_align: false, error_email: '', log_retention: 30, timeout_mins: 5 })
+
+  // ── Parity Report Modal ────────────────────────────────────────────────────────────────
+  // Aberto automaticamente quando o CLI gera um relatório de paridade após Eject & Sync.
+  // O relatório é persistido em projects.last_parity_report pelo /api/metadata/sync.
+  const [parityReport, setParityReport] = useState<ParityReport | null>(
+    project.last_parity_report ?? null
+  )
+  const [parityModalOpen, setParityModalOpen] = useState(
+    !!(project.last_parity_report?.issues?.length > 0)
+  )
+
+  // Polling via Supabase Realtime: detecta quando o CLI faz sync e gera novo relatório
+  useEffect(() => {
+    const channel = supabase
+      .channel(`parity-${project.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'projects',
+          filter: `id=eq.${project.id}`,
+        },
+        (payload: any) => {
+          const report = payload.new?.last_parity_report
+          if (report && (report.summary?.warning > 0 || report.summary?.critical > 0)) {
+            setParityReport(report)
+            setParityModalOpen(true)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [project.id, supabase])
+
 
   const [scale, setScale] = useState(1.0)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
@@ -1632,7 +1672,31 @@ export function StudioDashboardClient({
         >
           <AIBuilderSettings workspaceId={workspace.id} isPro={tier === 'pro'} />
         </Modal>
+
+        {/* ── Parity Report Modal ── abre automaticamente após Eject & Sync com divergências */}
+        <ParityReportModal
+          isOpen={parityModalOpen}
+          report={parityReport}
+          onClose={async () => {
+            setParityModalOpen(false)
+            // Limpa o relatório no Supabase para não re-abrir na próxima vez
+            await supabase
+              .from('projects')
+              .update({ last_parity_report: null })
+              .eq('id', project.id)
+          }}
+          onProceedToBuild={() => {
+            // Navega para a aba de build no Studio
+            setViewMode('list')
+            toast('Build liberado. Execute o Eject & Sync seguido do Build normalmente.', 'success')
+          }}
+          onAfterFix={() => {
+            // Força refresh dos models no próximo Eject & Sync
+            toast('Correções aplicadas no Supabase. Execute o Eject & Sync novamente para confirmar.', 'success')
+          }}
+        />
       </main>
     </>
   )
 }
+
