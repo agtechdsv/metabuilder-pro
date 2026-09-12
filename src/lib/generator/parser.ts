@@ -116,7 +116,11 @@ export function normalizeDbColumnType(rawType: string): string {
  * Usando normalizeDbColumnType primeiro, este mapeamento funciona corretamente
  * para Postgres, Oracle, MySQL e SQL Server sem ramificações por banco.
  */
-function mapFieldType(dbType: string): FieldNode['type'] {
+function mapFieldType(dbType: string, uiWidget?: string): FieldNode['type'] {
+  // Oracle armazena booleans como VARCHAR2 com default 'true'/'false'.
+  // O campo fica configurado com ui_widget='checkbox' no Supabase → detectamos aqui.
+  if (uiWidget === 'checkbox') return 'boolean'
+
   const canonical = normalizeDbColumnType(dbType)
   if (canonical === 'integer' || canonical === 'numeric') return 'number'
   if (canonical === 'boolean') return 'boolean'
@@ -167,8 +171,10 @@ function enrichFieldsWithRelations(
     const fkRel = rawRelations.find((r: any) =>
       r.from_model_id === model.id && (r.from_field_id === f.id || r.from_column === colOnly)
     )
+    // Matching case-insensitive: rel_table="funcionarios" deve encontrar db_table_name="FUNCIONARIOS" (Oracle)
+    const configuredTargetLower = configuredTarget?.toLowerCase()
     let targetModel = configuredTarget
-      ? rawModels.find((m: any) => m.db_table_name === configuredTarget)
+      ? rawModels.find((m: any) => m.db_table_name.toLowerCase() === configuredTargetLower)
       : (fkRel ? rawModels.find((m: any) => m.id === fkRel.to_model_id) : null)
 
     if (targetModel) {
@@ -1517,7 +1523,7 @@ export function parseMetaBuilderJSON(
       id: f.id,
       name: f.display_name || f.db_column_name,
       dbColumn: f.db_column_name,
-      type: mapFieldType(f.data_type),
+      type: mapFieldType(f.data_type, f.ui_widget),
       dataType: f.data_type || 'varchar',
       isPrimary: f.is_primary_key || false,
       isRequired: f.is_required || false,
