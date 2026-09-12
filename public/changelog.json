@@ -1,4 +1,34 @@
 {
+  "v1.0.6": {
+    "date": "2026-09-12",
+    "pt": [
+      "Formulários Aninhados e Relações Dinâmicas: Sincronização aprimorada de campos de data, opções dinâmicas inteligentes e recálculo automático de fórmulas em sub-itens e tabelas filhas.",
+      "Persistência Segura de Registros Relacionados: Criação fluida de registros com múltiplos sub-níveis, garantindo integridade dos dados antes da gravação definitiva.",
+      "Atualização em Tempo Real no Mapa Mental: Renomeação e edição de nós refletidas instantaneamente no quadro do Mindmap, otimizando o fluxo de modelagem visual.",
+      "Experiência Aperfeiçoada em Modais e Timeline: Preservação de cabeçalhos e filtros contextuais em modais, suporte a expansão em tela cheia e visualização dinâmica para cronogramas e agendadores.",
+      "Painéis de Analytics Mais Estáveis: Maior resiliência ao carregar páginas analíticas e gráficos em dashboards integrados ou embutidos no Next.js.",
+      "Alta Performance e Conectividade com Oracle: Novo pool de conexões otimizado, suporte completo ao Node.js 24 e tratamento inteligente de formatos de data e consultas insensíveis a maiúsculas/minúsculas.",
+      "Ambiente de Desenvolvimento (IDE e CLI) Mais Confiável: Limpeza de mensagens falsas de erro no console e finalização segura de serviços de túnel em segundo plano."
+    ],
+    "en": [
+      "Dynamic Nested Forms & Relations: Improved synchronization for date fields, dynamic dropdowns, and automatic formula recalculation within sub-items and child tables.",
+      "Secure Relational Data Persistence: Smoother creation flow for parent-child records, ensuring data integrity before final database commitment.",
+      "Real-Time Mindmap Collaboration: Node renaming and edits now sync instantaneously across the visual mindmap board.",
+      "Enhanced Modals & Timeline Experience: Contextual filters and headers are now seamlessly preserved in modals, alongside fullscreen expansion support and dynamic scheduling views.",
+      "More Resilient Analytics Dashboards: Resolved embedding issues for analytics views, ensuring smooth loading and navigation across Next.js environments.",
+      "High-Performance Oracle Integration: Upgraded connection pooling, full Node.js 24 compatibility, and robust date handling with case-insensitive timeline lookups.",
+      "Refined Developer Experience (IDE & CLI): Cleaner console output without false-positive error warnings and reliable shutdown for background tunneling services."
+    ],
+    "es": [
+      "Formularios Anidados y Relaciones Dinámicas: Sincronización optimizada para campos de fecha, selectores dinámicos y recálculo automático de fórmulas en sub-ítems y tablas dependientes.",
+      "Persistencia Segura de Datos Relacionados: Flujo de creación más fluido para registros principales y secundarios, garantizando la integridad de datos antes de guardar.",
+      "Actualización en Tiempo Real en el Mapa Mental: La edición y el renombramiento de nodos ahora se reflejan instantáneamente en el tablero visual.",
+      "Experiencia Mejorada en Modales y Línea de Tiempo: Conservación de filtros contextuales y encabezados en modales, con soporte para vista en pantalla completa y cronogramas dinámicos.",
+      "Mayor Estabilidad en Paneles de Analytics: Carga más sólida y fluida de paneles analíticos integrados o embebidos en entornos Next.js.",
+      "Alto Rendimiento y Compatibilidad con Oracle: Nuevo pool de conexiones optimizado, compatibilidad total con Node.js 24 y manejo robusto de formatos de fecha y búsquedas.",
+      "Entorno de Desarrollo (IDE y CLI) Más Limpio: Eliminación de falsos errores en la consola y cierre seguro de procesos de túnel en segundo plano."
+    ]
+  },
   "v1.0.5": {
     "date": "2026-09-10",
     "pt": [
