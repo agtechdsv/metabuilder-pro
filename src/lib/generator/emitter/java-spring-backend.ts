@@ -564,7 +564,22 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     if (!javaTypes.has(jt) && jt.includes('java.util.')) javaTypes.add(jt)
     const camelName = toCamelCase(field.dbColumn)
 
-    if (field.isPrimary && !pkGenerated) {
+    const rel = resolveFieldRelation(field, ast)
+
+    if (rel) {
+      const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
+      const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
+      
+      if (field.isPrimary && !pkGenerated) {
+        pkGenerated = true
+        fieldLines.push(`    @Id`)
+        // Não gera @GeneratedValue para chaves estrangeiras
+      }
+      fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+      fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
+      fieldLines.push(`    private ${targetPascal} ${propName};`)
+      
+    } else if (field.isPrimary && !pkGenerated) {
       pkGenerated = true
       fieldLines.push(`    @Id`)
       if (ast.dbStack === 'oracle') {
@@ -577,18 +592,10 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
       }
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
+      
     } else {
-      const rel = resolveFieldRelation(field, ast)
-      if (rel && !field.isPrimary) {
-        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
-        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
-        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
-        fieldLines.push(`    private ${targetPascal} ${propName};`)
-      } else {
-        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-        fieldLines.push(`    private ${jt} ${camelName};`)
-      }
+      fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+      fieldLines.push(`    private ${jt} ${camelName};`)
     }
     fieldLines.push(``)
   }
