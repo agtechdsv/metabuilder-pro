@@ -31,6 +31,7 @@ export interface IDEFileExplorerProps {
   isResizingExplorer: React.MutableRefObject<boolean>
   /** Detectado via detectBackendStack(fileTree). Mostra badge Java no header. */
   isJavaSpringProject?: boolean
+  activeFile?: string
 }
 
 export function IDEFileExplorer({
@@ -54,6 +55,7 @@ export function IDEFileExplorer({
   setCtxMenu,
   isResizingExplorer,
   isJavaSpringProject = false,
+  activeFile,
 }: IDEFileExplorerProps) {
   const { t } = useI18n()
   const [compactFolders, setCompactFolders] = React.useState(true)
@@ -153,7 +155,11 @@ export function IDEFileExplorer({
           ) : (
             <div
               className={`group flex items-center gap-1.5 py-1 px-2 ml-4 cursor-pointer rounded text-sm ${
-                isSelected ? 'bg-indigo-600/20 text-indigo-400' : 'text-neutral-400 hover:bg-neutral-800/50'
+                activeFile === node.path
+                  ? 'bg-indigo-600/30 text-white font-medium border border-indigo-500/30'
+                  : isSelected 
+                    ? 'bg-indigo-600/10 text-indigo-400' 
+                    : 'text-neutral-400 hover:bg-neutral-800/50'
               } ${clipboard?.nodes.find(n => n.path === node.path) && clipboard.op === 'cut' ? 'opacity-50' : ''}`}
               onClick={(e) => handleSelectFile(node.path, e.ctrlKey ? 'ctrl' : e.shiftKey ? 'shift' : undefined)}
               onContextMenu={(e) => {

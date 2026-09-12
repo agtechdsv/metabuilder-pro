@@ -139,6 +139,7 @@ export function IDEModal({
                 explorerActiveTab={fs.explorerActiveTab}
                 setExplorerActiveTab={fs.setExplorerActiveTab}
                 fileTree={fs.fileTree}
+                activeFile={tabs.activeFile ?? undefined}
                 selectedPaths={fs.selectedPaths}
                 expandedFolders={fs.expandedFolders}
                 clipboard={fs.clipboard}
