@@ -16,6 +16,11 @@
           "name": "cmd-npm-run-dev",
           "cmd": "cmd",
           "args": ["/c", "npm", "run", "dev"]
+        },
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
         }
       ]
     },
@@ -46,6 +51,11 @@
           "name": "cmd-npm-run-dev",
           "cmd": "cmd",
           "args": ["/c", "npm", "run", "dev"]
+        },
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
         }
       ]
     }

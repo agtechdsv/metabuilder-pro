@@ -37,6 +37,9 @@ export interface IDEConsolePanelProps {
   // Prompt Node
   nodePromptResolver: { resolve: (val: boolean) => void } | null
   setNodePromptResolver: React.Dispatch<React.SetStateAction<{ resolve: (val: boolean) => void } | null>>
+  // Prompt Java
+  javaPromptResolver: { resolve: (val: boolean) => void } | null
+  setJavaPromptResolver: React.Dispatch<React.SetStateAction<{ resolve: (val: boolean) => void } | null>>
 }
 
 export function IDEConsolePanel({
@@ -65,6 +68,8 @@ export function IDEConsolePanel({
   consoleEndRef,
   nodePromptResolver,
   setNodePromptResolver,
+  javaPromptResolver,
+  setJavaPromptResolver,
 }: IDEConsolePanelProps) {
   const { t } = useI18n()
 
@@ -343,6 +348,42 @@ export function IDEConsolePanel({
               onClick={() => {
                 nodePromptResolver?.resolve(true)
                 setNodePromptResolver(null)
+              }}
+              className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors shadow-sm"
+            >
+              Baixar e Instalar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Java 21 Portable Prompt */}
+      <Modal
+        isOpen={!!javaPromptResolver}
+        onClose={() => {
+          javaPromptResolver?.resolve(false)
+          setJavaPromptResolver(null)
+        }}
+        title="MetaBuilder Pro"
+        size="md"
+      >
+        <div className="flex flex-col gap-4 text-sm text-neutral-600 dark:text-neutral-300">
+          <p>O Java 21 é necessário para rodar o backend.</p>
+          <p>Deseja que o MetaBuilder baixe e configure uma versão portátil do Java automaticamente? (Aprox. 190MB)</p>
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              onClick={() => {
+                javaPromptResolver?.resolve(false)
+                setJavaPromptResolver(null)
+              }}
+              className="px-4 py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                javaPromptResolver?.resolve(true)
+                setJavaPromptResolver(null)
               }}
               className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors shadow-sm"
             >

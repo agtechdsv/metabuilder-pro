@@ -37,6 +37,7 @@ export function useIDEServer({
 
   // ── Modals State ──
   const [nodePromptResolver, setNodePromptResolver] = useState<{ resolve: (val: boolean) => void } | null>(null)
+  const [javaPromptResolver, setJavaPromptResolver] = useState<{ resolve: (val: boolean) => void } | null>(null)
 
   const getProjectPath = async () => {
     const home = await homeDir()
@@ -277,7 +278,12 @@ export function useIDEServer({
     addConsoleLog('▶ Verificando JDK...', 'info')
     const javaOk = await handleCheckJava()
     if (!javaOk) {
-      if (window.confirm('O Java 21 é necessário para rodar o backend.\n\nDeseja que o MetaBuilder baixe e configure uma versão portátil do Java automaticamente? (Aprox. 190MB)')) {
+      const userWantsDownload = await new Promise<boolean>((resolve) => {
+        setJavaPromptResolver({ resolve })
+      })
+      setJavaPromptResolver(null)
+
+      if (userWantsDownload) {
         try {
           addConsoleLog('▶ Iniciando download do Java 21 Portátil...', 'info')
           const { Command } = await import('@tauri-apps/plugin-shell')
@@ -430,6 +436,8 @@ export function useIDEServer({
     isJavaSpringProject,
     nodePromptResolver,
     setNodePromptResolver,
+    javaPromptResolver,
+    setJavaPromptResolver,
     // Spring Boot
     springProcess,
     isStartingSpring,
