@@ -1644,24 +1644,77 @@ export function parseMetaBuilderJSON(
       const tc = resolvedView.layout_config.timeline_config
       const resolveColumnName = (fieldIdOrName?: string): string => {
         if (!fieldIdOrName) return ''
-        const found = rawFields.find((f: any) => f.id === fieldIdOrName || f.db_column_name === fieldIdOrName || f.display_name === fieldIdOrName)
-        if (!found) return fieldIdOrName
+
+        // 1. Suporte a JSON de configuração (ex: com relation_path ou target_field_id)
+        let rawTarget: string = fieldIdOrName
+        if (typeof rawTarget === 'string' && rawTarget.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(rawTarget)
+            if (parsed.relation_path && parsed.relation_path.length > 0 && parsed.relation_path[0].foreign_column_id) {
+              rawTarget = parsed.relation_path[0].foreign_column_id
+            } else if (parsed.target_field_id) {
+              rawTarget = parsed.target_field_id
+            } else if (parsed.display_label) {
+              rawTarget = parsed.display_label
+            }
+          } catch (_) {}
+        }
+
+        const targetLower = String(rawTarget).toLowerCase().trim()
+        const colOnly = targetLower.includes('.') ? targetLower.split('.').pop()! : targetLower
+
+        // Se o próprio modelo da view já possui a coluna correspondente (ex: CLIENTE_ID ou cliente_id)
+        const directModelField = rawFields.find((f: any) =>
+          f.model_id === model.id && (
+            f.id === rawTarget ||
+            (f.db_column_name && (f.db_column_name.toLowerCase() === targetLower || f.db_column_name.toLowerCase() === colOnly)) ||
+            (f.dbColumn && (f.dbColumn.toLowerCase() === targetLower || f.dbColumn.toLowerCase() === colOnly))
+          )
+        )
+        if (directModelField) {
+          return directModelField.db_column_name || directModelField.dbColumn
+        }
+
+        const found = rawFields.find((f: any) =>
+          f.id === rawTarget ||
+          (f.db_column_name && f.db_column_name.toLowerCase() === targetLower) ||
+          (f.db_column_name && f.db_column_name.toLowerCase() === colOnly) ||
+          (f.dbColumn && f.dbColumn.toLowerCase() === targetLower) ||
+          (f.dbColumn && f.dbColumn.toLowerCase() === colOnly) ||
+          f.display_name === rawTarget
+        )
+        if (!found) return rawTarget
 
         // Se o campo pertence diretamente à tabela da view (ex: pedidos), usa sua própria coluna
         if (!found.model_id || found.model_id === model.id) {
-          return found.db_column_name || found.dbColumn || fieldIdOrName
+          return found.db_column_name || found.dbColumn || rawTarget
         }
 
         // Se pertence a uma tabela relacionada (ex: clientes, funcionarios),
         // busca qual campo FK no modelo atual aponta para essa tabela relacionada
-        const foundTargetTable = (found.model_table || '').toLowerCase()
+
+        // 1. Procura primeiro no catálogo dinâmico de relações do projeto (rawRelations)
+        const directRel = rawRelations.find((r: any) =>
+          (r.from_model_id === model.id && r.to_model_id === found.model_id) ||
+          (r.detail_model_id === model.id && r.master_model_id === found.model_id)
+        )
+        if (directRel) {
+          const fkId = directRel.from_field_id || directRel.foreign_column_id
+          const fkF = rawFields.find((f: any) => f.model_id === model.id && (f.id === fkId || f.db_column_name === fkId))
+          if (fkF) return fkF.db_column_name || fkF.dbColumn
+        }
+
+        // 2. Busca o modelo alvo para saber o nome exato da tabela
+        const foundModel = rawModels.find((rm: any) => rm.id === found.model_id)
+        const foundTargetTable = (foundModel?.db_table_name || found.model_table || '').toLowerCase()
         const fkField = rawFields.find((f: any) =>
           f.model_id === model.id && (
             f.foreign_key_target_model === found.model_id ||
             f.config?.relation?.targetModel === found.model_id ||
             (foundTargetTable && f.config?.relation?.targetTable?.toLowerCase() === foundTargetTable) ||
             (foundTargetTable && f.config?.component?.rel_table?.toLowerCase() === foundTargetTable) ||
-            (f.db_column_name && foundTargetTable && f.db_column_name.toLowerCase().startsWith(foundTargetTable))
+            (foundTargetTable && (f.db_column_name || '').toLowerCase().startsWith(foundTargetTable)) ||
+            (foundTargetTable && (f.dbColumn || '').toLowerCase().startsWith(foundTargetTable))
           )
         )
         if (fkField) {
@@ -1669,14 +1722,17 @@ export function parseMetaBuilderJSON(
         }
 
         // Fallback por convenção de nome de FK (ex: tabela clientes -> cliente_id, funcionarios -> funcionario_id)
+        // Comparação case-insensitive para compatibilidade com Oracle (CLIENTE_ID) e Postgres (cliente_id)
         const targetModel = models.find((m: any) => m.id === found.model_id)
         if (targetModel) {
           const table = targetModel.dbTable.toLowerCase()
           const singular = table.endsWith('s') ? table.slice(0, -1) : table
           const candidateFk = rawFields.find((f: any) =>
             f.model_id === model.id && (
-              f.db_column_name === `${singular}_id` ||
-              f.db_column_name === `${table}_id`
+              (f.db_column_name || '').toLowerCase() === `${singular}_id` ||
+              (f.db_column_name || '').toLowerCase() === `${table}_id` ||
+              (f.dbColumn || '').toLowerCase() === `${singular}_id` ||
+              (f.dbColumn || '').toLowerCase() === `${table}_id`
             )
           )
           if (candidateFk) {
@@ -1684,7 +1740,7 @@ export function parseMetaBuilderJSON(
           }
         }
 
-        return found.db_column_name || found.dbColumn || fieldIdOrName
+        return found.db_column_name || found.dbColumn || rawTarget
       }
 
       const dateField = resolveColumnName(tc.date_field)

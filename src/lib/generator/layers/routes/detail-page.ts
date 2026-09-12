@@ -285,7 +285,7 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `                )}`,
           `                <iframe`,
           `                  src={\`/${slot.useCaseSlug}?embedded=true&view_mode=tab&tab=true&${fkParam}\${isView ? '&mode=view' : ''}\`}`,
-          `                  className={\`w-full border-0 bg-transparent transition-opacity duration-300 \${!loadedIframes[${i + 1}] ? 'opacity-0 h-0 min-h-0 overflow-hidden' : 'min-h-[800px] opacity-100'}\`}`,
+          `                  className={\`border-0 bg-transparent transition-all duration-200 \${isChildModalOpen ? 'fixed inset-0 z-[9999] w-screen h-screen' : (!loadedIframes[${i + 1}] ? 'opacity-0 h-0 min-h-0 overflow-hidden' : 'w-full min-h-[800px] opacity-100')}\`}`,
           `                  title="${slot.title}"`,
           `                  onLoad={() => setLoadedIframes(p => ({ ...p, [${i + 1}]: true }))}`,
           `                />`,
@@ -470,7 +470,18 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
   const [activeTab, setActiveTab] = useState(0)
   const [visitedTabs, setVisitedTabs] = useState<Record<number, boolean>>({ 0: true })
   const [loadedIframes, setLoadedIframes] = useState<Record<number, boolean>>({})
+  const [isChildModalOpen, setIsChildModalOpen] = useState(false)
   const isEdit = true
+
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'MB_MODAL_STATE') {
+        setIsChildModalOpen(Boolean(e.data?.isOpen))
+      }
+    }
+    window.addEventListener('message', handleMsg)
+    return () => window.removeEventListener('message', handleMsg)
+  }, [])
 
 
 

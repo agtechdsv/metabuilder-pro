@@ -158,25 +158,29 @@ export function TimelineBoard({
       if (opts && Array.isArray(opts)) {
         const match = opts.find(o => String(o.value) === String(val))
         if (match) {
-          const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label
-          return matchVal || match.label
+          const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label ?? match.display_label
+          return matchVal || match.label || String(val)
         }
       }
       return String(val)
     }
 
-    // Se o valor direto estiver vazio na linha (ex: colName é 'nome_empresa' mas na row está 'cliente_id')
+    // Se o valor direto estiver vazio na linha (ex: colName é de tabela relacionada como 'RAZAO_SOCIAL' ou UUID)
     // busca pela FK correspondente ou na coleção de relationalOptions
     for (const [optKey, opts] of Object.entries(relationalOptions)) {
+      if (!Array.isArray(opts)) continue
       const rowVal = row[optKey] ?? row[optKey.toLowerCase()] ?? row[optKey.toUpperCase()]
       if (rowVal !== undefined && rowVal !== null && rowVal !== '') {
         const match = opts.find(o => String(o.value) === String(rowVal))
         if (match) {
+          const colVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()]
+          if (colVal !== undefined && colVal !== null && colVal !== '') {
+            return String(colVal)
+          }
           const lowerCol = colName.toLowerCase()
-          const lowerKey = optKey.toLowerCase().replace('_id', '')
+          const lowerKey = optKey.toLowerCase().replace(/_id$/, '')
           if (lowerKey.includes(lowerCol) || lowerCol.includes(lowerKey)) {
-            const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label
-            return matchVal || match.label
+            return String(match.label || match.display_label || '')
           }
         }
       }

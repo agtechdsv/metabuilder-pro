@@ -1,14 +1,49 @@
-import { RouteNode } from '../../ast'
-import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
+import { RouteNode, AppAST } from '../../ast'
+import { renderFormField, getByocComponentName, toPascalCase, findDisplayColumn, FORM_INPUT_FORMAT_HELPERS } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scheduler Page (Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateSchedulerPage(route: RouteNode): string {
+export function generateSchedulerPage(route: RouteNode, ast?: AppAST): string {
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+
+  // Helper para resolver tabelas alvo e nomes reais de modelos (inclusive UUIDs e maiúsculas/minúsculas)
+  const resolveTarget = (rawTable?: string, rawModel?: string): { table: string; modelName: string } | null => {
+    if (!rawTable) return null
+    let t = rawTable.trim()
+    let m = rawModel?.trim()
+
+    // Se t for um UUID ou contiver traços ou começar com número, tenta achar o modelo real no AST
+    if (t.includes('-') || /^[0-9]/.test(t) || !/^[a-zA-Z_]/.test(t)) {
+      const found = ast?.models.find(mod => mod.id === t || mod.dbTable === t || mod.name === t)
+      if (found && found.dbTable) {
+        t = found.dbTable
+        m = found.name || toPascalCase(found.dbTable)
+      } else {
+        return null
+      }
+    }
+
+    const cleanTable = t.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '')
+    if (!cleanTable || /^[0-9]/.test(cleanTable)) return null
+
+    // Procura modelo no AST por dbTable ou name para pegar o model.name exato
+    const foundModel = ast?.models.find(mod =>
+      (mod.dbTable && mod.dbTable.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '') === cleanTable) ||
+      (mod.name && mod.name.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '') === cleanTable)
+    )
+
+    const modelName = foundModel?.name || ((m && /^[a-zA-Z_]/.test(m))
+      ? m.replace(/[^a-zA-Z0-9_]/g, '')
+      : toPascalCase(cleanTable))
+
+    if (!modelName || /^[0-9]/.test(modelName)) return null
+
+    return { table: cleanTable, modelName }
+  }
 
   // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros, cards e schedulerConfig
   const lookupModels = new Map<string, string>() // table -> modelName
@@ -45,21 +80,22 @@ export function generateSchedulerPage(route: RouteNode): string {
     route.rawLayoutConfig?.joins || []
 
   rawJoins.forEach(j => {
-    const fromTbl = (j.from || '').toLowerCase()
-    const toTbl = (j.to || '').toLowerCase()
-    if (fromTbl && !fromTbl.includes('-') && fromTbl.length < 30) {
-      lookupModels.set(fromTbl, toPascalCase(fromTbl))
+    const fromRes = resolveTarget(j.from)
+    const toRes = resolveTarget(j.to)
+    if (fromRes && !lookupModels.has(fromRes.table)) {
+      lookupModels.set(fromRes.table, fromRes.modelName)
     }
-    if (toTbl && !toTbl.includes('-') && toTbl.length < 30) {
-      lookupModels.set(toTbl, toPascalCase(toTbl))
+    if (toRes && !lookupModels.has(toRes.table)) {
+      lookupModels.set(toRes.table, toRes.modelName)
     }
   })
 
   schedFieldNames.forEach(name => {
     if (name.includes('.')) {
-      const tbl = name.split('.')[0].toLowerCase()
-      if (tbl && !tbl.includes('-') && tbl.length < 30) {
-        lookupModels.set(tbl, toPascalCase(tbl))
+      const tbl = name.split('.')[0]
+      const res = resolveTarget(tbl)
+      if (res && !lookupModels.has(res.table)) {
+        lookupModels.set(res.table, res.modelName)
       }
     }
   })
@@ -67,16 +103,16 @@ export function generateSchedulerPage(route: RouteNode): string {
   allSchedulerFields.forEach(f => {
     const targetModel = f.config?.relation?.targetModel || (f as any).relation?.targetModel
     const targetTable = f.config?.relation?.targetTable || f.config?.component?.rel_table || f.config?.rel_table
-    if (targetModel && targetTable) {
-      lookupModels.set(targetTable.toLowerCase(), targetModel)
-    } else if (targetTable && !targetTable.includes('-') && targetTable.length < 30) {
-      const modelName = toPascalCase(targetTable)
-      lookupModels.set(targetTable.toLowerCase(), modelName)
-    } else if (f.dbColumn.endsWith('_id') && !f.isPrimaryKey) {
+    const resolved = resolveTarget(targetTable, targetModel)
+    if (resolved) {
+      lookupModels.set(resolved.table, resolved.modelName)
+    } else if (f.dbColumn.toLowerCase().endsWith('_id') && !f.isPrimaryKey) {
       const base = f.dbColumn.slice(0, -3)
-      const table = base.endsWith('s') ? base : (base + 's')
-      const modelName = toPascalCase(table)
-      lookupModels.set(table.toLowerCase(), modelName)
+      const table = base.toLowerCase().endsWith('s') ? base.toLowerCase() : (base.toLowerCase() + 's')
+      const resolvedFk = resolveTarget(table)
+      if (resolvedFk) {
+        lookupModels.set(resolvedFk.table, resolvedFk.modelName)
+      }
     }
   })
 
@@ -99,10 +135,15 @@ export function generateSchedulerPage(route: RouteNode): string {
       const t = targetTable.toLowerCase()
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
+      const targetModelObj = ast?.models.find(m => m.dbTable.toLowerCase() === t || m.name.toLowerCase() === t)
+      const targetDisplayCol = targetModelObj ? (findDisplayColumn(targetModelObj.fields) || '') : ''
+      const labelFallback = `r.display_label ?? Object.entries(r).find(([k, v]) => typeof v === 'string' && v && !/^id$/i.test(k))?.[1] ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const labelExpr = relLabel
-        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.title ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-        : `r.nome ?? r.name ?? r.razao_social ?? r.titulo ?? r.title ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? ${labelFallback}`
+        : (targetDisplayCol
+            ? `r[${JSON.stringify(targetDisplayCol)}] ?? r[${JSON.stringify(targetDisplayCol.toLowerCase())}] ?? r[${JSON.stringify(targetDisplayCol.toUpperCase())}] ?? ${labelFallback}`
+            : labelFallback)
+      const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r[${JSON.stringify(relValue.toUpperCase())}] ?? r.id ?? r.ID ?? Object.values(r)[0] ?? ''`
       
       const mappingCode = `(${t}LookupList || []).map((r: any) => ({ value: String(${valueExpr}), label: String(${labelExpr}) }))`
       

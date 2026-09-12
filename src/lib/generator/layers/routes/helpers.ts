@@ -16,6 +16,15 @@ export function isValidIdentifier(str?: string): boolean {
   return Boolean(str && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(str) && !str.includes('-'))
 }
 
+export function findDisplayColumn(fields: any[]): string {
+  if (!fields || fields.length === 0) return ''
+  const strField = fields.find((f: any) => !f.isPrimaryKey && !f.isPrimary && ['varchar', 'text', 'string'].includes(String(f.dataType || f.data_type || f.type || '').toLowerCase()))
+  if (strField) return strField.dbColumn || strField.db_column_name || ''
+  const pkField = fields.find((f: any) => f.isPrimaryKey || f.isPrimary)
+  if (pkField) return pkField.dbColumn || pkField.db_column_name || ''
+  return fields[0]?.dbColumn || fields[0]?.db_column_name || ''
+}
+
 /**
  * Gera o trecho JSX para renderizar o valor de um campo na tabela de listagem.
  * Replica a lógica de renderização do Runtime ViewPageContent.

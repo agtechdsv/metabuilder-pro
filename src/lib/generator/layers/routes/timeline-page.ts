@@ -1,5 +1,5 @@
 import { RouteNode, AppAST } from '../../ast'
-import { renderFormField, getByocComponentName, toPascalCase } from './helpers'
+import { renderFormField, getByocComponentName, toPascalCase, findDisplayColumn } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Timeline Page (Server Component)
@@ -122,9 +122,14 @@ export function generateTimelinePage(route: RouteNode, ast?: AppAST): string {
       const relLabel = f.config?.component?.rel_label || f.config?.relation?.displayColumn || f.config?.rel_label
       const relValue = f.config?.component?.rel_value || f.config?.relation?.valueColumn || f.config?.rel_value || 'id'
       const filterCol = f.config?.component?.filter_column || f.config?.filter_column || f.config?.filterColumn || ''
+      const targetModelObj = ast?.models.find(m => m.dbTable.toLowerCase() === t.toLowerCase() || m.name.toLowerCase() === t.toLowerCase())
+      const targetDisplayCol = targetModelObj ? (findDisplayColumn(targetModelObj.fields) || '') : ''
+      const labelFallback = `r.display_label ?? Object.entries(r).find(([k, v]) => typeof v === 'string' && v && !/^id$/i.test(k))?.[1] ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
       const labelExpr = relLabel
-        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-        : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+        ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? ${labelFallback}`
+        : (targetDisplayCol
+            ? `r[${JSON.stringify(targetDisplayCol)}] ?? r[${JSON.stringify(targetDisplayCol.toLowerCase())}] ?? r[${JSON.stringify(targetDisplayCol.toUpperCase())}] ?? ${labelFallback}`
+            : labelFallback)
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r[${JSON.stringify(relValue.toUpperCase())}] ?? r.id ?? r.ID ?? Object.values(r)[0] ?? ''`
       const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? r[${JSON.stringify(filterCol.toLowerCase())}] ?? r[${JSON.stringify(filterCol.toUpperCase())}] ?? ''` : `''`
       const altCol = isFk ? colOnly.slice(0, -3) : (colOnly + '_id')
@@ -169,9 +174,14 @@ export function generateTimelinePage(route: RouteNode, ast?: AppAST): string {
         const relLabel = matchedField?.config?.component?.rel_label || matchedField?.config?.relation?.displayColumn || matchedField?.config?.rel_label
         const relValue = matchedField?.config?.component?.rel_value || matchedField?.config?.relation?.valueColumn || matchedField?.config?.rel_value || 'id'
         const filterCol = matchedField?.config?.component?.filter_column || matchedField?.config?.filter_column || matchedField?.config?.filterColumn || ''
+        const targetModelObj = ast?.models.find(m => m.dbTable.toLowerCase() === t.toLowerCase() || m.name.toLowerCase() === t.toLowerCase())
+        const targetDisplayCol = targetModelObj ? (findDisplayColumn(targetModelObj.fields) || '') : ''
+        const labelFallback = `r.display_label ?? Object.entries(r).find(([k, v]) => typeof v === 'string' && v && !/^id$/i.test(k))?.[1] ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
         const labelExpr = relLabel
-          ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
-          : `r.display_label ?? Object.values(r)[1] ?? Object.values(r)[0] ?? ''`
+          ? `r[${JSON.stringify(relLabel)}] ?? r[${JSON.stringify(relLabel.toLowerCase())}] ?? r[${JSON.stringify(relLabel.toUpperCase())}] ?? ${labelFallback}`
+          : (targetDisplayCol
+              ? `r[${JSON.stringify(targetDisplayCol)}] ?? r[${JSON.stringify(targetDisplayCol.toLowerCase())}] ?? r[${JSON.stringify(targetDisplayCol.toUpperCase())}] ?? ${labelFallback}`
+              : labelFallback)
         const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r[${JSON.stringify(relValue.toUpperCase())}] ?? r.id ?? r.ID ?? Object.values(r)[0] ?? ''`
         const filterExpr = filterCol ? `r[${JSON.stringify(filterCol)}] ?? r[${JSON.stringify(filterCol.toLowerCase())}] ?? r[${JSON.stringify(filterCol.toUpperCase())}] ?? ''` : `''`
         const mapEntry = `    '${col}': (${t}LookupList || []).map((r: any) => ({ ...r, value: String(${valueExpr}), label: String(${labelExpr}), filter_value: String(${filterExpr}) })),`
@@ -571,6 +581,13 @@ export function TimelineClient({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [modalRelationItems, setModalRelationItems] = useState<Record<string, any[]>>({})
 
+  // Notifica janela pai (caso esteja em iframe/tab) para ocupar a tela inteira em modo modal
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'MB_MODAL_STATE', isOpen: isModalOpen }, '*')
+    }
+  }, [isModalOpen])
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
@@ -843,8 +860,20 @@ ${hasRelationTabs ? `      // Salva alterações nas abas de detalhe (relações
 
       {/* Modal de Ação / Edição (Configurada no Studio como 'modal') */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false)
+              setActiveRecord(null)
+              setModalRelationItems({})
+            }
+          }}
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-neutral-900 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 cursor-default"
+          >
             {/* Cabeçalho da Modal fiel ao Studio */}
             <div className="flex items-center justify-between p-6 sm:p-8 border-b border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-4">

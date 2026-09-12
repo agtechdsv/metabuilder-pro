@@ -27,16 +27,22 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
             ? generateSqlServerActions(model, ast.models)
             : generatePgActions(model, ast.models)
 
-    // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido)
+    // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido, CLIENTES vs Clientes)
     const aliases = new Set<string>()
-    if (model.dbTable) {
-      const directCap = model.dbTable.charAt(0).toUpperCase() + model.dbTable.slice(1)
-      if (directCap !== model.name && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(directCap)) {
-        aliases.add(directCap)
-      }
-      const pascal = toPascalCase(model.dbTable)
-      if (pascal !== model.name && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(pascal)) {
-        aliases.add(pascal)
+    const candidates = [
+      model.dbTable ? (model.dbTable.charAt(0).toUpperCase() + model.dbTable.slice(1).toLowerCase()) : null,
+      model.dbTable ? toPascalCase(model.dbTable) : null,
+      model.dbTable ? toPascalCase(model.dbTable.toLowerCase()) : null,
+      model.name ? toPascalCase(model.name) : null,
+      model.name ? toPascalCase(model.name.toLowerCase()) : null,
+      model.dbTable ? model.dbTable.toUpperCase() : null,
+      model.dbTable ? model.dbTable.toLowerCase() : null,
+      model.name ? model.name.toUpperCase() : null,
+      model.name ? model.name.toLowerCase() : null,
+    ]
+    for (const cand of candidates) {
+      if (cand && cand !== model.name && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(cand)) {
+        aliases.add(cand)
       }
     }
 

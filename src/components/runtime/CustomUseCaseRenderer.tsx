@@ -123,6 +123,8 @@ export default function CustomUseCaseRenderer({
     formFields: any[]
     rowData: any
     isSaving: boolean
+    joins?: any[]
+    useCaseSlug?: string
   } | null>(null)
   
   const [deleteModalState, setDeleteModalState] = useState<{
@@ -457,6 +459,8 @@ export default function CustomUseCaseRenderer({
     // de modal inline existente no CustomUseCaseRenderer.
     // Sem estes handlers, os botões aparecem mas não fazem nada.
 
+    const effectiveSlotJoins = ucJoins || slotProps[slot.use_case_slug]?.joins || joins || []
+
     const handleSlotEdit = (row: any) => {
       setInlineModalState({
         isOpen: true,
@@ -465,7 +469,9 @@ export default function CustomUseCaseRenderer({
         slotModelName: ucModelName,
         formFields: ucFormFields,
         rowData: row,
-        isSaving: false
+        isSaving: false,
+        joins: effectiveSlotJoins,
+        useCaseSlug: slot.use_case_slug,
       })
       setInlineRefreshKey(k => k + 1)
     }
@@ -479,7 +485,9 @@ export default function CustomUseCaseRenderer({
         slotModelName: ucModelName,
         formFields: ucFormFields,
         rowData: row,
-        isSaving: false
+        isSaving: false,
+        joins: effectiveSlotJoins,
+        useCaseSlug: slot.use_case_slug,
       })
     }
 
@@ -491,7 +499,9 @@ export default function CustomUseCaseRenderer({
         slotModelName: ucModelName,
         formFields: ucFormFields,
         rowData: {},
-        isSaving: false
+        isSaving: false,
+        joins: effectiveSlotJoins,
+        useCaseSlug: slot.use_case_slug,
       })
     }
 
@@ -970,8 +980,8 @@ export default function CustomUseCaseRenderer({
                   tunnelChannel={tunnelChannel}
                   isTunnelReady={isTunnelReady}
                   project={project}
-                  joins={[]
-                  }
+                  joins={inlineModalState.joins || slotProps[inlineModalState.useCaseSlug || '']?.joins || joins || []}
+                  projectRelations={projectRelations}
                   dictionary={dictionary}
                   hideHeader={true}
                 />

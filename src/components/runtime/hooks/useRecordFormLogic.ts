@@ -34,6 +34,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   const [activeTab, setActiveTab] = useState<'master' | string>(initialTab)
   const { toast } = useToast()
 
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData)
+    }
+  }, [initialData])
+
   const formRef = useRef<HTMLFormElement>(null)
   
   useEffect(() => {
@@ -270,6 +276,153 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       return { ...prev, _details: newDetails }
     })
   }
+
+  // Busca detalhes de 1º nível automaticamente caso não venham preenchidos (ex: aberto em modal inline ou abas de timeline)
+  useEffect(() => {
+    if (mode === 'create') return
+    const masterId = formData?.id ?? formData?.ID ?? (
+      formData ? Object.entries(formData).find(([k]) => /^id$/i.test(k))?.[1] : undefined
+    )
+    if (!masterId) return
+    if (formData._details && Array.isArray(formData._details) && formData._details.length > 0) return
+    if (!joins || joins.length === 0) return
+
+    const mName = (masterModelName || '').toLowerCase()
+    const masterJoins = joins.filter((j: any) =>
+      j.from?.toLowerCase() === mName ||
+      (mName.endsWith('s') && j.from?.toLowerCase() === mName.slice(0, -1)) ||
+      (!mName.endsWith('s') && j.from?.toLowerCase() === mName + 's')
+    )
+    if (masterJoins.length === 0) return
+
+    let isMounted = true
+    const fetchMasterDetails = async () => {
+      const supabaseClient = createClient()
+      const allDetails: any[] = []
+
+      for (const join of masterJoins) {
+        if (!join.to) continue
+        const fk = join.foreignKey || join.foreign_key || 'id'
+        const localVal = masterId
+
+        let detailData: any[] = []
+        if (projectId && project?.db_type !== 'postgres') {
+          const queryId = crypto.randomUUID()
+          try {
+            detailData = await new Promise<any[]>((resolve, reject) => {
+              const isTemporary = !tunnelChannel || !isTunnelReady
+              const channelName = `tunnel:${projectId}`
+              const channel = isTemporary ? supabaseClient.channel(channelName) : tunnelChannel
+              let resolved = false
+
+              const handleResult = (payload: any) => {
+                if (payload.payload?.queryId === queryId) {
+                  resolved = true
+                  cleanup()
+                  if (payload.payload.success) {
+                    resolve(payload.payload.data || [])
+                  } else {
+                    reject(new Error(payload.payload.error || 'Error fetching details'))
+                  }
+                }
+              }
+
+              const cleanup = () => {
+                try {
+                  const bindings = channel.bindings?.broadcast
+                  if (Array.isArray(bindings)) {
+                    const cleanBindings = bindings.filter((b: any) => {
+                      const match = b.callback === handleResult
+                      if (match && channel.channelAdapter) {
+                        channel.channelAdapter.off('broadcast', b.ref)
+                      }
+                      return !match
+                    })
+                    channel.bindings.broadcast = cleanBindings
+                  }
+                  if (isTemporary) {
+                    channel.unsubscribe()
+                    supabaseClient.removeChannel(channel)
+                  }
+                } catch (_) {}
+              }
+
+              channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+              channel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+              const sendPayload = {
+                type: 'broadcast',
+                event: 'sql_query',
+                payload: {
+                  queryId,
+                  table: join.to,
+                  schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+                  action: 'select',
+                  token: secretToken,
+                  joins: [],
+                  filters: { [fk]: String(localVal) },
+                  limit: 200,
+                  offset: 0
+                }
+              }
+
+              if (isTemporary) {
+                channel.subscribe((status: string) => {
+                  if (status === 'SUBSCRIBED') channel.send(sendPayload)
+                })
+              } else {
+                channel.send(sendPayload)
+              }
+
+              setTimeout(() => {
+                if (!resolved) {
+                  resolved = true
+                  cleanup()
+                  resolve([])
+                }
+              }, 8000)
+            })
+          } catch (err) {
+            console.error('[MetaBuilder] Erro ao buscar detalhes via túnel:', err)
+          }
+        } else {
+          try {
+            if (project?.db_type === 'postgres') {
+              const url = new URL(`${window.location.origin}/api/${join.to}`)
+              url.searchParams.set('limit', '1000')
+              url.searchParams.set(`filter_${fk}`, String(localVal))
+              const res = await fetch(url.toString())
+              const json = await res.json()
+              if (json.data) detailData = json.data
+            } else {
+              const { data: directData } = await (supabaseClient as any)
+                .from(join.to)
+                .select('*')
+                .eq(fk, String(localVal))
+              if (directData) detailData = directData
+            }
+          } catch (err) {
+            console.error('[MetaBuilder] Erro ao buscar detalhes diretamente:', err)
+          }
+        }
+
+        if (detailData && detailData.length > 0) {
+          allDetails.push(...detailData.map((d: any) => ({
+            ...d,
+            model_name: join.to,
+            display_model_name: join.to
+          })))
+        }
+      }
+
+      if (isMounted && allDetails.length > 0) {
+        setFormData((prev: any) => ({ ...prev, _details: allDetails }))
+      }
+    }
+
+    fetchMasterDetails()
+    return () => { isMounted = false }
+  }, [mode, masterModelName, joins, projectId, secretToken, isTunnelReady, formData?.id, formData?.ID])
 
   useEffect(() => {
     const fetchAllRelational = async () => {
