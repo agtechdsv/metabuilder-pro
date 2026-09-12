@@ -1483,16 +1483,38 @@ async function run() {
         }
       });
       await Promise.all(tunnelPromises);
-      
-      // Mantém o processo vivo esperando o usuário apertar Enter
-      const rl = require('readline').createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-      rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
-        logger.close();
-        process.exit(0);
-      });
+
+      // Detecta se está rodando como daemon headless (spawn do Tauri)
+      // vs. terminal interativo (execução manual pelo usuário)
+      const isHeadless = !process.stdin.isTTY || process.argv.includes('--headless');
+
+      if (isHeadless) {
+        // MODO HEADLESS (daemon Tauri): NÃO usa readline.
+        // O readline.question() dispara imediatamente quando stdin fecha (EOF),
+        // chamando process.exit(0) e encerrando o túnel em segundos.
+        // Em vez disso, mantemos o event loop vivo via setInterval como backup
+        // (o WebSocket do Supabase Realtime também o mantém ativo durante operação normal).
+        console.log(chalk.green.bold('\n[ TÚNEL HEADLESS ] Daemon ativo. Aguardando comandos remotos...\n'));
+        const _keepAlive = setInterval(() => {}, 1000 * 60 * 60); // Heartbeat de 1h
+        const _shutdownHeadless = (signal) => {
+          console.log(chalk.gray(`\n[ TÚNEL ] Recebido ${signal}. Encerrando daemon...`));
+          clearInterval(_keepAlive);
+          logger.close();
+          process.exit(0);
+        };
+        process.on('SIGTERM', () => _shutdownHeadless('SIGTERM'));
+        process.on('SIGBREAK', () => _shutdownHeadless('SIGBREAK')); // Windows Ctrl+Break
+      } else {
+        // MODO INTERATIVO: aguarda o usuário pressionar ENTER no terminal
+        const rl = require('readline').createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+          logger.close();
+          process.exit(0);
+        });
+      }
       return; 
     } 
     else if (mode === 'sync') {
@@ -1694,6 +1716,19 @@ async function run() {
     }
   }
 }
+
+// ── Proteção global contra falhas não tratadas ─────────────────────────────
+// Impede que exceções ou promises rejeitadas encerrem silenciosamente o daemon
+// do túnel. Erros são logados mas o processo continua vivo.
+process.on('uncaughtException', (err) => {
+  console.error(chalk.red('\n[ DAEMON ] Exceção não capturada (processo mantido vivo):'), err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(chalk.red('\n[ DAEMON ] Promise rejeitada não tratada (processo mantido vivo):'));
+  console.error(reason);
+});
 
 run().catch(err => {
   console.error(chalk.red('\n❌ Erro fatal:'), err);

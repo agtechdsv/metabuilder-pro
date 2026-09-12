@@ -13,17 +13,17 @@
 // Tipos de log suportados
 const LOG_TYPES = {
   SQL_SELECT: 'SQL_SELECT',
-  SQL_WRITE:  'SQL_WRITE',
-  SQL_ERROR:  'SQL_ERROR',
-  BPM:        'BPM',
-  SYNC:       'SYNC',
-  TUNNEL:     'TUNNEL',
+  SQL_WRITE: 'SQL_WRITE',
+  SQL_ERROR: 'SQL_ERROR',
+  BPM: 'BPM',
+  SYNC: 'SYNC',
+  TUNNEL: 'TUNNEL',
 };
 
 // DDL table function returns the CREATE TABLE script for the correct schema
 function getCreateTableSql() {
   return `
-    CREATE TABLE IF NOT EXISTS __mb_logs (
+    CREATE TABLE IF NOT EXISTS mb_logs (
       id          BIGSERIAL    PRIMARY KEY,
       session_id  UUID,
       type        TEXT         NOT NULL,
@@ -52,23 +52,23 @@ function localISOString() {
   const offH = String(Math.floor(absOff / 60)).padStart(2, '0');
   const offM = String(absOff % 60).padStart(2, '0');
   // Usa componentes LOCAIS (getHours etc.), NÃO toISOString() que retorna UTC
-  const y  = now.getFullYear();
+  const y = now.getFullYear();
   const mo = String(now.getMonth() + 1).padStart(2, '0');
-  const d  = String(now.getDate()).padStart(2, '0');
-  const h  = String(now.getHours()).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const h = String(now.getHours()).padStart(2, '0');
   const mi = String(now.getMinutes()).padStart(2, '0');
-  const s  = String(now.getSeconds()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
   const ms = String(now.getMilliseconds()).padStart(3, '0');
   return `${y}-${mo}-${d}T${h}:${mi}:${s}.${ms}${sign}${offH}:${offM}`;
 }
 
 class CliDbLogger {
   constructor() {
-    this._pgClient    = null;
-    this._sessionId   = null;
-    this._schemaName  = 'public';
-    this._logConfig   = { enabled: false, types: ['SQL_ERROR'], retention_days: 7 };
-    this._ready       = false;
+    this._pgClient = null;
+    this._sessionId = null;
+    this._schemaName = 'public';
+    this._logConfig = { enabled: false, types: ['SQL_ERROR'], retention_days: 7 };
+    this._ready = false;
   }
 
   /**
@@ -79,10 +79,10 @@ class CliDbLogger {
    */
   async init(pgClient, schemaName, logConfig) {
     if (!pgClient) return;
-    this._pgClient   = pgClient;
+    this._pgClient = pgClient;
     this._schemaName = schemaName || 'public';
-    this._logConfig  = logConfig  || this._logConfig;
-    this._sessionId  = require('crypto').randomUUID();
+    this._logConfig = logConfig || this._logConfig;
+    this._sessionId = require('crypto').randomUUID();
 
     if (!this._logConfig.enabled) {
       console.log('\x1b[90m[MBLog] Log de banco desativado para este projeto.\x1b[0m');
@@ -139,32 +139,32 @@ class CliDbLogger {
   /** Insere um registro na tabela __mb_logs (fire-and-forget) */
   _insert(type, action, tableName, sqlText, message, durationMs, rowCount, schemaName, metadata) {
     if (this._pgClient) {
-        const q = `
+      const q = `
           INSERT INTO __mb_logs 
             (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
           VALUES 
             ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         `;
-        const params = [
-          this._sessionId,
-          type,
-          action       || null,
-          tableName    || null,
-          schemaName   || this._schemaName,
-          message      || null,
-          sqlText      || null,
-          durationMs   != null ? parseInt(durationMs) : null,
-          rowCount     != null ? parseInt(rowCount)    : null,
-          metadata     ? JSON.stringify(metadata) : null,
-          localISOString(),
-        ];
-        try {
-          this._pgClient.query(q, params).catch(e => {
-            console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
-          });
-        } catch (queryErr) {
-          console.error('\x1b[33m[MBLog] Erro síncrono ao gravar log:\x1b[0m', queryErr.message);
-        }
+      const params = [
+        this._sessionId,
+        type,
+        action || null,
+        tableName || null,
+        schemaName || this._schemaName,
+        message || null,
+        sqlText || null,
+        durationMs != null ? parseInt(durationMs) : null,
+        rowCount != null ? parseInt(rowCount) : null,
+        metadata ? JSON.stringify(metadata) : null,
+        localISOString(),
+      ];
+      try {
+        this._pgClient.query(q, params).catch(e => {
+          console.error('\x1b[33m[MBLog] Erro ao gravar log:\x1b[0m', e.message);
+        });
+      } catch (queryErr) {
+        console.error('\x1b[33m[MBLog] Erro síncrono ao gravar log:\x1b[0m', queryErr.message);
+      }
     }
   }
 
@@ -281,7 +281,7 @@ class CliDbLogger {
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limit  = Math.min(parseInt(filters.limit  || 50),  200);
+    const limit = Math.min(parseInt(filters.limit || 50), 200);
     const offset = parseInt(filters.offset || 0);
 
     try {
@@ -298,7 +298,7 @@ class CliDbLogger {
       ]);
 
       return {
-        rows:  dataRes.rows,
+        rows: dataRes.rows,
         total: parseInt(countRes.rows[0]?.total || 0),
       };
     } catch (err) {
