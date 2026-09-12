@@ -56,19 +56,89 @@ function toPascalCase(str: string): string {
     .replace(/^[a-z]/, (m) => m.toUpperCase())
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Normalização de tipos (DB-agnostic)
+// Converte tipos brutos de qualquer banco para um tipo canônico universal.
+// Tipos canônicos: varchar | char | text | clob | integer | numeric | boolean
+//                  date | timestamp | time | uuid | json | blob
+// Garante que o gerador de view produza código IDÊnTICO independente
+// de o projeto usar Postgres, Oracle, MySQL ou SQL Server.
+// ─────────────────────────────────────────────────────────────────────────────
+export function normalizeDbColumnType(rawType: string): string {
+  // Remove precisão/escala: VARCHAR2(255) → varchar2, NUMBER(10,2) → number
+  const t = (rawType || '').toLowerCase().trim().replace(/\s*\(.*\)/, '').trim()
+
+  // ── Oracle ──────────────────────────────────────────────────────────────────────
+  if (t === 'varchar2' || t === 'nvarchar2') return 'varchar'
+  if (t === 'nchar') return 'char'
+  if (t === 'nclob') return 'clob'
+  if (t === 'number' || t === 'binary_float' || t === 'binary_double') return 'numeric'
+  if (t === 'long') return 'text'
+  if (t === 'raw' || t === 'long raw') return 'blob'
+  if (t === 'xmltype' || t === 'sys.xmltype') return 'text'
+  if (t.startsWith('interval')) return 'varchar'
+
+  // ── Postgres ───────────────────────────────────────────────────────────────────
+  if (t === 'character varying') return 'varchar'
+  if (t === 'character') return 'char'
+  if (['bigint', 'int8', 'int4', 'int2', 'smallint', 'integer', 'int', 'serial', 'bigserial', 'smallserial'].includes(t)) return 'integer'
+  if (['real', 'double precision', 'money', 'decimal', 'float8', 'float4'].includes(t)) return 'numeric'
+  if (t === 'bytea') return 'blob'
+  if (t === 'timestamptz' || t.startsWith('timestamp')) return 'timestamp'
+  if (t === 'timetz' || t.startsWith('time')) return 'time'
+  if (t === 'boolean' || t === 'bool') return 'boolean'
+  if (t === 'jsonb') return 'json'
+  if (t === 'tsvector' || t === 'tsquery') return 'text'
+
+  // ── SQL Server ────────────────────────────────────────────────────────────────
+  if (t === 'nvarchar') return 'varchar'
+  if (t === 'ntext') return 'text'
+  if (['datetime', 'datetime2', 'smalldatetime', 'datetimeoffset'].includes(t)) return 'timestamp'
+  if (t === 'bit') return 'boolean'
+  if (t === 'image' || t === 'varbinary') return 'blob'
+  if (t === 'tinyint') return 'integer'
+  if (t === 'uniqueidentifier') return 'uuid'
+  if (t === 'smallmoney') return 'numeric'
+
+  // ── MySQL / MariaDB ─────────────────────────────────────────────────────────────
+  if (['tinytext', 'mediumtext', 'longtext'].includes(t)) return 'text'
+  if (['tinyblob', 'mediumblob', 'longblob'].includes(t)) return 'blob'
+  if (t === 'enum' || t === 'set') return 'varchar'
+  if (t === 'year') return 'integer'
+  if (t === 'double') return 'numeric'
+
+  // ── Já canônico ou desconhecido → retorna como está (lowercase sem precisão) ──
+  return t || 'varchar'
+}
+
+/**
+ * Mapeia um tipo canônico (pós-normalização) para o FieldNode['type'] da AST.
+ * Usando normalizeDbColumnType primeiro, este mapeamento funciona corretamente
+ * para Postgres, Oracle, MySQL e SQL Server sem ramificações por banco.
+ */
 function mapFieldType(dbType: string): FieldNode['type'] {
-  const t = (dbType || '').toLowerCase()
-  if (t.includes('int') || t.includes('numeric') || t.includes('float') || t.includes('double') || t.includes('decimal')) return 'number'
-  if (t.includes('bool')) return 'boolean'
-  if (t.includes('date') || t.includes('time')) return 'date'
-  if (t.includes('uuid')) return 'uuid'
-  if (t.includes('json')) return 'json'
+  const canonical = normalizeDbColumnType(dbType)
+  if (canonical === 'integer' || canonical === 'numeric') return 'number'
+  if (canonical === 'boolean') return 'boolean'
+  if (canonical === 'date' || canonical === 'timestamp' || canonical === 'time') return 'date'
+  if (canonical === 'uuid') return 'uuid'
+  if (canonical === 'json') return 'json'
   return 'string'
 }
 
+/**
+ * Encontra a coluna de exibição preferencial de uma tabela.
+ * Usa normalizeDbColumnType para identificar colunas de texto corretamente
+ * independente de os tipos virem como VARCHAR2 (Oracle), character varying (PG),
+ * nvarchar (SQL Server) ou text (MySQL).
+ */
 function findDisplayColumn(fields: any[]): string {
   if (!fields || fields.length === 0) return ''
-  const strField = fields.find((f: any) => !f.is_primary_key && !f.isPrimary && ['varchar', 'text', 'string'].includes(String(f.data_type || f.type || '').toLowerCase()))
+  const TEXT_CANONICAL = new Set(['varchar', 'char', 'text', 'clob', 'string'])
+  const strField = fields.find((f: any) => {
+    if (f.is_primary_key || f.isPrimary) return false
+    return TEXT_CANONICAL.has(normalizeDbColumnType(String(f.data_type || f.type || '')))
+  })
   if (strField) return strField.db_column_name || strField.dbColumn || ''
   const pkField = fields.find((f: any) => f.is_primary_key || f.isPrimary)
   if (pkField) return pkField.db_column_name || pkField.dbColumn || ''
@@ -379,7 +449,7 @@ function buildResolvedField(
     dbColumn,
     sqlExpression,
     label,
-    dataType: field.data_type || 'varchar',
+    dataType: normalizeDbColumnType(field.data_type || 'varchar'),
     isPrimaryKey: field.is_primary_key || false,
     isSortable: field.is_sortable || false,
     isVirtual: false,
