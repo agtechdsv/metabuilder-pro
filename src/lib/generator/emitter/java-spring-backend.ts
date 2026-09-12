@@ -1,4 +1,4 @@
-import { AppAST, ModelNode, FieldNode } from '../ast'
+import { AppAST, ModelNode, FieldNode, RouteNode } from '../ast'
 
 /**
  * java-spring-backend.ts — Gerador do backend Spring Boot 3.x (Módulos 5 + 8)
@@ -20,6 +20,13 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
   const groupPath = groupIdToPath(groupId)
   const basePkg = `backend/src/main/java/${groupPath}`
 
+  // Índice de rotas por modelName e modelTable — lookup O(1) em todos os geradores
+  const routeMap = new Map<string, RouteNode>()
+  for (const route of ast.routes) {
+    routeMap.set(route.modelName, route)
+    routeMap.set(route.modelTable, route)
+  }
+
   // 1. pom.xml
   files.set('backend/pom.xml', generatePomXml(ast))
 
@@ -33,12 +40,25 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
   files.set(`${basePkg}/config/CorsConfig.java`, generateCorsConfig(ast, groupId))
   files.set(`${basePkg}/config/OpenApiConfig.java`, generateOpenApiConfig(ast, groupId))
 
-  // 5. Por modelo: Entity, Repository, Service, Controller
+  // 5. Por modelo: Entity, Repository, Service, Controller + Specification
   for (const model of ast.models) {
+    const route = routeMap.get(model.name) ?? routeMap.get(model.dbTable)
     files.set(`${basePkg}/entities/${model.name}.java`, generateEntityClass(model, ast, groupId))
-    files.set(`${basePkg}/repositories/${model.name}Repository.java`, generateRepositoryInterface(model, ast, groupId))
-    files.set(`${basePkg}/services/${model.name}Service.java`, generateServiceClass(model, ast, groupId))
-    files.set(`${basePkg}/controllers/${model.name}Controller.java`, generateControllerClass(model, ast, groupId))
+    files.set(`${basePkg}/repositories/${model.name}Repository.java`, generateRepositoryInterface(model, ast, groupId, route))
+    files.set(`${basePkg}/services/${model.name}Service.java`, generateServiceClass(model, ast, groupId, route))
+    files.set(`${basePkg}/controllers/${model.name}Controller.java`, generateControllerClass(model, ast, groupId, route))
+
+    // Specification (pesquisa dinâmica) — só gerada se a rota tem filterFields
+    if (route && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0) {
+      files.set(`${basePkg}/specifications/${model.name}Spec.java`,
+        generateSpecificationClass(model, ast, groupId, route))
+    }
+
+    // Projeções (DTOs para Grid) — evita trafegar a entidade inteira
+    if (route && route.gridFields && route.gridFields.length > 0) {
+      files.set(`${basePkg}/dto/${model.name}ListView.java`,
+        generateProjectionInterface(model, ast, groupId, route))
+    }
   }
 
   // 6. README
@@ -76,6 +96,26 @@ function toJavaType(dataType: string): string {
     bytea: 'byte[]',
   }
   return map[dataType.toLowerCase()] ?? 'String'
+}
+
+/**
+ * Normaliza tipos de banco para um canônico mínimo usado pelo gerador de Specification.
+ * Funciona para Postgres, Oracle, MySQL e SQL Server.
+ */
+function canonicalDbType(rawType: string): string {
+  const t = (rawType ?? '').toLowerCase().trim().replace(/\(.*\)/, '').trim()
+  if (t === 'varchar' || t === 'nvarchar' || t === 'nvarchar2' || t === 'varchar2' ||
+      t === 'character varying' || t === 'text' || t === 'ntext' ||
+      t === 'clob' || t === 'nclob' || t === 'char' || t === 'nchar') return 'varchar'
+  if (t === 'integer' || t === 'int' || t === 'int4' || t === 'bigint' ||
+      t === 'int8' || t === 'serial' || t === 'bigserial' || t === 'smallint') return 'integer'
+  if (t === 'numeric' || t === 'decimal' || t === 'number' ||
+      t === 'double precision' || t === 'real' || t === 'float4' || t === 'float8') return 'numeric'
+  if (t === 'boolean' || t === 'bool') return 'boolean'
+  if (t === 'date') return 'date'
+  if (t.startsWith('timestamp') || t === 'datetime' || t === 'datetime2') return 'timestamp'
+  if (t === 'uuid' || t === 'uniqueidentifier') return 'uuid'
+  return 'varchar'
 }
 
 /** Retorna os imports Java necessários dado o conjunto de tipos usados */
@@ -527,7 +567,14 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     if (field.isPrimary && !pkGenerated) {
       pkGenerated = true
       fieldLines.push(`    @Id`)
-      fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+      if (ast.dbStack === 'oracle') {
+        const seqName = `SEQ_${model.dbTable.toUpperCase()}`
+        const genName = `${model.dbTable.toLowerCase()}_seq`
+        fieldLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
+        fieldLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
+      } else {
+        fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+      }
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
     } else {
@@ -563,14 +610,20 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     const firstField = entityFields[0]
     const jt = toJavaType(firstField.dataType)
     const camelName = toCamelCase(firstField.dbColumn)
-    fieldLines.unshift(
+    const genLines: string[] = [
       `    // WARNING: nenhum campo marcado como PK — usando o primeiro campo como @Id`,
       `    @Id`,
-      `    @GeneratedValue(strategy = GenerationType.IDENTITY)`,
-      `    @Column(name = "${firstField.dbColumn}")`,
-      `    private ${jt} ${camelName};`,
-      ``,
-    )
+    ]
+    if (ast.dbStack === 'oracle') {
+      const seqName = `SEQ_${model.dbTable.toUpperCase()}`
+      const genName = `${model.dbTable.toLowerCase()}_seq`
+      genLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
+      genLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
+    } else {
+      genLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+    }
+    genLines.push(`    @Column(name = "${firstField.dbColumn}")`, `    private ${jt} ${camelName};`, ``)
+    fieldLines.unshift(...genLines)
     javaTypes.add(jt)
   }
 
@@ -595,27 +648,127 @@ ${fieldLines.join('\n')}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers para Relacionamentos Mestre-Detalhe e Ações Customizadas
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface IncomingFkDef {
+  fkField: string
+  fkCamel: string
+  fkJavaType: string
+}
+
+function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
+  const fks = new Map<string, IncomingFkDef>()
+  for (const route of ast.routes) {
+    for (const tab of route.relationTabs || []) {
+      if (tab.relatedTable === model.dbTable) {
+        const fkFieldNode = model.fields.find(f => f.dbColumn === tab.foreignKey)
+        const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+        const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
+        fks.set(tab.foreignKey, { fkField: tab.foreignKey, fkCamel, fkJavaType })
+      }
+    }
+    for (const slot of route.customSlots || []) {
+      if (slot.targetModelTable === model.dbTable && slot.foreignKey) {
+        const fkFieldNode = model.fields.find(f => f.dbColumn === slot.foreignKey)
+        const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+        const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
+        fks.set(slot.foreignKey, { fkField: slot.foreignKey, fkCamel, fkJavaType })
+      }
+    }
+    for (const btn of route.buttons || []) {
+      if (btn.triggerType === 'usecase' && btn.usecaseSelectedFields && btn.usecaseSelectedFields.length > 0) {
+        const targetRoute = ast.routes.find(r => r.viewSlug === btn.usecaseSlug)
+        if (targetRoute && targetRoute.modelTable === model.dbTable) {
+          for (const mapping of btn.usecaseSelectedFields) {
+            if (typeof mapping !== 'string' && mapping.target) {
+              const fkField = mapping.target
+              const fkFieldNode = model.fields.find(f => f.dbColumn === fkField)
+              const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+              const fkCamel = toPascalCaseJava(toCamelCase(fkField))
+              fks.set(fkField, { fkField, fkCamel, fkJavaType })
+            }
+          }
+        }
+      }
+    }
+  }
+  return Array.from(fks.values())
+}
+
+interface OutgoingSubResourceDef {
+  childTable: string
+  childModelName: string
+  fkField: string
+  fkCamel: string
+  urlSegment: string
+}
+
+function getOutgoingSubResources(route: RouteNode): OutgoingSubResourceDef[] {
+  const defs = new Map<string, OutgoingSubResourceDef>()
+  for (const tab of route.relationTabs || []) {
+    const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
+    const urlSegment = tab.relatedTable.replace(/_/g, '-')
+    defs.set(urlSegment, {
+      childTable: tab.relatedTable,
+      childModelName: tab.relatedModelName,
+      fkField: tab.foreignKey,
+      fkCamel,
+      urlSegment
+    })
+  }
+  for (const slot of route.customSlots || []) {
+    if (!slot.foreignKey || !slot.targetModelName) continue
+    const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
+    const childTable = slot.targetModelTable ?? ''
+    const urlSegment = (childTable || slot.useCaseSlug).replace(/_/g, '-')
+    defs.set(urlSegment, {
+      childTable,
+      childModelName: slot.targetModelName,
+      fkField: slot.foreignKey,
+      fkCamel,
+      urlSegment
+    })
+  }
+  return Array.from(defs.values())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 5.6 — Repository.java
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: string): string {
+function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
   const pkFieldPascal = toPascalCaseJava(getPkFieldName(model))
+  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
+  const incomingFks = getIncomingFks(model, ast)
+
+  const imports = [
+    `import ${groupId}.entities.${model.name};`,
+    (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
+    `import org.springframework.data.domain.Page;`,
+    `import org.springframework.data.domain.Pageable;`,
+    `import org.springframework.data.jpa.repository.JpaRepository;`,
+    hasSpec ? `import org.springframework.data.jpa.repository.JpaSpecificationExecutor;` : ``,
+    `import org.springframework.stereotype.Repository;`,
+    `import java.util.List;`,
+    pkType === 'UUID' ? `import java.util.UUID;` : ``
+  ].filter(Boolean).join('\n')
+
+  const extendsClause = hasSpec 
+    ? `JpaRepository<${model.name}, ${pkType}>, JpaSpecificationExecutor<${model.name}>`
+    : `JpaRepository<${model.name}, ${pkType}>`
 
   return `package ${groupId}.repositories;
 
-import ${groupId}.entities.${model.name};
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-import java.util.List;
-${pkType === 'UUID' ? 'import java.util.UUID;' : ''}
+${imports}
 
 @Repository
-public interface ${model.name}Repository extends JpaRepository<${model.name}, ${pkType}> {
+public interface ${model.name}Repository extends ${extendsClause} {
     List<${model.name}> findBy${pkFieldPascal}In(List<${pkType}> ids);
     Page<${model.name}> findAll(Pageable pageable);
+${(route && route.gridFields && route.gridFields.length > 0) ? `    Page<${model.name}ListView> findAllProjectedBy(Pageable pageable);` : ''}
+${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, Pageable pageable);`).join('\n')}
 }
 `
 }
@@ -624,18 +777,37 @@ public interface ${model.name}Repository extends JpaRepository<${model.name}, ${
 // 5.7 — Service.java
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string): string {
+function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
+  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
+  const incomingFks = getIncomingFks(model, ast)
+
+  const imports = [
+    `import ${groupId}.entities.${model.name};`,
+    `import ${groupId}.repositories.${model.name}Repository;`,
+    (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
+    hasSpec ? `import ${groupId}.specifications.${model.name}Spec;` : ``,
+    `import lombok.RequiredArgsConstructor;`,
+    `import org.springframework.data.domain.*;`,
+    `import org.springframework.stereotype.Service;`,
+    `import java.util.*;`,
+    pkType === 'UUID' ? `import java.util.UUID;` : ``
+  ].filter(Boolean).join('\n')
+
+  let searchMethod = ''
+  if (hasSpec) {
+    searchMethod = `
+    public Page<${model.name}> search(Map<String, String> params, int page, int size, String sort) {
+        Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
+        Pageable pageable = PageRequest.of(page, size, s);
+        return repository.findAll(${model.name}Spec.fromParams(params), pageable);
+    }
+`
+  }
 
   return `package ${groupId}.services;
 
-import ${groupId}.entities.${model.name};
-import ${groupId}.repositories.${model.name}Repository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
-import org.springframework.stereotype.Service;
-import java.util.*;
-${pkType === 'UUID' ? 'import java.util.UUID;' : ''}
+${imports}
 
 @Service
 @RequiredArgsConstructor
@@ -648,6 +820,18 @@ public class ${model.name}Service {
         return repository.findAll(PageRequest.of(page, size, s));
     }
 
+${(route && route.gridFields && route.gridFields.length > 0) ? `
+    public Page<${model.name}ListView> findAllProjected(int page, int size, String sort) {
+        Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
+        return repository.findAllProjectedBy(PageRequest.of(page, size, s));
+    }
+` : ''}
+${searchMethod}${incomingFks.map(fk => `
+    public Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, int page, int size, String sort) {
+        Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
+        return repository.findBy${fk.fkCamel}(id, PageRequest.of(page, size, s));
+    }
+`).join('')}
     public Optional<${model.name}> findById(${pkType} id) {
         return repository.findById(id);
     }
@@ -659,6 +843,13 @@ public class ${model.name}Service {
     public void delete(${pkType} id) {
         repository.deleteById(id);
     }
+
+    public Map<String, Object> getAnalyticsSummary() {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalRecords", repository.count());
+        // Custom aggregations for charts can be implemented here based on Route definitions
+        return summary;
+    }
 }
 `
 }
@@ -667,21 +858,77 @@ public class ${model.name}Service {
 // 5.8 — Controller.java
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string): string {
+function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
   const mapping = sanitizeTableForMapping(model.dbTable)
-  const uuidImport = pkType === 'UUID' ? 'import java.util.UUID;' : ''
+  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
+  const incomingFks = getIncomingFks(model, ast)
+  const outgoingSubResources = route ? getOutgoingSubResources(route) : []
+
+  const extraImports = new Set<string>()
+  for (const out of outgoingSubResources) {
+    extraImports.add(`import ${groupId}.entities.${out.childModelName};`)
+    extraImports.add(`import ${groupId}.services.${out.childModelName}Service;`)
+  }
+
+  const imports = [
+    `import ${groupId}.entities.${model.name};`,
+    `import ${groupId}.services.${model.name}Service;`,
+    (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
+    ...Array.from(extraImports),
+    `import jakarta.validation.Valid;`,
+    `import lombok.RequiredArgsConstructor;`,
+    `import org.springframework.data.domain.Page;`,
+    `import org.springframework.http.ResponseEntity;`,
+    `import org.springframework.web.bind.annotation.*;`,
+    hasSpec ? `import java.util.HashMap;` : ``,
+    `import java.util.Map;`,
+    pkType === 'UUID' ? `import java.util.UUID;` : ``
+  ].filter(Boolean).join('\n')
+
+  let searchEndpoint = ''
+  if (hasSpec) {
+    searchEndpoint = `
+    @GetMapping("/search")
+    public ResponseEntity<Page<${model.name}>> search(
+            @RequestParam Map<String, String> params,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String sort) {
+        Map<String, String> filters = new HashMap<>(params);
+        filters.remove("page");
+        filters.remove("size");
+        filters.remove("sort");
+        return ResponseEntity.ok(service.search(filters, page, size, sort));
+    }
+`
+  }
+
+  const incomingEndpoints = incomingFks.map(fk => `
+    @GetMapping("/by-${fk.fkField.replace(/_/g, '-')}/{id}")
+    public ResponseEntity<Page<${model.name}>> findBy${fk.fkCamel}(
+            @PathVariable ${fk.fkJavaType} id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(service.findBy${fk.fkCamel}(id, page, size, sort));
+    }
+`).join('')
+
+  const outgoingEndpoints = outgoingSubResources.map(out => `
+    @GetMapping("/{id}/${out.urlSegment}")
+    public ResponseEntity<Page<${out.childModelName}>> get${out.childModelName}By${toPascalCaseJava(toCamelCase(model.dbTable))}(
+            @PathVariable ${pkType} id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(${toCamelCase(out.childModelName)}Service.findBy${out.fkCamel}(id, page, size, sort));
+    }
+`).join('')
 
   return `package ${groupId}.controllers;
 
-import ${groupId}.entities.${model.name};
-import ${groupId}.services.${model.name}Service;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-${uuidImport}
+${imports}
 
 @RestController
 @RequestMapping("/api/${mapping}")
@@ -690,6 +937,7 @@ ${uuidImport}
 public class ${model.name}Controller {
 
     private final ${model.name}Service service;
+${outgoingSubResources.map(out => `    private final ${out.childModelName}Service ${toCamelCase(out.childModelName)}Service;`).join('\n')}
 
     @GetMapping
     public ResponseEntity<Page<${model.name}>> list(
@@ -699,6 +947,22 @@ public class ${model.name}Controller {
         return ResponseEntity.ok(service.findAll(page, size, sort));
     }
 
+${(route && route.gridFields && route.gridFields.length > 0) ? `
+    @GetMapping("/grid")
+    public ResponseEntity<Page<${model.name}ListView>> listGrid(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(service.findAllProjected(page, size, sort));
+    }
+` : ''}
+
+    @GetMapping("/analytics")
+    public ResponseEntity<Map<String, Object>> analytics() {
+        return ResponseEntity.ok(service.getAnalyticsSummary());
+    }
+
+${searchEndpoint}${incomingEndpoints}${outgoingEndpoints}
     @GetMapping("/{id}")
     public ResponseEntity<${model.name}> getById(@PathVariable ${pkType} id) {
         return service.findById(id)
@@ -785,5 +1049,136 @@ services/                 ← Regras de negócio
 controllers/              ← @RestController por entidade
 \`\`\`
 ${javaVersion === 21 ? '\n## Virtual Threads (Project Loom)\nEste projeto usa `spring.threads.virtual.enabled=true` para máxima concorrência com Java 21.\n' : ''}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.12 — Specification.java (Pesquisa Dinâmica)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: string, route: RouteNode): string {
+  const predicates: string[] = []
+  const imports = new Set<string>([
+    'import jakarta.persistence.criteria.*;',
+    'import org.springframework.data.jpa.domain.Specification;',
+    'import java.util.ArrayList;',
+    'import java.util.List;',
+    'import java.util.Map;',
+    `import ${groupId}.entities.${model.name};`
+  ])
+
+  // Ignorar campos com JOIN por enquanto (requer lógica mais complexa de fetch)
+  const filterFields = route.filterFields.filter(f => !f.dbColumn.includes('.'))
+
+  for (const field of filterFields) {
+    const javaProp = toCamelCase(field.dbColumn)
+    const paramKey = field.dbColumn
+    const dbType = canonicalDbType(field.dataType)
+
+    let predicateLogic = ''
+    if (dbType === 'varchar') {
+      predicateLogic = `
+            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("${javaProp}")),
+                    "%" + params.get("${paramKey}").toLowerCase() + "%"));
+            }`
+    } else if (dbType === 'date' || dbType === 'timestamp') {
+      const cls = dbType === 'date' ? 'LocalDate' : 'LocalDateTime'
+      if (dbType === 'date') imports.add('import java.time.LocalDate;')
+      else imports.add('import java.time.LocalDateTime;')
+
+      predicateLogic = `
+            if (params.containsKey("${paramKey}_start") && !params.get("${paramKey}_start").isBlank()) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("${javaProp}"),
+                    ${cls}.parse(params.get("${paramKey}_start"))));
+            }
+            if (params.containsKey("${paramKey}_end") && !params.get("${paramKey}_end").isBlank()) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("${javaProp}"),
+                    ${cls}.parse(params.get("${paramKey}_end"))));
+            }`
+    } else if (dbType === 'uuid') {
+      imports.add('import java.util.UUID;')
+      predicateLogic = `
+            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+                predicates.add(cb.equal(root.get("${javaProp}"), UUID.fromString(params.get("${paramKey}"))));
+            }`
+    } else if (dbType === 'integer') {
+      predicateLogic = `
+            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+                predicates.add(cb.equal(root.get("${javaProp}"), Integer.parseInt(params.get("${paramKey}"))));
+            }`
+    } else if (dbType === 'numeric') {
+      imports.add('import java.math.BigDecimal;')
+      predicateLogic = `
+            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+                predicates.add(cb.equal(root.get("${javaProp}"), new BigDecimal(params.get("${paramKey}"))));
+            }`
+    } else if (dbType === 'boolean') {
+      predicateLogic = `
+            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+                predicates.add(cb.equal(root.get("${javaProp}"), Boolean.parseBoolean(params.get("${paramKey}"))));
+            }`
+    }
+
+    if (predicateLogic) predicates.push(predicateLogic)
+  }
+
+  return `package ${groupId}.specifications;
+
+${Array.from(imports).sort().join('\n')}
+
+public class ${model.name}Spec {
+
+    public static Specification<${model.name}> fromParams(Map<String, String> params) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+${predicates.join('\n')}
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.13 — DTO de Projeção para o Grid (ListView)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateProjectionInterface(model: ModelNode, ast: AppAST, groupId: string, route: RouteNode): string {
+  const fields = route.gridFields || []
+  let hasPk = false
+
+  const getters = fields.map(f => {
+    if (f.isPrimaryKey) hasPk = true
+    const dbType = toJavaType(f.dataType)
+    const camel = toPascalCaseJava(toCamelCase(f.dbColumn))
+    return `    ${dbType} get${camel}();`
+  })
+
+  // Garantir que a chave primária sempre venha na projeção para permitir seleção/edição
+  if (!hasPk) {
+    const pkType = getPkJavaType(model)
+    const pkPascal = toPascalCaseJava(getPkFieldName(model))
+    getters.unshift(`    ${pkType} get${pkPascal}();`)
+  }
+
+  const javaTypes = new Set<string>()
+  fields.forEach(f => {
+    const jt = toJavaType(f.dataType)
+    if (!['String', 'Integer', 'Boolean', 'Double', 'Long'].includes(jt)) {
+      javaTypes.add(jt)
+    }
+  })
+  if (!hasPk && getPkJavaType(model) === 'UUID') javaTypes.add('UUID')
+
+  const imports = Array.from(getJavaImports(javaTypes)).join('\n')
+
+  return `package ${groupId}.dto;
+
+${imports}
+
+public interface ${model.name}ListView {
+${getters.join('\n')}
+}
 `
 }
