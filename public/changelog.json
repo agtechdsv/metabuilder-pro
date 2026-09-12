@@ -1,16 +1,4 @@
 {
-  "v1.0.3": {
-    "date": "2026-09-10",
-    "pt": [
-      "Detecção Inteligente de Projetos: Aprimoramos o reconhecimento automático de ambientes de desenvolvimento na IDE, garantindo que projetos Node.js em monorepos sejam identificados com total precisão, evitando configurações indevidas."
-    ],
-    "en": [
-      "Smart Project Detection: Enhanced automatic workspace recognition in the IDE, ensuring Node.js projects in monorepos are accurately identified without language conflicts or misconfigurations."
-    ],
-    "es": [
-      "Detección Inteligente de Proyectos: Mejoramos el reconocimiento automático de entornos en el IDE, asegurando que los proyectos Node.js en monorrepositorios se identifiquen con precisión y sin configuraciones erróneas."
-    ]
-  },
   "v1.0.2": {
     "date": "2026-09-10",
     "pt": [
