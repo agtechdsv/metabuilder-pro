@@ -56,6 +56,9 @@ export function IDEEditorArea({
   const { t } = useI18n()
   const fileContentsRef = React.useRef(fileContents)
   const allFilePathsRef = React.useRef(allFilePaths)
+  const editorInstanceRef = React.useRef<any>(null)
+  const jumpToMethodRef = React.useRef<{ path: string, method: string } | null>(null)
+
   React.useEffect(() => {
     fileContentsRef.current = fileContents
   }, [fileContents])
@@ -63,8 +66,39 @@ export function IDEEditorArea({
     allFilePathsRef.current = allFilePaths
   }, [allFilePaths])
 
+  React.useEffect(() => {
+    if (activeFile && jumpToMethodRef.current && jumpToMethodRef.current.path === activeFile) {
+      const targetMethod = jumpToMethodRef.current.method
+      jumpToMethodRef.current = null
+      
+      const editor = editorInstanceRef.current
+      if (editor) {
+         setTimeout(() => {
+           const model = editor.getModel()
+           if (model) {
+             const text = model.getValue()
+             const regex = new RegExp(`\\b${targetMethod}\\b`)
+             const match = text.match(regex)
+             if (match && match.index !== undefined) {
+                const pos = model.getPositionAt(match.index)
+                editor.revealLineInCenter(pos.lineNumber)
+                editor.setPosition(pos)
+                editor.focus()
+             }
+           }
+         }, 100)
+      }
+    }
+  }, [activeFile, fileContents])
+
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <style>{`
+        .monaco-editor.ide-ctrl-hover .view-lines,
+        .monaco-editor.ide-ctrl-hover .view-lines span {
+          cursor: pointer !important;
+        }
+      `}</style>
       {/* Tabs Header */}
       <div className="h-10 bg-[#1e1e1e] border-b border-neutral-800 flex items-center text-sm text-neutral-400 flex-shrink-0 w-full relative">
         <div className="flex-1 flex items-center h-full overflow-hidden relative group/tabs">
@@ -210,6 +244,7 @@ export function IDEEditorArea({
             }}
             onMount={(editor, monaco) => {
               monacoRef.current = monaco
+              editorInstanceRef.current = editor
               editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
                 handleSaveFile(editor.getValue(), activeFileRef.current || undefined)
               })
@@ -221,31 +256,76 @@ export function IDEEditorArea({
                 if (!position) return
 
                 const model = editor.getModel()
-                const word = model?.getWordAtPosition(position)
+                if (!model) return
+                
+                const word = model.getWordAtPosition(position)
                 if (!word?.word) return
 
-                const className = word.word
+                let targetClassName = word.word
+                let targetMethod: string | null = null
+
+                // Detectar se é chamada de método (ex: service.findAll)
+                const lineContent = model.getLineContent(position.lineNumber)
+                const textBefore = lineContent.substring(0, word.startColumn - 1)
+                const matchMethod = textBefore.match(/(\w+)\s*\.$/)
+                
+                if (matchMethod) {
+                  const objectName = matchMethod[1]
+                  targetMethod = word.word
+                  
+                  // Tentar inferir o tipo da variável no arquivo atual (ex: ClientesService service;)
+                  const fullText = model.getValue()
+                  const typeRegex = new RegExp(`\\b(\\w+)\\s+${objectName}\\b`)
+                  const typeMatch = fullText.match(typeRegex)
+                  if (typeMatch && typeMatch[1]) {
+                    targetClassName = typeMatch[1]
+                  } else {
+                    targetClassName = objectName // fallback caso seja estático
+                  }
+                }
 
                 // Extensoes candidatas — Java, TS e TSX
-                const candidates = [`/${className}.java`, `/${className}.ts`, `/${className}.tsx`]
+                const candidates = [`/${targetClassName}.java`, `/${targetClassName}.ts`, `/${targetClassName}.tsx`]
 
                 // 1º tenta nos arquivos já carregados em memória
                 const loadedPath = Object.keys(fileContentsRef.current).find(f =>
                   candidates.some(c => f.endsWith(c))
                 )
-                if (loadedPath) {
-                  setActiveFile(loadedPath)
-                  activeFileRef.current = loadedPath
-                  return
-                }
-
                 // 2º busca em toda a árvore de arquivos do projeto
                 const treeMatch = allFilePathsRef.current.find(f =>
                   candidates.some(c => f.endsWith(c))
                 )
-                if (treeMatch) {
-                  // Abre e carrega do disco (exatamente como clicar no Explorer)
-                  handleSelectFile(treeMatch)
+                
+                const foundPath = loadedPath || treeMatch
+
+                if (foundPath) {
+                  if (targetMethod) {
+                    jumpToMethodRef.current = { path: foundPath, method: targetMethod }
+                  }
+
+                  if (Object.keys(fileContentsRef.current).includes(foundPath)) {
+                    setActiveFile(foundPath)
+                    activeFileRef.current = foundPath
+                    
+                    // Se já for o arquivo ativo, o useEffect não roda por change do activeFile, então força aqui
+                    if (targetMethod) {
+                      setTimeout(() => {
+                         const currentModel = editorInstanceRef.current?.getModel()
+                         if (currentModel) {
+                           const match = currentModel.getValue().match(new RegExp(`\\b${targetMethod}\\b`))
+                           if (match && match.index !== undefined) {
+                              const pos = currentModel.getPositionAt(match.index)
+                              editorInstanceRef.current.revealLineInCenter(pos.lineNumber)
+                              editorInstanceRef.current.setPosition(pos)
+                              editorInstanceRef.current.focus()
+                           }
+                         }
+                      }, 50)
+                    }
+                  } else {
+                    // Abre e carrega do disco
+                    handleSelectFile(foundPath)
+                  }
                 }
               })
 
@@ -254,25 +334,45 @@ export function IDEEditorArea({
                 const domNode = editor.getDomNode()
                 if (!domNode) return
 
+                let isHoveringLink = false
+
                 if ((e.event.ctrlKey || e.event.metaKey) && e.target.position) {
                   const model = editor.getModel()
-                  const word = model?.getWordAtPosition(e.target.position)
+                  if (!model) return
+                  const word = model.getWordAtPosition(e.target.position)
+                  
                   if (word && word.word) {
-                    const className = word.word
-                    const candidates = [`/${className}.java`, `/${className}.ts`, `/${className}.tsx`]
+                    let targetClassName = word.word
+                    const lineContent = model.getLineContent(e.target.position.lineNumber)
+                    const textBefore = lineContent.substring(0, word.startColumn - 1)
+                    const matchMethod = textBefore.match(/(\w+)\s*\.$/)
+                    
+                    if (matchMethod) {
+                      const objectName = matchMethod[1]
+                      const fullText = model.getValue()
+                      const typeRegex = new RegExp(`\\b(\\w+)\\s+${objectName}\\b`)
+                      const typeMatch = fullText.match(typeRegex)
+                      if (typeMatch && typeMatch[1]) targetClassName = typeMatch[1]
+                      else targetClassName = objectName
+                    }
+
+                    const candidates = [`/${targetClassName}.java`, `/${targetClassName}.ts`, `/${targetClassName}.tsx`]
                     
                     const exists = 
                       Object.keys(fileContentsRef.current).some(f => candidates.some(c => f.endsWith(c))) ||
                       allFilePathsRef.current.some(f => candidates.some(c => f.endsWith(c)))
 
                     if (exists) {
-                      domNode.style.cursor = 'pointer'
-                      return
+                      isHoveringLink = true
                     }
                   }
                 }
-                // Reseta pro cursor padrão caso não dê match ou não tenha Ctrl
-                domNode.style.cursor = ''
+                
+                if (isHoveringLink) {
+                  domNode.classList.add('ide-ctrl-hover')
+                } else {
+                  domNode.classList.remove('ide-ctrl-hover')
+                }
               })
             }}
           />
