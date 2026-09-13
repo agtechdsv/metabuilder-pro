@@ -385,7 +385,16 @@ fn check_node_available(app: tauri::AppHandle) -> Result<(), String> {
 /// Verifica se o JDK está disponível no PATH.
 /// IMPORTANTE: `java -version` imprime na stderr — checar stderr, não stdout.
 #[command]
-fn check_java_available() -> Result<(), String> {
+fn check_java_available(app: tauri::AppHandle) -> Result<(), String> {
+    // 1. Verificar JDK Portátil
+    if let Ok(home) = app.path().home_dir() {
+        let jdk_bin = home.join(".metabuilder").join("jdk21").join("bin").join("java.exe");
+        if jdk_bin.exists() {
+            return Ok(());
+        }
+    }
+
+    // 2. Verificar JDK Global no PATH
     let output = std::process::Command::new("java")
         .arg("-version")
         .output()

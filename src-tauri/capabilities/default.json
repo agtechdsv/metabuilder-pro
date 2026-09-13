@@ -26,6 +26,61 @@
     "core:app:allow-version",
     "core:path:default",
     "shell:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "npm-run-dev",
+          "cmd": "npm",
+          "args": ["run", "dev"]
+        },
+        {
+          "name": "cmd-npm-run-dev",
+          "cmd": "cmd",
+          "args": ["/c", "npm", "run", "dev"]
+        },
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "npm",
+          "cmd": "npm",
+          "args": ["install"]
+        },
+        {
+          "name": "npm-run-dev",
+          "cmd": "npm",
+          "args": ["run", "dev"]
+        },
+        {
+          "name": "code",
+          "cmd": "code",
+          "args": ["."]
+        },
+        {
+          "name": "cmd",
+          "cmd": "cmd",
+          "args": ["/c", "npm", "install"]
+        },
+        {
+          "name": "cmd-npm-run-dev",
+          "cmd": "cmd",
+          "args": ["/c", "npm", "run", "dev"]
+        },
+        {
+          "name": "powershell",
+          "cmd": "powershell",
+          "args": true
+        }
+      ]
+    },
     "deep-link:default",
     "fs:default",
     "fs:allow-applocaldata-read",
