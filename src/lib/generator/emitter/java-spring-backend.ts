@@ -559,9 +559,16 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
   const entityFields = model.fields.filter(f => !f.dbColumn.includes('.'))
 
   const fieldLines: string[] = []
-  let pkGenerated = false
+  // Pre-process: guarantee at least one primary key
+  const hasPk = entityFields.some(f => f.isPrimary)
+  let processedFields = entityFields
+  if (!hasPk && entityFields.length > 0) {
+    processedFields = [...entityFields]
+    processedFields[0] = { ...processedFields[0], isPrimary: true }
+  }
 
-  for (const field of entityFields) {
+  let pkGenerated = false
+  for (const field of processedFields) {
     const jt = toJavaType(field.dataType)
     if (!javaTypes.has(jt)) javaTypes.add(jt)
     const camelName = toCamelCase(field.dbColumn)
@@ -575,11 +582,22 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
       if (field.isPrimary && !pkGenerated) {
         pkGenerated = true
         fieldLines.push(`    @Id`)
-        // Não gera @GeneratedValue para chaves estrangeiras
+        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+          javaTypes.add('JdbcTypeCode')
+          javaTypes.add('SqlTypes')
+        }
+        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${jt} ${camelName};`)
+        fieldLines.push(``)
+        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
+        fieldLines.push(`    private ${targetPascal} ${propName};`)
+      } else {
+        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${targetPascal} ${propName};`)
       }
-      fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-      fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
-      fieldLines.push(`    private ${targetPascal} ${propName};`)
       
     } else if (field.isPrimary && !pkGenerated) {
       pkGenerated = true
@@ -622,28 +640,6 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     fieldLines.push(`    @JsonIgnore`)
     fieldLines.push(`    private List<${inv.sourceModel}> ${listProp} = new ArrayList<>();`)
     fieldLines.push(``)
-  }
-
-  // Edge case: nenhum campo com isPrimary — adicionar @Id ao primeiro campo
-  if (!pkGenerated && entityFields.length > 0) {
-    const firstField = entityFields[0]
-    const jt = toJavaType(firstField.dataType)
-    const camelName = toCamelCase(firstField.dbColumn)
-    const genLines: string[] = [
-      `    // WARNING: nenhum campo marcado como PK — usando o primeiro campo como @Id`,
-      `    @Id`,
-    ]
-    if (ast.dbStack === 'oracle') {
-      const seqName = `SEQ_${model.dbTable.toUpperCase()}`
-      const genName = `${model.dbTable.toLowerCase()}_seq`
-      genLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
-      genLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
-    } else {
-      genLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
-    }
-    genLines.push(`    @Column(name = "${firstField.dbColumn}")`, `    private ${jt} ${camelName};`, ``)
-    fieldLines.unshift(...genLines)
-    javaTypes.add(jt)
   }
 
   const imports = [
