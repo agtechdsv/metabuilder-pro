@@ -4,7 +4,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Network, Trash2, Undo, UnfoldVertical, FoldVertical,
-  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical, Coffee, ListTree
+  ChevronDown, ChevronRight, Folder, FileCode2, ClipboardPaste, MoreVertical, Coffee, ListTree, Search
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { FileNode } from '@/contexts/ide/useIDEFileSystem'
@@ -59,6 +59,25 @@ export function IDEFileExplorer({
 }: IDEFileExplorerProps) {
   const { t } = useI18n()
   const [compactFolders, setCompactFolders] = React.useState(true)
+  const [searchQuery, setSearchQuery] = React.useState('')
+
+  const filterTree = (nodes: FileNode[], query: string): FileNode[] => {
+    if (!query) return nodes
+    const lowerQuery = query.toLowerCase()
+    
+    return nodes.map(node => {
+      if (node.name === '.trash') return null
+      
+      if (node.isDirectory && node.children) {
+        const filteredChildren = filterTree(node.children, query)
+        if (filteredChildren.length > 0 || node.name.toLowerCase().includes(lowerQuery)) {
+          return { ...node, children: filteredChildren }
+        }
+        return null
+      }
+      return node.name.toLowerCase().includes(lowerQuery) ? node : null
+    }).filter(Boolean) as FileNode[]
+  }
 
   const getCompactNode = (node: FileNode): { mergedName: string, targetNode: FileNode } => {
     let current = node
@@ -73,11 +92,15 @@ export function IDEFileExplorer({
   const renderTree = (nodes: FileNode[], depth: number = 0): React.ReactNode => {
     let visibleNodes = nodes
     if (depth === 0) {
-      if (explorerActiveTab === 'explorer') {
-        visibleNodes = nodes.filter(n => n.name !== '.trash')
+      if (searchQuery) {
+        visibleNodes = filterTree(nodes, searchQuery)
       } else {
-        const trashNode = nodes.find(n => n.name === '.trash')
-        visibleNodes = trashNode?.children || []
+        if (explorerActiveTab === 'explorer') {
+          visibleNodes = nodes.filter(n => n.name !== '.trash')
+        } else {
+          const trashNode = nodes.find(n => n.name === '.trash')
+          visibleNodes = trashNode?.children || []
+        }
       }
     }
 
@@ -111,7 +134,7 @@ export function IDEFileExplorer({
                   setCtxMenu({ x: e.clientX, y: e.clientY, node })
                 }}
               >
-                {expandedFolders.has(node.path) ? (
+                {(searchQuery ? true : expandedFolders.has(node.path)) ? (
                   <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
                 ) : (
                   <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
@@ -148,7 +171,7 @@ export function IDEFileExplorer({
                   <MoreVertical className="w-3 h-3 text-neutral-500" />
                 </button>
               </div>
-              {expandedFolders.has(node.path) && node.children && (
+              {(searchQuery ? true : expandedFolders.has(node.path)) && node.children && (
                 <div>{renderTree(node.children, depth + 1)}</div>
               )}
             </div>
@@ -276,6 +299,21 @@ export function IDEFileExplorer({
                 </button>
               </div>
             </div>
+            
+            {/* Search Input */}
+            <div className="p-2 border-b border-neutral-800/60 shrink-0">
+              <div className="relative flex items-center">
+                <Search className="w-3 h-3 text-neutral-500 absolute left-2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Pesquisar arquivos..."
+                  className="w-full bg-neutral-900/50 border border-neutral-800 rounded px-7 py-1 text-xs text-neutral-300 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all placeholder-neutral-600"
+                />
+              </div>
+            </div>
+
             <div className="flex-1 overflow-y-auto overflow-x-hidden py-1 select-none">
               {renderTree(fileTree)}
             </div>
