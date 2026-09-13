@@ -208,8 +208,8 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   >
                     <div className={cn(
                       "p-2 rounded-xl transition-all",
-                      isNavigatingWorkspace 
-                        ? "bg-blue-500/20 text-blue-500 animate-pulse" 
+                      isNavigatingWorkspace
+                        ? "bg-blue-500/20 text-blue-500 animate-pulse"
                         : "bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-500"
                     )}>
                       {isNavigatingWorkspace ? (
@@ -249,16 +249,18 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </Link>
                 )}
 
-                <Link
-                  href="/client/lounge"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-indigo-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-white transition-all group"
-                >
-                  <div className="p-2 bg-indigo-500/10 rounded-xl group-hover:bg-indigo-500/20 transition-all text-indigo-500">
-                    <Coffee className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="text-sm font-bold">{t('common.lounge', 'Lounge ☕')}</span>
-                </Link>
+                {!localProfile?.is_super_admin && (
+                  <Link
+                    href="/client/lounge"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-indigo-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-white transition-all group"
+                  >
+                    <div className="p-2 bg-indigo-500/10 rounded-xl group-hover:bg-indigo-500/20 transition-all text-indigo-500">
+                      <Coffee className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm font-bold">{t('common.lounge', 'Lounge')}</span>
+                  </Link>
+                )}
 
                 <button
                   onClick={() => {

@@ -11,13 +11,15 @@ import {
   BarChart3,
   RefreshCw,
   ShieldCheck,
-  Rocket
+  Rocket,
+  Coffee
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
 import { MetaVoiceAdminView } from './MetaVoiceAdminView'
 import CommunityHubView from '@/components/client/CommunityHubView'
+import { LoungeView } from '@/components/client/LoungeView'
 import { CliFilesAdminView } from './CliFilesAdminView'
 import { PricingRulesAdmin } from './PricingRulesAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
@@ -80,6 +82,7 @@ const TAB_CONFIG = {
   iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
   community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+  lounge: { label: 'Lounge', icon: Coffee, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   arquivos: { label: 'IDEs, CLI & Manuais', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   releases: { label: 'Releases (IDE)', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
 } as const
@@ -112,7 +115,7 @@ export default function PlatformAdminClient({
     setTimeout(() => setIsRefreshing(false), 800)
   }
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos' | 'releases'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'lounge' | 'arquivos' | 'releases'>('dashboard')
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
   const [clientProfiles, setClientProfiles] = useState<any[]>(profiles)
@@ -188,6 +191,7 @@ export default function PlatformAdminClient({
     iclub: { label: t('admin.tabs.iclub', 'Gestão do iClub'), icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
     metavoice: { label: t('admin.tabs.metavoice', 'MetaVoice'), icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
     community: { label: t('admin.tabs.community', 'MetaBuilders'), icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+    lounge: { label: t('admin.tabs.lounge', 'Lounge'), icon: Coffee, iconColor: 'text-indigo-500 dark:text-indigo-400' },
     arquivos: { label: t('admin.tabs.arquivos', 'IDEs, CLI & Manuais'), icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
     releases: { label: t('admin.tabs.releases', 'Releases (IDE)'), icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
   } as const
@@ -256,7 +260,7 @@ export default function PlatformAdminClient({
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['community', 'metavoice', 'iclub', 'arquivos', 'releases'] as const).map(tab => {
+            {(['community', 'lounge', 'metavoice', 'iclub', 'arquivos', 'releases'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -290,6 +294,19 @@ export default function PlatformAdminClient({
             className="mt-6"
           >
             <CommunityHubView />
+          </motion.div>
+        )}
+
+        {activeTab === 'lounge' && (
+          <motion.div
+            key="lounge"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6 mt-6"
+          >
+            <LoungeView />
           </motion.div>
         )}
 
