@@ -26,6 +26,10 @@ export interface IDEEditorAreaProps {
   ideLoadingState: { isLoading: boolean; message: string }
   monacoRef: React.MutableRefObject<any>
   handleMonacoBeforeMount: (monaco: any) => void
+  /** Lista plana de todos os caminhos de arquivo na árvore */
+  allFilePaths: string[]
+  /** Função que abre/carrega um arquivo do disco (ctrl+click navegação) */
+  handleSelectFile: (path: string) => Promise<void>
 }
 
 export function IDEEditorArea({
@@ -45,13 +49,19 @@ export function IDEEditorArea({
   isSyncing,
   ideLoadingState,
   monacoRef,
-  handleMonacoBeforeMount
+  handleMonacoBeforeMount,
+  allFilePaths,
+  handleSelectFile,
 }: IDEEditorAreaProps) {
   const { t } = useI18n()
   const fileContentsRef = React.useRef(fileContents)
+  const allFilePathsRef = React.useRef(allFilePaths)
   React.useEffect(() => {
     fileContentsRef.current = fileContents
   }, [fileContents])
+  React.useEffect(() => {
+    allFilePathsRef.current = allFilePaths
+  }, [allFilePaths])
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -204,20 +214,38 @@ export function IDEEditorArea({
                 handleSaveFile(editor.getValue(), activeFileRef.current || undefined)
               })
               
-              // Go to Definition (Ctrl+Click)
+              // Ctrl+Click — Navega para o arquivo da classe clicada (como no Eclipse)
               editor.onMouseDown((e) => {
-                if (e.event.ctrlKey || e.event.metaKey) {
-                  const position = e.target.position;
-                  if (position) {
-                    const model = editor.getModel();
-                    const word = model?.getWordAtPosition(position);
-                    if (word && word.word) {
-                       const targetFile = Object.keys(fileContentsRef.current).find(f => f.endsWith(`/${word.word}.java`) || f.endsWith(`/${word.word}.ts`) || f.endsWith(`/${word.word}.tsx`));
-                       if (targetFile) {
-                          setActiveFile(targetFile);
-                       }
-                    }
-                  }
+                if (!(e.event.ctrlKey || e.event.metaKey)) return
+                const position = e.target.position
+                if (!position) return
+
+                const model = editor.getModel()
+                const word = model?.getWordAtPosition(position)
+                if (!word?.word) return
+
+                const className = word.word
+
+                // Extensoes candidatas — Java, TS e TSX
+                const candidates = [`/${className}.java`, `/${className}.ts`, `/${className}.tsx`]
+
+                // 1º tenta nos arquivos já carregados em memória
+                const loadedPath = Object.keys(fileContentsRef.current).find(f =>
+                  candidates.some(c => f.endsWith(c))
+                )
+                if (loadedPath) {
+                  setActiveFile(loadedPath)
+                  activeFileRef.current = loadedPath
+                  return
+                }
+
+                // 2º busca em toda a árvore de arquivos do projeto
+                const treeMatch = allFilePathsRef.current.find(f =>
+                  candidates.some(c => f.endsWith(c))
+                )
+                if (treeMatch) {
+                  // Abre e carrega do disco (exatamente como clicar no Explorer)
+                  handleSelectFile(treeMatch)
                 }
               })
             }}
