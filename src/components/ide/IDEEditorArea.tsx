@@ -248,6 +248,32 @@ export function IDEEditorArea({
                   handleSelectFile(treeMatch)
                 }
               })
+
+              // Efeito "mãozinha" (pointer) no Ctrl+Hover
+              editor.onMouseMove((e) => {
+                const domNode = editor.getDomNode()
+                if (!domNode) return
+
+                if ((e.event.ctrlKey || e.event.metaKey) && e.target.position) {
+                  const model = editor.getModel()
+                  const word = model?.getWordAtPosition(e.target.position)
+                  if (word && word.word) {
+                    const className = word.word
+                    const candidates = [`/${className}.java`, `/${className}.ts`, `/${className}.tsx`]
+                    
+                    const exists = 
+                      Object.keys(fileContentsRef.current).some(f => candidates.some(c => f.endsWith(c))) ||
+                      allFilePathsRef.current.some(f => candidates.some(c => f.endsWith(c)))
+
+                    if (exists) {
+                      domNode.style.cursor = 'pointer'
+                      return
+                    }
+                  }
+                }
+                // Reseta pro cursor padrão caso não dê match ou não tenha Ctrl
+                domNode.style.cursor = ''
+              })
             }}
           />
         ) : (
