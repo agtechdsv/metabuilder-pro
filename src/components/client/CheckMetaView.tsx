@@ -64,13 +64,31 @@ export function CheckMetaView() {
     : t('checkmeta.status.playing', 'Em andamento')
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 lg:gap-10 h-full p-6 w-full max-w-[1400px] mx-auto items-start xl:items-stretch">
-      
-      {/* Board Column */}
-      <div className="flex-1 w-full max-w-[600px] mx-auto xl:mx-0">
-        
-        {matchId ? (
-          <div className="bg-white dark:bg-neutral-900 p-4 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden relative">
+    <>
+      {!matchId ? (
+        <div className="flex flex-col gap-8 w-full max-w-[1200px] mx-auto p-6">
+          <div className="text-center mb-4 mt-6">
+            <h2 className="text-3xl font-black text-neutral-400 dark:text-neutral-500 mb-2">CheckMeta</h2>
+            <p className="text-neutral-500 max-w-sm mx-auto text-center">Entre em um torneio ou procure uma partida rápida no Lobby para jogar.</p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+            <div className="flex flex-col gap-6">
+              <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl">
+                <CheckMetaLobby />
+              </div>
+              <CheckMetaTournaments isSuperAdmin={isSuperAdmin} />
+            </div>
+            <div className="flex flex-col gap-6">
+              <CheckMetaLists />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col xl:flex-row gap-6 lg:gap-10 h-full p-6 w-full max-w-[1400px] mx-auto items-start xl:items-stretch">
+          {/* 1. Área do Tabuleiro */}
+          <div className="flex-1 w-full max-w-[600px] mx-auto xl:mx-0">
+            
+            <div className="bg-white dark:bg-neutral-900 p-4 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden relative">
             
             {/* Black Clock (Top) */}
             <div className="flex justify-between items-center mb-4 px-2">
@@ -126,7 +144,7 @@ export function CheckMetaView() {
                 
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => router.push('/client/lounge')}
+                    onClick={() => router.replace(window.location.pathname)}
                     className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all"
                   >
                     Voltar para o Lobby
@@ -135,26 +153,11 @@ export function CheckMetaView() {
               </div>
             )}
           </div>
-        ) : (
-          <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center bg-white/50 dark:bg-neutral-900/50 rounded-3xl border border-dashed border-neutral-300 dark:border-neutral-700">
-            <h2 className="text-2xl font-bold text-neutral-400 mb-2">CheckMeta</h2>
-            <p className="text-neutral-500 max-w-sm text-center">Entre em um torneio ou procure uma partida rápida no Lobby para jogar.</p>
-          </div>
-        )}
-      </div>
+        </div>
 
-      {/* Sidebar Controls Column */}
-      <div className="w-full xl:w-[400px] flex flex-col gap-6">
-        
-        {/* Matchmaking Lobby */}
-        {!matchId && (
-          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl">
-            <CheckMetaLobby />
-          </div>
-        )}
-
-        {/* Game Info Card (only show if playing) */}
-        {matchId && (
+        {/* Sidebar Controls Column */}
+        <div className="w-full xl:w-[400px] flex flex-col gap-6">
+          {/* Game Info Card (only show if playing) */}
           <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col sm:flex-row xl:flex-col gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-6">
@@ -181,13 +184,12 @@ export function CheckMetaView() {
               </div>
             </div>
           </div>
-        )}
 
-        {/* New Tournaments and Lists */}
-        <CheckMetaTournaments isSuperAdmin={isSuperAdmin} />
-        <CheckMetaLists />
+          <CheckMetaTournaments isSuperAdmin={isSuperAdmin} />
+          <CheckMetaLists />
+        </div>
       </div>
-
-    </div>
+      )}
+    </>
   )
 }

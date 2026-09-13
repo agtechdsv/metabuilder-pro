@@ -6,8 +6,14 @@ import { createClient } from '@/utils/supabase/client'
 export function useCheckMetaGame(matchId?: string | null) {
   const supabase = createClient()
   const [game, setGame] = useState(new Chess())
+  const gameRef = useRef(game)
   const [fen, setFen] = useState(game.fen())
   const { toast } = useToast()
+
+  // Update ref when game changes
+  useEffect(() => {
+    gameRef.current = game
+  }, [game])
 
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [optionSquares, setOptionSquares] = useState<Record<string, any>>({})
@@ -76,7 +82,7 @@ export function useCheckMetaGame(matchId?: string | null) {
         setLastMoveAt(row.last_move_at ? new Date(row.last_move_at).getTime() : null)
 
         const newFen = row.fen
-        if (newFen && newFen !== game.fen()) {
+        if (newFen && newFen !== gameRef.current.fen()) {
           try {
             const newGame = new Chess(newFen)
             setGame(newGame)
@@ -89,7 +95,7 @@ export function useCheckMetaGame(matchId?: string | null) {
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
-  }, [matchId, supabase, game])
+  }, [matchId, supabase])
 
   const handleTimeOut = useCallback((loserTurn: string) => {
     if (matchStatus === 'finished') return

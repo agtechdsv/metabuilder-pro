@@ -84,7 +84,6 @@ export function CheckMetaLists() {
       })
       .subscribe()
 
-    // Fetch Matches
     const fetchMatches = async () => {
       const { data, error } = await supabase
         .from('checkmeta_matches')
@@ -93,12 +92,13 @@ export function CheckMetaLists() {
           status,
           player_white_id,
           player_black_id,
-          player_white:profiles!checkmeta_matches_player_white_id_fkey(full_name),
-          player_black:profiles!checkmeta_matches_player_black_id_fkey(full_name)
+          player_white:profiles!player_white_id(full_name),
+          player_black:profiles!player_black_id(full_name)
         `)
         .eq('status', 'playing')
         .order('created_at', { ascending: false })
       
+      if (error) console.error("Error fetching matches:", error)
       if (data) setMatches(data)
     }
 
