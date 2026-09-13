@@ -669,18 +669,22 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
   for (const route of ast.routes) {
     for (const tab of route.relationTabs || []) {
       if (tab.relatedTable === model.dbTable) {
-        const fkFieldNode = model.fields.find(f => f.dbColumn === tab.foreignKey)
-        const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-        const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
-        fks.set(tab.foreignKey, { fkField: tab.foreignKey, fkCamel, fkJavaType })
+        if (!tab.foreignKey.includes('.')) {
+          const fkFieldNode = model.fields.find(f => f.dbColumn === tab.foreignKey)
+          const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+          const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
+          fks.set(tab.foreignKey, { fkField: tab.foreignKey, fkCamel, fkJavaType })
+        }
       }
     }
     for (const slot of route.customSlots || []) {
       if (slot.targetModelTable === model.dbTable && slot.foreignKey) {
-        const fkFieldNode = model.fields.find(f => f.dbColumn === slot.foreignKey)
-        const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-        const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
-        fks.set(slot.foreignKey, { fkField: slot.foreignKey, fkCamel, fkJavaType })
+        if (!slot.foreignKey.includes('.')) {
+          const fkFieldNode = model.fields.find(f => f.dbColumn === slot.foreignKey)
+          const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+          const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
+          fks.set(slot.foreignKey, { fkField: slot.foreignKey, fkCamel, fkJavaType })
+        }
       }
     }
     for (const btn of route.buttons || []) {
@@ -690,10 +694,12 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
           for (const mapping of btn.usecaseSelectedFields) {
             if (typeof mapping !== 'string' && mapping.target) {
               const fkField = mapping.target
-              const fkFieldNode = model.fields.find(f => f.dbColumn === fkField)
-              const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-              const fkCamel = toPascalCaseJava(toCamelCase(fkField))
-              fks.set(fkField, { fkField, fkCamel, fkJavaType })
+              if (!fkField.includes('.')) {
+                const fkFieldNode = model.fields.find(f => f.dbColumn === fkField)
+                const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
+                const fkCamel = toPascalCaseJava(toCamelCase(fkField))
+                fks.set(fkField, { fkField, fkCamel, fkJavaType })
+              }
             }
           }
         }
