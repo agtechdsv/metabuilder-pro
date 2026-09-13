@@ -129,6 +129,8 @@ function getJavaImports(types: Set<string>): string[] {
     List: 'java.util.List',
     ArrayList: 'java.util.ArrayList',
     JsonIgnore: 'com.fasterxml.jackson.annotation.JsonIgnore',
+    JdbcTypeCode: 'org.hibernate.annotations.JdbcTypeCode',
+    SqlTypes: 'org.hibernate.type.SqlTypes',
     Float: '',  // java.lang — não precisa importar
     Double: '', // java.lang — não precisa importar
   }
@@ -590,10 +592,20 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
       } else {
         fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
       }
+      if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+        fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+        javaTypes.add('JdbcTypeCode')
+        javaTypes.add('SqlTypes')
+      }
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
       
     } else {
+      if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+        fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+        javaTypes.add('JdbcTypeCode')
+        javaTypes.add('SqlTypes')
+      }
       fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
       fieldLines.push(`    private ${jt} ${camelName};`)
     }
