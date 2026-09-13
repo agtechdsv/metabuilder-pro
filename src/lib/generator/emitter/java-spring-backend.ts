@@ -720,28 +720,32 @@ interface OutgoingSubResourceDef {
 function getOutgoingSubResources(route: RouteNode): OutgoingSubResourceDef[] {
   const defs = new Map<string, OutgoingSubResourceDef>()
   for (const tab of route.relationTabs || []) {
-    const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
-    const urlSegment = tab.relatedTable.replace(/_/g, '-')
-    defs.set(urlSegment, {
-      childTable: tab.relatedTable,
-      childModelName: tab.relatedModelName,
-      fkField: tab.foreignKey,
-      fkCamel,
-      urlSegment
-    })
+    if (!tab.foreignKey.includes('.')) {
+      const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
+      const urlSegment = tab.relatedTable.replace(/_/g, '-')
+      defs.set(urlSegment, {
+        childTable: tab.relatedTable,
+        childModelName: tab.relatedModelName,
+        fkField: tab.foreignKey,
+        fkCamel,
+        urlSegment
+      })
+    }
   }
   for (const slot of route.customSlots || []) {
     if (!slot.foreignKey || !slot.targetModelName) continue
-    const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
-    const childTable = slot.targetModelTable ?? ''
-    const urlSegment = (childTable || slot.useCaseSlug).replace(/_/g, '-')
-    defs.set(urlSegment, {
-      childTable,
-      childModelName: slot.targetModelName,
-      fkField: slot.foreignKey,
-      fkCamel,
-      urlSegment
-    })
+    if (!slot.foreignKey.includes('.')) {
+      const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
+      const childTable = slot.targetModelTable ?? ''
+      const urlSegment = (childTable || slot.useCaseSlug).replace(/_/g, '-')
+      defs.set(urlSegment, {
+        childTable,
+        childModelName: slot.targetModelName,
+        fkField: slot.foreignKey,
+        fkCamel,
+        urlSegment
+      })
+    }
   }
   return Array.from(defs.values())
 }
