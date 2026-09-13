@@ -561,7 +561,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
 
   for (const field of entityFields) {
     const jt = toJavaType(field.dataType)
-    if (!javaTypes.has(jt) && jt.includes('java.util.')) javaTypes.add(jt)
+    if (!javaTypes.has(jt)) javaTypes.add(jt)
     const camelName = toCamelCase(field.dbColumn)
 
     const rel = resolveFieldRelation(field, ast)
