@@ -282,6 +282,22 @@ export function IDEEditorArea({
                   } else {
                     targetClassName = objectName // fallback caso seja estático
                   }
+                } else {
+                  // Se não é método, checar se é uma variável/objeto local clicado no corpo
+                  const fullText = model.getValue()
+                  const localRegex = new RegExp(`\\b(\\w+)\\s+${targetClassName}\\b`)
+                  const localMatch = fullText.match(localRegex)
+                  
+                  if (localMatch && localMatch.index !== undefined) {
+                    const pos = model.getPositionAt(localMatch.index)
+                    // Se não estiver clicando na própria declaração, pula para ela
+                    if (pos.lineNumber !== position.lineNumber) {
+                      editorInstanceRef.current.revealLineInCenter(pos.lineNumber)
+                      editorInstanceRef.current.setPosition(pos)
+                      editorInstanceRef.current.focus()
+                      return
+                    }
+                  }
                 }
 
                 // Extensoes candidatas — Java, TS e TSX
@@ -347,6 +363,8 @@ export function IDEEditorArea({
                     const textBefore = lineContent.substring(0, word.startColumn - 1)
                     const matchMethod = textBefore.match(/(\w+)\s*\.$/)
                     
+                    let foundLocal = false
+
                     if (matchMethod) {
                       const objectName = matchMethod[1]
                       const fullText = model.getValue()
@@ -354,16 +372,30 @@ export function IDEEditorArea({
                       const typeMatch = fullText.match(typeRegex)
                       if (typeMatch && typeMatch[1]) targetClassName = typeMatch[1]
                       else targetClassName = objectName
+                    } else {
+                      // Hover em variável/objeto local
+                      const fullText = model.getValue()
+                      const localRegex = new RegExp(`\\b(\\w+)\\s+${targetClassName}\\b`)
+                      const localMatch = fullText.match(localRegex)
+                      if (localMatch && localMatch.index !== undefined) {
+                        const pos = model.getPositionAt(localMatch.index)
+                        if (pos.lineNumber !== e.target.position.lineNumber) {
+                          isHoveringLink = true
+                          foundLocal = true
+                        }
+                      }
                     }
 
-                    const candidates = [`/${targetClassName}.java`, `/${targetClassName}.ts`, `/${targetClassName}.tsx`]
-                    
-                    const exists = 
-                      Object.keys(fileContentsRef.current).some(f => candidates.some(c => f.endsWith(c))) ||
-                      allFilePathsRef.current.some(f => candidates.some(c => f.endsWith(c)))
+                    if (!foundLocal) {
+                      const candidates = [`/${targetClassName}.java`, `/${targetClassName}.ts`, `/${targetClassName}.tsx`]
+                      
+                      const exists = 
+                        Object.keys(fileContentsRef.current).some(f => candidates.some(c => f.endsWith(c))) ||
+                        allFilePathsRef.current.some(f => candidates.some(c => f.endsWith(c)))
 
-                    if (exists) {
-                      isHoveringLink = true
+                      if (exists) {
+                        isHoveringLink = true
+                      }
                     }
                   }
                 }
