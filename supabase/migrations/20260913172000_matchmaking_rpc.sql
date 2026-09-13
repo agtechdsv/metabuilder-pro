@@ -18,7 +18,7 @@ BEGIN
   WHERE time_control_minutes = p_minutes 
     AND time_control_increment = p_increment
     AND user_id != auth.uid()
-    AND rating BETWEEN v_user_rating - 150 AND v_user_rating + 150
+    AND rating BETWEEN v_user_rating - 500 AND v_user_rating + 500
   ORDER BY joined_at ASC
   LIMIT 1
   FOR UPDATE SKIP LOCKED;
