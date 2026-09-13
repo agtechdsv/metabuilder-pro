@@ -12,7 +12,17 @@ import { useSearchParams } from 'next/navigation'
 export function CheckMetaView() {
   const searchParams = useSearchParams()
   const matchId = searchParams.get('matchId')
-  const { fen, onDrop, resetGame, game, onSquareClick, optionSquares } = useCheckMetaGame(matchId)
+  const { 
+    fen, 
+    onDrop, 
+    resetGame, 
+    game, 
+    onSquareClick, 
+    optionSquares,
+    whiteTimeLeft,
+    blackTimeLeft,
+    matchStatus
+  } = useCheckMetaGame(matchId)
   const { t } = useI18n()
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const supabase = createClient()
@@ -30,11 +40,20 @@ export function CheckMetaView() {
     checkAdmin()
   }, [])
 
-  const isGameOver = game.isGameOver()
-  const gameStatus = game.isCheckmate() 
-    ? t('checkmeta.status.checkmate', 'Xeque-Mate!')
-    : game.isDraw() 
-    ? t('checkmeta.status.draw', 'Empate!')
+  // Format MS into mm:ss
+  const formatTime = (ms: number) => {
+    if (ms <= 0) return '00:00'
+    const totalSeconds = Math.ceil(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const isGameOver = game.isGameOver() || matchStatus === 'finished'
+  const gameStatus = matchStatus === 'finished' 
+    ? t('checkmeta.status.finished', 'Partida Encerrada')
+    : game.isCheckmate() 
+    ? t('checkmeta.status.checkmate', 'Xeque-Mate')
     : game.isCheck()
     ? t('checkmeta.status.check', 'Xeque!')
     : t('checkmeta.status.playing', 'Em andamento')
@@ -46,12 +65,28 @@ export function CheckMetaView() {
       <div className="flex-1 w-full max-w-[600px] mx-auto xl:mx-0">
         
         <div className="bg-white dark:bg-neutral-900 p-4 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden relative">
+          
+          {/* Black Clock (Top) */}
+          {matchId && (
+            <div className="flex justify-between items-center mb-4 px-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-xs">B</span>
+                </div>
+                <span className="font-semibold text-neutral-700 dark:text-neutral-300">Pretas</span>
+              </div>
+              <div className={`px-4 py-2 rounded-xl font-black text-xl tracking-wider ${blackTimeLeft < 10000 ? 'bg-red-100 text-red-600' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-white'}`}>
+                {formatTime(blackTimeLeft)}
+              </div>
+            </div>
+          )}
+
           {/* Classic Board Styling */}
           <Chessboard 
             options={{
               position: fen,
               onPieceDrop: ({ piece, sourceSquare, targetSquare }) => {
-                if (sourceSquare && targetSquare) return onDrop(sourceSquare, targetSquare, piece)
+                if (sourceSquare && targetSquare) return onDrop(sourceSquare, targetSquare, piece as unknown as string)
                 return false
               },
               onSquareClick: ({ square }) => onSquareClick(square as string),
@@ -66,6 +101,21 @@ export function CheckMetaView() {
               }
             }}
           />
+
+          {/* White Clock (Bottom) */}
+          {matchId && (
+            <div className="flex justify-between items-center mt-4 px-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-neutral-200 border border-neutral-300 rounded-lg flex items-center justify-center">
+                  <span className="text-neutral-900 font-bold text-xs">W</span>
+                </div>
+                <span className="font-semibold text-neutral-700 dark:text-neutral-300">Brancas</span>
+              </div>
+              <div className={`px-4 py-2 rounded-xl font-black text-xl tracking-wider ${whiteTimeLeft < 10000 ? 'bg-red-100 text-red-600' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-white'}`}>
+                {formatTime(whiteTimeLeft)}
+              </div>
+            </div>
+          )}
 
           {isGameOver && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">

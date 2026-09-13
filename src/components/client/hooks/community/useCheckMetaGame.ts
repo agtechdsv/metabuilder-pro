@@ -12,6 +12,18 @@ export function useCheckMetaGame(matchId?: string | null) {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
   const [optionSquares, setOptionSquares] = useState<Record<string, any>>({})
 
+  // Clocks
+  const [whiteTimeLeft, setWhiteTimeLeft] = useState<number>(0)
+  const [blackTimeLeft, setBlackTimeLeft] = useState<number>(0)
+  const [lastMoveAt, setLastMoveAt] = useState<number | null>(null)
+  const [timeControl, setTimeControl] = useState<{ min: number, inc: number } | null>(null)
+  const [matchStatus, setMatchStatus] = useState<string>('playing')
+
+  const matchIdRef = useRef(matchId)
+  useEffect(() => {
+    matchIdRef.current = matchId
+  }, [matchId])
+
   const resetGame = useCallback(() => {
     const newGame = new Chess()
     setGame(newGame)
@@ -20,25 +32,31 @@ export function useCheckMetaGame(matchId?: string | null) {
     setOptionSquares({})
   }, [])
 
-  const matchIdRef = useRef(matchId)
-  useEffect(() => {
-    matchIdRef.current = matchId
-  }, [matchId])
-
   useEffect(() => {
     if (!matchId) return
 
     let channel: any = null
 
     const fetchInitial = async () => {
-      const { data } = await supabase.from('checkmeta_matches').select('fen, status').eq('id', matchId).single()
-      if (data && data.fen) {
-        try {
-          const newGame = new Chess(data.fen)
-          setGame(newGame)
-          setFen(newGame.fen())
-        } catch (e) {
-          console.error("Invalid FEN from DB", e)
+      const { data } = await supabase.from('checkmeta_matches').select('*').eq('id', matchId).single()
+      if (data) {
+        setMatchStatus(data.status)
+        if (data.time_control_minutes) {
+          setTimeControl({ min: data.time_control_minutes, inc: data.time_control_increment || 0 })
+          const initialMs = data.time_control_minutes * 60 * 1000
+          setWhiteTimeLeft(data.white_time_left_ms ?? initialMs)
+          setBlackTimeLeft(data.black_time_left_ms ?? initialMs)
+          setLastMoveAt(data.last_move_at ? new Date(data.last_move_at).getTime() : null)
+        }
+        
+        if (data.fen) {
+          try {
+            const newGame = new Chess(data.fen)
+            setGame(newGame)
+            setFen(newGame.fen())
+          } catch (e) {
+            console.error("Invalid FEN from DB", e)
+          }
         }
       }
     }
@@ -47,7 +65,13 @@ export function useCheckMetaGame(matchId?: string | null) {
 
     channel = supabase.channel(`match_${matchId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'checkmeta_matches', filter: `id=eq.${matchId}` }, (payload) => {
-        const newFen = payload.new.fen
+        const row = payload.new
+        setMatchStatus(row.status)
+        setWhiteTimeLeft(row.white_time_left_ms)
+        setBlackTimeLeft(row.black_time_left_ms)
+        setLastMoveAt(row.last_move_at ? new Date(row.last_move_at).getTime() : null)
+
+        const newFen = row.fen
         if (newFen && newFen !== game.fen()) {
           try {
             const newGame = new Chess(newFen)
@@ -61,7 +85,53 @@ export function useCheckMetaGame(matchId?: string | null) {
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
-  }, [matchId, supabase])
+  }, [matchId, supabase, game])
+
+  const handleTimeOut = useCallback((loserTurn: string) => {
+    setMatchStatus('finished')
+    toast(`Fim por tempo! As ${loserTurn === 'w' ? 'Pretas' : 'Brancas'} vencem.`, 'info')
+    if (matchIdRef.current) {
+      supabase.from('checkmeta_matches').update({
+        status: 'finished',
+        result: loserTurn === 'w' ? '0-1' : '1-0',
+        white_time_left_ms: loserTurn === 'w' ? 0 : whiteTimeLeft,
+        black_time_left_ms: loserTurn === 'b' ? 0 : blackTimeLeft
+      }).eq('id', matchIdRef.current).then()
+    }
+  }, [supabase, toast, whiteTimeLeft, blackTimeLeft])
+
+  // Interval timer for local visual clocks
+  useEffect(() => {
+    if (matchStatus !== 'playing' || !lastMoveAt || !matchIdRef.current) return
+
+    const interval = setInterval(() => {
+      const now = Date.now()
+      const elapsed = now - lastMoveAt
+
+      if (game.turn() === 'w') {
+        setWhiteTimeLeft(prev => {
+          const next = prev - elapsed
+          if (next <= 0) {
+            handleTimeOut('w')
+            return 0
+          }
+          return next
+        })
+      } else {
+        setBlackTimeLeft(prev => {
+          const next = prev - elapsed
+          if (next <= 0) {
+            handleTimeOut('b')
+            return 0
+          }
+          return next
+        })
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [matchStatus, lastMoveAt, game, handleTimeOut])
+
 
   const getMoveOptions = useCallback((square: string) => {
     const moves = game.moves({
@@ -94,25 +164,56 @@ export function useCheckMetaGame(matchId?: string | null) {
   const makeMove = useCallback((move: string | { from: string, to: string, promotion?: string }) => {
     try {
       const result = game.move(move)
-      setGame(new Chess(game.fen())) // force instance change to trigger re-renders if necessary
-      setFen(game.fen())
       
-      if (game.isCheckmate()) {
-        toast('Xeque-mate! O jogo acabou.', 'success')
-      } else if (game.isDraw()) {
-        toast('Empate!', 'info')
-      } else if (game.isCheck()) {
-        toast('Xeque!', 'error')
-      }
+      if (result) {
+        setGame(new Chess(game.fen())) // force instance change to trigger re-renders if necessary
+        setFen(game.fen())
+        setSelectedSquare(null)
+        setOptionSquares({})
 
-      // Sync to Supabase
-      if (matchIdRef.current) {
-        const updatePayload: any = { fen: game.fen() }
-        if (game.isCheckmate() || game.isDraw()) {
-          updatePayload.status = 'finished'
-          updatePayload.result = game.isCheckmate() ? (game.turn() === 'w' ? '0-1' : '1-0') : '1/2-1/2'
+        // Evaluate times
+        let wTime = whiteTimeLeft
+        let bTime = blackTimeLeft
+        const now = Date.now()
+        
+        if (lastMoveAt) {
+          const elapsed = now - lastMoveAt
+          const incMs = (timeControl?.inc || 0) * 1000
+          
+          if (result.color === 'w') {
+            wTime = Math.max(0, wTime - elapsed + incMs)
+          } else {
+            bTime = Math.max(0, bTime - elapsed + incMs)
+          }
+          
+          setWhiteTimeLeft(wTime)
+          setBlackTimeLeft(bTime)
         }
-        supabase.from('checkmeta_matches').update(updatePayload).eq('id', matchIdRef.current).then()
+        
+        setLastMoveAt(now)
+        
+        if (game.isCheckmate()) {
+          toast('Xeque-mate! O jogo acabou.', 'success')
+        } else if (game.isDraw()) {
+          toast('Empate!', 'info')
+        } else if (game.isCheck()) {
+          toast('Xeque!', 'error')
+        }
+
+        // Sync to Supabase
+        if (matchIdRef.current) {
+          const updatePayload: any = { 
+            fen: game.fen(),
+            last_move_at: new Date(now).toISOString(),
+            white_time_left_ms: wTime,
+            black_time_left_ms: bTime
+          }
+          if (game.isCheckmate() || game.isDraw()) {
+            updatePayload.status = 'finished'
+            updatePayload.result = game.isCheckmate() ? (game.turn() === 'w' ? '0-1' : '1-0') : '1/2-1/2'
+          }
+          supabase.from('checkmeta_matches').update(updatePayload).eq('id', matchIdRef.current).then()
+        }
       }
       
       return result !== null
@@ -120,7 +221,7 @@ export function useCheckMetaGame(matchId?: string | null) {
       // Invalid move
       return false
     }
-  }, [game, toast])
+  }, [game, toast, lastMoveAt, timeControl, whiteTimeLeft, blackTimeLeft, supabase])
 
   const onSquareClick = useCallback((square: string) => {
     // If a piece is already selected, try to move
@@ -132,51 +233,39 @@ export function useCheckMetaGame(matchId?: string | null) {
       }
       const success = makeMove(moveInfo)
       if (success) {
-        setSelectedSquare(null)
-        setOptionSquares({})
         return
       }
     }
-    
-    // If the square contains a piece of the turn's color, select it
+
+    // Try to select the clicked piece to show options
     const piece = game.get(square as any)
     if (piece && piece.color === game.turn()) {
-      if (selectedSquare === square) {
-        setSelectedSquare(null)
-        setOptionSquares({})
-      } else {
-        setSelectedSquare(square)
-        getMoveOptions(square)
-      }
+      setSelectedSquare(square)
+      getMoveOptions(square)
     } else {
       setSelectedSquare(null)
       setOptionSquares({})
     }
   }, [game, selectedSquare, makeMove, getMoveOptions])
 
-  const onDrop = useCallback((sourceSquare: string, targetSquare: string, piece: any) => {
-    const pieceStr = typeof piece === 'string' ? piece : 'q'
-    const moveInfo = {
+  const onDrop = useCallback((sourceSquare: string, targetSquare: string, piece: string) => {
+    return makeMove({
       from: sourceSquare,
       to: targetSquare,
-      promotion: pieceStr[1]?.toLowerCase() ?? 'q',
-    }
-    const success = makeMove(moveInfo)
-    if (success) {
-      setSelectedSquare(null)
-      setOptionSquares({})
-    }
-    return success
+      promotion: piece[1].toLowerCase() ?? 'q',
+    })
   }, [makeMove])
 
   return {
     game,
     fen,
-    resetGame,
-    makeMove,
     onDrop,
+    resetGame,
     onSquareClick,
     optionSquares,
-    selectedSquare
+    selectedSquare,
+    whiteTimeLeft,
+    blackTimeLeft,
+    matchStatus
   }
 }
