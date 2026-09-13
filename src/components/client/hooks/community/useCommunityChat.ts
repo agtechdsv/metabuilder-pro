@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { getOrCreateChatRoom, getChatMessages, sendChatMessage } from '@/app/actions/community'
+import { useToast } from '@/components/ui/Toast'
 
 export function useCommunityChat(supabase: any, isSimulator: boolean, currentUser: any, setActiveSubTab: (tab: any) => void, setActiveConnection: (conn: any) => void) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
@@ -8,6 +9,7 @@ export function useCommunityChat(supabase: any, isSimulator: boolean, currentUse
   const [newMessageText, setNewMessageText] = useState('')
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!activeRoomId || isSimulator) return
@@ -60,7 +62,7 @@ export function useCommunityChat(supabase: any, isSimulator: boolean, currentUse
       const msgResult = await getChatMessages(roomResult.roomId)
       if (msgResult.success && msgResult.messages) setMessages(msgResult.messages)
     } else {
-      alert('Erro ao abrir conversa.')
+      toast('Erro ao abrir conversa.', 'error')
     }
     setIsLoadingMessages(false)
   }
@@ -88,7 +90,7 @@ export function useCommunityChat(supabase: any, isSimulator: boolean, currentUse
         return [...prev, result.message]
       })
     } else {
-      alert('Erro ao enviar mensagem: ' + result.error)
+      toast('Erro ao enviar mensagem: ' + result.error, 'error')
     }
     setIsSendingMessage(false)
   }
