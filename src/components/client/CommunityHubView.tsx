@@ -43,8 +43,8 @@ export default function CommunityHubView({
   
   const {
     connections, setConnections, suggestions, setSuggestions, isLoadingConnections,
-    isProcessingConnection, fetchConnectionsData, handleConnectionAction
-  } = useCommunityConnections(supabase, isSimulator)
+    isProcessingConnection, unreadCounts, setUnreadCounts, fetchConnectionsData, handleConnectionAction
+  } = useCommunityConnections(supabase, isSimulator, currentUser)
 
   const {
     posts, setPosts, isLoadingPosts, newPostContent, setNewPostContent,
@@ -635,11 +635,17 @@ export default function CommunityHubView({
                     
                     <div className="flex items-center gap-1 shrink-0">
                       <button 
-                        onClick={() => handleOpenChat(conn)}
-                        className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
+                        onClick={() => {
+                          setUnreadCounts(prev => ({ ...prev, [conn.user.id]: 0 }))
+                          handleOpenChat(conn)
+                        }}
+                        className="relative p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
                         title={t('client_views.community.send_dm_tooltip', 'Enviar Mensagem Privada')}
                       >
                         <MessageSquare className="w-4 h-4" />
+                        {unreadCounts[conn.user.id] > 0 && (
+                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-neutral-900 animate-pulse"></span>
+                        )}
                       </button>
                       
                       <button 

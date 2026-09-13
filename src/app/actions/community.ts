@@ -569,3 +569,41 @@ export async function sendChatMessage(roomId: string, content: string) {
     return { success: false, error: err.message }
   }
 }
+
+export async function getUnreadMessageCounts() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Não autenticado')
+
+    const { data: rooms } = await supabase
+      .from('community_chat_rooms')
+      .select('id, user1_id, user2_id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+
+    if (!rooms || rooms.length === 0) return { success: true, counts: {} }
+
+    const roomIds = rooms.map(r => r.id)
+
+    const { data: unreadMsgs, error } = await supabase
+      .from('community_chat_messages')
+      .select('sender_id')
+      .in('room_id', roomIds)
+      .eq('is_read', false)
+      .not('sender_id', 'eq', user.id)
+
+    if (error) throw error
+
+    const counts: Record<string, number> = {}
+    if (unreadMsgs) {
+      unreadMsgs.forEach(msg => {
+        counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1
+      })
+    }
+
+    return { success: true, counts }
+  } catch (err: any) {
+    console.error('Error in getUnreadMessageCounts:', err)
+    return { success: false, error: err.message }
+  }
+}
