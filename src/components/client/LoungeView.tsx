@@ -13,16 +13,53 @@ export function LoungeView() {
   const [activeTab, setActiveTab] = useState<LoungeTab>('hub')
 
   const tabs = [
-    { id: 'hub', label: 'Community Hub', icon: Users, description: 'Rede social e networking' },
-    { id: 'devmind', label: 'Psicologia do Dev', icon: BrainCircuit, description: 'Saúde mental e bem-estar (Em breve)' },
-    { id: 'checkmeta', label: 'CheckMeta', icon: Gamepad2, description: 'Arena de xadrez multijogador' },
+    { 
+      id: 'hub', 
+      label: 'Community Hub', 
+      icon: Users, 
+      description: 'Conecte-se, compartilhe novidades, tire dúvidas e converse em tempo real com outros desenvolvedores e criadores.' 
+    },
+    { 
+      id: 'devmind', 
+      label: 'Psicologia do Dev', 
+      icon: BrainCircuit, 
+      description: 'Um espaço seguro para cuidar da sua saúde mental, com artigos, exercícios e dicas para lidar com o burnout.' 
+    },
+    { 
+      id: 'checkmeta', 
+      label: 'CheckMeta', 
+      icon: Gamepad2, 
+      description: 'Relaxe jogando partidas de xadrez multijogador em tempo real com outros membros da comunidade.' 
+    },
   ] as const
+
+  const currentTab = tabs.find(t => t.id === activeTab)!
 
   return (
     <div className="flex flex-col w-full h-full gap-6">
       
       {/* Lounge Header & Navigation */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-8">
+        
+        {/* Dynamic Header */}
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
+            activeTab === 'hub' ? "bg-blue-500/10 text-blue-500" :
+            activeTab === 'devmind' ? "bg-emerald-500/10 text-emerald-500" :
+            "bg-indigo-500/10 text-indigo-500"
+          )}>
+            <currentTab.icon className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-neutral-900 dark:text-white">
+              {currentTab.label}
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+              {currentTab.description}
+            </p>
+          </div>
+        </div>
         <div className="flex bg-neutral-100 dark:bg-neutral-900 p-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full sm:w-fit overflow-x-auto no-scrollbar mx-auto sm:mx-0">
           {tabs.map((tab) => (
             <button

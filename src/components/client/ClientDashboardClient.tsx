@@ -373,9 +373,9 @@ export default function ClientDashboardClient({
       </div>
 
       {/* Tab Navigation */}
-      <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
+      <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-center" : "sm:items-center sm:justify-between")}>
           {isGuest && (
-            <div className="flex sm:grid sm:grid-cols-3 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
+            <div className="flex sm:grid sm:grid-cols-2 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
               {(['metavoice', 'downloads'] as const).map(tabId => {
                 const tab = TABS.find(t => t.id === tabId)!
                 return (

@@ -250,7 +250,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                 )}
 
                 <Link
-                  href="/client/dashboard?tab=lounge"
+                  href="/client/lounge"
                   onClick={() => setIsOpen(false)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-indigo-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-white transition-all group"
                 >
