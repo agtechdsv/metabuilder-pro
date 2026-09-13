@@ -273,13 +273,13 @@ export async function GET(request: Request) {
 }
 `)
 
-  // middleware.ts â€” intercepta toda requisição e redireciona para /login se não autenticado
-  files.set('middleware.ts', `import { NextResponse } from 'next/server'
+  // proxy.ts (antigo middleware.ts) — intercepta toda requisição e redireciona para /login se não autenticado
+  files.set('proxy.ts', `import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/api/login']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (
