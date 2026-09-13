@@ -52,51 +52,37 @@ export function CheckMetaLists() {
           }
         }
       })
-      .on('broadcast', { event: 'challenge' }, async (payload) => {
-        if (currentUser && payload.payload.to === currentUser.id) {
-          const accepted = window.confirm(`${payload.payload.fromName} desafiou você para uma partida! Aceitar?`)
-          if (accepted) {
-            // Create match
-            const { data: match, error } = await supabase
-              .from('checkmeta_matches')
-              .insert({
-                player_white_id: payload.payload.from,
-                player_black_id: currentUser.id,
-                status: 'playing'
-              })
-              .select()
-              .single()
-            
-            if (!error && match) {
-              toast('Partida iniciada!', 'success')
-              // Notify challenger that match started
-              channel.send({
-                type: 'broadcast',
-                event: 'challenge_accepted',
-                payload: { to: payload.payload.from, matchId: match.id }
-              })
-              navigateToMatch(match.id)
-            }
-          } else {
-            channel.send({
-              type: 'broadcast',
-              event: 'challenge_rejected',
-              payload: { to: payload.payload.from, fromName: currentUser.full_name }
-            })
+    if (!currentUser) return
+    
+    const challengesSub = supabase.channel('public:checkmeta_challenges')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkmeta_challenges', filter: `challenged_id=eq.${currentUser.id}` }, async (payload) => {
+        const { data: challenger } = await supabase.from('profiles').select('full_name').eq('id', payload.new.challenger_id).single()
+        const accepted = window.confirm(`${challenger?.full_name || 'Alguém'} desafiou você para uma partida! Aceitar?`)
+        if (accepted) {
+          const { data: match, error } = await supabase.from('checkmeta_matches').insert({
+            player_white_id: payload.new.challenger_id,
+            player_black_id: currentUser.id,
+            status: 'playing'
+          }).select().single()
+          
+          if (!error && match) {
+            await supabase.from('checkmeta_challenges').update({ status: 'accepted', match_id: match.id }).eq('id', payload.new.id)
+            toast('Partida iniciada!', 'success')
+            navigateToMatch(match.id)
           }
+        } else {
+          await supabase.from('checkmeta_challenges').update({ status: 'declined' }).eq('id', payload.new.id)
         }
       })
-      .on('broadcast', { event: 'challenge_accepted' }, (payload) => {
-        if (currentUser && payload.payload.to === currentUser.id) {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'checkmeta_challenges', filter: `challenger_id=eq.${currentUser.id}` }, (payload) => {
+        if (payload.new.status === 'accepted' && payload.new.match_id) {
           toast('Desafio aceito! A partida vai começar.', 'success')
-          navigateToMatch(payload.payload.matchId)
+          navigateToMatch(payload.new.match_id)
+        } else if (payload.new.status === 'declined') {
+          toast(`O desafio foi recusado.`, 'info')
         }
       })
-      .on('broadcast', { event: 'challenge_rejected' }, (payload) => {
-        if (currentUser && payload.payload.to === currentUser.id) {
-          toast(`${payload.payload.fromName} recusou o desafio.`, 'info')
-        }
-      })
+      .subscribe()
 
     // Fetch Matches
     const fetchMatches = async () => {
@@ -105,6 +91,8 @@ export function CheckMetaLists() {
         .select(`
           id,
           status,
+          player_white_id,
+          player_black_id,
           player_white:profiles!checkmeta_matches_player_white_id_fkey(full_name),
           player_black:profiles!checkmeta_matches_player_black_id_fkey(full_name)
         `)
@@ -127,6 +115,7 @@ export function CheckMetaLists() {
     return () => {
       channel.unsubscribe()
       matchesSubscription.unsubscribe()
+      challengesSub.unsubscribe()
     }
   }, [])
 
@@ -146,11 +135,19 @@ export function CheckMetaLists() {
         </div>
 
         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto no-scrollbar">
-          {onlineUsers.filter(u => u.status === 'available' && u.user_id !== currentUser?.id).length === 0 ? (
+          {onlineUsers.filter(u => 
+            u.status === 'available' && 
+            u.user_id !== currentUser?.id &&
+            !matches.some((m: any) => m.player_white_id === u.user_id || m.player_black_id === u.user_id)
+          ).length === 0 ? (
             <p className="text-sm text-neutral-500 text-center py-4">Nenhum usuário disponível agora.</p>
           ) : (
             onlineUsers
-              .filter(u => u.status === 'available' && u.user_id !== currentUser?.id)
+              .filter(u => 
+                u.status === 'available' && 
+                u.user_id !== currentUser?.id &&
+                !matches.some((m: any) => m.player_white_id === u.user_id || m.player_black_id === u.user_id)
+              )
               .map((u, i) => (
               <div key={i} className="flex items-center justify-between p-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                 <div className="flex items-center gap-3">
@@ -164,13 +161,11 @@ export function CheckMetaLists() {
                 </div>
                 
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     toast(`Desafio enviado para ${u.full_name}`, 'info')
-                    const channel = supabase.channel('lounge:checkmeta')
-                    channel.send({
-                      type: 'broadcast',
-                      event: 'challenge',
-                      payload: { from: currentUser?.id, fromName: currentUser?.full_name, to: u.user_id }
+                    await supabase.from('checkmeta_challenges').insert({
+                      challenger_id: currentUser?.id,
+                      challenged_id: u.user_id
                     })
                   }}
                   className="p-2 text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-500 hover:text-white rounded-lg transition-colors"

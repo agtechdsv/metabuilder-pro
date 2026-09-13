@@ -119,8 +119,8 @@ DECLARE
 BEGIN
   IF NEW.status = 'finished' AND OLD.status = 'playing' THEN
     -- Get current ratings
-    SELECT rating, rd, volatility INTO w_r, w_rd, w_vol FROM public.checkmeta_ratings WHERE user_id = NEW.white_player_id;
-    SELECT rating, rd, volatility INTO b_r, b_rd, b_vol FROM public.checkmeta_ratings WHERE user_id = NEW.black_player_id;
+    SELECT rating, rd, volatility INTO w_r, w_rd, w_vol FROM public.checkmeta_ratings WHERE user_id = NEW.player_white_id;
+    SELECT rating, rd, volatility INTO b_r, b_rd, b_vol FROM public.checkmeta_ratings WHERE user_id = NEW.player_black_id;
 
     -- If players don't have ratings yet for some reason, use defaults
     IF w_r IS NULL THEN w_r := 1500.0; w_rd := 350.0; w_vol := 0.06; END IF;
@@ -142,11 +142,11 @@ BEGIN
     -- Update ratings
     UPDATE public.checkmeta_ratings 
     SET rating = w_new_r, rd = w_new_rd, volatility = w_new_vol, games_played = games_played + 1, last_played_at = now() 
-    WHERE user_id = NEW.white_player_id;
+    WHERE user_id = NEW.player_white_id;
     
     UPDATE public.checkmeta_ratings 
     SET rating = b_new_r, rd = b_new_rd, volatility = b_new_vol, games_played = games_played + 1, last_played_at = now() 
-    WHERE user_id = NEW.black_player_id;
+    WHERE user_id = NEW.player_black_id;
   END IF;
 
   RETURN NEW;

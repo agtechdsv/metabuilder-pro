@@ -7,7 +7,7 @@ import { CheckMetaLists } from './checkmeta/CheckMetaLists'
 import { CheckMetaTournaments } from './checkmeta/CheckMetaTournaments'
 import { CheckMetaLobby } from './checkmeta/CheckMetaLobby'
 import { createClient } from '@/utils/supabase/client'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export function CheckMetaView() {
   const searchParams = useSearchParams()
@@ -21,16 +21,21 @@ export function CheckMetaView() {
     optionSquares,
     whiteTimeLeft,
     blackTimeLeft,
-    matchStatus
+    matchStatus,
+    whitePlayerId,
+    blackPlayerId
   } = useCheckMetaGame(matchId)
   const { t } = useI18n()
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setCurrentUserId(user.id)
         const { data } = await supabase.from('profiles').select('is_super_admin').eq('id', user.id).single()
         if (data?.is_super_admin) {
           setIsSuperAdmin(true)
@@ -59,15 +64,15 @@ export function CheckMetaView() {
     : t('checkmeta.status.playing', 'Em andamento')
 
   return (
-    <div className="flex flex-col xl:flex-row gap-8 w-full max-w-7xl mx-auto items-start">
+    <div className="flex flex-col xl:flex-row gap-6 lg:gap-10 h-full p-6 w-full max-w-[1400px] mx-auto items-start xl:items-stretch">
       
       {/* Board Column */}
       <div className="flex-1 w-full max-w-[600px] mx-auto xl:mx-0">
         
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden relative">
-          
-          {/* Black Clock (Top) */}
-          {matchId && (
+        {matchId ? (
+          <div className="bg-white dark:bg-neutral-900 p-4 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xl overflow-hidden relative">
+            
+            {/* Black Clock (Top) */}
             <div className="flex justify-between items-center mb-4 px-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center">
@@ -79,31 +84,29 @@ export function CheckMetaView() {
                 {formatTime(blackTimeLeft)}
               </div>
             </div>
-          )}
 
-          {/* Classic Board Styling */}
-          <Chessboard 
-            options={{
-              position: fen,
-              onPieceDrop: ({ piece, sourceSquare, targetSquare }) => {
-                if (sourceSquare && targetSquare) return onDrop(sourceSquare, targetSquare, piece as unknown as string)
-                return false
-              },
-              onSquareClick: ({ square }) => onSquareClick(square as string),
-              squareStyles: optionSquares,
-              boardOrientation: "white",
-              darkSquareStyle: { backgroundColor: '#6366f1' },
-              lightSquareStyle: { backgroundColor: '#e0e7ff' },
-              animationDurationInMs: 300,
-              boardStyle: {
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-              }
-            }}
-          />
+            {/* Classic Board Styling */}
+            <Chessboard 
+              options={{
+                boardOrientation: currentUserId === blackPlayerId ? "black" : "white",
+                position: fen,
+                onPieceDrop: ({ piece, sourceSquare, targetSquare }: any) => {
+                  if (sourceSquare && targetSquare) return onDrop(sourceSquare, targetSquare, piece as unknown as string)
+                  return false
+                },
+                onSquareClick: ({ square }: any) => onSquareClick(square as string),
+                squareStyles: optionSquares,
+                darkSquareStyle: { backgroundColor: '#5c7bb1' },
+                lightSquareStyle: { backgroundColor: '#a9bede' },
+                animationDurationInMs: 300,
+                boardStyle: {
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                }
+              }}
+            />
 
-          {/* White Clock (Bottom) */}
-          {matchId && (
+            {/* White Clock (Bottom) */}
             <div className="flex justify-between items-center mt-4 px-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-neutral-200 border border-neutral-300 rounded-lg flex items-center justify-center">
@@ -115,21 +118,29 @@ export function CheckMetaView() {
                 {formatTime(whiteTimeLeft)}
               </div>
             </div>
-          )}
 
-          {isGameOver && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
-              <h2 className="text-4xl font-black mb-2">{gameStatus}</h2>
-              <button 
-                onClick={resetGame}
-                className="mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold flex items-center gap-2 transition-colors"
-              >
-                <RotateCcw className="w-5 h-5" />
-                {t('checkmeta.actions.play_again', 'Jogar Novamente')}
-              </button>
-            </div>
-          )}
-        </div>
+            {isGameOver && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
+                <h2 className="text-4xl font-black mb-2">{gameStatus}</h2>
+                <p className="text-lg opacity-80 mb-6">Fim de jogo.</p>
+                
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => router.push('/client/lounge')}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all"
+                  >
+                    Voltar para o Lobby
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center bg-white/50 dark:bg-neutral-900/50 rounded-3xl border border-dashed border-neutral-300 dark:border-neutral-700">
+            <h2 className="text-2xl font-bold text-neutral-400 mb-2">CheckMeta</h2>
+            <p className="text-neutral-500 max-w-sm text-center">Entre em um torneio ou procure uma partida rápida no Lobby para jogar.</p>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Controls Column */}

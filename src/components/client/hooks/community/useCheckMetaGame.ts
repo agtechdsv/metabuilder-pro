@@ -18,6 +18,8 @@ export function useCheckMetaGame(matchId?: string | null) {
   const [lastMoveAt, setLastMoveAt] = useState<number | null>(null)
   const [timeControl, setTimeControl] = useState<{ min: number, inc: number } | null>(null)
   const [matchStatus, setMatchStatus] = useState<string>('playing')
+  const [whitePlayerId, setWhitePlayerId] = useState<string | null>(null)
+  const [blackPlayerId, setBlackPlayerId] = useState<string | null>(null)
 
   const matchIdRef = useRef(matchId)
   useEffect(() => {
@@ -41,6 +43,8 @@ export function useCheckMetaGame(matchId?: string | null) {
       const { data } = await supabase.from('checkmeta_matches').select('*').eq('id', matchId).single()
       if (data) {
         setMatchStatus(data.status)
+        setWhitePlayerId(data.player_white_id)
+        setBlackPlayerId(data.player_black_id)
         if (data.time_control_minutes) {
           setTimeControl({ min: data.time_control_minutes, inc: data.time_control_increment || 0 })
           const initialMs = data.time_control_minutes * 60 * 1000
@@ -88,6 +92,8 @@ export function useCheckMetaGame(matchId?: string | null) {
   }, [matchId, supabase, game])
 
   const handleTimeOut = useCallback((loserTurn: string) => {
+    if (matchStatus === 'finished') return
+    
     setMatchStatus('finished')
     toast(`Fim por tempo! As ${loserTurn === 'w' ? 'Pretas' : 'Brancas'} vencem.`, 'info')
     if (matchIdRef.current) {
@@ -96,9 +102,12 @@ export function useCheckMetaGame(matchId?: string | null) {
         result: loserTurn === 'w' ? '0-1' : '1-0',
         white_time_left_ms: loserTurn === 'w' ? 0 : whiteTimeLeft,
         black_time_left_ms: loserTurn === 'b' ? 0 : blackTimeLeft
-      }).eq('id', matchIdRef.current).then()
+      }).eq('id', matchIdRef.current)
+      .then(({ error }) => {
+        if (error) console.error("Error setting timeout status:", error)
+      })
     }
-  }, [supabase, toast, whiteTimeLeft, blackTimeLeft])
+  }, [supabase, toast, whiteTimeLeft, blackTimeLeft, matchStatus])
 
   // Interval timer for local visual clocks
   useEffect(() => {
@@ -112,6 +121,7 @@ export function useCheckMetaGame(matchId?: string | null) {
         setWhiteTimeLeft(prev => {
           const next = prev - elapsed
           if (next <= 0) {
+            clearInterval(interval)
             handleTimeOut('w')
             return 0
           }
@@ -121,6 +131,7 @@ export function useCheckMetaGame(matchId?: string | null) {
         setBlackTimeLeft(prev => {
           const next = prev - elapsed
           if (next <= 0) {
+            clearInterval(interval)
             handleTimeOut('b')
             return 0
           }
@@ -212,7 +223,10 @@ export function useCheckMetaGame(matchId?: string | null) {
             updatePayload.status = 'finished'
             updatePayload.result = game.isCheckmate() ? (game.turn() === 'w' ? '0-1' : '1-0') : '1/2-1/2'
           }
-          supabase.from('checkmeta_matches').update(updatePayload).eq('id', matchIdRef.current).then()
+          supabase.from('checkmeta_matches').update(updatePayload).eq('id', matchIdRef.current)
+          .then(({ error }) => {
+            if (error) console.error("Error updating move:", error)
+          })
         }
       }
       
@@ -266,6 +280,8 @@ export function useCheckMetaGame(matchId?: string | null) {
     selectedSquare,
     whiteTimeLeft,
     blackTimeLeft,
-    matchStatus
+    matchStatus,
+    whitePlayerId,
+    blackPlayerId
   }
 }
