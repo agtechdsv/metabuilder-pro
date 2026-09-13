@@ -153,6 +153,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS trg_checkmeta_match_finished ON public.checkmeta_matches;
 CREATE TRIGGER trg_checkmeta_match_finished
 AFTER UPDATE OF status ON public.checkmeta_matches
 FOR EACH ROW EXECUTE FUNCTION checkmeta_match_finished_trigger();
@@ -198,6 +199,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS trg_checkmeta_validate_time ON public.checkmeta_matches;
 CREATE TRIGGER trg_checkmeta_validate_time
 BEFORE UPDATE ON public.checkmeta_matches
 FOR EACH ROW EXECUTE FUNCTION checkmeta_validate_move_time();
