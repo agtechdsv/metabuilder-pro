@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react'
 import CommunityHubView from './CommunityHubView'
 import { CheckMetaView } from './CheckMetaView'
@@ -12,8 +14,8 @@ export function LoungeView() {
 
   const tabs = [
     { id: 'hub', label: 'Community Hub', icon: Users, description: 'Rede social e networking' },
-    { id: 'checkmeta', label: 'CheckMeta', icon: Gamepad2, description: 'Arena de xadrez multijogador' },
     { id: 'devmind', label: 'Psicologia do Dev', icon: BrainCircuit, description: 'Saúde mental e bem-estar (Em breve)' },
+    { id: 'checkmeta', label: 'CheckMeta', icon: Gamepad2, description: 'Arena de xadrez multijogador' },
   ] as const
 
   return (
@@ -36,8 +38,8 @@ export function LoungeView() {
               <tab.icon className={cn(
                 "w-4 h-4",
                 activeTab === tab.id && tab.id === 'hub' ? "text-blue-500" : "",
-                activeTab === tab.id && tab.id === 'checkmeta' ? "text-indigo-500" : "",
-                activeTab === tab.id && tab.id === 'devmind' ? "text-emerald-500" : ""
+                activeTab === tab.id && tab.id === 'devmind' ? "text-emerald-500" : "",
+                activeTab === tab.id && tab.id === 'checkmeta' ? "text-indigo-500" : ""
               )} />
               {tab.label}
             </button>
@@ -56,7 +58,6 @@ export function LoungeView() {
             transition={{ duration: 0.2 }}
           >
             {activeTab === 'hub' && <CommunityHubView />}
-            {activeTab === 'checkmeta' && <CheckMetaView />}
             {activeTab === 'devmind' && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center mb-6">
@@ -68,6 +69,7 @@ export function LoungeView() {
                 </p>
               </div>
             )}
+            {activeTab === 'checkmeta' && <CheckMetaView />}
           </motion.div>
         </AnimatePresence>
       </div>

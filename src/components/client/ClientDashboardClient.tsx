@@ -47,7 +47,6 @@ import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MetaVoiceView } from './MetaVoiceView'
-import { LoungeView } from './LoungeView'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -139,7 +138,6 @@ const TABS = [
   { id: 'productivity', label: 'Produtividade', icon: Activity },
   { id: 'downloads', label: 'Central de Downloads', icon: Download },
   { id: 'whitelabel', label: 'White-Label', icon: Globe },
-  { id: 'lounge', label: 'Lounge ☕', icon: Users },
   { id: 'metavoice', label: 'MetaVoice', icon: Lightbulb },
   { id: 'iclub', label: 'iClub', icon: Zap },
   { id: 'security', label: 'Segurança', icon: ShieldCheck },
@@ -164,7 +162,7 @@ export default function ClientDashboardClient({
   const { t } = useI18n()
   const [localProfile, setLocalProfile] = useState(profile)
   const isGuest = !localProfile?.is_super_admin && !localProfile?.subscription_licenses
-  const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'downloads' : 'dashboard')
+  const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'metavoice' : 'dashboard')
 
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
 
@@ -191,7 +189,7 @@ export default function ClientDashboardClient({
       const params = new URLSearchParams(window.location.search)
       const tab = params.get('tab') as TabId
       if (tab && TABS.some(t => t.id === tab)) {
-        if (!isGuest || tab === 'metavoice' || tab === 'lounge' || tab === 'downloads') {
+        if (!isGuest || tab === 'metavoice' || tab === 'downloads') {
           setActiveTab(tab)
         }
       }
@@ -199,8 +197,8 @@ export default function ClientDashboardClient({
   }, [isGuest])
 
   useEffect(() => {
-    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'lounge' && activeTab !== 'downloads') {
-      setActiveTab('downloads')
+    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'downloads') {
+      setActiveTab('metavoice')
     }
   }, [isGuest, activeTab])
 
@@ -297,19 +295,17 @@ export default function ClientDashboardClient({
           <div className="flex items-center gap-4">
             <div className={cn(
               "w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner",
-              activeTab === 'lounge' ? "bg-indigo-500/10 text-indigo-500" : "bg-amber-500/10 text-amber-500"
+              activeTab === 'downloads' ? "bg-indigo-500/10 text-indigo-500" : "bg-amber-500/10 text-amber-500"
             )}>
-              {activeTab === 'lounge' ? <Users className="w-6 h-6" /> : <Lightbulb className="w-6 h-6" />}
+              {activeTab === 'downloads' ? <Download className="w-6 h-6" /> : <Lightbulb className="w-6 h-6" />}
             </div>
             <div>
               <h1 className="text-2xl font-black text-neutral-900 dark:text-white">
-                {activeTab === 'lounge' ? t('client_dashboard.lounge_title', 'MetaBuilder Lounge ☕') : activeTab === 'downloads' ? t('client_dashboard.downloads_title', 'Central de Downloads') : t('client_dashboard.metavoice_title', 'Sugestões & Ideias (MetaVoice)')}
+                {activeTab === 'downloads' ? t('client_dashboard.downloads_title', 'Central de Downloads') : t('client_dashboard.metavoice_title', 'Sugestões & Ideias (MetaVoice)')}
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                {activeTab === 'lounge' 
-                  ? t('client_dashboard.lounge_subtitle', 'Conecte-se com a comunidade e cuide da sua saúde mental') 
-                  : activeTab === 'downloads'
-                  ? t('client_dashboard.downloads_subtitle', 'Baixe a IDE Desktop e mantenha seu ambiente de trabalho sempre atualizado')
+                {activeTab === 'downloads' 
+                  ? t('client_dashboard.downloads_subtitle', 'Baixe a IDE Desktop e mantenha seu ambiente de trabalho sempre atualizado') 
                   : t('client_dashboard.metavoice_subtitle', 'Deixe sugestões ou vote nas ideias da comunidade para nos ajudar a melhorar o MetaBuilder PRO')
                 }
               </p>
@@ -380,7 +376,7 @@ export default function ClientDashboardClient({
       <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
           {isGuest && (
             <div className="flex sm:grid sm:grid-cols-3 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
-              {(['downloads', 'lounge', 'metavoice'] as const).map(tabId => {
+              {(['metavoice', 'downloads'] as const).map(tabId => {
                 const tab = TABS.find(t => t.id === tabId)!
                 return (
                   <button
@@ -397,7 +393,7 @@ export default function ClientDashboardClient({
                     <tab.icon className={cn(
                       "w-4 h-4",
                       tab.id === 'downloads' && "text-cyan-500 dark:text-cyan-400",
-                      tab.id === 'lounge' && "text-indigo-500 dark:text-indigo-400",
+
                       tab.id === 'metavoice' && "text-amber-500 dark:text-amber-400",
                     )} />
                     <span className="hidden sm:block">{getTabLabel(tab.id, tab.label)}</span>
@@ -410,7 +406,7 @@ export default function ClientDashboardClient({
           {/* Owners: existing left tab group */}
           {!isGuest && (
           <div className="flex sm:grid sm:grid-cols-5 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
-            {TABS.filter(tab => !['iclub', 'metavoice', 'lounge', 'subscription', 'cancel'].includes(tab.id)).map(tab => (
+            {TABS.filter(tab => !['iclub', 'metavoice', 'subscription', 'cancel'].includes(tab.id)).map(tab => (
               <button
                 key={tab.id}
                 id={`client-tab-${tab.id}`}
@@ -445,7 +441,7 @@ export default function ClientDashboardClient({
             )}>
             {TABS.filter(tab => {
               if (isGuest && tab.id === 'iclub') return false;
-              return tab.id === 'metavoice' || tab.id === 'iclub' || tab.id === 'lounge';
+              return tab.id === 'metavoice' || tab.id === 'iclub';
             }).map(tab => (
               <button
                 key={tab.id}
@@ -461,8 +457,6 @@ export default function ClientDashboardClient({
                 <tab.icon className={cn(
                   "w-4 h-4",
                   tab.id === 'iclub'
-                    ? "text-indigo-500 dark:text-indigo-400"
-                    : tab.id === 'lounge'
                     ? "text-indigo-500 dark:text-indigo-400"
                     : "text-amber-500 dark:text-amber-400"
                 )} />
@@ -483,11 +477,6 @@ export default function ClientDashboardClient({
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
         >
-
-          {/* ── TAB: MetaBuilder Lounge ────────────────────────────────── */}
-          {activeTab === 'lounge' && (
-            <LoungeView />
-          )}
 
           {activeTab === 'metavoice' && (
             <MetaVoiceView userId={localProfile?.id} />
