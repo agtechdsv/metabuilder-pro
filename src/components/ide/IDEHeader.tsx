@@ -206,11 +206,10 @@ export function IDEHeader({
           {/* Console toggle button */}
           <button
             onClick={() => setShowConsole(v => !v)}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${
-              showConsole
+            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${showConsole
                 ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
                 : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
-            }`}
+              }`}
             title={showConsole ? t('workspace_components.ide_local.hide_console', 'Ocultar Console') : t('workspace_components.ide_local.show_console', 'Mostrar Console')}
           >
             <PanelBottomOpen className="w-4 h-4" />
@@ -219,11 +218,10 @@ export function IDEHeader({
           {/* Sidebar toggle button */}
           <button
             onClick={() => setShowSidebar(v => !v)}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${
-              showSidebar
+            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${showSidebar
                 ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
                 : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-700'
-            }`}
+              }`}
             title={showSidebar ? t('workspace_components.ide_local.hide_files', 'Ocultar Arquivos') : t('workspace_components.ide_local.show_files', 'Mostrar Arquivos')}
           >
             <PanelLeftOpen className="w-4 h-4" />
@@ -253,13 +251,12 @@ export function IDEHeader({
           <p className="text-sm text-neutral-400">
             Selecione a stack de Backend para gerar o código fonte nativo e sincronizar na árvore do seu projeto atual.
           </p>
-          
+
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Stack de Tecnologia</h4>
             <div className="grid grid-cols-1 gap-3">
-              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${
-                backendStack === 'nodejs' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
-              }`}>
+              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${backendStack === 'nodejs' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
+                }`}>
                 <input type="radio" checked={backendStack === 'nodejs'} onChange={() => setBackendStack('nodejs')} className="mt-1 w-4 h-4 accent-indigo-500" />
                 <div className="flex flex-col gap-1">
                   <span className={`font-bold text-sm ${backendStack === 'nodejs' ? 'text-indigo-400' : 'text-neutral-200'}`}>Next.js Full-Stack (Node.js)</span>
@@ -267,18 +264,17 @@ export function IDEHeader({
                 </div>
               </label>
 
-              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${
-                backendStack === 'java-spring' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
-              }`}>
+              <label className={`flex items-start gap-4 cursor-pointer border rounded-xl p-4 transition-all duration-200 ${backendStack === 'java-spring' ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5' : 'border-neutral-800 hover:border-neutral-700 bg-neutral-900/50'
+                }`}>
                 <input type="radio" checked={backendStack === 'java-spring'} onChange={() => setBackendStack('java-spring')} className="mt-1 w-4 h-4 accent-indigo-500" />
                 <div className="flex flex-col gap-1">
                   <span className={`font-bold text-sm ${backendStack === 'java-spring' ? 'text-indigo-400' : 'text-neutral-200'}`}>Next.js + Spring Boot 3 (Java 21)</span>
-                  <span className="text-xs text-neutral-500 leading-relaxed">Gera um monorepo com pastas independentes `frontend` (Next.js) e `backend` (Java Spring Boot API).</span>
+                  <span className="text-xs text-neutral-500 leading-relaxed">Gera uma aplicação com pastas independentes `frontend` (Next.js) e `backend` (Java Spring Boot API).</span>
                 </div>
               </label>
             </div>
           </div>
-          
+
           {backendStack === 'java-spring' && (
             <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
               <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
@@ -296,7 +292,7 @@ export function IDEHeader({
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-end pt-4 border-t border-neutral-800">
             <button onClick={confirmSync} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[#1a1b1e]">
               <DownloadCloud className="w-4 h-4" />
