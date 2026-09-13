@@ -84,6 +84,19 @@ export function IDEModal({
     )
   }
 
+  // Lista plana de todos os caminhos de arquivo na árvore (para Ctrl+Click)
+  const allFilePaths = React.useMemo(() => {
+    const paths: string[] = []
+    const flatten = (nodes: typeof fs.fileTree) => {
+      for (const node of nodes) {
+        if (!node.isDirectory) paths.push(node.path)
+        if (node.children) flatten(node.children)
+      }
+    }
+    flatten(fs.fileTree)
+    return paths
+  }, [fs.fileTree])
+
   return (
     <>
       <AnimatePresence>
@@ -174,6 +187,8 @@ export function IDEModal({
                 ideLoadingState={ideLoadingState}
                 monacoRef={monacoRef}
                 handleMonacoBeforeMount={handleMonacoBeforeMount}
+                allFilePaths={allFilePaths}
+                handleSelectFile={tabs.handleSelectFile}
               />
             </div>
 
