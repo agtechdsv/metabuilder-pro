@@ -43,6 +43,12 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
   // 5. Por modelo: Entity, Repository, Service, Controller + Specification
   for (const model of ast.models) {
     const route = routeMap.get(model.name) ?? routeMap.get(model.dbTable)
+
+    // Se o modelo tem chave composta, gera a classe @Embeddable separada
+    if (hasCompositePk(model)) {
+      files.set(`${basePkg}/entities/${model.name}Id.java`, generateEmbeddableIdClass(model, groupId))
+    }
+
     files.set(`${basePkg}/entities/${model.name}.java`, generateEntityClass(model, ast, groupId))
     files.set(`${basePkg}/repositories/${model.name}Repository.java`, generateRepositoryInterface(model, ast, groupId, route))
     files.set(`${basePkg}/services/${model.name}Service.java`, generateServiceClass(model, ast, groupId, route))
@@ -144,8 +150,19 @@ function groupIdToPath(groupId: string): string {
   return groupId.replace(/\./g, '/')
 }
 
+/** Retorna todos os campos marcados como PK (sem ponto) */
+function getPkFields(model: ModelNode) {
+  return model.fields.filter(f => f.isPrimary && !f.dbColumn.includes('.'))
+}
+
+/** Detecta se o modelo possui chave composta (mais de 1 PK real) */
+function hasCompositePk(model: ModelNode): boolean {
+  return getPkFields(model).length > 1
+}
+
 /** Determina o tipo Java da PK de um modelo */
 function getPkJavaType(model: ModelNode): string {
+  if (hasCompositePk(model)) return `${model.name}Id`
   const pkField = model.fields.find(f => f.isPrimary)
   if (!pkField) return 'Long'
   return toJavaType(pkField.dataType)
@@ -552,36 +569,91 @@ function getInverseRelations(model: ModelNode, ast: AppAST): InverseRelation[] {
   return inverses
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.5b — {Model}Id.java (@Embeddable para chaves compostas)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateEmbeddableIdClass(model: ModelNode, groupId: string): string {
+  const pkFields = getPkFields(model)
+  const javaTypes = new Set<string>()
+  const fieldLines: string[] = []
+
+  for (const field of pkFields) {
+    const jt = toJavaType(field.dataType)
+    javaTypes.add(jt)
+    fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+    fieldLines.push(`    private ${jt} ${toCamelCase(field.dbColumn)};`)
+    fieldLines.push(``)
+  }
+
+  const imports = [
+    `import jakarta.persistence.*;`,
+    `import lombok.Data;`,
+    `import lombok.EqualsAndHashCode;`,
+    ...getJavaImports(javaTypes),
+  ].join('\n')
+
+  return `package ${groupId}.entities;
+
+${imports}
+
+import java.io.Serializable;
+
+@Embeddable
+@Data
+@EqualsAndHashCode
+public class ${model.name}Id implements Serializable {
+
+${fieldLines.join('\n')}
+}
+`
+}
+
 function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): string {
   const javaTypes = new Set<string>()
 
   // Filtrar campos virtuais (JOIN — contêm ponto)
   const entityFields = model.fields.filter(f => !f.dbColumn.includes('.'))
+  const pkFieldNames = new Set(getPkFields(model).map(f => f.dbColumn))
+  const isComposite = hasCompositePk(model)
 
   const fieldLines: string[] = []
-  // Pre-process: guarantee at least one primary key
-  const hasPk = entityFields.some(f => f.isPrimary)
-  let processedFields = entityFields
-  if (!hasPk && entityFields.length > 0) {
-    processedFields = [...entityFields]
-    processedFields[0] = { ...processedFields[0], isPrimary: true }
-  }
 
-  let pkGenerated = false
-  for (const field of processedFields) {
-    const jt = toJavaType(field.dataType)
-    if (!javaTypes.has(jt)) javaTypes.add(jt)
-    const camelName = toCamelCase(field.dbColumn)
+  // ── Chave COMPOSTA: usar @EmbeddedId ──────────────────────────────────────
+  if (isComposite) {
+    const idClassName = `${model.name}Id`
+    fieldLines.push(`    @EmbeddedId`)
+    fieldLines.push(`    private ${idClassName} id;`)
+    fieldLines.push(``)
 
-    const rel = resolveFieldRelation(field, ast)
-
-    if (rel) {
+    // Campos PK que também são FK → gerar @ManyToOne read-only
+    for (const field of entityFields) {
+      if (!pkFieldNames.has(field.dbColumn)) continue
+      const rel = resolveFieldRelation(field, ast)
+      if (!rel) continue
       const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
-      const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
-      
-      if (field.isPrimary && !pkGenerated) {
-        pkGenerated = true
-        fieldLines.push(`    @Id`)
+      const camelName = toCamelCase(field.dbColumn)
+      const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : camelName + 'Ref'
+      fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+      fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
+      fieldLines.push(`    private ${targetPascal} ${propName};`)
+      fieldLines.push(``)
+    }
+
+    // Campos não-PK normais
+    for (const field of entityFields) {
+      if (pkFieldNames.has(field.dbColumn)) continue
+      const jt = toJavaType(field.dataType)
+      javaTypes.add(jt)
+      const camelName = toCamelCase(field.dbColumn)
+      const rel = resolveFieldRelation(field, ast)
+      if (rel) {
+        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
+        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : camelName + 'Ref'
+        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${targetPascal} ${propName};`)
+      } else {
         if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
           fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
           javaTypes.add('JdbcTypeCode')
@@ -589,45 +661,82 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
         }
         fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
         fieldLines.push(`    private ${jt} ${camelName};`)
-        fieldLines.push(``)
-        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
-        fieldLines.push(`    private ${targetPascal} ${propName};`)
-      } else {
-        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
-        fieldLines.push(`    private ${targetPascal} ${propName};`)
       }
-      
-    } else if (field.isPrimary && !pkGenerated) {
-      pkGenerated = true
-      fieldLines.push(`    @Id`)
-      if (ast.dbStack === 'oracle') {
-        const seqName = `SEQ_${model.dbTable.toUpperCase()}`
-        const genName = `${model.dbTable.toLowerCase()}_seq`
-        fieldLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
-        fieldLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
-      } else {
-        fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
-      }
-      if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-        fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-        javaTypes.add('JdbcTypeCode')
-        javaTypes.add('SqlTypes')
-      }
-      fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-      fieldLines.push(`    private ${jt} ${camelName};`)
-      
-    } else {
-      if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-        fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-        javaTypes.add('JdbcTypeCode')
-        javaTypes.add('SqlTypes')
-      }
-      fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-      fieldLines.push(`    private ${jt} ${camelName};`)
+      fieldLines.push(``)
     }
-    fieldLines.push(``)
+
+  // ── Chave SIMPLES (ou sem PK): comportamento original ────────────────────
+  } else {
+    // Pre-process: guarantee at least one primary key
+    const hasPk = entityFields.some(f => f.isPrimary)
+    let processedFields = entityFields
+    if (!hasPk && entityFields.length > 0) {
+      processedFields = [...entityFields]
+      processedFields[0] = { ...processedFields[0], isPrimary: true }
+    }
+
+    let pkGenerated = false
+    for (const field of processedFields) {
+      const jt = toJavaType(field.dataType)
+      if (!javaTypes.has(jt)) javaTypes.add(jt)
+      const camelName = toCamelCase(field.dbColumn)
+
+      const rel = resolveFieldRelation(field, ast)
+
+      if (rel) {
+        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
+        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
+        
+        if (field.isPrimary && !pkGenerated) {
+          pkGenerated = true
+          fieldLines.push(`    @Id`)
+          if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+            fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+            javaTypes.add('JdbcTypeCode')
+            javaTypes.add('SqlTypes')
+          }
+          fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+          fieldLines.push(`    private ${jt} ${camelName};`)
+          fieldLines.push(``)
+          fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+          fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
+          fieldLines.push(`    private ${targetPascal} ${propName};`)
+        } else {
+          fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
+          fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
+          fieldLines.push(`    private ${targetPascal} ${propName};`)
+        }
+        
+      } else if (field.isPrimary && !pkGenerated) {
+        pkGenerated = true
+        fieldLines.push(`    @Id`)
+        if (ast.dbStack === 'oracle') {
+          const seqName = `SEQ_${model.dbTable.toUpperCase()}`
+          const genName = `${model.dbTable.toLowerCase()}_seq`
+          fieldLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
+          fieldLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
+        } else {
+          fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+        }
+        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+          javaTypes.add('JdbcTypeCode')
+          javaTypes.add('SqlTypes')
+        }
+        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${jt} ${camelName};`)
+        
+      } else {
+        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
+          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+          javaTypes.add('JdbcTypeCode')
+          javaTypes.add('SqlTypes')
+        }
+        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    private ${jt} ${camelName};`)
+      }
+      fieldLines.push(``)
+    }
   }
 
   const inverseRels = getInverseRelations(model, ast)
@@ -642,11 +751,14 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     fieldLines.push(``)
   }
 
+  const idClassImport = isComposite ? `import ${groupId}.entities.${model.name}Id;` : ''
+
   const imports = [
     `import jakarta.persistence.*;`,
     `import lombok.Data;`,
+    idClassImport,
     ...getJavaImports(javaTypes),
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 
   return `package ${groupId}.entities;
 
@@ -768,8 +880,10 @@ function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: str
   const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
 
+  const isComposite = hasCompositePk(model)
   const imports = [
     `import ${groupId}.entities.${model.name};`,
+    isComposite ? `import ${groupId}.entities.${model.name}Id;` : ``,
     (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
     `import org.springframework.data.domain.Page;`,
     `import org.springframework.data.domain.Pageable;`,
@@ -777,7 +891,7 @@ function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: str
     hasSpec ? `import org.springframework.data.jpa.repository.JpaSpecificationExecutor;` : ``,
     `import org.springframework.stereotype.Repository;`,
     `import java.util.List;`,
-    pkType === 'UUID' ? `import java.util.UUID;` : ``
+    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
 
   const extendsClause = hasSpec 
