@@ -324,12 +324,26 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       }
     };
 
+    // Helper para lidar com a troca de código (PKCE FIX)
+    const handleAuthCode = async (code: string, redirectNext: string) => {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
+      if (error) {
+        setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação. Tente novamente.'));
+        setIsLoading(false);
+      } else if (data?.session) {
+        await processAuthSuccess(data.session.access_token, data.session.refresh_token, redirectNext);
+      }
+    };
+
     // Canal principal: BroadcastChannel (não depende de window.opener)
     const bc = new BroadcastChannel('supabase_auth_channel');
     bc.onmessage = async (event) => {
       if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
         const { access_token, refresh_token, next } = event.data;
         await processAuthSuccess(access_token, refresh_token, next);
+      } else if (event.data?.type === 'SUPABASE_AUTH_CODE') {
+        await handleAuthCode(event.data.code, event.data.next);
       }
     };
 
@@ -339,6 +353,8 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
         const { access_token, refresh_token, next } = event.data;
         await processAuthSuccess(access_token, refresh_token, next);
+      } else if (event.data?.type === 'SUPABASE_AUTH_CODE') {
+        await handleAuthCode(event.data.code, event.data.next);
       }
     };
 
@@ -471,6 +487,27 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     setIsLoading(true)
     setClientError(null)
 
+    // Tática anti-popup blocker: abrir a janela de forma síncrona, ANTES do await.
+    let popup: Window | null = null;
+    if (!isTauri() && typeof window !== 'undefined') {
+      try {
+        const width = 500
+        const height = 650
+        const left = window.screenX + (window.outerWidth - width) / 2
+        const top = window.screenY + (window.outerHeight - height) / 2
+        popup = window.open(
+          '',
+          'google-login',
+          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+        )
+        if (popup) {
+          popup.document.write('<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #050505; color: white;">Aguarde, conectando ao Google...</div>');
+        }
+      } catch (err) {
+        console.warn('Erro ao preparar popup:', err);
+      }
+    }
+
     // Para Tauri: usa a mesma callbackUrl do browser (HTTPS), pois a WebView
     // navega internamente pelo fluxo OAuth sem precisar abrir browser externo.
     let origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -493,6 +530,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
+        skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',
           access_type: 'offline',
@@ -501,13 +539,24 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     })
 
     if (error) {
+      if (popup) popup.close();
       setClientError(error.message)
       setIsLoading(false)
       return
     }
 
     if (data?.url) {
-      window.location.href = data.url
+      if (isTauri()) {
+        // Tauri usa In-App Browser (WebView), então é sempre redirect direto.
+        window.location.href = data.url
+      } else {
+        if (popup) {
+          popup.location.href = data.url
+        } else {
+          // Fallback se o navegador bloqueou o popup na abertura síncrona
+          window.location.href = data.url
+        }
+      }
     }
   }
 

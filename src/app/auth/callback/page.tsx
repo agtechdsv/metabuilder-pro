@@ -124,6 +124,32 @@ function CallbackHandler() {
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
 
+      // NOVO: PKCE FIX PARA POPUPS
+      // Se estamos em um popup, NÃO trocamos o código aqui porque o cookie sb-pkce-verifier
+      // pode não estar acessível devido a bloqueios de navegadores (SameSite/Third-party).
+      // Enviamos o "code" crú para a janela pai trocar!
+      let isPopup = false
+      if (typeof window !== 'undefined' && window.opener && !window.opener.closed && window.opener !== window) {
+        isPopup = true
+      }
+
+      if (isPopup) {
+        const payload = { type: 'SUPABASE_AUTH_CODE', code, next }
+        try { window.opener.postMessage(payload, window.location.origin) } catch (_) {}
+        try {
+          const bc = new BroadcastChannel('supabase_auth_channel')
+          bc.postMessage(payload)
+          bc.close()
+        } catch (_) {}
+
+        setStatus('success')
+        setTimeout(() => {
+          try { window.close() } catch (_) {}
+        }, 500)
+        return // Encerrar a execução, a janela pai cuidará do resto
+      }
+
+      // Se NÃO for popup (ex: Tauri WebView, Redirect direto), trocamos o código aqui mesmo
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
           console.error('Erro ao trocar código por sessão:', error)
