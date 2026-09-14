@@ -9,6 +9,12 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        domain: process.env.NODE_ENV === 'production' ? '.metabuilderpro.com' : undefined,
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll()
@@ -16,7 +22,10 @@ export async function createClient() {
         setAll(cookiesToSet: any[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                domain: process.env.NODE_ENV === 'production' ? '.metabuilderpro.com' : options?.domain,
+              })
             )
           } catch {
             // The `setAll` method was called from a Server Component.
