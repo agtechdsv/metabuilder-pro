@@ -341,6 +341,23 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       setIsLoading(true);
       const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
       if (error) {
+        // Ocorreu erro ao trocar o código. Mas é muito provável que o cliente do Supabase
+        // que estava rodando lá no popup já tenha trocado o código automaticamente (auto PKCE).
+        // Vamos verificar se a sessão já está ativa nos cookies!
+        let { data: { session } } = await supabase.auth.getSession();
+        
+        // Dá um tempinho extra para os cookies sincronizarem entre as abas se necessário
+        if (!session?.user) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const res = await supabase.auth.getSession();
+          session = res.data.session;
+        }
+
+        if (session?.user) {
+          await processAuthSuccess(session.access_token, session.refresh_token, redirectNext);
+          return;
+        }
+
         setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação. Tente novamente.'));
         setIsLoading(false);
       } else if (data?.session) {
