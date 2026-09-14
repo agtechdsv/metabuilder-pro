@@ -293,16 +293,13 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       let currentUser = currentSession?.user;
 
       if (!currentUser) {
-        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-        if (error) {
-          setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação.'));
-          setIsLoading(false);
-          return;
-        }
+        await supabase.auth.setSession({ access_token, refresh_token });
         const { data: { session: newSession } } = await supabase.auth.getSession();
         currentUser = newSession?.user;
       }
 
+      let redirectTo = next;
+      
       if (currentUser) {
         try {
           const mfaRes = await verifyMfaPolicy()
@@ -317,7 +314,6 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           console.error('MFA Policy check failed:', e)
         }
 
-        let redirectTo = next
         if (!redirectTo || redirectTo === '/workspace') {
           try {
             const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
@@ -327,11 +323,15 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
             redirectTo = '/workspace'
           }
         }
-        window.location.href = redirectTo;
-      } else {
-        setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação.'));
-        setIsLoading(false);
       }
+
+      if (!redirectTo) {
+        redirectTo = '/workspace';
+      }
+
+      // Redirecionamento INCONDICIONAL: se temos tokens, o login teve sucesso
+      // O recarregamento da página forçará a leitura dos cookies limpos
+      window.location.href = redirectTo;
     };
 
     // Helper para lidar com a troca de código (PKCE FIX)
