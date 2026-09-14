@@ -918,11 +918,13 @@ ${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJava
 
 function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
+  const isComposite = hasCompositePk(model)
   const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
 
   const imports = [
     `import ${groupId}.entities.${model.name};`,
+    isComposite ? `import ${groupId}.entities.${model.name}Id;` : ``,
     `import ${groupId}.repositories.${model.name}Repository;`,
     (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
     hasSpec ? `import ${groupId}.specifications.${model.name}Spec;` : ``,
@@ -930,7 +932,7 @@ function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, ro
     `import org.springframework.data.domain.*;`,
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
-    pkType === 'UUID' ? `import java.util.UUID;` : ``
+    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
 
   let searchMethod = ''
@@ -999,6 +1001,7 @@ ${searchMethod}${incomingFks.map(fk => `
 
 function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
+  const isComposite = hasCompositePk(model)
   const mapping = sanitizeTableForMapping(model.dbTable)
   const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
@@ -1012,6 +1015,7 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
 
   const imports = [
     `import ${groupId}.entities.${model.name};`,
+    isComposite ? `import ${groupId}.entities.${model.name}Id;` : ``,
     `import ${groupId}.services.${model.name}Service;`,
     (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
     ...Array.from(extraImports),
@@ -1022,7 +1026,7 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
     `import org.springframework.web.bind.annotation.*;`,
     hasSpec ? `import java.util.HashMap;` : ``,
     `import java.util.Map;`,
-    pkType === 'UUID' ? `import java.util.UUID;` : ``
+    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
 
   let searchEndpoint = ''
