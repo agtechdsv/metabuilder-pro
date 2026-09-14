@@ -35,6 +35,14 @@ export function HeaderActions({
   const supabase = createClient()
 
   useEffect(() => {
+    setUser(initialUser)
+  }, [initialUser])
+
+  useEffect(() => {
+    setProfile(initialProfile)
+  }, [initialProfile])
+
+  useEffect(() => {
     if (!initialUser && !hideUser) {
       const fetchUser = async () => {
         const { data: { user } } = await supabase.auth.getUser()

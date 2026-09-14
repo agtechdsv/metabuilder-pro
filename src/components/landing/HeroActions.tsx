@@ -1,19 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LayoutDashboard, ArrowRight, LogIn } from 'lucide-react'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { useI18n } from '@/i18n/I18nContext'
+import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 
 interface HeroActionsProps {
   user: any
 }
 
-export function HeroActions({ user }: HeroActionsProps) {
+export function HeroActions({ user: initialUser }: HeroActionsProps) {
+  const [user, setUser] = useState(initialUser)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const { t } = useI18n()
+
+  useEffect(() => {
+    setUser(initialUser)
+  }, [initialUser])
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!initialUser) {
+      supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
+        if (currentUser) setUser(currentUser)
+      })
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [initialUser])
 
   return (
     <>

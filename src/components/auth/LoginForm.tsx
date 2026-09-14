@@ -477,12 +477,14 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     let callbackUrl = `${window.location.origin}/auth/callback`
     if (isTauri()) {
       // Mantém HTTPS — a WebView vai navegar para o Google e voltar para cá
-      callbackUrl = 'https://metabuilderpro.com/auth/callback'
+      callbackUrl = 'https://metabuilderpro.com/auth/callback?next=/workspace'
     } else if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       const redirectParam = searchParams.get('redirect_to')
       if (redirectParam) {
         callbackUrl += `?next=${encodeURIComponent(redirectParam)}`
+      } else {
+        callbackUrl += `?next=/workspace`
       }
     }
 
