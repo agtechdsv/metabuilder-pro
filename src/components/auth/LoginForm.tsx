@@ -289,7 +289,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     const processAuthSuccess = async (access_token: string, refresh_token: string, next: string) => {
       setIsLoading(true);
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-      if (!error) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      if (!error || currentUser) {
         try {
           const mfaRes = await verifyMfaPolicy()
           if (mfaRes.mfaSetupRequired) {
@@ -305,11 +307,10 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
         let redirectTo = next
         if (!redirectTo || redirectTo === '/workspace') {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
+          if (currentUser) {
             try {
               const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
-              redirectTo = await getPostLoginRedirectPath(user.id)
+              redirectTo = await getPostLoginRedirectPath(currentUser.id)
             } catch (err) {
               console.error('Error in OAuth redirect:', err)
               redirectTo = '/workspace'
