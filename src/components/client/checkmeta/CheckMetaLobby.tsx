@@ -43,11 +43,11 @@ export function CheckMetaLobby() {
       }
     }
 
-    const channelWhite = supabase.channel('matchmaking_white')
+    const channelWhite = supabase.channel(`matchmaking_white_${currentUser.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkmeta_matches', filter: `player_white_id=eq.${currentUser.id}` }, handleMatchFound)
       .subscribe()
 
-    const channelBlack = supabase.channel('matchmaking_black')
+    const channelBlack = supabase.channel(`matchmaking_black_${currentUser.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkmeta_matches', filter: `player_black_id=eq.${currentUser.id}` }, handleMatchFound)
       .subscribe()
 
@@ -58,7 +58,17 @@ export function CheckMetaLobby() {
   }, [currentUser, pathname, router, searchParams, supabase])
 
   const joinQueue = async (min: number, inc: number) => {
-    if (!currentUser) return
+    let user = currentUser
+    if (!user) {
+      const { data } = await supabase.auth.getUser()
+      user = data?.user
+      if (user) setCurrentUser(user)
+    }
+    if (!user) {
+      console.error("Matchmaking error: user not authenticated")
+      return
+    }
+
     setIsSearching({ min, inc })
     
     const { data: matchId, error } = await supabase.rpc('join_matchmaking_queue', {

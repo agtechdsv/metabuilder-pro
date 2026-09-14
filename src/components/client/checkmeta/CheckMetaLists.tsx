@@ -21,55 +21,61 @@ export function CheckMetaLists() {
     router.push(`${pathname}?${params.toString()}`)
   }
 
+  // 1. Fetch current user and profile
   useEffect(() => {
-    // Supabase Presence setup for lounge:checkmeta
-    // We must remove any existing channel first — Supabase caches channels by name,
-    // and calling .on() after .subscribe() on a cached instance throws a fatal error.
-    let channel: ReturnType<typeof supabase.channel> | null = null
-    let cancelled = false
-
-    const setup = async () => {
-      // Remove stale channel if it exists from a previous mount
-      const existing = supabase.getChannels().find((c: any) => c.topic === 'realtime:lounge:checkmeta')
-      if (existing) await supabase.removeChannel(existing)
-      if (cancelled) return
-
-      channel = supabase.channel('lounge:checkmeta')
-
-      channel
-        .on('presence', { event: 'sync' }, () => {
-          if (!channel) return
-          const state = channel.presenceState()
-          const users = Object.values(state).map((presence: any) => presence[0])
-          setOnlineUsers(users)
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+        setCurrentUser({
+          id: user.id,
+          full_name: profile?.full_name || 'Desconhecido'
         })
-        .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED' && !cancelled) {
-            // Track current user
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user && !cancelled) {
-              const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-              const u = {
-                id: user.id,
-                full_name: profile?.full_name || 'Desconhecido'
-              }
-              setCurrentUser(u)
-              await channel?.track({
-                user_id: u.id,
-                full_name: u.full_name,
-                status: 'available',
-                online_at: new Date().toISOString()
-              })
-            }
-          }
-        })
+      }
+    })
+  }, [])
+
+  // 2. Presence setup for lounge:checkmeta
+  useEffect(() => {
+    let isCancelled = false
+
+    // Clean up any existing channel with the same topic before subscribing
+    const existing = supabase.getChannels().find((c: any) => c.topic === 'realtime:lounge:checkmeta')
+    if (existing) {
+      supabase.removeChannel(existing)
     }
 
-    setup()
+    const channel = supabase.channel('lounge:checkmeta')
 
-    if (!currentUser) return
-    
-    const challengesSub = supabase.channel('public:checkmeta_challenges')
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        if (isCancelled) return
+        const state = channel.presenceState()
+        const users = Object.values(state).map((presence: any) => presence[0])
+        setOnlineUsers(users)
+      })
+      .subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED' && !isCancelled && currentUser) {
+          await channel.track({
+            user_id: currentUser.id,
+            full_name: currentUser.full_name,
+            status: 'available',
+            online_at: new Date().toISOString()
+          })
+        }
+      })
+
+    return () => {
+      isCancelled = true
+      supabase.removeChannel(channel)
+    }
+  }, [currentUser?.id])
+
+  // 3. Direct challenges listener
+  useEffect(() => {
+    if (!currentUser?.id) return
+
+    const challengesSub = supabase
+      .channel(`challenges_${currentUser.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkmeta_challenges', filter: `challenged_id=eq.${currentUser.id}` }, async (payload) => {
         const { data: challenger } = await supabase.from('profiles').select('full_name').eq('id', payload.new.challenger_id).single()
         const accepted = window.confirm(`${challenger?.full_name || 'Alguém'} desafiou você para uma partida! Aceitar?`)
@@ -99,6 +105,15 @@ export function CheckMetaLists() {
       })
       .subscribe()
 
+    return () => {
+      supabase.removeChannel(challengesSub)
+    }
+  }, [currentUser?.id])
+
+  // 4. Matches loader and realtime listener
+  useEffect(() => {
+    let isCancelled = false
+
     const fetchMatches = async () => {
       try {
         const { data: matchesData, error } = await supabase
@@ -111,6 +126,8 @@ export function CheckMetaLists() {
           console.error("Error fetching matches:", error)
           return
         }
+
+        if (isCancelled) return
 
         if (!matchesData || matchesData.length === 0) {
           setMatches([])
@@ -135,6 +152,8 @@ export function CheckMetaLists() {
           }
         }
 
+        if (isCancelled) return
+
         const enriched = matchesData.map((m: any) => ({
           ...m,
           player_white: { full_name: profilesMap[m.player_white_id] || 'Brancas' },
@@ -149,7 +168,6 @@ export function CheckMetaLists() {
 
     fetchMatches()
 
-    // Realtime subscription for matches
     const matchesSubscription = supabase
       .channel('public:checkmeta_matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'checkmeta_matches' }, () => {
@@ -157,15 +175,12 @@ export function CheckMetaLists() {
       })
       .subscribe()
 
-    // Polling fallback to guarantee continuous updates
     const pollInterval = setInterval(fetchMatches, 4000)
 
     return () => {
-      cancelled = true
+      isCancelled = true
       clearInterval(pollInterval)
-      if (channel) supabase.removeChannel(channel)
-      matchesSubscription.unsubscribe()
-      challengesSub.unsubscribe()
+      supabase.removeChannel(matchesSubscription)
     }
   }, [])
 

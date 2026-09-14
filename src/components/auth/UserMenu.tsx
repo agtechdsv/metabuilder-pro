@@ -108,11 +108,23 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   const handleSignOut = async () => {
     try {
       const supabase = createClient()
-      await supabase.auth.signOut()
+      supabase.auth.signOut().catch(() => {})
+      try {
+        await signOut()
+      } catch (_) {}
       document.cookie = 'passkey_authenticated=; path=/; max-age=0; SameSite=Lax'
-      window.location.href = '/'
+      if (typeof document !== 'undefined') {
+        document.cookie.split(';').forEach(c => {
+          const name = c.trim().split('=')[0]
+          if (name.startsWith('sb-')) {
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`
+          }
+        })
+      }
     } catch (error) {
       console.error('Erro ao sair:', error)
+    } finally {
+      window.location.href = '/'
     }
   }
 
