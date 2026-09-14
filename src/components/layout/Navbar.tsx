@@ -9,6 +9,7 @@ import { HeaderActions } from '@/components/layout/HeaderActions'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { cn } from '@/lib/utils'
 
@@ -28,11 +29,58 @@ function ActiveIndicator() {
   )
 }
 
-export function Navbar({ user, profile, showLogin = true, isStudio = false }: NavbarProps) {
+export function Navbar({ user: initialUser, profile: initialProfile, showLogin = true, isStudio = false }: NavbarProps) {
+  const [user, setUser] = useState(initialUser)
+  const [profile, setProfile] = useState(initialProfile)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const { t } = useI18n()
   const pathname = usePathname()
+
+  useEffect(() => {
+    setUser(initialUser)
+  }, [initialUser])
+
+  useEffect(() => {
+    setProfile(initialProfile)
+  }, [initialProfile])
+
+  useEffect(() => {
+    const supabase = createClient()
+
+    if (!initialUser) {
+      supabase.auth.getUser().then(async ({ data: { user: currentUser } }) => {
+        if (currentUser) {
+          setUser(currentUser)
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+          if (data) setProfile(data)
+        }
+      })
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+      if (currentUser) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single()
+        if (data) setProfile(data)
+      } else {
+        setProfile(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [initialUser])
 
   const isItemActive = (href: string, altHrefs?: string[]) => {
     if (!pathname) return false

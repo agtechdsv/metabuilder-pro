@@ -90,13 +90,10 @@ export default async function RootLayout({
                 document.cookie = 'iclub_ref_code=' + encodeURIComponent(ref) + '; path=/; max-age=604800; SameSite=Lax';
               }
 
-              // Se o Supabase rejeitar a URL de callback (ex: falta de configuração no painel),
-              // ele faz fallback para a URL base (/). Se isso acontecer no popup e tiver um código OAuth,
-              // interceptamos e forçamos o redirecionamento para o callback correto.
-              if (window.opener && window.opener !== window) {
-                if (window.location.pathname === '/' && window.location.search.includes('code=')) {
-                  window.location.href = '/auth/callback' + window.location.search;
-                }
+              // Se o Supabase rejeitar a URL de callback ou fizer fallback para a URL base (/),
+              // interceptamos o retorno com código de autorização (ou token no hash) e redirecionamos imediatamente para /auth/callback
+              if (window.location.pathname === '/' && (window.location.search.includes('code=') || window.location.hash.includes('access_token='))) {
+                window.location.replace('/auth/callback' + window.location.search + window.location.hash);
               }
             } catch (e) {}
             `

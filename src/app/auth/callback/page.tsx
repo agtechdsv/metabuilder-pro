@@ -46,11 +46,12 @@ function CallbackHandler() {
         }
       }
 
-      // 0. Determina o redirect_to dinâmico se a URL não forneceu um explícito
+      // 0. Determina o redirect_to dinâmico se a URL não forneceu um destino explícito não-padrão
       let finalRedirect = next
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search)
-        if (!urlParams.get('next') && session?.user?.id) {
+        const nextParam = urlParams.get('next')
+        if ((!nextParam || nextParam === '/workspace' || nextParam === '/') && session?.user?.id) {
           try {
             const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
             finalRedirect = await getPostLoginRedirectPath(session.user.id)
@@ -58,6 +59,10 @@ function CallbackHandler() {
             console.error('Erro ao determinar redirecionamento dinâmico:', e)
           }
         }
+      }
+
+      if (!finalRedirect || finalRedirect === '/') {
+        finalRedirect = '/workspace'
       }
 
       const payload = { 
