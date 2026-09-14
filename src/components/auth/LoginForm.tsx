@@ -284,6 +284,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
   // O BroadcastChannel é necessário pois o COOP do Google pode cortar window.opener em produção
   useEffect(() => {
     const supabase = createClient();
+    let isExchanging = false;
 
     const processAuthSuccess = async (access_token: string, refresh_token: string, next: string) => {
       setIsLoading(true);
@@ -326,6 +327,8 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
     // Helper para lidar com a troca de código (PKCE FIX)
     const handleAuthCode = async (code: string, redirectNext: string) => {
+      if (isExchanging) return;
+      isExchanging = true;
       setIsLoading(true);
       const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
       if (error) {

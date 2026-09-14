@@ -107,8 +107,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
 
   const handleSignOut = async () => {
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
+      await signOut()
       document.cookie = 'passkey_authenticated=; path=/; max-age=0; SameSite=Lax'
       window.location.href = '/'
     } catch (error) {
