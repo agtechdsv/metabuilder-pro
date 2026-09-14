@@ -22,14 +22,6 @@ export async function proxy(request: NextRequest) {
     'metabuilder-pro.vercel.app'
   ].filter(Boolean)
 
-  // Canonical redirect: force non-www metabuilderpro.com to maintain consistent cookies and OAuth storage
-  if (hostname === 'www.metabuilderpro.com') {
-    const redirectUrl = new URL(request.url)
-    redirectUrl.hostname = 'metabuilderpro.com'
-    redirectUrl.port = ''
-    return NextResponse.redirect(redirectUrl, 308)
-  }
-
   // If we don't have a hostname or it's one of our core domains, proceed normally
   if (!hostname || appDomains.includes(hostname)) {
     return response

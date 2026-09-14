@@ -473,11 +473,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
     // Para Tauri: usa a mesma callbackUrl do browser (HTTPS), pois a WebView
     // navega internamente pelo fluxo OAuth sem precisar abrir browser externo.
-    // Para browser: usa a callbackUrl normal com suporte ao redirect_to param.
     let origin = typeof window !== 'undefined' ? window.location.origin : ''
-    if (typeof window !== 'undefined' && window.location.hostname.endsWith('metabuilderpro.com')) {
-      origin = 'https://metabuilderpro.com'
-    }
     let callbackUrl = `${origin}/auth/callback`
 
     if (isTauri()) {
