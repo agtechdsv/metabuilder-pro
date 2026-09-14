@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense } from 'react'
-import { Chessboard } from 'react-chessboard'
+import dynamic from 'next/dynamic'
 import { useCheckMetaGame } from './hooks/community/useCheckMetaGame'
 import { Swords } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
@@ -17,6 +17,19 @@ function Spinner() {
     </div>
   )
 }
+
+// Load chessboard only on client side — react-chessboard uses browser APIs
+const Chessboard = dynamic(
+  () => import('react-chessboard').then(m => m.Chessboard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full aspect-square bg-neutral-100 dark:bg-neutral-800 rounded-lg animate-pulse flex items-center justify-center">
+        <span className="text-neutral-400 text-sm">Carregando tabuleiro...</span>
+      </div>
+    )
+  }
+)
 
 // ─── Inner component: inside Suspense because it uses useSearchParams ─────────
 function CheckMetaInner() {
