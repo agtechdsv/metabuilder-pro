@@ -100,21 +100,51 @@ export function CheckMetaLists() {
       .subscribe()
 
     const fetchMatches = async () => {
-      const { data, error } = await supabase
-        .from('checkmeta_matches')
-        .select(`
-          id,
-          status,
-          player_white_id,
-          player_black_id,
-          player_white:profiles!player_white_id(full_name),
-          player_black:profiles!player_black_id(full_name)
-        `)
-        .eq('status', 'playing')
-        .order('created_at', { ascending: false })
-      
-      if (error) console.error("Error fetching matches:", error)
-      if (data) setMatches(data)
+      try {
+        const { data: matchesData, error } = await supabase
+          .from('checkmeta_matches')
+          .select('id, status, player_white_id, player_black_id, created_at, time_control_minutes, time_control_increment')
+          .eq('status', 'playing')
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          console.error("Error fetching matches:", error)
+          return
+        }
+
+        if (!matchesData || matchesData.length === 0) {
+          setMatches([])
+          return
+        }
+
+        const userIds = Array.from(new Set(
+          matchesData.flatMap((m: any) => [m.player_white_id, m.player_black_id]).filter(Boolean)
+        ))
+
+        let profilesMap: Record<string, string> = {}
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds)
+          
+          if (profilesData) {
+            profilesData.forEach((p: any) => {
+              profilesMap[p.id] = p.full_name || 'Jogador'
+            })
+          }
+        }
+
+        const enriched = matchesData.map((m: any) => ({
+          ...m,
+          player_white: { full_name: profilesMap[m.player_white_id] || 'Brancas' },
+          player_black: { full_name: profilesMap[m.player_black_id] || 'Pretas' }
+        }))
+
+        setMatches(enriched)
+      } catch (err) {
+        console.error("Failed to load matches:", err)
+      }
     }
 
     fetchMatches()
@@ -122,13 +152,17 @@ export function CheckMetaLists() {
     // Realtime subscription for matches
     const matchesSubscription = supabase
       .channel('public:checkmeta_matches')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'checkmeta_matches' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'checkmeta_matches' }, () => {
         fetchMatches()
       })
       .subscribe()
 
+    // Polling fallback to guarantee continuous updates
+    const pollInterval = setInterval(fetchMatches, 4000)
+
     return () => {
       cancelled = true
+      clearInterval(pollInterval)
       if (channel) supabase.removeChannel(channel)
       matchesSubscription.unsubscribe()
       challengesSub.unsubscribe()
@@ -218,7 +252,11 @@ export function CheckMetaLists() {
                     <span className="truncate max-w-[80px]">{m.player_black?.full_name?.split(' ')[0] || 'Pretas'}</span>
                   </div>
                 </div>
-                <button className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white rounded-lg transition-all" title="Assistir">
+                <button 
+                  onClick={() => navigateToMatch(m.id)}
+                  className="p-2 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500 hover:text-white rounded-lg transition-all" 
+                  title="Assistir"
+                >
                   <Eye className="w-4 h-4" />
                 </button>
               </div>

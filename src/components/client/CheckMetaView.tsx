@@ -35,6 +35,7 @@ const Chessboard = dynamic(
 function CheckMetaInner() {
   const searchParams = useSearchParams()
   const matchId = searchParams.get('matchId')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const { 
     fen, 
     onDrop, 
@@ -46,10 +47,9 @@ function CheckMetaInner() {
     matchStatus,
     whitePlayerId,
     blackPlayerId
-  } = useCheckMetaGame(matchId)
+  } = useCheckMetaGame(matchId, currentUserId)
   const { t } = useI18n()
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
