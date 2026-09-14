@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import CommunityHubView from './CommunityHubView'
 import { CheckMetaView } from './CheckMetaView'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -106,7 +106,11 @@ export function LoungeView() {
                 </p>
               </div>
             )}
-            {activeTab === 'checkmeta' && <CheckMetaView />}
+            {activeTab === 'checkmeta' && (
+              <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" /></div>}>
+                <CheckMetaView />
+              </Suspense>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
