@@ -288,10 +288,22 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
     const processAuthSuccess = async (access_token: string, refresh_token: string, next: string) => {
       setIsLoading(true);
-      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-      if (!error || currentUser) {
+      let { data: { session: currentSession } } = await supabase.auth.getSession();
+      let currentUser = currentSession?.user;
+
+      if (!currentUser) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (error) {
+          setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação.'));
+          setIsLoading(false);
+          return;
+        }
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        currentUser = newSession?.user;
+      }
+
+      if (currentUser) {
         try {
           const mfaRes = await verifyMfaPolicy()
           if (mfaRes.mfaSetupRequired) {
@@ -307,15 +319,11 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
         let redirectTo = next
         if (!redirectTo || redirectTo === '/workspace') {
-          if (currentUser) {
-            try {
-              const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
-              redirectTo = await getPostLoginRedirectPath(currentUser.id)
-            } catch (err) {
-              console.error('Error in OAuth redirect:', err)
-              redirectTo = '/workspace'
-            }
-          } else {
+          try {
+            const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
+            redirectTo = await getPostLoginRedirectPath(currentUser.id)
+          } catch (err) {
+            console.error('Error in OAuth redirect:', err)
             redirectTo = '/workspace'
           }
         }
