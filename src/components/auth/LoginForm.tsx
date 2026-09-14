@@ -340,19 +340,6 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         const { access_token, refresh_token, next } = event.data;
         await processAuthSuccess(access_token, refresh_token, next);
       }
-      // PKCE FIX: popup sends the raw code back so the parent (which holds the
-      // code_verifier in its localStorage) can do the exchange.
-      if (event.data?.type === 'SUPABASE_AUTH_CODE') {
-        const { code, next: redirectNext } = event.data;
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
-        if (error) {
-          setClientError('Erro ao autenticar com Google. Tente novamente.');
-          setIsLoading(false);
-        } else if (data?.session) {
-          await processAuthSuccess(data.session.access_token, data.session.refresh_token, redirectNext);
-        }
-      }
     };
 
     window.addEventListener('message', handleMessage);
@@ -484,27 +471,6 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     setIsLoading(true)
     setClientError(null)
 
-    // Tática anti-popup blocker: abrir a janela de forma síncrona, ANTES do await.
-    let popup: Window | null = null;
-    if (!isTauri() && typeof window !== 'undefined') {
-      try {
-        const width = 500
-        const height = 650
-        const left = window.screenX + (window.outerWidth - width) / 2
-        const top = window.screenY + (window.outerHeight - height) / 2
-        popup = window.open(
-          '',
-          'google-login',
-          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-        )
-        if (popup) {
-          popup.document.write('<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh;">Aguarde, conectando ao Google...</div>');
-        }
-      } catch (err) {
-        console.warn('Erro ao preparar popup (bloqueado pelo navegador):', err);
-      }
-    }
-    
     // Para Tauri: usa a mesma callbackUrl do browser (HTTPS), pois a WebView
     // navega internamente pelo fluxo OAuth sem precisar abrir browser externo.
     // Para browser: usa a callbackUrl normal com suporte ao redirect_to param.
@@ -524,7 +490,6 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
-        skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',
           access_type: 'offline',
@@ -533,25 +498,13 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     })
 
     if (error) {
-      if (popup) popup.close();
       setClientError(error.message)
       setIsLoading(false)
       return
     }
 
     if (data?.url) {
-      if (isTauri()) {
-        // Redirecionamento tela-cheia (In-App Browser). 
-        // 100% estável e imune aos bloqueios de popup do Tauri.
-        window.location.href = data.url;
-      } else {
-        if (popup) {
-          popup.location.href = data.url
-        } else {
-          // Se o popup blocker foi MUITO agressivo e bloqueou até a chamada síncrona
-          window.location.href = data.url
-        }
-      }
+      window.location.href = data.url
     }
   }
 

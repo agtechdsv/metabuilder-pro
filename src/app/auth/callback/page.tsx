@@ -12,7 +12,7 @@ function CallbackHandler() {
   const next = searchParams.get('next') ?? '/workspace'
   const errorDesc = searchParams.get('error_description') || searchParams.get('error')
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success' | 'redirecting' | 'error'>('loading')
   const [errorMessage, setErrorMessage] = useState<string | null>(errorDesc)
   const exchangeAttempted = useRef(false)
 
@@ -22,7 +22,14 @@ function CallbackHandler() {
       return
     }
 
-    const supabase = createClient()
+    // Criamos o cliente com detectSessionInUrl: false para impedir race condition interna
+    // do GoTrueClient tentar trocar o código simultaneamente com nosso handler.
+    const supabase = createClient({
+      auth: {
+        detectSessionInUrl: false,
+        persistSession: true,
+      }
+    })
     let done = false
 
     const notifyAndClose = async (session: any) => {
@@ -42,8 +49,8 @@ function CallbackHandler() {
       // 0. Determina o redirect_to dinâmico se a URL não forneceu um explícito
       let finalRedirect = next
       if (typeof window !== 'undefined') {
-        const searchParams = new URLSearchParams(window.location.search)
-        if (!searchParams.get('next') && session?.user?.id) {
+        const urlParams = new URLSearchParams(window.location.search)
+        if (!urlParams.get('next') && session?.user?.id) {
           try {
             const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
             finalRedirect = await getPostLoginRedirectPath(session.user.id)
@@ -101,63 +108,33 @@ function CallbackHandler() {
         }
 
         // Se passou pela verificação, continua o redirecionamento
-        setStatus('redirecting' as any) // Gambiarra segura pro tipo local
+        setStatus('redirecting')
         window.location.replace(finalRedirect)
       }
     }
 
-    // Extrai o code (PKCE) da URL
-    const searchParams = new URLSearchParams(window.location.search)
-    const code = searchParams.get('code')
+    // Extrai o code (PKCE) da URL para forçar a troca de forma determinística
+    const currentParams = new URLSearchParams(window.location.search)
+    const code = currentParams.get('code')
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
 
-      const isPopupContext = typeof window !== 'undefined' && window.opener && !window.opener.closed && window.opener !== window
-
-      if (isPopupContext) {
-        // ⚠️ PKCE FIX: The code_verifier was stored in the PARENT window's localStorage,
-        // not the popup's. Exchanging the code here (in the popup) fails because the
-        // verifier is not accessible. Instead, send the code back to the parent so it
-        // can do the exchange with its own verifier.
-        try {
-          window.opener.postMessage({
-            type: 'SUPABASE_AUTH_CODE',
-            code,
-            next,
-          }, window.location.origin)
-          setStatus('success')
-          // Popup closes itself after the parent gets the message
-          setTimeout(() => { try { window.close() } catch (_) {} }, 1000)
-        } catch (e) {
-          // Fallback: try to exchange locally (will likely fail but worth trying)
-          supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
-            if (error) {
-              setErrorMessage(error.message)
-              setStatus('error')
-            } else if (data.session) {
-              notifyAndClose(data.session)
-            }
-          })
-        }
-        return
-      }
-
-      // Non-popup context: exchange normally (verifier is in this window's localStorage)
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
+          console.error('Erro ao trocar código por sessão:', error)
+          // Apenas mostra erro se realmente falhou e não temos sessão ativa
           supabase.auth.getSession().then(({ data: currentData }: any) => {
-            if (currentData.session) {
+            if (currentData?.session) {
               notifyAndClose(currentData.session)
             } else {
               setErrorMessage(error.message)
               setStatus('error')
             }
           })
-        } else if (data.session) {
+        } else if (data?.session) {
           notifyAndClose(data.session)
         }
       })
-      // Não damos return aqui para permitir que os listeners de fallback também rodem
     }
 
     // Extrai tokens manualmente do hash caso o Supabase não tenha feito o parse automático (comum em navegações client-side)
@@ -175,7 +152,7 @@ function CallbackHandler() {
           if (error) {
             setErrorMessage(error.message)
             setStatus('error')
-          } else if (data.session) {
+          } else if (data?.session) {
             notifyAndClose(data.session)
           }
         })
@@ -192,11 +169,16 @@ function CallbackHandler() {
 
     // Caso a sessão já tenha sido trocada antes do listener ativar
     supabase.auth.getSession().then(({ data: { session }, error }: any) => {
-      if (error) {
-        setErrorMessage(error.message)
-        setStatus('error')
-      } else if (session) {
+      if (session) {
         notifyAndClose(session)
+      } else if (!code && !hash.includes('access_token=') && !errorDesc) {
+        // Se após um momento não houver código, hash ou sessão
+        setTimeout(() => {
+          if (!done) {
+            setStatus('error')
+            setErrorMessage('Nenhum código de autorização encontrado.')
+          }
+        }, 4000)
       }
     })
 
@@ -232,7 +214,7 @@ function CallbackHandler() {
           </div>
         )}
 
-        {status === ('redirecting' as any) && (
+        {status === 'redirecting' && (
           <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
             <Loader2 className="w-12 h-12 text-emerald-600 dark:text-emerald-500 animate-spin mb-6" />
             <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.redirecting', 'Redirecionando...')}</h2>
@@ -248,7 +230,13 @@ function CallbackHandler() {
             <h2 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">{t('auth.callback.auth_error_title', 'Erro na Autenticação')}</h2>
             <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">{errorMessage || t('auth.callback.auth_error_desc', 'Não foi possível concluir o login.')}</p>
             <button 
-              onClick={() => window.close()}
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+                  window.close()
+                } else {
+                  window.location.href = '/'
+                }
+              }}
               className="px-6 py-3 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-white rounded-xl text-sm font-bold transition-colors"
             >
               {t('auth.callback.close_try_again', 'Fechar e Tentar Novamente')}
