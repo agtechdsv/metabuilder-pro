@@ -340,6 +340,19 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         const { access_token, refresh_token, next } = event.data;
         await processAuthSuccess(access_token, refresh_token, next);
       }
+      // PKCE FIX: popup sends the raw code back so the parent (which holds the
+      // code_verifier in its localStorage) can do the exchange.
+      if (event.data?.type === 'SUPABASE_AUTH_CODE') {
+        const { code, next: redirectNext } = event.data;
+        const supabase = createClient();
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
+        if (error) {
+          setClientError('Erro ao autenticar com Google. Tente novamente.');
+          setIsLoading(false);
+        } else if (data?.session) {
+          await processAuthSuccess(data.session.access_token, data.session.refresh_token, redirectNext);
+        }
+      }
     };
 
     window.addEventListener('message', handleMessage);

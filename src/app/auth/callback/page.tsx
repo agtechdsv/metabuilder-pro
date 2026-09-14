@@ -106,15 +106,45 @@ function CallbackHandler() {
       }
     }
 
-    // Extrai o code (PKCE) da URL para forçar a troca (contorna falhas do Supabase SSR no client)
+    // Extrai o code (PKCE) da URL
     const searchParams = new URLSearchParams(window.location.search)
     const code = searchParams.get('code')
     if (code && !exchangeAttempted.current) {
       exchangeAttempted.current = true
-      
+
+      const isPopupContext = typeof window !== 'undefined' && window.opener && !window.opener.closed && window.opener !== window
+
+      if (isPopupContext) {
+        // ⚠️ PKCE FIX: The code_verifier was stored in the PARENT window's localStorage,
+        // not the popup's. Exchanging the code here (in the popup) fails because the
+        // verifier is not accessible. Instead, send the code back to the parent so it
+        // can do the exchange with its own verifier.
+        try {
+          window.opener.postMessage({
+            type: 'SUPABASE_AUTH_CODE',
+            code,
+            next,
+          }, window.location.origin)
+          setStatus('success')
+          // Popup closes itself after the parent gets the message
+          setTimeout(() => { try { window.close() } catch (_) {} }, 1000)
+        } catch (e) {
+          // Fallback: try to exchange locally (will likely fail but worth trying)
+          supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
+            if (error) {
+              setErrorMessage(error.message)
+              setStatus('error')
+            } else if (data.session) {
+              notifyAndClose(data.session)
+            }
+          })
+        }
+        return
+      }
+
+      // Non-popup context: exchange normally (verifier is in this window's localStorage)
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
-          // Apenas mostra erro se realmente falhou a primeira vez e não temos sessão ativa
           supabase.auth.getSession().then(({ data: currentData }: any) => {
             if (currentData.session) {
               notifyAndClose(currentData.session)
