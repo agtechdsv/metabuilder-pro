@@ -382,11 +382,51 @@ export class LocalSyncManager {
    */
   public async resetProjectToCleanState() {
     if (!isTauri()) throw new Error("Local sync is only available on the Desktop App.");
+
+    // 1. Force kill any running processes on ports 3000 (Next.js) and 8080 (Spring Boot) via Tauri
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('stopcli');
+      await invoke('stop_spring_boot');
+    } catch (_) {}
+
+    // 2. Pequeno delay para o Windows liberar os file handles
+    await new Promise(r => setTimeout(r, 600));
+
+    // 3. Tentar remoção via PowerShell com -Recurse -Force (ignora readonly de git/npm e lida com permissões no Windows)
+    try {
+      const { homeDir } = await import('@tauri-apps/api/path');
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      const home = await homeDir();
+      const targetDir = `${home}/${this.projectDir}`.replace(/\//g, '\\');
+      const safeTargetDir = targetDir.replace(/'/g, "''");
+
+      const psCommand = Command.create('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `if (Test-Path -LiteralPath '${safeTargetDir}') { Remove-Item -LiteralPath '${safeTargetDir}' -Recurse -Force -ErrorAction SilentlyContinue }`
+      ]);
+      await psCommand.execute();
+    } catch (err) {
+      console.warn('PowerShell clean error (fallback to fs):', err);
+    }
+
+    // 4. Limpeza adicional/fallback caso algum arquivo ou diretório ainda resista
     try {
       await tauriFs.remove(this.projectDir, { recursive: true, baseDir: BaseDirectory.Home });
     } catch (e) {
-      // Ignore error if directory doesn't exist or was partially removed
+      // Ignora erro se pasta já tiver sido completamente removida pelo PowerShell
     }
+
+    // 5. Garantir que as subpastas específicas (frontend, backend, etc.) não tenham sobrado
+    for (const sub of ['frontend', 'backend', '.git', '.trash', '.metabuilder']) {
+      try {
+        await tauriFs.remove(`${this.projectDir}/${sub}`, { recursive: true, baseDir: BaseDirectory.Home });
+      } catch (_) {}
+    }
+
+    // 6. Recria o projeto local limpo
     await this.initLocalProject();
   }
 

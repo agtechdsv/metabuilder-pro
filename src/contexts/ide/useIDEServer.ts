@@ -440,6 +440,7 @@ export function useIDEServer({
     setJavaPromptResolver,
     // Spring Boot
     springProcess,
+    setSpringProcess,
     isStartingSpring,
     isStoppingSpring,
     springPort,

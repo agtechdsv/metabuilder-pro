@@ -287,6 +287,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         } catch (e) {}
         serverState.setDevProcess(null)
       }
+      if (serverState.springProcess) {
+        try {
+          await serverState.springProcess.kill()
+        } catch (e) {}
+        serverState.setSpringProcess(null)
+      }
+
+      // Parada direta via invoke para garantir que nenhuma porta (3000/8080) fique presa
+      try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('stopcli')
+        await invoke('stop_spring_boot')
+      } catch (_) {}
 
       tabsState.resetTabs()
       consoleState.clearConsole()
