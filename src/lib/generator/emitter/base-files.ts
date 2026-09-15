@@ -35,7 +35,8 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@radix-ui/react-label": "^2.1.0",
       "@radix-ui/react-slot": "^1.1.0",
       "@radix-ui/react-tabs": "^1.1.0",
-      ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "bcryptjs": "^2.4.3" } : {}),
+      "bcryptjs": "^2.4.3",
+      "jose": "^5.4.0",
       ...(ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)
           ? { "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.45.0" }
           : {}),
@@ -59,7 +60,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "tailwindcss": "^3.4.0",
       "postcss": "^8.4.0",
       "autoprefixer": "^10.4.20",
-      ...(ast.authConfig?.hashFormat === 'bcrypt' ? { "@types/bcryptjs": "^2.4.6" } : {})
+      "@types/bcryptjs": "^2.4.6"
     }
   }, null, 2))
 

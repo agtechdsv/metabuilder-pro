@@ -101,6 +101,8 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
       '@radix-ui/react-label': '^2.1.0',
       '@radix-ui/react-slot': '^1.1.0',
       '@radix-ui/react-tabs': '^1.1.0',
+      'bcryptjs': '^2.4.3',
+      'jose': '^5.4.0',
       // NOTA: sem pg, oracledb, mysql2, mssql, @supabase/ssr
       // O frontend chama a API REST do Spring Boot
     } as Record<string, string>,
@@ -114,6 +116,7 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
       tailwindcss: '^3.4.0',
       postcss: '^8.4.0',
       autoprefixer: '^10.4.20',
+      '@types/bcryptjs': '^2.4.6',
     } as Record<string, string>,
   }
 

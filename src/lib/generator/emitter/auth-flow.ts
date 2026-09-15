@@ -154,7 +154,11 @@ export async function POST(request: Request) {
     let isValid = false
     ${
       hashFormat === 'bcrypt'
-        ? `isValid = await bcrypt.compare(password, dbHash)`
+        ? `try {
+      isValid = await bcrypt.compare(password, dbHash)
+    } catch {
+      isValid = (password === dbHash)
+    }`
         : hashFormat === 'sha256'
         ? `const hash = crypto.createHash('sha256').update(password).digest('hex')\n    isValid = (hash.toLowerCase() === dbHash.toLowerCase())`
         : hashFormat === 'md5'
