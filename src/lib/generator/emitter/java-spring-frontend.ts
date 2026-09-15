@@ -225,7 +225,7 @@ function generateFrontendConfigFiles(ast: AppAST, files: Map<string, string>): v
       jsx: 'preserve',
       incremental: true,
       plugins: [{ name: 'next' }],
-      paths: { '@/*': ['./src/*'] },
+      paths: { '@/*': ['./*'] },
     },
     include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
     exclude: ['node_modules'],
