@@ -254,7 +254,7 @@ export function IDEConsolePanel({
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
                       >
                         {isStoppingServer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
-                        <span className="hidden sm:inline">Stop FE</span>
+                        <span className="hidden sm:inline">Stop NextJs</span>
                       </button>
                     )}
 
@@ -301,15 +301,14 @@ export function IDEConsolePanel({
               {consoleLogs.map((log, i) => (
                 <div
                   key={i}
-                  className={`flex gap-2 ${
-                    log.type === 'error'
+                  className={`flex gap-2 ${log.type === 'error'
                       ? 'text-red-400'
                       : log.type === 'warn'
-                      ? 'text-yellow-400'
-                      : log.type === 'info'
-                      ? 'text-cyan-400'
-                      : 'text-neutral-300'
-                  }`}
+                        ? 'text-yellow-400'
+                        : log.type === 'info'
+                          ? 'text-cyan-400'
+                          : 'text-neutral-300'
+                    }`}
                 >
                   <span className="text-neutral-600 shrink-0">{log.ts}</span>
                   <span className="break-all whitespace-pre-wrap">{log.text}</span>
