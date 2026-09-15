@@ -358,10 +358,13 @@ export async function query(text: string, params: any = {}) {
 
     const safeParams = normalizeOracleParams(params)
 
+    const startTime = Date.now()
     const result = await connection.execute(text, safeParams, { 
       outFormat: oracledb.OUT_FORMAT_OBJECT,
       autoCommit: true 
     })
+    const duration = Date.now() - startTime
+    console.log('Executed query', { text, duration, rows: result.rows?.length || 0 })
 
     const rawRows = (result.rows || []) as any[]
     const rows = rawRows.map((row: any) => {

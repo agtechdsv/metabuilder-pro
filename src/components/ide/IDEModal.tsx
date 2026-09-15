@@ -209,6 +209,8 @@ export function IDEModal({
               clearConsole={consoleState.clearConsole}
               consoleLogs={consoleState.consoleLogs}
               consoleEndRef={consoleState.consoleEndRef}
+              isDetailedConsole={consoleState.isDetailedConsole}
+              setIsDetailedConsole={consoleState.setIsDetailedConsole}
               isJavaSpringProject={server.isJavaSpringProject}
               springProcess={server.springProcess}
               isStartingSpring={server.isStartingSpring}
