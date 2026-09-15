@@ -3,6 +3,8 @@ import { generateRoutes } from '../layers/routes'
 import { generateActions } from '../layers/actions'
 import { generateComponents } from '../layers/components'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
+import { generateBaseFiles } from './base-files'
+
 
 /**
  * java-spring-frontend.ts — Gerador do frontend Next.js para modo java-spring (Módulo 4)
@@ -41,14 +43,17 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
 
   // Gerar arquivos de rota e componentes com prefixo frontend/
   const tempFiles = new Map<string, string>()
+  generateBaseFiles(frontendAst, tempFiles)
   generateRoutes(frontendAst, tempFiles)
   generateComponents(frontendAst, tempFiles)
   generateLoginPage(frontendAst, tempFiles)
   generateDownloadsPage(frontendAst, tempFiles)
 
-  // Mover todos para frontend/
+  // Mover todos para frontend/ (ignorando config files da raiz que são recriados abaixo)
   for (const [path, content] of tempFiles) {
-    files.set(`frontend/${path}`, content)
+    if (path.includes('/') || path === 'components.json') {
+      files.set(`frontend/${path}`, content)
+    }
   }
 
   // 8. tsconfig.json, tailwind, next.config, postcss, etc.
