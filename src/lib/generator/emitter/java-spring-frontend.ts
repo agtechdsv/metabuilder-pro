@@ -187,7 +187,11 @@ export async function get${mn}ById(id: string) {
 }
 
 export async function get${mn}ByField(field: string, value: any) {
-  return apiGet('${endpoint}', { [field]: value })
+  const res: any = await apiGet('${endpoint}', { [field]: value })
+  if (Array.isArray(res)) return res
+  if (res && Array.isArray(res.content)) return res.content
+  if (res && typeof res === 'object') return [res]
+  return []
 }
 
 export async function create${mn}(formData: FormData | Record<string, any>) {

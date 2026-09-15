@@ -143,12 +143,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const rows = await get${authModel.name}ByField('${emailCol}', email)
-    if (!rows || rows.length === 0) {
+    const rawRes: any = await get${authModel.name}ByField('${emailCol}', email)
+    const rows = Array.isArray(rawRes) ? rawRes : (rawRes?.content ?? (rawRes ? [rawRes] : []))
+    if (!rows || rows.length === 0 || !rows[0]) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
     
     const user = rows[0]
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    }
     const dbHash = String(user['${passCol}'] ?? user['${passCol.toLowerCase()}'] ?? user['${passCol.toUpperCase()}'] ?? '')
 
     let isValid = false
