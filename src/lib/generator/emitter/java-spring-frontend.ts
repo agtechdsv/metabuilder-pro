@@ -30,7 +30,7 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
   files.set('frontend/.npmrc', `legacy-peer-deps=true\nprefer-offline=true\naudit=false\nfund=false\n`)
 
   // 5. api-client.ts — wrapper de fetch REST
-  files.set('frontend/src/lib/api-client.ts', generateApiClient())
+  files.set('frontend/lib/api-client.ts', generateApiClient())
 
   // 6. REST Actions para cada modelo (substituem as Server Actions de banco)
   for (const model of ast.models) {
