@@ -33,6 +33,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
   const [showExpiredModal, setShowExpiredModal] = useState(false)
   const [expiredModalDesc, setExpiredModalDesc] = useState('')
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
+  const [resumingSession, setResumingSession] = useState<{ name: string; email: string; avatarUrl?: string } | null>(null)
 
   const emailInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -217,6 +218,12 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           if (isInviteOrRecovery) {
             setShowSetPasswordModal(true)
           } else {
+            // Mostra o card "Retomando sessão" antes de redirecionar
+            setResumingSession({
+              name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+              email: user.email || '',
+              avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+            })
             navigateToDashboard(user.id)
           }
         }
@@ -587,6 +594,94 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         }
       }
     }
+  }
+
+  // ── Tela de "Retomando sessão" ───────────────────────────────────────────
+  if (resumingSession) {
+    const initials = resumingSession.name
+      .split(' ')
+      .slice(0, 2)
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase()
+
+    return (
+      <div className={cn('w-full max-w-md mx-auto', className)}>
+        <div className="text-center mb-8">
+          <div className="inline-flex relative group mb-6">
+            <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
+            <div className="relative p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                <Layers className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+          <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight mb-1">
+            MetaBuilder <span className="text-indigo-600">PRO</span>
+          </h2>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">Retomando sua sessão...</p>
+        </div>
+
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl p-8 flex flex-col items-center gap-5">
+          {/* Avatar */}
+          <div className="relative">
+            {resumingSession.avatarUrl ? (
+              <img
+                src={resumingSession.avatarUrl}
+                alt={resumingSession.name}
+                className="w-20 h-20 rounded-full object-cover ring-4 ring-indigo-500/20 shadow-lg"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-indigo-500/20 shadow-lg">
+                {initials}
+              </div>
+            )}
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white dark:border-neutral-900 flex items-center justify-center">
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
+
+          {/* User info */}
+          <div className="text-center">
+            <p className="text-lg font-bold text-neutral-900 dark:text-white">{resumingSession.name}</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{resumingSession.email}</p>
+          </div>
+
+          {/* Progress bar animada */}
+          <div className="w-full space-y-2">
+            <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
+                Verificando permissões e redirecionando...
+              </span>
+            </div>
+            <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 rounded-full animate-[progress_2.5s_ease-in-out_infinite]" style={{ width: '100%', transformOrigin: 'left', animation: 'resumeProgress 2s ease-in-out forwards' }} />
+            </div>
+          </div>
+
+          {/* Escape hatch */}
+          <button
+            onClick={async () => {
+              const supabase = createClient()
+              await supabase.auth.signOut()
+              setResumingSession(null)
+            }}
+            className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors underline underline-offset-2"
+          >
+            Não sou eu — entrar como outro usuário
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes resumeProgress {
+            0%   { width: 5%; }
+            60%  { width: 85%; }
+            100% { width: 100%; }
+          }
+        `}</style>
+      </div>
+    )
   }
 
   return (
