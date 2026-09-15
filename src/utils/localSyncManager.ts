@@ -393,7 +393,7 @@ export class LocalSyncManager {
     // 2. Pequeno delay para o Windows liberar os file handles
     await new Promise(r => setTimeout(r, 600));
 
-    // 3. Tentar remoção via PowerShell com -Recurse -Force (ignora readonly de git/npm e lida com permissões no Windows)
+    // 3. Tentar remoção via PowerShell com -Recurse -Force (elimina processos presos nas portas 3000/8080 e ignora readonly)
     try {
       const { homeDir } = await import('@tauri-apps/api/path');
       const { Command } = await import('@tauri-apps/plugin-shell');
@@ -405,28 +405,51 @@ export class LocalSyncManager {
         '-NoProfile',
         '-NonInteractive',
         '-Command',
-        `if (Test-Path -LiteralPath '${safeTargetDir}') { Remove-Item -LiteralPath '${safeTargetDir}' -Recurse -Force -ErrorAction SilentlyContinue }`
+        `
+        Get-NetTCPConnection -LocalPort 3000, 8080 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+        if (Test-Path -LiteralPath '${safeTargetDir}') {
+          Get-ChildItem -LiteralPath '${safeTargetDir}' -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath '${safeTargetDir}' -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        `
       ]);
       await psCommand.execute();
     } catch (err) {
       console.warn('PowerShell clean error (fallback to fs):', err);
     }
 
-    // 4. Limpeza adicional/fallback caso algum arquivo ou diretório ainda resista
+    // 4. Limpeza explícita das subpastas caso alguma ainda tenha sobrado (ex: backend/frontend)
+    for (const sub of ['backend', 'frontend', '.git', '.trash', '.metabuilder']) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await tauriFs.remove(`${this.projectDir}/${sub}`, { recursive: true, baseDir: BaseDirectory.Home });
+          break;
+        } catch (_) {
+          await new Promise(r => setTimeout(r, 150));
+        }
+      }
+    }
+
+    // 5. Limpeza do diretório raiz do projeto
     try {
       await tauriFs.remove(this.projectDir, { recursive: true, baseDir: BaseDirectory.Home });
     } catch (e) {
-      // Ignora erro se pasta já tiver sido completamente removida pelo PowerShell
+      // Ignora erro se pasta já tiver sido completamente removida
     }
 
-    // 5. Garantir que as subpastas específicas (frontend, backend, etc.) não tenham sobrado
-    for (const sub of ['frontend', 'backend', '.git', '.trash', '.metabuilder']) {
-      try {
-        await tauriFs.remove(`${this.projectDir}/${sub}`, { recursive: true, baseDir: BaseDirectory.Home });
-      } catch (_) {}
-    }
+    // 6. Varredura final de segurança: se sobrou algo no diretório além dos arquivos base, remove
+    try {
+      const entries = await tauriFs.readDir(this.projectDir, { baseDir: BaseDirectory.Home });
+      for (const entry of entries) {
+        if (entry.name !== '.metabuilder' && entry.name !== '.gitignore' && entry.name !== '.git') {
+          try {
+            await tauriFs.remove(`${this.projectDir}/${entry.name}`, { recursive: true, baseDir: BaseDirectory.Home });
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
 
-    // 6. Recria o projeto local limpo
+    // 7. Recria o projeto local virgem
     await this.initLocalProject();
   }
 

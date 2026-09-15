@@ -529,6 +529,17 @@ fn stop_spring_boot(state: State<'_, SpringState>) -> Result<String, String> {
         let _ = child.kill();
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let _ = Command::new("cmd")
+            .args(["/c", "for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :8080 ^| findstr LISTENING') do taskkill /F /PID %a"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output();
+    }
+
     Ok("Spring Boot parado".to_string())
 }
 
