@@ -7,13 +7,23 @@ export interface ConsoleLog {
   isDb?: boolean
 }
 
+export function stripAnsiCodes(str: string): string {
+  if (!str) return ''
+  return str
+    // Standard ANSI escape sequences (with ESC byte \x1b or \u001b)
+    .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+    // Orphaned ANSI SGR color sequences where ESC was stripped (e.g. [34m, [0m, [35m, [36m, [1m, [90m)
+    .replace(/\[\d{1,3}(?:;\d{1,3})*m/g, '')
+}
+
 export function isDatabaseLog(text: string): boolean {
   if (!text) return false
-  const t = text.trim()
+  const t = stripAnsiCodes(text).trim()
 
   // Spring Boot / Hibernate / HikariCP / JDBC logs
   if (
     t.includes('Hibernate:') ||
+    t.includes('[Hibernate]') ||
     t.includes('org.hibernate.SQL') ||
     t.includes('org.hibernate.orm.jdbc.bind') ||
     t.includes('org.hibernate.type.descriptor') ||
@@ -22,7 +32,7 @@ export function isDatabaseLog(text: string): boolean {
     t.includes('HikariPool') ||
     t.includes('HikariDataSource') ||
     t.includes('HikariConfig') ||
-    t.includes('binding parameter [')
+    t.includes('binding parameter')
   ) {
     return true
   }
@@ -71,10 +81,11 @@ export function useIDEConsole() {
   }
 
   const addConsoleLog = (text: string, type: 'info' | 'error' | 'warn' | 'stdout' = 'stdout') => {
-    const isDb = isDatabaseLog(text)
+    const clean = stripAnsiCodes(text)
+    const isDb = isDatabaseLog(clean)
     setConsoleLogs(prev => [...prev, {
       ts: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      text,
+      text: clean,
       type,
       isDb
     }])

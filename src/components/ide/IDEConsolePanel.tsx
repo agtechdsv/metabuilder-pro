@@ -4,7 +4,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Package, Play, Square, AppWindow, Trash2, X, Coffee, BookOpen, Database } from 'lucide-react'
 import { useI18n } from '@/i18n'
-import { ConsoleLog, isDatabaseLog } from '@/contexts/ide/useIDEConsole'
+import { ConsoleLog, isDatabaseLog, stripAnsiCodes } from '@/contexts/ide/useIDEConsole'
 import { Modal } from '@/components/ui/Modal'
 
 export interface IDEConsolePanelProps {
@@ -383,7 +383,7 @@ export function IDEConsolePanel({
                         DB
                       </span>
                     )}
-                    <span className="break-all whitespace-pre-wrap">{log.text}</span>
+                    <span className="break-all whitespace-pre-wrap">{stripAnsiCodes(log.text)}</span>
                   </div>
                 )
               })}
