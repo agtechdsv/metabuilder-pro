@@ -1,5 +1,5 @@
 import { RouteNode } from '../../ast'
-import { renderGridCellValue, toPascalCase } from './helpers'
+import { renderGridCellValue, toPascalCase, toCamel } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Listagem (pesquisa_cadastro — page.tsx)
@@ -270,9 +270,10 @@ ${buildOptionsCode.join('\n')}
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn
+  const camelCol = toCamel(f.dbColumn)
   return `    const val_${col} = params?.['${col}_filter'] || params?.['${col}'] || params?.['${rawCol}']
     if (val_${col}) {
-      const itemVal = String(item['${rawCol}'] ?? item['${col}'] ?? '').toLowerCase()
+      const itemVal = String(item['${rawCol}'] ?? item['${camelCol}'] ?? item['${col}'] ?? '').toLowerCase()
       if (!itemVal.includes(String(val_${col}).toLowerCase())) return false
     }`
 }).join('\n')}
@@ -283,8 +284,9 @@ ${filterFields.map(f => {
   if (sortBy) {
     filteredData.sort((a: any, b: any) => {
       const rawCol = sortBy.replace('.', '_')
-      const valA = a[sortBy] ?? a[rawCol] ?? ''
-      const valB = b[sortBy] ?? b[rawCol] ?? ''
+      const camelCol = toCamel(sortBy)
+      const valA = a[sortBy] ?? a[rawCol] ?? a[camelCol] ?? ''
+      const valB = b[sortBy] ?? b[rawCol] ?? b[camelCol] ?? ''
       if (typeof valA === 'number' && typeof valB === 'number') {
         return sortOrder === 'asc' ? valA - valB : valB - valA
       }
@@ -327,7 +329,7 @@ ${thCells}
           </thead>
           <tbody>
             {paginatedData.map((item: any, idx: number) => {
-              const itemId = item.${route.primaryKey} ?? (item as any)?.[${JSON.stringify(route.primaryKey.toLowerCase())}] ?? (item as any)?.[${JSON.stringify(route.primaryKey.toUpperCase())}] ?? item.id ?? item.ID ?? item._id
+              const itemId = item.${route.primaryKey} ?? (item as any)?.[${JSON.stringify(route.primaryKey.toLowerCase())}] ?? (item as any)?.[${JSON.stringify(toCamel(route.primaryKey))}] ?? (item as any)?.[${JSON.stringify(route.primaryKey.toUpperCase())}] ?? item.id ?? item.ID ?? item._id
               return (
               <tr key={itemId || idx} className={"group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors " + (idx % 2 === 0 ? "" : "bg-neutral-50/50 dark:bg-neutral-900/20")}>
                 <td className="px-4 py-4 w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50">

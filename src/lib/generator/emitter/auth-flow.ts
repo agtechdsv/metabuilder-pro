@@ -1,6 +1,12 @@
 import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
 
+function toCamel(str: string): string {
+  return str
+    .replace(/[^a-zA-Z0-9]+(.)/g, (_m, c) => c.toUpperCase())
+    .replace(/^[A-Z]/, (m) => m.toLowerCase())
+}
+
 export function generateLoginPage(ast: AppAST, files: Map<string, string>) {
   const iconFallback = ast.projectName.charAt(0).toUpperCase()
   const projectIconSvg = ast.projectIcon && ast.projectIcon.startsWith('<svg') 
@@ -149,11 +155,49 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
     
-    const user = rows[0]
+    // Procura o usuário exato pelo e-mail caso a API tenha retornado uma lista de registros
+    const cleanTargetEmail = email.toLowerCase().trim()
+    const user = rows.find((r: any) => {
+      const e = String(
+        r?.['${emailCol}'] ?? 
+        r?.['${emailCol.toLowerCase()}'] ?? 
+        r?.['${toCamel(emailCol)}'] ?? 
+        r?.email ?? 
+        r?.EMAIL ?? 
+        ''
+      ).toLowerCase().trim()
+      return e === cleanTargetEmail
+    }) || rows[0]
+
     if (!user) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
-    const dbHash = String(user['${passCol}'] ?? user['${passCol.toLowerCase()}'] ?? user['${passCol.toUpperCase()}'] ?? '')
+
+    const foundEmail = String(
+      user?.['${emailCol}'] ?? 
+      user?.['${emailCol.toLowerCase()}'] ?? 
+      user?.['${toCamel(emailCol)}'] ?? 
+      user?.email ?? 
+      user?.EMAIL ?? 
+      ''
+    ).toLowerCase().trim()
+
+    if (foundEmail && foundEmail !== cleanTargetEmail) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    }
+
+    const passCamel = '${toCamel(passCol)}'
+    const dbHash = String(
+      user['${passCol}'] ?? 
+      user[passCamel] ?? 
+      user['${passCol.toLowerCase()}'] ?? 
+      user['${passCol.toUpperCase()}'] ?? 
+      user?.hash_senha ?? 
+      user?.hashSenha ?? 
+      user?.senha ?? 
+      user?.password ?? 
+      ''
+    )
 
     let isValid = false
     ${
@@ -174,6 +218,16 @@ export async function POST(request: Request) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
 
+    const userName = String(
+      user['nome'] || 
+      user['nome_completo'] || 
+      user['nomeCompleto'] || 
+      user['name'] || 
+      user['NOME'] || 
+      email.split('@')[0] || 
+      ''
+    )
+
     const response = NextResponse.redirect(new URL(redirect, request.url))
     response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
       httpOnly: true,
@@ -181,7 +235,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
-    response.cookies.set('mb_user', JSON.stringify({ email, name: user['nome'] || user['nome_completo'] || user['name'] || user['NOME'] || '' }), {
+    response.cookies.set('mb_user', JSON.stringify({ email, name: userName }), {
       httpOnly: false,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,

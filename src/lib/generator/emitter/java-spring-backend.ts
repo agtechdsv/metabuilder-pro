@@ -54,11 +54,9 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
     files.set(`${basePkg}/services/${model.name}Service.java`, generateServiceClass(model, ast, groupId, route))
     files.set(`${basePkg}/controllers/${model.name}Controller.java`, generateControllerClass(model, ast, groupId, route))
 
-    // Specification (pesquisa dinâmica) — só gerada se a rota tem filterFields
-    if (route && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0) {
-      files.set(`${basePkg}/specifications/${model.name}Spec.java`,
-        generateSpecificationClass(model, ast, groupId, route))
-    }
+    // Specification (pesquisa dinâmica) — gerada para todos os modelos
+    files.set(`${basePkg}/specifications/${model.name}Spec.java`,
+      generateSpecificationClass(model, ast, groupId, route))
 
     // Projeções (DTOs para Grid) — evita trafegar a entidade inteira
     if (route && route.gridFields && route.gridFields.length > 0) {
@@ -413,6 +411,9 @@ function generateApplicationProperties(ast: AppAST): string {
     `# ── CORS ──`,
     `app.cors.allowed-origins=http://localhost:3000`,
     ``,
+    `# ── Jackson JSON Serialization (snake_case) ──`,
+    `spring.jackson.property-naming-strategy=SNAKE_CASE`,
+    ``,
     `# ── OpenAPI / Swagger ──`,
     `springdoc.api-docs.path=/api-docs`,
     `springdoc.swagger-ui.path=/swagger-ui.html`,
@@ -582,6 +583,7 @@ function generateEmbeddableIdClass(model: ModelNode, groupId: string): string {
     const jt = toJavaType(field.dataType)
     javaTypes.add(jt)
     fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+    fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
     fieldLines.push(`    private ${jt} ${toCamelCase(field.dbColumn)};`)
     fieldLines.push(``)
   }
@@ -590,6 +592,7 @@ function generateEmbeddableIdClass(model: ModelNode, groupId: string): string {
     `import jakarta.persistence.*;`,
     `import lombok.Data;`,
     `import lombok.EqualsAndHashCode;`,
+    `import com.fasterxml.jackson.annotation.JsonProperty;`,
     ...getJavaImports(javaTypes),
   ].join('\n')
 
@@ -660,6 +663,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
           javaTypes.add('SqlTypes')
         }
         fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
         fieldLines.push(`    private ${jt} ${camelName};`)
       }
       fieldLines.push(``)
@@ -696,6 +700,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
             javaTypes.add('SqlTypes')
           }
           fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+          fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
           fieldLines.push(`    private ${jt} ${camelName};`)
           fieldLines.push(``)
           fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
@@ -724,6 +729,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
           javaTypes.add('SqlTypes')
         }
         fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
         fieldLines.push(`    private ${jt} ${camelName};`)
         
       } else {
@@ -733,6 +739,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
           javaTypes.add('SqlTypes')
         }
         fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
+        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
         fieldLines.push(`    private ${jt} ${camelName};`)
       }
       fieldLines.push(``)
@@ -756,6 +763,8 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
   const imports = [
     `import jakarta.persistence.*;`,
     `import lombok.Data;`,
+    `import com.fasterxml.jackson.annotation.JsonProperty;`,
+    `import com.fasterxml.jackson.annotation.JsonIgnoreProperties;`,
     idClassImport,
     ...getJavaImports(javaTypes),
   ].filter(Boolean).join('\n')
@@ -767,6 +776,7 @@ ${imports}
 @Entity
 @Table(name = "${model.dbTable}")
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ${model.name} {
 
 ${fieldLines.join('\n')}
@@ -877,7 +887,6 @@ function getOutgoingSubResources(route: RouteNode): OutgoingSubResourceDef[] {
 function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
   const pkFieldPascal = toPascalCaseJava(getPkFieldName(model))
-  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
 
   const isComposite = hasCompositePk(model)
@@ -888,15 +897,13 @@ function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: str
     `import org.springframework.data.domain.Page;`,
     `import org.springframework.data.domain.Pageable;`,
     `import org.springframework.data.jpa.repository.JpaRepository;`,
-    hasSpec ? `import org.springframework.data.jpa.repository.JpaSpecificationExecutor;` : ``,
+    `import org.springframework.data.jpa.repository.JpaSpecificationExecutor;`,
     `import org.springframework.stereotype.Repository;`,
     `import java.util.List;`,
     (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
 
-  const extendsClause = hasSpec 
-    ? `JpaRepository<${model.name}, ${pkType}>, JpaSpecificationExecutor<${model.name}>`
-    : `JpaRepository<${model.name}, ${pkType}>`
+  const extendsClause = `JpaRepository<${model.name}, ${pkType}>, JpaSpecificationExecutor<${model.name}>`
 
   return `package ${groupId}.repositories;
 
@@ -919,7 +926,6 @@ ${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJava
 function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
   const isComposite = hasCompositePk(model)
-  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
 
   const imports = [
@@ -927,24 +933,13 @@ function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, ro
     isComposite ? `import ${groupId}.entities.${model.name}Id;` : ``,
     `import ${groupId}.repositories.${model.name}Repository;`,
     (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
-    hasSpec ? `import ${groupId}.specifications.${model.name}Spec;` : ``,
+    `import ${groupId}.specifications.${model.name}Spec;`,
     `import lombok.RequiredArgsConstructor;`,
     `import org.springframework.data.domain.*;`,
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
     (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
-
-  let searchMethod = ''
-  if (hasSpec) {
-    searchMethod = `
-    public Page<${model.name}> search(Map<String, String> params, int page, int size, String sort) {
-        Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
-        Pageable pageable = PageRequest.of(page, size, s);
-        return repository.findAll(${model.name}Spec.fromParams(params), pageable);
-    }
-`
-  }
 
   return `package ${groupId}.services;
 
@@ -961,13 +956,19 @@ public class ${model.name}Service {
         return repository.findAll(PageRequest.of(page, size, s));
     }
 
+    public Page<${model.name}> search(Map<String, String> params, int page, int size, String sort) {
+        Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
+        Pageable pageable = PageRequest.of(page, size, s);
+        return repository.findAll(${model.name}Spec.fromParams(params), pageable);
+    }
+
 ${(route && route.gridFields && route.gridFields.length > 0) ? `
     public Page<${model.name}ListView> findAllProjected(int page, int size, String sort) {
         Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
         return repository.findAllProjectedBy(PageRequest.of(page, size, s));
     }
 ` : ''}
-${searchMethod}${incomingFks.map(fk => `
+${incomingFks.map(fk => `
     public Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, int page, int size, String sort) {
         Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
         return repository.findBy${fk.fkCamel}(id, PageRequest.of(page, size, s));
@@ -988,7 +989,6 @@ ${searchMethod}${incomingFks.map(fk => `
     public Map<String, Object> getAnalyticsSummary() {
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalRecords", repository.count());
-        // Custom aggregations for charts can be implemented here based on Route definitions
         return summary;
     }
 }
@@ -1003,7 +1003,6 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
   const pkType = getPkJavaType(model)
   const isComposite = hasCompositePk(model)
   const mapping = sanitizeTableForMapping(model.dbTable)
-  const hasSpec = route && route.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0
   const incomingFks = getIncomingFks(model, ast)
   const outgoingSubResources = route ? getOutgoingSubResources(route) : []
 
@@ -1024,14 +1023,12 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
     `import org.springframework.data.domain.Page;`,
     `import org.springframework.http.ResponseEntity;`,
     `import org.springframework.web.bind.annotation.*;`,
-    hasSpec ? `import java.util.HashMap;` : ``,
+    `import java.util.HashMap;`,
     `import java.util.Map;`,
     (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
   ].filter(Boolean).join('\n')
 
-  let searchEndpoint = ''
-  if (hasSpec) {
-    searchEndpoint = `
+  const searchEndpoint = `
     @GetMapping("/search")
     public ResponseEntity<Page<${model.name}>> search(
             @RequestParam Map<String, String> params,
@@ -1045,7 +1042,6 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
         return ResponseEntity.ok(service.search(filters, page, size, sort));
     }
 `
-  }
 
   const incomingEndpoints = incomingFks.map(fk => `
     @GetMapping("/by-${fk.fkField.replace(/_/g, '-')}/{id}")
@@ -1084,9 +1080,17 @@ ${outgoingSubResources.map(out => `    private final ${out.childModelName}Servic
 
     @GetMapping
     public ResponseEntity<Page<${model.name}>> list(
+            @RequestParam Map<String, String> allParams,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String sort) {
+        Map<String, String> filters = new HashMap<>(allParams);
+        filters.remove("page");
+        filters.remove("size");
+        filters.remove("sort");
+        if (!filters.isEmpty()) {
+            return ResponseEntity.ok(service.search(filters, page, size, sort));
+        }
         return ResponseEntity.ok(service.findAll(page, size, sort));
     }
 
@@ -1199,7 +1203,7 @@ ${javaVersion === 21 ? '\n## Virtual Threads (Project Loom)\nEste projeto usa `s
 // 5.12 — Specification.java (Pesquisa Dinâmica)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: string, route: RouteNode): string {
+function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const predicates: string[] = []
   const imports = new Set<string>([
     'import jakarta.persistence.criteria.*;',
@@ -1210,8 +1214,10 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
     `import ${groupId}.entities.${model.name};`
   ])
 
-  // Ignorar campos com JOIN por enquanto (requer lógica mais complexa de fetch)
-  const filterFields = route.filterFields.filter(f => !f.dbColumn.includes('.'))
+  // Usa filterFields da rota se configurados, caso contrário utiliza todos os campos escalares do modelo
+  const filterFields = (route?.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0)
+    ? route.filterFields.filter(f => !f.dbColumn.includes('.'))
+    : model.fields.filter(f => !f.dbColumn.includes('.'))
 
   for (const field of filterFields) {
     const javaProp = toCamelCase(field.dbColumn)
@@ -1221,9 +1227,10 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
     let predicateLogic = ''
     if (dbType === 'varchar') {
       predicateLogic = `
-            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
+            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
                 predicates.add(cb.like(cb.lower(root.get("${javaProp}")),
-                    "%" + params.get("${paramKey}").toLowerCase() + "%"));
+                    "%" + val_${javaProp}.toLowerCase() + "%"));
             }`
     } else if (dbType === 'date' || dbType === 'timestamp') {
       const cls = dbType === 'date' ? 'LocalDate' : 'LocalDateTime'
@@ -1231,35 +1238,47 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
       else imports.add('import java.time.LocalDateTime;')
 
       predicateLogic = `
-            if (params.containsKey("${paramKey}_start") && !params.get("${paramKey}_start").isBlank()) {
+            String start_${javaProp} = params.get("${paramKey}_start") != null ? params.get("${paramKey}_start") : params.get("${javaProp}_start");
+            if (start_${javaProp} != null && !start_${javaProp}.isBlank()) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("${javaProp}"),
-                    ${cls}.parse(params.get("${paramKey}_start"))));
+                    ${cls}.parse(start_${javaProp})));
             }
-            if (params.containsKey("${paramKey}_end") && !params.get("${paramKey}_end").isBlank()) {
+            String end_${javaProp} = params.get("${paramKey}_end") != null ? params.get("${paramKey}_end") : params.get("${javaProp}_end");
+            if (end_${javaProp} != null && !end_${javaProp}.isBlank()) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("${javaProp}"),
-                    ${cls}.parse(params.get("${paramKey}_end"))));
+                    ${cls}.parse(end_${javaProp})));
             }`
     } else if (dbType === 'uuid') {
       imports.add('import java.util.UUID;')
       predicateLogic = `
-            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
-                predicates.add(cb.equal(root.get("${javaProp}"), UUID.fromString(params.get("${paramKey}"))));
+            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
+                try {
+                    predicates.add(cb.equal(root.get("${javaProp}"), UUID.fromString(val_${javaProp})));
+                } catch (Exception ignored) {}
             }`
     } else if (dbType === 'integer') {
       predicateLogic = `
-            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
-                predicates.add(cb.equal(root.get("${javaProp}"), Integer.parseInt(params.get("${paramKey}"))));
+            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
+                try {
+                    predicates.add(cb.equal(root.get("${javaProp}"), Integer.parseInt(val_${javaProp})));
+                } catch (Exception ignored) {}
             }`
     } else if (dbType === 'numeric') {
       imports.add('import java.math.BigDecimal;')
       predicateLogic = `
-            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
-                predicates.add(cb.equal(root.get("${javaProp}"), new BigDecimal(params.get("${paramKey}"))));
+            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
+                try {
+                    predicates.add(cb.equal(root.get("${javaProp}"), new BigDecimal(val_${javaProp})));
+                } catch (Exception ignored) {}
             }`
     } else if (dbType === 'boolean') {
       predicateLogic = `
-            if (params.containsKey("${paramKey}") && !params.get("${paramKey}").isBlank()) {
-                predicates.add(cb.equal(root.get("${javaProp}"), Boolean.parseBoolean(params.get("${paramKey}"))));
+            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
+                predicates.add(cb.equal(root.get("${javaProp}"), Boolean.parseBoolean(val_${javaProp})));
             }`
     }
 

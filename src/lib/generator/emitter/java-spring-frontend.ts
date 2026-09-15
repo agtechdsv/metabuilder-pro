@@ -4,6 +4,7 @@ import { generateActions } from '../layers/actions'
 import { generateComponents } from '../layers/components'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
 import { generateBaseFiles } from './base-files'
+import { toPascalCase } from '../layers/routes/helpers'
 
 
 /**
@@ -34,7 +35,19 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
 
   // 6. REST Actions para cada modelo (substituem as Server Actions de banco)
   for (const model of ast.models) {
-    files.set(`frontend/app/actions/${model.dbTable}.ts`, generateRestActions(model))
+    const actionContent = generateRestActions(model)
+    const fileKeys = new Set<string>()
+    if (model.dbTable) {
+      fileKeys.add(model.dbTable.toLowerCase().trim())
+      fileKeys.add(model.dbTable.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ''))
+    }
+    if (model.name) {
+      fileKeys.add(model.name.toLowerCase().trim())
+      fileKeys.add(model.name.toLowerCase().replace(/[^a-zA-Z0-9_]/g, ''))
+    }
+    for (const key of fileKeys) {
+      files.set(`frontend/app/actions/${key}.ts`, actionContent)
+    }
   }
 
   // 7. Gerar rotas, componentes e páginas (reutilizar camadas existentes com prefixo)
@@ -175,11 +188,49 @@ function generateRestActions(model: ModelNode): string {
   const mn = model.name
   const endpoint = `/api/${model.dbTable}`
 
+  // Compatibility aliases
+  const aliases = new Set<string>()
+  const candidates = [
+    model.dbTable ? (model.dbTable.charAt(0).toUpperCase() + model.dbTable.slice(1).toLowerCase()) : null,
+    model.dbTable ? toPascalCase(model.dbTable) : null,
+    model.dbTable ? toPascalCase(model.dbTable.toLowerCase()) : null,
+    model.name ? toPascalCase(model.name) : null,
+  ]
+  for (const cand of candidates) {
+    if (cand && cand !== mn && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(cand)) {
+      aliases.add(cand)
+    }
+  }
+
+  let aliasCode = ''
+  if (aliases.size > 0) {
+    aliasCode = '\n// Compatibility aliases\n'
+    for (const alias of aliases) {
+      aliasCode += `export async function get${alias}List(opts?: any) { return get${mn}List(opts) }\n`
+      aliasCode += `export async function get${alias}ById(id: string) { return get${mn}ById(id) }\n`
+      aliasCode += `export async function get${alias}ByField(field: string, value: any) { return get${mn}ByField(field, value) }\n`
+      aliasCode += `export async function create${alias}(formData: any) { return create${mn}(formData) }\n`
+      aliasCode += `export async function update${alias}(id: string, formData: any) { return update${mn}(id, formData) }\n`
+      aliasCode += `export async function delete${alias}(id: string) { return delete${mn}(id) }\n`
+    }
+  }
+
   return `'use server'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client'
 
-export async function get${mn}List(opts?: { page?: number; limit?: number; search?: string }) {
-  return apiGet('${endpoint}', opts)
+export async function get${mn}List(opts?: { page?: number; limit?: number; search?: string; filters?: Record<string, any> }) {
+  const queryParams: Record<string, any> = {}
+  if (opts) {
+    if (opts.page != null) queryParams.page = Math.max(0, opts.page - 1)
+    if (opts.limit != null) queryParams.size = opts.limit
+    if (opts.search) queryParams.search = opts.search
+    if (opts.filters) {
+      Object.entries(opts.filters).forEach(([k, v]) => {
+        if (v != null && v !== '') queryParams[k] = v
+      })
+    }
+  }
+  return apiGet('${endpoint}', queryParams)
 }
 
 export async function get${mn}ById(id: string) {
@@ -188,10 +239,18 @@ export async function get${mn}ById(id: string) {
 
 export async function get${mn}ByField(field: string, value: any) {
   const res: any = await apiGet('${endpoint}', { [field]: value })
-  if (Array.isArray(res)) return res
-  if (res && Array.isArray(res.content)) return res.content
-  if (res && typeof res === 'object') return [res]
-  return []
+  let items: any[] = []
+  if (Array.isArray(res)) items = res
+  else if (res && Array.isArray(res.content)) items = res.content
+  else if (res && typeof res === 'object') items = [res]
+
+  // Failsafe: se a API retornou mais de 1 registro ou todos os registros, filtra pelo campo solicitado
+  const targetVal = String(value ?? '').trim().toLowerCase()
+  const filtered = items.filter((item: any) => {
+    const val = String(item?.[field] ?? item?.[field.toLowerCase()] ?? item?.[field.toUpperCase()] ?? '').trim().toLowerCase()
+    return val === targetVal
+  })
+  return filtered.length > 0 ? filtered : items
 }
 
 export async function create${mn}(formData: FormData | Record<string, any>) {
@@ -207,7 +266,7 @@ export async function update${mn}(id: string, formData: FormData | Record<string
 export async function delete${mn}(id: string) {
   return apiDelete(\`${endpoint}/\${id}\`)
 }
-`
+${aliasCode}`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

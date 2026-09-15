@@ -30,8 +30,10 @@ export function findDisplayColumn(fields: any[]): string {
  * Replica a lógica de renderização do Runtime ViewPageContent.
  */
 export function renderGridCellValue(field: ResolvedField, varName = 'item', relationalOptionsVar?: string): string {
-  const col = field.dbColumn.includes('.') ? `["${field.dbColumn}"]` : `.${field.dbColumn}`
-  const raw = `${varName}${col}`
+  const camel = toCamel(field.dbColumn)
+  const raw = field.dbColumn.includes('.')
+    ? `${varName}?.["${field.dbColumn}"]`
+    : `(${varName}?.['${field.dbColumn}'] ?? ${varName}?.['${camel}'] ?? ${varName}?.['${field.dbColumn.toLowerCase()}'])`
   const dt = (field.dataType || '').toLowerCase()
 
   if (field.isByoc || field.isVirtual) {
@@ -193,6 +195,8 @@ export function renderFormField(
   isModal = false
 ): string {
   const col = field.dbColumn
+  const colCamel = toCamel(col)
+  const valExpr = `(data?.['${col}'] ?? (data as any)?.['${colCamel}'] ?? (data as any)?.['${col.toLowerCase()}'])`
   const label = field.label
   const dt = (field.dataType || '').toLowerCase()
   const required = field.config?.required || false
@@ -221,7 +225,7 @@ export function renderFormField(
               type="text"
               readOnly
               disabled
-              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              defaultValue={isEdit ? String(${valExpr} ?? '') : ''}
               className="w-full bg-neutral-100/80 dark:bg-neutral-800/80 border border-slate-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 font-mono text-sm rounded-xl px-4 py-2.5 outline-none cursor-not-allowed"
             />
           </div>`
@@ -277,7 +281,7 @@ export function renderFormField(
               name="${col}"
               ${required ? 'required' : ''}
               disabled={${readOnlyCond}}
-              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              defaultValue={isEdit ? String(${valExpr} ?? '') : ''}
               className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50 cursor-pointer")}
             >
               <option value="">Selecione ${label}...</option>
@@ -298,7 +302,7 @@ export function renderFormField(
                 name="${col}"
                 type="checkbox"
                 disabled={${readOnlyCond}}
-                defaultChecked={isEdit ? Boolean(data?.${col}) : false}
+                defaultChecked={isEdit ? Boolean(${valExpr}) : false}
                 className={"w-5 h-5 rounded-md border-2 border-neutral-300 dark:border-neutral-600 text-indigo-600 focus:ring-indigo-500 " + (${readOnlyCond} ? "cursor-not-allowed opacity-60" : "cursor-pointer")}
               />
               <label htmlFor="${col}" className="text-sm text-neutral-700 dark:text-neutral-300 cursor-pointer">${label}</label>
@@ -327,7 +331,7 @@ export function renderFormField(
               ${required ? 'required' : ''}
               readOnly={${readOnlyCond}}
               disabled={${readOnlyCond}}
-              defaultValue={isEdit ? formatDateForInput(data?.${col}) : ''}
+              defaultValue={isEdit ? formatDateForInput(${valExpr}) : ''}
               className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
@@ -344,7 +348,7 @@ export function renderFormField(
               ${required ? 'required' : ''}
               readOnly={${readOnlyCond}}
               disabled={${readOnlyCond}}
-              defaultValue={isEdit ? formatDatetimeForInput(data?.${col}) : ''}
+              defaultValue={isEdit ? formatDatetimeForInput(${valExpr}) : ''}
               className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
@@ -363,7 +367,7 @@ export function renderFormField(
               readOnly={${readOnlyCond}}
               disabled={${readOnlyCond}}
               placeholder="${placeholder}"
-              defaultValue={isEdit ? String(data?.${col} ?? '') : ''}
+              defaultValue={isEdit ? String(${valExpr} ?? '') : ''}
               className={"w-full border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 placeholder:text-slate-400 dark:placeholder:text-neutral-500 rounded-xl px-4 py-3 text-sm outline-none resize-y min-h-[100px] transition-all " + (${readOnlyCond} ? "bg-neutral-100/80 dark:bg-neutral-800/80 font-semibold cursor-not-allowed opacity-90" : "bg-slate-50 dark:bg-neutral-800 focus:ring-2 focus:ring-indigo-500/50")}
             />
           </div>`
@@ -375,7 +379,7 @@ export function renderFormField(
   const formulaAttr = hasFormula ? ` data-formula={${JSON.stringify(JSON.stringify(formulaTokens))}}` : ''
   const defaultValueExpr = hasFormula
     ? `isEdit ? (formatWithMask(evaluateFormula(${JSON.stringify(formulaTokens)}, data), '${mask}')) : ''`
-    : `isEdit ? (formatWithMask(data?.${col}, '${mask}')) : ''`
+    : `isEdit ? (formatWithMask(${valExpr}, '${mask}')) : ''`
   const placeholderText = hasFormula ? 'Calculado automaticamente' : placeholder
 
   return `
