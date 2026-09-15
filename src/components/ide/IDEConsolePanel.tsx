@@ -2,10 +2,11 @@
 
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Package, Play, Square, AppWindow, Trash2, X, Coffee, BookOpen, Database } from 'lucide-react'
+import { Loader2, Package, Play, Square, AppWindow, Trash2, X, Coffee, BookOpen, Database, Code2, Copy, Check } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { ConsoleLog, isDatabaseLog, stripAnsiCodes } from '@/contexts/ide/useIDEConsole'
 import { Modal } from '@/components/ui/Modal'
+import { parseDbLogLine, formatSql, SqlHighlight, ParameterBindHighlight } from '@/utils/sqlFormatter'
 
 export interface IDEConsolePanelProps {
   showConsole: boolean
@@ -42,6 +43,31 @@ export interface IDEConsolePanelProps {
   // Prompt Java
   javaPromptResolver: { resolve: (val: boolean) => void } | null
   setJavaPromptResolver: React.Dispatch<React.SetStateAction<{ resolve: (val: boolean) => void } | null>>
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = React.useState(false)
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title="Copiar SQL"
+      className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1.5 py-0.5 rounded bg-neutral-800/90 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-100 text-[10px] transition-all shrink-0 ml-2"
+    >
+      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+      <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+    </button>
+  )
 }
 
 export function IDEConsolePanel({
@@ -83,6 +109,21 @@ export function IDEConsolePanel({
     }
     return false
   })
+
+  const [isFormatSql, setIsFormatSql] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ide_console_format_sql')
+      return stored === null ? true : stored === 'true'
+    }
+    return true
+  })
+
+  const setFormatSql = (val: boolean) => {
+    setIsFormatSql(val)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ide_console_format_sql', String(val))
+    }
+  }
 
   const isDetailed = isDetailedConsole !== undefined ? isDetailedConsole : localDetailed
   const setDetailed = (val: boolean) => {
@@ -162,6 +203,37 @@ export function IDEConsolePanel({
                     )}
                   </button>
                 </div>
+
+                {/* ── Toggle Sem Formato / Com Formato (visível em modo Detalhado) ── */}
+                {isDetailed && (
+                  <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded p-0.5 mr-2 animate-in fade-in duration-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormatSql(false)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                        !isFormatSql
+                          ? 'bg-neutral-800 text-neutral-200 shadow-sm border border-neutral-700/60 font-semibold'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                      title="Sem Formato: exibe as queries SQL em linha única contínua"
+                    >
+                      Sem Formato
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormatSql(true)}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                        isFormatSql
+                          ? 'bg-fuchsia-700 text-white shadow-sm shadow-fuchsia-500/20 font-semibold'
+                          : 'text-neutral-500 hover:text-neutral-300'
+                      }`}
+                      title="Com Formato: indenta colunas e quebra linhas de cláusulas SQL (SELECT, FROM, WHERE, etc.)"
+                    >
+                      <Code2 className={`w-3 h-3 ${isFormatSql ? 'text-fuchsia-200' : 'text-neutral-500'}`} />
+                      <span>Com Formato</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* ── Node.js controls (sempre visíveis se não for java-spring) ── */}
                 {!isJavaSpringProject && (
@@ -360,30 +432,89 @@ export function IDEConsolePanel({
                 </span>
               )}
               {visibleLogs.map((log, i) => {
+                const cleanText = stripAnsiCodes(log.text)
                 const isDb = log.isDb || isDatabaseLog(log.text)
+                const parsed = isDb ? parseDbLogLine(cleanText) : null
+
                 return (
                   <div
                     key={i}
-                    className={`flex items-start gap-2 py-0.5 ${
+                    className={`group flex items-start gap-2 py-1 px-1.5 rounded transition-colors ${
                       isDb
-                        ? 'bg-cyan-950/20 px-1.5 rounded border-l-2 border-cyan-500/60 text-cyan-200'
+                        ? 'bg-cyan-950/25 border-l-2 border-cyan-500/70 text-cyan-200 my-0.5'
                         : log.type === 'error'
-                          ? 'text-red-400'
+                          ? 'text-red-400 py-0.5'
                           : log.type === 'warn'
-                            ? 'text-yellow-400'
+                            ? 'text-yellow-400 py-0.5'
                             : log.type === 'info'
-                              ? 'text-cyan-400'
-                              : 'text-neutral-300'
+                              ? 'text-cyan-400 py-0.5'
+                              : 'text-neutral-300 py-0.5'
                     }`}
                   >
-                    <span className="text-neutral-600 shrink-0 select-none">{log.ts}</span>
+                    <span className="text-neutral-600 shrink-0 select-none text-[10px] pt-0.5">{log.ts}</span>
                     {isDb && (
                       <span className="inline-flex items-center gap-1 px-1 py-0.2 rounded text-[9px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800/50 shrink-0 select-none mt-0.5">
                         <Database className="w-2.5 h-2.5" />
                         DB
                       </span>
                     )}
-                    <span className="break-all whitespace-pre-wrap">{stripAnsiCodes(log.text)}</span>
+                    <div className="flex-1 min-w-0">
+                      {isDb && parsed && parsed.header ? (
+                        <>
+                          {/* Linha 1: Cabeçalho com dois pontos colado à esquerda */}
+                          <div className="flex items-center justify-between text-neutral-400 font-mono text-[10.5px] select-text">
+                            <span className="break-all">{parsed.header}</span>
+                            {parsed.isQuery && (
+                              <CopyButton text={isFormatSql ? formatSql(parsed.content) : parsed.content} />
+                            )}
+                          </div>
+
+                          {/* Linha 2: ENTER antes da query ou parameter */}
+                          <div className="mt-1 select-text">
+                            {parsed.isQuery ? (
+                              <div
+                                className={
+                                  isFormatSql
+                                    ? 'overflow-x-auto py-1.5 pl-2.5 pr-2 bg-neutral-950/60 rounded border border-cyan-900/30 text-xs'
+                                    : 'break-all whitespace-pre-wrap pl-1 text-xs'
+                                }
+                              >
+                                <SqlHighlight
+                                  sql={isFormatSql ? formatSql(parsed.content) : parsed.content}
+                                />
+                              </div>
+                            ) : parsed.isParameterBind ? (
+                              <div className="pl-1">
+                                <ParameterBindHighlight text={parsed.content} />
+                              </div>
+                            ) : (
+                              <div className="font-mono text-[11px] text-cyan-200/90 pl-1 break-all whitespace-pre-wrap">
+                                {parsed.content}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : isDb && parsed && parsed.isQuery ? (
+                        <div className="select-text">
+                          <div className="flex items-center justify-end mb-1">
+                            <CopyButton text={isFormatSql ? formatSql(parsed.content) : parsed.content} />
+                          </div>
+                          <div
+                            className={
+                              isFormatSql
+                                ? 'overflow-x-auto py-1.5 pl-2.5 pr-2 bg-neutral-950/60 rounded border border-cyan-900/30 text-xs'
+                                : 'break-all whitespace-pre-wrap text-xs'
+                            }
+                          >
+                            <SqlHighlight
+                              sql={isFormatSql ? formatSql(parsed.content) : parsed.content}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="break-all whitespace-pre-wrap select-text">{cleanText}</span>
+                      )}
+                    </div>
                   </div>
                 )
               })}
