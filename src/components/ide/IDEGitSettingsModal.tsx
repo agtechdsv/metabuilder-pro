@@ -92,7 +92,7 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug, onResetProje
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="w-full max-w-2xl bg-[#1e1e1e] border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        className="w-full max-w-4xl bg-[#1e1e1e] border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between bg-[#151515]">
