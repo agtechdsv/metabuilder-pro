@@ -350,7 +350,7 @@ ${lookupQueries}
     ${Array.from(lookupModels.keys()).map(t => `'${t}': ${t}LookupList || [],`).join('\n    ')}
   }
 
-  const enrichedData = (rawData || []).map((row: any) => {
+  const enrichedData = (Array.isArray(rawData) ? rawData : (rawData?.content ?? [])).map((row: any) => {
     const item: Record<string, any> = { ...row }
     for (const [tbl, list] of Object.entries(tablesData)) {
       const singular = tbl.endsWith('s') ? tbl.slice(0, -1) : tbl

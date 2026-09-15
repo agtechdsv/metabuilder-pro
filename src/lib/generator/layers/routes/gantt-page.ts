@@ -210,7 +210,7 @@ ${buildOptionsCode.join('\n')}
   }
 
   // Filtros dinâmicos da URL
-  const data = (rawData || []).filter((item: any) => {
+  const data = (Array.isArray(rawData) ? rawData : (rawData?.content ?? [])).filter((item: any) => {
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn

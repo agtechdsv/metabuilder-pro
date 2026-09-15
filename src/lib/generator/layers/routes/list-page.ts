@@ -258,12 +258,15 @@ async function ${mn}TableContent({
 
 ${fetchDataCode}
 
+  // Normaliza resposta: suporta array direto (Node.js) e Page object (Spring Boot / REST APIs paginadas)
+  const dataArray: any[] = Array.isArray(rawData) ? rawData : (rawData?.content ?? [])
+
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
   }
 
   // Filtros dinâmicos da URL
-  const filteredData = (rawData || []).filter((item: any) => {
+  const filteredData = (dataArray).filter((item: any) => {
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn

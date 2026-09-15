@@ -255,7 +255,7 @@ ${Array.from(optionsMap.values()).join('\n')}
 
   return (
     <TimelineClient
-      initialData={rawData || []}
+      initialData={Array.isArray(rawData) ? rawData : (rawData?.content ?? [])}
       relationalOptions={relationalOptions}
       initialParams={params}
     />

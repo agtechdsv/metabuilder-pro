@@ -231,7 +231,7 @@ ${buildOptionsCode.join('\n')}
 
   return (
     <KanbanClient
-      initialData={rawData || []}
+      initialData={Array.isArray(rawData) ? rawData : (rawData?.content ?? [])}
       relationalOptions={relationalOptions}
       initialParams={params}
       isEmbedded={isEmbedded}
