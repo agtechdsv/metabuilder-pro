@@ -189,7 +189,7 @@ export function IDEConsolePanel({
                           <Play className="w-3.5 h-3.5 text-amber-400" />
                         )}
                         <span className="hidden sm:inline">
-                          {isStartingSpring ? 'Iniciando...' : 'Start Java'}
+                          {isStartingSpring ? 'Iniciando...' : 'Start Spring Boot'}
                         </span>
                       </button>
                     ) : (
@@ -205,7 +205,7 @@ export function IDEConsolePanel({
                           <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />
                         )}
                         <span className="hidden sm:inline">
-                          {isStoppingSpring ? 'Parando...' : 'Stop Java'}
+                          {isStoppingSpring ? 'Parando...' : 'Stop Spring Boot'}
                         </span>
                       </button>
                     )}
@@ -244,7 +244,7 @@ export function IDEConsolePanel({
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
                       >
                         <Play className="w-3.5 h-3.5 text-green-400" />
-                        <span className="hidden sm:inline">Frontend</span>
+                        <span className="hidden sm:inline">Start NextJs</span>
                       </button>
                     ) : (
                       <button
@@ -302,12 +302,12 @@ export function IDEConsolePanel({
                 <div
                   key={i}
                   className={`flex gap-2 ${log.type === 'error'
-                      ? 'text-red-400'
-                      : log.type === 'warn'
-                        ? 'text-yellow-400'
-                        : log.type === 'info'
-                          ? 'text-cyan-400'
-                          : 'text-neutral-300'
+                    ? 'text-red-400'
+                    : log.type === 'warn'
+                      ? 'text-yellow-400'
+                      : log.type === 'info'
+                        ? 'text-cyan-400'
+                        : 'text-neutral-300'
                     }`}
                 >
                   <span className="text-neutral-600 shrink-0">{log.ts}</span>
