@@ -225,12 +225,12 @@ function generateFrontendConfigFiles(ast: AppAST, files: Map<string, string>): v
       moduleResolution: 'bundler',
       resolveJsonModule: true,
       isolatedModules: true,
-      jsx: 'preserve',
+      jsx: 'react-jsx',
       incremental: true,
       plugins: [{ name: 'next' }],
       paths: { '@/*': ['./*'] },
     },
-    include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+    include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts', '.next/dev/types/**/*.ts'],
     exclude: ['node_modules'],
   }, null, 2))
 
