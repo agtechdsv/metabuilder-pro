@@ -39,25 +39,30 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
           const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
           const { readTextFile, exists } = await import('@tauri-apps/plugin-fs')
 
-          // Ler logs antigos do arquivo
-          const dir = await appLocalDataDir()
-          const logPath = await join(dir, 'logs', 'tunnel.log')
-          
-          if (await exists(logPath)) {
-            const fileContent = await readTextFile(logPath)
-            const lines = fileContent.split('\n').filter(l => l.trim() !== '')
-            setLogs(lines)
-          } else {
-            setLogs([t('tunnel_log.not_found', '[SYSTEM] Arquivo de log não encontrado. O túnel pode não ter sido iniciado ainda.')])
+          try {
+            // Ler logs antigos do arquivo
+            const dir = await appLocalDataDir()
+            const logPath = await join(dir, 'logs', 'tunnel.log')
+            
+            if (await exists(logPath)) {
+              const fileContent = await readTextFile(logPath)
+              const lines = fileContent.split('\n').filter(l => l.trim() !== '')
+              setLogs(lines)
+            } else {
+              setLogs([t('tunnel_log.not_found', '[SYSTEM] Arquivo de log não encontrado. O túnel pode não ter sido iniciado ainda.')])
+            }
+          } catch (fileErr: any) {
+            console.error('Falha ao ler log inicial:', fileErr)
+            setLogs([`${t('tunnel_log.error_read_file', '[ERRO] Falha ao ler o arquivo de log do túnel local.')} Detalhe: ${fileErr.message || fileErr}`])
           }
 
           // Escutar novos logs em tempo real
           unlisten = await listen<string>('tunnel-log', (event) => {
             setLogs((prev) => [...prev, event.payload])
           })
-        } catch (error) {
+        } catch (error: any) {
           console.error(t('tunnel_log.error_read_console', 'Erro ao ler logs do túnel:'), error)
-          setLogs([t('tunnel_log.error_read_file', '[ERRO] Falha ao ler o arquivo de log do túnel local.')])
+          setLogs([`${t('tunnel_log.error_read_file', '[ERRO] Falha ao iniciar escuta de logs.')} Detalhe: ${error.message || error}`])
         }
       } else {
         setLogs([t('tunnel_log.desktop_only', '[SYSTEM] Visualização de logs do túnel só está disponível no ambiente Desktop (IDE).')])
@@ -127,19 +132,41 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleCopyAll}
-              title={t('tunnel_log.copy_all', 'Copiar Tudo')}
-              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white"
+              onClick={async () => {
+                const selectedText = window.getSelection()?.toString()
+                if (selectedText) {
+                  await navigator.clipboard.writeText(selectedText)
+                  toast("Seleção copiada para a área de transferência.", "success")
+                } else {
+                  toast("Selecione o texto que deseja copiar primeiro.", "info")
+                }
+              }}
+              className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded bg-gray-800/50 hover:bg-gray-700/50"
+              title="Copiar Seleção"
             >
-              <Copy className="w-5 h-5" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
+            
+            <button
+              onClick={async () => {
+                const allText = logs.join('\n')
+                await navigator.clipboard.writeText(allText)
+                toast("Todos os logs copiados para a área de transferência.", "success")
+              }}
+              className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded bg-gray-800/50 hover:bg-gray-700/50"
+              title="Copiar Tudo"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+
             <button
               onClick={handleClearLogs}
-              title={t('tunnel_log.clear_button', 'Limpar Logs')}
-              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-red-400"
+              className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded bg-gray-800/50 hover:bg-gray-700/50"
+              title={t('tunnel_log.clear_logs', 'Limpar Logs')}
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </button>
+            
             <button
               onClick={async () => {
                 if (isWindow && isTauri()) {
@@ -149,9 +176,9 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                   onClose()
                 }
               }}
-              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white"
+              className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded hover:bg-red-500/20 hover:text-red-400"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
