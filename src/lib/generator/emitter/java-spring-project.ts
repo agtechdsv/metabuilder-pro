@@ -1,6 +1,6 @@
 import { AppAST } from '../ast'
 import { generateJavaFrontend } from './java-spring-frontend'
-import { generateSpringBootBackend } from './java-spring-backend'
+import { generateSpringBootBackend, generateRootReadme } from './java-spring-backend'
 
 /**
  * java-spring-project.ts — Orquestrador do modo java-spring (Módulo 4)
@@ -8,6 +8,7 @@ import { generateSpringBootBackend } from './java-spring-backend'
  * Gera um ZIP com estrutura dupla:
  *   frontend/  → Next.js chamando REST API (sem acesso direto ao banco)
  *   backend/   → Spring Boot 3.x + Java 21 com Entity/Repository/Service/Controller
+ *   README.md  → Documentação master raiz do projeto full-stack
  */
 export function generateJavaSpringProject(ast: AppAST): Map<string, string> {
   const files = new Map<string, string>()
@@ -17,6 +18,9 @@ export function generateJavaSpringProject(ast: AppAST): Map<string, string> {
 
   // BLOCO 2 — Backend Spring Boot
   generateSpringBootBackend(ast, files)
+
+  // BLOCO 3 — Root README
+  files.set('README.md', generateRootReadme(ast))
 
   return files
 }

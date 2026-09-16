@@ -1,4 +1,4 @@
-import { AppAST, ModelNode, FieldNode, RouteNode } from '../ast'
+import { AppAST, ModelNode, FieldNode, RouteNode, DbType } from '../ast'
 
 /**
  * java-spring-backend.ts — Gerador do backend Spring Boot 3.x (Módulos 5 + 8)
@@ -67,6 +67,14 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
 
   // 6. README
   files.set('backend/README.md', generateBackendReadme(ast))
+
+  // 7. Eject Options Condicionais (JWT, Migrations, Testes, Dockerfile, docker-compose, .env.example)
+  if (ast.jwtEnabled) generateJwtFiles(ast, files, basePkg, groupId)
+  if (ast.generateMigrations) generateMigrationFiles(ast, files)
+  if (ast.generateServiceTests || ast.generateControllerTests) generateTestFiles(ast, files, groupId)
+  if (ast.generateDockerfile) files.set('backend/Dockerfile', generateBackendDockerfile(ast))
+  if (ast.generateDockerCompose) files.set('docker-compose.yml', generateDockerCompose(ast))
+  if (ast.generateEnvExample) files.set('backend/.env.example', generateEnvExample(ast))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,6 +235,41 @@ function generatePomXml(ast: AppAST): string {
     }
   })()
 
+  const jwtDeps = ast.jwtEnabled ? `
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+      <version>0.11.5</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+      <version>0.11.5</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
+      <version>0.11.5</version>
+      <scope>runtime</scope>
+    </dependency>` : ''
+
+  const flywayDep = (ast.generateMigrations && ast.migrationEngine !== 'liquibase') ? `
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>` : ''
+
+  const liquibaseDep = (ast.generateMigrations && ast.migrationEngine === 'liquibase') ? `
+    <dependency>
+      <groupId>org.liquibase</groupId>
+      <artifactId>liquibase-core</artifactId>
+    </dependency>` : ''
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -278,7 +321,7 @@ function generatePomXml(ast: AppAST): string {
       <artifactId>spring-boot-devtools</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
-    </dependency>${dbDriver}
+    </dependency>${dbDriver}${jwtDeps}${flywayDep}${liquibaseDep}
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -433,6 +476,36 @@ function generateApplicationProperties(ast: AppAST): string {
     lines.push(``)
     lines.push(`# ── Virtual Threads (Project Loom — Java 21) ──`)
     lines.push(`spring.threads.virtual.enabled=true`)
+  }
+
+  if (ast.jwtEnabled) {
+    lines.push(
+      ``,
+      `# ── JWT Security ──`,
+      `jwt.secret=\${JWT_SECRET:minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}`,
+      `jwt.expiration-ms=\${JWT_EXPIRATION_MS:86400000}`
+    )
+  }
+
+  if (ast.generateMigrations && ast.migrationEngine !== 'liquibase') {
+    lines.push(
+      ``,
+      `# ── Flyway Migrations ──`,
+      `spring.flyway.enabled=true`,
+      `spring.flyway.locations=classpath:db/migration`,
+      `spring.flyway.baseline-on-migrate=true`,
+      `spring.jpa.hibernate.ddl-auto=validate`
+    )
+  }
+
+  if (ast.generateMigrations && ast.migrationEngine === 'liquibase') {
+    lines.push(
+      ``,
+      `# ── Liquibase Migrations ──`,
+      `spring.liquibase.enabled=true`,
+      `spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml`,
+      `spring.jpa.hibernate.ddl-auto=validate`
+    )
   }
 
   return lines.join('\n') + '\n'
@@ -1155,56 +1228,215 @@ ${searchEndpoint}${incomingEndpoints}${outgoingEndpoints}
 function generateBackendReadme(ast: AppAST): string {
   const port = ast.javaPort ?? 8080
   const javaVersion = ast.javaVersion ?? 21
+  const dbStackUpper = ast.dbStack.toUpperCase()
 
-  return `# ${ast.projectName} — Backend (Spring Boot ${javaVersion})
+  const jwtBadges = ast.jwtEnabled
+    ? `\n<a href="#-autenticação--segurança-jwt"><img src="https://img.shields.io/badge/Security-JWT%20Stateless-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT Security" /></a>`
+    : ''
+  const dockerBadge = ast.generateDockerfile
+    ? `\n<a href="#-executar-com-docker"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready" /></a>`
+    : ''
+  const migrationBadge = ast.generateMigrations
+    ? `\n<a href="#-migrations-de-banco-de-dados"><img src="https://img.shields.io/badge/Migrations-${ast.migrationEngine === 'liquibase' ? 'Liquibase' : 'Flyway'}-CC292B?style=for-the-badge&logo=database&logoColor=white" alt="Migrations" /></a>`
+    : ''
 
-## Pré-requisitos
-- JDK ${javaVersion} ([Adoptium Temurin](https://adoptium.net))
-- Maven 3.9+ (ou use o Maven Wrapper incluído: \`./mvnw\`)
+  const endpointsRows = ast.models.map(m => {
+    const t = sanitizeTableForMapping(m.dbTable)
+    return `| **${m.name}** | \`GET\` | \`/api/${t}\` | Listar registros paginados (\`?page=0&size=50&sort=campo\`) |
+| **${m.name}** | \`GET\` | \`/api/${t}/{id}\` | Buscar registro por ID |
+| **${m.name}** | \`POST\` | \`/api/${t}\` | Criar novo registro com validação Bean Validation |
+| **${m.name}** | \`PUT\` | \`/api/${t}/{id}\` | Atualizar registro existente por ID |
+| **${m.name}** | \`DELETE\` | \`/api/${t}/{id}\` | Excluir registro por ID |
+| **${m.name}** | \`GET\` | \`/api/${t}/search\` | Pesquisa multicritério com filtros dinâmicos |
+| **${m.name}** | \`GET\` | \`/api/${t}/analytics\` | Resumo estatístico e contagem de registros |`
+  }).join('\n')
 
-## Configuração
-Edite \`src/main/resources/application.properties\`:
-\`\`\`properties
-spring.datasource.url=jdbc:...   # configure sua URL JDBC
-spring.datasource.username=...
-spring.datasource.password=...
-\`\`\`
+  const jwtSection = ast.jwtEnabled ? `
+## 🔐 Autenticação & Segurança (JWT)
 
-## Executar
+A API utiliza autenticação **Stateless** com tokens JWT (algoritmo HMAC-SHA256).
+
+### 1. Obter Token de Acesso
 \`\`\`bash
-cd backend
-mvn spring-boot:run
-# ou: ./mvnw spring-boot:run
-
-# Acesse: http://localhost:${port}
-# Swagger: http://localhost:${port}/swagger-ui.html
+curl -X POST http://localhost:${port}/api/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"email": "admin@metabuilder.com", "password": "senhaSegura123"}'
 \`\`\`
 
-## Endpoints gerados
-${ast.models.map(m => {
-  const t = sanitizeTableForMapping(m.dbTable)
-  return [
-    `### ${m.name}`,
-    `- \`GET    /api/${t}\` — listar (paginado: ?page=0&size=50&sort=campo)`,
-    `- \`GET    /api/${t}/{id}\` — buscar por ID`,
-    `- \`POST   /api/${t}\` — criar`,
-    `- \`PUT    /api/${t}/{id}\` — atualizar`,
-    `- \`DELETE /api/${t}/{id}\` — excluir`,
-  ].join('\n')
-}).join('\n\n')}
+**Resposta (200 OK):**
+\`\`\`json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "email": "admin@metabuilder.com",
+  "expiresIn": 86400000
+}
+\`\`\`
 
-## Arquitetura
+### 2. Consumir Endpoints Protegidos
+Envie o token no header \`Authorization\`:
+\`\`\`bash
+curl -X GET http://localhost:${port}/api/${ast.models[0] ? sanitizeTableForMapping(ast.models[0].dbTable) : 'dados'} \\
+  -H "Authorization: Bearer <SEU_TOKEN_AQUI>"
 \`\`\`
-Application.java          ← Entry point
-config/
-  CorsConfig.java         ← CORS configurado para http://localhost:3000
-  OpenApiConfig.java      ← Swagger/OpenAPI 3.x
-entities/                 ← @Entity JPA por tabela
-repositories/             ← JpaRepository por entidade
-services/                 ← Regras de negócio
-controllers/              ← @RestController por entidade
+` : ''
+
+  const migrationsSection = ast.generateMigrations ? `
+## 🗄️ Migrations de Banco de Dados (${ast.migrationEngine === 'liquibase' ? 'Liquibase' : 'Flyway'})
+
+${ast.migrationEngine === 'liquibase'
+  ? `O versionamento de banco é automatizado com **Liquibase**:
+- Changelog mestre: \`src/main/resources/db/changelog/db.changelog-master.yaml\`
+- As tabelas e constraints são aplicadas automaticamente no boot do Spring Boot.`
+  : `O versionamento de banco é automatizado com **Flyway**:
+- Scripts de migração: \`src/main/resources/db/migration/V1__init.sql\`
+- Para novas alterações de schema, crie arquivos seguindo o padrão \`V2__descricao.sql\`.
+- As migrações executam automaticamente na inicialização da aplicação.`
+}
+` : ''
+
+  const dockerSection = ast.generateDockerfile ? `
+## 🐳 Executar com Docker
+
+### 1. Construir a Imagem Multi-Stage
+\`\`\`bash
+docker build -t ${ast.projectSlug}-backend:latest .
 \`\`\`
-${javaVersion === 21 ? '\n## Virtual Threads (Project Loom)\nEste projeto usa `spring.threads.virtual.enabled=true` para máxima concorrência com Java 21.\n' : ''}
+
+### 2. Executar o Container
+\`\`\`bash
+docker run -d \\
+  --name ${ast.projectSlug}-backend \\
+  -p ${port}:${port} \\
+  ${ast.projectSlug}-backend:latest
+\`\`\`
+` : ''
+
+  const testsSection = (ast.generateServiceTests || ast.generateControllerTests) ? `
+## 🧪 Testes Automatizados (JUnit 5 + Mockito)
+
+Execute a suíte de testes com o Maven Wrapper:
+\`\`\`bash
+# Executar todos os testes
+./mvnw test
+
+# Executar apenas testes de uma classe específica
+./mvnw test -Dtest=${ast.models[0] ? ast.models[0].name : 'App'}ServiceTest
+\`\`\`
+` : ''
+
+  return `<div align="center">
+
+# 🚀 ${ast.projectName} — Backend API (Spring Boot)
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-${javaVersion}%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java ${javaVersion}" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.3.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3" />
+  <img src="https://img.shields.io/badge/Database-${dbStackUpper}-336791?style=for-the-badge&logo=database&logoColor=white" alt="Database ${dbStackUpper}" />
+  <img src="https://img.shields.io/badge/Swagger-OpenAPI%203.0-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="Swagger OpenAPI" />${jwtBadges}${migrationBadge}${dockerBadge}
+</p>
+
+**API REST empresarial gerada com arquitetura limpa, alta performance e type-safety.**
+
+</div>
+
+---
+
+## 📋 Pré-requisitos
+
+| Ferramenta | Versão Mínima | Descrição / Download |
+|---|---|---|
+| **JDK** | Java ${javaVersion} (LTS) | [Eclipse Adoptium Temurin](https://adoptium.net/) |
+| **Maven** | 3.9+ | Opcional (Maven Wrapper \`./mvnw\` já incluído) |
+| **Banco de Dados** | ${dbStackUpper} | Instância local, em nuvem ou via Docker |
+
+---
+
+## ⚙️ Configuração do Ambiente
+
+1. Crie o arquivo de configuração baseado no exemplo:
+\`\`\`bash
+cp .env.example .env
+\`\`\`
+
+2. Verifique as credenciais no arquivo \`src/main/resources/application.properties\`:
+\`\`\`properties
+spring.datasource.url=jdbc:... # configure a URL JDBC correta
+spring.datasource.username=seu_usuario
+spring.datasource.password=sua_senha
+\`\`\`
+
+---
+
+## 🚀 Como Executar
+
+### Opção 1: Via Maven Wrapper (Recomendado)
+\`\`\`bash
+# No Linux / macOS:
+./mvnw spring-boot:run
+
+# No Windows PowerShell:
+.\\mvnw.cmd spring-boot:run
+\`\`\`
+
+### Opção 2: Compilar e Rodar o JAR
+\`\`\`bash
+./mvnw clean package -DskipTests
+java -jar target/*.jar
+\`\`\`
+
+A API estará disponível em: **\`http://localhost:${port}\`**
+Documentação interativa Swagger UI: **\`http://localhost:${port}/swagger-ui.html\`**
+Especificação OpenAPI (JSON): **\`http://localhost:${port}/api-docs\`**
+
+---
+${testsSection}${migrationsSection}${jwtSection}${dockerSection}
+## 📚 Endpoints da API
+
+Abaixo estão todos os endpoints REST gerados para os modelos de dados:
+
+| Modelo | Método | Rota | Descrição |
+|---|---|---|---|
+${endpointsRows}
+
+---
+
+## 🏛️ Arquitetura do Projeto
+
+\`\`\`
+backend/
+├── src/
+│   ├── main/
+│   │   ├── java/${groupIdToPath(ast.javaGroupId ?? 'com.app')}/
+│   │   │   ├── Application.java          # Entry point Spring Boot
+│   │   │   ├── config/                   # Configurações (CORS, Swagger${ast.jwtEnabled ? ', Security' : ''})
+${ast.jwtEnabled ? '│   │   │   ├── security/                 # Utilitários JWT & Filter de Autenticação\n' : ''}│   │   │   ├── entities/                 # Entidades JPA (@Entity)
+│   │   │   ├── repositories/             # Interfaces Spring Data JPA
+│   │   │   ├── services/                 # Camada de Negócio (@Service)
+│   │   │   ├── controllers/              # Endpoints REST (@RestController)
+│   │   │   ├── dto/                      # Projeções e DTOs de listagem
+│   │   │   └── specifications/           # Especificações JPA de busca dinâmica
+│   │   └── resources/
+│   │       ├── application.properties    # Configurações do servidor e banco
+${ast.generateMigrations ? (ast.migrationEngine === 'liquibase' ? '│   │       └── db/changelog/             # Migrations Liquibase\n' : '│   │       └── db/migration/             # Migrations Flyway SQL\n') : ''}│   └── test/                             # Testes automatizados (JUnit 5 + Mockito)
+├── pom.xml                               # Dependências Maven
+${ast.generateDockerfile ? '├── Dockerfile                            # Docker multi-stage build\n' : ''}${ast.generateEnvExample ? '└── .env.example                          # Exemplo de variáveis de ambiente\n' : ''}\`\`\`
+
+---
+
+## 🛠️ Resolução de Problemas (Troubleshooting)
+
+| Sintoma | Possível Causa | Como Resolver |
+|---|---|---|
+| \`Port ${port} is already in use\` | A porta configurada já está em uso por outro processo | Altere \`server.port\` no \`application.properties\` ou encerre o processo conflitante |
+| \`Connection to localhost refused\` | O banco de dados ${dbStackUpper} não está ativo | Inicie o serviço do banco de dados ou use o \`docker-compose up db -d\` |
+| \`401 Unauthorized\` | Token JWT ausente ou inválido | Faça login em \`POST /api/auth/login\` e adicione o header \`Authorization: Bearer <token>\` |
+| \`CORS header missing\` | Requisições vindas de portas não liberadas | Ajuste \`app.cors.allowed-origins\` em \`application.properties\` |
+
+${javaVersion === 21 ? `---
+
+## ⚡ Virtual Threads (Project Loom — Java 21)
+Este projeto vem pré-configurado com Virtual Threads do Java 21 (\`spring.threads.virtual.enabled=true\`). Isto permite throughput extremamente elevado sem o consumo de threads do sistema operacional.
+` : ''}
 `
 }
 
@@ -1351,5 +1583,915 @@ ${imports}
 public interface ${model.name}ListView {
 ${getters.join('\n')}
 }
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.14 — SQL Migrations (Flyway & Liquibase)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toSqlMigrationTypeForDb(dataType: string, dbStack: DbType): string {
+  const dt = canonicalDbType(dataType)
+  switch (dt) {
+    case 'uuid':
+      if (dbStack === 'postgres' || dbStack === 'supabase') return 'UUID'
+      if (dbStack === 'mysql') return 'CHAR(36)'
+      if (dbStack === 'sqlserver') return 'UNIQUEIDENTIFIER'
+      if (dbStack === 'oracle') return 'VARCHAR2(36)'
+      return 'VARCHAR(36)'
+    case 'boolean':
+      if (dbStack === 'postgres' || dbStack === 'supabase') return 'BOOLEAN'
+      if (dbStack === 'mysql') return 'TINYINT(1)'
+      if (dbStack === 'sqlserver') return 'BIT'
+      if (dbStack === 'oracle') return 'NUMBER(1)'
+      return 'BOOLEAN'
+    case 'integer':
+      if (dbStack === 'oracle') return 'NUMBER(10)'
+      return 'INT'
+    case 'numeric':
+      if (dbStack === 'oracle') return 'NUMBER(15,2)'
+      if (dbStack === 'mysql' || dbStack === 'sqlserver') return 'DECIMAL(15,2)'
+      return 'NUMERIC(15,2)'
+    case 'date':
+      return 'DATE'
+    case 'timestamp':
+      if (dbStack === 'mysql') return 'DATETIME'
+      if (dbStack === 'sqlserver') return 'DATETIME2'
+      return 'TIMESTAMP'
+    default:
+      if (dataType.toLowerCase() === 'text' || dataType.toLowerCase() === 'clob') {
+        if (dbStack === 'postgres' || dbStack === 'supabase') return 'TEXT'
+        if (dbStack === 'mysql') return 'LONGTEXT'
+        if (dbStack === 'sqlserver') return 'NVARCHAR(MAX)'
+        if (dbStack === 'oracle') return 'CLOB'
+        return 'TEXT'
+      }
+      if (dbStack === 'oracle') return 'VARCHAR2(255)'
+      if (dbStack === 'sqlserver') return 'NVARCHAR(255)'
+      return 'VARCHAR(255)'
+  }
+}
+
+function generateMigrationFiles(ast: AppAST, files: Map<string, string>): void {
+  if (ast.migrationEngine === 'liquibase') {
+    files.set('backend/src/main/resources/db/changelog/db.changelog-master.yaml', generateLiquibaseChangelog(ast))
+  } else {
+    files.set('backend/src/main/resources/db/migration/V1__init.sql', generateFlywayMigration(ast))
+  }
+}
+
+function generateFlywayMigration(ast: AppAST): string {
+  const sqlBlocks: string[] = [
+    `-- =========================================================================`,
+    `-- V1__init.sql — MetaBuilder Pro Auto-Generated Migration`,
+    `-- Project: ${ast.projectName}`,
+    `-- Database: ${ast.dbStack.toUpperCase()}`,
+    `-- =========================================================================\n`,
+  ]
+
+  for (const model of ast.models) {
+    const tableName = sanitizeTableForMapping(model.dbTable)
+    const realFields = model.fields.filter(f => !f.dbColumn.includes('.'))
+    const pkFields = realFields.filter(f => f.isPrimary)
+    const isComposite = pkFields.length > 1
+
+    const fieldDefs = realFields.map(f => {
+      const sqlType = toSqlMigrationTypeForDb(f.dataType, ast.dbStack)
+      const pkModifier = (!isComposite && f.isPrimary) ? ' PRIMARY KEY' : ''
+      const nullModifier = (!f.isPrimary && f.isRequired) ? ' NOT NULL' : ''
+      return `    ${f.dbColumn} ${sqlType}${pkModifier}${nullModifier}`
+    })
+
+    if (isComposite) {
+      const pkCols = pkFields.map(f => f.dbColumn).join(', ')
+      fieldDefs.push(`    CONSTRAINT pk_${tableName} PRIMARY KEY (${pkCols})`)
+    }
+
+    const ifNotExists = (ast.dbStack === 'oracle') ? '' : 'IF NOT EXISTS '
+    sqlBlocks.push(
+      `-- Tabela: ${model.name} (${tableName})\n` +
+      `CREATE TABLE ${ifNotExists}${tableName} (\n` +
+      fieldDefs.join(',\n') +
+      `\n);\n`
+    )
+  }
+
+  return sqlBlocks.join('\n')
+}
+
+function generateLiquibaseChangelog(ast: AppAST): string {
+  const tablesYaml = ast.models.map(m => {
+    const tableName = sanitizeTableForMapping(m.dbTable)
+    const realFields = m.fields.filter(f => !f.dbColumn.includes('.'))
+    const colsYaml = realFields.map(f => {
+      const sqlType = toSqlMigrationTypeForDb(f.dataType, ast.dbStack)
+      const isPk = f.isPrimary
+      const isNullable = !f.isPrimary && !f.isRequired
+      return `                - column:
+                    name: ${f.dbColumn}
+                    type: ${sqlType}
+                    constraints:
+                      primaryKey: ${isPk}
+                      nullable: ${isNullable}`
+    }).join('\n')
+
+    return `        - createTable:
+            tableName: ${tableName}
+            columns:
+${colsYaml}`
+  }).join('\n')
+
+  return `databaseChangeLog:
+  - changeSet:
+      id: 1-init-schema
+      author: metabuilder-pro
+      changes:
+${tablesYaml}
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.15 — Segurança JWT (SecurityConfig, JwtUtil, JwtFilter, AuthController)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateJwtFiles(ast: AppAST, files: Map<string, string>, basePkg: string, groupId: string): void {
+  const encoderSnippet = ast.passwordHashAlgorithm === 'sha256'
+    ? 'return new org.springframework.security.crypto.password.MessageDigestPasswordEncoder("SHA-256");'
+    : 'return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();'
+
+  // 1. SecurityConfig.java
+  files.set(`${basePkg}/config/SecurityConfig.java`, `package ${groupId}.config;
+
+import ${groupId}.security.JwtFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> {})
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/api-docs/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        ${encoderSnippet}
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+}
+`)
+
+  // 2. JwtUtil.java
+  files.set(`${basePkg}/security/JwtUtil.java`, `package ${groupId}.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Date;
+
+@Component
+public class JwtUtil {
+
+    @Value("\${jwt.secret:minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}")
+    private String secret;
+
+    @Value("\${jwt.expiration-ms:86400000}")
+    private long expirationMs;
+
+    private Key getSigningKey() {
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            byte[] padded = new byte[32];
+            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
+            keyBytes = padded;
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(String subject) {
+        return Jwts.builder()
+                .setSubject(subject)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String extractSubject(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public Claims extractClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            extractClaims(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+}
+`)
+
+  // 3. JwtFilter.java
+  files.set(`${basePkg}/security/JwtFilter.java`, `package ${groupId}.security;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Collections;
+
+@Component
+public class JwtFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtUtil.validateToken(token)) {
+                String subject = jwtUtil.extractSubject(token);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                subject,
+                                null,
+                                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                        );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+`)
+
+  // 4. AuthController.java
+  files.set(`${basePkg}/controllers/AuthController.java`, `package ${groupId}.controllers;
+
+import ${groupId}.security.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/auth")
+@Tag(name = "Autenticação", description = "Endpoints de login e verificação JWT")
+public class AuthController {
+
+    private final JwtUtil jwtUtil;
+
+    public AuthController(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    public record LoginRequest(String email, String password) {}
+
+    @PostMapping("/login")
+    @Operation(summary = "Autenticar usuário", description = "Valida credenciais e gera token JWT")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        // TODO: Integrar com a tabela de usuários do banco para validação de senha
+        if (request.email() == null || request.password() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email e senha são obrigatórios"));
+        }
+
+        String token = jwtUtil.generateToken(request.email());
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("email", request.email());
+        response.put("expiresIn", 86400000L);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Verificar autenticação", description = "Retorna os dados do usuário autenticado")
+    public ResponseEntity<?> me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(Map.of("authenticated", false));
+        }
+        return ResponseEntity.ok(Map.of(
+                "authenticated", true,
+                "principal", authentication.getPrincipal(),
+                "roles", authentication.getAuthorities()
+        ));
+    }
+}
+`)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.16 — Testes Automatizados (Service & Controller)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateTestFiles(ast: AppAST, files: Map<string, string>, groupId: string): void {
+  const groupPath = groupIdToPath(groupId)
+  const testBasePkg = `backend/src/test/java/${groupPath}`
+
+  const routeMap = new Map<string, RouteNode>()
+  for (const route of ast.routes) {
+    routeMap.set(route.modelName, route)
+    routeMap.set(route.modelTable, route)
+  }
+
+  for (const model of ast.models) {
+    const route = routeMap.get(model.name) ?? routeMap.get(model.dbTable)
+    const mapping = sanitizeTableForMapping(model.dbTable)
+    const outgoingSubResources = route ? getOutgoingSubResources(route) : []
+
+    // 1. Service Test
+    if (ast.generateServiceTests) {
+      files.set(`${testBasePkg}/services/${model.name}ServiceTest.java`, `package ${groupId}.services;
+
+import ${groupId}.entities.${model.name};
+import ${groupId}.repositories.${model.name}Repository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("Testes Unitários - ${model.name}Service")
+class ${model.name}ServiceTest {
+
+    @Mock
+    private ${model.name}Repository repository;
+
+    @InjectMocks
+    private ${model.name}Service service;
+
+    @Test
+    @DisplayName("Deve buscar todos os registros paginados")
+    void deveBuscarTodosComPaginacao() {
+        Page<${model.name}> mockPage = new PageImpl<>(List.of(new ${model.name}()));
+        when(repository.findAll(any(Pageable.class))).thenReturn(mockPage);
+
+        Page<${model.name}> result = service.findAll(0, 10, null);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        verify(repository, times(1)).findAll(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Deve salvar uma entidade com sucesso")
+    void deveSalvarEntidade() {
+        ${model.name} entity = new ${model.name}();
+        when(repository.save(any(${model.name}.class))).thenReturn(entity);
+
+        ${model.name} saved = service.save(entity);
+
+        assertThat(saved).isNotNull();
+        verify(repository, times(1)).save(entity);
+    }
+
+    @Test
+    @DisplayName("Deve excluir entidade por ID")
+    void deveDeletarPorId() {
+        doNothing().when(repository).deleteById(any());
+
+        service.delete(null);
+
+        verify(repository, times(1)).deleteById(any());
+    }
+}
+`)
+    }
+
+    // 2. Controller Test
+    if (ast.generateControllerTests) {
+      const mockBeansChildServices = outgoingSubResources.map(out =>
+        `    @MockBean\n    private ${groupId}.services.${out.childModelName}Service ${toCamelCase(out.childModelName)}Service;`
+      ).join('\n')
+
+      files.set(`${testBasePkg}/controllers/${model.name}ControllerTest.java`, `package ${groupId}.controllers;
+
+import ${groupId}.entities.${model.name};
+import ${groupId}.services.${model.name}Service;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(${model.name}Controller.class)
+@AutoConfigureMockMvc(addFilters = false)
+@DisplayName("Testes de Integração MVC - ${model.name}Controller")
+class ${model.name}ControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private ${model.name}Service service;
+${mockBeansChildServices ? '\n' + mockBeansChildServices : ''}
+
+    @Test
+    @DisplayName("GET /api/${mapping} - Deve retornar lista paginada")
+    void deveRetornarListaPaginada() throws Exception {
+        when(service.findAll(anyInt(), anyInt(), any())).thenReturn(new PageImpl<>(List.of(new ${model.name}())));
+
+        mockMvc.perform(get("/api/${mapping}")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/${mapping} - Deve criar registro com status 201")
+    void deveCriarEntidade() throws Exception {
+        ${model.name} entity = new ${model.name}();
+        when(service.save(any(${model.name}.class))).thenReturn(entity);
+
+        mockMvc.perform(post("/api/${mapping}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isCreated());
+    }
+}
+`)
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.17 — Dockerfile (Multi-stage Eclipse Temurin)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateBackendDockerfile(ast: AppAST): string {
+  const javaVersion = ast.javaVersion ?? 21
+  const port = ast.javaPort ?? 8080
+
+  return `# =========================================================================
+# Multi-Stage Dockerfile - Eclipse Temurin (JDK + JRE Minimal Alpine)
+# Generated by MetaBuilder Pro
+# =========================================================================
+
+# ── Stage 1: Build & Dependencies Cache ──
+FROM eclipse-temurin:${javaVersion}-jdk-alpine AS builder
+WORKDIR /app
+
+# Copia configurações Maven e wrapper
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
+RUN chmod +x ./mvnw
+
+# Resolve dependências em cache
+RUN ./mvnw dependency:go-offline -B
+
+# Copia código-fonte e compila pacote sem testes unitários
+COPY src ./src
+RUN ./mvnw clean package -DskipTests -B
+
+# ── Stage 2: Runtime Image (Lightweight JRE) ──
+FROM eclipse-temurin:${javaVersion}-jre-alpine
+WORKDIR /app
+
+# Usuário não-root por boas práticas de segurança
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Copia o artefato compilado do builder
+COPY --from=builder /app/target/*.jar app.jar
+
+# Porta do servidor Spring Boot
+EXPOSE ${port}
+
+# Tuning para containers Docker e suporte a Virtual Threads
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.18 — docker-compose.yml (Backend + Database)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateDockerCompose(ast: AppAST): string {
+  const slug = ast.projectSlug || 'app'
+  const port = ast.javaPort ?? 8080
+
+  let dbImage = 'postgres:16-alpine'
+  let dbHostPort = 5432
+  let dbContainerPort = 5432
+  let dbVolumePath = '/var/lib/postgresql/data'
+  let dbEnvLines = ''
+  let healthCheckLines = ''
+  let composeJdbcUrl = `jdbc:postgresql://db:5432/${slug}_db`
+  let composeUser = 'postgres'
+  let composePass = 'postgres'
+
+  switch (ast.dbStack) {
+    case 'postgres':
+    case 'supabase':
+      dbImage = 'postgres:16-alpine'
+      dbHostPort = 5432
+      dbContainerPort = 5432
+      dbVolumePath = '/var/lib/postgresql/data'
+      dbEnvLines = [
+        `      POSTGRES_DB: ${slug}_db`,
+        `      POSTGRES_USER: postgres`,
+        `      POSTGRES_PASSWORD: postgres`,
+      ].join('\n')
+      healthCheckLines = [
+        `      test: ["CMD-SHELL", "pg_isready -U postgres -d ${slug}_db"]`,
+        `      interval: 5s`,
+        `      timeout: 5s`,
+        `      retries: 5`,
+      ].join('\n')
+      composeJdbcUrl = `jdbc:postgresql://db:5432/${slug}_db`
+      composeUser = 'postgres'
+      composePass = 'postgres'
+      break
+
+    case 'mysql':
+      dbImage = 'mysql:8-debian'
+      dbHostPort = 3306
+      dbContainerPort = 3306
+      dbVolumePath = '/var/lib/mysql'
+      dbEnvLines = [
+        `      MYSQL_DATABASE: ${slug}_db`,
+        `      MYSQL_ROOT_PASSWORD: root`,
+      ].join('\n')
+      healthCheckLines = [
+        `      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]`,
+        `      interval: 5s`,
+        `      timeout: 5s`,
+        `      retries: 5`,
+      ].join('\n')
+      composeJdbcUrl = `jdbc:mysql://db:3306/${slug}_db?useSSL=false&allowPublicKeyRetrieval=true`
+      composeUser = 'root'
+      composePass = 'root'
+      break
+
+    case 'sqlserver':
+      dbImage = 'mcr.microsoft.com/mssql/server:2022-latest'
+      dbHostPort = 1433
+      dbContainerPort = 1433
+      dbVolumePath = '/var/opt/mssql'
+      dbEnvLines = [
+        `      ACCEPT_EULA: "Y"`,
+        `      MSSQL_SA_PASSWORD: "Password123!"`,
+      ].join('\n')
+      healthCheckLines = [
+        `      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Password123!' -Q 'SELECT 1' || exit 1"]`,
+        `      interval: 10s`,
+        `      timeout: 5s`,
+        `      retries: 5`,
+      ].join('\n')
+      composeJdbcUrl = `jdbc:sqlserver://db:1433;databaseName=master;trustServerCertificate=true`
+      composeUser = 'sa'
+      composePass = 'Password123!'
+      break
+
+    case 'oracle':
+      dbImage = 'gvenzl/oracle-free:latest'
+      dbHostPort = 1521
+      dbContainerPort = 1521
+      dbVolumePath = '/opt/oracle/oradata'
+      dbEnvLines = [
+        `      APP_USER: app`,
+        `      APP_USER_PASSWORD: Password123!`,
+      ].join('\n')
+      healthCheckLines = [
+        `      test: ["CMD-SHELL", "healthcheck.sh"]`,
+        `      interval: 10s`,
+        `      timeout: 5s`,
+        `      retries: 5`,
+      ].join('\n')
+      composeJdbcUrl = `jdbc:oracle:thin:@//db:1521/FREEPDB1`
+      composeUser = 'app'
+      composePass = 'Password123!'
+      break
+  }
+
+  const jwtEnv = ast.jwtEnabled
+    ? `\n      - JWT_SECRET=\${JWT_SECRET:-minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}`
+    : ''
+
+  return `# =========================================================================
+# docker-compose.yml — Stack Completa (App + Banco de Dados)
+# Generated by MetaBuilder Pro
+# =========================================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${slug}-backend
+    restart: unless-stopped
+    ports:
+      - "${port}:${port}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=${port}
+      - SPRING_DATASOURCE_URL=${composeJdbcUrl}
+      - SPRING_DATASOURCE_USERNAME=${composeUser}
+      - SPRING_DATASOURCE_PASSWORD=${composePass}${jwtEnv}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ${slug}-network
+
+  db:
+    image: ${dbImage}
+    container_name: ${slug}-db
+    restart: unless-stopped
+    ports:
+      - "${dbHostPort}:${dbContainerPort}"
+    environment:
+${dbEnvLines}
+    healthcheck:
+${healthCheckLines}
+    volumes:
+      - db_data:${dbVolumePath}
+    networks:
+      - ${slug}-network
+
+volumes:
+  db_data:
+
+networks:
+  ${slug}-network:
+    driver: bridge
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.19 — .env.example
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateEnvExample(ast: AppAST): string {
+  const port = ast.javaPort ?? 8080
+  const slug = ast.projectSlug || 'app'
+
+  let defaultUrl = 'jdbc:postgresql://localhost:5432/nome_do_banco'
+  let defaultUser = 'postgres'
+  let defaultPass = 'senha_secreta'
+
+  switch (ast.dbStack) {
+    case 'postgres':
+    case 'supabase':
+      defaultUrl = `jdbc:postgresql://localhost:5432/${slug}_db`
+      defaultUser = 'postgres'
+      defaultPass = 'postgres'
+      break
+    case 'mysql':
+      defaultUrl = `jdbc:mysql://localhost:3306/${slug}_db?useSSL=false&allowPublicKeyRetrieval=true`
+      defaultUser = 'root'
+      defaultPass = 'root'
+      break
+    case 'sqlserver':
+      defaultUrl = `jdbc:sqlserver://localhost:1433;databaseName=${slug}_db;trustServerCertificate=true`
+      defaultUser = 'sa'
+      defaultPass = 'Password123!'
+      break
+    case 'oracle':
+      defaultUrl = `jdbc:oracle:thin:@//localhost:1521/FREEPDB1`
+      defaultUser = 'app'
+      defaultPass = 'Password123!'
+      break
+  }
+
+  const jwtLines = ast.jwtEnabled ? `
+# ── Segurança JWT ──
+# Chave de assinatura HMAC-SHA256 (mínimo de 256 bits / 32 caracteres)
+# Recomendado gerar com: openssl rand -hex 32
+JWT_SECRET=minha-chave-secreta-256-bits-super-segura-e-longa-32bytes
+
+# Tempo de vida do token em milissegundos (86400000 ms = 24 horas)
+JWT_EXPIRATION_MS=86400000
+` : ''
+
+  return `# =========================================================================
+# .env.example — Variáveis de Ambiente do Backend Spring Boot
+# Copie este arquivo para .env ou configure no seu gerenciador de segredos
+# =========================================================================
+
+# ── Servidor Spring Boot ──
+SERVER_PORT=${port}
+SPRING_PROFILES_ACTIVE=dev
+
+# ── Banco de Dados (${ast.dbStack.toUpperCase()}) ──
+SPRING_DATASOURCE_URL=${defaultUrl}
+SPRING_DATASOURCE_USERNAME=${defaultUser}
+SPRING_DATASOURCE_PASSWORD=${defaultPass}
+${jwtLines}
+# ── CORS ──
+APP_CORS_ALLOWED_ORIGINS=http://localhost:3000
+`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5.20 — README.md Raiz do Projeto (Full-Stack)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function generateRootReadme(ast: AppAST): string {
+  const port = ast.javaPort ?? 8080
+  const slug = ast.projectSlug || 'app'
+  const dbStackUpper = ast.dbStack.toUpperCase()
+
+  const modelsRows = ast.models.map(m => {
+    const fieldsCount = m.fields.filter(f => !f.dbColumn.includes('.')).length
+    return `| **${m.name}** | \`${sanitizeTableForMapping(m.dbTable)}\` | ${fieldsCount} campos | [Swagger API](http://localhost:${port}/swagger-ui.html#/${m.name}) |`
+  }).join('\n')
+
+  return `<div align="center">
+
+# 🌟 ${ast.projectName} — Projeto Completo Full-Stack
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Frontend-Next.js%2014-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 14" />
+  <img src="https://img.shields.io/badge/Backend-Spring%20Boot%203-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3" />
+  <img src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
+  <img src="https://img.shields.io/badge/Language-TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Database-${dbStackUpper}-336791?style=for-the-badge&logo=database&logoColor=white" alt="Database" />
+</p>
+
+**Projeto completo gerado pelo MetaBuilder Pro com separação limpa entre Frontend (Next.js) e Backend (Spring Boot).**
+
+</div>
+
+---
+
+## 🌐 Visão Geral dos Serviços
+
+| Serviço | Diretório | Tecnologia | URL Padrão |
+|---|---|---|---|
+| **Frontend Web** | \`frontend/\` | Next.js 14 + React + TypeScript | [http://localhost:3000](http://localhost:3000) |
+| **Backend REST** | \`backend/\` | Spring Boot 3 + Java 21 | [http://localhost:${port}](http://localhost:${port}) |
+| **Documentação API** | \`backend/\` | Swagger / OpenAPI 3.0 | [http://localhost:${port}/swagger-ui.html](http://localhost:${port}/swagger-ui.html) |
+| **Banco de Dados** | — | ${dbStackUpper} | Configurado no \`backend/\` |
+
+---
+
+## 📁 Estrutura do Repositório
+
+\`\`\`
+${slug}/
+├── frontend/                     # Aplicação Next.js 14 (App Router)
+│   ├── src/app/                  # Páginas, telas de listagem, formulários e kanban
+│   ├── src/components/           # Componentes UI reutilizáveis (shadcn/ui style)
+│   ├── src/lib/api-client.ts     # Cliente HTTP type-safe para a API Spring Boot
+│   ├── package.json              # Dependências do frontend
+│   └── README.md                 # Documentação detalhada do frontend
+│
+├── backend/                      # API REST Spring Boot 3
+│   ├── src/main/java/            # Código Java (Entities, Repositories, Services, Controllers)
+│   ├── src/main/resources/       # application.properties, migrations SQL
+│   ├── src/test/java/            # Testes automatizados (JUnit 5 + Mockito)
+│   ├── pom.xml                   # Dependências Maven
+│   ├── Dockerfile                # Imagem container multi-stage
+│   └── README.md                 # Documentação detalhada do backend
+│
+${ast.generateDockerCompose ? '├── docker-compose.yml            # Orquestração do Backend + Banco de Dados\n' : ''}└── README.md                     # Este arquivo (Visão Geral do Projeto)
+\`\`\`
+
+---
+
+## 🚀 Inicialização Rápida (Quick Start)
+
+${ast.generateDockerCompose ? `### Opção A: Usando Docker Compose (Mais Fácil)
+Suba o backend e o banco de dados com um único comando:
+\`\`\`bash
+# Na raiz do projeto:
+docker-compose up --build
+\`\`\`
+
+Em seguida, inicie o frontend:
+\`\`\`bash
+cd frontend
+npm install
+npm run dev
+\`\`\`
+` : ''}
+### Opção B: Execução Local Passo a Passo
+
+#### 1. Iniciar o Backend Spring Boot
+\`\`\`bash
+cd backend
+# No Linux/macOS:
+./mvnw spring-boot:run
+# No Windows PowerShell:
+.\\mvnw.cmd spring-boot:run
+\`\`\`
+> A API estará operando em: **\`http://localhost:${port}\`**
+
+#### 2. Iniciar o Frontend Next.js
+\`\`\`bash
+cd frontend
+npm install
+npm run dev
+\`\`\`
+> O sistema estará acessível em: **\`http://localhost:3000\`**
+
+---
+
+## 📊 Modelos de Dados Gerados
+
+O MetaBuilder Pro gerou suporte completo de backend e frontend para as seguintes entidades:
+
+| Entidade | Tabela no Banco | Quantidade de Campos | Documentação Swagger |
+|---|---|---|---|
+${modelsRows}
+
+---
+
+## 📖 Documentações Detalhadas
+
+- 📘 [Documentação Completa do Backend (Spring Boot)](./backend/README.md)
+- 📙 [Documentação Completa do Frontend (Next.js)](./frontend/README.md)
 `
 }

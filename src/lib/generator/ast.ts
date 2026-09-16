@@ -476,6 +476,23 @@ export interface AppAST {
   javaArtifactId?: string
   /** Porta do servidor Spring Boot. Default: 8080. */
   javaPort?: number
+
+  // Eject Options - Seguranca
+  jwtEnabled?: boolean
+  passwordHashAlgorithm?: 'bcrypt' | 'sha256'
+
+  // Eject Options - Migrations
+  generateMigrations?: boolean
+  migrationEngine?: 'flyway' | 'liquibase'
+
+  // Eject Options - Testes
+  generateServiceTests?: boolean
+  generateControllerTests?: boolean
+
+  // Eject Options - DevOps
+  generateDockerfile?: boolean
+  generateDockerCompose?: boolean
+  generateEnvExample?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

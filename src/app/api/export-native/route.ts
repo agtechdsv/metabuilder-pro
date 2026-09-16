@@ -17,7 +17,16 @@ export async function POST(request: Request) {
       javaVersion = 21 as JavaVersion,            // NOVO: 17 | 21
       javaGroupId,                                // NOVO: ex: 'com.empresa'
       javaArtifactId,                             // NOVO: ex: 'crm-backend'
-      javaPort = 8080                             // NOVO: porta Spring Boot
+      javaPort = 8080,                            // NOVO: porta Spring Boot
+      jwtEnabled = false,
+      passwordHashAlgorithm = 'bcrypt',
+      generateMigrations = false,
+      migrationEngine = 'flyway',
+      generateServiceTests = false,
+      generateControllerTests = false,
+      generateDockerfile = false,
+      generateDockerCompose = false,
+      generateEnvExample = false,
     } = await request.json()
 
     // Validar backendStack — tratar valores inválidos como 'nodejs' (GAP edge case)
@@ -106,6 +115,15 @@ export async function POST(request: Request) {
       javaGroupId,
       javaArtifactId,
       javaPort: resolvedJavaPort,
+      jwtEnabled: Boolean(jwtEnabled),
+      passwordHashAlgorithm: (passwordHashAlgorithm === 'sha256' ? 'sha256' : 'bcrypt'),
+      generateMigrations: Boolean(generateMigrations),
+      migrationEngine: (migrationEngine === 'liquibase' ? 'liquibase' : 'flyway'),
+      generateServiceTests: Boolean(generateServiceTests),
+      generateControllerTests: Boolean(generateControllerTests),
+      generateDockerfile: Boolean(generateDockerfile),
+      generateDockerCompose: Boolean(generateDockerCompose),
+      generateEnvExample: Boolean(generateEnvExample),
     })
     
     // Emit

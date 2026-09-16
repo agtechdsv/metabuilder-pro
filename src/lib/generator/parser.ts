@@ -1451,6 +1451,23 @@ export interface ParseOptions {
   javaArtifactId?: string
   /** Porta do Spring Boot. Default: 8080. */
   javaPort?: number
+
+  // Eject Options - Seguranca
+  jwtEnabled?: boolean
+  passwordHashAlgorithm?: 'bcrypt' | 'sha256'
+
+  // Eject Options - Migrations
+  generateMigrations?: boolean
+  migrationEngine?: 'flyway' | 'liquibase'
+
+  // Eject Options - Testes
+  generateServiceTests?: boolean
+  generateControllerTests?: boolean
+
+  // Eject Options - DevOps
+  generateDockerfile?: boolean
+  generateDockerCompose?: boolean
+  generateEnvExample?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2759,6 +2776,15 @@ export function parseMetaBuilderJSON(
     javaGroupId: rawGroupId,
     javaArtifactId: resolvedArtifactId,
     javaPort: options?.javaPort ?? 8080,
+    jwtEnabled: options?.jwtEnabled ?? false,
+    passwordHashAlgorithm: options?.passwordHashAlgorithm ?? 'bcrypt',
+    generateMigrations: options?.generateMigrations ?? false,
+    migrationEngine: options?.migrationEngine ?? 'flyway',
+    generateServiceTests: options?.generateServiceTests ?? false,
+    generateControllerTests: options?.generateControllerTests ?? false,
+    generateDockerfile: options?.generateDockerfile ?? false,
+    generateDockerCompose: options?.generateDockerCompose ?? false,
+    generateEnvExample: options?.generateEnvExample ?? false,
   }
 }
 

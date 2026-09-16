@@ -335,34 +335,149 @@ export default config
 
 function generateFrontendReadme(ast: AppAST): string {
   const port = ast.javaPort ?? 8080
-  return `# ${ast.projectName} — Frontend (Next.js)
 
-## Pré-requisitos
-- Node.js 18+
-- Spring Boot backend rodando em \`http://localhost:${port}\`
+  const routesRows = ast.routes.map(r => {
+    return `| \`${r.path}\` | **${r.title || r.viewSlug}** | \`${r.logicType}\` | \`${r.modelTable}\` |`
+  }).join('\n')
 
-## Configuração
-\`\`\`bash
-# .env.local já está pré-configurado:
+  return `<div align="center">
+
+# 💻 ${ast.projectName} — Frontend Web (Next.js 14)
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-14%20App%20Router-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 14" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS" />
+  <img src="https://img.shields.io/badge/Architecture-REST%20Client-blueviolet?style=for-the-badge" alt="REST Client" />
+</p>
+
+**Interface moderna de alta produtividade consumindo a API REST Spring Boot de forma desacoplada.**
+
+</div>
+
+---
+
+## 📋 Pré-requisitos
+
+| Item | Requisito Mínimo | Observações |
+|---|---|---|
+| **Node.js** | 18.17+ ou 20+ (LTS) | Verifique com \`node -v\` |
+| **Gerenciador de Pacotes** | npm 9+, yarn 1.22+ ou pnpm 8+ | Recomendado: \`npm\` |
+| **Backend Spring Boot** | Rodando em \`http://localhost:${port}\` | Necessário para requisições de dados |
+
+---
+
+## ⚙️ Configuração do Ambiente
+
+O arquivo \`.env.local\` já é gerado pré-configurado para apontar para o backend local:
+
+\`\`\`env
 NEXT_PUBLIC_API_URL=http://localhost:${port}
 \`\`\`
 
-## Executar
+> 💡 **Em produção:** Altere \`NEXT_PUBLIC_API_URL\` para a URL pública do seu backend (ex: \`https://api.seudominio.com\`).
+
+---
+
+## 🚀 Como Executar
+
+### 1. Instalar as Dependências
 \`\`\`bash
 cd frontend
 npm install
-npm run dev
-# Acesse: http://localhost:3000
 \`\`\`
 
-## Arquitetura
-O frontend chama a API REST do Spring Boot via \`src/lib/api-client.ts\`.
-Não há acesso direto ao banco de dados neste projeto.
+### 2. Iniciar o Servidor de Desenvolvimento
+\`\`\`bash
+npm run dev
+\`\`\`
+Acesse: **\`http://localhost:3000\`**
 
-### Endpoints consumidos
-${ast.models.map(m => `- \`GET/POST /api/${m.dbTable}\` — ${m.name}`).join('\n')}
+### 3. Scripts Disponíveis no \`package.json\`
+- \`npm run dev\`: Inicia servidor local em modo watch/HMR
+- \`npm run build\`: Cria o build de produção otimizado
+- \`npm run start\`: Executa o build de produção localmente
+- \`npm run lint\`: Executa verificação de código com ESLint
 
-## Swagger UI
-\`http://localhost:${port}/swagger-ui.html\`
+---
+
+## 🗺️ Rotas e Telas Geradas
+
+Abaixo estão todas as rotas de interface geradas no Next.js App Router:
+
+| Rota | Título da Tela | Tipo de Interface | Tabela Vinculada |
+|---|---|---|---|
+${routesRows}
+
+---
+
+## 🏛️ Arquitetura do Frontend
+
+\`\`\`
+frontend/
+├── src/
+│   ├── app/                      # App Router (Páginas e Layouts)
+│   │   ├── layout.tsx            # Root Layout com Header e Navegação
+│   │   ├── page.tsx              # Dashboard / Home
+│   │   └── ...                   # Subpastas de cada rota gerada
+│   ├── components/               # Componentes UI reutilizáveis
+│   │   ├── ui/                   # Botões, Modais, Inputs, Tabelas, Badges
+│   │   └── sidebar/              # Navegação lateral expansível
+│   └── lib/
+│       ├── api-client.ts         # Cliente HTTP centralizado para o Spring Boot
+│       └── utils.ts              # Utilitários de formatação e classes Tailwind
+├── public/                       # Assets estáticos, ícones e fontes
+├── .env.local                    # Configuração local de URL do backend
+├── tailwind.config.ts            # Configuração de temas e cores
+└── package.json                  # Dependências e scripts
+\`\`\`
+
+---
+
+## 🔌 Comunicação com o Backend
+
+Todo o tráfego de dados é intermediado de forma type-safe através do módulo \`src/lib/api-client.ts\`.
+Nenhum componente do frontend acessa o banco de dados diretamente.
+
+Exemplo de chamada com tratamento de erros integrado:
+\`\`\`typescript
+import { apiClient } from '@/lib/api-client'
+
+// Listagem paginada consumindo a API Spring Boot
+const data = await apiClient.get('/api/clientes?page=0&size=20')
+\`\`\`
+
+---
+
+## 🚢 Deploy para Produção
+
+### Opção 1: Vercel (Recomendado)
+A Vercel oferece deploy zero-config para Next.js:
+1. Conecte seu repositório Git à plataforma Vercel.
+2. Defina a variável de ambiente: \`NEXT_PUBLIC_API_URL=https://sua-api.com\`.
+3. O build e deploy serão automáticos.
+
+### Opção 2: Container Docker
+Para rodar em cluster Kubernetes ou VPS tradicional:
+\`\`\`bash
+docker build -t ${ast.projectSlug}-frontend:latest .
+docker run -p 3000:3000 ${ast.projectSlug}-frontend:latest
+\`\`\`
+
+---
+
+## 🛠️ Resolução de Problemas (Troubleshooting)
+
+| Problema | Causa Provável | Ação Recomendada |
+|---|---|---|
+| \`Failed to fetch\` ou \`Network Error\` | O backend Spring Boot não está rodando na porta ${port} | Verifique se o backend está ativo em \`http://localhost:${port}/api-docs\` |
+| \`CORS error\` no console do navegador | O backend não autorizou \`http://localhost:3000\` | Verifique \`app.cors.allowed-origins\` em \`application.properties\` no backend |
+| \`Port 3000 is in use\` | Outro processo local está utilizando a porta 3000 | O Next.js usará a 3001 automaticamente, ou encerre o processo anterior |
+
+---
+
+## 📄 Swagger da API
+Acesse a documentação da API em: [http://localhost:${port}/swagger-ui.html](http://localhost:${port}/swagger-ui.html)
 `
 }

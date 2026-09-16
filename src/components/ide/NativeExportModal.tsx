@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { DownloadCloud, Loader2, Code2, Database, CheckCircle2, Server, Coffee } from 'lucide-react'
+import { DownloadCloud, Loader2, Code2, Database, CheckCircle2, Server, Coffee, Shield, TestTube, Container, BookOpen } from 'lucide-react'
 import { DbType, BackendStack } from '@/lib/generator/ast'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
@@ -45,6 +45,17 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
   const [javaPort, setJavaPort] = useState(8080)
   const [done, setDone] = useState(false)
 
+  // Eject Options - Novas configurações dinâmicas
+  const [jwtEnabled, setJwtEnabled] = useState(false)
+  const [passwordHashAlgorithm, setPasswordHashAlgorithm] = useState<'bcrypt' | 'sha256'>('bcrypt')
+  const [generateMigrations, setGenerateMigrations] = useState(true)
+  const [migrationEngine, setMigrationEngine] = useState<'flyway' | 'liquibase'>('flyway')
+  const [generateServiceTests, setGenerateServiceTests] = useState(false)
+  const [generateControllerTests, setGenerateControllerTests] = useState(false)
+  const [generateDockerfile, setGenerateDockerfile] = useState(true)
+  const [generateDockerCompose, setGenerateDockerCompose] = useState(true)
+  const [generateEnvExample, setGenerateEnvExample] = useState(true)
+
   if (!isOpen) return null
 
   // GAP fix: reset state on every open so re-opens start clean
@@ -54,6 +65,15 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
     setDbStack('postgres')
     setJavaGroupId('com.app')
     setJavaPort(8080)
+    setJwtEnabled(false)
+    setPasswordHashAlgorithm('bcrypt')
+    setGenerateMigrations(true)
+    setMigrationEngine('flyway')
+    setGenerateServiceTests(false)
+    setGenerateControllerTests(false)
+    setGenerateDockerfile(true)
+    setGenerateDockerCompose(true)
+    setGenerateEnvExample(true)
     onClose()
   }
 
@@ -70,6 +90,15 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
           javaGroupId: backendStack === 'java-spring' ? javaGroupId : undefined,
           javaPort: backendStack === 'java-spring' ? javaPort : undefined,
           javaVersion: 21,
+          jwtEnabled: backendStack === 'java-spring' ? jwtEnabled : false,
+          passwordHashAlgorithm: (backendStack === 'java-spring' && jwtEnabled) ? passwordHashAlgorithm : undefined,
+          generateMigrations: backendStack === 'java-spring' ? generateMigrations : false,
+          migrationEngine: (backendStack === 'java-spring' && generateMigrations) ? migrationEngine : undefined,
+          generateServiceTests: backendStack === 'java-spring' ? generateServiceTests : false,
+          generateControllerTests: backendStack === 'java-spring' ? generateControllerTests : false,
+          generateDockerfile: backendStack === 'java-spring' ? generateDockerfile : false,
+          generateDockerCompose: backendStack === 'java-spring' ? generateDockerCompose : false,
+          generateEnvExample: backendStack === 'java-spring' ? generateEnvExample : false,
         })
       })
 
@@ -274,6 +303,203 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
                   ))}
                 </div>
               </div>
+
+              {/* ── Seções específicas para Spring Boot ── */}
+              {isJava && (
+                <>
+                  {/* ── Seção 4: Segurança & Autenticação ── */}
+                  <div className="border border-neutral-700/60 rounded-lg p-4 bg-neutral-800/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={jwtEnabled}
+                          onChange={e => setJwtEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded accent-indigo-500"
+                        />
+                        <Shield className="w-4 h-4 text-emerald-400" />
+                        Autenticação JWT (Stateless)
+                      </label>
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Recomendado
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 pl-6">
+                      Gera SecurityConfig, JwtUtil, JwtFilter e AuthController com endpoints /api/auth/login e /me.
+                    </p>
+
+                    {jwtEnabled && (
+                      <div className="ml-6 pl-3 border-l-2 border-indigo-500/40 pt-1 space-y-2">
+                        <label className="block text-xs text-neutral-400 font-medium">Algoritmo de Hash de Senha:</label>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="passwordHash"
+                              value="bcrypt"
+                              checked={passwordHashAlgorithm === 'bcrypt'}
+                              onChange={() => setPasswordHashAlgorithm('bcrypt')}
+                              className="accent-indigo-500"
+                            />
+                            BCrypt (Recomendado)
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="passwordHash"
+                              value="sha256"
+                              checked={passwordHashAlgorithm === 'sha256'}
+                              onChange={() => setPasswordHashAlgorithm('sha256')}
+                              className="accent-indigo-500"
+                            />
+                            SHA-256
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Seção 5: Migrations de Banco de Dados ── */}
+                  <div className="border border-neutral-700/60 rounded-lg p-4 bg-neutral-800/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateMigrations}
+                          onChange={e => setGenerateMigrations(e.target.checked)}
+                          className="w-4 h-4 rounded accent-indigo-500"
+                        />
+                        <Database className="w-4 h-4 text-blue-400" />
+                        Gerar Migrations SQL
+                      </label>
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Padrão
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 pl-6">
+                      Versionamento de schema com DDL automático para todas as tabelas e relacionamentos.
+                    </p>
+
+                    {generateMigrations && (
+                      <div className="ml-6 pl-3 border-l-2 border-indigo-500/40 pt-1 space-y-2">
+                        <label className="block text-xs text-neutral-400 font-medium">Engine de Migration:</label>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="migrationEngine"
+                              value="flyway"
+                              checked={migrationEngine === 'flyway'}
+                              onChange={() => setMigrationEngine('flyway')}
+                              className="accent-indigo-500"
+                            />
+                            Flyway (V1__init.sql)
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="migrationEngine"
+                              value="liquibase"
+                              checked={migrationEngine === 'liquibase'}
+                              onChange={() => setMigrationEngine('liquibase')}
+                              className="accent-indigo-500"
+                            />
+                            Liquibase (YAML changelog)
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Seção 6: Testes Automatizados ── */}
+                  <div className="border border-neutral-700/60 rounded-lg p-4 bg-neutral-800/30 space-y-3">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                      <TestTube className="w-4 h-4 text-purple-400" />
+                      Testes Automatizados (JUnit 5 + Mockito)
+                    </label>
+                    <div className="space-y-2 pl-6">
+                      <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateServiceTests}
+                          onChange={e => setGenerateServiceTests(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-indigo-500"
+                        />
+                        <span>Gerar Testes Unitários de Service (<code>*ServiceTest.java</code>)</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateControllerTests}
+                          onChange={e => setGenerateControllerTests(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-indigo-500"
+                        />
+                        <span>Gerar Testes de Integração de Controller (<code>*ControllerTest.java</code> com MockMvc)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* ── Seção 7: DevOps & Containerização ── */}
+                  <div className="border border-neutral-700/60 rounded-lg p-4 bg-neutral-800/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                        <Container className="w-4 h-4 text-cyan-400" />
+                        DevOps & Containerização
+                      </label>
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        Padrão
+                      </span>
+                    </div>
+                    <div className="space-y-2 pl-6">
+                      <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateDockerfile}
+                          onChange={e => setGenerateDockerfile(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-indigo-500"
+                        />
+                        <span>Dockerfile multi-stage (Eclipse Temurin JDK + JRE Alpine)</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateDockerCompose}
+                          onChange={e => setGenerateDockerCompose(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-indigo-500"
+                        />
+                        <span>docker-compose.yml (Backend Spring + Banco {dbStack})</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={generateEnvExample}
+                          onChange={e => setGenerateEnvExample(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded accent-indigo-500"
+                        />
+                        <span>Arquivo backend/.env.example documentado</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* ── Seção 8: Documentação Completa ── */}
+                  <div className="border border-neutral-700/60 rounded-lg p-4 bg-neutral-800/30 space-y-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                      <BookOpen className="w-4 h-4 text-amber-400" />
+                      Documentação Completa (Inclusa)
+                    </label>
+                    <div className="grid grid-cols-1 gap-1.5 pl-6 text-xs text-neutral-400">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Swagger / OpenAPI 3.0 interativo em <code>/swagger-ui.html</code></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>READMEs profissionais completos com Badges, Quickstart, Tabelas de Endpoints e Troubleshooting</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
