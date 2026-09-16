@@ -220,17 +220,11 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }, [isOpen, target])
 
-  // Cleanup npm process when IDE is fully closed
+  // Cleanup npm dev server process when IDE modal is fully closed
   useEffect(() => {
-    if (!isOpen) {
-      if (serverState.devProcess) {
-        serverState.devProcess.kill()
-        serverState.setDevProcess(null)
-      } else if (isTauri()) {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('stopcli').catch(() => {})
-        })
-      }
+    if (!isOpen && serverState.devProcess) {
+      serverState.devProcess.kill()
+      serverState.setDevProcess(null)
     }
   }, [isOpen, serverState.devProcess])
 
@@ -244,10 +238,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       consoleState.clearConsole()
-      if (isTauri()) {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('stopcli').catch(() => {})
-        })
+      if (serverState.devProcess) {
+        serverState.devProcess.kill()
+        serverState.setDevProcess(null)
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
@@ -255,7 +248,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [])
+  }, [serverState.devProcess])
 
   const openIDE = (newTarget: IDETarget) => {
     if (!isTauri()) {

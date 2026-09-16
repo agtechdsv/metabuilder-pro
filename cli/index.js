@@ -230,30 +230,39 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     }
   });
 
-  let pgClient, oracleConnection;
+  let pgClient = null;
+  let oracleConnection = null;
+  let isDbConnected = false;
   console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel (${dbType})...`));
 
-  if (dbType === 'oracle') {
-    let user, password, connectStr = connectionString;
-    if (connectionString.startsWith('oracle://')) {
-      try {
-        const url = new URL(connectionString);
-        user = decodeURIComponent(url.username);
-        password = decodeURIComponent(url.password);
-        connectStr = `${url.hostname}${url.port ? ':' + url.port : ''}${url.pathname}`;
-      } catch (err) {}
+  try {
+    if (dbType === 'oracle') {
+      let user, password, connectStr = connectionString;
+      if (connectionString.startsWith('oracle://')) {
+        try {
+          const url = new URL(connectionString);
+          user = decodeURIComponent(url.username);
+          password = decodeURIComponent(url.password);
+          connectStr = `${url.hostname}${url.port ? ':' + url.port : ''}${url.pathname}`;
+        } catch (err) {}
+      }
+      const connectConfig = { connectString: connectStr };
+      if (user) connectConfig.user = user;
+      if (password) connectConfig.password = password;
+      
+      oracleConnection = await oracledb.getConnection(connectConfig);
+      isDbConnected = true;
+    } else {
+      pgClient = new Pool({ connectionString, max: 20 });
+      await pgClient.query('SELECT 1'); // Testa a conexão
+      isDbConnected = true;
     }
-    const connectConfig = { connectString: connectStr };
-    if (user) connectConfig.user = user;
-    if (password) connectConfig.password = password;
     
-    oracleConnection = await oracledb.getConnection(connectConfig);
-  } else {
-    pgClient = new Pool({ connectionString, max: 20 });
-    await pgClient.query('SELECT 1'); // Testa a conexão
+    console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
+  } catch (connErr) {
+    console.error(chalk.red.bold(`❌ [FALHA DE CONEXÃO] Não foi possível conectar ao banco '${connectionName || 'public'}' (${dbType}):`), connErr.message);
+    console.log(chalk.yellow(`⚠️ O túnel permanecerá ativo para atender e reportar erros deste banco, e os demais bancos continuam operando normalmente!`));
   }
-  
-  console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
 
   // Inicializa o logger de banco (lê log_config do Supabase)
   if (dbType === 'postgres' && pgClient) {
@@ -326,6 +335,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       let sql = '';
       let params = [];
       try {
+        if (!isDbConnected || (dbType === 'oracle' && !oracleConnection) || (dbType !== 'oracle' && !pgClient)) {
+          throw new Error(`Banco de dados local '${expectedSchema}' (${dbType}) está desconectado ou inacessível no momento.`);
+        }
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
         let result;
 
@@ -1475,14 +1487,24 @@ async function run() {
         if (Array.isArray(conn.connectionsString)) {
           conn.connectionsString.forEach(dbConfig => {
             const dbType = dbConfig.type || 'postgres';
-            tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData));
+            tunnelPromises.push(
+              startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData)
+                .catch(err => {
+                  console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${dbConfig.name}' (${dbType}):`), err.message);
+                })
+            );
           });
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
-          tunnelPromises.push(startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData));
+          tunnelPromises.push(
+            startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData)
+              .catch(err => {
+                console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${conn.projectId}':`), err.message);
+              })
+          );
         }
       });
-      await Promise.all(tunnelPromises);
+      await Promise.allSettled(tunnelPromises);
 
       // Detecta se está rodando como daemon headless (spawn do Tauri)
       // vs. terminal interativo (execução manual pelo usuário)
@@ -1528,9 +1550,15 @@ async function run() {
         if (Array.isArray(conn.connectionsString)) {
           for (const dbConfig of conn.connectionsString) {
             const dbType = dbConfig.type || 'postgres';
-            const schemaDefinition = dbType === 'oracle' 
-              ? await introspectOracle(dbConfig.connectionString) 
-              : await introspectPostgres(dbConfig.connectionString);
+            let schemaDefinition = null;
+            try {
+              schemaDefinition = dbType === 'oracle' 
+                ? await introspectOracle(dbConfig.connectionString) 
+                : await introspectPostgres(dbConfig.connectionString);
+            } catch (err) {
+              console.error(chalk.red.bold(`❌ [FALHA NA INTROSPECÇÃO] Banco '${dbConfig.name}' (${dbType}) inacessível:`), err.message);
+              continue;
+            }
 
             // --- INÍCIO DA HEURÍSTICA DE MIGRAÇÃO ---
             try {
@@ -1607,9 +1635,15 @@ async function run() {
           }
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
-          const schemaDefinition = dbType === 'oracle' 
-            ? await introspectOracle(conn.connectionString) 
-            : await introspectPostgres(conn.connectionString);
+          let schemaDefinition = null;
+          try {
+            schemaDefinition = dbType === 'oracle' 
+              ? await introspectOracle(conn.connectionString) 
+              : await introspectPostgres(conn.connectionString);
+          } catch (err) {
+            console.error(chalk.red.bold(`❌ [FALHA NA INTROSPECÇÃO] Projeto ${conn.projectId} (${dbType}) inacessível:`), err.message);
+            continue;
+          }
           console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
           try {
             const syncResp = await axios.post(API_URL, {
