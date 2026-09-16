@@ -1184,6 +1184,8 @@ pub fn run() {
             tauri::RunEvent::WindowEvent { label, event: window_event, .. } => {
                 if label == "main" {
                     if let tauri::WindowEvent::Destroyed = window_event {
+                        let state = app_handle.state::<CliState>();
+                        kill_dev_process_tree(&state);
                         std::process::exit(0);
                     }
                 }
