@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { X, Trash2, Copy } from 'lucide-react'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -9,9 +9,10 @@ import { useI18n } from '@/i18n/I18nContext'
 interface TunnelLogConsoleModalProps {
   isOpen: boolean
   onClose: () => void
+  isWindow?: boolean
 }
 
-export function TunnelLogConsoleModal({ isOpen, onClose }: TunnelLogConsoleModalProps) {
+export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: TunnelLogConsoleModalProps) {
   const [logs, setLogs] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
@@ -90,15 +91,32 @@ export function TunnelLogConsoleModal({ isOpen, onClose }: TunnelLogConsoleModal
     }
   }
 
+  const handleCopyAll = () => {
+    if (logs.length > 0) {
+      navigator.clipboard.writeText(logs.join('\n'))
+      toast(t('tunnel_log.copied_all', 'Todos os logs copiados!'), 'success')
+    }
+  }
+
+  const handleMouseUp = () => {
+    const selectedText = window.getSelection()?.toString()
+    if (selectedText && selectedText.trim().length > 0) {
+      navigator.clipboard.writeText(selectedText)
+      toast(t('tunnel_log.copied_selection', 'Seleção copiada!'), 'success')
+    }
+  }
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center">
-      <div
-        className="Absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity"
-        onClick={onClose}
-      />
-      <div className="pointer-events-auto w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 relative">
+    <div className={isWindow ? "w-full h-screen bg-[#0c0c0c] flex flex-col text-white" : "fixed inset-0 z-[200] pointer-events-none flex items-center justify-center"}>
+      {!isWindow && (
+        <div
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm pointer-events-auto transition-opacity"
+          onClick={onClose}
+        />
+      )}
+      <div className={isWindow ? "w-full h-full flex flex-col relative" : "pointer-events-auto w-full max-w-4xl max-h-[80vh] bg-[#0c0c0c] border border-neutral-800 rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 relative"}>
         <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-[#111]">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -109,6 +127,13 @@ export function TunnelLogConsoleModal({ isOpen, onClose }: TunnelLogConsoleModal
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleCopyAll}
+              title={t('tunnel_log.copy_all', 'Copiar Tudo')}
+              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white"
+            >
+              <Copy className="w-5 h-5" />
+            </button>
+            <button
               onClick={handleClearLogs}
               title={t('tunnel_log.clear_button', 'Limpar Logs')}
               className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-red-400"
@@ -116,7 +141,14 @@ export function TunnelLogConsoleModal({ isOpen, onClose }: TunnelLogConsoleModal
               <Trash2 className="w-5 h-5" />
             </button>
             <button
-              onClick={onClose}
+              onClick={async () => {
+                if (isWindow && isTauri()) {
+                  const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+                  getCurrentWebviewWindow().close()
+                } else {
+                  onClose()
+                }
+              }}
               className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-500 hover:text-white"
             >
               <X className="w-5 h-5" />
@@ -124,7 +156,10 @@ export function TunnelLogConsoleModal({ isOpen, onClose }: TunnelLogConsoleModal
           </div>
         </div>
 
-        <div className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px]">
+        <div 
+          className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px] select-text"
+          onMouseUp={handleMouseUp}
+        >
           {
             isLoading ? (
               <div className="text-neutral-400 animate-pulse">{t('tunnel_log.loading', 'Carregando logs...')}</div>
