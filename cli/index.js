@@ -590,10 +590,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             const parsedRows = (oraRes.rows || []).map(row => {
               const normalizedRow = {};
               for (const [k, v] of Object.entries(row)) {
+                const lowerK = k.toLowerCase();
                 if (typeof v === 'string' && v.trimStart().startsWith('{') && v.trimEnd().endsWith('}')) {
-                  try { normalizedRow[k] = JSON.parse(v); } catch (_) { normalizedRow[k] = v; }
+                  try { normalizedRow[lowerK] = JSON.parse(v); } catch (_) { normalizedRow[lowerK] = v; }
                 } else {
-                  normalizedRow[k] = v;
+                  normalizedRow[lowerK] = v;
                 }
               }
               return normalizedRow;
@@ -745,10 +746,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             const parsedRows = (oraRes.rows || []).map(row => {
               const normalizedRow = {};
               for (const [k, v] of Object.entries(row)) {
+                const lowerK = k.toLowerCase();
                 if (typeof v === 'string' && v.trimStart().startsWith('{') && v.trimEnd().endsWith('}')) {
-                  try { normalizedRow[k] = JSON.parse(v); } catch (_) { normalizedRow[k] = v; }
+                  try { normalizedRow[lowerK] = JSON.parse(v); } catch (_) { normalizedRow[lowerK] = v; }
                 } else {
-                  normalizedRow[k] = v;
+                  normalizedRow[lowerK] = v;
                 }
               }
               return normalizedRow;
@@ -773,7 +775,14 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           if (dbType === 'oracle') {
             const oraRes = await oracleConnection.execute(sql, [], { outFormat: oracledb.OUT_FORMAT_OBJECT, autoCommit: true });
-            result = { rows: oraRes.rows || [], rowsAffected: oraRes.rowsAffected };
+            const parsedRows = (oraRes.rows || []).map(row => {
+              const normalizedRow = {};
+              for (const [k, v] of Object.entries(row)) {
+                normalizedRow[k.toLowerCase()] = v;
+              }
+              return normalizedRow;
+            });
+            result = { rows: parsedRows, rowsAffected: oraRes.rowsAffected };
           } else {
             result = await pgClient.query(sql);
             if (result && !result.rows && Array.isArray(result)) {
