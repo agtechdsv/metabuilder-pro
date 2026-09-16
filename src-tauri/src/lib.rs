@@ -1176,9 +1176,19 @@ pub fn run() {
         .expect("error while building tauri application");
 
     app.run(|app_handle, event| {
-        if let tauri::RunEvent::ExitRequested { .. } = event {
-            let state = app_handle.state::<CliState>();
-            kill_dev_process_tree(&state);
+        match event {
+            tauri::RunEvent::ExitRequested { .. } => {
+                let state = app_handle.state::<CliState>();
+                kill_dev_process_tree(&state);
+            }
+            tauri::RunEvent::WindowEvent { label, event: window_event, .. } => {
+                if label == "main" {
+                    if let tauri::WindowEvent::Destroyed = window_event {
+                        std::process::exit(0);
+                    }
+                }
+            }
+            _ => {}
         }
     });
 }
