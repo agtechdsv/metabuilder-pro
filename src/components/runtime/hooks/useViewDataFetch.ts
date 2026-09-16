@@ -111,10 +111,17 @@ export function useViewDataFetch({
           resultData = Object.values(grouped)
         }
 
-        resultData = resultData.map((row: any) => ({
-          ...row,
-          _key: String(row[primaryKeyName] || row.id || row.ID || crypto.randomUUID())
-        }))
+        resultData = resultData.map((row: any) => {
+          const normalizedRow: any = {}
+          Object.keys(row).forEach(k => {
+            normalizedRow[k] = row[k]
+            normalizedRow[k.toLowerCase()] = row[k]
+          })
+          return {
+            ...normalizedRow,
+            _key: String(row[primaryKeyName] || row.id || row.ID || crypto.randomUUID())
+          }
+        })
 
         const uniqueResultData = resultData.filter((row: any, index: number, self: any[]) =>
           index === self.findIndex((r) =>
