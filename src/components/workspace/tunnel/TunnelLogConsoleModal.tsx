@@ -52,17 +52,25 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
               setLogs([t('tunnel_log.not_found', '[SYSTEM] Arquivo de log não encontrado. O túnel pode não ter sido iniciado ainda.')])
             }
           } catch (fileErr: any) {
-            console.error('Falha ao ler log inicial:', fileErr)
+            console.warn('Falha ao ler log inicial:', fileErr)
             setLogs([`${t('tunnel_log.error_read_file', '[ERRO] Falha ao ler o arquivo de log do túnel local.')} Detalhe: ${fileErr.message || fileErr}`])
           }
 
           // Escutar novos logs em tempo real
-          unlisten = await listen<string>('tunnel-log', (event) => {
-            setLogs((prev) => [...prev, event.payload])
-          })
+          try {
+            unlisten = await listen<string>('tunnel-log', (event) => {
+              setLogs((prev) => [...prev, event.payload])
+            })
+          } catch (listenErr: any) {
+            console.error('Falha ao registrar escuta de logs do túnel:', listenErr)
+            setLogs((prev) => [
+              ...prev,
+              `[ERRO] Falha ao iniciar escuta de logs em tempo real. Detalhe: ${listenErr.message || listenErr}`
+            ])
+          }
         } catch (error: any) {
-          console.error(t('tunnel_log.error_read_console', 'Erro ao ler logs do túnel:'), error)
-          setLogs([`${t('tunnel_log.error_read_file', '[ERRO] Falha ao iniciar escuta de logs.')} Detalhe: ${error.message || error}`])
+          console.error(t('tunnel_log.error_read_console', 'Erro ao inicializar logs do túnel:'), error)
+          setLogs([`[ERRO] Falha ao carregar módulos do Desktop. Detalhe: ${error.message || error}`])
         }
       } else {
         setLogs([t('tunnel_log.desktop_only', '[SYSTEM] Visualização de logs do túnel só está disponível no ambiente Desktop (IDE).')])
