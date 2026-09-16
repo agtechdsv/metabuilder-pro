@@ -1,11 +1,13 @@
 import { RouteNode } from '../../ast'
+import { getGeneratorDictionary } from '../../i18n'
 import { renderGridCellValue, toPascalCase, toCamel } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Listagem (pesquisa_cadastro — page.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateListPage(route: RouteNode): string {
+export function generateListPage(route: RouteNode, targetLang?: string): string {
+  const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
@@ -134,7 +136,7 @@ export function generateListPage(route: RouteNode): string {
       defaultValue={defaultValue || ''}
       className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
     >
-      <option value="">Todos</option>
+      <option value="">${dict.list.all_filter}</option>
       {list.map((r: any, i: number) => {
         const val = String(${valueExpr})
         const lbl = String(${labelExpr})
@@ -154,7 +156,7 @@ export function generateListPage(route: RouteNode): string {
                   defaultValue={params?.['${col}_filter'] || ''}
                   className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm opacity-60"
                 >
-                  <option value="">Todos</option>
+                  <option value="">${dict.list.all_filter}</option>
                 </select>
               }
             >
@@ -173,7 +175,7 @@ export function generateListPage(route: RouteNode): string {
               defaultValue={params?.['${col}_filter'] || ''}
               className="w-full h-[42px] px-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
             >
-              <option value="">Todos</option>
+              <option value="">${dict.list.all_filter}</option>
               {(${optsCode} as Array<{value: string; label: string}>).map((opt, i) => (
                 <option key={i} value={opt.value}>{opt.label}</option>
               ))}
@@ -188,7 +190,7 @@ export function generateListPage(route: RouteNode): string {
               <input
                 type="text"
                 name="${col}_filter"
-                placeholder="Filtrar por ${f.label.toLowerCase()}..."
+                placeholder="${dict.list.filter_by} ${f.label.toLowerCase()}..."
                 defaultValue={params?.['${col}_filter'] || ''}
                 className="w-full h-[42px] pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-all shadow-sm"
               />
@@ -236,8 +238,8 @@ function TableLoading() {
     <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
       <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
       <div className="text-center">
-        <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>
-        <p className="text-sm">Buscando dados no Direct Access...</p>
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-200">${dict.list.connecting_db}</h3>
+        <p className="text-sm">${dict.list.fetching_data}</p>
       </div>
     </div>
   )
@@ -324,7 +326,7 @@ ${filterFields.map(f => {
             <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
               <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] text-center">#</th>
 ${thCells}
-              <th className="px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50">AÇÕES</th>
+              <th className="px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50">${dict.list.actions_header}</th>
             </tr>
           </thead>
           <tbody>
@@ -338,10 +340,10 @@ ${thCells}
 ${tdCells}
                 <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
                   <div className="flex items-center justify-end gap-1.5">
-                    <Link href={'${route.path}/' + itemId + '?mode=view' + (isEmbedded ? '&embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Visualizar">
+                    <Link href={'${route.path}/' + itemId + '?mode=view' + (isEmbedded ? '&embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="${dict.list.view_tooltip}">
                       <Search className="w-3.5 h-3.5" />
                     </Link>
-                    <Link href={'${route.path}/' + itemId + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="Editar">
+                    <Link href={'${route.path}/' + itemId + (isEmbedded ? '?embedded=true' : '')} className="p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-neutral-200 dark:border-neutral-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center" title="${dict.list.edit_tooltip}">
                       <Pencil className="w-3.5 h-3.5" />
                     </Link>
                     <DeleteButton
@@ -356,7 +358,7 @@ ${rowButtonsHtml}
             {paginatedData.length === 0 && (
               <tr>
                 <td colSpan={${route.gridFields.filter(f => !f.hidden).length + 2}} className="h-48 text-center">
-                  <p className="text-neutral-400 dark:text-neutral-600 text-sm">Nenhum registro encontrado.</p>
+                  <p className="text-neutral-400 dark:text-neutral-600 text-sm">${dict.list.no_records}</p>
                 </td>
               </tr>
             )}
@@ -367,10 +369,10 @@ ${rowButtonsHtml}
       {/* Rodapé com Navegador de Páginas fiel à Web Produção */}
       <div className="px-8 py-4 bg-neutral-50/50 dark:bg-neutral-900/50 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
-          <span className="opacity-60">Exibir</span>
+          <span className="opacity-60">${dict.list.show}</span>
           <LimitSelector currentLimit={limit} />
           <span className="mx-2 opacity-20">|</span>
-          <span className="opacity-60">Total: <span className="text-neutral-900 dark:text-white font-bold">{totalRows}</span></span>
+          <span className="opacity-60">${dict.list.total} <span className="text-neutral-900 dark:text-white font-bold">{totalRows}</span></span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -472,7 +474,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
             ${b.label}
           </button>`
 }).join('\n') || (hasCreate ? `          <Link href={\`${route.path}/new\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-            <Plus className="w-4 h-4" /> Novo Registro
+            <Plus className="w-4 h-4" /> ${dict.list.new_record}
           </Link>` : '')}
           {isEmbedded && <CloseModalButton />}
         </div>
@@ -492,14 +494,14 @@ ${filterInputs}
               className="h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
             >
               <Search className="w-4 h-4" />
-              Pesquisar
+              ${dict.list.search}
             </button>
             <Link
               href="${route.path}"
               className="h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 capitalize tracking-wider active:scale-95 shrink-0"
             >
               <RefreshCcw className="w-4 h-4" />
-              Limpar
+              ${dict.list.clear}
             </Link>
           </div>
         </div>

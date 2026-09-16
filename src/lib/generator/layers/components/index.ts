@@ -31,9 +31,9 @@ export * from './mindmap-board'
  * Ponto de entrada modular para geração dos componentes do projeto ejetado.
  */
 export function generateComponents(ast: AppAST, files: Map<string, string>) {
-  generateUiPrimitives(files)
-  generateRelationSectionComponent(files)
-  generateMasterFormComponent(files)
+  generateUiPrimitives(files, ast.targetLanguage)
+  generateRelationSectionComponent(files, ast.targetLanguage)
+  generateMasterFormComponent(files, ast.targetLanguage)
   generateByocComponents(ast, files)
   generateKanbanBoardComponent(files)
   generateTimelineBoardComponent(files)

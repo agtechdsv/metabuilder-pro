@@ -3816,6 +3816,8 @@
     "eject_modal": {
       "title": "Configuração de Eject & Sincronização",
       "subtitle": "Configure os parâmetros da stack, componentes e arquitetura do backend",
+      "target_lang_title": "Idioma de Geração",
+      "target_lang_tooltip": "Idioma do código gerado",
       "soon_badge": "EM BREVE",
       "syncing_as": "Sincronizando projeto como: {stack}",
       "select_stack": "Selecione uma stack disponível para sincronizar",

@@ -1,4 +1,7 @@
-export function generateRelationSectionComponent(files: Map<string, string>) {
+import { getGeneratorDictionary } from '../../i18n'
+
+export function generateRelationSectionComponent(files: Map<string, string>, targetLang?: string) {
+    const dict = getGeneratorDictionary(targetLang)
     files.set('components/DetailRelationSection.tsx', `'use client'
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
@@ -1471,14 +1474,14 @@ export function DetailRelationSection({
 
       if (silent !== true) {
         setToastType('success')
-        setToastMessage('Alterações salvas com sucesso!')
+        setToastMessage('${dict.feedback.changes_saved}')
         window.dispatchEvent(new CustomEvent('save-master-form'))
       }
     } catch (err: any) {
       console.error('Erro ao salvar alterações:', err)
       if (silent !== true) {
         setToastType('error')
-        setToastMessage(err?.message || 'Erro ao salvar alterações.')
+        setToastMessage(err?.message || '${dict.feedback.err_saving_changes}')
       }
     } finally {
       setIsSubmitting(false)
@@ -1623,13 +1626,13 @@ export function DetailRelationSection({
       }
 
       setToastType('success')
-      setToastMessage(\`\${detailSingular} salvo com sucesso!\`)
+      setToastMessage(\`\${detailSingular} ${dict.feedback.saved_successfully}\`)
       setIsModalOpen(false)
       setEditingItem(null)
     } catch (err: any) {
       console.error('Erro ao salvar:', err)
       setToastType('error')
-      setToastMessage(err?.message || \`Erro ao salvar \${detailSingular.toLowerCase()}.\`)
+      setToastMessage(err?.message || \`${dict.feedback.error_saving} \${detailSingular.toLowerCase()}.\`)
     } finally {
       setIsSubmitting(false)
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
@@ -1648,12 +1651,12 @@ export function DetailRelationSection({
         setLocalItems(localItems.filter(i => (i.id || i.codigo) !== (deletingItem.id || deletingItem.codigo)))
       }
       setToastType('success')
-      setToastMessage(\`\${detailSingular} excluído com sucesso!\`)
+      setToastMessage(\`\${detailSingular} ${dict.feedback.deleted_successfully}\`)
       setDeletingItem(null)
     } catch (err: any) {
       console.error('Erro ao excluir:', err)
       setToastType('error')
-      setToastMessage(err?.message || \`Erro ao excluir \${detailSingular.toLowerCase()}.\`)
+      setToastMessage(err?.message || \`${dict.feedback.error_deleting} \${detailSingular.toLowerCase()}.\`)
     } finally {
       setIsSubmitting(false)
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
@@ -1789,12 +1792,12 @@ export function DetailRelationSection({
         }
       }
       setToastType('success')
-      setToastMessage('Item salvo com sucesso!')
+      setToastMessage('${dict.feedback.item_saved}')
       setEditingSubItem(null)
     } catch (err: any) {
       console.error(err)
       setToastType('error')
-      setToastMessage(err?.message || 'Erro ao salvar item.')
+      setToastMessage(err?.message || '${dict.feedback.err_saving_item}')
     } finally {
       setIsSubmitting(false)
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
@@ -1868,12 +1871,12 @@ export function DetailRelationSection({
         }
       }
       setToastType('success')
-      setToastMessage('Item excluído com sucesso!')
+      setToastMessage('${dict.feedback.item_deleted}')
       setDeletingSubItem(null)
     } catch (err: any) {
       console.error(err)
       setToastType('error')
-      setToastMessage(err?.message || 'Erro ao excluir item.')
+      setToastMessage(err?.message || '${dict.feedback.err_deleting_item}')
     } finally {
       setIsSubmitting(false)
       window.dispatchEvent(new CustomEvent('page-progress-complete'))
@@ -2379,7 +2382,7 @@ export function DetailRelationSection({
             href={backPath || '#'}
             className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
           >
-            {isReadOnlyMode ? 'Voltar' : 'Cancelar'}
+            {isReadOnlyMode ? '${dict.form.back}' : '${dict.form.cancel}'}
           </Link>
           {!isReadOnlyMode && (
             <button
@@ -2389,7 +2392,7 @@ export function DetailRelationSection({
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+              {isSubmitting ? '${dict.form.saving}' : '${dict.form.save_changes}'}
             </button>
           )}
         </div>
@@ -2719,7 +2722,7 @@ export function DetailRelationSection({
                   }}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  {isReadOnlyMode ? 'Fechar' : 'Cancelar'}
+                  {isReadOnlyMode ? '${dict.nav.close}' : '${dict.form.cancel}'}
                 </button>
                 {!isReadOnlyMode && (
                   <button
@@ -2727,7 +2730,7 @@ export function DetailRelationSection({
                     disabled={isSubmitting}
                     className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
                   >
-                    <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                    <Save className="w-4 h-4" /> {isSubmitting ? '${dict.form.saving}' : '${dict.form.save_changes}'}
                   </button>
                 )}
               </div>
@@ -2744,10 +2747,10 @@ export function DetailRelationSection({
             <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
               <div>
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                  Excluir Registro
+                  ${dict.delete_modal.title}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                  ${dict.delete_modal.warning}
                 </p>
               </div>
               <button
@@ -2764,9 +2767,9 @@ export function DetailRelationSection({
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-sm font-bold">${dict.delete_modal.are_you_sure}</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir "\${String(deletingItem.display_label || deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.descricao || 'este registro')}".
+                  ${dict.delete_modal.about_to_delete} "\${String(deletingItem.display_label || deletingItem.id || deletingItem.codigo || deletingItem.nome || deletingItem.descricao || '${dict.delete_modal.this_record}')}".
                 </p>
               </div>
             </div>
@@ -2777,7 +2780,7 @@ export function DetailRelationSection({
                 onClick={() => setDeletingItem(null)}
                 className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
               >
-                CANCELAR
+                ${dict.form.cancel.toUpperCase()}
               </button>
               <button
                 type="button"
@@ -2785,7 +2788,7 @@ export function DetailRelationSection({
                 onClick={handleConfirmDelete}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
               >
-                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}
+                <Trash2 className="w-4 h-4" /> {isSubmitting ? '${dict.delete_modal.deleting}' : '${dict.delete_modal.confirm_delete}'}
               </button>
             </div>
           </div>
@@ -2994,14 +2997,14 @@ export function DetailRelationSection({
                   onClick={() => setEditingSubItem(null)}
                   className="px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
-                  Cancelar
+                  ${dict.form.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
                 >
-                  <Save className="w-4 h-4" /> {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                  <Save className="w-4 h-4" /> {isSubmitting ? '${dict.form.saving}' : '${dict.form.save_changes}'}
                 </button>
               </div>
             </form>
@@ -3017,10 +3020,10 @@ export function DetailRelationSection({
             <div className="flex items-start justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
               <div>
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                  Excluir Registro
+                  ${dict.delete_modal.title}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                  ${dict.delete_modal.warning}
                 </p>
               </div>
               <button
@@ -3037,9 +3040,9 @@ export function DetailRelationSection({
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-sm font-bold">${dict.delete_modal.are_you_sure}</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir "\${String(deletingSubItem.subItem.display_label || deletingSubItem.subItem.id || deletingSubItem.subItem.codigo || deletingSubItem.subItem.nome || deletingSubItem.subItem.descricao || 'este registro')}".
+                  ${dict.delete_modal.about_to_delete} "\${String(deletingSubItem.subItem.display_label || deletingSubItem.subItem.id || deletingSubItem.subItem.codigo || deletingSubItem.subItem.nome || deletingSubItem.subItem.descricao || '${dict.delete_modal.this_record}')}".
                 </p>
               </div>
             </div>
@@ -3050,7 +3053,7 @@ export function DetailRelationSection({
                 onClick={() => setDeletingSubItem(null)}
                 className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
               >
-                CANCELAR
+                ${dict.form.cancel.toUpperCase()}
               </button>
               <button
                 type="button"
@@ -3058,7 +3061,7 @@ export function DetailRelationSection({
                 onClick={handleConfirmDeleteSubItem}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-widest transition-colors shadow-lg shadow-red-500/20"
               >
-                <Trash2 className="w-4 h-4" /> {isSubmitting ? 'Excluindo...' : 'CONFIRMAR EXCLUSÃO'}
+                <Trash2 className="w-4 h-4" /> {isSubmitting ? '${dict.delete_modal.deleting}' : '${dict.delete_modal.confirm_delete}'}
               </button>
             </div>
           </div>

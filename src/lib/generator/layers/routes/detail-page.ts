@@ -1,4 +1,5 @@
 import { RouteNode } from '../../ast'
+import { getGeneratorDictionary } from '../../i18n'
 import { renderFormField, getByocComponentName, isValidIdentifier } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,7 +81,8 @@ ${tabConstants.join('\n')}
 // Client Component para Abas de Detalhe ([id]/DetailTabsClient.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateDetailTabsClient(route: RouteNode): string {
+export function generateDetailTabsClient(route: RouteNode, targetLang?: string): string {
+  const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const pk = route.primaryKey
   const title = route.title
@@ -278,8 +280,8 @@ export function generateDetailTabsClient(route: RouteNode): string {
           `                  <div className="py-24 flex flex-col items-center justify-center gap-3 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-3xl animate-in fade-in duration-200">`,
           `                    <Loader2 className="w-9 h-9 animate-spin text-indigo-500" />`,
           `                    <div className="text-center">`,
-          `                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-200">Conectando ao banco...</h3>`,
-          `                      <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Buscando dados via Túnel Seguro</p>`,
+          `                      <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-200">${dict.list.connecting_db}</h3>`,
+          `                      <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">${dict.list.fetching_data}</p>`,
           `                    </div>`,
           `                  </div>`,
           `                )}`,
@@ -503,7 +505,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
               <div className="flex items-center gap-2 mt-1">
                 <div className="w-8 h-1 bg-indigo-600 rounded-full" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                  SISTEMA METABUILDER
+                  ${dict.form.system_tag}
                 </span>
               </div>
             </div>
@@ -517,7 +519,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
               <Download className="w-4 h-4 text-neutral-400" /> Exportar
             </button>
             <Link href={newPath + (isEmbedded ? '?embedded=true' : '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-              <Plus className="w-4 h-4" /> Novo Registro
+              <Plus className="w-4 h-4" /> ${dict.list.new_record}
             </Link>
           </div>
         </div>
@@ -539,8 +541,8 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
             <div>
               <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
                 ${hasCustomSlots
-                  ? `{(isView ? 'Visualizar Item' : 'Editar Item')}`
-                  : `{(isView ? 'Visualizar ' : 'Editar ') + (title.endsWith('s') ? title.slice(0, -1) : title)}`}
+                  ? `{(isView ? '${dict.form.view_record}' : '${dict.form.edit_record}')}`
+                  : `{(isView ? '${dict.list.view_tooltip} ' : '${dict.list.edit_tooltip} ') + (title.endsWith('s') ? title.slice(0, -1) : title)}`}
               </h3>
               <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400 mt-0.5">
                 ${hasCustomSlots
@@ -562,7 +564,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
             }}
             className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all uppercase cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" /> Voltar para Lista
+            <ArrowLeft className="w-4 h-4" /> ${dict.form.back_to_list}
           </Link>
         </div>
 ${tabsHeader}
@@ -595,7 +597,8 @@ ${hasCustomSlots ? customTabPanels : tabPanels}
 // [id]/page.tsx        → Server Component (fetch) → passa props ao Client
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateDetailPage(route: RouteNode): string {
+export function generateDetailPage(route: RouteNode, targetLang?: string): string {
+  const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const pk = route.primaryKey
@@ -997,7 +1000,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const resolvedSearchParams = searchParams ? await searchParams : {}
   const isView = resolvedSearchParams?.mode === 'view'
-  return { title: (isView ? 'Visualizar' : 'Editar') + ' \u2014 ${route.title}' }
+  return { title: (isView ? '${dict.list.view_tooltip}' : '${dict.list.edit_tooltip}') + ' \u2014 ${route.title}' }
 }
 
 export default async function ${mn}DetailPage({

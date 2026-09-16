@@ -1,11 +1,13 @@
 import { RouteNode } from '../../ast'
+import { getGeneratorDictionary } from '../../i18n'
 import { renderFormField, getByocComponentName } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cadastro (new/page.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateNewPage(route: RouteNode): string {
+export function generateNewPage(route: RouteNode, targetLang?: string): string {
+  const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
 
@@ -179,7 +181,7 @@ function formatWithMask(v: any, mask?: string) {
   return s
 }
 
-export const metadata: Metadata = { title: 'Novo — ${route.title}' }
+export const metadata: Metadata = { title: '${dict.form.new_prefix} — ${route.title}' }
 
 export default async function ${mn}NewPage(props: {
   searchParams?: Promise<Record<string, string | undefined>>
@@ -211,7 +213,7 @@ ${buildOptionsCode.join('\n')}
             <div className="flex items-center gap-2 mt-1">
               <div className="w-8 h-1 bg-indigo-600 rounded-full" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                SISTEMA METABUILDER
+                ${dict.form.system_tag}
               </span>
             </div>
           </div>
@@ -219,7 +221,7 @@ ${buildOptionsCode.join('\n')}
 
         <div className="flex items-center gap-3">
           <Link href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-            <ArrowLeft className="w-4 h-4" /> Voltar para Lista
+            <ArrowLeft className="w-4 h-4" /> ${dict.form.back_to_list}
           </Link>
           {isEmbedded && <CloseModalButton />}
         </div>
@@ -233,10 +235,10 @@ ${buildOptionsCode.join('\n')}
           </div>
           <div>
             <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
-              Novo ${route.title.endsWith('s') ? route.title.slice(0, -1) : route.title}
+              ${dict.form.new_prefix} ${route.title.endsWith('s') ? route.title.slice(0, -1) : route.title}
             </h2>
             <p className="text-xs font-medium text-neutral-400 mt-0.5">
-              Preencha os campos para criar um novo registro no sistema.
+              ${dict.form.fill_fields_desc}
             </p>
           </div>
         </div>
@@ -262,13 +264,13 @@ ${formFieldsHtml}
               href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`}
               className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
             >
-              Cancelar
+              ${dict.form.cancel}
             </Link>
             <button
               type="submit"
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
             >
-              <Save className="w-4 h-4" /> Criar Registro
+              <Save className="w-4 h-4" /> ${dict.form.create_record}
             </button>
           </div>
         </form>

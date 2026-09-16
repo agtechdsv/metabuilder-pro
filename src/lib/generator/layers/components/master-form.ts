@@ -1,4 +1,7 @@
-export function generateMasterFormComponent(files: Map<string, string>) {
+import { getGeneratorDictionary } from '../../i18n'
+
+export function generateMasterFormComponent(files: Map<string, string>, targetLang?: string) {
+  const dict = getGeneratorDictionary(targetLang)
   files.set('components/DetailMasterForm.tsx', `'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -124,7 +127,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
       await updateAction(id, payload)
       if (!silent) {
         setToastType('success')
-        setToastMessage('Registro atualizado com sucesso!')
+        setToastMessage('${dict.feedback.record_updated}')
         window.dispatchEvent(new CustomEvent('save-all-relations'))
         if (typeof window !== 'undefined' && window.parent !== window) {
           window.parent.postMessage({
@@ -149,7 +152,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
       console.error(err)
       if (!silent) {
         setToastType('error')
-        setToastMessage(err?.message || 'Erro ao salvar alterações.')
+        setToastMessage(err?.message || '${dict.feedback.err_saving_changes}')
       }
     } finally {
       setIsSubmitting(false)
@@ -175,7 +178,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
             }}
             className="px-6 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
-            {isView ? 'Voltar' : 'Cancelar'}
+            {isView ? '${dict.form.back}' : '${dict.form.cancel}'}
           </Link>
           {!isView && (
             <button
@@ -184,7 +187,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+              {isSubmitting ? '${dict.form.saving}' : '${dict.form.save_changes}'}
             </button>
           )}
         </div>

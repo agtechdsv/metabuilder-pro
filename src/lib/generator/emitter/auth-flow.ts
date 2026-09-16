@@ -1,5 +1,6 @@
 import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
+import { getGeneratorDictionary } from '../i18n'
 
 function toCamel(str: string): string {
   return str
@@ -8,6 +9,7 @@ function toCamel(str: string): string {
 }
 
 export function generateLoginPage(ast: AppAST, files: Map<string, string>) {
+  const d = getGeneratorDictionary(ast.targetLanguage)
   const iconFallback = ast.projectName.charAt(0).toUpperCase()
   const projectIconSvg = ast.projectIcon && ast.projectIcon.startsWith('<svg') 
     ? ast.projectIcon 
@@ -16,20 +18,20 @@ export function generateLoginPage(ast: AppAST, files: Map<string, string>) {
   files.set('app/(auth)/login/page.tsx', `import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Login — ${ast.projectName}',
+  title: '${d.login.title} — ${ast.projectName}',
 }
 
 export default async function LoginPage({ searchParams }: { searchParams?: Promise<{ error?: string }> }) {
   const resolvedSearchParams = await searchParams
   const error = resolvedSearchParams?.error
   const errorMessage = error === 'invalid'
-    ? 'E-mail ou senha incorretos. Verifique suas credenciais.'
+    ? '${d.login.err_invalid}'
     : error === 'credentials'
-    ? 'Por favor, preencha o e-mail e a senha.'
+    ? '${d.login.err_credentials}'
     : error === 'server'
-    ? 'Erro ao processar login. Verifique a conexão com o banco de dados.'
+    ? '${d.login.err_server}'
     : error === 'config'
-    ? 'Tabela de autenticação não encontrada nos modelos do projeto.'
+    ? '${d.login.err_config}'
     : null
 
   return (
@@ -42,8 +44,8 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
             ${projectIconSvg}
           </div>
 
-          <h1 className="${T.LOGIN_TITLE}">Bem-vindo de volta!</h1>
-          <p className="${T.LOGIN_SUBTITLE}">Entre com suas credenciais para acessar o sistema.</p>
+          <h1 className="${T.LOGIN_TITLE}">${d.login.welcome_back}</h1>
+          <p className="${T.LOGIN_SUBTITLE}">${d.login.subtitle}</p>
 
           {errorMessage && (
             <div className="mb-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold text-center leading-relaxed">
@@ -54,7 +56,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
           {/* Form */}
           <form action="/api/login" method="post" className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="email" className="${T.LOGIN_LABEL}">E-mail</label>
+              <label htmlFor="email" className="${T.LOGIN_LABEL}">${d.login.email}</label>
               <input
                 id="email"
                 name="email"
@@ -67,8 +69,8 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="${T.LOGIN_LABEL}">Senha</label>
-                <a href="#" className="text-[10px] text-indigo-600 dark:text-[#4f46e5] hover:text-indigo-700 dark:hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">Esqueci minha senha?</a>
+                <label htmlFor="password" className="${T.LOGIN_LABEL}">${d.login.password}</label>
+                <a href="#" className="text-[10px] text-indigo-600 dark:text-[#4f46e5] hover:text-indigo-700 dark:hover:text-[#6366f1] transition-colors font-bold uppercase tracking-wide">${d.login.forgot_password}</a>
               </div>
               <div className="relative">
                 <input
@@ -86,13 +88,13 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
               type="submit"
               className="${T.LOGIN_BTN}"
             >
-              ENTRAR NO SISTEMA
+              ${d.login.enter_system}
             </button>
           </form>
 
           <div className="mt-8 text-center">
             <a href="/" className="${T.LOGIN_BACK_LINK}">
-              &larr; VOLTAR AO INÍCIO
+              ${d.login.back_to_home}
             </a>
           </div>
 
@@ -370,6 +372,8 @@ export const config = {
 
 
 export function generateDownloadsPage(ast: AppAST, files: Map<string, string>) {
+  const d = getGeneratorDictionary(ast.targetLanguage)
+
   files.set('app/(protected)/downloads/page.tsx', `import Link from 'next/link'
 import {
   Download,
@@ -384,7 +388,7 @@ import {
 } from 'lucide-react'
 
 export default function DownloadsPage() {
-  // Dados mockados estruturais (O frontend farÃ¡ fetch real na API em v2)
+  // Dados mockados estruturais
   const jobs = [
     { id: '1', file_name: 'clientes_export.csv', status: 'completed', progress: 100, record_count: 1450, file_size: 45020, created_at: new Date().toISOString() },
     { id: '2', file_name: 'pedidos_relatorio.xlsx', status: 'processing', progress: 45, record_count: 8500, created_at: new Date().toISOString() },
@@ -405,18 +409,18 @@ export default function DownloadsPage() {
           <div className="w-10 h-10 rounded-xl bg-indigo-600/10 flex items-center justify-center ring-1 ring-indigo-500/20">
             <Download className="w-5 h-5 text-indigo-500" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Gerenciador de Downloads</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">${d.downloads.title}</h1>
         </div>
-        <p className="text-sm text-[var(--muted)]">Central de exportAções assíncronas do sistema.</p>
+        <p className="text-sm text-[var(--muted)]">${d.downloads.subtitle}</p>
       </div>
 
       {/* Info Alert */}
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
         <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
         <div>
-          <h4 className="text-sm font-semibold text-amber-500">FILA DE GERAÇÃO DE ARQUIVOS</h4>
+          <h4 className="text-sm font-semibold text-amber-500">${d.downloads.queue_title}</h4>
           <p className="text-xs text-amber-500/80 mt-1 leading-relaxed">
-            As exportAções com mais de 1.000 registros são processadas em background para não travar o uso da aplicação. VocÃª pode continuar trabalhando normalmente e voltar aqui quando o status estiver Concluído.
+            ${d.downloads.queue_desc}
           </p>
         </div>
       </div>
@@ -424,10 +428,10 @@ export default function DownloadsPage() {
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Solicitado', value: metrics.total, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-          { label: 'Download Concluído', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-          { label: 'Em Processamento', value: metrics.processing, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
-          { label: 'Falhas', value: metrics.failed, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+          { label: '${d.downloads.total_requested}', value: metrics.total, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+          { label: '${d.downloads.download_completed}', value: metrics.completed, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+          { label: '${d.downloads.in_processing}', value: metrics.processing, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+          { label: '${d.downloads.failures}', value: metrics.failed, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
         ].map((m, idx) => (
           <div key={idx} className="bg-[var(--card)] border border-[var(--card-border)] rounded-2xl p-5 flex flex-col justify-between">
             <div className="flex justify-between items-center mb-4">
@@ -443,26 +447,26 @@ export default function DownloadsPage() {
 
       {/* Tabs placeholder */}
       <div className="border-b border-[var(--card-border)] flex gap-6 mt-8">
-        <div className="pb-3 border-b-2 border-indigo-500 font-semibold text-sm text-white">Todas ({metrics.total})</div>
-        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Concluídas ({metrics.completed})</div>
-        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">Pendentes ({metrics.processing})</div>
+        <div className="pb-3 border-b-2 border-indigo-500 font-semibold text-sm text-white">${d.downloads.tab_all} ({metrics.total})</div>
+        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">${d.downloads.tab_completed} ({metrics.completed})</div>
+        <div className="pb-3 border-b-2 border-transparent font-medium text-sm text-[var(--muted)] hover:text-white transition-colors cursor-pointer">${d.downloads.tab_pending} ({metrics.processing})</div>
       </div>
 
       {/* List */}
       <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-xl">
         <div className="p-4 border-b border-[var(--card-border)] bg-neutral-900/40 grid grid-cols-12 gap-4 items-center">
-          <div className="col-span-5 flex items-center gap-2 text-xs font-black tracking-widest text-[var(--muted)] uppercase"><ArrowUpDown className="w-3 h-3"/> Arquivo</div>
-          <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Registros</div>
-          <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">Status</div>
-          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">Ações</div>
+          <div className="col-span-5 flex items-center gap-2 text-xs font-black tracking-widest text-[var(--muted)] uppercase"><ArrowUpDown className="w-3 h-3"/> ${d.downloads.col_file}</div>
+          <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">${d.downloads.col_records}</div>
+          <div className="col-span-3 text-xs font-black tracking-widest text-[var(--muted)] uppercase">${d.downloads.col_status}</div>
+          <div className="col-span-1 text-center text-xs font-black tracking-widest text-[var(--muted)] uppercase">${d.downloads.col_actions}</div>
         </div>
 
         <div className="divide-y divide-[var(--card-border)]">
           {jobs.length === 0 ? (
              <div className="p-12 text-center flex flex-col items-center">
                <Download className="w-12 h-12 text-[var(--muted)] opacity-20 mb-4" />
-               <h3 className="text-white font-semibold mb-1">Nenhuma exportação encontrada</h3>
-               <p className="text-[var(--muted)] text-sm">Gere arquivos nas telas de listagem clicando em "Exportar".</p>
+               <h3 className="text-white font-semibold mb-1">${d.downloads.empty_title}</h3>
+               <p className="text-[var(--muted)] text-sm">${d.downloads.empty_desc}</p>
              </div>
           ) : jobs.map((job) => (
              <div key={job.id} className="p-4 grid grid-cols-12 gap-4 items-center hover:bg-white/5 transition-colors group">
@@ -475,26 +479,26 @@ export default function DownloadsPage() {
                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)]">
                      <Calendar className="w-3 h-3" />
                      {new Date(job.created_at).toLocaleString()}
-                     {job.file_size && <span className="opacity-50">Â· {(job.file_size / 1024).toFixed(2)} KB</span>}
+                     {job.file_size && <span className="opacity-50">· {(job.file_size / 1024).toFixed(2)} KB</span>}
                    </div>
                  </div>
                </div>
 
                <div className="col-span-3 text-sm text-[var(--foreground)]">
                  <span className="bg-neutral-800 border border-neutral-700 px-2.5 py-1 rounded-md text-xs font-medium">
-                   {job.record_count?.toLocaleString()} linhas
+                   {job.record_count?.toLocaleString()} ${d.list.lines.toLowerCase()}
                  </span>
                </div>
 
                <div className="col-span-3">
                  {job.status === 'completed' && (
                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold ring-1 ring-emerald-500/20">
-                     <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
+                     <CheckCircle2 className="w-3.5 h-3.5" /> ${d.downloads.tab_completed.slice(0, -1)}o
                    </span>
                  )}
                  {job.status === 'processing' && (
                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-semibold ring-1 ring-amber-500/20">
-                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> Em Processamento {job.progress}%
+                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> ${d.downloads.in_processing} {job.progress}%
                    </span>
                  )}
                </div>

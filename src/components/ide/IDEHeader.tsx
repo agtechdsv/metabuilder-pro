@@ -1,15 +1,21 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   FolderGit2, XCircle, Loader2, CheckCircle2, DownloadCloud,
   Save, UploadCloud, Download, History, Settings, Package,
   PanelBottomOpen, PanelLeftOpen, Minimize2, X,
-  Server, Coffee, Lock, Clock, ChevronRight,
+  Server, Coffee, Lock, Clock, ChevronRight, ChevronDown,
   Database, ShieldCheck, FileCode2, FlaskConical, Box, FileText, Check
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
+
+const GEN_LANGUAGES = [
+  { code: 'pt', label: 'Português', flag: 'https://flagcdn.com/w80/br.png', short: 'PT' },
+  { code: 'en', label: 'English', flag: 'https://flagcdn.com/w80/us.png', short: 'EN' },
+  { code: 'es', label: 'Español', flag: 'https://flagcdn.com/w80/es.png', short: 'ES' },
+] as const
 
 export interface IDEHeaderProps {
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string }
@@ -18,7 +24,7 @@ export interface IDEHeaderProps {
   isDiscarding: boolean
   isConfirming: boolean
   handleOpenCommitModal: (mode: 'commit' | 'merge') => void
-  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number) => void
+  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number, targetLanguage?: string) => void
   isSyncing: boolean
   selectedBranch: string
   handleBranchChange: (branch: string) => void
@@ -561,11 +567,33 @@ export function IDEHeader({
   setIsMinimized,
   closeIDE
 }: IDEHeaderProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const defaultGroupId = `com.${target.slug.replace(/-/g, '').toLowerCase() || 'app'}`
 
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<StackTab>('nodejs')
+
+  // Idioma de Destino da Geração do Código (totalmente desacoplado do idioma da IDE)
+  const [genLanguage, setGenLanguage] = useState<'pt' | 'en' | 'es'>((language as any) || 'pt')
+  const [isGenLangOpen, setIsGenLangOpen] = useState(false)
+  const genLangDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isSyncModalOpen) {
+      setGenLanguage((language as any) || 'pt')
+      setIsGenLangOpen(false)
+    }
+  }, [isSyncModalOpen, language])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (genLangDropdownRef.current && !genLangDropdownRef.current.contains(event.target as Node)) {
+        setIsGenLangOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const [nodeConfig, setNodeConfig] = useState<NodeConfig>({
     dbStack: 'postgresql',
@@ -598,9 +626,9 @@ export function IDEHeader({
   const confirmSync = () => {
     setIsSyncModalOpen(false)
     if (activeTab === 'java') {
-      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port)
+      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage)
     } else {
-      handleSyncFromWeb('nodejs')
+      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage)
     }
   }
 
@@ -797,12 +825,74 @@ export function IDEHeader({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsSyncModalOpen(false)}
-                  className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Seletor de Idioma de Destino da Geração */}
+                  <div className="relative" ref={genLangDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsGenLangOpen(!isGenLangOpen)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-700 transition-all active:scale-95 shadow-sm"
+                      title={t('workspace_components.eject_modal.target_lang_tooltip', 'Idioma do código gerado')}
+                    >
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-neutral-700 shadow-sm flex-shrink-0">
+                        <img
+                          src={GEN_LANGUAGES.find(l => l.code === genLanguage)?.flag || GEN_LANGUAGES[0].flag}
+                          alt={genLanguage}
+                          className="w-full h-full object-cover scale-125"
+                        />
+                      </div>
+                      <span className="text-xs font-bold font-mono tracking-wider">
+                        {GEN_LANGUAGES.find(l => l.code === genLanguage)?.short || 'PT'}
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${isGenLangOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isGenLangOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                          className="absolute right-0 mt-2 w-52 z-[1000000] bg-[#1a1b1e] border border-neutral-800 rounded-2xl shadow-2xl p-1.5 overflow-hidden"
+                        >
+                          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-3 py-2">
+                            {t('workspace_components.eject_modal.target_lang_title', 'Idioma de Geração')}
+                          </p>
+                          {GEN_LANGUAGES.map((lang) => (
+                            <button
+                              key={lang.code}
+                              type="button"
+                              onClick={() => {
+                                setGenLanguage(lang.code)
+                                setIsGenLangOpen(false)
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                genLanguage === lang.code
+                                  ? 'bg-indigo-500/15 text-indigo-400 font-bold'
+                                  : 'text-neutral-400 hover:bg-neutral-800/80 hover:text-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-5 h-5 rounded-full overflow-hidden border border-neutral-700 shadow-sm">
+                                  <img src={lang.flag} alt={lang.label} className="w-full h-full object-cover scale-125" />
+                                </div>
+                                <span>{lang.label}</span>
+                              </div>
+                              {genLanguage === lang.code && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    onClick={() => setIsSyncModalOpen(false)}
+                    className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Tab Bar */}

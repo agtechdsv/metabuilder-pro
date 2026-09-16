@@ -493,6 +493,9 @@ export interface AppAST {
   generateDockerfile?: boolean
   generateDockerCompose?: boolean
   generateEnvExample?: boolean
+
+  // Idioma de geração do código fonte
+  targetLanguage?: 'pt' | 'en' | 'es'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -516,4 +519,6 @@ export interface WorkspaceAST {
   projects: WorkspaceProjectNode[]
   /** Stack de backend padrão do workspace (GAP 2: propagado de AppAST). */
   backendStack?: BackendStack
+  /** Idioma alvo para geração do workspace */
+  targetLanguage?: 'pt' | 'en' | 'es'
 }

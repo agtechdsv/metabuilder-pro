@@ -1468,6 +1468,9 @@ export interface ParseOptions {
   generateDockerfile?: boolean
   generateDockerCompose?: boolean
   generateEnvExample?: boolean
+
+  // Idioma de geração do código fonte
+  targetLanguage?: 'pt' | 'en' | 'es'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2785,6 +2788,7 @@ export function parseMetaBuilderJSON(
     generateDockerfile: options?.generateDockerfile ?? false,
     generateDockerCompose: options?.generateDockerCompose ?? false,
     generateEnvExample: options?.generateEnvExample ?? false,
+    targetLanguage: options?.targetLanguage ?? 'pt',
   }
 }
 
@@ -2814,6 +2818,7 @@ export function parseWorkspaceJSON(
     supabaseAnonKey: options?.supabaseAnonKey,
     projects,
     backendStack: options?.backendStack ?? 'nodejs',
+    targetLanguage: options?.targetLanguage ?? 'pt',
   }
 }
 

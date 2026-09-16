@@ -22,7 +22,8 @@ export async function POST(request: Request) {
       legacyDriver,
       backendStack = 'nodejs',
       javaGroupId,
-      javaPort
+      javaPort,
+      targetLanguage
     } = await request.json()
     const supabase = await createClient()
 
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
       supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       backendStack,
       javaGroupId,
-      javaPort
+      javaPort,
+      targetLanguage
     }
 
     // 5. Parser → AST

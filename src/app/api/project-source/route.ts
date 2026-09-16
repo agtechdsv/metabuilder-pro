@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     const backendStack = payload.backendStack || 'nodejs'
     const javaGroupId = payload.javaGroupId
     const javaPort = payload.javaPort
+    const targetLanguage = payload.targetLanguage
     const supabase = await createClient()
 
     // 1. Authenticate
@@ -86,7 +87,8 @@ export async function POST(request: Request) {
       supabaseAnonKey: project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       backendStack,
       javaGroupId,
-      javaPort
+      javaPort,
+      targetLanguage
     }
 
     // --- CLEAN CODE GENERATOR ---

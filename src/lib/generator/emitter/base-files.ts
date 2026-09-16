@@ -1,6 +1,9 @@
 import { AppAST } from '../ast'
+import { getGeneratorDictionary } from '../i18n'
 
 export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
+  const d = getGeneratorDictionary(ast.targetLanguage)
+
   // package.json
   files.set('package.json', JSON.stringify({
     name: ast.projectName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
@@ -307,8 +310,8 @@ export function HeaderControls() {
     }
   }, [])
 
-  const displayName = clientUser?.name || clientUser?.email || 'Usuário'
-  const displayEmail = clientUser?.email || 'Sair do Sistema'
+  const displayName = clientUser?.name || clientUser?.email || '${d.nav.user_default}'
+  const displayEmail = clientUser?.email || '${d.nav.logout}'
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
   return (
@@ -318,7 +321,7 @@ export function HeaderControls() {
         <button 
           onClick={toggleTheme}
           className="w-8 h-8 flex items-center justify-center rounded-full text-slate-500 dark:text-[#71717a] hover:text-slate-800 dark:hover:text-[#d4d4d8] hover:bg-slate-100 dark:hover:bg-[#27272a] transition-all"
-          title="Alternar Tema"
+          title="${d.nav.toggle_theme}"
         >
           {theme === 'dark' ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
@@ -348,7 +351,7 @@ export function HeaderControls() {
               <div className="p-1.5">
                 <a href="/api/logout" className="w-full flex items-center gap-2 px-2.5 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors font-medium">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                  Sair do Sistema
+                  ${d.nav.logout}
                 </a>
               </div>
             </div>
@@ -589,11 +592,11 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
           {!isCollapsed && (
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
               <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{displayName}</span>
-              <a href="/api/logout" className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate">Sair do Sistema</a>
+              <a href="/api/logout" className="text-[9px] text-neutral-400 hover:text-red-500 text-left transition-colors truncate">${d.nav.logout}</a>
             </div>
           )}
           {!isCollapsed && (
-            <a href="/api/logout" title="Sair" className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors">
+            <a href="/api/logout" title="${d.nav.logout_short}" className="p-1.5 text-neutral-400 hover:text-red-500 transition-colors">
               <LogOut className="w-4 h-4" />
             </a>
           )}
@@ -675,7 +678,7 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
           <nav className="flex-1 flex items-center gap-2 text-[10px] font-bold capitalize tracking-widest text-neutral-400 overflow-hidden">
             <Link href="/" className="hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0">
               <Home className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span className="hidden sm:inline">${d.nav.dashboard}</span>
             </Link>
             {navItem && (
               <div className="flex items-center gap-2 min-w-0">
@@ -736,13 +739,13 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                 ${n.label}
               </h3>
               <p className="text-xs text-neutral-400 dark:text-neutral-500 font-medium uppercase tracking-widest">
-                CASO DE USO
+                ${d.nav.use_case}
               </p>
             </div>
 
             <div className="mt-auto flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-hover:text-indigo-500 transition-colors">
-                ACESSAR
+                ${d.nav.access}
               </span>
               <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
                 <ArrowRight className="w-4 h-4" />
@@ -756,7 +759,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 
-export const metadata: Metadata = { title: 'Dashboard - ${ast.projectName}' }
+export const metadata: Metadata = { title: '${d.nav.dashboard} - ${ast.projectName}' }
 
 export default function DashboardPage() {
   return (

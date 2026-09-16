@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       generateDockerfile = false,
       generateDockerCompose = false,
       generateEnvExample = false,
+      targetLanguage,
     } = await request.json()
 
     // Validar backendStack — tratar valores inválidos como 'nodejs' (GAP edge case)
@@ -124,6 +125,7 @@ export async function POST(request: Request) {
       generateDockerfile: Boolean(generateDockerfile),
       generateDockerCompose: Boolean(generateDockerCompose),
       generateEnvExample: Boolean(generateEnvExample),
+      targetLanguage,
     })
     
     // Emit

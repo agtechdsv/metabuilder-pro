@@ -1,4 +1,7 @@
-export function generateUiPrimitives(files: Map<string, string>) {
+import { getGeneratorDictionary } from '../../i18n'
+
+export function generateUiPrimitives(files: Map<string, string>, targetLang?: string) {
+  const d = getGeneratorDictionary(targetLang)
   files.set('lib/utils.ts', `import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -219,7 +222,7 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
           setIsOpen(true)
         }}
         className={className || "p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-red-500 border border-neutral-200 dark:border-neutral-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all active:scale-90 shadow-sm flex items-center justify-center"} 
-        title="Excluir" 
+        title="${d.list.delete_tooltip}" 
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>
@@ -230,10 +233,10 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                  Excluir Registro
+                  ${d.delete_modal.title}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Esta ação não pode ser desfeita e removerá permanentemente os dados do banco.
+                  ${d.delete_modal.warning}
                 </p>
               </div>
               <button
@@ -260,9 +263,9 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-bold">Você tem certeza?</p>
+                <p className="text-sm font-bold">${d.delete_modal.are_you_sure}</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Você está prestes a excluir {recordName ? '"' + recordName + '"' : 'este registro'}.
+                  ${d.delete_modal.about_to_delete} {recordName ? '"' + recordName + '"' : '${d.delete_modal.this_record}'}.
                 </p>
               </div>
             </div>
@@ -273,7 +276,7 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
                 onClick={handleClose}
                 className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
               >
-                Cancelar
+                ${d.form.cancel}
               </button>
               <button
                 type="button"
@@ -282,7 +285,7 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
                 className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50"
               >
                 {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {isPending ? 'Excluindo...' : 'Confirmar Exclusão'}
+                {isPending ? '${d.delete_modal.deleting}' : '${d.delete_modal.confirm_delete}'}
               </button>
             </div>
           </div>
@@ -315,10 +318,10 @@ export function LimitSelector({ currentLimit }: { currentLimit: number }) {
       onChange={(e) => handleChange(e.target.value)}
       className="bg-transparent border-none outline-none text-indigo-600 font-bold focus:ring-0 cursor-pointer text-[11px] uppercase tracking-widest"
     >
-      <option value={10}>10 Linhas</option>
-      <option value={15}>15 Linhas</option>
-      <option value={25}>25 Linhas</option>
-      <option value={50}>50 Linhas</option>
+      <option value={10}>10 ${d.list.lines}</option>
+      <option value={15}>15 ${d.list.lines}</option>
+      <option value={25}>25 ${d.list.lines}</option>
+      <option value={50}>50 ${d.list.lines}</option>
     </select>
   )
 }
@@ -697,7 +700,7 @@ export function CloseModalButton() {
       type="button"
       onClick={() => window.parent.postMessage({ type: 'CLOSE_MODAL' }, '*')}
       className="p-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-white shrink-0 ml-1 cursor-pointer"
-      title="Fechar"
+      title="${d.nav.close}"
     >
       <X className="w-5 h-5" />
     </button>

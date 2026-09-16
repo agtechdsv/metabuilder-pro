@@ -3815,6 +3815,8 @@
     "eject_modal": {
       "title": "Eject & Sync Configuration",
       "subtitle": "Configure stack parameters, components and backend architecture",
+      "target_lang_title": "Generation Language",
+      "target_lang_tooltip": "Generated source code language",
       "soon_badge": "COMING SOON",
       "syncing_as": "Syncing project as: {stack}",
       "select_stack": "Select an available stack to sync",
