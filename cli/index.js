@@ -311,10 +311,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
       // Ações META não são queries de dados e ignoram o filtro de schema
       const META_ACTIONS = ['sync_bpm', 'sync_log_config', 'read_logs', 'clear_logs', 'get_log_stats', 'raw_sql'];
-      const expectedSchema = connectionName || 'public';
-      const incomingSchema = schemaName || 'public';
-      if (incomingSchema !== expectedSchema && !META_ACTIONS.includes(action)) {
-        console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${incomingSchema}', mas este agente atende '${expectedSchema}'.`));
+      const expectedSchema = (connectionName || 'public').toLowerCase();
+      const incomingSchema = (schemaName || 'public').toLowerCase();
+      const isSchemaMatch = incomingSchema === expectedSchema || (action === 'validate_login' && (incomingSchema === 'public' || incomingSchema === ''));
+      if (!isSchemaMatch && !META_ACTIONS.includes(action)) {
+        console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${schemaName || 'public'}', mas este agente atende '${connectionName || 'public'}'.`));
         return; // Ignora o broadcast, outro agente responderá
       }
 
@@ -870,15 +871,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             const safeEmailCol = db_email_column.replace(/[^a-zA-Z0-9_]/g, '');
             const safePasswordCol = db_password_column.replace(/[^a-zA-Z0-9_]/g, '');
 
-            sql = `SELECT * FROM "${safeTable}" WHERE "${safeEmailCol}" = $1`;
+            const sqlTable = dbType === 'oracle' ? safeTable.toUpperCase() : safeTable;
+            const sqlEmailCol = dbType === 'oracle' ? safeEmailCol.toUpperCase() : safeEmailCol;
+
+            sql = `SELECT * FROM "${sqlTable}" WHERE "${sqlEmailCol}" = $1`;
             params = [email];
-            if (dbType === 'oracle') sql = sql.replace(/\$(\d+)/g, ':$1');
+            if (dbType === 'oracle') {
+              sql = sql.replace(/\$(\d+)/g, ':$1');
+              sql = sql.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
+            }
             
             console.log(chalk.gray(`[ SQL ] Buscando usuário: ${sql}`));
             let selectResult;
             if (dbType === 'oracle') {
               const oraRes = await oracleConnection.execute(sql, params, { outFormat: oracledb.OUT_FORMAT_OBJECT });
-              selectResult = { rows: oraRes.rows };
+              selectResult = { rows: oraRes.rows || [] };
             } else {
               selectResult = await pgClient.query(sql, params);
             }
@@ -888,7 +895,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
 
             const userRow = selectResult.rows[0];
-            const dbPassword = userRow[safePasswordCol];
+            const dbPassword = userRow[safePasswordCol] ?? userRow[safePasswordCol.toUpperCase()] ?? userRow[safePasswordCol.toLowerCase()];
             let isMatch = false;
 
             if (db_password_hash_type === 'plain') {
@@ -911,6 +918,16 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
             const userObj = { ...userRow };
             delete userObj[safePasswordCol];
+            delete userObj[safePasswordCol.toUpperCase()];
+            delete userObj[safePasswordCol.toLowerCase()];
+
+            // Adiciona aliases em minúsculo para bancos como Oracle cujos identificadores vêm todos em maiúsculo
+            for (const [k, v] of Object.entries(userRow)) {
+              const lowerKey = k.toLowerCase();
+              if (!(lowerKey in userObj) && lowerKey !== safePasswordCol.toLowerCase()) {
+                userObj[lowerKey] = v;
+              }
+            }
             
             // Se for N to N, precisamos buscar o papel na tabela de junção
             if (config.db_user_groups_type === 'n_to_n' && config.db_user_roles_table) {
@@ -919,25 +936,31 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               const safeUrRoleCol = (config.db_user_roles_role_id_column || 'role_id').replace(/[^a-zA-Z0-9_]/g, '');
               const targetRoleKey = config.db_user_role_column || 'role_id'; // Chave esperada pelo frontend
               
+              const sqlUrTable = dbType === 'oracle' ? safeUrTable.toUpperCase() : safeUrTable;
+              const sqlUrUserCol = dbType === 'oracle' ? safeUrUserCol.toUpperCase() : safeUrUserCol;
+              const sqlUrRoleCol = dbType === 'oracle' ? safeUrRoleCol.toUpperCase() : safeUrRoleCol;
+
               const pkCol = 'id'; // assumindo que id_local se mapeie primariamente via id ou similar. O ideal seria o frontend passar, mas 'id' atende a maioria.
-              const userIdVal = userObj[pkCol] || userObj['ID'] || userObj['Id'];
+              const userIdVal = userObj[pkCol] || userObj['ID'] || userObj['Id'] || userObj['id'];
 
               if (userIdVal) {
                 const urSql = dbType === 'oracle' 
-                  ? `SELECT "${safeUrRoleCol}" FROM "${safeUrTable}" WHERE "${safeUrUserCol}" = :1` 
+                  ? `SELECT "${sqlUrRoleCol}" FROM "${sqlUrTable}" WHERE "${sqlUrUserCol}" = :1` 
                   : `SELECT "${safeUrRoleCol}" FROM "${safeUrTable}" WHERE "${safeUrUserCol}" = $1`;
                 
                 try {
                   let urResult;
                   if (dbType === 'oracle') {
-                    const oraRes = await oracleConnection.execute(urSql, [userIdVal], { outFormat: oracledb.OUT_FORMAT_OBJECT });
-                    urResult = { rows: oraRes.rows };
+                    const oraUrRes = await oracleConnection.execute(urSql, [userIdVal], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                    urResult = { rows: oraUrRes.rows || [] };
                   } else {
                     urResult = await pgClient.query(urSql, [userIdVal]);
                   }
                   
                   if (urResult.rows.length > 0) {
-                    userObj[targetRoleKey] = urResult.rows[0][safeUrRoleCol] || urResult.rows[0][safeUrRoleCol.toLowerCase()];
+                    const foundRole = urResult.rows[0][sqlUrRoleCol] ?? urResult.rows[0][safeUrRoleCol] ?? urResult.rows[0][safeUrRoleCol.toUpperCase()] ?? urResult.rows[0][safeUrRoleCol.toLowerCase()];
+                    userObj[targetRoleKey] = foundRole;
+                    userObj[targetRoleKey.toLowerCase()] = foundRole;
                   }
                 } catch (urErr) {
                   console.error(chalk.yellow(`[ AVISO ] Falha ao buscar papel N:N para o usuário '${email}': ${urErr.message}`));
@@ -1016,7 +1039,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               }
               return `:${i + 1}`;
             });
-            sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
+            const sqlTable = safeTable.toUpperCase();
+            sql = `INSERT INTO "${sqlTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
           } else {
             placeholders = values.map((_, i) => `$${i + 1}`);
             sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
@@ -1094,7 +1118,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 }
                 return `${key} = :${i + 1}`;
               }).join(', ');
-              sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = :${values.length + 1}`;
+              const sqlTable = safeTable.toUpperCase();
+              sql = `UPDATE "${sqlTable}" SET ${setClause} WHERE "${safeIdCol}" = :${values.length + 1}`;
             } else {
               setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
               sql = `UPDATE "${safeTable}" SET ${setClause} WHERE "${safeIdCol}" = $${values.length + 1} RETURNING *`;
@@ -1165,7 +1190,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           let deletedRowData = { [safeIdCol]: idValue };
 
           if (dbType === 'oracle') {
-            sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = :1`;
+            const sqlTable = safeTable.toUpperCase();
+            sql = `DELETE FROM "${sqlTable}" WHERE "${safeIdCol}" = :1`;
             params = [idValue];
             await oracleConnection.execute(sql, params, { autoCommit: true });
             result = { rows: [] };

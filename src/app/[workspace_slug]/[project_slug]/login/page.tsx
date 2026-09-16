@@ -105,8 +105,8 @@ export default async function LoginPage({ params, searchParams }: any) {
     .select('db_table_name, db_schema_name')
     .eq('project_id', project.id)
   
-  const authModel = models?.find(m => m.db_table_name === auth.db_table_name)
-  const schemaName = authModel?.db_schema_name || 'public'
+  const authModel = models?.find(m => m.db_table_name?.toLowerCase() === auth.db_table_name?.toLowerCase())
+  const schemaName = authModel?.db_schema_name || models?.[0]?.db_schema_name || 'public'
 
   return (
     <LoginPortalClient
