@@ -19,6 +19,12 @@ export const getLanguageFromPath = (filename: string): string => {
   }
 }
 
+let javaClasses: string[] = []
+
+export const updateJavaClasses = (classes: string[]) => {
+  javaClasses = classes
+}
+
 let javaSnippetsRegistered = false
 
 export const registerJavaSnippets = (monaco: any) => {
@@ -70,7 +76,14 @@ export const registerJavaSnippets = (monaco: any) => {
         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
       }))
 
-      return { suggestions }
+      // Classes dinâmicas do projeto (extraídas da árvore de arquivos)
+      const dynamicSuggestions = javaClasses.map(className => ({
+        label: className,
+        kind: monaco.languages.CompletionItemKind.Class,
+        insertText: className,
+      }))
+
+      return { suggestions: [...suggestions, ...dynamicSuggestions] }
     }
   })
 }

@@ -13,7 +13,7 @@ import { useIDEFileSystem, FileNode, UndoAction } from './ide/useIDEFileSystem'
 import { useIDEFileOperations } from './ide/useIDEFileOperations'
 import { useIDEGit } from './ide/useIDEGit'
 import { useIDEServer } from './ide/useIDEServer'
-import { handleMonacoBeforeMount } from '@/components/ide/ideUtils'
+import { handleMonacoBeforeMount, updateJavaClasses } from '@/components/ide/ideUtils'
 import { IDEModal } from '@/components/ide/IDEModal'
 
 export interface IDETarget {
@@ -111,6 +111,24 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Atualiza a lista global de classes Java para o Autocomplete do Monaco
+  useEffect(() => {
+    const javaClassNames: string[] = []
+    
+    const extractJavaClasses = (nodes: any[]) => {
+      for (const node of nodes) {
+        if (node.type === 'file' && node.name.endsWith('.java')) {
+          javaClassNames.push(node.name.replace('.java', ''))
+        } else if (node.type === 'folder' && node.children) {
+          extractJavaClasses(node.children)
+        }
+      }
+    }
+    
+    extractJavaClasses(fsState.fileTree)
+    updateJavaClasses(javaClassNames)
+  }, [fsState.fileTree])
 
   // Global keyboard shortcuts (ESC, Enter, Ctrl+Z, Delete)
   useEffect(() => {
