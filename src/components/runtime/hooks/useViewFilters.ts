@@ -71,7 +71,7 @@ export function useViewFilters({
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
       searchParams.forEach((value, key) => {
-        if (!['embedded', 'preview', 'return_to', 'edit_id'].includes(key)) {
+        if (!['embedded', 'preview', 'return_to', 'edit_id', 'standalone', 'mode'].includes(key)) {
           defaults[key] = value
         }
       })
