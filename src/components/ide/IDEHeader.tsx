@@ -196,6 +196,7 @@ function RadioGroup({ value, onChange, options }: { value: string; onChange: (v:
 
 // ─── Node.js config panel ─────────────────────────────────────────────────────
 function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: NodeConfig) => void }) {
+  const { t } = useI18n()
   const set = <K extends keyof NodeConfig>(k: K, v: NodeConfig[K]) => onChange({ ...config, [k]: v })
   const setAuth = <K extends keyof NodeConfig['auth']>(k: K, v: NodeConfig['auth'][K]) =>
     onChange({ ...config, auth: { ...config.auth, [k]: v } })
@@ -210,13 +211,15 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-white">Banco de Dados Vinculado</h4>
+              <h4 className="text-sm font-bold text-white">
+                {t('workspace_components.eject_modal.node.db_title', 'Banco de Dados Vinculado')}
+              </h4>
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">
-                Auto-detectado
+                {t('workspace_components.eject_modal.node.auto_detected', 'Auto-detectado')}
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-0.5">
-              O driver e a connection string configurados no projeto são injetados diretamente no código gerado durante a sincronização.
+              {t('workspace_components.eject_modal.node.db_desc', 'O driver e a connection string configurados no projeto são injetados diretamente no código gerado durante a sincronização.')}
             </p>
           </div>
         </div>
@@ -226,24 +229,24 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <ShieldCheck className="w-4 h-4 text-indigo-400" />
-          <span>Autenticação</span>
+          <span>{t('workspace_components.eject_modal.node.auth_title', 'Autenticação')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <FieldLabel>Tipo de Autenticação</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.node.auth_type', 'Tipo de Autenticação')}</FieldLabel>
             <SelectInput
               value={config.auth.authType}
               onChange={v => setAuth('authType', v)}
               options={[
-                { value: 'database', label: 'Banco de dados' },
+                { value: 'database', label: t('workspace_components.eject_modal.node.auth_database', 'Banco de dados') },
                 { value: 'supabase', label: 'Managed (Supabase)' },
                 { value: 'ldap',     label: 'LDAP' },
-                { value: 'none',     label: 'Nenhum' },
+                { value: 'none',     label: t('workspace_components.eject_modal.node.auth_none', 'Nenhum') },
               ]}
             />
           </div>
           <div>
-            <FieldLabel>Hash de Senha</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.node.password_hash', 'Hash de Senha')}</FieldLabel>
             <SelectInput
               value={config.auth.hashFormat}
               onChange={v => setAuth('hashFormat', v)}
@@ -262,15 +265,15 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <Package className="w-4 h-4 text-sky-400" />
-          <span>Metadados do Projeto</span>
+          <span>{t('workspace_components.eject_modal.node.project_metadata', 'Metadados do Projeto')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <FieldLabel>Nome do Projeto</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.node.project_name', 'Nome do Projeto')}</FieldLabel>
             <TextInput value={config.projectName} onChange={v => set('projectName', v)} placeholder="Meu CRM" />
           </div>
           <div>
-            <FieldLabel>Slug do Projeto</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.node.project_slug', 'Slug do Projeto')}</FieldLabel>
             <TextInput value={config.projectSlug} onChange={v => set('projectSlug', v)} placeholder="meu-crm" />
           </div>
         </div>
@@ -281,6 +284,7 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
 
 // ─── Java config panel ────────────────────────────────────────────────────────
 function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: JavaConfig) => void }) {
+  const { t } = useI18n()
   const set = <K extends keyof JavaConfig>(k: K, v: JavaConfig[K]) => onChange({ ...config, [k]: v })
 
   return (
@@ -293,13 +297,15 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-white">Banco de Dados & Conexão do Projeto</h4>
+              <h4 className="text-sm font-bold text-white">
+                {t('workspace_components.eject_modal.java.db_title', 'Banco de Dados & Conexão do Projeto')}
+              </h4>
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">
-                Sincronizado
+                {t('workspace_components.eject_modal.java.synced', 'Sincronizado')}
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-0.5">
-              O driver e a connection string configurados no projeto são injetados automaticamente no <code className="text-neutral-300 font-mono text-[11px]">src/main/resources/application.properties</code> durante o Eject.
+              {t('workspace_components.eject_modal.java.db_desc', 'O driver e a connection string configurados no projeto são injetados automaticamente no src/main/resources/application.properties durante o Eject.')}
             </p>
           </div>
         </div>
@@ -309,11 +315,11 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <Coffee className="w-4 h-4 text-amber-400" />
-          <span>Configurações Base (Spring Boot)</span>
+          <span>{t('workspace_components.eject_modal.java.base_config', 'Configurações Base (Spring Boot)')}</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <FieldLabel>Versão do JDK</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.java.jdk_version', 'Versão do JDK')}</FieldLabel>
             <RadioGroup
               value={config.jdkVersion}
               onChange={v => set('jdkVersion', v)}
@@ -324,7 +330,7 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
             />
           </div>
           <div>
-            <FieldLabel>Porta do Servidor</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.java.server_port', 'Porta do Servidor')}</FieldLabel>
             <input
               type="number"
               value={config.port}
@@ -347,22 +353,22 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <ShieldCheck className="w-4 h-4 text-indigo-400" />
-          <span>Segurança</span>
+          <span>{t('workspace_components.eject_modal.java.security', 'Segurança')}</span>
         </div>
         <CheckboxRow
-          label="Autenticação JWT"
-          description="Gera SecurityConfig.java, JwtUtil.java, JwtFilter.java e AuthController.java"
+          label={t('workspace_components.eject_modal.java.jwt_auth', 'Autenticação JWT')}
+          description={t('workspace_components.eject_modal.java.jwt_desc', 'Gera SecurityConfig.java, JwtUtil.java, JwtFilter.java e AuthController.java')}
           checked={config.jwt}
           onChange={v => set('jwt', v)}
-          badge="Recomendado"
+          badge={t('workspace_components.eject_modal.java.recommended', 'Recomendado')}
         >
           <div>
-            <FieldLabel>Algoritmo de Hash da Senha</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.java.password_hash_algo', 'Algoritmo de Hash da Senha')}</FieldLabel>
             <RadioGroup
               value={config.jwtHash}
               onChange={v => set('jwtHash', v)}
               options={[
-                { value: 'bcrypt', label: 'BCrypt (Recomendado)' },
+                { value: 'bcrypt', label: t('workspace_components.eject_modal.java.bcrypt_recommended', 'BCrypt (Recomendado)') },
                 { value: 'sha256', label: 'SHA-256' }
               ]}
             />
@@ -374,21 +380,21 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <FileCode2 className="w-4 h-4 text-emerald-400" />
-          <span>Migrations</span>
+          <span>{t('workspace_components.eject_modal.java.migrations', 'Migrations')}</span>
         </div>
         <CheckboxRow
-          label="Gerar Migrations SQL"
-          description="Cria V1__init.sql em resources/db/migration/ baseado nas entidades do projeto"
+          label={t('workspace_components.eject_modal.java.gen_migrations', 'Gerar Migrations SQL')}
+          description={t('workspace_components.eject_modal.java.migrations_desc', 'Cria V1__init.sql em resources/db/migration/ baseado nas entidades do projeto')}
           checked={config.migrations}
           onChange={v => set('migrations', v)}
         >
           <div>
-            <FieldLabel>Engine de Migration</FieldLabel>
+            <FieldLabel>{t('workspace_components.eject_modal.java.migration_engine', 'Engine de Migration')}</FieldLabel>
             <RadioGroup
               value={config.migrationEngine}
               onChange={v => set('migrationEngine', v)}
               options={[
-                { value: 'flyway', label: 'Flyway (Padrão Spring Boot)' },
+                { value: 'flyway', label: t('workspace_components.eject_modal.java.flyway_default', 'Flyway (Padrão Spring Boot)') },
                 { value: 'liquibase', label: 'Liquibase' }
               ]}
             />
@@ -400,17 +406,17 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <FlaskConical className="w-4 h-4 text-amber-400" />
-          <span>Testes Automatizados</span>
+          <span>{t('workspace_components.eject_modal.java.tests', 'Testes Automatizados')}</span>
         </div>
         <div className="space-y-3">
           <CheckboxRow
-            label="Gerar Testes Unitários de Service"
+            label={t('workspace_components.eject_modal.java.gen_service_tests', 'Gerar Testes Unitários de Service')}
             description="{Model}ServiceTest.java com @SpringBootTest + JUnit 5 + Mockito"
             checked={config.testService}
             onChange={v => set('testService', v)}
           />
           <CheckboxRow
-            label="Gerar Testes de Controller"
+            label={t('workspace_components.eject_modal.java.gen_controller_tests', 'Gerar Testes de Controller')}
             description="{Model}ControllerTest.java com MockMvc"
             checked={config.testController}
             onChange={v => set('testController', v)}
@@ -422,29 +428,29 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <Box className="w-4 h-4 text-sky-400" />
-          <span>DevOps / Containerização</span>
+          <span>{t('workspace_components.eject_modal.java.devops', 'DevOps / Containerização')}</span>
         </div>
         <div className="space-y-3">
           <CheckboxRow
-            label="Gerar Dockerfile"
-            description="Multi-stage build otimizado para produção com Eclipse Temurin"
+            label={t('workspace_components.eject_modal.java.gen_dockerfile', 'Gerar Dockerfile')}
+            description={t('workspace_components.eject_modal.java.dockerfile_desc', 'Multi-stage build otimizado para produção com Eclipse Temurin')}
             checked={config.dockerfile}
             onChange={v => set('dockerfile', v)}
-            badge="Padrão"
+            badge={t('workspace_components.eject_modal.java.default_badge', 'Padrão')}
           />
           <CheckboxRow
-            label="Gerar docker-compose.yml"
-            description="Configuração pronta de App Spring Boot + banco de dados integrado via containers"
+            label={t('workspace_components.eject_modal.java.gen_docker_compose', 'Gerar docker-compose.yml')}
+            description={t('workspace_components.eject_modal.java.docker_compose_desc', 'Configuração pronta de App Spring Boot + banco de dados integrado via containers')}
             checked={config.dockerCompose}
             onChange={v => set('dockerCompose', v)}
-            badge="Padrão"
+            badge={t('workspace_components.eject_modal.java.default_badge', 'Padrão')}
           />
           <CheckboxRow
-            label="Gerar .env.example"
-            description="Variáveis de ambiente do Spring documentadas com valores de exemplo"
+            label={t('workspace_components.eject_modal.java.gen_env_example', 'Gerar .env.example')}
+            description={t('workspace_components.eject_modal.java.env_example_desc', 'Variáveis de ambiente do Spring documentadas com valores de exemplo')}
             checked={config.envExample}
             onChange={v => set('envExample', v)}
-            badge="Padrão"
+            badge={t('workspace_components.eject_modal.java.default_badge', 'Padrão')}
           />
         </div>
       </div>
@@ -453,22 +459,22 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
         <div className="flex items-center gap-2 text-white font-bold text-sm">
           <FileText className="w-4 h-4 text-purple-400" />
-          <span>Documentação / API</span>
+          <span>{t('workspace_components.eject_modal.java.docs', 'Documentação / API')}</span>
         </div>
         <div className="space-y-3">
           <CheckboxRow
-            label="Swagger / OpenAPI"
-            description="OpenApiConfig.java com interface Swagger UI interativa habilitada"
+            label={t('workspace_components.eject_modal.java.swagger', 'Swagger / OpenAPI')}
+            description={t('workspace_components.eject_modal.java.swagger_desc', 'OpenApiConfig.java com interface Swagger UI interativa habilitada')}
             checked={config.swagger}
             onChange={v => set('swagger', v)}
-            badge="Padrão"
+            badge={t('workspace_components.eject_modal.java.default_badge', 'Padrão')}
           />
           <CheckboxRow
-            label="Gerar README"
-            description="backend/README.md com documentação completa de setup, build e execução"
+            label={t('workspace_components.eject_modal.java.gen_readme', 'Gerar README')}
+            description={t('workspace_components.eject_modal.java.readme_desc', 'backend/README.md com documentação completa de setup, build e execução')}
             checked={config.readme}
             onChange={v => set('readme', v)}
-            badge="Padrão"
+            badge={t('workspace_components.eject_modal.java.default_badge', 'Padrão')}
           />
         </div>
       </div>
@@ -478,12 +484,13 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
 
 // ─── Placeholder for upcoming stacks ─────────────────────────────────────────
 function ComingSoonPanel({ icon, label, features }: { icon: string; label: string; features: string[] }) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-4">
       <div className="text-5xl p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 shadow-inner">{icon}</div>
       <div>
         <p className="text-lg font-bold text-white">{label}</p>
-        <p className="text-sm text-neutral-400 mt-1">Em breve disponível para Eject & Sync no MetaBuilder PRO</p>
+        <p className="text-sm text-neutral-400 mt-1">{t('workspace_components.eject_modal.coming_soon_desc', 'Em breve disponível para Eject & Sync no MetaBuilder PRO')}</p>
       </div>
       <div className="flex flex-wrap gap-2 justify-center mt-2 max-w-md">
         {features.map(f => (
@@ -491,7 +498,7 @@ function ComingSoonPanel({ icon, label, features }: { icon: string; label: strin
         ))}
       </div>
       <div className="mt-2 px-3.5 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs font-semibold text-amber-400 flex items-center gap-2">
-        <Clock className="w-3.5 h-3.5" /> Roadmap — aguarde novidades nas próximas releases!
+        <Clock className="w-3.5 h-3.5" /> {t('workspace_components.eject_modal.roadmap_badge', 'Roadmap — aguarde novidades nas próximas releases!')}
       </div>
     </div>
   )
@@ -611,7 +618,7 @@ export function IDEHeader({
             {t('workspace_components.ide_local.title', 'IDE Local')}
           </span>
           <span className="text-xs text-neutral-500">
-            {target.type === 'workspace' ? 'Workspace' : 'Projeto'}: {target.name}
+            {target.type === 'workspace' ? t('workspace_components.ide_local.workspace_label', 'Workspace') : t('workspace_components.ide_local.project_label', 'Projeto')}: {target.name}
           </span>
         </div>
       </div>
@@ -675,7 +682,7 @@ export function IDEHeader({
             onClick={() => handleOpenCommitModal('commit')}
             disabled={isCommitLoading || isCommitting}
             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-            title="Commit Local"
+            title={t('workspace_components.ide_local.commit_tooltip', 'Commit Local')}
           >
             {isCommitLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Commit
           </button>
@@ -717,10 +724,10 @@ export function IDEHeader({
           <button
             onClick={() => setShowNativeExport(true)}
             className="flex items-center justify-center gap-1.5 px-2.5 h-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-xs font-bold border border-indigo-500"
-            title="Ejetar código-fonte nativo (Next.js puro)"
+            title={t('workspace_components.ide_local.eject_native_tooltip', 'Ejetar código-fonte nativo (Next.js puro)')}
           >
             <Package className="w-3.5 h-3.5" />
-            Ejetar
+            {t('workspace_components.ide_local.eject_btn', 'Ejetar')}
           </button>
 
           {/* Console toggle button */}
@@ -782,8 +789,12 @@ export function IDEHeader({
                     <DownloadCloud className="w-5 h-5 text-indigo-400" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white">Configuração de Eject & Sincronização</h2>
-                    <p className="text-xs text-neutral-400">Configure os parâmetros da stack, componentes e arquitetura do backend</p>
+                    <h2 className="text-lg font-bold text-white">
+                      {t('workspace_components.eject_modal.title', 'Configuração de Eject & Sincronização')}
+                    </h2>
+                    <p className="text-xs text-neutral-400">
+                      {t('workspace_components.eject_modal.subtitle', 'Configure os parâmetros da stack, componentes e arquitetura do backend')}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -818,7 +829,7 @@ export function IDEHeader({
                       <span>{tab.label}</span>
                       {isSoon && (
                         <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full leading-none">
-                          EM BREVE
+                          {t('workspace_components.eject_modal.soon_badge', 'EM BREVE')}
                         </span>
                       )}
                       {isLocked && (
@@ -865,8 +876,8 @@ export function IDEHeader({
                   <span className="text-lg">{activeTabDef.icon}</span>
                   <span>
                     {canSync
-                      ? `Sincronizando projeto como: ${activeTabDef.label}`
-                      : 'Selecione uma stack disponível para sincronizar'
+                      ? t('workspace_components.eject_modal.syncing_as', 'Sincronizando projeto como: {stack}').replace('{stack}', activeTabDef.label)
+                      : t('workspace_components.eject_modal.select_stack', 'Selecione uma stack disponível para sincronizar')
                     }
                   </span>
                 </div>
@@ -875,7 +886,7 @@ export function IDEHeader({
                     onClick={() => setIsSyncModalOpen(false)}
                     className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
                   >
-                    Cancelar
+                    {t('workspace_components.ide_local.cancel', 'Cancelar')}
                   </button>
                   <button
                     onClick={confirmSync}
@@ -883,7 +894,7 @@ export function IDEHeader({
                     className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <DownloadCloud className="w-4 h-4" />
-                    Sincronizar Repositório
+                    {t('workspace_components.eject_modal.sync_repo', 'Sincronizar Repositório')}
                   </button>
                 </div>
               </div>

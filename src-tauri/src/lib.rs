@@ -221,7 +221,7 @@ fn start_nextjs_dev(app: tauri::AppHandle, state: State<'_, CliState>, project_p
                     }
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                    let _ = app_handle.emit("nextjs-dev-log", format!("Encerrado com código {:?}", payload.code));
+                    let _ = app_handle.emit("nextjs-dev-log", get_terminated_msg(payload.code));
                     let state = app_handle.state::<CliState>();
                     let mut child_guard = state.child.lock().unwrap();
                     *child_guard = None;
@@ -263,7 +263,7 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
 
     let app_handle = app.clone();
     tauri::async_runtime::spawn(async move {
-        let _ = app_handle.emit("nextjs-dev-log", "[Build] Iniciando npm install...".to_string());
+        let _ = app_handle.emit("nextjs-dev-log", get_build_start_msg());
         while let Some(event) = rx.recv().await {
             match event {
                 tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
@@ -285,10 +285,10 @@ fn start_npm_install(app: tauri::AppHandle, state: State<'_, CliState>, project_
                     *pid_guard = None;
                     let code = payload.code.unwrap_or(-1);
                     if code == 0 {
-                        let _ = app_handle.emit("nextjs-dev-log", "[Build] npm install concluído com sucesso!".to_string());
+                        let _ = app_handle.emit("nextjs-dev-log", get_build_success_msg());
                         let _ = app_handle.emit("npm-install-done", true);
                     } else {
-                        let _ = app_handle.emit("nextjs-dev-log", format!("[Build] npm install falhou com código {}", code));
+                        let _ = app_handle.emit("nextjs-dev-log", get_build_fail_msg(code));
                         let _ = app_handle.emit("npm-install-done", false);
                     }
                 }
@@ -330,7 +330,7 @@ fn start_nextjs_server(app: tauri::AppHandle, state: State<'_, CliState>, projec
                     let _ = app_handle.emit("nextjs-dev-log", format!("ERROR: {}", String::from_utf8_lossy(&line)));
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                    let _ = app_handle.emit("nextjs-dev-log", format!("Encerrado com código {:?}", payload.code));
+                    let _ = app_handle.emit("nextjs-dev-log", get_terminated_msg(payload.code));
                     let state = app_handle.state::<CliState>();
                     let mut child_guard = state.child.lock().unwrap();
                     *child_guard = None;
@@ -480,7 +480,7 @@ fn start_spring_boot(
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
                     let _ = app_handle.emit(
                         "spring-boot-log",
-                        format!("Encerrado com código {:?}", payload.code)
+                        get_terminated_msg(payload.code)
                     );
                     let state = app_handle.state::<SpringState>();
                     let mut child_guard = state.child.lock().unwrap();
@@ -849,6 +849,38 @@ fn read_saved_language() -> String {
         }
     }
     "pt".to_string()
+}
+
+fn get_build_start_msg() -> String {
+    match read_saved_language().as_str() {
+        "en" => "[Build] Starting npm install...".to_string(),
+        "es" => "[Build] Iniciando npm install...".to_string(),
+        _ => "[Build] Iniciando npm install...".to_string(),
+    }
+}
+
+fn get_build_success_msg() -> String {
+    match read_saved_language().as_str() {
+        "en" => "[Build] npm install completed successfully!".to_string(),
+        "es" => "[Build] ¡npm install completado con éxito!".to_string(),
+        _ => "[Build] npm install concluído com sucesso!".to_string(),
+    }
+}
+
+fn get_build_fail_msg(code: i32) -> String {
+    match read_saved_language().as_str() {
+        "en" => format!("[Build] npm install failed with code {}", code),
+        "es" => format!("[Build] npm install falló con código {}", code),
+        _ => format!("[Build] npm install falhou com código {}", code),
+    }
+}
+
+fn get_terminated_msg(code: Option<i32>) -> String {
+    match read_saved_language().as_str() {
+        "en" => format!("Terminated with code {:?}", code),
+        "es" => format!("Terminado con código {:?}", code),
+        _ => format!("Encerrado com código {:?}", code),
+    }
 }
 
 #[tauri::command]

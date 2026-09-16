@@ -46,6 +46,7 @@ export interface IDEConsolePanelProps {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useI18n()
   const [copied, setCopied] = React.useState(false)
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -61,11 +62,11 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      title="Copiar SQL"
+      title={t('ide.console.copy_sql', 'Copiar SQL')}
       className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1.5 py-0.5 rounded bg-neutral-800/90 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-100 text-[10px] transition-all shrink-0 ml-2"
     >
       {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-      <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+      <span>{copied ? t('ide.console.copied', 'Copiado!') : t('ide.console.copy', 'Copiar')}</span>
     </button>
   )
 }
@@ -169,7 +170,7 @@ export function IDEConsolePanel({
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800 shrink-0 bg-[#141414]">
               <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mr-1.5">
-                  Console
+                  {t('ide.console.title', 'Console')}
                 </span>
 
                 {/* ── Toggle Resumido / Detalhado (DB) ── */}
@@ -182,9 +183,9 @@ export function IDEConsolePanel({
                         ? 'bg-neutral-800 text-neutral-200 shadow-sm border border-neutral-700/60 font-semibold'
                         : 'text-neutral-500 hover:text-neutral-300'
                     }`}
-                    title="Console Resumido: oculta queries SQL e conexões internas do banco de dados"
+                    title={t('ide.console.summary_tooltip', 'Console Resumido: oculta queries SQL e conexões internas do banco de dados')}
                   >
-                    Resumido
+                    {t('ide.console.summary', 'Resumido')}
                   </button>
                   <button
                     type="button"
@@ -194,10 +195,10 @@ export function IDEConsolePanel({
                         ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 font-semibold'
                         : 'text-neutral-500 hover:text-neutral-300'
                     }`}
-                    title="Console Detalhado: exibe queries SQL, parâmetros e eventos de conexão do banco de dados"
+                    title={t('ide.console.detailed_tooltip', 'Console Detalhado: exibe queries SQL, parâmetros e eventos de conexão do banco de dados')}
                   >
                     <Database className={`w-3 h-3 ${isDetailed ? 'text-cyan-300' : 'text-neutral-500'}`} />
-                    <span>Detalhado</span>
+                    <span>{t('ide.console.detailed', 'Detalhado')}</span>
                     {isDetailed && (
                       <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                     )}
@@ -215,9 +216,9 @@ export function IDEConsolePanel({
                           ? 'bg-neutral-800 text-neutral-200 shadow-sm border border-neutral-700/60 font-semibold'
                           : 'text-neutral-500 hover:text-neutral-300'
                       }`}
-                      title="Sem Formato: exibe as queries SQL em linha única contínua"
+                      title={t('ide.console.unformatted_tooltip', 'Sem Formato: exibe as queries SQL em linha única contínua')}
                     >
-                      Sem Formato
+                      {t('ide.console.unformatted', 'Sem Formato')}
                     </button>
                     <button
                       type="button"
@@ -227,10 +228,10 @@ export function IDEConsolePanel({
                           ? 'bg-fuchsia-700 text-white shadow-sm shadow-fuchsia-500/20 font-semibold'
                           : 'text-neutral-500 hover:text-neutral-300'
                       }`}
-                      title="Com Formato: indenta colunas e quebra linhas de cláusulas SQL (SELECT, FROM, WHERE, etc.)"
+                      title={t('ide.console.formatted_tooltip', 'Com Formato: indenta colunas e quebra linhas de cláusulas SQL (SELECT, FROM, WHERE, etc.)')}
                     >
                       <Code2 className={`w-3 h-3 ${isFormatSql ? 'text-fuchsia-200' : 'text-neutral-500'}`} />
-                      <span>Com Formato</span>
+                      <span>{t('ide.console.formatted', 'Com Formato')}</span>
                     </button>
                   </div>
                 )}
@@ -242,7 +243,7 @@ export function IDEConsolePanel({
                     <button
                       onClick={handleInstall}
                       disabled={isInstalling || !!devProcess || isSyncing}
-                      title="Build (npm install)"
+                      title={t('ide.console.build_tooltip', 'Build (npm install)')}
                       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
                     >
                       {isInstalling ? (
@@ -250,7 +251,7 @@ export function IDEConsolePanel({
                       ) : (
                         <Package className="w-3.5 h-3.5" />
                       )}
-                      <span className="hidden sm:inline">Build</span>
+                      <span className="hidden sm:inline">{t('ide.console.build', 'Build')}</span>
                     </button>
 
                     {/* Start / Stop Next.js */}
@@ -258,11 +259,11 @@ export function IDEConsolePanel({
                       <button
                         onClick={handleStart}
                         disabled={isInstalling || isSyncing}
-                        title="Start (npm run dev)"
+                        title={t('ide.console.start_tooltip', 'Start (npm run dev)')}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
                       >
                         <Play className="w-3.5 h-3.5 text-green-400" />
-                        <span className="hidden sm:inline">Start</span>
+                        <span className="hidden sm:inline">{t('ide.console.start', 'Start')}</span>
                       </button>
                     ) : (
                       <button
@@ -292,7 +293,7 @@ export function IDEConsolePanel({
                       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
                     >
                       <AppWindow className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Browser</span>
+                      <span className="hidden sm:inline">{t('ide.console.browser', 'Browser')}</span>
                     </button>
                   </>
                 )}
@@ -311,7 +312,7 @@ export function IDEConsolePanel({
                       <button
                         onClick={handleStartSpring}
                         disabled={!!isStartingSpring || isSyncing}
-                        title="Start Spring Boot (mvn spring-boot:run)"
+                        title={t('ide.console.start_spring_tooltip', 'Start Spring Boot (mvn spring-boot:run)')}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
                       >
                         {isStartingSpring ? (
@@ -320,14 +321,14 @@ export function IDEConsolePanel({
                           <Play className="w-3.5 h-3.5 text-amber-400" />
                         )}
                         <span className="hidden sm:inline">
-                          {isStartingSpring ? 'Iniciando...' : 'Start Spring Boot'}
+                          {isStartingSpring ? t('ide.console.starting', 'Iniciando...') : t('ide.console.start_spring', 'Start Spring Boot')}
                         </span>
                       </button>
                     ) : (
                       <button
                         onClick={handleStopSpring}
                         disabled={!!isStoppingSpring}
-                        title="Stop Spring Boot"
+                        title={t('ide.console.stop_spring_tooltip', 'Stop Spring Boot')}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
                       >
                         {isStoppingSpring ? (
@@ -336,7 +337,7 @@ export function IDEConsolePanel({
                           <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />
                         )}
                         <span className="hidden sm:inline">
-                          {isStoppingSpring ? 'Parando...' : 'Stop Spring Boot'}
+                          {isStoppingSpring ? t('ide.console.stopping', 'Parando...') : t('ide.console.stop_spring', 'Stop Spring Boot')}
                         </span>
                       </button>
                     )}
@@ -345,7 +346,7 @@ export function IDEConsolePanel({
                     <button
                       onClick={handleOpenSpringSwagger}
                       disabled={!springProcess}
-                      title={`Abrir Swagger UI (localhost:${springPort})`}
+                      title={t('ide.console.open_swagger_tooltip', 'Abrir Swagger UI (localhost:{port})').replace('{port}', String(springPort))}
                       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
@@ -360,43 +361,43 @@ export function IDEConsolePanel({
                     <button
                       onClick={handleInstall}
                       disabled={isInstalling || !!devProcess || isSyncing}
-                      title="npm install (frontend)"
+                      title={t('ide.console.build_frontend_tooltip', 'npm install (frontend)')}
                       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-amber-400"
                     >
                       {isInstalling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Package className="w-3.5 h-3.5" />}
-                      <span className="hidden sm:inline">Build</span>
+                      <span className="hidden sm:inline">{t('ide.console.build', 'Build')}</span>
                     </button>
 
                     {!devProcess ? (
                       <button
                         onClick={handleStart}
                         disabled={isInstalling || isSyncing}
-                        title="Start Next.js frontend"
+                        title={t('ide.console.start_nextjs_tooltip', 'Start Next.js frontend')}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-green-400"
                       >
                         <Play className="w-3.5 h-3.5 text-green-400" />
-                        <span className="hidden sm:inline">Start NextJs</span>
+                        <span className="hidden sm:inline">{t('ide.console.start_nextjs', 'Start NextJs')}</span>
                       </button>
                     ) : (
                       <button
                         onClick={handleStop}
                         disabled={isStoppingServer}
-                        title="Stop Next.js frontend"
+                        title={t('ide.console.stop_nextjs_tooltip', 'Stop Next.js frontend')}
                         className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-red-400"
                       >
                         {isStoppingServer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
-                        <span className="hidden sm:inline">Stop NextJs</span>
+                        <span className="hidden sm:inline">{t('ide.console.stop_nextjs', 'Stop NextJs')}</span>
                       </button>
                     )}
 
                     <button
                       onClick={handleOpenBrowser}
                       disabled={!devProcess}
-                      title="Abrir frontend no browser"
+                      title={t('ide.console.open_browser_tooltip', 'Abrir frontend no browser')}
                       className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-40 hover:bg-neutral-800 text-neutral-400 hover:text-indigo-400"
                     >
                       <AppWindow className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Browser</span>
+                      <span className="hidden sm:inline">{t('ide.console.browser', 'Browser')}</span>
                     </button>
                   </>
                 )}
@@ -406,7 +407,7 @@ export function IDEConsolePanel({
                 {/* Clear */}
                 <button
                   onClick={clearConsole}
-                  title="Limpar Console"
+                  title={t('ide.console.clear_tooltip', 'Limpar Console')}
                   className="flex items-center justify-center w-6 h-6 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -414,7 +415,7 @@ export function IDEConsolePanel({
                 {/* Close */}
                 <button
                   onClick={() => setShowConsole(false)}
-                  title="Fechar Console"
+                  title={t('ide.console.close_tooltip', 'Fechar Console')}
                   className="flex items-center justify-center w-6 h-6 rounded hover:bg-neutral-800 text-neutral-500 hover:text-white transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -427,7 +428,7 @@ export function IDEConsolePanel({
               {visibleLogs.length === 0 && (
                 <span className="text-neutral-600">
                   {consoleLogs.length > 0 && !isDetailed
-                    ? 'Logs de banco de dados ocultados pelo modo Resumido. Clique em Detalhado para exibir.'
+                    ? t('ide.console.logs_hidden_summary', 'Logs de banco de dados ocultados pelo modo Resumido. Clique em Detalhado para exibir.')
                     : t('ide.console.ready', 'Console pronto. Use os ícones acima para iniciar.')}
                 </span>
               )}
@@ -535,8 +536,8 @@ export function IDEConsolePanel({
         size="md"
       >
         <div className="flex flex-col gap-4 text-sm text-neutral-600 dark:text-neutral-300">
-          <p>O Node.js (v20+) é necessário para rodar o frontend.</p>
-          <p>Deseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)</p>
+          <p>{t('ide.console.portable_node_msg1', 'O Node.js (v20+) é necessário para rodar o frontend.')}</p>
+          <p>{t('ide.console.portable_node_msg2', 'Deseja que o MetaBuilder baixe e configure uma versão portátil do Node automaticamente? (Aprox. 30MB)')}</p>
           <div className="flex justify-end gap-2 mt-2">
             <button
               onClick={() => {
@@ -545,7 +546,7 @@ export function IDEConsolePanel({
               }}
               className="px-4 py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-medium transition-colors"
             >
-              Cancelar
+              {t('workspace_components.ide_local.cancel', 'Cancelar')}
             </button>
             <button
               onClick={() => {
@@ -554,7 +555,7 @@ export function IDEConsolePanel({
               }}
               className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors shadow-sm"
             >
-              Baixar e Instalar
+              {t('ide.console.download_install', 'Baixar e Instalar')}
             </button>
           </div>
         </div>
@@ -571,8 +572,8 @@ export function IDEConsolePanel({
         size="md"
       >
         <div className="flex flex-col gap-4 text-sm text-neutral-600 dark:text-neutral-300">
-          <p>O Java 21 é necessário para rodar o backend.</p>
-          <p>Deseja que o MetaBuilder baixe e configure uma versão portátil do Java automaticamente? (Aprox. 190MB)</p>
+          <p>{t('ide.console.portable_java_msg1', 'O Java 21 é necessário para rodar o backend.')}</p>
+          <p>{t('ide.console.portable_java_msg2', 'Deseja que o MetaBuilder baixe e configure uma versão portátil do Java automaticamente? (Aprox. 190MB)')}</p>
           <div className="flex justify-end gap-2 mt-2">
             <button
               onClick={() => {
@@ -581,7 +582,7 @@ export function IDEConsolePanel({
               }}
               className="px-4 py-2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700 font-medium transition-colors"
             >
-              Cancelar
+              {t('workspace_components.ide_local.cancel', 'Cancelar')}
             </button>
             <button
               onClick={() => {
@@ -590,7 +591,7 @@ export function IDEConsolePanel({
               }}
               className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 font-medium transition-colors shadow-sm"
             >
-              Baixar e Instalar
+              {t('ide.console.download_install', 'Baixar e Instalar')}
             </button>
           </div>
         </div>

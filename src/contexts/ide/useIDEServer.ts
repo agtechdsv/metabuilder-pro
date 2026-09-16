@@ -115,7 +115,7 @@ export function useIDEServer({
     setIsInstalling(true)
     setShowConsole(true)
     
-    addConsoleLog('▶ Verificando Node.js...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.checking_nodejs', 'Verificando Node.js...')}`, 'info')
     const nodeOk = await handleCheckNode(() => {
       setIsInstalling(false)
       handleInstall()
@@ -170,7 +170,7 @@ export function useIDEServer({
     if (!target || devProcess || isInstalling) return
     setShowConsole(true)
 
-    addConsoleLog('▶ Verificando Node.js...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.checking_nodejs', 'Verificando Node.js...')}`, 'info')
     const nodeOk = await handleCheckNode(() => {
       handleStart()
     })
@@ -216,7 +216,7 @@ export function useIDEServer({
           warmUp()
         }
 
-        if (text.includes('Encerrado com código')) {
+        if (lower.includes('encerrado com código') || lower.includes('terminated with code') || lower.includes('terminado con código')) {
           setDevProcess(null)
           setIsStoppingServer(false)
           addConsoleLog(`■ ${t('workspace_components.ide_local.server_stopped', 'Servidor encerrado.')}`, 'info')
@@ -275,7 +275,7 @@ export function useIDEServer({
     setShowConsole(true)
     setIsStartingSpring(true)
 
-    addConsoleLog('▶ Verificando JDK...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.checking_jdk', 'Verificando JDK...')}`, 'info')
     const javaOk = await handleCheckJava()
     if (!javaOk) {
       const userWantsDownload = await new Promise<boolean>((resolve) => {
@@ -350,7 +350,7 @@ export function useIDEServer({
       }
     }
 
-    addConsoleLog('▶ Iniciando Spring Boot backend...', 'info')
+    addConsoleLog(`▶ ${t('workspace_components.ide_local.starting_spring_boot', 'Iniciando Spring Boot backend...')}`, 'info')
     try {
       const baseProjectPath = await getProjectPath()
       // Em modo java-spring, o backend fica em <project>/backend/
@@ -372,16 +372,16 @@ export function useIDEServer({
         if (!springReady && (lower.includes('started') && lower.includes('seconds'))) {
           springReady = true
           setIsStartingSpring(false)
-          addConsoleLog(`✓ Spring Boot pronto em http://localhost:${springPort}`, 'info')
+          addConsoleLog(`✓ ${t('workspace_components.ide_local.spring_boot_ready', 'Spring Boot pronto em http://localhost:{port}').replace('{port}', String(springPort))}`, 'info')
           addConsoleLog(`✓ Swagger UI: http://localhost:${springPort}/swagger-ui.html`, 'info')
-          toast('Spring Boot pronto!', 'success')
+          toast(t('workspace_components.ide_local.spring_boot_ready_toast', 'Spring Boot pronto!'), 'success')
         }
 
-        if (text.includes('Encerrado com código')) {
+        if (lower.includes('encerrado com código') || lower.includes('terminated with code') || lower.includes('terminado con código')) {
           setSpringProcess(null)
           setIsStoppingSpring(false)
           setIsStartingSpring(false)
-          addConsoleLog('■ Spring Boot encerrado.', 'info')
+          addConsoleLog(`■ ${t('workspace_components.ide_local.spring_boot_stopped', 'Spring Boot encerrado.')}`, 'info')
           unlisten()
         }
       })
@@ -400,7 +400,7 @@ export function useIDEServer({
       } as any)
 
     } catch (err: any) {
-      addConsoleLog(`✗ Erro ao iniciar Spring Boot: ${err?.message || err}`, 'error')
+      addConsoleLog(`✗ ${t('workspace_components.ide_local.error_starting_spring_boot', 'Erro ao iniciar Spring Boot:')} ${err?.message || err}`, 'error')
       toast(`Erro ao iniciar Spring Boot: ${err?.message || err}`, 'error')
     } finally {
       setIsStartingSpring(false)
@@ -414,7 +414,7 @@ export function useIDEServer({
 
   const handleOpenSpringSwagger = async () => {
     const url = `http://localhost:${springPort}/swagger-ui.html`
-    addConsoleLog(`↗ Abrindo Swagger UI em ${url}`, 'info')
+    addConsoleLog(`↗ ${t('workspace_components.ide_local.opening_swagger', 'Abrindo Swagger UI em {url}').replace('{url}', url)}`, 'info')
     import('@tauri-apps/plugin-shell').then(({ open }) => {
       open(url)
     }).catch(() => {
