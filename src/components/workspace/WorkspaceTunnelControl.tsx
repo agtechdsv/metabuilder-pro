@@ -379,7 +379,29 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
               <Square className="w-4 h-4" /> {t('workspace_components.tunnel_control.stop_tunnel', 'Parar Túnel')}
             </button>
             <button
-              onClick={() => setIsLogModalOpen(true)}
+              onClick={async () => {
+                if (isTauri()) {
+                  try {
+                    const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+                    const logWindow = new WebviewWindow('tunnel-logs', {
+                      url: '/tunnel-logs',
+                      title: 'Tunnel Logs - MetaBuilder PRO',
+                      width: 900,
+                      height: 600,
+                      center: true,
+                      decorations: true,
+                    })
+                    logWindow.once('tauri://error', (e) => {
+                      console.error('Error creating log window', e)
+                      setIsLogModalOpen(true)
+                    })
+                  } catch (e) {
+                    setIsLogModalOpen(true)
+                  }
+                } else {
+                  setIsLogModalOpen(true)
+                }
+              }}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 shrink-0"
               title="Ver Logs do Túnel"
             >

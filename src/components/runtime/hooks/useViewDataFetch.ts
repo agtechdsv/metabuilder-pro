@@ -385,6 +385,9 @@ export function useViewDataFetch({
         let finalExpr = expr
         if (!expr.includes('.') && !hasAlias) {
           finalExpr = `"${modelName}"."${expr}"`
+        } else if (expr.includes('.') && !hasAlias) {
+          const parts = expr.split('.')
+          finalExpr = `"${parts[0]}"."${parts[1]}"`
         }
 
         if (alias && !hasAlias) {
@@ -528,29 +531,30 @@ export function useViewDataFetch({
 
       let rawQuery = '';
       const joinsSql = buildJoinsSql(joins, true);
-      if (joinsSql) {
-        let outerJoinsSql = '';
-        if (projectRelations && projectRelations.length > 0 && outerRequiredTables.size > 0) {
-          const allModels = project?.models || [];
-          const resolvedRelations = resolveRelations(projectRelations, allModels);
-          const steps = resolveAllJoins(resolvedRelations, modelName, Array.from(outerRequiredTables));
-          outerJoinsSql = buildJoinSql(steps, new Set());
-        } else if (!projectRelations || projectRelations.length === 0) {
-          const requiredOuterJoins = (joins || []).filter((j: any) => {
-            const toTable = (j.toTable || j.to || '').toLowerCase();
-            const fromTable = (j.table || j.from || '').toLowerCase();
-            if (!toTable || !fromTable) return false;
-            const isToMaster = toTable === modelName.toLowerCase();
-            const isFromMaster = fromTable === modelName.toLowerCase();
-            const isToUsed = outerRequiredTables.has(toTable);
-            const isFromUsed = outerRequiredTables.has(fromTable);
-            if (!isToMaster && !isToUsed) return false;
-            if (!isFromMaster && !isFromUsed) return false;
-            return true;
-          });
-          outerJoinsSql = buildJoinsSql(requiredOuterJoins, false);
-        }
+      
+      let outerJoinsSql = '';
+      if (projectRelations && projectRelations.length > 0 && outerRequiredTables.size > 0) {
+        const allModels = project?.models || [];
+        const resolvedRelations = resolveRelations(projectRelations, allModels);
+        const steps = resolveAllJoins(resolvedRelations, modelName, Array.from(outerRequiredTables));
+        outerJoinsSql = buildJoinSql(steps, new Set());
+      } else if (!projectRelations || projectRelations.length === 0) {
+        const requiredOuterJoins = (joins || []).filter((j: any) => {
+          const toTable = (j.toTable || j.to || '').toLowerCase();
+          const fromTable = (j.table || j.from || '').toLowerCase();
+          if (!toTable || !fromTable) return false;
+          const isToMaster = toTable === modelName.toLowerCase();
+          const isFromMaster = fromTable === modelName.toLowerCase();
+          const isToUsed = outerRequiredTables.has(toTable);
+          const isFromUsed = outerRequiredTables.has(fromTable);
+          if (!isToMaster && !isToUsed) return false;
+          if (!isFromMaster && !isFromUsed) return false;
+          return true;
+        });
+        outerJoinsSql = buildJoinsSql(requiredOuterJoins, false);
+      }
 
+      if (joinsSql || outerJoinsSql) {
         const dbType = (project?.db_type || 'postgres').toLowerCase();
         const limitOffsetStr = dbType === 'oracle' 
             ? `OFFSET ${currentOffset} ROWS FETCH NEXT ${itemsPerPage} ROWS ONLY`
