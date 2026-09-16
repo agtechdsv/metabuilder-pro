@@ -381,19 +381,20 @@ export function useViewDataFetch({
           outerRequiredTables.add(exprWithoutAlias.split('.')[0].replace(/"/g, '').toLowerCase())
         }
 
+        const cleanPart = (p: string) => p.replace(/"/g, '').trim()
         const hasAlias = expr.toLowerCase().includes(' as ')
         let finalExpr = expr
         if (!expr.includes('.') && !hasAlias) {
-          finalExpr = `"${modelName}"."${expr}"`
+          finalExpr = `"${cleanPart(modelName)}"."${cleanPart(expr)}"`
         } else if (expr.includes('.') && !hasAlias) {
           const parts = expr.split('.')
-          finalExpr = `"${parts[0]}"."${parts[1]}"`
+          finalExpr = `"${cleanPart(parts[0])}"."${cleanPart(parts[1])}"`
         }
 
         if (alias && !hasAlias) {
-          selectExprs.push(`${finalExpr} AS "${alias}"`)
+          selectExprs.push(`${finalExpr} AS "${cleanPart(alias)}"`)
         } else if (expr.includes('.') && !hasAlias) {
-          selectExprs.push(`${finalExpr} AS "${expr}"`)
+          selectExprs.push(`${finalExpr} AS "${cleanPart(expr)}"`)
         } else if (!expr.includes('.') && !hasAlias) {
           selectExprs.push(finalExpr)
         } else {
