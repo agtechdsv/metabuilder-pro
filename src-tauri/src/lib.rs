@@ -106,17 +106,52 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
     *child_guard = Some(child);
 
     let app_handle = app.clone();
+    
+    let log_file_path = if let Ok(dir) = app.path().app_local_data_dir() {
+        let logs_dir = dir.join("logs");
+        let _ = std::fs::create_dir_all(&logs_dir);
+        Some(logs_dir.join("tunnel.log"))
+    } else {
+        None
+    };
+
     tauri::async_runtime::spawn(async move {
+        if let Some(path) = &log_file_path {
+            let _ = std::fs::write(path, ""); // Limpa o log antigo a cada novo start
+        }
+        
         while let Some(event) = rx.recv().await {
             match event {
                 tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
-                    println!("[CLI] {}", String::from_utf8_lossy(&line));
+                    let log_line = String::from_utf8_lossy(&line).to_string();
+                    println!("[CLI] {}", log_line);
+                    let _ = app_handle.emit("tunnel-log", &log_line);
+                    if let Some(path) = &log_file_path {
+                        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                            let _ = writeln!(file, "{}", log_line);
+                        }
+                    }
                 }
                 tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                    eprintln!("[CLI ERROR] {}", String::from_utf8_lossy(&line));
+                    let log_line = String::from_utf8_lossy(&line).to_string();
+                    eprintln!("[CLI ERROR] {}", log_line);
+                    let err_line = format!("[ERROR] {}", log_line);
+                    let _ = app_handle.emit("tunnel-log", &err_line);
+                    if let Some(path) = &log_file_path {
+                        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                            let _ = writeln!(file, "{}", err_line);
+                        }
+                    }
                 }
                 tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                    println!("[CLI] Encerrado com código {:?}", payload.code);
+                    let term_msg = format!("[CLI] Encerrado com código {:?}", payload.code);
+                    println!("{}", term_msg);
+                    let _ = app_handle.emit("tunnel-log", &term_msg);
+                    if let Some(path) = &log_file_path {
+                        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+                            let _ = writeln!(file, "{}", term_msg);
+                        }
+                    }
                     let state = app_handle.state::<CliState>();
                     let mut child_guard = state.child.lock().unwrap();
                     *child_guard = None;

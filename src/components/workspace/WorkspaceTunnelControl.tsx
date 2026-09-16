@@ -12,6 +12,7 @@ import { defaultTunnelConfigTemplate } from './tunnel/tunnelUtils'
 import { TunnelConfigModal } from './tunnel/TunnelConfigModal'
 import { TunnelSyncConsoleModal } from './tunnel/TunnelSyncConsoleModal'
 import { TunnelPendingResolutionModal } from './tunnel/TunnelPendingResolutionModal'
+import { TunnelLogConsoleModal } from './tunnel/TunnelLogConsoleModal'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
   const { t } = useI18n()
@@ -23,6 +24,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const [isDesktopEnv, setIsDesktopEnv] = useState<boolean | null>(null)
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [configContent, setConfigContent] = useState('')
   const [isSavingConfig, setIsSavingConfig] = useState(false)
   const [hasProjects, setHasProjects] = useState<boolean | null>(null)
@@ -376,6 +378,13 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             >
               <Square className="w-4 h-4" /> {t('workspace_components.tunnel_control.stop_tunnel', 'Parar Túnel')}
             </button>
+            <button
+              onClick={() => setIsLogModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 shrink-0"
+              title="Ver Logs do Túnel"
+            >
+              Logs
+            </button>
           </div>
         </div>
 
@@ -428,6 +437,12 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         pendingResolution={pendingResolution}
         pathname={pathname}
         onClose={() => setPendingResolution(null)}
+      />
+
+      {/* Modal de Logs do Túnel */}
+      <TunnelLogConsoleModal
+        isOpen={isLogModalOpen}
+        onClose={() => setIsLogModalOpen(false)}
       />
     </div>
   )

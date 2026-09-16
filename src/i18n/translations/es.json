@@ -1,4 +1,17 @@
 {
+  "tunnel_log": {
+    "not_found": "[SYSTEM] Archivo de log no encontrado. Es posible que el túnel aún no se haya iniciado.",
+    "error_read_console": "Error al leer los logs del túnel:",
+    "error_read_file": "[ERROR] Falló la lectura del archivo de log del túnel local.",
+    "desktop_only": "[SYSTEM] La visualización de los logs del túnel solo está disponible en el entorno de Escritorio (IDE).",
+    "clear_success": "Logs limpiados con éxito.",
+    "error_clear_console": "Error al limpiar los logs:",
+    "error_clear_file": "Error al limpiar el archivo de log.",
+    "title": "Consola del Túnel (Logs)",
+    "clear_button": "Limpiar Logs",
+    "loading": "Cargando logs...",
+    "empty": "Ningún log registrado."
+  },
   "agtech": {
     "title": "La ingeniería detrás de MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",

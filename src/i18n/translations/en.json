@@ -1,4 +1,17 @@
 {
+  "tunnel_log": {
+    "not_found": "[SYSTEM] Log file not found. The tunnel may not have been started yet.",
+    "error_read_console": "Error reading tunnel logs:",
+    "error_read_file": "[ERROR] Failed to read the local tunnel log file.",
+    "desktop_only": "[SYSTEM] Tunnel log visualization is only available in the Desktop (IDE) environment.",
+    "clear_success": "Logs cleared successfully.",
+    "error_clear_console": "Error clearing logs:",
+    "error_clear_file": "Error clearing log file.",
+    "title": "Tunnel Console (Logs)",
+    "clear_button": "Clear Logs",
+    "loading": "Loading logs...",
+    "empty": "No logs recorded."
+  },
   "agtech": {
     "title": "The engineering behind MetaBuilderPRO",
     "lab": "AGTECH INNOVATION LAB",
