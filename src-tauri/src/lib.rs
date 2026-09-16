@@ -875,7 +875,17 @@ fn read_saved_language() -> String {
             }
         }
     }
-    // 2. Tenta carregar de temp_dir/metabuilder_language.txt
+    // 2. Tenta carregar de %APPDATA%/.metabuilder/language.txt
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let lang_file = std::path::PathBuf::from(app_data).join(".metabuilder").join("language.txt");
+        if let Ok(content) = std::fs::read_to_string(lang_file) {
+            let trimmed = content.trim().to_lowercase();
+            if trimmed == "en" || trimmed == "es" || trimmed == "pt" {
+                return trimmed;
+            }
+        }
+    }
+    // 3. Tenta carregar de temp_dir/metabuilder_language.txt
     let temp_file = std::env::temp_dir().join("metabuilder_language.txt");
     if let Ok(content) = std::fs::read_to_string(temp_file) {
         let trimmed = content.trim().to_lowercase();
@@ -928,6 +938,11 @@ fn save_language(lang: String) -> Result<(), String> {
 
     if let Ok(user_profile) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
         let dir = std::path::PathBuf::from(user_profile).join(".metabuilder");
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("language.txt"), valid_lang);
+    }
+    if let Ok(app_data) = std::env::var("APPDATA") {
+        let dir = std::path::PathBuf::from(app_data).join(".metabuilder");
         let _ = std::fs::create_dir_all(&dir);
         let _ = std::fs::write(dir.join("language.txt"), valid_lang);
     }
@@ -1101,12 +1116,12 @@ pub fn run() {
                 .replace("<span id=\"version\">v1.0</span>", &format!("<span id=\"version\">v{}</span>", version))
                 .replace("window.__INITIAL_LANG__ = 'pt'", &format!("window.__INITIAL_LANG__ = '{}'", saved_lang));
             
-            let splash_path = std::env::temp_dir().join(format!("metabuilder_splash_{}.html", version));
+            let splash_path = std::env::temp_dir().join(format!("metabuilder_splash_{}_{}.html", version, saved_lang));
             std::fs::write(&splash_path, splash_html)
                 .expect("Falha ao escrever splash.html temporário");
 
             // Converte o caminho para URL file:// compatível com qualquer OS
-            let splash_url_str = format!("file:///{}", splash_path.to_string_lossy().replace('\\', "/"));
+            let splash_url_str = format!("file:///{}?lang={}", splash_path.to_string_lossy().replace('\\', "/"), saved_lang);
             let splash_url = tauri::Url::parse(&splash_url_str)
                 .expect("URL da splash inválida");
 
@@ -1127,6 +1142,7 @@ pub fn run() {
 
             // Transição: aguarda animação completa e mostra a janela principal
             let app_handle = app.handle().clone();
+            let splash_path_cleanup = splash_path.clone();
             std::thread::spawn(move || {
                 // Aguarda a animação de progresso rodar completamente
                 // 6 steps × ~450ms + fadeIn 350ms + margem = ~3.5s
@@ -1142,8 +1158,7 @@ pub fn run() {
                 }
 
                 // Limpa o arquivo temporário da splash
-                let splash_tmp = std::env::temp_dir().join("metabuilder_splash.html");
-                let _ = std::fs::remove_file(splash_tmp);
+                let _ = std::fs::remove_file(splash_path_cleanup);
             });
 
             Ok(())

@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "save-language",
+      "description": "allow save_language",
+      "commands": {
+        "allow": ["save_language"],
+        "deny": []
+      }
+    }
+  ]
+}

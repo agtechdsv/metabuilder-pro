@@ -30,31 +30,44 @@ export function I18nProvider({
   const router = useRouter()
 
   useEffect(() => {
-    // Sincroniza com localStorage se existir, mas o initialLocale manda no primeiro render
-    const savedLang = localStorage.getItem('app-language') as Language
-    let current = initialLocale
-    if (savedLang && ['pt', 'en', 'es'].includes(savedLang) && savedLang !== initialLocale) {
-      setLanguageState(savedLang)
-      current = savedLang
+    const sync = async () => {
+      const savedLang = (localStorage.getItem('app-language') as Language) || null
+      let current: Language = (savedLang && ['pt', 'en', 'es'].includes(savedLang)) ? savedLang : initialLocale
+
+      // Sincroniza com o Tauri para que o próximo splash screen leia imediatamente este idioma
+      if (typeof window !== 'undefined') {
+        // @ts-ignore
+        const isTauri = Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+        if (isTauri) {
+          try {
+            const { invoke } = await import('@tauri-apps/api/core')
+            if (!savedLang) {
+              const fromTauri = await invoke<string>('get_saved_language').catch(() => '')
+              if (fromTauri && ['pt', 'en', 'es'].includes(fromTauri)) {
+                current = fromTauri as Language
+              }
+            }
+            await invoke('save_language', { lang: current }).catch(() => {})
+          } catch (e) {
+            console.warn('[i18n] Falha ao sincronizar idioma com Tauri:', e)
+          }
+        }
+      }
+
+      setLanguageState(current)
+      localStorage.setItem('app-language', current)
+      document.cookie = `app-language=${current}; path=/; max-age=31536000; SameSite=Lax`
+      document.documentElement.lang = current
     }
 
-    // Sincroniza com o Tauri para que o próximo splash screen leia imediatamente este idioma
-    if (typeof window !== 'undefined') {
-      // @ts-ignore
-      const isTauri = Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
-      if (isTauri) {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('save_language', { lang: current }).catch(() => {})
-        }).catch(() => {})
-      }
-    }
+    sync()
   }, [initialLocale])
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('app-language', lang)
     // Persiste em cookie para o Server Side Rendering (SSR)
-    document.cookie = `app-language=${lang}; path=/; max-age=31536000`
+    document.cookie = `app-language=${lang}; path=/; max-age=31536000; SameSite=Lax`
     // Atualiza o atributo lang do HTML
     document.documentElement.lang = lang
 

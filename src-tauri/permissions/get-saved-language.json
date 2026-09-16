@@ -1,0 +1,13 @@
+{
+  "default": null,
+  "permission": [
+    {
+      "identifier": "get-saved-language",
+      "description": "allow get_saved_language",
+      "commands": {
+        "allow": ["get_saved_language"],
+        "deny": []
+      }
+    }
+  ]
+}

@@ -196,8 +196,17 @@
       ]
     };
 
+    // Lê query param caso venha na URL (ex: file:///...?lang=en)
+    let urlLang = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      urlLang = params.get('lang');
+    } catch (e) {}
+
     let currentLang = 'pt';
-    if (window.__INITIAL_LANG__ && i18nSteps[window.__INITIAL_LANG__]) {
+    if (urlLang && i18nSteps[urlLang]) {
+      currentLang = urlLang;
+    } else if (window.__INITIAL_LANG__ && i18nSteps[window.__INITIAL_LANG__]) {
       currentLang = window.__INITIAL_LANG__;
     } else {
       try {

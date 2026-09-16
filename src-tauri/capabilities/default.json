@@ -134,6 +134,8 @@
     "check-java-available",
     "start-spring-boot",
     "stop-spring-boot",
-    "compile-java-workspace"
+    "compile-java-workspace",
+    "save-language",
+    "get-saved-language"
   ]
 }
