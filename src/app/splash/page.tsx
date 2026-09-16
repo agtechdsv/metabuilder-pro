@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Rocket, Loader2 } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 export default function SplashPage() {
+  const { t } = useI18n()
   const [progress, setProgress] = useState(0)
-  const [status, setStatus] = useState('Iniciando módulos core...')
+  const [status, setStatus] = useState(t('splash.starting_core', 'Iniciando módulos core...'))
   const [version, setVersion] = useState('v1.0')
 
   useEffect(() => {
@@ -32,11 +34,11 @@ export default function SplashPage() {
     
     // Simulate loading steps for the splash screen
     const steps = [
-      { p: 15, msg: 'Carregando ambiente de execução...' },
-      { p: 35, msg: 'Verificando atualizações...' },
-      { p: 60, msg: 'Iniciando MetaBuilder Engine...' },
-      { p: 85, msg: 'Carregando interface...' },
-      { p: 100, msg: 'Pronto!' }
+      { p: 15, msg: t('splash.loading_env', 'Carregando ambiente de execução...') },
+      { p: 35, msg: t('splash.checking_updates', 'Verificando atualizações...') },
+      { p: 60, msg: t('splash.starting_engine', 'Iniciando MetaBuilder Engine...') },
+      { p: 85, msg: t('splash.loading_ui', 'Carregando interface...') },
+      { p: 100, msg: t('splash.ready', 'Pronto!') }
     ]
 
     let currentStep = 0

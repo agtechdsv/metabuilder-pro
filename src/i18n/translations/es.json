@@ -2670,7 +2670,11 @@
       "passkey_error": "Error al procesar el inicio de sesión biométrico.",
       "verifying": "Verificando...",
       "biometrics_signin": "Iniciar sesión con Biometría",
-      "powered_by": "Autenticación empresarial segura por MetaBuilderPRO"
+      "powered_by": "Autenticación empresarial segura por MetaBuilderPRO",
+      "resuming_session": "Reanudando su sesión...",
+      "verifying_permissions": "Verificando permisos y redirigiendo...",
+      "not_me_switch_user": "No soy yo — iniciar sesión con otro usuario",
+      "default_user": "Usuario"
     },
     "callback": {
       "authenticating": "Autenticando...",
@@ -3959,5 +3963,13 @@
     "saving": "Guardando...",
     "reset_success": "¡Proyecto local reiniciado desde cero con éxito!",
     "reset_error": "Error al reiniciar el proyecto local:"
+  },
+  "splash": {
+    "starting_core": "Iniciando módulos principales...",
+    "loading_env": "Cargando entorno de ejecución...",
+    "checking_updates": "Buscando actualizaciones...",
+    "starting_engine": "Iniciando MetaBuilder Engine...",
+    "loading_ui": "Cargando interfaz...",
+    "ready": "¡Listo!"
   }
 }

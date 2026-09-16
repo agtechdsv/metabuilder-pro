@@ -829,6 +829,51 @@ fn update_tray_menu(
     Ok(())
 }
 
+fn read_saved_language() -> String {
+    // 1. Tenta carregar de ~/.metabuilder/language.txt
+    if let Ok(user_profile) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        let lang_file = std::path::PathBuf::from(user_profile).join(".metabuilder").join("language.txt");
+        if let Ok(content) = std::fs::read_to_string(lang_file) {
+            let trimmed = content.trim().to_lowercase();
+            if trimmed == "en" || trimmed == "es" || trimmed == "pt" {
+                return trimmed;
+            }
+        }
+    }
+    // 2. Tenta carregar de temp_dir/metabuilder_language.txt
+    let temp_file = std::env::temp_dir().join("metabuilder_language.txt");
+    if let Ok(content) = std::fs::read_to_string(temp_file) {
+        let trimmed = content.trim().to_lowercase();
+        if trimmed == "en" || trimmed == "es" || trimmed == "pt" {
+            return trimmed;
+        }
+    }
+    "pt".to_string()
+}
+
+#[tauri::command]
+fn save_language(lang: String) -> Result<(), String> {
+    let valid_lang = match lang.to_lowercase().as_str() {
+        "en" => "en",
+        "es" => "es",
+        _ => "pt",
+    };
+
+    if let Ok(user_profile) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+        let dir = std::path::PathBuf::from(user_profile).join(".metabuilder");
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(dir.join("language.txt"), valid_lang);
+    }
+    let temp_file = std::env::temp_dir().join("metabuilder_language.txt");
+    let _ = std::fs::write(temp_file, valid_lang);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_saved_language() -> String {
+    read_saved_language()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -984,7 +1029,10 @@ pub fn run() {
             // WebView2 (Windows) bloqueia data: URIs mas aceita file:// sem problemas.
             let splash_html_raw = include_str!("../splash.html");
             let version = app.package_info().version.to_string();
-            let splash_html = splash_html_raw.replace("<span id=\"version\">v1.0</span>", &format!("<span id=\"version\">v{}</span>", version));
+            let saved_lang = read_saved_language();
+            let splash_html = splash_html_raw
+                .replace("<span id=\"version\">v1.0</span>", &format!("<span id=\"version\">v{}</span>", version))
+                .replace("window.__INITIAL_LANG__ = 'pt'", &format!("window.__INITIAL_LANG__ = '{}'", saved_lang));
             
             let splash_path = std::env::temp_dir().join(format!("metabuilder_splash_{}.html", version));
             std::fs::write(&splash_path, splash_html)
@@ -1053,7 +1101,9 @@ pub fn run() {
             check_java_available,
             start_spring_boot,
             stop_spring_boot,
-            compile_java_workspace
+            compile_java_workspace,
+            save_language,
+            get_saved_language
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

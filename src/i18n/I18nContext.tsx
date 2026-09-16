@@ -32,10 +32,21 @@ export function I18nProvider({
   useEffect(() => {
     // Sincroniza com localStorage se existir, mas o initialLocale manda no primeiro render
     const savedLang = localStorage.getItem('app-language') as Language
+    let current = initialLocale
     if (savedLang && ['pt', 'en', 'es'].includes(savedLang) && savedLang !== initialLocale) {
       setLanguageState(savedLang)
-      // Se o que temos no localStorage for diferente do que o server mandou,
-      // talvez precisemos atualizar o cookie e recarregar, mas vamos deixar o server mandar por enquanto.
+      current = savedLang
+    }
+
+    // Sincroniza com o Tauri para que o próximo splash screen leia imediatamente este idioma
+    if (typeof window !== 'undefined') {
+      // @ts-ignore
+      const isTauri = Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+      if (isTauri) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('save_language', { lang: current }).catch(() => {})
+        }).catch(() => {})
+      }
     }
   }, [initialLocale])
 
@@ -46,6 +57,17 @@ export function I18nProvider({
     document.cookie = `app-language=${lang}; path=/; max-age=31536000`
     // Atualiza o atributo lang do HTML
     document.documentElement.lang = lang
+
+    // Sincroniza com o Tauri para que o próximo splash screen leia imediatamente este idioma
+    if (typeof window !== 'undefined') {
+      // @ts-ignore
+      const isTauri = Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__ || window.__TAURI_IPC__)
+      if (isTauri) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('save_language', { lang }).catch((err) => console.warn('Falha ao sincronizar idioma com Tauri:', err))
+        }).catch(() => {})
+      }
+    }
     
     // Atualiza os Server Components sem dar reload na página (mantém o estado do React)
     router.refresh()

@@ -155,7 +155,7 @@
         <div class="status-row">
           <div class="status-left">
             <div class="spinner"></div>
-            <span class="status-text" id="status">Iniciando mÃ³dulos core...</span>
+            <span class="status-text" id="status">...</span>
           </div>
           <span class="pct" id="pct">0%</span>
         </div>
@@ -167,48 +167,82 @@
   </div>
 
   <script>
-    const steps = [
-      { p: 12, msg: 'Iniciando módulos core...' },
-      { p: 30, msg: 'Carregando ambiente de execução...' },
-      { p: 52, msg: 'Verificando atualizações...' },
-      { p: 74, msg: 'Iniciando MetaBuilder Engine...' },
-      { p: 90, msg: 'Carregando interface...' },
-      { p: 100, msg: 'Pronto!' }
-    ]
+    window.__INITIAL_LANG__ = 'pt';
 
-    const bar    = document.getElementById('bar')
-    const pct    = document.getElementById('pct')
-    const status = document.getElementById('status')
-    const verEl  = document.getElementById('version')
+    const i18nSteps = {
+      pt: [
+        { p: 12, msg: 'Iniciando módulos core...' },
+        { p: 30, msg: 'Carregando ambiente de execução...' },
+        { p: 52, msg: 'Verificando atualizações...' },
+        { p: 74, msg: 'Iniciando MetaBuilder Engine...' },
+        { p: 90, msg: 'Carregando interface...' },
+        { p: 100, msg: 'Pronto!' }
+      ],
+      en: [
+        { p: 12, msg: 'Starting core modules...' },
+        { p: 30, msg: 'Loading execution environment...' },
+        { p: 52, msg: 'Checking for updates...' },
+        { p: 74, msg: 'Starting MetaBuilder Engine...' },
+        { p: 90, msg: 'Loading interface...' },
+        { p: 100, msg: 'Ready!' }
+      ],
+      es: [
+        { p: 12, msg: 'Iniciando módulos principales...' },
+        { p: 30, msg: 'Cargando entorno de ejecución...' },
+        { p: 52, msg: 'Buscando actualizaciones...' },
+        { p: 74, msg: 'Iniciando MetaBuilder Engine...' },
+        { p: 90, msg: 'Cargando interfaz...' },
+        { p: 100, msg: '¡Listo!' }
+      ]
+    };
 
+    let currentLang = 'pt';
+    if (window.__INITIAL_LANG__ && i18nSteps[window.__INITIAL_LANG__]) {
+      currentLang = window.__INITIAL_LANG__;
+    } else {
+      try {
+        const ls = localStorage.getItem('app-language');
+        if (ls && i18nSteps[ls]) currentLang = ls;
+      } catch (e) {}
+    }
 
+    const steps = i18nSteps[currentLang] || i18nSteps.pt;
 
-    // Progresso sincronizado: comeÃ§a imediatamente quando a pÃ¡gina carrega
-    let step = 0
+    const bar    = document.getElementById('bar');
+    const pct    = document.getElementById('pct');
+    const status = document.getElementById('status');
+    const verEl  = document.getElementById('version');
+
+    if (status && steps[0]) {
+      status.textContent = steps[0].msg;
+    }
+
+    // Progresso sincronizado: começa imediatamente quando a página carrega
+    let step = 0;
     function tick() {
-      if (step >= steps.length) return
-      const s = steps[step++]
-      bar.style.width = s.p + '%'
-      pct.textContent = s.p + '%'
-      status.textContent = s.msg
+      if (step >= steps.length) return;
+      const s = steps[step++];
+      bar.style.width = s.p + '%';
+      pct.textContent = s.p + '%';
+      status.textContent = s.msg;
       if (step < steps.length) {
         // Intervalo maior para o user ver cada etapa
-        setTimeout(tick, step === steps.length - 1 ? 600 : 450)
+        setTimeout(tick, step === steps.length - 1 ? 600 : 450);
       }
     }
 
-    // Inicia o progresso assim que a pÃ¡gina renderiza, sem delay artificial
-    requestAnimationFrame(() => setTimeout(tick, 100))
+    // Inicia o progresso assim que a página renderiza, sem delay artificial
+    requestAnimationFrame(() => setTimeout(tick, 100));
 
-    // Escuta evento do Rust para acelerar/forÃ§ar o fechamento
+    // Escuta evento do Rust para acelerar/forçar o fechamento
     if (window.__TAURI_INTERNALS__) {
       import('https://unpkg.com/@tauri-apps/api@2/event').then(({ listen }) => {
         listen('splash-close', () => {
-          bar.style.width = '100%'
-          pct.textContent = '100%'
-          status.textContent = 'Pronto!'
-        })
-      }).catch(() => {})
+          bar.style.width = '100%';
+          pct.textContent = '100%';
+          status.textContent = steps[steps.length - 1].msg;
+        });
+      }).catch(() => {});
     }
   </script>
 </body>

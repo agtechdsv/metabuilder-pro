@@ -2599,7 +2599,11 @@
       "passkey_error": "Error processing biometric login.",
       "verifying": "Verifying...",
       "biometrics_signin": "Sign in with Biometrics",
-      "powered_by": "Secure enterprise authentication powered by MetaBuilderPRO"
+      "powered_by": "Secure enterprise authentication powered by MetaBuilderPRO",
+      "resuming_session": "Resuming your session...",
+      "verifying_permissions": "Verifying permissions and redirecting...",
+      "not_me_switch_user": "Not you? Sign in as another user",
+      "default_user": "User"
     },
     "callback": {
       "authenticating": "Authenticating...",
@@ -3899,5 +3903,13 @@
     "saving": "Saving...",
     "reset_success": "Local project reset from scratch successfully!",
     "reset_error": "Error resetting local project:"
+  },
+  "splash": {
+    "starting_core": "Starting core modules...",
+    "loading_env": "Loading execution environment...",
+    "checking_updates": "Checking for updates...",
+    "starting_engine": "Starting MetaBuilder Engine...",
+    "loading_ui": "Loading interface...",
+    "ready": "Ready!"
   }
 }

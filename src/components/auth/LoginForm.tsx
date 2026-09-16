@@ -220,7 +220,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           } else {
             // Mostra o card "Retomando sessão" antes de redirecionar
             setResumingSession({
-              name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuário',
+              name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || t('auth.login.default_user', 'Usuário'),
               email: user.email || '',
               avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
             })
@@ -619,7 +619,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight mb-1">
             MetaBuilder <span className="text-indigo-600">PRO</span>
           </h2>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm">Retomando sua sessão...</p>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+            {t('auth.login.resuming_session', 'Retomando sua sessão...')}
+          </p>
         </div>
 
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-xl p-8 flex flex-col items-center gap-5">
@@ -652,7 +654,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
             <div className="flex items-center justify-between text-xs text-neutral-400 mb-1">
               <span className="flex items-center gap-1.5">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-                Verificando permissões e redirecionando...
+                {t('auth.login.verifying_permissions', 'Verificando permissões e redirecionando...')}
               </span>
             </div>
             <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
@@ -669,7 +671,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
             }}
             className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors underline underline-offset-2"
           >
-            Não sou eu — entrar como outro usuário
+            {t('auth.login.not_me_switch_user', 'Não sou eu — entrar como outro usuário')}
           </button>
         </div>
 
