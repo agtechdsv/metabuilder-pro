@@ -129,7 +129,7 @@ export function InternalBrowser({
           }
         })
         unlistenTauri = unlisten
-      } catch (_) {}
+      } catch (_) { }
     }
     setupTauri()
 
@@ -153,13 +153,13 @@ export function InternalBrowser({
     if (activeTab?.url && activeTab.url.startsWith('http')) {
       try {
         return new URL(activeTab.url).origin
-      } catch (_) {}
+      } catch (_) { }
     }
     const firstWithUrl = tabs.find(t => t.url && t.url.startsWith('http'))
     if (firstWithUrl) {
       try {
         return new URL(firstWithUrl.url).origin
-      } catch (_) {}
+      } catch (_) { }
     }
     if (typeof window !== 'undefined') {
       return window.location.origin
@@ -176,8 +176,8 @@ export function InternalBrowser({
 
       if (isWindow) {
         import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-          getCurrentWebviewWindow().setTitle(docTitle).catch(() => {})
-        }).catch(() => {})
+          getCurrentWebviewWindow().setTitle(docTitle).catch(() => { })
+        }).catch(() => { })
       }
     }
   }, [activeTab, isWindow])
@@ -219,12 +219,12 @@ export function InternalBrowser({
       setTabs(prev => prev.map(t =>
         t.id === tabId
           ? {
-              ...t,
-              url: targetUrl,
-              displayUrl: targetUrl,
-              title: targetTitle,
-              isSelecting: false,
-            }
+            ...t,
+            url: targetUrl,
+            displayUrl: targetUrl,
+            title: targetTitle,
+            isSelecting: false,
+          }
           : t
       ))
       setLoadingTabs(prev => new Set([...prev, tabId]))
@@ -239,7 +239,7 @@ export function InternalBrowser({
         setActiveTabId(null)
         if (isWindow) {
           import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-            getCurrentWebviewWindow().close().catch(() => {})
+            getCurrentWebviewWindow().close().catch(() => { })
           }).catch(() => {
             onClose?.()
           })
@@ -308,7 +308,7 @@ export function InternalBrowser({
     iframeRefs.current = {}
     if (isWindow) {
       import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-        getCurrentWebviewWindow().close().catch(() => {})
+        getCurrentWebviewWindow().close().catch(() => { })
       }).catch(() => {
         onClose?.()
       })
@@ -336,8 +336,8 @@ export function InternalBrowser({
         return
       }
 
-      // 3. Fechar aba ativa com Ctrl + W
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+      // 3. Fechar aba ativa com Ctrl + W ou Ctrl + F4
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'w' || e.key === 'F4' || e.key.toLowerCase() === 'f4')) {
         if (activeTabId) {
           e.preventDefault()
           closeTabById(activeTabId)
@@ -346,13 +346,13 @@ export function InternalBrowser({
       }
 
       // 4. Navegação sequencial entre abas
-      // Esquerda: Ctrl + Shift + Tab ou Ctrl + PageDown
-      const isNavLeft = (e.ctrlKey && e.shiftKey && e.key === 'Tab') || 
-                        (e.ctrlKey && e.key === 'PageDown')
+      // Esquerda: Ctrl + Shift + Tab ou Ctrl + PageUp
+      const isNavLeft = (e.ctrlKey && e.shiftKey && e.key === 'Tab') ||
+        (e.ctrlKey && e.key === 'PageUp')
 
-      // Direita: Ctrl + Tab (sem Shift) ou Ctrl + PageUp
-      const isNavRight = (e.ctrlKey && !e.shiftKey && e.key === 'Tab') || 
-                         (e.ctrlKey && e.key === 'PageUp')
+      // Direita: Ctrl + Tab (sem Shift) ou Ctrl + PageDown
+      const isNavRight = (e.ctrlKey && !e.shiftKey && e.key === 'Tab') ||
+        (e.ctrlKey && e.key === 'PageDown')
 
       if (isNavLeft || isNavRight) {
         e.preventDefault()
@@ -493,8 +493,8 @@ export function InternalBrowser({
                 }}
                 className={`
                   group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-colors border border-b-0 cursor-pointer
-                  ${isActive 
-                    ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm' 
+                  ${isActive
+                    ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm'
                     : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
                   }
                 `}
@@ -543,7 +543,7 @@ export function InternalBrowser({
                   </span>
                 )}
 
-                <div 
+                <div
                   onClick={(e) => closeTab(e, tab.id)}
                   className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700/50 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Fechar Aba"
@@ -568,9 +568,9 @@ export function InternalBrowser({
         <div className="flex items-center justify-end gap-1 pb-1.5 ml-auto shrink-0 w-[240px]">
           {!isWindow && (
             <div className="flex bg-black/40 rounded-lg p-1 border border-neutral-800/50 gap-1 mr-2">
-              <button 
+              <button
                 onClick={() => setIsMinimized(true)}
-                className="px-3 py-1 rounded-md text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all flex items-center gap-2 text-xs font-bold" 
+                className="px-3 py-1 rounded-md text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all flex items-center gap-2 text-xs font-bold"
                 title="Alternar para a IDE (Manter aberto em segundo plano)"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
@@ -579,9 +579,9 @@ export function InternalBrowser({
             </div>
           )}
 
-          <button 
-            onClick={closeAllTabs} 
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-red-500/80 text-neutral-300 hover:text-white transition-colors" 
+          <button
+            onClick={closeAllTabs}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-red-500/80 text-neutral-300 hover:text-white transition-colors"
             title={isWindow ? "Fechar Janela" : "Fechar Todas as Abas"}
           >
             <X className="w-4 h-4" />
@@ -614,32 +614,32 @@ export function InternalBrowser({
       {/* Navbar da Aba Ativa (Browser Style com URL protegida somente leitura) */}
       <div className="h-12 bg-neutral-900 border-b border-neutral-800 flex items-center px-4 shrink-0 gap-4">
         <div className="flex items-center gap-1">
-          <button 
-            onClick={handleBack} 
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all" 
+          <button
+            onClick={handleBack}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all"
             title="Voltar"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
         </div>
-        
+
         <div className="flex-1 flex justify-center">
           <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 pl-3 pr-1 py-1 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono transition-colors">
             <span title="URL protegida" className="flex items-center">
               <Lock className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
             </span>
             <span className="text-neutral-500 text-[11px] select-none font-sans font-bold">URL</span>
-            <input 
+            <input
               type="text"
               readOnly
               value={urlInput}
               className="bg-transparent border-none outline-none w-full text-xs font-mono text-neutral-300 cursor-default select-all"
               title="URL do Navegador Interno (somente leitura)"
             />
-            <button 
+            <button
               type="button"
-              onClick={handleRefresh} 
-              className="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all shrink-0" 
+              onClick={handleRefresh}
+              className="w-7 h-7 flex items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all shrink-0"
               title="Atualizar Aba"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -648,16 +648,16 @@ export function InternalBrowser({
         </div>
 
         <div className="flex items-center gap-1">
-          <button 
-            onClick={handleOpenDevTools} 
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-neutral-800 transition-colors" 
+          <button
+            onClick={handleOpenDevTools}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-neutral-800 transition-colors"
             title="Inspecionar Elemento (DevTools)"
           >
             <Terminal className="w-4 h-4" />
           </button>
-          <button 
-            onClick={handleOpenExternal} 
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-800 transition-colors" 
+          <button
+            onClick={handleOpenExternal}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-400 hover:bg-neutral-800 transition-colors"
             title="Abrir no Navegador Externo"
           >
             <ExternalLink className="w-4 h-4" />
@@ -743,7 +743,7 @@ export function InternalBrowser({
                   <span className="text-sm font-medium text-indigo-400 animate-pulse">Carregando aplicação...</span>
                 </div>
               )}
-              <iframe 
+              <iframe
                 ref={el => { iframeRefs.current[tab.id] = el }}
                 src={tab.url}
                 onLoad={() => handleIframeLoad(tab.id)}
