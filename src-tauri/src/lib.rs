@@ -100,6 +100,9 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
         }
     }
 
+    let saved_lang = read_saved_language();
+    args.push(format!("--lang={}", saved_lang));
+
     let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
 
@@ -645,6 +648,9 @@ async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>) -> Resul
             args.push(format!("--log-dir={}", logs_str));
         }
     }
+
+    let saved_lang = read_saved_language();
+    args.push(format!("--lang={}", saved_lang));
 
     let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
     let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;

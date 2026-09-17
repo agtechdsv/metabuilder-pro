@@ -5,6 +5,7 @@ import { X, Trash2, Copy } from 'lucide-react'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { translateTunnelLog } from '@/utils/tunnelLogTranslator'
 
 interface TunnelLogConsoleModalProps {
   isOpen: boolean
@@ -17,7 +18,7 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
   const [isLoading, setIsLoading] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
 
   // Scroll para o fim quando chegam novos logs
   useEffect(() => {
@@ -121,7 +122,8 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
 
   const handleCopyAll = () => {
     if (logs.length > 0) {
-      navigator.clipboard.writeText(logs.join('\n'))
+      const translatedLogs = logs.map(l => translateTunnelLog(l, language))
+      navigator.clipboard.writeText(translatedLogs.join('\n'))
       toast(t('tunnel_log.copied_all', 'Todos os logs copiados!'), 'success')
     }
   }
@@ -224,22 +226,25 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
             ) : logs.length === 0 ? (
               <div className="text-neutral-500">{t('tunnel_log.empty', 'Nenhum log registrado.')}</div>
             ) : (
-              logs.map((log, i) => (
-                <div
-                  key={i}
-                  className={`mb-1 ${
-                    log.includes('ERROR') || log.includes('ERRO') || log.includes('FALHA')
-                      ? 'text-red-400'
-                      : log.includes('sucesso') || log.includes('OK')
-                      ? 'text-green-400'
-                      : log.includes('DEBUG')
-                      ? 'text-yellow-400'
-                      : 'text-neutral-300'
-                  }`}
-                >
-                  {log}
-                </div>
-              ))
+              logs.map((log, i) => {
+                const translated = translateTunnelLog(log, language)
+                return (
+                  <div
+                    key={i}
+                    className={`mb-1 ${
+                      translated.includes('ERROR') || translated.includes('ERRO') || translated.includes('FALHA') || translated.includes('FAILED')
+                        ? 'text-red-400'
+                        : translated.includes('sucesso') || translated.includes('successfully') || translated.includes('éxito') || translated.includes('OK')
+                        ? 'text-green-400'
+                        : translated.includes('DEBUG')
+                        ? 'text-yellow-400'
+                        : 'text-neutral-300'
+                    }`}
+                  >
+                    {translated}
+                  </div>
+                )
+              })
             )
           }
           <div ref={logsEndRef} />

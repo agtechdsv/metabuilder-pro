@@ -383,6 +383,14 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 if (isTauri()) {
                   try {
                     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+                    const existing = await WebviewWindow.getByLabel('tunnel-logs')
+                    if (existing) {
+                      await existing.unminimize().catch(() => {})
+                      await existing.show().catch(() => {})
+                      await existing.setFocus().catch(() => {})
+                      return
+                    }
+
                     const logWindow = new WebviewWindow('tunnel-logs', {
                       url: '/tunnel-logs',
                       title: 'Tunnel Logs - MetaBuilder PRO',
@@ -391,9 +399,16 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                       center: true,
                       decorations: true,
                     })
-                    logWindow.once('tauri://error', (e) => {
+                    logWindow.once('tauri://error', async (e) => {
                       console.error('Error creating log window', e)
-                      setIsLogModalOpen(true)
+                      const w = await WebviewWindow.getByLabel('tunnel-logs')
+                      if (w) {
+                        await w.unminimize().catch(() => {})
+                        await w.show().catch(() => {})
+                        await w.setFocus().catch(() => {})
+                      } else {
+                        setIsLogModalOpen(true)
+                      }
                     })
                   } catch (e) {
                     setIsLogModalOpen(true)
