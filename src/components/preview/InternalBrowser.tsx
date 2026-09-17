@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft } from 'lucide-react'
+import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 
 export interface PreviewTab {
@@ -11,6 +11,7 @@ export interface PreviewTab {
   url: string
   displayUrl: string
   title: string
+  isSelecting?: boolean
 }
 
 interface InternalBrowserProps {
@@ -18,6 +19,19 @@ interface InternalBrowserProps {
   initialUrl?: string
   initialTitle?: string
   onClose?: () => void
+}
+
+interface WorkspaceTarget {
+  id: string
+  name: string
+  slug: string
+  has_portal_project: boolean
+  projects: Array<{
+    id: string
+    name: string
+    slug: string
+    show_in_portal: boolean
+  }>
 }
 
 export function InternalBrowser({
@@ -37,7 +51,8 @@ export function InternalBrowser({
         id: tabId,
         url: initialUrl,
         displayUrl: initialUrl,
-        title: initialTitle
+        title: initialTitle,
+        isSelecting: false,
       }]
     }
     return []
@@ -51,9 +66,22 @@ export function InternalBrowser({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null)
   const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set(tabs[0]?.id ? [tabs[0].id] : []))
   const [urlInput, setUrlInput] = useState('')
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceTarget[]>([])
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({})
   const { toast } = useToast()
+
+  // Fetch available workspaces and projects for the tab selection combo
+  useEffect(() => {
+    fetch('/api/preview/targets')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.workspaces)) {
+          setAvailableWorkspaces(data.workspaces)
+        }
+      })
+      .catch(err => console.error('Error fetching preview targets:', err))
+  }, [])
 
   const openNewTab = (targetUrl: string, targetTitle: string) => {
     if (!targetUrl) return
@@ -72,7 +100,8 @@ export function InternalBrowser({
         id: newTabId,
         url: targetUrl,
         displayUrl: targetUrl,
-        title: targetTitle
+        title: targetTitle,
+        isSelecting: false,
       }]
     })
     setIsMinimized(false)
@@ -80,7 +109,6 @@ export function InternalBrowser({
 
   // Cross-window and Tauri communication
   useEffect(() => {
-    // 1. BroadcastChannel (fast, same-origin)
     let bc: BroadcastChannel | null = null
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       bc = new BroadcastChannel('metabuilder-preview-channel')
@@ -91,7 +119,6 @@ export function InternalBrowser({
       }
     }
 
-    // 2. Tauri Event Listener
     let unlistenTauri: (() => void) | null = null
     const setupTauri = async () => {
       try {
@@ -121,12 +148,31 @@ export function InternalBrowser({
 
   const activeTab = tabs.find(t => t.id === activeTabId)
 
+  // Compute active base origin (e.g. https://www.metabuilderpro.com or window.location.origin)
+  const getBaseOrigin = () => {
+    if (activeTab?.url && activeTab.url.startsWith('http')) {
+      try {
+        return new URL(activeTab.url).origin
+      } catch (_) {}
+    }
+    const firstWithUrl = tabs.find(t => t.url && t.url.startsWith('http'))
+    if (firstWithUrl) {
+      try {
+        return new URL(firstWithUrl.url).origin
+      } catch (_) {}
+    }
+    if (typeof window !== 'undefined') {
+      return window.location.origin
+    }
+    return 'https://www.metabuilderpro.com'
+  }
+
   // Sync window / document title
   useEffect(() => {
     if (activeTab) {
       const docTitle = `${activeTab.title} - MetaBuilder PRO`
       document.title = docTitle
-      setUrlInput(activeTab.displayUrl || activeTab.url)
+      setUrlInput(activeTab.displayUrl || activeTab.url || '')
 
       if (isWindow) {
         import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
@@ -135,6 +181,56 @@ export function InternalBrowser({
       }
     }
   }, [activeTab, isWindow])
+
+  const handleAddNewTab = () => {
+    const newTabId = Math.random().toString(36).substring(7)
+    setTabs(prev => [...prev, {
+      id: newTabId,
+      url: '',
+      displayUrl: '',
+      title: 'Nova Aba',
+      isSelecting: true,
+    }])
+    setActiveTabId(newTabId)
+  }
+
+  const handleSelectTarget = (tabId: string, value: string) => {
+    if (!value) return
+    const baseOrigin = getBaseOrigin()
+    const parts = value.split(':')
+    const type = parts[0]
+    let targetUrl = ''
+    let targetTitle = ''
+
+    if (type === 'portal') {
+      const wsSlug = parts[1]
+      const wsName = parts.slice(2).join(':')
+      targetUrl = `${baseOrigin}/${wsSlug}`
+      targetTitle = `Portal: ${wsName}`
+    } else if (type === 'project') {
+      const wsSlug = parts[1]
+      const projSlug = parts[2]
+      const projName = parts.slice(3).join(':')
+      targetUrl = `${baseOrigin}/${wsSlug}/${projSlug}`
+      targetTitle = `Projeto: ${projName}`
+    }
+
+    if (targetUrl) {
+      setTabs(prev => prev.map(t =>
+        t.id === tabId
+          ? {
+              ...t,
+              url: targetUrl,
+              displayUrl: targetUrl,
+              title: targetTitle,
+              isSelecting: false,
+            }
+          : t
+      ))
+      setLoadingTabs(prev => new Set([...prev, tabId]))
+      setUrlInput(targetUrl)
+    }
+  }
 
   const closeTabById = (id: string) => {
     setTabs(prev => {
@@ -233,9 +329,9 @@ export function InternalBrowser({
   const handleRefresh = () => {
     if (activeTabId && iframeRefs.current[activeTabId]) {
       const iframe = iframeRefs.current[activeTabId]
-      if (iframe) {
+      if (iframe && activeTab?.url) {
         setLoadingTabs(prev => new Set([...prev, activeTabId]))
-        const currentSrc = iframe.src
+        const currentSrc = iframe.src || activeTab.url
         iframe.src = 'about:blank'
         setTimeout(() => {
           if (iframe) iframe.src = currentSrc
@@ -273,7 +369,7 @@ export function InternalBrowser({
   }
 
   const handleOpenExternal = () => {
-    if (!activeTab) return
+    if (!activeTab || !activeTab.url) return
     import('@tauri-apps/plugin-shell').then(({ open }) => {
       open(activeTab.displayUrl || activeTab.url)
     }).catch(() => {
@@ -290,30 +386,29 @@ export function InternalBrowser({
     }
   }
 
-  const handleNavigateUrl = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!activeTabId || !urlInput.trim()) return
-    const iframe = iframeRefs.current[activeTabId]
-    if (iframe) {
-      setLoadingTabs(prev => new Set([...prev, activeTabId]))
-      iframe.src = urlInput.trim()
-    }
-  }
-
   if (tabs.length === 0) {
     return (
       <div className="w-full h-full min-h-screen flex flex-col items-center justify-center bg-neutral-900 text-neutral-400 gap-4 p-8">
         <AppWindow className="w-12 h-12 text-neutral-600" />
         <h2 className="text-lg font-bold text-neutral-300">Nenhuma aba aberta no navegador interno</h2>
-        <p className="text-sm text-neutral-500">Selecione uma aplicação ou caso de uso na IDE para visualizar aqui.</p>
-        {isWindow && (
+        <p className="text-sm text-neutral-500">Adicione uma nova aba ou selecione um caso de uso na IDE.</p>
+        <div className="flex items-center gap-3 mt-4">
           <button
-            onClick={closeAllTabs}
-            className="mt-4 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold rounded-xl transition-all"
+            onClick={handleAddNewTab}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/30"
           >
-            Fechar Janela
+            <Plus className="w-4 h-4" />
+            Nova Aba
           </button>
-        )}
+          {isWindow && (
+            <button
+              onClick={closeAllTabs}
+              className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold rounded-xl transition-all"
+            >
+              Fechar Janela
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -323,41 +418,93 @@ export function InternalBrowser({
       {/* Header Superior com as Abas */}
       <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-end pt-2 px-2 shrink-0 shadow-lg relative">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-[calc(100%-250px)]">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTabId(tab.id)}
-              onMouseDown={(e) => {
-                if (e.button === 1) {
+          {tabs.map(tab => {
+            const isActive = activeTabId === tab.id
+            return (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTabId(tab.id)}
+                onMouseDown={(e) => {
+                  if (e.button === 1) {
+                    e.preventDefault()
+                    closeTab(e, tab.id)
+                  }
+                }}
+                onContextMenu={(e) => {
                   e.preventDefault()
-                  closeTab(e, tab.id)
-                }
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
-              }}
-              className={`
-                group relative flex items-center gap-2 min-w-[140px] max-w-[220px] h-9 px-3 rounded-t-lg transition-colors border border-b-0
-                ${activeTabId === tab.id 
-                  ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm' 
-                  : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
-                }
-              `}
-            >
-              <AppWindow className={`w-3.5 h-3.5 shrink-0 ${activeTabId === tab.id ? 'text-indigo-400' : 'text-neutral-500'}`} />
-              <span className="text-xs truncate flex-1 text-left">
-                {tab.title}
-              </span>
-              <div 
-                onClick={(e) => closeTab(e, tab.id)}
-                className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700/50 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Fechar Aba"
+                  setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
+                }}
+                className={`
+                  group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-colors border border-b-0 cursor-pointer
+                  ${isActive 
+                    ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm' 
+                    : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
+                  }
+                `}
               >
-                <X className="w-3 h-3" />
+                {/* Bolinha na aba ativa */}
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.9)] shrink-0 animate-pulse" />
+                )}
+
+                <AppWindow className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : 'text-neutral-500'}`} />
+
+                {/* Nome da aba ou Combo de Seleção de Workspace/Projetos */}
+                {tab.isSelecting ? (
+                  <select
+                    autoFocus
+                    value=""
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleSelectTarget(tab.id, e.target.value)}
+                    className="bg-neutral-800 text-neutral-200 text-xs font-semibold rounded px-2 py-0.5 border border-indigo-500/60 outline-none cursor-pointer flex-1 truncate max-w-[180px]"
+                  >
+                    <option value="" disabled>Selecione...</option>
+                    {availableWorkspaces.map(ws => (
+                      <React.Fragment key={ws.id}>
+                        {ws.has_portal_project && (
+                          <optgroup label="Workspace (Portal)">
+                            <option value={`portal:${ws.slug}:${ws.name}`}>
+                              {ws.name}
+                            </option>
+                          </optgroup>
+                        )}
+                        {ws.projects.length > 0 && (
+                          <optgroup label="Projetos">
+                            {ws.projects.map((proj: any) => (
+                              <option key={proj.id} value={`project:${ws.slug}:${proj.slug}:${proj.name}`}>
+                                {proj.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs truncate flex-1 text-left">
+                    {tab.title}
+                  </span>
+                )}
+
+                <div 
+                  onClick={(e) => closeTab(e, tab.id)}
+                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700/50 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Fechar Aba"
+                >
+                  <X className="w-3 h-3" />
+                </div>
               </div>
-            </button>
-          ))}
+            )
+          })}
+
+          {/* Botão + para adicionar nova aba */}
+          <button
+            onClick={handleAddNewTab}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/80 transition-colors shrink-0 mb-0.5 ml-1"
+            title="Nova Aba (Adicionar Workspace ou Projeto)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Top Right Actions */}
@@ -407,7 +554,7 @@ export function InternalBrowser({
         )}
       </AnimatePresence>
 
-      {/* Navbar da Aba Ativa (Browser Style) */}
+      {/* Navbar da Aba Ativa (Browser Style com URL protegida somente leitura) */}
       <div className="h-12 bg-neutral-900 border-b border-neutral-800 flex items-center px-4 shrink-0 gap-4">
         <div className="flex items-center gap-1">
           <button 
@@ -419,15 +566,18 @@ export function InternalBrowser({
           </button>
         </div>
         
-        <form onSubmit={handleNavigateUrl} className="flex-1 flex justify-center">
-          <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 pl-4 pr-1 py-1 rounded-full w-full max-w-2xl text-xs text-neutral-300 font-mono transition-colors focus-within:border-indigo-500/50">
-            <span className="text-neutral-500 text-[11px] select-none">URL</span>
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-2 bg-[#1a1b1e] border border-neutral-800 pl-3 pr-1 py-1 rounded-full w-full max-w-2xl text-xs text-neutral-400 font-mono transition-colors">
+            <span title="URL protegida" className="flex items-center">
+              <Lock className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+            </span>
+            <span className="text-neutral-500 text-[11px] select-none font-sans font-bold">URL</span>
             <input 
               type="text"
+              readOnly
               value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              className="bg-transparent border-none outline-none w-full text-xs font-mono text-neutral-200 placeholder-neutral-500"
-              placeholder="Digite a URL..."
+              className="bg-transparent border-none outline-none w-full text-xs font-mono text-neutral-300 cursor-default select-all"
+              title="URL do Navegador Interno (somente leitura)"
             />
             <button 
               type="button"
@@ -438,7 +588,7 @@ export function InternalBrowser({
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </div>
-        </form>
+        </div>
 
         <div className="flex items-center gap-1">
           <button 
@@ -458,30 +608,95 @@ export function InternalBrowser({
         </div>
       </div>
 
-      {/* Area dos Iframes */}
+      {/* Area dos Iframes e Seleção de Aplicação */}
       <div className="flex-1 bg-white relative">
-        {tabs.map(tab => (
-          <div
-            key={tab.id}
-            className={`w-full h-full absolute inset-0 ${activeTabId === tab.id ? 'z-10' : 'z-0 pointer-events-none'}`}
-          >
-            {/* Loading overlay */}
-            {loadingTabs.has(tab.id) && activeTabId === tab.id && (
-              <div className="absolute inset-0 z-20 bg-neutral-900 flex flex-col items-center justify-center gap-4">
-                <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-                <span className="text-sm font-medium text-indigo-400 animate-pulse">Carregando aplicação...</span>
+        {tabs.map(tab => {
+          const isTabActive = activeTabId === tab.id
+
+          // Se a aba ainda estiver em modo de seleção (sem URL definida)
+          if (tab.isSelecting || !tab.url) {
+            return (
+              <div
+                key={tab.id}
+                className={`w-full h-full absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-8 text-neutral-300 overflow-y-auto ${isTabActive ? 'z-10' : 'z-0 pointer-events-none opacity-0'}`}
+              >
+                <div className="max-w-2xl w-full text-center space-y-6">
+                  <div>
+                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20 text-[11px] font-bold text-indigo-400 uppercase tracking-wider mb-2">
+                      Nova Aba
+                    </span>
+                    <h2 className="text-2xl font-black text-white">Escolha o que deseja abrir</h2>
+                    <p className="text-sm text-neutral-400 mt-1">Selecione o Portal do Workspace ou um Projeto específico abaixo:</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                    {availableWorkspaces.map(ws => (
+                      <React.Fragment key={ws.id}>
+                        {ws.has_portal_project && (
+                          <div
+                            onClick={() => handleSelectTarget(tab.id, `portal:${ws.slug}:${ws.name}`)}
+                            className="bg-[#1a1b1e] hover:bg-[#25272c] border border-neutral-800 hover:border-indigo-500/50 rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] shadow-lg group"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-3 group-hover:bg-indigo-500/20 transition-colors">
+                              <Building2 className="w-5 h-5" />
+                            </div>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-400">Portal de Aplicações</span>
+                            <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{ws.name}</h3>
+                            <p className="text-xs text-neutral-500 mt-1">Acesso unificado aos projetos configurados no portal</p>
+                          </div>
+                        )}
+
+                        {ws.projects.map(proj => (
+                          <div
+                            key={proj.id}
+                            onClick={() => handleSelectTarget(tab.id, `project:${ws.slug}:${proj.slug}:${proj.name}`)}
+                            className="bg-[#1a1b1e] hover:bg-[#25272c] border border-neutral-800 hover:border-indigo-500/50 rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] shadow-lg group"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-300 mb-3 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-colors">
+                              <FolderKanban className="w-5 h-5" />
+                            </div>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Projeto ({ws.name})</span>
+                            <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{proj.name}</h3>
+                            <p className="text-xs text-neutral-500 mt-1">/{ws.slug}/{proj.slug}</p>
+                          </div>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {availableWorkspaces.length === 0 && (
+                    <div className="py-8 text-neutral-500 text-sm animate-pulse">
+                      Carregando opções disponíveis...
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            <iframe 
-              ref={el => { iframeRefs.current[tab.id] = el }}
-              src={tab.url}
-              onLoad={() => handleIframeLoad(tab.id)}
-              className={`w-full h-full border-none bg-white ${activeTabId === tab.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        ))}
+            )
+          }
+
+          return (
+            <div
+              key={tab.id}
+              className={`w-full h-full absolute inset-0 ${isTabActive ? 'z-10' : 'z-0 pointer-events-none'}`}
+            >
+              {/* Loading overlay */}
+              {loadingTabs.has(tab.id) && isTabActive && (
+                <div className="absolute inset-0 z-20 bg-neutral-900 flex flex-col items-center justify-center gap-4">
+                  <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+                  <span className="text-sm font-medium text-indigo-400 animate-pulse">Carregando aplicação...</span>
+                </div>
+              )}
+              <iframe 
+                ref={el => { iframeRefs.current[tab.id] = el }}
+                src={tab.url}
+                onLoad={() => handleIframeLoad(tab.id)}
+                className={`w-full h-full border-none bg-white ${isTabActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          )
+        })}
       </div>
     </div>
   )

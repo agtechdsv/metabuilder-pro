@@ -103,9 +103,14 @@ const patterns: LogPattern[] = [
     es: (m) => `[ SQL ] Ejecutando Acción Personalizada: ${m[1]}`,
   },
   {
-    regex: /\[\s*OK\s*\]\s*LOGIN:\s*Usu[áa]rio "(.*?)" autenticado com sucesso\./i,
-    en: (m) => `[ OK ] LOGIN: User "${m[1]}" authenticated successfully.`,
-    es: (m) => `[ OK ] LOGIN: Usuario "${m[1]}" autenticado con éxito.`,
+    regex: /\[\s*OK\s*\]\s*LOGIN:\s*Usu[áa]rio\s*['"]?(.*?)['"]?\s*autenticado com sucesso\.?/i,
+    en: (m) => `[ OK ] LOGIN: User '${m[1]}' authenticated successfully.`,
+    es: (m) => `[ OK ] LOGIN: Usuario '${m[1]}' autenticado con éxito.`,
+  },
+  {
+    regex: /\[\s*CLI\s*\]\s*Encerrado com c[óo]digo\s*(.*)/i,
+    en: (m) => `[CLI] Exited with code ${m[1]}`,
+    es: (m) => `[CLI] Finalizado con código ${m[1]}`,
   },
   {
     regex: /\[\s*OK\s*\]\s*CUSTOM ACTION executada\./i,
