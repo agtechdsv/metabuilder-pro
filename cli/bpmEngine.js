@@ -3,6 +3,7 @@ const axios = require('axios');
 const oracledb = require('oracledb');
 const cron = require('node-cron');
 const { wrapEmailInTemplate } = require('./emailTemplates');
+const { t } = require('./i18n');
 
 class BpmEngine {
   constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl) {
@@ -18,7 +19,7 @@ class BpmEngine {
   }
 
   async init() {
-    console.log(chalk.blue('\n[BPM] Inicializando motor de automações...'));
+    console.log(chalk.blue('\n' + t('bpm_init')));
     await this.syncWorkflows();
     await this.syncModels();
 
@@ -29,13 +30,13 @@ class BpmEngine {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'bpm_workflows', filter: `project_id=eq.${this.project.id}` },
         () => {
-          console.log(chalk.yellow('\n[BPM] Mudança detectada nos fluxos. Sincronizando...'));
+          console.log(chalk.yellow('\n' + t('bpm_flows_changed')));
           this.syncWorkflows();
         }
       )
       .subscribe();
       
-    console.log(chalk.green(`[BPM] Motor rodando. Escutando ${this.workflows.length} fluxos ativos.\n`));
+    console.log(chalk.green(t('bpm_running', { count: this.workflows.length }) + '\n'));
   }
 
   async syncWorkflows() {
@@ -58,7 +59,7 @@ class BpmEngine {
       }
     }
     this.scheduledJobs = [];
-    console.log(chalk.gray(`[BPM] Todos os agendamentos antigos foram limpos.`));
+    console.log(chalk.gray(t('bpm_schedules_cleared')));
   }
 
   initScheduledJobs() {
@@ -133,7 +134,7 @@ class BpmEngine {
        console.error(chalk.red('[BPM-DEBUG] Erro ao sincronizar models:'), error);
     }
     this.models = data || [];
-    console.log(chalk.gray(`[BPM-DEBUG] syncModels carregou ${this.models.length} modelos para o projeto ${this.project.id}`));
+    console.log(chalk.gray(t('bpm_models_loaded', { count: this.models.length, projectId: this.project.id })));
   }
 
   async getModelTable(modelId) {

@@ -14,7 +14,15 @@
     "empty": "Nenhum log registrado.",
     "copied_selection": "Seleção copiada!",
     "copied_all": "Todos os logs copiados para a área de transferência.",
-    "copy_all_button": "Copiar Tudo"
+    "copy_all_button": "Copiar Tudo",
+    "type_tunnel": "Túnel",
+    "type_sync": "Sincronização",
+    "select_date": "Data",
+    "today_btn": "Hoje",
+    "today_tooltip": "Voltar para hoje (tempo real)",
+    "live": "Tempo Real",
+    "reload": "Recarregar",
+    "no_logs_date": "Nenhum arquivo de log encontrado para {type} na data {date}."
   },
   "agtech": {
     "title": "A engenharia por trás do MetaBuilderPRO",
@@ -3642,6 +3650,8 @@
       "status_loading": "Verificando...",
       "start_tunnel": "Iniciar Túnel",
       "stop_tunnel": "Parar Túnel",
+      "view_tunnel_logs": "Ver Logs do Túnel",
+      "logs_btn": "Logs",
       "global_sync_title": "Sincronização Global (Introspecção)",
       "global_sync_desc": "Força a leitura da estrutura de todos os bancos de dados configurados no 'metabuilder.config.json' ativo na máquina. Não afeta a execução do túnel.",
       "trigger_sync": "Disparar Sincronização Geral",

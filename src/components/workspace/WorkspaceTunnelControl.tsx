@@ -281,6 +281,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
           await invoke('startcli', {
             mode: mode || 1,
             configPath: configPath,
+            lang: language,
           })
           toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success')
         }
@@ -444,9 +445,9 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                 }
               }}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 shrink-0"
-              title="Ver Logs do Túnel"
+              title={t('workspace_components.tunnel_control.view_tunnel_logs', 'Ver Logs do Túnel')}
             >
-              Logs
+              {t('workspace_components.tunnel_control.logs_btn', 'Logs')}
             </button>
           </div>
         </div>

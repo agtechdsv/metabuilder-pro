@@ -34,7 +34,7 @@ oracledb.fetchAsString = [ oracledb.CLOB ];
 const { BpmEngine } = require('./bpmEngine');
 const logger = require('./logger');
 const { cliDbLogger } = require('./cliDbLogger');
-const { t, setLanguage, detectLanguage } = require('./i18n');
+const { t, setLanguage, detectLanguage, getLanguage } = require('./i18n');
 
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
@@ -234,7 +234,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   let pgClient = null;
   let oracleConnection = null;
   let isDbConnected = false;
-  console.log(chalk.blue(`\nConectando ao banco de dados local para o túnel (${dbType})...`));
+  console.log(chalk.blue('\n' + t('tunnel_connecting_db', { dbType })));
 
   try {
     if (dbType === 'oracle') {
@@ -259,10 +259,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       isDbConnected = true;
     }
     
-    console.log(chalk.green(`✓ Conexão contínua estabelecida com sucesso! (${connectionName || 'public'})`));
+    console.log(chalk.green(t('tunnel_conn_established', { name: connectionName || 'public' })));
   } catch (connErr) {
-    console.error(chalk.red.bold(`❌ [FALHA DE CONEXÃO] Não foi possível conectar ao banco '${connectionName || 'public'}' (${dbType}):`), connErr.message);
-    console.log(chalk.yellow(`⚠️ O túnel permanecerá ativo para atender e reportar erros deste banco, e os demais bancos continuam operando normalmente!`));
+    console.error(chalk.red.bold(t('tunnel_conn_failed', { name: connectionName || 'public', dbType })), connErr.message);
+    console.log(chalk.yellow(t('tunnel_conn_warning')));
   }
 
   // Inicializa o logger de banco (lê log_config do Supabase)
@@ -294,8 +294,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   const channelName = `tunnel:${projectId}`;
   const channel = wrapChannelWithChunking(supabase.channel(channelName));
 
-  console.log(chalk.cyan(`\n🎧 Agente MetaBuilderPRO ouvindo ativamente comandos no canal: ${channelName}...`));
-  console.log(chalk.gray(`(Pressione Ctrl+C para encerrar o túnel)`));
+  console.log(chalk.cyan('\n' + t('tunnel_agent_listening', { channel: channelName })));
+  console.log(chalk.gray(t('tunnel_press_ctrl_c')));
 
   channel
     .on('broadcast', { event: 'sql_query' }, async (payload) => {
@@ -1461,7 +1461,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log(chalk.green.bold('🔌 Túnel Seguro estabelecido. Tudo pronto!'));
+        console.log(chalk.green.bold(t('tunnel_ready')));
       }
     });
 }
@@ -1515,15 +1515,15 @@ async function run() {
     mode = initial.mode;
   }
 
-  // Inicializa o logger com o modo selecionado
-  logger.init(mode);
+  // Inicializa o logger com o modo selecionado e o idioma ativo
+  logger.init(mode, getLanguage());
   process.on('exit', () => logger.close());
   process.on('SIGINT', () => { logger.close(); process.exit(0); });
 
   // 3. Executa a Ação com base no ConfigFile (Gateway)
   if (configData && configData.connections && configData.connections.length > 0) {
     if (mode === 'tunnel') {
-      console.log(chalk.gray(`Iniciando Túnel para ${configData.connections.length} projeto(s) simultaneamente...`));
+      console.log(chalk.gray(t('tunnel_starting_for', { count: configData.connections.length })));
       
       const SUPABASE_URL = configData.supabaseUrl || 'https://chmstvtepzmjhpyxjjam.supabase.co';
       const SUPABASE_ANON_KEY = configData.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To';
@@ -1562,10 +1562,10 @@ async function run() {
         // chamando process.exit(0) e encerrando o túnel em segundos.
         // Em vez disso, mantemos o event loop vivo via setInterval como backup
         // (o WebSocket do Supabase Realtime também o mantém ativo durante operação normal).
-        console.log(chalk.green.bold('\n[ TÚNEL HEADLESS ] Daemon ativo. Aguardando comandos remotos...\n'));
+        console.log(chalk.green.bold('\n' + t('tunnel_headless_daemon') + '\n'));
         const _keepAlive = setInterval(() => {}, 1000 * 60 * 60); // Heartbeat de 1h
         const _shutdownHeadless = (signal) => {
-          console.log(chalk.gray(`\n[ TÚNEL ] Recebido ${signal}. Encerrando daemon...`));
+          console.log(chalk.gray('\n' + t('tunnel_shutdown', { signal }) + '\n'));
           clearInterval(_keepAlive);
           logger.close();
           process.exit(0);
@@ -1578,7 +1578,7 @@ async function run() {
           input: process.stdin,
           output: process.stdout
         });
-        rl.question(chalk.gray(`\n[ TÚNEL ATIVO ] Pressione ENTER a qualquer momento para encerrar o túnel e fechar a janela...\n`), () => {
+        rl.question(chalk.gray('\n' + t('tunnel_press_enter') + '\n'), () => {
           logger.close();
           process.exit(0);
         });

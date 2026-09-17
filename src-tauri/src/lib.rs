@@ -72,7 +72,7 @@ fn open_in_explorer(path: String) -> Result<(), String> {
 }
 
 #[command]
-fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>, config_path: Option<String>) -> Result<String, String> {
+fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>, config_path: Option<String>, lang: Option<String>) -> Result<String, String> {
     let mut child_guard = state.child.lock().unwrap();
     if child_guard.is_some() {
         return Ok("Já está rodando".to_string());
@@ -100,8 +100,8 @@ fn startcli(app: tauri::AppHandle, state: State<'_, CliState>, mode: Option<i32>
         }
     }
 
-    let saved_lang = read_saved_language();
-    args.push(format!("--lang={}", saved_lang));
+    let active_lang = lang.unwrap_or_else(|| read_saved_language());
+    args.push(format!("--lang={}", active_lang));
 
     let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
     let (mut rx, child) = sidecar_command.spawn().map_err(|e| e.to_string())?;

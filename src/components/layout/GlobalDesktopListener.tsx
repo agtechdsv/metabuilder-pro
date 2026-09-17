@@ -11,7 +11,7 @@ export function GlobalDesktopListener() {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -96,7 +96,7 @@ export function GlobalDesktopListener() {
                   const dir = await appLocalDataDir();
                   const configPath = await join(dir, 'metabuilder.config.json');
                   
-                  await invoke('startcli', { mode: 1, configPath });
+                  await invoke('startcli', { mode: 1, configPath, lang: language });
                   toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success');
                 }
               } catch (e) {

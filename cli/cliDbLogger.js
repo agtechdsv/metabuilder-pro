@@ -10,6 +10,8 @@
 
 'use strict';
 
+const { t } = require('./i18n');
+
 // Tipos de log suportados
 const LOG_TYPES = {
   SQL_SELECT: 'SQL_SELECT',
@@ -85,7 +87,7 @@ class CliDbLogger {
     this._sessionId = require('crypto').randomUUID();
 
     if (!this._logConfig.enabled) {
-      console.log('\x1b[90m[MBLog] Log de banco desativado para este projeto.\x1b[0m');
+      console.log(`\x1b[90m${t('tunnel_db_disabled')}\x1b[0m`);
       return;
     }
 
@@ -117,7 +119,7 @@ class CliDbLogger {
     this._logConfig = logConfig || this._logConfig;
     if (!this._logConfig.enabled) {
       this._ready = false;
-      console.log('\x1b[90m[MBLog] Log de banco desativado dinamicamente.\x1b[0m');
+      console.log(`\x1b[90m${t('tunnel_db_disabled_dyn')}\x1b[0m`);
     } else {
       const wasReady = this._ready;
       this._ready = true;

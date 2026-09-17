@@ -11,7 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { t, setLanguage, getLanguage } = require('./i18n');
+const { t, setLanguage, getLanguage, translateLogFallback } = require('./i18n');
 
 // Resolve a pasta raiz onde o CLI (ou o .exe compilado) está localizado.
 // process.pkg.entrypoint indica que está rodando como binário compilado.
@@ -149,7 +149,9 @@ class Logger {
 
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
     const clean = stripAnsi(text);
-    const line = `[${getTimeStr()}] [${level}] ${clean}\n`;
+    const lang = getLanguage();
+    const translated = lang === 'pt' ? clean : translateLogFallback(clean, lang);
+    const line = `[${getTimeStr()}] [${level}] ${translated}\n`;
     try {
       fs.appendFileSync(this._filepath, line, 'utf8');
     } catch (e) {}

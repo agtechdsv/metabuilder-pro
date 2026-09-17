@@ -14,7 +14,15 @@
     "empty": "No logs recorded.",
     "copied_selection": "Selection copied!",
     "copied_all": "All logs copied to clipboard.",
-    "copy_all_button": "Copy All"
+    "copy_all_button": "Copy All",
+    "type_tunnel": "Tunnel",
+    "type_sync": "Synchronization",
+    "select_date": "Date",
+    "today_btn": "Today",
+    "today_tooltip": "Back to today (real-time)",
+    "live": "Real-time",
+    "reload": "Reload",
+    "no_logs_date": "No log file found for {type} on date {date}."
   },
   "agtech": {
     "title": "The engineering behind MetaBuilderPRO",
@@ -3641,6 +3649,8 @@
       "status_loading": "Checking...",
       "start_tunnel": "Start Tunnel",
       "stop_tunnel": "Stop Tunnel",
+      "view_tunnel_logs": "View Tunnel Logs",
+      "logs_btn": "Logs",
       "global_sync_title": "Global Sync (Introspection)",
       "global_sync_desc": "Forces schema reading of all databases configured in active 'metabuilder.config.json'. Does not affect tunnel execution.",
       "trigger_sync": "Trigger Global Sync",
