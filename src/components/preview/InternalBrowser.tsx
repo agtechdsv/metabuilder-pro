@@ -317,6 +317,63 @@ export function InternalBrowser({
     }
   }
 
+  // Atalhos de teclado (fechar menu com ESC, navegar abas com Ctrl+Tab/Ctrl+Shift+Tab/Ctrl+PgDn/Ctrl+PgUp, nova aba com Ctrl+T/Ctrl+N)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Fechar Context Menu com ESC
+      if (e.key === 'Escape') {
+        if (contextMenu) {
+          e.preventDefault()
+          setContextMenu(null)
+          return
+        }
+      }
+
+      // 2. Adicionar nova aba com Ctrl + T ou Ctrl + N
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 't' || e.key.toLowerCase() === 'n')) {
+        e.preventDefault()
+        handleAddNewTab()
+        return
+      }
+
+      // 3. Fechar aba ativa com Ctrl + W
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        if (activeTabId) {
+          e.preventDefault()
+          closeTabById(activeTabId)
+          return
+        }
+      }
+
+      // 4. Navegação sequencial entre abas
+      // Esquerda: Ctrl + Shift + Tab ou Ctrl + PageDown
+      const isNavLeft = (e.ctrlKey && e.shiftKey && e.key === 'Tab') || 
+                        (e.ctrlKey && e.key === 'PageDown')
+
+      // Direita: Ctrl + Tab (sem Shift) ou Ctrl + PageUp
+      const isNavRight = (e.ctrlKey && !e.shiftKey && e.key === 'Tab') || 
+                         (e.ctrlKey && e.key === 'PageUp')
+
+      if (isNavLeft || isNavRight) {
+        e.preventDefault()
+        if (tabs.length <= 1) return
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId)
+        if (currentIndex === -1) return
+
+        if (isNavLeft) {
+          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length
+          setActiveTabId(tabs[prevIndex].id)
+        } else if (isNavRight) {
+          const nextIndex = (currentIndex + 1) % tabs.length
+          setActiveTabId(tabs[nextIndex].id)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tabs, activeTabId, contextMenu])
+
   const handleBack = () => {
     if (activeTabId && iframeRefs.current[activeTabId]) {
       const iframe = iframeRefs.current[activeTabId]
