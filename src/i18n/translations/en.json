@@ -9,8 +9,12 @@
     "error_clear_file": "Error clearing log file.",
     "title": "Tunnel Console (Logs)",
     "clear_button": "Clear Logs",
+    "clear_logs": "Clear Logs",
     "loading": "Loading logs...",
-    "empty": "No logs recorded."
+    "empty": "No logs recorded.",
+    "copied_selection": "Selection copied!",
+    "copied_all": "All logs copied to clipboard.",
+    "copy_all_button": "Copy All"
   },
   "agtech": {
     "title": "The engineering behind MetaBuilderPRO",

@@ -104,6 +104,21 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
     }
   }
 
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null)
+  const lastCopiedTextRef = useRef<string>('')
+
+  // Reseta a referência de texto copiado quando a seleção for limpa
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection()
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        lastCopiedTextRef.current = ''
+      }
+    }
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+  }, [])
+
   const handleCopyAll = () => {
     if (logs.length > 0) {
       navigator.clipboard.writeText(logs.join('\n'))
@@ -111,9 +126,36 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
     }
   }
 
-  const handleMouseUp = () => {
-    const selectedText = window.getSelection()?.toString()
-    if (selectedText && selectedText.trim().length > 0) {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY }
+  }
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    const startPos = mouseDownPosRef.current
+    mouseDownPosRef.current = null
+
+    // Distância percorrida pelo ponteiro
+    const dx = startPos ? Math.abs(e.clientX - startPos.x) : 0
+    const dy = startPos ? Math.abs(e.clientY - startPos.y) : 0
+    const isDrag = dx >= 5 || dy >= 5
+    const isMultiClick = e.detail >= 2
+
+    // Se for clique simples sem arrastar, é apenas para remover seleção anterior ou clicar na tela
+    if (!isDrag && !isMultiClick) {
+      lastCopiedTextRef.current = ''
+      return
+    }
+
+    const selection = window.getSelection()
+    if (!selection || selection.isCollapsed) {
+      lastCopiedTextRef.current = ''
+      return
+    }
+
+    const selectedText = selection.toString().trim()
+    // Só copia e notifica se houver texto selecionado e não for cópia repetida
+    if (selectedText.length > 0 && selectedText !== lastCopiedTextRef.current) {
+      lastCopiedTextRef.current = selectedText
       navigator.clipboard.writeText(selectedText)
       toast(t('tunnel_log.copied_selection', 'Seleção copiada!'), 'success')
     }
@@ -140,29 +182,9 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={async () => {
-                const selectedText = window.getSelection()?.toString()
-                if (selectedText) {
-                  await navigator.clipboard.writeText(selectedText)
-                  toast("Seleção copiada para a área de transferência.", "success")
-                } else {
-                  toast("Selecione o texto que deseja copiar primeiro.", "info")
-                }
-              }}
+              onClick={handleCopyAll}
               className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded bg-gray-800/50 hover:bg-gray-700/50"
-              title="Copiar Seleção"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-            
-            <button
-              onClick={async () => {
-                const allText = logs.join('\n')
-                await navigator.clipboard.writeText(allText)
-                toast("Todos os logs copiados para a área de transferência.", "success")
-              }}
-              className="text-gray-400 hover:text-white transition-colors flex items-center justify-center p-1.5 rounded bg-gray-800/50 hover:bg-gray-700/50"
-              title="Copiar Tudo"
+              title={t('tunnel_log.copy_all_button', 'Copiar Tudo')}
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -193,6 +215,7 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
 
         <div 
           className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px] select-text"
+          onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
         >
           {

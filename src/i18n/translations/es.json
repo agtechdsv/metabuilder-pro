@@ -9,8 +9,12 @@
     "error_clear_file": "Error al limpiar el archivo de log.",
     "title": "Consola del Túnel (Logs)",
     "clear_button": "Limpiar Logs",
+    "clear_logs": "Limpiar Logs",
     "loading": "Cargando logs...",
-    "empty": "Ningún log registrado."
+    "empty": "Ningún log registrado.",
+    "copied_selection": "¡Selección copiada!",
+    "copied_all": "Todos los logs copiados al portapapeles.",
+    "copy_all_button": "Copiar Todo"
   },
   "agtech": {
     "title": "La ingeniería detrás de MetaBuilderPRO",
