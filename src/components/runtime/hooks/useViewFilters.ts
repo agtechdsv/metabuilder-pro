@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 export function useViewFilters({
   projectId,
@@ -138,7 +139,7 @@ export function useViewFilters({
               const queryId = crypto.randomUUID()
               const colsToSelect = Array.from(new Set([`"${comp.rel_label}"`, `"${comp.rel_value}"`, comp.filter_column ? `"${comp.filter_column}"` : null].filter(Boolean))).join(', ')
               const rawQuery = `SELECT ${colsToSelect} FROM "${comp.rel_table}"`
-              const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
+              const schemaToUse = getModelSchemaName(project, comp.rel_table)
 
               data = await new Promise<any[]>((resolve, reject) => {
                 let resolved = false

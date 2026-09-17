@@ -212,7 +212,7 @@ async function introspectOracle(connectionString) {
 }
 
 // Função 2: Iniciar Túnel Seguro (Modo Agente Escuta)
-async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres', configData = {}) {
+async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres', configData = {}, totalConnsForProject = 1) {
   // Pega do ambiente (.env.local) ou do arquivo metabuilder.config.json
   const finalSupabaseUrl = SUPABASE_URL || configSupabaseUrl;
   const finalSupabaseKey = SUPABASE_KEY || configSupabaseKey;
@@ -314,7 +314,12 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       const META_ACTIONS = ['sync_bpm', 'sync_log_config', 'read_logs', 'clear_logs', 'get_log_stats', 'raw_sql'];
       const expectedSchema = (connectionName || 'public').toLowerCase();
       const incomingSchema = (schemaName || 'public').toLowerCase();
-      const isSchemaMatch = incomingSchema === expectedSchema || (action === 'validate_login' && (incomingSchema === 'public' || incomingSchema === ''));
+      const isSingleConn = totalConnsForProject <= 1;
+      const isSchemaMatch = isSingleConn ||
+        incomingSchema === expectedSchema ||
+        (action === 'validate_login' && (incomingSchema === 'public' || incomingSchema === '')) ||
+        (payload.payload.slug && incomingSchema === payload.payload.slug.toLowerCase());
+
       if (!isSchemaMatch && !META_ACTIONS.includes(action)) {
         console.log(chalk.yellow(`[ IGNORADO ] Comando destinado ao schema '${schemaName || 'public'}', mas este agente atende '${connectionName || 'public'}'.`));
         return; // Ignora o broadcast, outro agente responderá
@@ -1531,10 +1536,11 @@ async function run() {
       const tunnelPromises = [];
       configData.connections.forEach(conn => {
         if (Array.isArray(conn.connectionsString)) {
+          const totalConnsForProject = conn.connectionsString.length;
           conn.connectionsString.forEach(dbConfig => {
             const dbType = dbConfig.type || 'postgres';
             tunnelPromises.push(
-              startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData)
+              startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData, totalConnsForProject)
                 .catch(err => {
                   console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${dbConfig.name}' (${dbType}):`), err.message);
                 })
@@ -1543,7 +1549,7 @@ async function run() {
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
           tunnelPromises.push(
-            startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData)
+            startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData, 1)
               .catch(err => {
                 console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${conn.projectId}':`), err.message);
               })

@@ -1,6 +1,7 @@
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseMasterDataProps {
   project: any
@@ -202,7 +203,7 @@ export function useMasterData({
                 idColumn: payloadIdCol,
                 idValue: pkValue,
                 token: project?.secret_token || 'test-token',
-                schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
+                schemaName: getModelSchemaName(project, modelName),
                 slug: project?.slug
               }
 
@@ -491,7 +492,7 @@ export function useMasterData({
                   query: sql, sql,
                   idColumn: payloadIdCol, idValue: rowPkVal,
                   token: project?.secret_token || 'test-token',
-                  schemaName: project?.models?.find((m: any) => m.db_table_name === rowTable)?.db_schema_name || project?.slug || 'public',
+                  schemaName: getModelSchemaName(project, rowTable),
                   slug: project?.slug
                 }
               })
@@ -642,7 +643,7 @@ export function useMasterData({
               query: rawQuery,
               sql: rawQuery,
               token: project?.secret_token || 'test-token',
-              schemaName: project?.models?.find((m: any) => m.db_table_name === actualModelName)?.db_schema_name || project?.slug || 'public',
+              schemaName: getModelSchemaName(project, actualModelName),
               slug: project?.slug,
               idColumn: actualPkKey,
               idValue: pkValue

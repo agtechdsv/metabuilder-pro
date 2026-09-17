@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 export interface UseRecordFormLogicProps {
   mode: 'create' | 'edit' | 'view';
@@ -168,7 +169,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               payload: {
                 queryId,
                 table: join.to,
-                schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+                schemaName: getModelSchemaName(project, join.to),
                 action: 'select',
                 token: secretToken,
                 joins: fetchJoins,
@@ -356,7 +357,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 payload: {
                   queryId,
                   table: join.to,
-                  schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+                  schemaName: getModelSchemaName(project, join.to),
                   action: 'select',
                   token: secretToken,
                   joins: [],
@@ -505,7 +506,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               const colsToSelect = Array.from(new Set([comp.rel_label, comp.rel_value, comp.filter_column].filter(Boolean))).join(', ')
               const rawQuery = `SELECT ${colsToSelect} FROM ${comp.rel_table}`
 
-              const schemaToUse = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === comp.rel_table?.toLowerCase())?.db_schema_name || project?.slug || 'public'
+              const schemaToUse = getModelSchemaName(project, comp.rel_table)
               // console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
               // console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
 

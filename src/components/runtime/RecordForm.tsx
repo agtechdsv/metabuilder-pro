@@ -242,13 +242,76 @@ export default function RecordForm({
         {/* Formulário Principal e Abas Híbridas */}
         <div className={cn("flex flex-col h-full", !isPageMode && "overflow-hidden")}>
           {(() => {
-            const getModelIdForTable = (tableName: string) => {
-              const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
-              return targetModel?.id || fields.find((f: any) => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id;
+            const getTargetModelForTable = (tableName: string) => {
+              if (!tableName) return null;
+              const target = tableName.trim().toLowerCase();
+              return project?.models?.find((m: any) => 
+                (m.db_table_name && m.db_table_name.trim().toLowerCase() === target) ||
+                (m.name && m.name.trim().toLowerCase() === target)
+              ) || null;
             };
-            const visibleDetailTables = detailTables.filter(tableName => !hiddenDetails.includes(getModelIdForTable(tableName) as string));
-            const tabTables = visibleDetailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] === 'tabs');
-            const sectionTables = visibleDetailTables.filter(tableName => detailsDisplayMode?.[getModelIdForTable(tableName) as string] !== 'tabs');
+
+            const getModelIdForTable = (tableName: string) => {
+              const targetModel = getTargetModelForTable(tableName);
+              return targetModel?.id || fields.find((f: any) => f.model_name?.trim().toLowerCase() === tableName?.trim().toLowerCase())?.model_id;
+            };
+
+            const isHiddenDetail = (tableName: string) => {
+              const mId = getModelIdForTable(tableName);
+              const m = getTargetModelForTable(tableName);
+              if (!hiddenDetails || hiddenDetails.length === 0) return false;
+              const target = tableName.trim().toLowerCase();
+              return hiddenDetails.some((h: string) => 
+                h === mId || 
+                (typeof h === 'string' && h.trim().toLowerCase() === target) ||
+                (m?.db_table_name && typeof h === 'string' && h.trim().toLowerCase() === m.db_table_name.trim().toLowerCase())
+              );
+            };
+
+            const isTabMode = (tableName: string) => {
+              const mId = getModelIdForTable(tableName);
+              const m = getTargetModelForTable(tableName);
+              const target = tableName.trim().toLowerCase();
+
+              // 1. Verificação direta por modelId se configurado
+              if (mId && detailsDisplayMode?.[mId]) {
+                return detailsDisplayMode[mId] === 'tabs';
+              }
+
+              // 2. Verificação por nome da tabela ou nome do modelo (case-insensitive)
+              if (detailsDisplayMode) {
+                for (const [key, mode] of Object.entries(detailsDisplayMode)) {
+                  const k = key.trim().toLowerCase();
+                  if (
+                    k === target ||
+                    (m?.db_table_name && k === m.db_table_name.trim().toLowerCase()) ||
+                    (m?.name && k === m.name.trim().toLowerCase())
+                  ) {
+                    return mode === 'tabs';
+                  }
+                }
+              }
+
+              // 3. Fallback de view duplicada/importada entre projetos:
+              // Se há configurações salvas na view e todas forem 'tabs', respeitar
+              if (detailsDisplayMode && Object.keys(detailsDisplayMode).length > 0) {
+                const modes = Object.values(detailsDisplayMode);
+                if (modes.every(val => val === 'tabs')) {
+                  return true;
+                }
+              }
+
+              // 4. Default do Master-Detail: em casos de uso master_detail, os detalhes são abas por padrão
+              if (logicType === 'master_detail') {
+                return true;
+              }
+
+              return false;
+            };
+
+            const visibleDetailTables = detailTables.filter(tableName => !isHiddenDetail(tableName));
+            const tabTables = visibleDetailTables.filter(tableName => isTabMode(tableName));
+            const sectionTables = visibleDetailTables.filter(tableName => !isTabMode(tableName));
 
             return (
               <>

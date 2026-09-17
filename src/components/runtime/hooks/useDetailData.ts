@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseDetailDataProps {
   project: any
@@ -284,7 +285,7 @@ export function useDetailData({
                 table: join.to,
                 action: 'select',
                 token: project?.secret_token || 'test-token',
-                schemaName: project?.models?.find((m: any) => m.db_table_name === join.to)?.db_schema_name || project?.slug || 'public',
+                schemaName: getModelSchemaName(project, join.to),
                 slug: project?.slug,
                 filters: { [join.foreignKey]: String(localValue) },
                 joins: titleJoins,
@@ -548,7 +549,7 @@ export function useDetailData({
                 query: rawQuery,
                 sql: rawQuery,
                 token: project?.secret_token || 'test-token',
-                schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
+                schemaName: getModelSchemaName(project, tableName),
                 slug: project?.slug,
                 idColumn: actualPkKey,
                 idValue: pkValue
@@ -842,7 +843,7 @@ export function useDetailData({
                   idColumn: payloadIdCol,
                   idValue: dPkValue,
                   token: project?.secret_token || 'test-token',
-                  schemaName: project?.models?.find((m: any) => m.db_table_name === tableName)?.db_schema_name || project?.slug || 'public',
+                  schemaName: getModelSchemaName(project, tableName),
                   slug: project?.slug
                 }
               })
@@ -1028,7 +1029,7 @@ export function useDetailData({
                   query: sql, sql,
                   idColumn: rowPkName, idValue: rowPkVal,
                   token: project?.secret_token || 'test-token',
-                  schemaName: project?.models?.find((m: any) => m.db_table_name === rowTable)?.db_schema_name || project?.slug || 'public',
+                  schemaName: getModelSchemaName(project, rowTable),
                   slug: project?.slug
                 }
               })

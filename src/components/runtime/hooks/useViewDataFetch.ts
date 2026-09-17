@@ -4,6 +4,7 @@ import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { resolveRelations, resolveAllJoins, buildJoinSql } from '@/lib/relationPathFinder'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 const getCachedData = (key: string) => {
   if (typeof window === 'undefined') return null
@@ -594,8 +595,7 @@ export function useViewDataFetch({
         rawQuery = `SELECT ${columns} FROM "${modelName}" __WHERE_PLACEHOLDER__ ORDER BY ${orderSql}`
       }
 
-      const currentModel = project?.models?.find((m: any) => m.db_table_name === modelName)
-      const actualSchemaName = currentModel?.db_schema_name || project?.slug || 'public'
+      const actualSchemaName = getModelSchemaName(project, modelName)
 
       const payload: any = {
         queryId: queryId,
@@ -764,7 +764,7 @@ export function useViewDataFetch({
       queryId,
       table: modelName,
       tableName: modelName,
-      schemaName: project?.models?.find((m: any) => m.db_table_name === modelName)?.db_schema_name || project?.slug || 'public',
+      schemaName: getModelSchemaName(project, modelName),
       slug: project?.slug,
       action: 'update',
       data: updates,
