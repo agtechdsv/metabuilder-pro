@@ -5,8 +5,58 @@
  */
 export const getNestedValue = (obj: any, path: string): any => {
   if (!obj || !path) return undefined
+
+  // 1. Direct match: exact, lower, upper
   if (obj[path] !== undefined) return obj[path]
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj)
+  const lowerPath = path.toLowerCase()
+  if (obj[lowerPath] !== undefined) return obj[lowerPath]
+  const upperPath = path.toUpperCase()
+  if (obj[upperPath] !== undefined) return obj[upperPath]
+
+  // 2. Case-insensitive key lookup across all top-level keys if flat
+  if (typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      if (key.toLowerCase() === lowerPath) {
+        return obj[key]
+      }
+    }
+  }
+
+  // 3. Dot notation / nested access (e.g. "pedidos.status", "PEDIDOS.STATUS")
+  if (path.includes('.')) {
+    const parts = path.split('.')
+    const nested = parts.reduce((acc, part) => {
+      if (acc === undefined || acc === null || typeof acc !== 'object') return undefined
+      if (acc[part] !== undefined) return acc[part]
+      const lp = part.toLowerCase()
+      if (acc[lp] !== undefined) return acc[lp]
+      const up = part.toUpperCase()
+      if (acc[up] !== undefined) return acc[up]
+      for (const k of Object.keys(acc)) {
+        if (k.toLowerCase() === lp) return acc[k]
+      }
+      return undefined
+    }, obj)
+    if (nested !== undefined) return nested
+
+    // 4. Fallback to last part of path (e.g. 'pedidos.status' -> 'status' / 'STATUS')
+    const lastPart = parts[parts.length - 1]
+    if (obj[lastPart] !== undefined) return obj[lastPart]
+    const lowerLast = lastPart.toLowerCase()
+    if (obj[lowerLast] !== undefined) return obj[lowerLast]
+    const upperLast = lastPart.toUpperCase()
+    if (obj[upperLast] !== undefined) return obj[upperLast]
+
+    // 5. Underscore fallback (e.g. 'pedidos_status' / 'PEDIDOS_STATUS')
+    const underscorePath = path.replace(/\./g, '_')
+    if (obj[underscorePath] !== undefined) return obj[underscorePath]
+    const lowerUnderscore = underscorePath.toLowerCase()
+    if (obj[lowerUnderscore] !== undefined) return obj[lowerUnderscore]
+    const upperUnderscore = underscorePath.toUpperCase()
+    if (obj[upperUnderscore] !== undefined) return obj[upperUnderscore]
+  }
+
+  return undefined
 }
 
 /**

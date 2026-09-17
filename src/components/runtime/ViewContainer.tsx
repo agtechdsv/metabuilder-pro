@@ -365,8 +365,8 @@ export default function ViewContainer({
   const sortedData = [...data].sort((a, b) => {
     if (!sortConfig) return 0
     const { key, direction } = sortConfig
-    const valA = a[key]
-    const valB = b[key]
+    const valA = a[key] ?? a[key?.toLowerCase()] ?? a[key?.toUpperCase()]
+    const valB = b[key] ?? b[key?.toLowerCase()] ?? b[key?.toUpperCase()]
     if (valA < valB) return direction === 'asc' ? -1 : 1
     if (valA > valB) return direction === 'asc' ? 1 : -1
     return 0

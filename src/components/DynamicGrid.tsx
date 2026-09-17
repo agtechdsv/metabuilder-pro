@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
-import { formatFieldValue } from '@/lib/formatters'
+import { formatFieldValue, getNestedValue } from '@/lib/formatters'
 
 interface DynamicGridProps {
   fields: any[]
@@ -140,32 +140,6 @@ export default function DynamicGrid({
       styles.borderColor = btn.bg_color
     }
     return styles
-  }
-
-  const getNestedValue = (obj: any, path: string) => {
-    if (!obj || !path) return undefined
-    
-    // 1. Tenta acesso direto (caso a chave tenha pontos mas o objeto seja flat no JSON)
-    if (obj[path] !== undefined) return obj[path]
-    
-    // 2. Tenta acesso aninhado real (ex: row.user.name)
-    const nested = path.split('.').reduce((acc, part) => acc && acc[part], obj)
-    if (nested !== undefined) return nested
-
-    // 3. Tenta apenas a última parte (caso o backend retorne sem prefixo de tabela, ex: 'fields.name' -> 'name')
-    if (path.includes('.')) {
-      const parts = path.split('.')
-      const lastPart = parts[parts.length - 1]
-      if (obj[lastPart] !== undefined) return obj[lastPart]
-    }
-    
-    // 4. Tenta com underscore no lugar do ponto (algumas bibliotecas/drivers fazem essa conversão)
-    if (path.includes('.')) {
-      const underscorePath = path.replace(/\./g, '_')
-      if (obj[underscorePath] !== undefined) return obj[underscorePath]
-    }
-    
-    return undefined
   }
 
   if (data.length === 0) {

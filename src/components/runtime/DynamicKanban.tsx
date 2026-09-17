@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MoreVertical, Calendar, User, Tag, GripVertical, Plus, Minimize2, Maximize2, ZoomIn, LayoutGrid, Zap, Pencil, Trash2 } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn, getActionColorClasses } from '@/lib/utils'
-import { formatFieldValue } from '@/lib/formatters'
+import { formatFieldValue, getNestedValue } from '@/lib/formatters'
 import { useI18n } from '@/i18n/I18nContext'
 
 interface DynamicKanbanProps {
@@ -323,11 +323,6 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, rela
   )
 }
 
-function getNestedValue(obj: any, path: string) {
-  if (!path) return undefined
-  if (obj && obj[path] !== undefined) return obj[path]
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj)
-}
 
 function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, relationalOptions, customActions = [], onCustomAction }: any) {
   const {

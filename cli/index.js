@@ -591,11 +591,14 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               const normalizedRow = {};
               for (const [k, v] of Object.entries(row)) {
                 const lowerK = k.toLowerCase();
+                const upperK = k.toUpperCase();
+                let finalVal = v;
                 if (typeof v === 'string' && v.trimStart().startsWith('{') && v.trimEnd().endsWith('}')) {
-                  try { normalizedRow[lowerK] = JSON.parse(v); } catch (_) { normalizedRow[lowerK] = v; }
-                } else {
-                  normalizedRow[lowerK] = v;
+                  try { finalVal = JSON.parse(v); } catch (_) { finalVal = v; }
                 }
+                normalizedRow[k] = finalVal;
+                normalizedRow[lowerK] = finalVal;
+                normalizedRow[upperK] = finalVal;
               }
               return normalizedRow;
             });

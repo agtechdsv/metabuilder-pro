@@ -97,13 +97,26 @@ export function useViewDataFetch({
           return
         }
 
-        let resultData = payload.payload.data || []
+        const rawResultData = payload.payload.data || []
+
+        const normalizeRowKeys = (row: any) => {
+          if (!row || typeof row !== 'object') return row
+          const normalized: any = {}
+          for (const [k, v] of Object.entries(row)) {
+            normalized[k] = v
+            normalized[k.toLowerCase()] = v
+            normalized[k.toUpperCase()] = v
+          }
+          return normalized
+        }
+
+        let resultData = rawResultData.map(normalizeRowKeys)
 
         if (joins && joins.length > 0) {
           const pkName = formFields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
           const grouped: Record<string, any> = {}
           resultData.forEach((row: any) => {
-            const pkValue = row[pkName] || row.id || row.ID
+            const pkValue = row[pkName] || row[pkName?.toLowerCase()] || row[pkName?.toUpperCase()] || row.id || row.ID
             if (!pkValue) return
             if (!grouped[pkValue]) grouped[pkValue] = { ...row, _details: [] }
             grouped[pkValue]._details.push(row)
@@ -112,30 +125,30 @@ export function useViewDataFetch({
         }
 
         resultData = resultData.map((row: any) => {
-          const normalizedRow: any = {}
-          Object.keys(row).forEach(k => {
-            normalizedRow[k] = row[k]
-            normalizedRow[k.toLowerCase()] = row[k]
-          })
+          const normalizedRow = normalizeRowKeys(row)
           return {
             ...normalizedRow,
-            _key: String(row[primaryKeyName] || row.id || row.ID || crypto.randomUUID())
+            _key: String(row[primaryKeyName] || row[primaryKeyName?.toLowerCase()] || row[primaryKeyName?.toUpperCase()] || row.id || row.ID || crypto.randomUUID())
           }
         })
 
         const uniqueResultData = resultData.filter((row: any, index: number, self: any[]) =>
-          index === self.findIndex((r) =>
-            String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
-          )
+          index === self.findIndex((r) => {
+            const rPk = r[primaryKeyName] || r[primaryKeyName?.toLowerCase()] || r[primaryKeyName?.toUpperCase()] || r.id || r.ID
+            const rowPk = row[primaryKeyName] || row[primaryKeyName?.toLowerCase()] || row[primaryKeyName?.toUpperCase()] || row.id || row.ID
+            return String(rPk) === String(rowPk)
+          })
         );
 
         if (shouldAppend) {
           setData((prev: any[]) => {
             const combined = [...prev, ...uniqueResultData]
             return combined.filter((row: any, index: number, self: any[]) =>
-              index === self.findIndex((r) =>
-                String(r[primaryKeyName] || r.id || r.ID) === String(row[primaryKeyName] || row.id || row.ID)
-              )
+              index === self.findIndex((r) => {
+                const rPk = r[primaryKeyName] || r[primaryKeyName?.toLowerCase()] || r[primaryKeyName?.toUpperCase()] || r.id || r.ID
+                const rowPk = row[primaryKeyName] || row[primaryKeyName?.toLowerCase()] || row[primaryKeyName?.toUpperCase()] || row.id || row.ID
+                return String(rPk) === String(rowPk)
+              })
             )
           })
         } else {
