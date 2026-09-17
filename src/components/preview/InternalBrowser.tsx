@@ -349,6 +349,8 @@ export function InternalBrowser({
     if (isCloseTab) {
       if (activeTabId) {
         e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation?.()
         closeTabById(activeTabId)
         return
       }
@@ -365,16 +367,18 @@ export function InternalBrowser({
 
     if (isNavLeft || isNavRight) {
       e.preventDefault()
+      e.stopPropagation()
+      e.stopImmediatePropagation?.()
       if (tabs.length <= 1) return
       const currentIndex = tabs.findIndex(t => t.id === activeTabId)
       if (currentIndex === -1) return
 
-      if (isNavLeft) {
-        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length
-        setActiveTabId(tabs[prevIndex].id)
-      } else if (isNavRight) {
-        const nextIndex = (currentIndex + 1) % tabs.length
-        setActiveTabId(tabs[nextIndex].id)
+      if (isNavRight) {
+        const targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
+        setActiveTabId(tabs[targetIndex].id)
+      } else if (isNavLeft) {
+        const targetIndex = (currentIndex + 1) % tabs.length
+        setActiveTabId(tabs[targetIndex].id)
       }
     }
   }
@@ -388,18 +392,11 @@ export function InternalBrowser({
     if (!iframe) return
     try {
       const win = iframe.contentWindow
-      const doc = iframe.contentDocument
       // @ts-ignore
       if (win && !win.__mb_key_listener_attached) {
         win.addEventListener('keydown', (e: KeyboardEvent) => handleKeyDownRef.current?.(e), true)
         // @ts-ignore
         win.__mb_key_listener_attached = true
-      }
-      // @ts-ignore
-      if (doc && !doc.__mb_key_listener_attached) {
-        doc.addEventListener('keydown', (e: KeyboardEvent) => handleKeyDownRef.current?.(e), true)
-        // @ts-ignore
-        doc.__mb_key_listener_attached = true
       }
     } catch (_) {}
   }
