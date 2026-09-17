@@ -318,7 +318,7 @@ export function InternalBrowser({
   }
 
   // Referência atualizada do handler para captura uniforme na janela principal e dentro dos iframes
-  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => { })
 
   const handleKeyDown = (e: KeyboardEvent) => {
     // 1. Fechar Context Menu com ESC
@@ -374,10 +374,10 @@ export function InternalBrowser({
       if (currentIndex === -1) return
 
       if (isNavRight) {
-        const targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
+        const targetIndex = (currentIndex + 1) % tabs.length
         setActiveTabId(tabs[targetIndex].id)
       } else if (isNavLeft) {
-        const targetIndex = (currentIndex + 1) % tabs.length
+        const targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
         setActiveTabId(tabs[targetIndex].id)
       }
     }
@@ -398,7 +398,7 @@ export function InternalBrowser({
         // @ts-ignore
         win.__mb_key_listener_attached = true
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   useEffect(() => {
@@ -431,7 +431,7 @@ export function InternalBrowser({
         setTimeout(() => {
           try {
             iframe.contentWindow?.focus()
-          } catch (_) {}
+          } catch (_) { }
         }, 50)
       }
     }
@@ -808,7 +808,7 @@ export function InternalBrowser({
                 </div>
               )}
               <iframe
-                ref={el => { 
+                ref={el => {
                   iframeRefs.current[tab.id] = el
                   if (el) attachIframeListener(el)
                 }}
