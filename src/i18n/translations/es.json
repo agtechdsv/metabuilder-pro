@@ -3753,7 +3753,16 @@
       "config_load_error": "Error al cargar la configuración.",
       "config_save_success": "¡Configuración guardada con éxito!",
       "config_save_error": "Error al guardar la configuración.",
-      "process_comm_error": "Error al comunicar con el proceso."
+      "process_comm_error": "Error al comunicar con el proceso.",
+      "sync_modal_title": "Consola de Sincronización",
+      "sync_modal_subtitle": "cli-win.exe --action=sync",
+      "sync_processing": "Procesando...",
+      "sync_completed_success": "✓ ¡Sincronización completada con éxito!",
+      "sync_failed": "⚠ Fallo en la sincronización. Verifique los registros anteriores.",
+      "sync_starting": "Iniciando Sincronización General...",
+      "sync_web_cloud": "Proceso disparado en la nube. Verifique los registros del servidor.",
+      "sync_web_comm_error": "Fallo de comunicación web:",
+      "close_btn": "Cerrar"
     },
     "synced_dbs": {
       "title": "Bases de Datos Sincronizadas (Schemas)",

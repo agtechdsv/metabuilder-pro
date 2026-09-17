@@ -3693,7 +3693,16 @@
       "config_load_error": "Error loading configuration.",
       "config_save_success": "Configuration saved successfully!",
       "config_save_error": "Error saving configuration.",
-      "process_comm_error": "Error communicating with process."
+      "process_comm_error": "Error communicating with process.",
+      "sync_modal_title": "Synchronization Console",
+      "sync_modal_subtitle": "cli-win.exe --action=sync",
+      "sync_processing": "Processing...",
+      "sync_completed_success": "✓ Synchronization completed successfully!",
+      "sync_failed": "⚠ Synchronization failed. Please check the logs above.",
+      "sync_starting": "Starting Global Synchronization...",
+      "sync_web_cloud": "Process triggered in the cloud. Check the server logs.",
+      "sync_web_comm_error": "Web communication failure:",
+      "close_btn": "Close"
     },
     "synced_dbs": {
       "title": "Synced Databases (Schemas)",

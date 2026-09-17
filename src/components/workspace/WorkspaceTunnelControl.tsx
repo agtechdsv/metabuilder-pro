@@ -15,7 +15,7 @@ import { TunnelPendingResolutionModal } from './tunnel/TunnelPendingResolutionMo
 import { TunnelLogConsoleModal } from './tunnel/TunnelLogConsoleModal'
 
 export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const { toast } = useToast()
   const pathname = usePathname()
 
@@ -48,6 +48,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
 
       let configText = ''
       const fileExists = await exists(configPath)
+
       if (fileExists) {
         configText = await readTextFile(configPath)
       } else {
@@ -55,10 +56,17 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       }
 
       try {
-        const { createClient } = await import('@/utils/supabase/client')
         const supabase = createClient()
+        let query = supabase.from('projects').select('id, name, secret_token')
 
-        const { data: projectsData } = await supabase.from('projects').select('id, name, secret_token')
+        if (workspaceSlug !== 'global') {
+          const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
+          if (workspace) {
+            query = query.eq('workspace_id', workspace.id)
+          }
+        }
+
+        const { data: projectsData } = await query
 
         setHasProjects(projectsData && projectsData.length > 0)
         setAvailableProjects(projectsData || [])
@@ -82,43 +90,48 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
                   secretToken: p.secret_token || '',
                   connectionsString: [
                     {
-                      name: safeName || 'public',
+                      name: safeName,
                       type: 'postgres',
-                      connectionString: 'postgresql://postgres:password@localhost:5432/dbname',
+                      connectionString: 'postgresql://postgres:postgres@localhost:5432/' + safeName,
                     },
                   ],
                 })
               }
             }
+
             configText = JSON.stringify(currentConfig, null, 2)
           }
         }
-      } catch (err) {
-        console.error('Erro ao buscar projetos para popular config:', err)
+      } catch (dbErr) {
+        console.warn('Falha ao buscar projetos do banco para sugerir no config:', dbErr)
       }
 
       setConfigContent(configText)
-    } catch (e) {
-      console.error(e)
-      toast(t('workspace_components.tunnel_control.config_load_error', 'Erro ao carregar configuração.'), 'error')
+    } catch (e: any) {
+      toast(t('workspace_components.tunnel_control.config_load_error', 'Erro ao carregar configuração.') + (e?.message ? ` ${e.message}` : ''), 'error')
     }
   }
 
   const handleSaveConfig = async () => {
     setIsSavingConfig(true)
     try {
+      JSON.parse(configContent)
+
       const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+      const { writeTextFile, mkdir, exists } = await import('@tauri-apps/plugin-fs')
 
       const dir = await appLocalDataDir()
-      const configPath = await join(dir, 'metabuilder.config.json')
+      if (!(await exists(dir))) {
+        await mkdir(dir, { recursive: true })
+      }
 
+      const configPath = await join(dir, 'metabuilder.config.json')
       await writeTextFile(configPath, configContent)
+
       toast(t('workspace_components.tunnel_control.config_save_success', 'Configuração salva com sucesso!'), 'success')
       setIsConfigModalOpen(false)
-    } catch (e) {
-      console.error(e)
-      toast(t('workspace_components.tunnel_control.config_save_error', 'Erro ao salvar configuração.'), 'error')
+    } catch (e: any) {
+      toast(t('workspace_components.tunnel_control.config_save_error', 'Erro ao salvar configuração.') + (e?.message ? `: ${e.message}` : ''), 'error')
     } finally {
       setIsSavingConfig(false)
     }
@@ -128,7 +141,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     try {
       if (isTauri()) {
         const { invoke } = await import('@tauri-apps/api/core')
-        const isRunning = await invoke('statuscli')
+        const isRunning = await invoke<boolean>('statuscli')
         setTunnelStatus(isRunning ? 'running' : 'stopped')
         setTunnelPid(null)
         return
@@ -193,7 +206,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
   const handleSync = async () => {
     setIsSyncModalOpen(true)
     setSyncStatus('running')
-    setSyncLogs(['Iniciando Sincronização Geral...'])
+    setSyncLogs([t('workspace_components.tunnel_control.sync_starting', 'Iniciando Sincronização Geral...')])
 
     if (isTauri()) {
       try {
@@ -210,7 +223,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         })
 
         try {
-          const result = await invoke<string>('runsynccli', { configPath })
+          const result = await invoke<string>('runsynccli', { configPath, lang: language })
           setSyncLogs((prev) => [...prev, result])
           setSyncStatus('success')
         } catch (error: any) {
@@ -228,18 +241,25 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         const res = await fetch('/api/tunnel/process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'start', mode: 3 }),
+          body: JSON.stringify({ action: 'start', mode: 3, lang: language }),
         })
         const data = await res.json()
         if (data.success) {
-          setSyncLogs((prev) => [...prev, data.message, 'Processo disparado na nuvem. Verifique os logs do servidor.'])
+          setSyncLogs((prev) => [
+            ...prev,
+            data.message,
+            t('workspace_components.tunnel_control.sync_web_cloud', 'Processo disparado na nuvem. Verifique os logs do servidor.')
+          ])
           setSyncStatus('success')
         } else {
           setSyncLogs((prev) => [...prev, `[ERRO] ${data.message}`])
           setSyncStatus('error')
         }
       } catch (e: any) {
-        setSyncLogs((prev) => [...prev, `[ERRO] Falha de comunicação web: ${e.message}`])
+        setSyncLogs((prev) => [
+          ...prev,
+          `[ERRO] ${t('workspace_components.tunnel_control.sync_web_comm_error', 'Falha de comunicação web:')} ${e.message}`
+        ])
         setSyncStatus('error')
       }
     }

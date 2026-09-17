@@ -12,7 +12,7 @@ const CLI_PATH = path.join(process.cwd(), 'cli', 'cli-win.exe');
 
 export async function POST(req: Request) {
   try {
-    const { action, mode } = await req.json();
+    const { action, mode, lang } = await req.json();
 
     if (action === 'start') {
       if (tunnelProcess && !tunnelProcess.killed) {
@@ -25,7 +25,11 @@ export async function POST(req: Request) {
 
       // Executa o CLI em background (detached) ou atrelado a este processo.
       // Vamos atrelar para podermos dar kill.
-      tunnelProcess = spawn(CLI_PATH, ['--mode', String(mode || 1)], {
+      const args = ['--mode', String(mode || 1)];
+      if (lang) {
+        args.push(`--lang=${lang}`);
+      }
+      tunnelProcess = spawn(CLI_PATH, args, {
         cwd: path.join(process.cwd(), 'cli')
       });
 

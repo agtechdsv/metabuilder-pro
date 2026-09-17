@@ -221,6 +221,121 @@ const patterns: LogPattern[] = [
     regex: /\[Build\] npm install falhou com c[óo]digo (\d+)/i,
     en: (m) => `[Build] npm install failed with code ${m[1]}`,
     es: (m) => `[Build] npm install falló con código ${m[1]}`,
+  },
+  {
+    regex: /Iniciando Sincroniza[çc][ãa]o Geral\.\.\./i,
+    en: 'Starting Global Synchronization...',
+    es: 'Iniciando Sincronización General...',
+  },
+  {
+    regex: /Conectando ao banco de dados\.\.\./i,
+    en: 'Connecting to database...',
+    es: 'Conectando a la base de datos...',
+  },
+  {
+    regex: /✓\s*Conex[ãa]o local estabelecida com sucesso!/i,
+    en: '✓ Local connection successfully established!',
+    es: '✓ ¡Conexión local establecida con éxito!',
+  },
+  {
+    regex: /Lendo tabelas\.\.\./i,
+    en: 'Reading tables...',
+    es: 'Leyendo tablas...',
+  },
+  {
+    regex: /Lendo colunas\.\.\./i,
+    en: 'Reading columns...',
+    es: 'Leyendo columnas...',
+  },
+  {
+    regex: /Lendo chaves prim[áa]rias\.\.\./i,
+    en: 'Reading primary keys...',
+    es: 'Leyendo claves primarias...',
+  },
+  {
+    regex: /Lendo chaves estrangeiras \(relacionamentos\)\.\.\./i,
+    en: 'Reading foreign keys (relationships)...',
+    es: 'Leyendo claves foráneas (relaciones)...',
+  },
+  {
+    regex: /✓\s*Lidos metadados de (\d+) tabelas\./i,
+    en: (m) => `✓ Metadata read for ${m[1]} tables.`,
+    es: (m) => `✓ Leídos metadatos de ${m[1]} tablas.`,
+  },
+  {
+    regex: /Conectando ao banco de dados Oracle\.\.\./i,
+    en: 'Connecting to Oracle database...',
+    es: 'Conectando a la base de datos Oracle...',
+  },
+  {
+    regex: /✓\s*Conex[ãa]o Oracle local estabelecida com sucesso!/i,
+    en: '✓ Local Oracle connection successfully established!',
+    es: '✓ ¡Conexión Oracle local establecida con éxito!',
+  },
+  {
+    regex: /Enviando metadados do projeto\s+([^\s]+)\s+\(Schema:\s*([^\)]+)\)\.\.\./i,
+    en: (m) => `Sending metadata for project ${m[1]} (Schema: ${m[2]})...`,
+    es: (m) => `Enviando metadatos del proyecto ${m[1]} (Schema: ${m[2]})...`,
+  },
+  {
+    regex: /Enviando metadados do projeto\s+([^\s\.]+)\.\.\./i,
+    en: (m) => `Sending metadata for project ${m[1]}...`,
+    es: (m) => `Enviando metadatos del proyecto ${m[1]}...`,
+  },
+  {
+    regex: /\[SYNC\]\s*\+\s*ADICIONADO\s*\|\s*Tabela:\s*([^\s|]+)\s*\|\s*(\d+)\s*coluna\(s\) detectada\(s\)(.*)/i,
+    en: (m) => `[SYNC] + ADDED | Table: ${m[1]} | ${m[2]} column(s) detected${m[3]}`,
+    es: (m) => `[SYNC] + AÑADIDO | Tabla: ${m[1]} | ${m[2]} columna(s) detectada(s)${m[3]}`,
+  },
+  {
+    regex: /\[SYNC\]\s*\-\s*REMOVIDO\s*\|\s*Tabela:\s*([^\s|]+)\s*\|\s*(.*)/i,
+    en: (m) => `[SYNC] - REMOVED | Table: ${m[1]} | ${m[2]}`,
+    es: (m) => `[SYNC] - ELIMINADO | Tabla: ${m[1]} | ${m[2]}`,
+  },
+  {
+    regex: /\[SYNC\]\s*~\s*ALTERADO\s*\|\s*Tabela:\s*([^\s|]+)\s*\|\s*(.*)/i,
+    en: (m) => `[SYNC] ~ MODIFIED | Table: ${m[1]} | ${m[2]}`,
+    es: (m) => `[SYNC] ~ MODIFICADO | Tabla: ${m[1]} | ${m[2]}`,
+  },
+  {
+    regex: /✅\s*Projeto\s+(.*?)\s*\((.*?)\)\s*sincronizado com sucesso!/i,
+    en: (m) => `✅ Project ${m[1]} (${m[2]}) synchronized successfully!`,
+    es: (m) => `✅ ¡Proyecto ${m[1]} (${m[2]}) sincronizado con éxito!`,
+  },
+  {
+    regex: /✅\s*Projeto\s+(.*?)\s*sincronizado com sucesso!/i,
+    en: (m) => `✅ Project ${m[1]} synchronized successfully!`,
+    es: (m) => `✅ ¡Proyecto ${m[1]} sincronizado con éxito!`,
+  },
+  {
+    regex: /⚠️\s*Projeto\s+(.*?)\s*\((.*?)\):\s*diverg[êe]ncias detectadas\s*—\s*draft criado para revis[ãa]o manual\./i,
+    en: (m) => `⚠️ Project ${m[1]} (${m[2]}): divergences detected — draft created for manual review.`,
+    es: (m) => `⚠️ Proyecto ${m[1]} (${m[2]}): divergencias detectadas — borrador creado para revisión manual.`,
+  },
+  {
+    regex: /⚠️\s*Projeto\s+(.*?):\s*diverg[êe]ncias detectadas\s*—\s*draft criado para revis[ãa]o manual\./i,
+    en: (m) => `⚠️ Project ${m[1]}: divergences detected — draft created for manual review.`,
+    es: (m) => `⚠️ Proyecto ${m[1]}: divergencias detectadas — borrador creado para revisión manual.`,
+  },
+  {
+    regex: /Processo de Sincroniza[çc][ãa]o finalizado\./i,
+    en: 'Synchronization process finished.',
+    es: 'Proceso de sincronización finalizado.',
+  },
+  {
+    regex: /Sincroniza[çc][ãa]o finalizada com sucesso/i,
+    en: 'Synchronization finished successfully',
+    es: 'Sincronización finalizada con éxito',
+  },
+  {
+    regex: /\[FALHA\]\s*(.*)/i,
+    en: (m) => `[FAILURE] ${m[1]}`,
+    es: (m) => `[FALLO] ${m[1]}`,
+  },
+  {
+    regex: /\[ERRO INTERNO\]\s*(.*)/i,
+    en: (m) => `[INTERNAL ERROR] ${m[1]}`,
+    es: (m) => `[ERROR INTERNO] ${m[1]}`,
   }
 ]
 

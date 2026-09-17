@@ -34,6 +34,7 @@ oracledb.fetchAsString = [ oracledb.CLOB ];
 const { BpmEngine } = require('./bpmEngine');
 const logger = require('./logger');
 const { cliDbLogger } = require('./cliDbLogger');
+const { t, setLanguage, detectLanguage } = require('./i18n');
 
 
 // Configurações do Supabase lidas do ambiente ou perguntadas depois
@@ -61,18 +62,18 @@ function formatAxiosError(error) {
 async function introspectPostgres(connectionString) {
   const client = new Client({ connectionString });
   try {
-    console.log(chalk.blue('\nConectando ao banco de dados...'));
+    console.log(chalk.blue(`\n${t('connecting_db')}`));
     await client.connect();
-    console.log(chalk.green('✓ Conexão local estabelecida com sucesso!\n'));
+    console.log(chalk.green(`${t('conn_established')}\n`));
 
-    console.log(chalk.gray('Lendo tabelas...'));
+    console.log(chalk.gray(t('reading_tables')));
     const tablesResult = await client.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`);
     const tables = tablesResult.rows.map(row => row.table_name);
 
-    console.log(chalk.gray('Lendo colunas...'));
+    console.log(chalk.gray(t('reading_columns')));
     const columnsResult = await client.query(`SELECT table_name, column_name, data_type, is_nullable, character_maximum_length, column_default FROM information_schema.columns WHERE table_schema = 'public'`);
 
-    console.log(chalk.gray('Lendo chaves primárias...'));
+    console.log(chalk.gray(t('reading_pks')));
     const pkResult = await client.query(`
       SELECT kcu.table_name, kcu.column_name 
       FROM information_schema.table_constraints tco
@@ -81,7 +82,7 @@ async function introspectPostgres(connectionString) {
     `);
     const primaryKeys = pkResult.rows;
 
-    console.log(chalk.gray('Lendo chaves estrangeiras (relacionamentos)...'));
+    console.log(chalk.gray(t('reading_fks')));
     const fkResult = await client.query(`
       SELECT tc.table_name AS foreign_table_name, kcu.column_name AS foreign_column_name, ccu.table_name AS primary_table_name, ccu.column_name AS primary_column_name
       FROM information_schema.table_constraints AS tc 
@@ -113,7 +114,7 @@ async function introspectPostgres(connectionString) {
       };
     });
 
-    console.log(chalk.green(`✓ Lidos metadados de ${schemaDefinition.length} tabelas.`));
+    console.log(chalk.green(t('metadata_read_tables', { count: schemaDefinition.length })));
     return schemaDefinition;
   } finally {
     await client.end();
@@ -124,7 +125,7 @@ async function introspectPostgres(connectionString) {
 async function introspectOracle(connectionString) {
   let connection;
   try {
-    console.log(chalk.blue('\nConectando ao banco de dados Oracle...'));
+    console.log(chalk.blue(`\n${t('connecting_db_oracle')}`));
 
     let user, password, connectString = connectionString;
     if (connectionString.startsWith('oracle://')) {
@@ -143,19 +144,19 @@ async function introspectOracle(connectionString) {
     if (password) connectConfig.password = password;
 
     connection = await oracledb.getConnection(connectConfig);
-    console.log(chalk.green('✓ Conexão Oracle local estabelecida com sucesso!\n'));
+    console.log(chalk.green(`${t('conn_oracle_established')}\n`));
 
-    console.log(chalk.gray('Lendo tabelas...'));
+    console.log(chalk.gray(t('reading_tables')));
     const tablesResult = await connection.execute(`SELECT TABLE_NAME FROM USER_TABLES`);
     const tables = tablesResult.rows.map(row => row.TABLE_NAME);
 
-    console.log(chalk.gray('Lendo colunas...'));
+    console.log(chalk.gray(t('reading_columns')));
     const columnsResult = await connection.execute(`
       SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, NULLABLE, DATA_DEFAULT 
       FROM USER_TAB_COLUMNS
     `);
 
-    console.log(chalk.gray('Lendo chaves primárias...'));
+    console.log(chalk.gray(t('reading_pks')));
     const pkResult = await connection.execute(`
       SELECT cols.TABLE_NAME, cols.COLUMN_NAME 
       FROM USER_CONSTRAINTS cons 
@@ -164,7 +165,7 @@ async function introspectOracle(connectionString) {
     `);
     const primaryKeys = pkResult.rows;
 
-    console.log(chalk.gray('Lendo chaves estrangeiras (relacionamentos)...'));
+    console.log(chalk.gray(t('reading_fks')));
     const fkResult = await connection.execute(`
       SELECT a.TABLE_NAME as FOREIGN_TABLE_NAME, a.COLUMN_NAME as FOREIGN_COLUMN_NAME, 
              c_pk.TABLE_NAME as PRIMARY_TABLE_NAME, b.COLUMN_NAME as PRIMARY_COLUMN_NAME
@@ -198,7 +199,7 @@ async function introspectOracle(connectionString) {
       };
     });
 
-    console.log(chalk.green(`✓ Lidos metadados de ${schemaDefinition.length} tabelas.`));
+    console.log(chalk.green(t('metadata_read_tables', { count: schemaDefinition.length })));
     return schemaDefinition;
   } catch (err) {
     console.error(chalk.red('Erro na introspecção Oracle: '), err);
@@ -1468,7 +1469,14 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 const fs = require('fs');
 
 async function run() {
-  console.log(chalk.bold.cyan('\n🚀 MetaBuilderPRO CLI - Enterprise Gateway\n'));
+  const langArg = process.argv.find(arg => arg.startsWith('--lang='));
+  if (langArg) {
+    setLanguage(langArg.split('=')[1].trim().toLowerCase());
+  } else {
+    setLanguage(detectLanguage());
+  }
+
+  console.log(chalk.bold.cyan(`\n🚀 ${t('cli_title')}\n`));
 
   const configArg = process.argv.find(arg => arg.startsWith('--config='));
   const configPath = configArg ? configArg.split('=')[1] : './metabuilder.config.json';
@@ -1476,11 +1484,11 @@ async function run() {
 
   // 1. Tenta carregar as conexões do arquivo
   if (fs.existsSync(configPath)) {
-    console.log(chalk.yellow('📄 Arquivo metabuilder.config.json detectado.'));
+    console.log(chalk.yellow(`📄 ${t('config_detected')}`));
     try {
       configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     } catch (err) {
-      console.log(chalk.red('❌ Erro ao ler o arquivo metabuilder.config.json: ', err.message));
+      console.log(chalk.red(`❌ ${t('config_read_error')}`, err.message));
     }
   }
 
@@ -1578,7 +1586,7 @@ async function run() {
       return; 
     } 
     else if (mode === 'sync') {
-      console.log(chalk.gray(`Sincronizando esquemas de ${configData.connections.length} projeto(s)...`));
+      console.log(chalk.gray(t('sync_starting_for', { count: configData.connections.length })));
       
       const SUPABASE_URL = configData.supabaseUrl || 'https://chmstvtepzmjhpyxjjam.supabase.co';
       const SUPABASE_ANON_KEY = configData.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To';
@@ -1646,7 +1654,7 @@ async function run() {
             }
             // --- FIM DA HEURÍSTICA ---
 
-            console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId} (Schema: ${dbConfig.name})...`));
+            console.log(chalk.blue(`\n${t('sending_metadata_schema', { projectId: conn.projectId, schema: dbConfig.name })}`));
             try {
               const syncResp = await axios.post(API_URL, {
                 projectId: conn.projectId,
@@ -1658,17 +1666,17 @@ async function run() {
               const respData = syncResp.data || {};
               // Loga resumo do schema
               schemaDefinition.forEach(tbl => {
-                logger.logSyncChange({ table: tbl.name, type: 'added', item: `${tbl.columns.length} coluna(s) detectada(s)`, detail: `Schema: ${dbConfig.name}` });
+                logger.logSyncChange({ table: tbl.name, type: 'added', count: tbl.columns.length, detail: `Schema: ${dbConfig.name}` });
               });
               if (respData.draftCreated) {
-                console.log(chalk.yellow.bold(`⚠️ Projeto ${conn.projectId} (${dbConfig.name}): divergências detectadas — draft criado para revisão manual.`));
+                console.log(chalk.yellow.bold(t('sync_divergences_detected', { projectId: conn.projectId, schema: dbConfig.name })));
               } else {
-                console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} (${dbConfig.name}) sincronizado com sucesso!`));
+                console.log(chalk.green.bold(t('sync_success_schema', { projectId: conn.projectId, schema: dbConfig.name })));
               }
             } catch (error) {
               const errorMsg = formatAxiosError(error);
               logger.logCriticalError(`Falha na sync do projeto ${conn.projectId} (${dbConfig.name})`, error);
-              console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId} (${dbConfig.name}):`), errorMsg);
+              console.error(chalk.red.bold(t('sync_failure_schema', { projectId: conn.projectId, schema: dbConfig.name })), errorMsg);
             }
           }
         } else if (conn.connectionString) {
@@ -1682,7 +1690,7 @@ async function run() {
             console.error(chalk.red.bold(`❌ [FALHA NA INTROSPECÇÃO] Projeto ${conn.projectId} (${dbType}) inacessível:`), err.message);
             continue;
           }
-          console.log(chalk.blue(`\nEnviando metadados do projeto ${conn.projectId}...`));
+          console.log(chalk.blue(`\n${t('sending_metadata', { projectId: conn.projectId })}`));
           try {
             const syncResp = await axios.post(API_URL, {
               projectId: conn.projectId,
@@ -1693,21 +1701,21 @@ async function run() {
             });
             const respData = syncResp.data || {};
             schemaDefinition.forEach(tbl => {
-              logger.logSyncChange({ table: tbl.name, type: 'added', item: `${tbl.columns.length} coluna(s) detectada(s)` });
+              logger.logSyncChange({ table: tbl.name, type: 'added', count: tbl.columns.length });
             });
             if (respData.draftCreated) {
-              console.log(chalk.yellow.bold(`⚠️ Projeto ${conn.projectId}: divergências detectadas — draft criado para revisão manual.`));
+              console.log(chalk.yellow.bold(t('sync_divergences_detected_no_schema', { projectId: conn.projectId })));
             } else {
-              console.log(chalk.green.bold(`✅ Projeto ${conn.projectId} sincronizado com sucesso!`));
+              console.log(chalk.green.bold(t('sync_success', { projectId: conn.projectId })));
             }
           } catch (error) {
             const errorMsg = formatAxiosError(error);
             logger.logCriticalError(`Falha na sync do projeto ${conn.projectId}`, error);
-            console.error(chalk.red.bold(`❌ Falha no projeto ${conn.projectId}:`), errorMsg);
+            console.error(chalk.red.bold(t('sync_failure', { projectId: conn.projectId })), errorMsg);
           }
         }
       }
-      console.log(chalk.yellow('\nProcesso de Sincronização finalizado.'));
+      console.log(chalk.yellow(`\n${t('sync_process_finished')}`));
       logger.close();
       process.exit(0);
     }

@@ -2,12 +2,19 @@
 
 import React, { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
+import { translateTunnelLog } from '@/utils/tunnelLogTranslator'
 
 interface TunnelSyncConsoleModalProps {
   isOpen: boolean
   syncStatus: 'idle' | 'running' | 'success' | 'error'
   syncLogs: string[]
   onClose: () => void
+}
+
+function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return String(str).replace(/\x1B\[[0-9;]*[mGKHF]/g, '')
 }
 
 export function TunnelSyncConsoleModal({
@@ -17,6 +24,7 @@ export function TunnelSyncConsoleModal({
   onClose
 }: TunnelSyncConsoleModalProps) {
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const { t, language } = useI18n()
 
   useEffect(() => {
     if (logsEndRef.current) {
@@ -47,8 +55,12 @@ export function TunnelSyncConsoleModal({
               }`}
             />
             <div>
-              <h3 className="font-bold text-lg text-white">Console de Sincronização</h3>
-              <p className="text-xs text-neutral-400 font-mono">cli-win.exe --action=sync</p>
+              <h3 className="font-bold text-lg text-white">
+                {t('workspace_components.tunnel_control.sync_modal_title', 'Console de Sincronização')}
+              </h3>
+              <p className="text-xs text-neutral-400 font-mono">
+                {t('workspace_components.tunnel_control.sync_modal_subtitle', 'cli-win.exe --action=sync')}
+              </p>
             </div>
           </div>
           <button
@@ -61,23 +73,42 @@ export function TunnelSyncConsoleModal({
         </div>
 
         <div className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px]">
-          {syncLogs.map((log, i) => (
-            <div
-              key={i}
-              className={`mb-1 ${
-                log.includes('ERROR') || log.includes('ERRO') || log.includes('FALHA')
-                  ? 'text-red-400'
-                  : log.includes('sucesso')
-                  ? 'text-green-400'
-                  : 'text-neutral-300'
-              }`}
-            >
-              <span className="text-neutral-600 mr-2">[{new Date().toLocaleTimeString()}]</span>
-              {log}
-            </div>
-          ))}
+          {syncLogs.map((rawLog, i) => {
+            const clean = stripAnsi(rawLog)
+            const log = translateTunnelLog(clean, language)
+            const isError =
+              log.includes('ERROR') ||
+              log.includes('ERRO') ||
+              log.includes('FALHA') ||
+              log.includes('FAIL') ||
+              log.includes('FALLO')
+            const isSuccess =
+              log.includes('sucesso') ||
+              log.includes('success') ||
+              log.includes('éxito') ||
+              log.includes('✓') ||
+              log.includes('✅')
+
+            return (
+              <div
+                key={i}
+                className={`mb-1 ${
+                  isError
+                    ? 'text-red-400'
+                    : isSuccess
+                    ? 'text-green-400'
+                    : 'text-neutral-300'
+                }`}
+              >
+                <span className="text-neutral-600 mr-2">[{new Date().toLocaleTimeString()}]</span>
+                {log}
+              </div>
+            )
+          })}
           {syncStatus === 'running' && (
-            <div className="text-indigo-400 animate-pulse mt-4">Processando...</div>
+            <div className="text-indigo-400 animate-pulse mt-4">
+              {t('workspace_components.tunnel_control.sync_processing', 'Processando...')}
+            </div>
           )}
           <div ref={logsEndRef} />
         </div>
@@ -90,16 +121,20 @@ export function TunnelSyncConsoleModal({
           >
             <div className="flex items-center gap-2">
               {syncStatus === 'success' ? (
-                <span className="font-bold text-sm text-green-500">✓ Sincronização concluída com sucesso!</span>
+                <span className="font-bold text-sm text-green-500">
+                  {t('workspace_components.tunnel_control.sync_completed_success', '✓ Sincronização concluída com sucesso!')}
+                </span>
               ) : (
-                <span className="font-bold text-sm text-red-500">⚠ Falha na sincronização. Verifique os logs acima.</span>
+                <span className="font-bold text-sm text-red-500">
+                  {t('workspace_components.tunnel_control.sync_failed', '⚠ Falha na sincronização. Verifique os logs acima.')}
+                </span>
               )}
             </div>
             <button
               onClick={onClose}
               className="px-6 py-2 rounded-xl font-bold text-sm bg-white text-black hover:bg-neutral-200 transition-colors"
             >
-              Fechar
+              {t('workspace_components.tunnel_control.close_btn', 'Fechar')}
             </button>
           </div>
         )}

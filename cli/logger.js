@@ -6,11 +6,12 @@
  * - Arquivo de sync:   logs/sync-YYYY-MM-DD.log
  *
  * Intercepta automaticamente console.log, console.error e console.warn
- * para espelhar tudo no arquivo sem alterar o comportamento do terminal.
+ * para espelhar tudo no arquivo de forma síncrona sem truncamento e no idioma selecionado.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { t, setLanguage, getLanguage } = require('./i18n');
 
 // Resolve a pasta raiz onde o CLI (ou o .exe compilado) está localizado.
 // process.pkg.entrypoint indica que está rodando como binário compilado.
@@ -25,7 +26,9 @@ const LOGS_DIR = logDirArg
 
 // Garante que a pasta logs/ existe
 if (!fs.existsSync(LOGS_DIR)) {
-  fs.mkdirSync(LOGS_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(LOGS_DIR, { recursive: true });
+  } catch (e) {}
 }
 
 /** Retorna a data local no formato YYYY-MM-DD usando o fuso horário local da máquina */
@@ -62,8 +65,9 @@ function stripAnsi(str) {
 
 class Logger {
   constructor() {
-    this._stream = null;
     this._mode = null;
+    this._filepath = null;
+    this._dateStr = null;
     this._originalLog = console.log.bind(console);
     this._originalError = console.error.bind(console);
     this._originalWarn = console.warn.bind(console);
@@ -75,27 +79,40 @@ class Logger {
     this._fileLoggingEnabled = enabled !== false;
   }
 
+  /** Define o idioma das mensagens e cabeçalhos de log */
+  setLanguage(lang) {
+    setLanguage(lang);
+  }
+
   /**
    * Inicializa o logger para um modo específico.
    * @param {'tunnel'|'sync'} mode
+   * @param {string} [lang]
    */
-  init(mode) {
+  init(mode, lang) {
+    if (lang) {
+      setLanguage(lang);
+    }
     this._mode = mode;
-    const filename = `${mode}-${getDateStr()}.log`;
-    const filepath = path.join(LOGS_DIR, filename);
-
-    this._stream = fs.createWriteStream(filepath, { flags: 'a', encoding: 'utf8' });
+    this._dateStr = getDateStr();
+    const filename = `${mode}-${this._dateStr}.log`;
+    this._filepath = path.join(LOGS_DIR, filename);
 
     // Cabeçalho de sessão
     const header = [
       '',
       '='.repeat(70),
-      `  MetaBuilderPRO CLI -- Modo: ${mode.toUpperCase()}`,
-      `  Sessao iniciada em: ${new Date().toLocaleString()} [${Intl.DateTimeFormat().resolvedOptions().timeZone}]`,
+      `  ${t('header_mode', { mode: mode.toUpperCase() })}`,
+      `  ${t('session_started', { time: `${new Date().toLocaleString()} [${Intl.DateTimeFormat().resolvedOptions().timeZone}]` })}`,
       '='.repeat(70),
       '',
     ].join('\n');
-    this._stream.write(header + '\n');
+
+    try {
+      fs.appendFileSync(this._filepath, header + '\n', 'utf8');
+    } catch (e) {
+      this._originalError('Failed to write log header:', e);
+    }
 
     // Intercepta console.log
     console.log = (...args) => {
@@ -115,27 +132,27 @@ class Logger {
       this._write('WRN', args);
     };
 
-    this._originalLog(`\n📄 Log sendo salvo em: ${filepath}\n`);
+    this._originalLog(`\n📄 ${t('log_saved_at', { path: this._filepath })}\n`);
   }
 
-  /** Escreve uma linha formatada no arquivo */
+  /** Escreve uma linha formatada no arquivo de forma síncrona para evitar truncamento */
   _write(level, args) {
-    if (!this._stream || !this._fileLoggingEnabled) return;
+    if (!this._filepath || !this._fileLoggingEnabled) return;
     
     // Rotação diária: verifica se virou o dia enquanto o processo rodava
     const currentDay = getDateStr();
     if (this._dateStr !== currentDay) {
       this._dateStr = currentDay;
-      this._stream.end();
       const filename = `${this._mode}-${currentDay}.log`;
-      const filepath = path.join(LOGS_DIR, filename);
-      this._stream = fs.createWriteStream(filepath, { flags: 'a', encoding: 'utf8' });
+      this._filepath = path.join(LOGS_DIR, filename);
     }
 
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
     const clean = stripAnsi(text);
     const line = `[${getTimeStr()}] [${level}] ${clean}\n`;
-    this._stream.write(line);
+    try {
+      fs.appendFileSync(this._filepath, line, 'utf8');
+    } catch (e) {}
   }
 
   /**
@@ -143,21 +160,36 @@ class Logger {
    * @param {Object} params
    * @param {string} params.table  - Nome da tabela
    * @param {'added'|'removed'|'modified'} params.type
-   * @param {string} params.item   - Descrição do item (coluna, índice, etc.)
-   * @param {string} [params.detail] - Detalhe adicional (ex: tipo anterior → novo)
+   * @param {string} [params.item]   - Descrição do item (coluna, índice, etc.)
+   * @param {number} [params.count]  - Quantidade de colunas detectadas
+   * @param {string} [params.detail] - Detalhe adicional (ex: Schema: crm)
    */
-  logSyncChange({ table, type, item, detail }) {
+  logSyncChange({ table, type, item, count, detail }) {
     const typeLabel = {
-      added:    '+ ADICIONADO',
-      removed:  '- REMOVIDO  ',
-      modified: '~ ALTERADO  ',
-    }[type] || '? MUDANÇA   ';
+      added:    t('sync_added'),
+      removed:  t('sync_removed'),
+      modified: t('sync_modified'),
+    }[type] || t('sync_change');
+
+    const tableWord = t('sync_table');
+
+    let itemStr = item;
+    if (count !== undefined) {
+      itemStr = t('sync_columns_detected', { count });
+    } else if (typeof item === 'string') {
+      const match = item.match(/(\d+)\s*(?:coluna|column)/i);
+      if (match) {
+        itemStr = t('sync_columns_detected', { count: match[1] });
+      }
+    }
 
     const detailStr = detail ? ` (${detail})` : '';
-    const line = `[${getTimeStr()}] [SYNC] ${typeLabel} | Tabela: ${table} | ${item}${detailStr}\n`;
+    const line = `[${getTimeStr()}] [SYNC] ${typeLabel} | ${tableWord}: ${table} | ${itemStr || ''}${detailStr}\n`;
     
-    if (this._stream && this._fileLoggingEnabled) {
-      this._stream.write(line);
+    if (this._filepath && this._fileLoggingEnabled) {
+      try {
+        fs.appendFileSync(this._filepath, line, 'utf8');
+      } catch (e) {}
     }
 
     // Também imprime no console com cor
@@ -169,22 +201,25 @@ class Logger {
    * Loga um erro crítico com stack trace.
    */
   logCriticalError(message, error) {
-    if (!this._stream) return;
+    if (!this._filepath) return;
     const stack = error?.stack || String(error);
     const block = [
       `[${getTimeStr()}] [CRIT] ${message}`,
       `         Stack: ${stack}`,
       '',
     ].join('\n');
-    this._stream.write(block);
+    try {
+      fs.appendFileSync(this._filepath, block, 'utf8');
+    } catch (e) {}
   }
 
-  /** Fecha o stream de forma limpa ao encerrar o processo */
+  /** Fecha o logger de forma limpa escrevendo o rodapé síncrono */
   close() {
-    if (this._stream) {
-      const footer = `\n[${getTimeStr()}] [LOG] Sessao encerrada.\n${'-'.repeat(70)}\n`;
-      this._stream.write(footer);
-      this._stream.end();
+    if (this._filepath && this._fileLoggingEnabled) {
+      const footer = `\n[${getTimeStr()}] [LOG] ${t('session_ended')}\n${'-'.repeat(70)}\n`;
+      try {
+        fs.appendFileSync(this._filepath, footer, 'utf8');
+      } catch (e) {}
     }
     // Restaura os originais
     console.log = this._originalLog;

@@ -635,7 +635,7 @@ fn statuscli(state: State<'_, CliState>) -> Result<bool, String> {
 }
 
 #[command]
-async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>) -> Result<String, String> {
+async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>, lang: Option<String>) -> Result<String, String> {
     let mut args = vec!["--headless".to_string(), "--action=sync".to_string()];
 
     if let Some(cfg) = config_path {
@@ -649,8 +649,8 @@ async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>) -> Resul
         }
     }
 
-    let saved_lang = read_saved_language();
-    args.push(format!("--lang={}", saved_lang));
+    let active_lang = lang.unwrap_or_else(|| read_saved_language());
+    args.push(format!("--lang={}", active_lang));
 
     let sidecar_command = app.shell().sidecar("cli").unwrap().args(args);
     let (mut rx, _child) = sidecar_command.spawn().map_err(|e| e.to_string())?;
@@ -679,12 +679,24 @@ async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>) -> Resul
 
     if let Some(code) = exit_code {
         if code == 0 {
-            Ok("Sincronização finalizada com sucesso".to_string())
+            match active_lang.as_str() {
+                "en" => Ok("Synchronization finished successfully".to_string()),
+                "es" => Ok("Sincronización finalizada con éxito".to_string()),
+                _ => Ok("Sincronização finalizada com sucesso".to_string()),
+            }
         } else {
-            Err(format!("Processo finalizado com erro (código {})", code))
+            match active_lang.as_str() {
+                "en" => Err(format!("Process finished with error (code {})", code)),
+                "es" => Err(format!("Proceso finalizado con error (código {})", code)),
+                _ => Err(format!("Processo finalizado com erro (código {})", code)),
+            }
         }
     } else {
-        Err("Processo finalizado de forma inesperada".to_string())
+        match active_lang.as_str() {
+            "en" => Err("Process terminated unexpectedly".to_string()),
+            "es" => Err("Proceso finalizado de forma inesperada".to_string()),
+            _ => Err("Processo finalizado de forma inesperada".to_string()),
+        }
     }
 }
 
