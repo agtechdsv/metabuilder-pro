@@ -317,62 +317,128 @@ export function InternalBrowser({
     }
   }
 
-  // Atalhos de teclado (fechar menu com ESC, navegar abas com Ctrl+Tab/Ctrl+Shift+Tab/Ctrl+PgDn/Ctrl+PgUp, nova aba com Ctrl+T/Ctrl+N)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Fechar Context Menu com ESC
-      if (e.key === 'Escape') {
-        if (contextMenu) {
-          e.preventDefault()
-          setContextMenu(null)
-          return
-        }
-      }
+  // Referência atualizada do handler para captura uniforme na janela principal e dentro dos iframes
+  const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {})
 
-      // 2. Adicionar nova aba com Ctrl + T ou Ctrl + N
-      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 't' || e.key.toLowerCase() === 'n')) {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // 1. Fechar Context Menu com ESC
+    if (e.key === 'Escape') {
+      if (contextMenu) {
         e.preventDefault()
-        handleAddNewTab()
+        setContextMenu(null)
         return
-      }
-
-      // 3. Fechar aba ativa com Ctrl + W ou Ctrl + F4
-      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'w' || e.key === 'F4' || e.key.toLowerCase() === 'f4')) {
-        if (activeTabId) {
-          e.preventDefault()
-          closeTabById(activeTabId)
-          return
-        }
-      }
-
-      // 4. Navegação sequencial entre abas
-      // Esquerda: Ctrl + Shift + Tab ou Ctrl + PageUp
-      const isNavLeft = (e.ctrlKey && e.shiftKey && e.key === 'Tab') ||
-        (e.ctrlKey && e.key === 'PageUp')
-
-      // Direita: Ctrl + Tab (sem Shift) ou Ctrl + PageDown
-      const isNavRight = (e.ctrlKey && !e.shiftKey && e.key === 'Tab') ||
-        (e.ctrlKey && e.key === 'PageDown')
-
-      if (isNavLeft || isNavRight) {
-        e.preventDefault()
-        if (tabs.length <= 1) return
-        const currentIndex = tabs.findIndex(t => t.id === activeTabId)
-        if (currentIndex === -1) return
-
-        if (isNavLeft) {
-          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length
-          setActiveTabId(tabs[prevIndex].id)
-        } else if (isNavRight) {
-          const nextIndex = (currentIndex + 1) % tabs.length
-          setActiveTabId(tabs[nextIndex].id)
-        }
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [tabs, activeTabId, contextMenu])
+    // 2. Adicionar nova aba com Ctrl + T ou Ctrl + N
+    const isNewTab = (e.ctrlKey || e.metaKey) && (
+      e.key.toLowerCase() === 't' || e.code === 'KeyT' ||
+      e.key.toLowerCase() === 'n' || e.code === 'KeyN'
+    )
+    if (isNewTab) {
+      e.preventDefault()
+      handleAddNewTab()
+      return
+    }
+
+    // 3. Fechar aba ativa com Ctrl + W ou Ctrl + F4
+    const isCloseTab = (e.ctrlKey || e.metaKey) && (
+      e.key.toLowerCase() === 'w' || e.code === 'KeyW' ||
+      e.key === 'F4' || e.key.toLowerCase() === 'f4'
+    )
+    if (isCloseTab) {
+      if (activeTabId) {
+        e.preventDefault()
+        closeTabById(activeTabId)
+        return
+      }
+    }
+
+    // 4. Navegação sequencial entre abas
+    // Esquerda: Ctrl + Shift + Tab ou Ctrl + PageUp
+    const isNavLeft = (e.ctrlKey && e.shiftKey && (e.key === 'Tab' || e.code === 'Tab')) ||
+      (e.ctrlKey && (e.key === 'PageUp' || e.code === 'PageUp'))
+
+    // Direita: Ctrl + Tab (sem Shift) ou Ctrl + PageDown
+    const isNavRight = (e.ctrlKey && !e.shiftKey && (e.key === 'Tab' || e.code === 'Tab')) ||
+      (e.ctrlKey && (e.key === 'PageDown' || e.code === 'PageDown'))
+
+    if (isNavLeft || isNavRight) {
+      e.preventDefault()
+      if (tabs.length <= 1) return
+      const currentIndex = tabs.findIndex(t => t.id === activeTabId)
+      if (currentIndex === -1) return
+
+      if (isNavLeft) {
+        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length
+        setActiveTabId(tabs[prevIndex].id)
+      } else if (isNavRight) {
+        const nextIndex = (currentIndex + 1) % tabs.length
+        setActiveTabId(tabs[nextIndex].id)
+      }
+    }
+  }
+
+  useEffect(() => {
+    handleKeyDownRef.current = handleKeyDown
+  })
+
+  // Listener para conectar eventos de teclado da janela principal e dos iframes das aplicações
+  const attachIframeListener = (iframe: HTMLIFrameElement | null) => {
+    if (!iframe) return
+    try {
+      const win = iframe.contentWindow
+      const doc = iframe.contentDocument
+      // @ts-ignore
+      if (win && !win.__mb_key_listener_attached) {
+        win.addEventListener('keydown', (e: KeyboardEvent) => handleKeyDownRef.current?.(e), true)
+        // @ts-ignore
+        win.__mb_key_listener_attached = true
+      }
+      // @ts-ignore
+      if (doc && !doc.__mb_key_listener_attached) {
+        doc.addEventListener('keydown', (e: KeyboardEvent) => handleKeyDownRef.current?.(e), true)
+        // @ts-ignore
+        doc.__mb_key_listener_attached = true
+      }
+    } catch (_) {}
+  }
+
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      handleKeyDownRef.current?.(e)
+    }
+    window.addEventListener('keydown', onWindowKeyDown, true)
+
+    // Conectar e monitorar iframes para anexar listener de teclas
+    const attachAll = () => {
+      Object.values(iframeRefs.current).forEach(iframe => {
+        if (iframe) attachIframeListener(iframe)
+      })
+    }
+
+    attachAll()
+    const interval = setInterval(attachAll, 600)
+
+    return () => {
+      window.removeEventListener('keydown', onWindowKeyDown, true)
+      clearInterval(interval)
+    }
+  }, [tabs])
+
+  useEffect(() => {
+    if (activeTabId && iframeRefs.current[activeTabId]) {
+      const iframe = iframeRefs.current[activeTabId]
+      if (iframe) {
+        attachIframeListener(iframe)
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus()
+          } catch (_) {}
+        }, 50)
+      }
+    }
+  }, [activeTabId])
 
   const handleBack = () => {
     if (activeTabId && iframeRefs.current[activeTabId]) {
@@ -400,6 +466,7 @@ export function InternalBrowser({
   const handleIframeLoad = (tabId: string) => {
     const iframe = iframeRefs.current[tabId]
     if (iframe) {
+      attachIframeListener(iframe)
       try {
         const currentUrl = iframe.contentWindow?.location.href
         if (currentUrl && currentUrl !== 'about:blank') {
@@ -744,7 +811,10 @@ export function InternalBrowser({
                 </div>
               )}
               <iframe
-                ref={el => { iframeRefs.current[tab.id] = el }}
+                ref={el => { 
+                  iframeRefs.current[tab.id] = el
+                  if (el) attachIframeListener(el)
+                }}
                 src={tab.url}
                 onLoad={() => handleIframeLoad(tab.id)}
                 className={`w-full h-full border-none bg-white ${isTabActive ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
