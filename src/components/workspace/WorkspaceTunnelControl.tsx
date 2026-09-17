@@ -100,7 +100,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       setConfigContent(configText)
     } catch (e) {
       console.error(e)
-      toast('Erro ao carregar configuração.', 'error')
+      toast(t('workspace_components.tunnel_control.config_load_error', 'Erro ao carregar configuração.'), 'error')
     }
   }
 
@@ -114,11 +114,11 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       const configPath = await join(dir, 'metabuilder.config.json')
 
       await writeTextFile(configPath, configContent)
-      toast('Configuração salva com sucesso!', 'success')
+      toast(t('workspace_components.tunnel_control.config_save_success', 'Configuração salva com sucesso!'), 'success')
       setIsConfigModalOpen(false)
     } catch (e) {
       console.error(e)
-      toast('Erro ao salvar configuração.', 'error')
+      toast(t('workspace_components.tunnel_control.config_save_error', 'Erro ao salvar configuração.'), 'error')
     } finally {
       setIsSavingConfig(false)
     }
@@ -252,7 +252,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         const { invoke } = await import('@tauri-apps/api/core')
         if (action === 'stop') {
           await invoke('stopcli')
-          toast('Processo parado com sucesso', 'success')
+          toast(t('workspace_components.tunnel_control.process_stopped_success', 'Processo parado com sucesso'), 'success')
         } else {
           const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
           const dir = await appLocalDataDir()
@@ -262,7 +262,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             mode: mode || 1,
             configPath: configPath,
           })
-          toast('Túnel iniciado com sucesso.', 'success')
+          toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success')
         }
         checkStatus()
         return
@@ -276,14 +276,20 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       const data = await res.json()
 
       if (data.success) {
-        toast(data.message, 'success')
+        if (action === 'start') {
+          toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success')
+        } else if (action === 'stop') {
+          toast(t('workspace_components.tunnel_control.tunnel_stopped_success', 'Túnel parado com sucesso'), 'success')
+        } else {
+          toast(data.message, 'success')
+        }
       } else {
-        toast(data.message || 'Erro ao comunicar com o processo.', 'error')
+        toast(data.message || t('workspace_components.tunnel_control.process_comm_error', 'Erro ao comunicar com o processo.'), 'error')
       }
 
       checkStatus()
     } catch (e) {
-      toast('Falha ao executar processo CLI.', 'error')
+      toast(t('workspace_components.tunnel_control.cli_process_failed', 'Falha ao executar processo CLI.'), 'error')
       checkStatus()
     }
   }

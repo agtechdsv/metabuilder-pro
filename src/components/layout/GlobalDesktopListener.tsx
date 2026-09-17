@@ -4,12 +4,14 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n'
 import { DesktopBuildTracker } from '@/components/runtime/DesktopBuildTracker'
 
 export function GlobalDesktopListener() {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
+  const { t } = useI18n()
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -74,7 +76,12 @@ export function GlobalDesktopListener() {
                 const win = getCurrentWindow();
                 const isVisible = await win.isVisible();
                 
-                toast(payload === 'start_tunnel' ? 'Iniciando túnel...' : 'Parando túnel...', 'info');
+                toast(
+                  payload === 'start_tunnel' 
+                    ? t('workspace_components.tunnel_control.starting_tunnel', 'Iniciando túnel...') 
+                    : t('workspace_components.tunnel_control.stopping_tunnel', 'Parando túnel...'), 
+                  'info'
+                );
 
                 if (!isVisible) {
                   await bringToFront();
@@ -83,17 +90,17 @@ export function GlobalDesktopListener() {
                 const { invoke } = await import('@tauri-apps/api/core');
                 if (payload === 'stop_tunnel') {
                   await invoke('stopcli');
-                  toast('Túnel parado com sucesso', 'success');
+                  toast(t('workspace_components.tunnel_control.tunnel_stopped_success', 'Túnel parado com sucesso'), 'success');
                 } else {
                   const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
                   const dir = await appLocalDataDir();
                   const configPath = await join(dir, 'metabuilder.config.json');
                   
                   await invoke('startcli', { mode: 1, configPath });
-                  toast('Túnel iniciado com sucesso.', 'success');
+                  toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success');
                 }
               } catch (e) {
-                toast('Falha ao executar processo do túnel.', 'error');
+                toast(t('workspace_components.tunnel_control.tunnel_process_failed', 'Falha ao executar processo do túnel.'), 'error');
               }
               break;
           }

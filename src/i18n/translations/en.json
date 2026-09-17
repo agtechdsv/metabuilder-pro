@@ -3682,7 +3682,18 @@
       "add_ldap_config": "+ Add LDAP Configuration",
       "tip_title": "Tip:",
       "tip_desc": "If you generate a project before editing this configuration, properties like projectId and secretToken will be automatically pre-filled for you!",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "tunnel_started_success": "Tunnel started successfully.",
+      "process_stopped_success": "Process stopped successfully",
+      "tunnel_stopped_success": "Tunnel stopped successfully",
+      "starting_tunnel": "Starting tunnel...",
+      "stopping_tunnel": "Stopping tunnel...",
+      "cli_process_failed": "Failed to execute CLI process.",
+      "tunnel_process_failed": "Failed to execute tunnel process.",
+      "config_load_error": "Error loading configuration.",
+      "config_save_success": "Configuration saved successfully!",
+      "config_save_error": "Error saving configuration.",
+      "process_comm_error": "Error communicating with process."
     },
     "synced_dbs": {
       "title": "Synced Databases (Schemas)",
