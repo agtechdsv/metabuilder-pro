@@ -1086,6 +1086,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
             
             params = values;
+            
+            console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
+            console.log(chalk.gray(`[ SQL ] Params: ${JSON.stringify(params)}`));
+
             try {
               if (dbType === 'oracle') {
                 await oracleConnection.execute(sql, params, { autoCommit: true });
@@ -1211,6 +1215,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
             params = [...values, idValue];
 
+            console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
+            console.log(chalk.gray(`[ SQL ] Params: ${JSON.stringify(params)}`));
+
             try {
               if (dbType === 'oracle') {
                  await oracleConnection.execute(sql, params, { autoCommit: true });
@@ -1292,11 +1299,19 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             const sqlTable = safeTable.toUpperCase();
             sql = `DELETE FROM "${sqlTable}" WHERE "${safeIdCol}" = :1`;
             params = [idValue];
+            
+            console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
+            console.log(chalk.gray(`[ SQL ] Params: ${JSON.stringify(params)}`));
+
             await oracleConnection.execute(sql, params, { autoCommit: true });
             result = { rows: [] };
           } else {
             sql = `DELETE FROM "${safeTable}" WHERE "${safeIdCol}" = $1 RETURNING *`;
             params = [idValue];
+            
+            console.log(chalk.gray(`[ SQL ] Executando: ${sql}`));
+            console.log(chalk.gray(`[ SQL ] Params: ${JSON.stringify(params)}`));
+
             result = await pgClient.query(sql, params);
             if (result.rows.length > 0) {
               deletedRowData = result.rows[0];
