@@ -337,7 +337,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         actionDesc = `${action.toUpperCase()} na tabela '${table || 'desconhecida'}'`;
       }
 
-      console.log(chalk.yellow(`[ EXEC ] Comando Recebido no schema '${expectedSchema}': ${actionDesc}`));
+      let actionColor = chalk.yellow;
+      if (action === 'select' || action === 'get_users' || action === 'read_logs') actionColor = chalk.cyan;
+      else if (action === 'insert') actionColor = chalk.green;
+      else if (action === 'update') actionColor = chalk.magenta;
+      else if (action === 'delete') actionColor = chalk.red;
+
+      console.log(`${actionColor('[ EXEC ]')} Comando Recebido no schema '${expectedSchema}': ${actionDesc}`);
 
       let sql = '';
       let params = [];
