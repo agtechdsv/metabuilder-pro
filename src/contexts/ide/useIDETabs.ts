@@ -4,6 +4,7 @@ import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '@/components/ui/Toast'
 import { parseEntitySource, updateEntityCache } from '@/components/ide/entityParser'
+import { updateJavaClassSource } from '@/components/ide/ideUtils'
 
 export interface UseIDETabsProps {
   targetSlug?: string
@@ -94,10 +95,15 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
         setFileContents(prev => ({ ...prev, [path]: content }))
         setOriginalFileContents(prev => ({ ...prev, [path]: content }))
 
-        // Atualiza cache de entidades em tempo real
-        if (content && (path.includes('/entities/') || path.includes('\\entities\\') || content.includes('@Entity'))) {
-          const className = path.split('/').pop()?.replace('.java', '') || ''
-          updateEntityCache(className, parseEntitySource(content, className, path))
+        // Atualiza cache de classes e entidades Java em tempo real
+        if (content && path.endsWith('.java')) {
+          const className = (path.split(/[/\\]/).pop() || '').replace('.java', '')
+          if (className) {
+            updateJavaClassSource(className, content)
+            if (path.includes('/entities/') || path.includes('\\entities\\') || content.includes('@Entity')) {
+              updateEntityCache(className, parseEntitySource(content, className, path))
+            }
+          }
         }
 
         setOpenFiles(prev => {
@@ -133,10 +139,15 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
       setFileContents(prev => ({ ...prev, [targetPath]: value }))
       setOriginalFileContents(prev => ({ ...prev, [targetPath]: value }))
       
-      // Atualiza cache de entidades em tempo real ao salvar
-      if (value && (targetPath.includes('/entities/') || targetPath.includes('\\entities\\') || value.includes('@Entity'))) {
-        const className = targetPath.split('/').pop()?.replace('.java', '') || ''
-        updateEntityCache(className, parseEntitySource(value, className, targetPath))
+      // Atualiza cache de classes e entidades Java em tempo real ao salvar
+      if (value && targetPath.endsWith('.java')) {
+        const className = (targetPath.split(/[/\\]/).pop() || '').replace('.java', '')
+        if (className) {
+          updateJavaClassSource(className, value)
+          if (targetPath.includes('/entities/') || targetPath.includes('\\entities\\') || value.includes('@Entity')) {
+            updateEntityCache(className, parseEntitySource(value, className, targetPath))
+          }
+        }
       }
 
       setDiffActiveFile(curr => {

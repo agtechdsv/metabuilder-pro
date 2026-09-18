@@ -13,7 +13,7 @@ import { useIDEFileSystem, FileNode, UndoAction } from './ide/useIDEFileSystem'
 import { useIDEFileOperations } from './ide/useIDEFileOperations'
 import { useIDEGit } from './ide/useIDEGit'
 import { useIDEServer } from './ide/useIDEServer'
-import { handleMonacoBeforeMount, updateJavaClasses } from '@/components/ide/ideUtils'
+import { handleMonacoBeforeMount, updateJavaClasses, updateJavaClassSource } from '@/components/ide/ideUtils'
 import { registerEntityPath, updateEntityCache, parseEntitySource } from '@/components/ide/entityParser'
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory } from '@tauri-apps/api/path'
@@ -115,10 +115,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
-  // Atualiza a lista global de classes Java para o Autocomplete do Monaco e indexa entidades
+  // Extração inteligente de classes Java para auto-import e autocomplete no Monaco Editor
   useEffect(() => {
     const javaClassItems: { name: string; packageName?: string; fullPath?: string }[] = []
-    const entityNodesToLoad: { className: string; path: string }[] = []
     
     const extractJavaClasses = (nodes: FileNode[]) => {
       for (const node of nodes) {
@@ -127,14 +126,15 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           const className = node.name.replace('.java', '')
           
           let pkg = ''
-          const javaIdx = node.path.lastIndexOf('/java/')
+          const normalizedPath = node.path.replace(/\\/g, '/')
+          const javaIdx = normalizedPath.lastIndexOf('/java/')
           if (javaIdx !== -1) {
-            const rel = node.path.substring(javaIdx + 6)
+            const rel = normalizedPath.substring(javaIdx + 6)
             const parts = rel.split('/')
             parts.pop() // remove o nome do arquivo .java
             pkg = parts.join('.')
           } else {
-            const parts = node.path.split('/')
+            const parts = normalizedPath.split('/')
             parts.pop()
             const parentFolder = parts[parts.length - 1]
             if (parentFolder && parentFolder !== 'src') {
@@ -145,9 +145,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           javaClassItems.push({ name: className, packageName: pkg, fullPath: node.path })
 
           // Registra entidades
-          if (node.path.includes('/entities/') || node.path.includes('\\entities\\') || pkg.endsWith('entities')) {
+          if (normalizedPath.includes('/entities/') || pkg.endsWith('entities')) {
             registerEntityPath(className, node.path)
-            entityNodesToLoad.push({ className, path: node.path })
           }
         } else if (node.isDirectory && node.children) {
           extractJavaClasses(node.children)
@@ -163,14 +162,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       )
       updateJavaClasses(uniqueItems)
 
-      // Carga em background das entidades para preencher o cache do Monaco
-      if (isTauri() && entityNodesToLoad.length > 0) {
+      // Carga em background das classes e entidades Java para preencher o cache do Monaco
+      if (isTauri() && uniqueItems.length > 0) {
         setTimeout(async () => {
-          for (const ent of entityNodesToLoad) {
+          for (const item of uniqueItems) {
+            if (!item.fullPath) continue
             try {
-              const src = await tauriFs.readTextFile(ent.path, { baseDir: BaseDirectory.Home })
+              const src = await tauriFs.readTextFile(item.fullPath, { baseDir: BaseDirectory.Home })
               if (src) {
-                updateEntityCache(ent.className, parseEntitySource(src, ent.className, ent.path))
+                updateJavaClassSource(item.name, src)
+                const norm = item.fullPath.replace(/\\/g, '/')
+                if (norm.includes('/entities/') || (item.packageName && item.packageName.endsWith('entities'))) {
+                  updateEntityCache(item.name, parseEntitySource(src, item.name, item.fullPath))
+                }
               }
             } catch {
               // Silencioso se der erro na leitura em background

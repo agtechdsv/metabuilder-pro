@@ -345,11 +345,20 @@ export const SPRING_DATA_JPA_METHODS = [
 ]
 
 export const SPRING_SERVICE_METHODS = [
-  { label: 'findAll()', insertText: 'findAll()', detail: 'List<DTO> findAll() - Retorna lista completa' },
-  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'DTO findById(ID id) - Busca por ID' },
-  { label: 'save(dto)', insertText: 'save(${1:dto})', isSnippet: true, detail: 'DTO save(DTO dto) - Cria ou atualiza registro' },
-  { label: 'update(id, dto)', insertText: 'update(${1:id}, ${2:dto})', isSnippet: true, detail: 'DTO update(ID id, DTO dto) - Atualiza registro existente' },
+  // 1. Métodos padrão de negócio e métricas do MetaBuilder Spring Boot
+  { label: 'getAnalyticsSummary()', insertText: 'getAnalyticsSummary()', detail: 'Map<String, Object> getAnalyticsSummary() - Métricas e resumo analítico' },
+  { label: 'findAll(page, size, sort)', insertText: 'findAll(${1:page}, ${2:size}, ${3:sort})', isSnippet: true, detail: 'Page<T> findAll(int page, int size, String sort) - Busca paginada' },
+  { label: 'search(params, page, size, sort)', insertText: 'search(${1:filters}, ${2:page}, ${3:size}, ${4:sort})', isSnippet: true, detail: 'Page<T> search(Map<String, String> params, int page, int size, String sort) - Busca dinâmica por filtros' },
+  { label: 'findAllProjected(page, size, sort)', insertText: 'findAllProjected(${1:page}, ${2:size}, ${3:sort})', isSnippet: true, detail: 'Page<ListView> findAllProjected(int page, int size, String sort) - Projeção de Grid' },
+
+  // 2. Operações CRUD canônicas
+  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'Optional<T> findById(ID id) - Busca por ID' },
+  { label: 'save(entity)', insertText: 'save(${1:entity})', isSnippet: true, detail: 'T save(T entity) - Salva ou atualiza entidade' },
+  { label: 'delete(id)', insertText: 'delete(${1:id})', isSnippet: true, detail: 'void delete(ID id) - Remove por ID' },
   { label: 'deleteById(id)', insertText: 'deleteById(${1:id})', isSnippet: true, detail: 'void deleteById(ID id) - Remove por ID' },
+  { label: 'findAll()', insertText: 'findAll()', detail: 'List<T> findAll() - Retorna lista completa' },
+  { label: 'save(dto)', insertText: 'save(${1:dto})', isSnippet: true, detail: 'DTO save(DTO dto) - Cria ou atualiza registro DTO' },
+  { label: 'update(id, dto)', insertText: 'update(${1:id}, ${2:dto})', isSnippet: true, detail: 'DTO update(ID id, DTO dto) - Atualiza registro existente' },
 ]
 
 const COMMON_INSTANCE_DOT_SUGGESTIONS = [
@@ -373,16 +382,408 @@ const COMMON_INSTANCE_DOT_SUGGESTIONS = [
   { label: 'stream', insertText: 'stream()', isSnippet: true, detail: 'Inicia Stream da coleção' },
 ]
 
+// Cache de fontes de classes Java para extração dinâmica de métodos
+const classSourceCache = new Map<string, string>()
+
+export const updateJavaClassSource = (className: string, source: string) => {
+  if (className && source) {
+    classSourceCache.set(className, source)
+  }
+}
+
+export interface JavaMethodSuggestion {
+  label: string
+  insertText: string
+  isSnippet?: boolean
+  kind: 'Method'
+  detail: string
+}
+
+/**
+ * Extrai todos os métodos públicos declarados em um arquivo fonte Java
+ */
+export function parseJavaMethodsFromSource(source: string): JavaMethodSuggestion[] {
+  if (!source) return []
+  const methods: JavaMethodSuggestion[] = []
+  const seen = new Set<string>()
+
+  // Regex para declarações de métodos públicos:
+  // public [static] [<T>] ReturnType methodName(Type1 param1, Type2 param2) [throws ...] {
+  const methodRegex = /public\s+(?:static\s+)?(?:<[^>]+>\s+)?([A-Za-z0-9_<>[\],\s]+?)\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*(?:throws\s+[^{]+)?\s*\{/g
+
+  let match: RegExpExecArray | null
+  while ((match = methodRegex.exec(source)) !== null) {
+    const returnType = match[1].trim()
+    const methodName = match[2].trim()
+    const rawParams = match[3].trim()
+
+    // Ignora construtores (iniciados com maiúscula)
+    if (/^[A-Z]/.test(methodName)) continue
+
+    let label = `${methodName}()`
+    let insertText = `${methodName}()`
+    let isSnippet = false
+
+    if (rawParams) {
+      const params = rawParams.split(',').map(p => {
+        const cleaned = p.replace(/@\w+(?:\([^)]*\))?\s*/g, '').trim()
+        const parts = cleaned.split(/\s+/)
+        return {
+          type: parts.slice(0, -1).join(' ') || 'Object',
+          name: parts[parts.length - 1] || 'param'
+        }
+      })
+
+      const paramNames = params.map(p => p.name).join(', ')
+      label = `${methodName}(${paramNames})`
+
+      const snippetParams = params.map((p, idx) => `\${${idx + 1}:${p.name}}`).join(', ')
+      insertText = `${methodName}(${snippetParams})`
+      isSnippet = true
+    }
+
+    if (!seen.has(label)) {
+      seen.add(label)
+      methods.push({
+        label,
+        insertText,
+        isSnippet,
+        kind: 'Method',
+        detail: `${returnType} ${methodName}(${rawParams.replace(/\s+/g, ' ')})`
+      })
+    }
+  }
+
+  return methods
+}
+
+/**
+ * Obtém os métodos de uma classe Java (do cache de fontes ou modelos abertos do Monaco)
+ */
+export function getMethodsForClass(className: string, monaco?: any): JavaMethodSuggestion[] {
+  if (!className) return []
+
+  let source = classSourceCache.get(className) || null
+  if (!source && monaco && monaco.editor) {
+    const models = monaco.editor.getModels()
+    for (const m of models) {
+      const p = (m.uri ? m.uri.path || '' : '').replace(/\\/g, '/')
+      if (p.endsWith(`/${className}.java`)) {
+        source = m.getValue()
+        if (source) {
+          classSourceCache.set(className, source)
+          break
+        }
+      }
+    }
+  }
+
+  if (source) {
+    return parseJavaMethodsFromSource(source)
+  }
+
+  return []
+}
+
+/**
+ * Detecta se o trecho digitado imediatamente antes da palavra atual representa um Tipo Java.
+ * Quando verdadeiro, o usuário está nomeando uma variável/atributo (ex: "private CategoriasProdutosService ")
+ */
+export function detectTypeBeforeCursor(textBeforeWord: string): string | null {
+  const trimmed = textBeforeWord.trim()
+  if (!trimmed) return null
+
+  // Palavras-chave ou caracteres que precedem identificadores mas NÃO são tipos de variáveis
+  const nonTypeKeywords = [
+    'package', 'import', 'class', 'interface', 'enum', 'record', 'extends', 'implements',
+    'throws', 'throw', 'new', 'return', 'instanceof', 'case', 'default', 'if', 'else',
+    'while', 'for', 'do', 'switch', 'try', 'catch', 'finally', 'synchronized',
+    'assert', 'goto', 'const', 'true', 'false', 'null', 'this', 'super'
+  ]
+
+  // Se terminar com operadores (=, ==, +, -, etc.), parênteses de chamada ou pontuação
+  if (/[=+\-*/%&|^!<>?:;,()\[\]{}]$/.test(trimmed)) return null
+
+  // Pega a última palavra do trecho
+  const lastWordMatch = trimmed.match(/([a-zA-Z0-9_]+)$/)
+  if (!lastWordMatch) return null
+  const lastWord = lastWordMatch[1]
+  if (nonTypeKeywords.includes(lastWord)) return null
+
+  // Se a última palavra for um modificador (ex: "private", "final", "public"), o usuário ainda vai digitar o tipo
+  const modifiers = ['private', 'protected', 'public', 'static', 'final', 'transient', 'volatile', 'abstract']
+  if (modifiers.includes(lastWord)) return null
+
+  // Se for instanciação: ex: new ClientesService
+  if (/\bnew\s+[A-Za-z0-9_<>]+$/.test(trimmed)) return null
+
+  // Se for anotação isolada: ex: @GetMapping
+  if (/^@\w+$/.test(trimmed)) return null
+
+  // 1. Tipo genérico no final: Ex: Map<String, String>, List<Item>, ResponseEntity<Page<X>>
+  const genericMatch = trimmed.match(/(?:^|[\s,(])(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:private|protected|public|static|final|transient|volatile)\s+)*([A-Z][A-Za-z0-9_]*<.+>)$/)
+  if (genericMatch) {
+    return genericMatch[1].trim()
+  }
+
+  // 2. Tipo simples (PascalCase ou tipo primitivo) com possíveis modificadores
+  // Ex: "private CategoriasProdutosService" -> "CategoriasProdutosService"
+  // Ex: "private final PedidosService" -> "PedidosService"
+  // Ex: "String" -> "String"
+  // Ex: "int" -> "int"
+  const simpleMatch = trimmed.match(/(?:^|[\s,(])(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:private|protected|public|static|final|transient|volatile)\s+)*([A-Z][A-Za-z0-9_]*(?:\[\s*\])*|\b(?:int|long|boolean|double|float|byte|char|short|void)(?:\[\s*\])*)$/)
+  if (simpleMatch) {
+    return simpleMatch[1].trim()
+  }
+
+  return null
+}
+
+/**
+ * Gera sugestões inteligentes de nomes de variáveis/atributos a partir do tipo declarado
+ */
+export function generateVariableNameSuggestions(typeStr: string): string[] {
+  const suggestions: string[] = []
+  const seen = new Set<string>()
+
+  const add = (name: string) => {
+    if (!name || seen.has(name) || !/^[a-z][a-zA-Z0-9_]*$/.test(name)) return
+    const reserved = ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while']
+    if (reserved.includes(name)) return
+    seen.add(name)
+    suggestions.push(name)
+  }
+
+  const lowerType = typeStr.toLowerCase()
+
+  // Tipos primitivos e básicos
+  if (lowerType === 'string') {
+    ['str', 'name', 'value', 'text', 'title', 'description'].forEach(add)
+    return suggestions
+  }
+  if (['int', 'integer', 'long'].includes(lowerType)) {
+    ['id', 'count', 'total', 'index', 'size', 'number'].forEach(add)
+    return suggestions
+  }
+  if (['boolean', 'bool'].includes(lowerType)) {
+    ['active', 'enabled', 'isValid', 'hasAccess', 'success'].forEach(add)
+    return suggestions
+  }
+  if (['double', 'float', 'bigdecimal'].includes(lowerType)) {
+    ['amount', 'price', 'total', 'value', 'balance'].forEach(add)
+    return suggestions
+  }
+  if (lowerType === 'uuid') {
+    ['id', 'uuid', 'token'].forEach(add)
+    return suggestions
+  }
+
+  // Genéricos: List<X>, Set<X>, Page<X>, Map<K,V>
+  const genericMatch = typeStr.match(/^([A-Za-z0-9_]+)<(.+)>$/)
+  if (genericMatch) {
+    const outer = genericMatch[1]
+    const inner = genericMatch[2].trim()
+
+    if (['List', 'Set', 'Collection', 'Iterable', 'Page'].includes(outer)) {
+      const innerClean = inner.replace(/<.*>/, '').replace(/.*[.]/, '').trim()
+      if (innerClean && /^[A-Z]/.test(innerClean)) {
+        const innerCamel = innerClean.charAt(0).toLowerCase() + innerClean.slice(1)
+        const plural = innerCamel.endsWith('s') ? innerCamel : `${innerCamel}s`
+        add(plural)
+        add(`${innerCamel}List`)
+        if (outer === 'Page') add(`${innerCamel}Page`)
+        add('items')
+        add('list')
+        return suggestions
+      }
+    }
+
+    if (['Map', 'HashMap', 'ConcurrentMap'].includes(outer)) {
+      ['map', 'params', 'filters', 'data', 'summary', 'payload'].forEach(add)
+      return suggestions
+    }
+
+    if (outer === 'Optional') {
+      const innerClean = inner.replace(/<.*>/, '').replace(/.*[.]/, '').trim()
+      if (innerClean && /^[A-Z]/.test(innerClean)) {
+        const innerCamel = innerClean.charAt(0).toLowerCase() + innerClean.slice(1)
+        add(`opt${innerClean}`)
+        add(`${innerCamel}Opt`)
+        add(innerCamel)
+        return suggestions
+      }
+    }
+  }
+
+  // Classes (PascalCase): Ex: CategoriasProdutosService, ClientesRepository
+  const cleanType = typeStr.replace(/\[\s*\]/g, '').replace(/<.*>/g, '').trim()
+  if (!cleanType) return suggestions
+
+  const words = cleanType.match(/[A-Z][a-z0-9]*/g) || [cleanType]
+
+  // 1. camelCase completo (ex: "categoriasProdutosService")
+  const fullCamel = cleanType.charAt(0).toLowerCase() + cleanType.slice(1)
+  add(fullCamel)
+
+  // 2. Sufixo arquitetural (ex: "service", "repository", "controller")
+  const lastWord = words[words.length - 1]
+  const archSuffixes = ['Service', 'Repository', 'Controller', 'DTO', 'Dto', 'Record', 'Entity', 'Mapper', 'Helper', 'Client', 'Spec', 'Specification', 'Config', 'Producer', 'Consumer']
+  if (archSuffixes.includes(lastWord) && words.length > 1) {
+    add(lastWord.toLowerCase()) // ex: "service"
+
+    // 3. Primeira palavra + sufixo (ex: "categoriasService")
+    if (words.length > 2) {
+      const firstWord = words[0]
+      add(firstWord.charAt(0).toLowerCase() + firstWord.slice(1) + lastWord)
+    }
+
+    // 4. Sem sufixo (ex: "categoriasProdutos")
+    const withoutSuffix = words.slice(0, -1).join('')
+    const withoutSuffixCamel = withoutSuffix.charAt(0).toLowerCase() + withoutSuffix.slice(1)
+    add(withoutSuffixCamel)
+
+    // 5. Singular da primeira palavra (ex: "categoria")
+    const firstSingular = words[0].replace(/s$/, '')
+    if (firstSingular !== words[0]) {
+      add(firstSingular.charAt(0).toLowerCase() + firstSingular.slice(1))
+    }
+  } else if (words.length > 1) {
+    const lastCamel = lastWord.charAt(0).toLowerCase() + lastWord.slice(1)
+    add(lastCamel)
+
+    const firstSingular = words[0].replace(/s$/, '')
+    if (firstSingular !== words[0]) {
+      add(firstSingular.charAt(0).toLowerCase() + firstSingular.slice(1))
+    }
+  }
+
+  // 6. Abreviação curta de 4 ou 3 letras (ex: "cate" ou "cat")
+  if (words[0].length >= 4) {
+    add(words[0].substring(0, 4).toLowerCase())
+    add(words[0].substring(0, 3).toLowerCase())
+  }
+
+  return suggestions
+}
+
+export interface ScopeSymbol {
+  name: string
+  type: string
+  kind: 'Field' | 'Variable' | 'Parameter'
+  detail: string
+}
+
+/**
+ * Extrai campos da classe, parâmetros de método e variáveis locais do arquivo atual
+ */
+export function extractInScopeSymbols(source: string, currentLineNumber: number): ScopeSymbol[] {
+  const symbols: ScopeSymbol[] = []
+  const seen = new Set<string>()
+
+  const add = (sym: ScopeSymbol) => {
+    if (!sym.name || seen.has(sym.name)) return
+    const reserved = ['this', 'super', 'null', 'true', 'false', 'class', 'return', 'if', 'else', 'for', 'while', 'new', 'try', 'catch', 'throw']
+    if (reserved.includes(sym.name)) return
+    seen.add(sym.name)
+    symbols.push(sym)
+  }
+
+  const lines = source.split('\n')
+
+  // 1. Atributos/Campos da Classe (Fields)
+  // Ex: private final ClientesService service;
+  // Ex: private CategoriasProdutosService cate;
+  const fieldRegex = /^\s*(?:@\w+(?:\([^)]*\))?\s+)*(?:(?:private|protected|public|static|final|transient|volatile)\s+)+([A-Za-z0-9_<>[\],\s]+?)\s+([a-zA-Z0-9_]+)\s*(?:=[^;]+)?;/
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.includes('(') || line.includes('class ') || line.includes('interface ')) continue
+    const match = line.match(fieldRegex)
+    if (match) {
+      const type = match[1].trim()
+      const name = match[2].trim()
+      if (name !== 'serialVersionUID') {
+        add({
+          name,
+          type,
+          kind: 'Field',
+          detail: `${type} ${name} (Campo da Classe)`
+        })
+      }
+    }
+  }
+
+  // 2. Parâmetros do Método Atual (se o cursor estiver dentro de um método)
+  let methodStartLine = -1
+  let methodParamsRaw = ''
+
+  for (let i = currentLineNumber - 1; i >= 0; i--) {
+    const line = lines[i]
+    if (line.includes('class ') || line.includes('interface ')) break
+
+    const chunk = lines.slice(Math.max(0, i - 4), i + 1).join(' ')
+    const methodMatch = chunk.match(/(?:public|protected|private|static)\s+(?:<[^>]+>\s+)?(?:[A-Za-z0-9_<>[\],\s]+?)\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*(?:throws\s+[^{]+)?\s*\{/)
+    if (methodMatch) {
+      methodParamsRaw = methodMatch[2]
+      methodStartLine = i
+      break
+    }
+  }
+
+  if (methodParamsRaw) {
+    const rawList = methodParamsRaw.split(',')
+    for (const raw of rawList) {
+      const cleaned = raw.replace(/@\w+(?:\([^)]*\))?\s*/g, '').trim()
+      if (!cleaned) continue
+      const parts = cleaned.split(/\s+/)
+      const name = parts[parts.length - 1]
+      const type = parts.slice(0, -1).join(' ') || 'Object'
+      if (name && /^[a-zA-Z0-9_]+$/.test(name)) {
+        add({
+          name,
+          type,
+          kind: 'Parameter',
+          detail: `${type} ${name} (Parâmetro do Método)`
+        })
+      }
+    }
+  }
+
+  // 3. Variáveis Locais declaradas acima do cursor no método
+  const localStart = methodStartLine !== -1 ? methodStartLine : 0
+  const varRegex = /^\s*(?:final\s+)?([A-Za-z0-9_<>[\],]+|var)\s+([a-zA-Z0-9_]+)\s*(?:=|;)/
+  for (let i = localStart; i < currentLineNumber - 1 && i < lines.length; i++) {
+    const line = lines[i]
+    if (line.includes('return ') || line.includes('throw ')) continue
+    const match = line.match(varRegex)
+    if (match) {
+      const type = match[1].trim()
+      const name = match[2].trim()
+      add({
+        name,
+        type,
+        kind: 'Variable',
+        detail: `${type} ${name} (Variável Local)`
+      })
+    }
+  }
+
+  return symbols
+}
+
 /**
  * Infere o tipo de uma variável inspecionando o código-fonte Java local (0ms, sem necessidade de JVM/LSP externo)
  */
 export function inferVariableType(source: string, variableName: string): string | null {
   if (!variableName) return null
 
-  // 1. Injeção de dependência / Atributo com ou sem anotação (@Inject, @Autowired, private, etc.)
+  // 1. Injeção de dependência / Atributo com ou sem anotações (@Inject, @Autowired, private, final, etc.)
   // Ex: private ClientesRepository clientesRepository;
-  // Ex: @Inject private ClientesRepository clientesRepository;
-  const fieldRegex = new RegExp(`(?:@\\w+\\s+)*(?:private|protected|public|final)?\\s*([A-Z][A-Za-z0-9_<>]+)\\s+${variableName}\\b`, 'm')
+  // Ex: private final ClientesService service;
+  // Ex: private CategoriasProdutosService cate;
+  const fieldRegex = new RegExp(
+    `(?:@\\w+(?:\\([^)]*\\))?\\s+)*(?:(?:private|protected|public|static|final|transient|volatile)\\s+)+([A-Z][A-Za-z0-9_<>]+)\\s+${variableName}\\b`,
+    'm'
+  )
   const fieldMatch = source.match(fieldRegex)
   if (fieldMatch) {
     const rawType = fieldMatch[1]
@@ -420,7 +821,7 @@ export const registerJavaSnippets = (monaco: any) => {
       const lineContent = model.getLineContent(position.lineNumber)
       const textBeforeCursor = lineContent.substring(0, position.column - 1)
 
-      // Detecta se o usuário acabou de digitar um ponto ou está digitando após um ponto (ex: "Integer." ou "cliente." ou "clientesRepository.")
+      // Detecta se o usuário acabou de digitar um ponto ou está digitando após um ponto (ex: "Integer." ou "cliente." ou "cate.")
       const dotMatch = textBeforeCursor.match(/([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]*)$/)
 
       if (dotMatch) {
@@ -452,16 +853,27 @@ export const registerJavaSnippets = (monaco: any) => {
           }
         }
 
-        // 2. Análise de escopo e inferência de tipo para instâncias (cliente., clientesRepository., etc.)
+        // 2. Análise de escopo e inferência de tipo para instâncias (cliente., clientesRepository., cate., etc.)
         const fullSource = model.getValue()
         const inferredType = inferVariableType(fullSource, caller)
-        const callerLower = caller.toLowerCase()
-        const inferredTypeLower = (inferredType || '').toLowerCase()
+        const targetType = inferredType || caller
+        const targetTypeLower = targetType.toLowerCase()
 
-        // 2.1 É um Repository do Spring Data JPA?
-        if (callerLower.endsWith('repository') || callerLower.endsWith('repo') || inferredTypeLower.endsWith('repository')) {
+        // 2.1 Verifica se há métodos extraídos diretamente do código-fonte da classe
+        const parsedClassMethods = getMethodsForClass(targetType, monaco)
+
+        // 2.2 É um Repository do Spring Data JPA?
+        if (targetTypeLower.endsWith('repository') || targetTypeLower.endsWith('repo')) {
+          const repoMethods = [...parsedClassMethods]
+          const existingLabels = new Set(repoMethods.map(m => m.label.split('(')[0]))
+          SPRING_DATA_JPA_METHODS.forEach(m => {
+            const base = m.label.split('(')[0]
+            if (!existingLabels.has(base)) {
+              repoMethods.push(m as any)
+            }
+          })
           return {
-            suggestions: SPRING_DATA_JPA_METHODS.map(s => ({
+            suggestions: repoMethods.map(s => ({
               label: s.label,
               kind: monaco.languages.CompletionItemKind.Method,
               insertText: s.insertText,
@@ -474,10 +886,20 @@ export const registerJavaSnippets = (monaco: any) => {
           }
         }
 
-        // 2.2 É um Service do Spring?
-        if (callerLower.endsWith('service') || inferredTypeLower.endsWith('service')) {
+        // 2.3 É um Service do Spring?
+        if (targetTypeLower.endsWith('service')) {
+          const serviceMethods = [...parsedClassMethods]
+          const existingLabels = new Set(serviceMethods.map(m => m.label.split('(')[0]))
+
+          SPRING_SERVICE_METHODS.forEach(m => {
+            const baseName = m.label.split('(')[0]
+            if (!existingLabels.has(baseName)) {
+              serviceMethods.push(m as any)
+            }
+          })
+
           return {
-            suggestions: SPRING_SERVICE_METHODS.map(s => ({
+            suggestions: serviceMethods.map(s => ({
               label: s.label,
               kind: monaco.languages.CompletionItemKind.Method,
               insertText: s.insertText,
@@ -490,8 +912,24 @@ export const registerJavaSnippets = (monaco: any) => {
           }
         }
 
-        // 2.3 É uma Entidade JPA (ou DTO correspondente) do projeto?
-        const matchedEntity = findEntityByNameOrVariable(inferredType || caller)
+        // 2.4 Se foram encontrados métodos no fonte da classe (qualquer outra classe do projeto)
+        if (parsedClassMethods.length > 0) {
+          return {
+            suggestions: parsedClassMethods.map(s => ({
+              label: s.label,
+              kind: monaco.languages.CompletionItemKind.Method,
+              insertText: s.insertText,
+              insertTextRules: s.isSnippet 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+              range: dotRange,
+              detail: s.detail
+            }))
+          }
+        }
+
+        // 2.5 É uma Entidade JPA (ou DTO correspondente) do projeto?
+        const matchedEntity = findEntityByNameOrVariable(targetType)
         if (matchedEntity) {
           const entityMethods = generateEntityInstanceMethods(matchedEntity)
           return {
@@ -510,7 +948,7 @@ export const registerJavaSnippets = (monaco: any) => {
           }
         }
 
-        // 2.4 Fallback para métodos comuns de instâncias (Optional, String, Object, Collection)
+        // 2.6 Fallback para métodos comuns de instâncias (Optional, String, Object, Collection)
         return {
           suggestions: COMMON_INSTANCE_DOT_SUGGESTIONS.map(s => ({
             label: s.label,
@@ -532,6 +970,25 @@ export const registerJavaSnippets = (monaco: any) => {
         endLineNumber: position.lineNumber,
         startColumn: word.startColumn,
         endColumn: word.endColumn
+      }
+
+      // Detecta se o cursor está após a declaração de um Tipo (ex: "private CategoriasProdutosService ")
+      // Neste caso o desenvolvedor está dando nome à variável e NÃO deve sugerir classes Java!
+      const textBeforeWord = textBeforeCursor.substring(0, textBeforeCursor.length - word.word.length).trimEnd()
+      const declaredType = detectTypeBeforeCursor(textBeforeWord)
+
+      if (declaredType) {
+        const varSuggestions = generateVariableNameSuggestions(declaredType)
+        return {
+          suggestions: varSuggestions.map((name, idx) => ({
+            label: name,
+            kind: monaco.languages.CompletionItemKind.Variable,
+            insertText: name,
+            range,
+            detail: `${declaredType} ${name} (Sugestão de atributo/variável)`,
+            sortText: `00_${String(idx).padStart(2, '0')}_${name}`
+          }))
+        }
       }
 
       // Se o usuário já digitou '@' antes da palavra/cursor, ajusta o range para substituir o '@'
@@ -662,6 +1119,19 @@ export const registerJavaSnippets = (monaco: any) => {
       const currentFilePkg = currentPkgMatch ? currentPkgMatch[1] : ''
       const basePackage = currentFilePkg ? currentFilePkg.replace(/\.[^.]+$/, '') : ''
 
+      // Extrai símbolos de escopo locais (atributos de classe, parâmetros de método e variáveis locais)
+      const inScopeSymbols = extractInScopeSymbols(fullText, position.lineNumber)
+      const inScopeSuggestions = inScopeSymbols.map((sym, idx) => ({
+        label: sym.name,
+        kind: sym.kind === 'Field' 
+          ? monaco.languages.CompletionItemKind.Field 
+          : monaco.languages.CompletionItemKind.Variable,
+        insertText: sym.name,
+        range,
+        detail: sym.detail,
+        sortText: `01_${String(idx).padStart(3, '0')}_${sym.name}`
+      }))
+
       const mappedStaticSuggestions = suggestions.map(s => {
         const importTarget = STANDARD_JAVA_IMPORTS[s.label]
         const autoImportEdit = importTarget ? getAutoImportEdit(model, importTarget) : undefined
@@ -673,7 +1143,8 @@ export const registerJavaSnippets = (monaco: any) => {
           insertTextRules: s.isSnippet ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
           range: s.isAnnotation ? annotationRange : range,
           detail: s.detail || (s.isAnnotation ? 'Anotação' : 'Tipo'),
-          additionalTextEdits: autoImportEdit
+          additionalTextEdits: autoImportEdit,
+          sortText: `07_${s.label}`
         }
       })
 
@@ -698,7 +1169,8 @@ export const registerJavaSnippets = (monaco: any) => {
           insertText: item.name,
           range,
           detail: fullImport ? `${fullImport}` : 'Classe do Projeto',
-          additionalTextEdits: autoImportEdit
+          additionalTextEdits: autoImportEdit,
+          sortText: `05_${item.name}`
         }
       })
 
@@ -710,11 +1182,14 @@ export const registerJavaSnippets = (monaco: any) => {
       if (entityName) {
         const entityInfo = getCachedEntity(entityName)
         if (entityInfo) {
-          entitySuggestions = generateEntityContextSuggestions(filename, entityInfo, range, monaco)
+          entitySuggestions = generateEntityContextSuggestions(filename, entityInfo, range, monaco).map(s => ({
+            ...s,
+            sortText: `04_${s.label}`
+          }))
         }
       }
 
-      return { suggestions: [...mappedStaticSuggestions, ...dynamicSuggestions, ...entitySuggestions] }
+      return { suggestions: [...inScopeSuggestions, ...mappedStaticSuggestions, ...dynamicSuggestions, ...entitySuggestions] }
     }
   })
 }
