@@ -4,6 +4,14 @@
  * Configurações utilitárias compartilhadas entre os componentes da IDE Local.
  */
 
+import {
+  getCachedEntity,
+  resolveEntityNameFromFilename,
+  generateEntityContextSuggestions,
+  findEntityByNameOrVariable,
+  generateEntityInstanceMethods,
+} from './entityParser'
+
 export const getLanguageFromPath = (filename: string): string => {
   const ext = filename.split('.').pop()?.toLowerCase() || ''
   switch (ext) {
@@ -286,6 +294,32 @@ const WRAPPER_DOT_SUGGESTIONS: Record<string, { label: string, insertText: strin
   ]
 }
 
+export const SPRING_DATA_JPA_METHODS = [
+  { label: 'findAll()', insertText: 'findAll()', detail: 'List<T> findAll() - Retorna todos os registros' },
+  { label: 'findAll(Pageable)', insertText: 'findAll(${1:pageable})', isSnippet: true, detail: 'Page<T> findAll(Pageable) - Consulta paginada' },
+  { label: 'findAll(Sort)', insertText: 'findAll(${1:sort})', isSnippet: true, detail: 'List<T> findAll(Sort) - Consulta ordenada' },
+  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'Optional<T> findById(ID id) - Busca por ID primário' },
+  { label: 'save(entity)', insertText: 'save(${1:entity})', isSnippet: true, detail: '<S extends T> S save(S entity) - Salva ou atualiza registro' },
+  { label: 'saveAll(entities)', insertText: 'saveAll(${1:entities})', isSnippet: true, detail: 'List<S> saveAll(Iterable<S> entities) - Salva lista em lote' },
+  { label: 'saveAndFlush(entity)', insertText: 'saveAndFlush(${1:entity})', isSnippet: true, detail: 'Salva e força flush imediato no banco' },
+  { label: 'deleteById(id)', insertText: 'deleteById(${1:id})', isSnippet: true, detail: 'void deleteById(ID id) - Remove registro por ID' },
+  { label: 'delete(entity)', insertText: 'delete(${1:entity})', isSnippet: true, detail: 'void delete(T entity) - Remove a entidade informada' },
+  { label: 'deleteAll()', insertText: 'deleteAll()', detail: 'void deleteAll() - Remove todos os registros' },
+  { label: 'deleteAll(entities)', insertText: 'deleteAll(${1:entities})', isSnippet: true, detail: 'void deleteAll(Iterable<T> entities) - Remove lista' },
+  { label: 'existsById(id)', insertText: 'existsById(${1:id})', isSnippet: true, detail: 'boolean existsById(ID id) - Verifica se registro existe' },
+  { label: 'count()', insertText: 'count()', detail: 'long count() - Contagem total de registros' },
+  { label: 'flush()', insertText: 'flush()', detail: 'void flush() - Sincroniza operações pendentes com banco' },
+  { label: 'getReferenceById(id)', insertText: 'getReferenceById(${1:id})', isSnippet: true, detail: 'T getReferenceById(ID id) - Proxy preguiçoso (Lazy load)' },
+]
+
+export const SPRING_SERVICE_METHODS = [
+  { label: 'findAll()', insertText: 'findAll()', detail: 'List<DTO> findAll() - Retorna lista completa' },
+  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'DTO findById(ID id) - Busca por ID' },
+  { label: 'save(dto)', insertText: 'save(${1:dto})', isSnippet: true, detail: 'DTO save(DTO dto) - Cria ou atualiza registro' },
+  { label: 'update(id, dto)', insertText: 'update(${1:id}, ${2:dto})', isSnippet: true, detail: 'DTO update(ID id, DTO dto) - Atualiza registro existente' },
+  { label: 'deleteById(id)', insertText: 'deleteById(${1:id})', isSnippet: true, detail: 'void deleteById(ID id) - Remove por ID' },
+]
+
 const COMMON_INSTANCE_DOT_SUGGESTIONS = [
   // Optional methods
   { label: 'orElse', insertText: 'orElse(${1:defaultValue})', isSnippet: true, detail: 'Optional: Retorna valor ou fallback' },
@@ -307,6 +341,43 @@ const COMMON_INSTANCE_DOT_SUGGESTIONS = [
   { label: 'stream', insertText: 'stream()', isSnippet: true, detail: 'Inicia Stream da coleção' },
 ]
 
+/**
+ * Infere o tipo de uma variável inspecionando o código-fonte Java local (0ms, sem necessidade de JVM/LSP externo)
+ */
+export function inferVariableType(source: string, variableName: string): string | null {
+  if (!variableName) return null
+
+  // 1. Injeção de dependência / Atributo com ou sem anotação (@Inject, @Autowired, private, etc.)
+  // Ex: private ClientesRepository clientesRepository;
+  // Ex: @Inject private ClientesRepository clientesRepository;
+  const fieldRegex = new RegExp(`(?:@\\w+\\s+)*(?:private|protected|public|final)?\\s*([A-Z][A-Za-z0-9_<>]+)\\s+${variableName}\\b`, 'm')
+  const fieldMatch = source.match(fieldRegex)
+  if (fieldMatch) {
+    const rawType = fieldMatch[1]
+    const genericMatch = rawType.match(/<([A-Za-z0-9_]+)>/)
+    return genericMatch ? genericMatch[1] : rawType
+  }
+
+  // 2. Declaração local de variável ou parâmetro
+  // Ex: ClientesEntity cliente = new ClientesEntity();
+  // Ex: public void salvar(Clientes cliente)
+  const localRegex = new RegExp(`\\b([A-Z][A-Za-z0-9_<>]+)\\s+${variableName}\\b`, 'm')
+  const localMatch = source.match(localRegex)
+  if (localMatch) {
+    const rawType = localMatch[1]
+    const genericMatch = rawType.match(/<([A-Za-z0-9_]+)>/)
+    return genericMatch ? genericMatch[1] : rawType
+  }
+
+  // 3. Instanciação com new
+  // Ex: var cliente = new ClientesEntity();
+  const newRegex = new RegExp(`\\b${variableName}\\s*=\\s*new\\s+([A-Z][A-Za-z0-9_]+)\\b`, 'm')
+  const newMatch = source.match(newRegex)
+  if (newMatch) return newMatch[1]
+
+  return null
+}
+
 export const registerJavaSnippets = (monaco: any) => {
   if (javaSnippetsRegistered) return
   javaSnippetsRegistered = true
@@ -317,7 +388,7 @@ export const registerJavaSnippets = (monaco: any) => {
       const lineContent = model.getLineContent(position.lineNumber)
       const textBeforeCursor = lineContent.substring(0, position.column - 1)
 
-      // Detecta se o usuário acabou de digitar um ponto ou está digitando após um ponto (ex: "Integer." ou "Integer.par")
+      // Detecta se o usuário acabou de digitar um ponto ou está digitando após um ponto (ex: "Integer." ou "cliente." ou "clientesRepository.")
       const dotMatch = textBeforeCursor.match(/([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]*)$/)
 
       if (dotMatch) {
@@ -330,21 +401,94 @@ export const registerJavaSnippets = (monaco: any) => {
           endColumn: position.column
         }
 
+        // 1. Se for uma classe Wrapper estática (ex: Integer., ResponseEntity., UUID., Optional.)
         const callerSuggestions = WRAPPER_DOT_SUGGESTIONS[caller]
-        const suggestionsList = callerSuggestions || COMMON_INSTANCE_DOT_SUGGESTIONS
+        if (callerSuggestions) {
+          return {
+            suggestions: callerSuggestions.map(s => ({
+              label: s.label,
+              kind: s.kind === 'Field' 
+                ? monaco.languages.CompletionItemKind.Field 
+                : monaco.languages.CompletionItemKind.Method,
+              insertText: s.insertText,
+              insertTextRules: s.isSnippet 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+              range: dotRange,
+              detail: s.detail || `${caller}.${s.label}`
+            }))
+          }
+        }
 
+        // 2. Análise de escopo e inferência de tipo para instâncias (cliente., clientesRepository., etc.)
+        const fullSource = model.getValue()
+        const inferredType = inferVariableType(fullSource, caller)
+        const callerLower = caller.toLowerCase()
+        const inferredTypeLower = (inferredType || '').toLowerCase()
+
+        // 2.1 É um Repository do Spring Data JPA?
+        if (callerLower.endsWith('repository') || callerLower.endsWith('repo') || inferredTypeLower.endsWith('repository')) {
+          return {
+            suggestions: SPRING_DATA_JPA_METHODS.map(s => ({
+              label: s.label,
+              kind: monaco.languages.CompletionItemKind.Method,
+              insertText: s.insertText,
+              insertTextRules: s.isSnippet 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+              range: dotRange,
+              detail: s.detail
+            }))
+          }
+        }
+
+        // 2.2 É um Service do Spring?
+        if (callerLower.endsWith('service') || inferredTypeLower.endsWith('service')) {
+          return {
+            suggestions: SPRING_SERVICE_METHODS.map(s => ({
+              label: s.label,
+              kind: monaco.languages.CompletionItemKind.Method,
+              insertText: s.insertText,
+              insertTextRules: s.isSnippet 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+              range: dotRange,
+              detail: s.detail
+            }))
+          }
+        }
+
+        // 2.3 É uma Entidade JPA (ou DTO correspondente) do projeto?
+        const matchedEntity = findEntityByNameOrVariable(inferredType || caller)
+        if (matchedEntity) {
+          const entityMethods = generateEntityInstanceMethods(matchedEntity)
+          return {
+            suggestions: entityMethods.map(s => ({
+              label: s.label,
+              kind: s.kind === 'Field' 
+                ? monaco.languages.CompletionItemKind.Field 
+                : monaco.languages.CompletionItemKind.Method,
+              insertText: s.insertText,
+              insertTextRules: s.isSnippet 
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
+                : undefined,
+              range: dotRange,
+              detail: s.detail
+            }))
+          }
+        }
+
+        // 2.4 Fallback para métodos comuns de instâncias (Optional, String, Object, Collection)
         return {
-          suggestions: suggestionsList.map(s => ({
+          suggestions: COMMON_INSTANCE_DOT_SUGGESTIONS.map(s => ({
             label: s.label,
-            kind: s.kind === 'Field' 
-              ? monaco.languages.CompletionItemKind.Field 
-              : monaco.languages.CompletionItemKind.Method,
+            kind: monaco.languages.CompletionItemKind.Method,
             insertText: s.insertText,
             insertTextRules: s.isSnippet 
               ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet 
               : undefined,
             range: dotRange,
-            detail: s.detail || (callerSuggestions ? `${caller}.${s.label}` : 'Método')
+            detail: s.detail || 'Método'
           }))
         }
       }
@@ -512,7 +656,19 @@ export const registerJavaSnippets = (monaco: any) => {
         }
       })
 
-      return { suggestions: [...mappedStaticSuggestions, ...dynamicSuggestions] }
+      // Sugestões inteligentes contextuais baseadas em Entidades (DTOs, Records, Services)
+      const filename = model.uri.path.split('/').pop() || ''
+      const entityName = resolveEntityNameFromFilename(filename)
+      let entitySuggestions: any[] = []
+
+      if (entityName) {
+        const entityInfo = getCachedEntity(entityName)
+        if (entityInfo) {
+          entitySuggestions = generateEntityContextSuggestions(filename, entityInfo, range, monaco)
+        }
+      }
+
+      return { suggestions: [...mappedStaticSuggestions, ...dynamicSuggestions, ...entitySuggestions] }
     }
   })
 }
