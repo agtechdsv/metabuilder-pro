@@ -237,7 +237,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
           return detailsToRender.map((detail: any, idx: number) => {
             const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
             const pkCol = pkField.db_column_name.split('.').pop() || 'id';
-            const detailIdValue = detail[pkCol] || detail[pkCol.toUpperCase()] || detail.id || detail.ID || `idx-${idx}`;
+            const detailIdValue = detail[pkCol] ?? detail[pkCol.toUpperCase()] ?? detail[pkCol.toLowerCase()] ?? detail.id ?? detail.ID ?? detail._tempId ?? `idx-${idx}`;
             const uniqueKey = `detail-${tableName}-${detailIdValue}`;
 
             if (seenIds.has(uniqueKey)) return null;
@@ -462,7 +462,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             ...prev,
                             _details: (prev._details || []).filter((_d: any, _i: number) => {
                               const _pk = pkField.db_column_name.split('.').pop() || 'id';
-                              const _dPk = _d[_pk] || _d[_pk.toUpperCase()] || _d.id || _d.ID || `idx-${_i}`;
+                              const _dPk = _d[_pk] ?? _d[_pk.toUpperCase()] ?? _d[_pk.toLowerCase()] ?? _d.id ?? _d.ID ?? _d._tempId ?? `idx-${_i}`;
                               return String(_dPk) !== String(detailIdValue);
                             })
                           }));
@@ -520,7 +520,27 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                               </label>
                               {(() => {
                                 const baseCol = field.db_column_name.split('.').pop() || field.db_column_name;
-                                const rawValue = detail[baseCol] || detail[baseCol.toUpperCase()] || detail[field.db_column_name] || '';
+                                const rawValue = (() => {
+                                  const candidates = [
+                                    baseCol,
+                                    baseCol.toUpperCase(),
+                                    baseCol.toLowerCase(),
+                                    field.db_column_name,
+                                    field.db_column_name.toUpperCase(),
+                                    field.db_column_name.toLowerCase(),
+                                  ];
+                                  for (const k of candidates) {
+                                    if (detail[k] !== undefined && detail[k] !== null) return detail[k];
+                                  }
+                                  const baseLower = baseCol.toLowerCase();
+                                  for (const k of Object.keys(detail)) {
+                                    const kLower = k.toLowerCase();
+                                    if (kLower === baseLower || kLower.split('.').pop() === baseLower) {
+                                      if (detail[k] !== undefined && detail[k] !== null) return detail[k];
+                                    }
+                                  }
+                                  return '';
+                                })();
 
                                 const fieldConfig = field.config?.form_config || field.config || {};
                                 const type = fieldConfig.component?.type || 'text';
@@ -538,22 +558,52 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     }
                                   }
 
+                                  const updateRecord = (d: any) => {
+                                    const updated = { ...d };
+                                    const targetKeys = new Set([
+                                      baseCol,
+                                      baseCol.toUpperCase(),
+                                      baseCol.toLowerCase(),
+                                      field.db_column_name,
+                                      field.db_column_name.toUpperCase(),
+                                      field.db_column_name.toLowerCase(),
+                                    ]);
+                                    const baseLower = baseCol.toLowerCase();
+                                    for (const k of Object.keys(d)) {
+                                      const kLower = k.toLowerCase();
+                                      if (kLower === baseLower || kLower.split('.').pop() === baseLower) {
+                                        targetKeys.add(k);
+                                      }
+                                    }
+                                    for (const k of targetKeys) {
+                                      if (k in d || k === baseCol || k === baseCol.toUpperCase() || k === field.db_column_name) {
+                                        updated[k] = newVal;
+                                      }
+                                    }
+                                    return updated;
+                                  };
+
+                                  const isMatchingRecord = (d: any, dIdx: number) => {
+                                    const dPk = d[pkCol] ?? d[pkCol.toUpperCase()] ?? d[pkCol.toLowerCase()] ?? d.id ?? d.ID ?? d._tempId ?? `idx-${dIdx}`;
+                                    const matchPk = String(dPk) === String(detailIdValue);
+                                    const matchModel = String(d.model_name || '').trim().toLowerCase() === String(tableName || '').trim().toLowerCase();
+                                    return matchPk && matchModel;
+                                  };
+
                                   // Se parentData for o formData principal, atualizamos o topo
                                   if (parentData === formData) {
-                                    const newDetails = (formData._details || []).map((d: any) => {
-                                      const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`;
-                                      if (dPk === detailIdValue && d.model_name === tableName) {
-                                        return { ...d, [baseCol]: newVal };
+                                    const newDetails = (formData._details || []).map((d: any, dIdx: number) => {
+                                      if (isMatchingRecord(d, dIdx)) {
+                                        return updateRecord(d);
                                       }
                                       return d;
                                     });
                                     setFormData({ ...formData, _details: newDetails });
                                   } else {
                                     // Se parentData for um registro de detalhe, atualizamos dentro dele (recursivo)
-                                    const newParentDetails = (parentData._details || []).map((d: any) => {
-                                      const dPk = d[pkCol] || d[pkCol.toUpperCase()] || d.id || d.ID || `idx-${idx}`;
-                                      if (dPk === detailIdValue && d.model_name === tableName) {
-                                        return { ...d, [baseCol]: newVal };
+                                    const newParentDetails = (parentData._details || []).map((d: any, dIdx: number) => {
+                                      if (isMatchingRecord(d, dIdx)) {
+                                        return updateRecord(d);
                                       }
                                       return d;
                                     });
@@ -563,6 +613,13 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                     const matchRecords = (r1: any, r2: any) => {
                                       if (r1 === r2) return true;
+                                      const pk1 = r1[pkCol] ?? r1[pkCol.toUpperCase()] ?? r1[pkCol.toLowerCase()] ?? r1.id ?? r1.ID;
+                                      const pk2 = r2[pkCol] ?? r2[pkCol.toUpperCase()] ?? r2[pkCol.toLowerCase()] ?? r2.id ?? r2.ID;
+                                      if (pk1 !== undefined && pk2 !== undefined && String(pk1) === String(pk2)) {
+                                        if (String(r1.model_name || '').toLowerCase() === String(r2.model_name || '').toLowerCase()) {
+                                          return true;
+                                        }
+                                      }
                                       
                                       // Para evitar falsos positivos com foreign keys (ex: cliente_id igual para todos os pedidos),
                                       // comparamos as propriedades base do registro, ignorando o array _details e propriedades virtuais
@@ -610,14 +667,14 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   );
                                 }
 
-                                if (['select', 'Combo (Select)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0)) {
-                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.fixed_options || fieldConfig.component?.options || fieldConfig.fixed_options || fieldConfig.options);
+                                if (['select', 'Combo (Select)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0) || (relationalOptions[field.db_column_name] && relationalOptions[field.db_column_name].length > 0)) {
+                                  let options = relationalOptions[field.id] || relationalOptions[field.db_column_name] || parseFixedOptions(fieldConfig.component?.fixed_options || fieldConfig.component?.options || fieldConfig.fixed_options || fieldConfig.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
                                     const depName = fieldConfig.component.depends_on;
                                     const depBase = depName.split('.').pop() || depName;
-                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()];
+                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()] ?? detail[depBase.toLowerCase()];
                                     if (depValue === undefined || depValue === null) {
-                                      depValue = formData[depName] ?? formData[depBase];
+                                      depValue = formData[depName] ?? formData[depBase] ?? formData[depBase.toUpperCase()] ?? formData[depBase.toLowerCase()];
                                     }
                                     if (depValue !== undefined && depValue !== null && depValue !== '') {
                                       options = options.filter((o: any) => String(o.filter_value) === String(depValue));
@@ -628,7 +685,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   return (
                                     <div className="flex flex-col gap-1">
                                       <select
-                                        value={rawValue || ''}
+                                        value={rawValue !== undefined && rawValue !== null ? String(rawValue) : ''}
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         disabled={isInlineDisabled}
                                         className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -638,7 +695,6 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                       </select>
-                                      {/* Removed debug info */}
                                     </div>
                                   );
                                 }
@@ -756,7 +812,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                             maskStr ? 'text' :
                                               type === 'number' ? 'number' : 'text'
                                     }
-                                    value={displayValue}
+                                    value={displayValue ?? ''}
                                     onChange={(e) => handleInlineChange(e.target.value)}
                                     disabled={isInlineDisabled}
                                     className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
