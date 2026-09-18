@@ -108,6 +108,22 @@ export const STANDARD_JAVA_IMPORTS: Record<string, string> = {
   'BigDecimal': 'java.math.BigDecimal',
   'LocalDateTime': 'java.time.LocalDateTime',
   'OffsetDateTime': 'java.time.OffsetDateTime',
+
+  // Spring Transactions
+  '@Transactional': 'org.springframework.transaction.annotation.Transactional',
+  'Transactional': 'org.springframework.transaction.annotation.Transactional',
+
+  // Spring Data Domain
+  'Page': 'org.springframework.data.domain.Page',
+  'Pageable': 'org.springframework.data.domain.Pageable',
+  'PageRequest': 'org.springframework.data.domain.PageRequest',
+  'Sort': 'org.springframework.data.domain.Sort',
+
+  // Spring Exceptions & HTTP
+  'DataIntegrityViolationException': 'org.springframework.dao.DataIntegrityViolationException',
+  'EntityNotFoundException': 'jakarta.persistence.EntityNotFoundException',
+  'ResponseStatusException': 'org.springframework.web.server.ResponseStatusException',
+  'HttpStatus': 'org.springframework.http.HttpStatus',
 }
 
 export const getAutoImportEdit = (
@@ -295,21 +311,37 @@ const WRAPPER_DOT_SUGGESTIONS: Record<string, { label: string, insertText: strin
 }
 
 export const SPRING_DATA_JPA_METHODS = [
+  // 1. Escrita e Mutação (Persistência)
+  { label: 'save(entity)', insertText: 'save(${1:entity})', isSnippet: true, detail: '<S extends T> S save(S entity) - Salva ou atualiza entidade' },
+  { label: 'saveAndFlush(entity)', insertText: 'saveAndFlush(${1:entity})', isSnippet: true, detail: 'Salva a entidade e sincroniza com o banco imediatamente' },
+  { label: 'saveAll(entities)', insertText: 'saveAll(${1:listOfEntities})', isSnippet: true, detail: '<S extends T> List<S> saveAll(Iterable<S>) - Salva lote em batch' },
+
+  // 2. Consultas Unitárias
+  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'Optional<T> findById(ID id) - Busca por chave primária (Anti-NPE)' },
+  { label: 'existsById(id)', insertText: 'existsById(${1:id})', isSnippet: true, detail: 'boolean existsById(ID id) - Verifica existência sem carregar entidade' },
+  { label: 'getReferenceById(id)', insertText: 'getReferenceById(${1:id})', isSnippet: true, detail: 'T getReferenceById(ID id) - Referência Lazy Proxy (alta performance)' },
+
+  // 3. Listagens
   { label: 'findAll()', insertText: 'findAll()', detail: 'List<T> findAll() - Retorna todos os registros' },
-  { label: 'findAll(Pageable)', insertText: 'findAll(${1:pageable})', isSnippet: true, detail: 'Page<T> findAll(Pageable) - Consulta paginada' },
-  { label: 'findAll(Sort)', insertText: 'findAll(${1:sort})', isSnippet: true, detail: 'List<T> findAll(Sort) - Consulta ordenada' },
-  { label: 'findById(id)', insertText: 'findById(${1:id})', isSnippet: true, detail: 'Optional<T> findById(ID id) - Busca por ID primário' },
-  { label: 'save(entity)', insertText: 'save(${1:entity})', isSnippet: true, detail: '<S extends T> S save(S entity) - Salva ou atualiza registro' },
-  { label: 'saveAll(entities)', insertText: 'saveAll(${1:entities})', isSnippet: true, detail: 'List<S> saveAll(Iterable<S> entities) - Salva lista em lote' },
-  { label: 'saveAndFlush(entity)', insertText: 'saveAndFlush(${1:entity})', isSnippet: true, detail: 'Salva e força flush imediato no banco' },
+  { label: 'findAllById(ids)', insertText: 'findAllById(${1:listOfIds})', isSnippet: true, detail: 'List<T> findAllById(Iterable<ID>) - Busca por lista de IDs' },
+  { label: 'count()', insertText: 'count()', detail: 'long count() - Quantidade total de registros' },
+
+  // 4. Paginação, Ordenação e Busca Fluida (Spring Data 3.x)
+  { label: 'findAll(PageRequest)', insertText: 'findAll(org.springframework.data.domain.PageRequest.of(${1:0}, ${2:10}))', isSnippet: true, detail: 'Page<T> findAll(Pageable) - Paginação com PageRequest.of(page, size)' },
+  { label: 'findAll(Sort)', insertText: 'findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.${1:ASC}, "${2:id}"))', isSnippet: true, detail: 'List<T> findAll(Sort) - Consulta com ordenação Sort.by' },
+
+  // 5. Exclusões Otimizadas
   { label: 'deleteById(id)', insertText: 'deleteById(${1:id})', isSnippet: true, detail: 'void deleteById(ID id) - Remove registro por ID' },
-  { label: 'delete(entity)', insertText: 'delete(${1:entity})', isSnippet: true, detail: 'void delete(T entity) - Remove a entidade informada' },
+  { label: 'delete(entity)', insertText: 'delete(${1:entity})', isSnippet: true, detail: 'void delete(T entity) - Remove entidade especificada' },
+  { label: 'deleteAllInBatch()', insertText: 'deleteAllInBatch()', detail: 'void deleteAllInBatch() - Apaga registros em query única combinada (Batch)' },
+  { label: 'deleteAllByIdInBatch(ids)', insertText: 'deleteAllByIdInBatch(${1:listOfIds})', isSnippet: true, detail: 'Apaga lote por lista de IDs em query única combinada' },
   { label: 'deleteAll()', insertText: 'deleteAll()', detail: 'void deleteAll() - Remove todos os registros' },
-  { label: 'deleteAll(entities)', insertText: 'deleteAll(${1:entities})', isSnippet: true, detail: 'void deleteAll(Iterable<T> entities) - Remove lista' },
-  { label: 'existsById(id)', insertText: 'existsById(${1:id})', isSnippet: true, detail: 'boolean existsById(ID id) - Verifica se registro existe' },
-  { label: 'count()', insertText: 'count()', detail: 'long count() - Contagem total de registros' },
-  { label: 'flush()', insertText: 'flush()', detail: 'void flush() - Sincroniza operações pendentes com banco' },
-  { label: 'getReferenceById(id)', insertText: 'getReferenceById(${1:id})', isSnippet: true, detail: 'T getReferenceById(ID id) - Proxy preguiçoso (Lazy load)' },
+
+  // 6. Projeção Dinâmica (Spring Data 3.x)
+  { label: 'findBy(id, Class)', insertText: 'findBy(${1:id}, ${2:ClassToConvert}.class)', isSnippet: true, detail: 'Spring 3: Projeção dinâmica direta para Record/DTO no banco' },
+
+  // 7. Flush e Sincronização
+  { label: 'flush()', insertText: 'flush()', detail: 'void flush() - Descarrega operações pendentes no banco' },
 ]
 
 export const SPRING_SERVICE_METHODS = [
@@ -587,8 +619,22 @@ export const registerJavaSnippets = (monaco: any) => {
         { label: '@ExceptionHandler', insertText: '@ExceptionHandler(${1:Exception}.class)', isAnnotation: true, isSnippet: true, detail: 'Spring: Captura exceção em ControllerAdvice' },
         { label: '@ResponseStatus', insertText: '@ResponseStatus(org.springframework.http.HttpStatus.${1:NOT_FOUND})', isAnnotation: true, isSnippet: true, detail: 'Spring: Status HTTP padrão da exceção' },
 
-        // Spring Security
+        // Spring Security & Transactions
         { label: '@PreAuthorize', insertText: '@PreAuthorize("hasRole(\'${1:ADMIN}\')")', isAnnotation: true, isSnippet: true, detail: 'Spring Security: Controle de acesso' },
+        { label: '@Transactional', insertText: '@Transactional', isAnnotation: true, detail: 'Spring: Gerenciamento de transação' },
+        { label: '@Transactional(readOnly)', insertText: '@Transactional(readOnly = true)', isAnnotation: true, detail: 'Spring: Transação otimizada somente-leitura' },
+
+        // Spring Data Domain
+        { label: 'Page', insertText: 'Page<${1:Type}>', isSnippet: true, kind: monaco.languages.CompletionItemKind.Interface, detail: 'Spring Data: Interface de página' },
+        { label: 'Pageable', insertText: 'Pageable', kind: monaco.languages.CompletionItemKind.Interface, detail: 'Spring Data: Interface de paginação' },
+        { label: 'PageRequest', insertText: 'PageRequest.of(${1:0}, ${2:10})', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'Spring Data: Instância de Pageable' },
+        { label: 'Sort', insertText: 'Sort.by("${1:property}")', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'Spring Data: Ordenação de consulta' },
+
+        // Spring Database Exceptions & Error Handling Snippets
+        { label: 'try-catch-db', insertText: 'try {\n\t${1:// Operação de persistência}\n} catch (org.springframework.dao.DataIntegrityViolationException ex) {\n\tthrow new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "${2:Violação de integridade nos dados}", ex);\n} catch (jakarta.persistence.EntityNotFoundException ex) {\n\tthrow new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "${3:Registro não encontrado}", ex);\n}', isSnippet: true, kind: monaco.languages.CompletionItemKind.Snippet, detail: 'Spring: try/catch para DataIntegrityViolation e EntityNotFound' },
+        { label: 'DataIntegrityViolationException', insertText: 'DataIntegrityViolationException', kind: monaco.languages.CompletionItemKind.Class, detail: 'Spring DAO: Violação de integridade relacional' },
+        { label: 'EntityNotFoundException', insertText: 'EntityNotFoundException', kind: monaco.languages.CompletionItemKind.Class, detail: 'Jakarta: Entidade não encontrada' },
+        { label: 'ResponseStatusException', insertText: 'new ResponseStatusException(HttpStatus.${1:NOT_FOUND}, "${2:Mensagem}")', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'Spring: Lança exceção com status HTTP' },
 
         // Modern Java 21 / 17 Constructs & Snippets
         { label: 'record', insertText: 'public record ${1:RecordName}(${2:Long id, String nome}) {}', isSnippet: true, kind: monaco.languages.CompletionItemKind.Snippet, detail: 'Java 17/21: Definição de Record imutável' },
