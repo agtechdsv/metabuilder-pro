@@ -85,6 +85,10 @@ interface RecordFormFieldProps {
   onCustomAction?: (action: any, context?: any) => void;
   buildActionContext: (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => any;
   project?: any;
+  projectId?: string;
+  secretToken?: string;
+  tunnelChannel?: any;
+  isTunnelReady?: boolean;
   masterModelId?: string;
   masterModelName?: string;
   logicType?: string;
@@ -103,6 +107,10 @@ export function RecordFormField(props: RecordFormFieldProps) {
     onCustomAction,
     buildActionContext,
     project,
+    projectId,
+    secretToken,
+    tunnelChannel,
+    isTunnelReady,
     masterModelId,
     masterModelName,
     logicType,
@@ -226,7 +234,12 @@ export function RecordFormField(props: RecordFormFieldProps) {
       !zoneConfig.content?.color && "text-neutral-900 dark:text-white"
     )
 
-    let options = (comp.options_type === 'relational' || comp.options_type === 'enumeration')
+    const isRelationalComp = comp.options_type === 'relational' || 
+      comp.options_type === 'enumeration' || 
+      ['autocomplete', 'Autocomplete (Busca Dinâmica)', 'Autocomplete'].includes(fieldType) || 
+      !!comp.rel_table;
+
+    let options = isRelationalComp
       ? (relationalOptions[field.id] || relationalOptions[field.db_column_name] || [])
       : parseFixedOptions(comp.fixed_options)
       
@@ -324,6 +337,11 @@ export function RecordFormField(props: RecordFormFieldProps) {
                 placeholder={comp.search_placeholder || (mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name))}
                 style={inputStyle}
                 className={commonClasses}
+                projectId={projectId}
+                project={project}
+                tunnelChannel={tunnelChannel}
+                isTunnelReady={isTunnelReady}
+                secretToken={secretToken}
               />
             ) : ['radio', 'Radio Buttons'].includes(fieldType) ? (
               <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">

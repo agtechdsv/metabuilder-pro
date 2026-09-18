@@ -606,7 +606,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               // Guard: only store if we actually got data (timeout resolves with [])
               if (data && data.length > 0) {
                 // console.log(`[MetaBuilder:RecordForm] Raw data from tunnel for ${comp.rel_table}:`, data[0])
-                newOptions[field.id] = data.map(item => {
+                const mappedOpts = data.map(item => {
                   const getVal = (key: string) => {
                      if (!key) return undefined;
                      const searchKey = key.includes('.') ? key.split('.').pop()! : key;
@@ -620,6 +620,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     ...item
                   }
                 })
+                newOptions[field.id] = mappedOpts
+                if (field.db_column_name) {
+                  newOptions[field.db_column_name] = mappedOpts
+                }
                 // console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
               }
             } else {
@@ -635,11 +639,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               }
               
               if (relData) {
-                newOptions[field.id] = relData.map((item: any) => ({
-                  label: item[comp.rel_label] || item[comp.rel_label?.toUpperCase()] || item[comp.rel_label?.toLowerCase()],
-                  value: item[comp.rel_value] || item[comp.rel_value?.toUpperCase()] || item[comp.rel_value?.toLowerCase()],
+                const mappedDirect = relData.map((item: any) => ({
+                  label: item[comp.rel_label] || item[comp.rel_label?.toUpperCase()] || item[comp.rel_label?.toLowerCase()] || Object.values(item)[1] || Object.values(item)[0],
+                  value: item[comp.rel_value] || item[comp.rel_value?.toUpperCase()] || item[comp.rel_value?.toLowerCase()] || item.id || Object.values(item)[0],
                   filter_value: comp.filter_column ? (item[comp.filter_column] || item[comp.filter_column?.toUpperCase()] || item[comp.filter_column?.toLowerCase()]) : undefined
                 }))
+                newOptions[field.id] = mappedDirect
+                if (field.db_column_name) {
+                  newOptions[field.db_column_name] = mappedDirect
+                }
               }
             }
           } catch (err) {

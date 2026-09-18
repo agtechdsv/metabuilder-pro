@@ -539,6 +539,10 @@ export default function RecordForm({
   onCustomAction={onCustomAction}
   buildActionContext={buildActionContext}
   project={project}
+  projectId={projectId}
+  secretToken={secretToken}
+  tunnelChannel={tunnelChannel}
+  isTunnelReady={isTunnelReady}
   masterModelId={masterModelId}
   masterModelName={masterModelName}
   logicType={logicType}
@@ -589,6 +593,10 @@ export default function RecordForm({
     onCustomAction={onCustomAction}
     relationalOptions={relationalOptions}
     project={project}
+    projectId={projectId}
+    secretToken={secretToken}
+    tunnelChannel={tunnelChannel}
+    isTunnelReady={isTunnelReady}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
     detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
@@ -626,6 +634,10 @@ export default function RecordForm({
     onCustomAction={onCustomAction}
     relationalOptions={relationalOptions}
     project={project}
+    projectId={projectId}
+    secretToken={secretToken}
+    tunnelChannel={tunnelChannel}
+    isTunnelReady={isTunnelReady}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
     detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}
@@ -659,6 +671,10 @@ export default function RecordForm({
     onCustomAction={onCustomAction}
     relationalOptions={relationalOptions}
     project={project}
+    projectId={projectId}
+    secretToken={secretToken}
+    tunnelChannel={tunnelChannel}
+    isTunnelReady={isTunnelReady}
     detailsInterfaceTypes={detailsInterfaceTypes || {}}
     detailsInlineTypes={detailsInlineTypes || {}}
     detailsTabTitles={detailsTabTitles}

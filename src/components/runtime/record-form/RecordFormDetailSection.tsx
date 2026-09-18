@@ -27,6 +27,10 @@ interface RecordFormDetailSectionProps {
   onCustomAction?: (action: any, context?: any) => void;
   relationalOptions: Record<string, any[]>;
   project?: any;
+  projectId?: string;
+  secretToken?: string;
+  tunnelChannel?: any;
+  isTunnelReady?: boolean;
   detailsInterfaceTypes?: Record<string, string>;
   detailsInlineTypes?: Record<string, boolean>;
   detailsTabTitles?: Record<string, string>;
@@ -58,6 +62,10 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     fetchSubDetailsForRecord,
     formData,
     setFormData,
+    projectId,
+    secretToken,
+    tunnelChannel,
+    isTunnelReady,
     fields,
     joins,
     detailFields,
@@ -697,6 +705,11 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                         limit={fieldConfig.component?.limit}
                                         placeholder={fieldConfig.component?.search_placeholder || 'Digite para buscar...'}
                                         disabled={isInlineDisabled}
+                                        projectId={projectId}
+                                        project={project}
+                                        tunnelChannel={tunnelChannel}
+                                        isTunnelReady={isTunnelReady}
+                                        secretToken={secretToken}
                                       />
                                     </div>
                                   );

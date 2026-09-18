@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Search, X, Loader2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 export interface AutocompleteOption {
   label: string
@@ -24,12 +25,21 @@ export interface AutocompleteInputProps {
   disabled?: boolean
   className?: string
   style?: React.CSSProperties
+  projectId?: string
+  project?: any
+  tunnelChannel?: any
+  isTunnelReady?: boolean
+  secretToken?: string
+  onSearch?: (query: string) => Promise<AutocompleteOption[]>
 }
 
 export function AutocompleteInput({
   value,
   onChange,
   options = [],
+  table,
+  labelCol,
+  valueCol,
   minChars = 2,
   debounceMs = 300,
   limit,
@@ -37,39 +47,75 @@ export function AutocompleteInput({
   disabled = false,
   className,
   style,
+  projectId,
+  project,
+  tunnelChannel,
+  isTunnelReady,
+  secretToken,
+  onSearch,
 }: AutocompleteInputProps) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const [dynamicResults, setDynamicResults] = useState<AutocompleteOption[]>([])
+  const [selectedItemCache, setSelectedItemCache] = useState<AutocompleteOption | null>(null)
+
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Encontra o item selecionado inicialmente a partir do value
+  // Combina opções estáticas/pré-carregadas com resultados dinâmicos e cache de seleção
+  const allAvailableOptions = useMemo(() => {
+    const map = new Map<string, AutocompleteOption>()
+
+    ;(options || []).forEach((opt) => {
+      if (opt && opt.value !== undefined && opt.value !== null) {
+        map.set(String(opt.value), opt)
+      }
+    })
+
+    dynamicResults.forEach((opt) => {
+      if (opt && opt.value !== undefined && opt.value !== null) {
+        map.set(String(opt.value), opt)
+      }
+    })
+
+    if (selectedItemCache && selectedItemCache.value !== undefined && selectedItemCache.value !== null) {
+      map.set(String(selectedItemCache.value), selectedItemCache)
+    }
+
+    return Array.from(map.values())
+  }, [options, dynamicResults, selectedItemCache])
+
+  // Encontra o item selecionado atualmente a partir do value
   const selectedOption = useMemo(() => {
     if (value === undefined || value === null || value === '') return null
-    return options.find((opt) => String(opt.value) === String(value)) || null
-  }, [value, options])
+    return allAvailableOptions.find((opt) => String(opt.value) === String(value)) || null
+  }, [value, allAvailableOptions])
 
-  // Sincroniza o texto do input com o item selecionado
+  // Sincroniza o texto do input com o item selecionado ou com o próprio value
   useEffect(() => {
     if (selectedOption) {
       setQuery(selectedOption.label)
-    } else if (!value) {
+    } else if (value !== undefined && value !== null && value !== '') {
+      // Se não temos a opção mapeada ainda, exibe o próprio valor
+      setQuery((prev) => (prev ? prev : String(value)))
+    } else {
       setQuery('')
     }
   }, [selectedOption, value])
 
-  // Fecha o dropdown ao clicar fora do container
+  // Fecha o dropdown ao clicar fora do container e restaura texto do item selecionado
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false)
-        // Se o usuário digitou mas não selecionou, restaura para o item selecionado anteriormente
         if (selectedOption) {
           setQuery(selectedOption.label)
-        } else if (!value) {
+        } else if (value !== undefined && value !== null && value !== '') {
+          setQuery(String(value))
+        } else {
           setQuery('')
         }
       }
@@ -79,44 +125,185 @@ export function AutocompleteInput({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [selectedOption, value])
 
-  // Filtra as opções localmente com base na query
+  // Filtra as opções com base na query digitada
   const filteredResults = useMemo(() => {
     const trimmed = query.trim().toLowerCase()
     if (trimmed.length < minChars) return []
 
-    let matches = options.filter((opt) => {
-      const label = String(opt.label || '').toLowerCase()
-      const val = String(opt.value || '').toLowerCase()
+    let matches = allAvailableOptions.filter((opt) => {
+      const label = String(opt.label ?? '').toLowerCase()
+      const val = String(opt.value ?? '').toLowerCase()
       return label.includes(trimmed) || val.includes(trimmed)
     })
 
-    // Se houver limite configurado (> 0), aplica o corte. Se vazio ou 0, retorna 100% dos resultados
     const numLimit = limit ? Number(limit) : 0
     if (numLimit > 0) {
       matches = matches.slice(0, numLimit)
     }
 
     return matches
-  }, [query, options, minChars, limit])
+  }, [query, allAvailableOptions, minChars, limit])
+
+  // Executa busca dinâmica no banco de dados via Túnel ou API
+  const executeDynamicSearch = useCallback(
+    async (searchTerm: string) => {
+      if (onSearch) {
+        try {
+          const res = await onSearch(searchTerm)
+          if (Array.isArray(res)) {
+            setDynamicResults(res)
+          }
+        } catch (err) {
+          console.error('[AutocompleteInput] Erro em onSearch customizado:', err)
+        }
+        return
+      }
+
+      if (!table || !labelCol) return
+
+      const valCol = valueCol || labelCol || 'id'
+      const limitNum = limit ? Number(limit) : 0
+
+      // Caso 1: Projeto com Túnel ativo
+      if (projectId && project?.db_type !== 'postgres' && tunnelChannel && isTunnelReady) {
+        const queryId = crypto.randomUUID()
+        const schemaToUse = project ? getModelSchemaName(project, table) : 'public'
+
+        return new Promise<void>((resolve) => {
+          let resolved = false
+
+          const handleResult = (payload: any) => {
+            if (payload.payload?.queryId === queryId) {
+              resolved = true
+              cleanup()
+              if (payload.payload?.success && Array.isArray(payload.payload.data)) {
+                const mapped: AutocompleteOption[] = payload.payload.data.map((row: any) => {
+                  const val = row[valCol] ?? row[valCol.toLowerCase()] ?? row.id ?? row.ID ?? Object.values(row)[0]
+                  const lbl = row[labelCol] ?? row[labelCol.toLowerCase()] ?? row.display_name ?? row.name ?? String(val)
+                  return {
+                    label: String(lbl ?? ''),
+                    value: val,
+                    ...row,
+                  }
+                })
+                setDynamicResults(mapped)
+              }
+              resolve()
+            }
+          }
+
+          const cleanup = () => {
+            try {
+              const bindings = tunnelChannel.bindings?.broadcast
+              if (Array.isArray(bindings)) {
+                tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+              }
+            } catch (_) {}
+          }
+
+          tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+          tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+
+          tunnelChannel.send({
+            type: 'broadcast',
+            event: 'sql_query',
+            payload: {
+              queryId,
+              table,
+              tableName: table,
+              schemaName: schemaToUse,
+              action: 'select',
+              token: secretToken || project?.secret_token || 'test-token',
+              joins: [],
+              filters: { [labelCol]: searchTerm },
+              limit: limitNum > 0 ? limitNum : 100,
+              offset: 0,
+            },
+          })
+
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              cleanup()
+              resolve()
+            }
+          }, 6000)
+        })
+      }
+
+      // Caso 2: API REST / PostgreSQL direto
+      try {
+        const url = new URL(`/api/${table}`, window.location.origin)
+        url.searchParams.set(`filter_${labelCol}`, searchTerm)
+        if (limitNum > 0) {
+          url.searchParams.set('limit', String(limitNum))
+        }
+        const res = await fetch(url.toString())
+        if (res.ok) {
+          const json = await res.json()
+          const rows = Array.isArray(json) ? json : json.data || []
+          const mapped: AutocompleteOption[] = rows.map((row: any) => {
+            const val = row[valCol] ?? row[valCol.toLowerCase()] ?? row.id ?? row.ID ?? Object.values(row)[0]
+            const lbl = row[labelCol] ?? row[labelCol.toLowerCase()] ?? row.display_name ?? row.name ?? String(val)
+            return {
+              label: String(lbl ?? ''),
+              value: val,
+              ...row,
+            }
+          })
+          setDynamicResults(mapped)
+        }
+      } catch (err) {
+        console.error('[AutocompleteInput] Erro na busca dinâmica via API:', err)
+      }
+    },
+    [table, labelCol, valueCol, limit, projectId, project, tunnelChannel, isTunnelReady, secretToken, onSearch]
+  )
+
+  // Dispara busca dinâmica com debounce ao digitar
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length < minChars) {
+      setIsLoading(false)
+      return
+    }
+
+    const canDynamic = Boolean(onSearch || (table && labelCol))
+    if (!canDynamic) {
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        await executeDynamicSearch(trimmed)
+      } finally {
+        setIsLoading(false)
+      }
+    }, debounceMs)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [query, minChars, debounceMs, executeDynamicSearch, onSearch, table, labelCol])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setQuery(val)
     setIsOpen(true)
     setHighlightedIndex(-1)
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    setIsLoading(true)
-    debounceTimerRef.current = setTimeout(() => {
-      setIsLoading(false)
-    }, debounceMs)
   }
 
   const handleSelect = (item: AutocompleteOption) => {
     setQuery(item.label)
+    setSelectedItemCache(item)
     setIsOpen(false)
     onChange(item.value, item)
     inputRef.current?.blur()
@@ -125,6 +312,7 @@ export function AutocompleteInput({
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
     setQuery('')
+    setSelectedItemCache(null)
     setIsOpen(false)
     onChange('', null)
     inputRef.current?.focus()
@@ -146,8 +334,9 @@ export function AutocompleteInput({
       setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredResults.length - 1))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (highlightedIndex >= 0 && highlightedIndex < filteredResults.length) {
-        handleSelect(filteredResults[highlightedIndex])
+      const targetIdx = highlightedIndex >= 0 ? highlightedIndex : 0
+      if (filteredResults[targetIdx]) {
+        handleSelect(filteredResults[targetIdx])
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
@@ -160,7 +349,7 @@ export function AutocompleteInput({
   return (
     <div ref={containerRef} className="relative w-full">
       <div className="relative flex items-center">
-        {/* Ícone de busca */}
+        {/* Ícone de busca ou spinner */}
         <div className="absolute left-3.5 text-neutral-400 dark:text-neutral-500 pointer-events-none flex items-center justify-center">
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
@@ -169,7 +358,7 @@ export function AutocompleteInput({
           )}
         </div>
 
-        {/* Input */}
+        {/* Input Text */}
         <input
           ref={inputRef}
           type="text"
@@ -218,7 +407,10 @@ export function AutocompleteInput({
               return (
                 <div
                   key={`${item.value}-${idx}`}
-                  onClick={() => handleSelect(item)}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    handleSelect(item)
+                  }}
                   onMouseEnter={() => setHighlightedIndex(idx)}
                   className={cn(
                     'px-3.5 py-2.5 flex items-center justify-between cursor-pointer transition-colors',
@@ -244,7 +436,7 @@ export function AutocompleteInput({
             })
           ) : (
             <div className="px-4 py-3 text-center text-neutral-400 dark:text-neutral-500 italic">
-              Nenhum resultado encontrado para &quot;{query}&quot;
+              {isLoading ? 'Pesquisando registros...' : `Nenhum resultado encontrado para "${query}"`}
             </div>
           )}
         </div>

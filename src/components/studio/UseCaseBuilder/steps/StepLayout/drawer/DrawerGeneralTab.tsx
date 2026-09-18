@@ -536,7 +536,12 @@ export function DrawerGeneralTab({
             </label>
             <select
               value={currentFieldMeta.component?.type || 'text'}
-              onChange={(e) => updateMeta('component', 'type', e.target.value)}
+              onChange={(e) => {
+                updateMeta('component', 'type', e.target.value)
+                if (e.target.value === 'autocomplete') {
+                  updateMeta('component', 'options_type', 'relational')
+                }
+              }}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
             >
               <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
@@ -572,7 +577,10 @@ export function DrawerGeneralTab({
                 </label>
                 <select
                   value={currentFieldMeta.component?.rel_table || ''}
-                  onChange={(e) => updateMeta('component', 'rel_table', e.target.value)}
+                  onChange={(e) => {
+                    updateMeta('component', 'rel_table', e.target.value)
+                    updateMeta('component', 'options_type', 'relational')
+                  }}
                   className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
                 >
                   <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione a tabela alvo...')}</option>

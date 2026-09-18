@@ -400,7 +400,12 @@ export function FieldSettingsModal({
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
                     <select
                       value={currentFieldMeta.component?.type || 'text'}
-                      onChange={e => updateMeta('component', 'type', e.target.value)}
+                      onChange={e => {
+                        updateMeta('component', 'type', e.target.value)
+                        if (e.target.value === 'autocomplete') {
+                          updateMeta('component', 'options_type', 'relational')
+                        }
+                      }}
                       className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                     >
                       <option value="text">{t('wizard.layout.drawer.component_types.text')}</option>
@@ -585,7 +590,10 @@ export function FieldSettingsModal({
                         </label>
                         <select
                           value={currentFieldMeta.component?.rel_table || ''}
-                          onChange={(e) => updateMeta('component', 'rel_table', e.target.value)}
+                          onChange={(e) => {
+                            updateMeta('component', 'rel_table', e.target.value)
+                            updateMeta('component', 'options_type', 'relational')
+                          }}
                           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                         >
                           <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione a tabela alvo...')}</option>
