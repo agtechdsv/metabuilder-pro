@@ -240,7 +240,15 @@ export function IDEEditorArea({
               minimap: { enabled: false },
               fontSize: 13,
               wordWrap: 'on',
-              padding: { top: 16 }
+              padding: { top: 16 },
+              quickSuggestions: {
+                other: true,
+                comments: false,
+                strings: false
+              },
+              suggestOnTriggerCharacters: true,
+              acceptSuggestionOnEnter: 'on',
+              tabCompletion: 'on'
             }}
             onMount={(editor, monaco) => {
               monacoRef.current = monaco
