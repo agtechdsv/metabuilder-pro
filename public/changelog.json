@@ -1,22 +1,4 @@
 {
-  "v1.0.7": {
-    "date": "2026-09-17",
-    "pt": [
-      "Maior compatibilidade com bancos Oracle e PostgreSQL através da resolução inteligente de colunas (independente de maiúsculas ou minúsculas).",
-      "Suporte completo a múltiplos idiomas nos logs do túnel e aprimoramento na navegação, evitando janelas duplicadas.",
-      "Interface do túnel simplificada e mais ágil, com melhoria no clique para cópia de dados e remoção de botões redundantes."
-    ],
-    "en": [
-      "Enhanced database compatibility for Oracle and PostgreSQL with intelligent, case-insensitive column resolution.",
-      "Full multi-language support for tunnel logs and an improved viewing experience, preventing duplicate windows.",
-      "Streamlined tunnel interface with faster, more reliable click-to-copy interactions and a cleaner layout."
-    ],
-    "es": [
-      "Mayor compatibilidad con bases de datos Oracle y PostgreSQL gracias a la resolución inteligente de columnas sin distinción entre mayúsculas y minúsculas.",
-      "Soporte multilingüe completo en los registros del túnel y optimización de la interfaz para evitar ventanas duplicadas.",
-      "Interfaz del túnel más limpia y ágil, con mejoras en la acción de copiado y eliminación de botones redundantes."
-    ]
-  },
   "v1.0.6": {
     "date": "2026-09-16",
     "pt": [
