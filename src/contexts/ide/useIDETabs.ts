@@ -3,6 +3,7 @@ import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory, homeDir } from '@tauri-apps/api/path'
 import { invoke } from '@tauri-apps/api/core'
 import { useToast } from '@/components/ui/Toast'
+import { parseEntitySource, updateEntityCache } from '@/components/ide/entityParser'
 
 export interface UseIDETabsProps {
   targetSlug?: string
@@ -92,6 +93,13 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
         const content = await tauriFs.readTextFile(path, { baseDir: BaseDirectory.Home })
         setFileContents(prev => ({ ...prev, [path]: content }))
         setOriginalFileContents(prev => ({ ...prev, [path]: content }))
+
+        // Atualiza cache de entidades em tempo real
+        if (content && (path.includes('/entities/') || path.includes('\\entities\\') || content.includes('@Entity'))) {
+          const className = path.split('/').pop()?.replace('.java', '') || ''
+          updateEntityCache(className, parseEntitySource(content, className, path))
+        }
+
         setOpenFiles(prev => {
           const exists = prev.includes(path)
           const newList = exists ? prev : [...prev, path]
@@ -125,6 +133,12 @@ export function useIDETabs({ targetSlug, monacoRef }: UseIDETabsProps) {
       setFileContents(prev => ({ ...prev, [targetPath]: value }))
       setOriginalFileContents(prev => ({ ...prev, [targetPath]: value }))
       
+      // Atualiza cache de entidades em tempo real ao salvar
+      if (value && (targetPath.includes('/entities/') || targetPath.includes('\\entities\\') || value.includes('@Entity'))) {
+        const className = targetPath.split('/').pop()?.replace('.java', '') || ''
+        updateEntityCache(className, parseEntitySource(value, className, targetPath))
+      }
+
       setDiffActiveFile(curr => {
         if (curr === targetPath) {
           setDiffLocalContent(value)

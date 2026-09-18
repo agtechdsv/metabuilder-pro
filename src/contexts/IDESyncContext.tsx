@@ -14,6 +14,9 @@ import { useIDEFileOperations } from './ide/useIDEFileOperations'
 import { useIDEGit } from './ide/useIDEGit'
 import { useIDEServer } from './ide/useIDEServer'
 import { handleMonacoBeforeMount, updateJavaClasses } from '@/components/ide/ideUtils'
+import { registerEntityPath, updateEntityCache, parseEntitySource } from '@/components/ide/entityParser'
+import * as tauriFs from '@tauri-apps/plugin-fs'
+import { BaseDirectory } from '@tauri-apps/api/path'
 import { IDEModal } from '@/components/ide/IDEModal'
 
 export interface IDETarget {
@@ -112,9 +115,10 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
-  // Atualiza a lista global de classes Java para o Autocomplete do Monaco
+  // Atualiza a lista global de classes Java para o Autocomplete do Monaco e indexa entidades
   useEffect(() => {
     const javaClassItems: { name: string; packageName?: string; fullPath?: string }[] = []
+    const entityNodesToLoad: { className: string; path: string }[] = []
     
     const extractJavaClasses = (nodes: FileNode[]) => {
       for (const node of nodes) {
@@ -139,6 +143,12 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
           }
           
           javaClassItems.push({ name: className, packageName: pkg, fullPath: node.path })
+
+          // Registra entidades
+          if (node.path.includes('/entities/') || node.path.includes('\\entities\\') || pkg.endsWith('entities')) {
+            registerEntityPath(className, node.path)
+            entityNodesToLoad.push({ className, path: node.path })
+          }
         } else if (node.isDirectory && node.children) {
           extractJavaClasses(node.children)
         }
@@ -152,6 +162,22 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
         new Map(javaClassItems.map(item => [item.name, item])).values()
       )
       updateJavaClasses(uniqueItems)
+
+      // Carga em background das entidades para preencher o cache do Monaco
+      if (isTauri() && entityNodesToLoad.length > 0) {
+        setTimeout(async () => {
+          for (const ent of entityNodesToLoad) {
+            try {
+              const src = await tauriFs.readTextFile(ent.path, { baseDir: BaseDirectory.Home })
+              if (src) {
+                updateEntityCache(ent.className, parseEntitySource(src, ent.className, ent.path))
+              }
+            } catch {
+              // Silencioso se der erro na leitura em background
+            }
+          }
+        }, 100)
+      }
     }
   }, [fsState.fileTree])
 
