@@ -114,20 +114,45 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   // Atualiza a lista global de classes Java para o Autocomplete do Monaco
   useEffect(() => {
-    const javaClassNames: string[] = []
+    const javaClassItems: { name: string; packageName?: string; fullPath?: string }[] = []
     
-    const extractJavaClasses = (nodes: any[]) => {
+    const extractJavaClasses = (nodes: FileNode[]) => {
       for (const node of nodes) {
-        if (node.type === 'file' && node.name.endsWith('.java')) {
-          javaClassNames.push(node.name.replace('.java', ''))
-        } else if (node.type === 'folder' && node.children) {
+        if (node.name === '.trash') continue
+        if (!node.isDirectory && node.name.endsWith('.java')) {
+          const className = node.name.replace('.java', '')
+          
+          let pkg = ''
+          const javaIdx = node.path.lastIndexOf('/java/')
+          if (javaIdx !== -1) {
+            const rel = node.path.substring(javaIdx + 6)
+            const parts = rel.split('/')
+            parts.pop() // remove o nome do arquivo .java
+            pkg = parts.join('.')
+          } else {
+            const parts = node.path.split('/')
+            parts.pop()
+            const parentFolder = parts[parts.length - 1]
+            if (parentFolder && parentFolder !== 'src') {
+              pkg = parentFolder
+            }
+          }
+          
+          javaClassItems.push({ name: className, packageName: pkg, fullPath: node.path })
+        } else if (node.isDirectory && node.children) {
           extractJavaClasses(node.children)
         }
       }
     }
     
-    extractJavaClasses(fsState.fileTree)
-    updateJavaClasses(javaClassNames)
+    if (fsState.fileTree && fsState.fileTree.length > 0) {
+      extractJavaClasses(fsState.fileTree)
+      // Remove duplicatas pelo nome da classe
+      const uniqueItems = Array.from(
+        new Map(javaClassItems.map(item => [item.name, item])).values()
+      )
+      updateJavaClasses(uniqueItems)
+    }
   }, [fsState.fileTree])
 
   // Global keyboard shortcuts (ESC, Enter, Ctrl+Z, Delete)
