@@ -52,6 +52,8 @@ export interface BuiltViewProps {
   detailsDisplayMode?: Record<string, string>
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, string>
+  detailsTabTitles?: Record<string, string>
+  masterTabTitle?: string
   detailsItemTitles?: Record<string, string>
   hiddenDetails?: string[]
   actionInterfaceType?: string
@@ -144,7 +146,13 @@ export async function buildViewProps(
   }
 
   const modelName = tableDictionary[view.model_id] || view.model?.db_table_name || ''
-  const allComponents = view.ui_components || []
+  const allComponents = (view.ui_components || []).map((c: any) => {
+    let cfg = c.config
+    if (typeof cfg === 'string') {
+      try { cfg = JSON.parse(cfg) } catch (_) {}
+    }
+    return { ...c, config: cfg || {} }
+  })
   const gridFieldsOrder: string[] = view.layout_config?.grid_fields || []
   const formFieldsOrder: string[] = view.layout_config?.form_fields || []
   const filterFieldsOrder: string[] = view.layout_config?.filter_fields || []
@@ -262,7 +270,13 @@ export async function buildViewProps(
 
     if (siblingView) {
       const siblingGridOrder: string[] = siblingView.layout_config?.grid_fields || []
-      const siblingComponents = siblingView.ui_components || []
+      const siblingComponents = (siblingView.ui_components || []).map((c: any) => {
+        let cfg = c.config
+        if (typeof cfg === 'string') {
+          try { cfg = JSON.parse(cfg) } catch (_) {}
+        }
+        return { ...c, config: cfg || {} }
+      })
       const siblingDisplayFields = siblingComponents
         .filter((c: any) => c.is_visible !== false && (c.config?.zones?.includes('grid') || !c.config?.zones) && c.field?.is_visible_in_list !== false)
         .sort((a: any, b: any) => {
@@ -532,7 +546,13 @@ export async function buildViewProps(
 
     if (masterView) {
       const masterFormFieldsOrder: string[] = masterView.layout_config?.form_fields || []
-      const masterComponents = masterView.ui_components || []
+      const masterComponents = (masterView.ui_components || []).map((c: any) => {
+        let cfg = c.config
+        if (typeof cfg === 'string') {
+          try { cfg = JSON.parse(cfg) } catch (_) {}
+        }
+        return { ...c, config: cfg || {} }
+      })
       const masterFormFields = masterComponents
         .filter((c: any) => c.is_visible !== false && c.config?.zones?.includes('form') && c.field?.is_visible_in_form !== false)
         .sort((a: any, b: any) => {
@@ -563,7 +583,7 @@ export async function buildViewProps(
             id: c.field.id,
             model_id: c.field.model_id,
             model_name: tableDictionary[c.field.model_id],
-            display_name: specificMeta.label?.text || baseMeta.label?.text || c.label || c.field.display_name || c.field.db_column_name,
+            display_name: c.label || c.field.display_name || c.field.db_column_name,
             db_column_name: resolveResultKey(c.field),
             sql_expression: resolveSqlExpression(c.field),
             data_type: c.field.data_type,
@@ -581,12 +601,10 @@ export async function buildViewProps(
             const formMeta = masterView.layout_config?.fields_metadata?.[`form-${id}`] || {}
             const baseMeta = masterView.layout_config?.fields_metadata?.[id] || {}
             const meta = { ...baseMeta, ...formMeta }
-            const virtualModelId = meta.virtual_model_id || null
-            let virtualModelName = ''
-            if (virtualModelId) {
-              const foundModel = allModels?.find((m: any) => m.id === virtualModelId)
-              if (foundModel) virtualModelName = foundModel.db_table_name
-            }
+
+            const virtualModelId = id.startsWith('byoc_') ? meta.byoc_model_id : meta.virtual_model_id
+            const virtualModelName = virtualModelId ? tableDictionary[virtualModelId] : modelName
+
             const isByoc = id.startsWith('byoc_')
             const byocName = isByoc ? id.split('_').slice(2).join('_') : ''
             formFields.push({
@@ -654,6 +672,8 @@ export async function buildViewProps(
     detailsDisplayMode: view.layout_config?.details_display_mode,
     detailsInterfaceTypes: view.layout_config?.details_interface_types,
     detailsInlineTypes: view.layout_config?.details_inline_types,
+    detailsTabTitles: view.layout_config?.details_tab_titles,
+    masterTabTitle: view.layout_config?.master_tab_title,
     detailsItemTitles: view.layout_config?.details_item_titles,
     hiddenDetails: view.layout_config?.hidden_details,
     actionInterfaceType: view.layout_config?.action_interface_type || view.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (view.logic_type === 'mapa_mental' ? 'modal' : undefined),

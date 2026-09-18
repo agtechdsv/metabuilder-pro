@@ -137,25 +137,45 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
             let fetchJoins = (joins || []).filter((j: any) => j.from?.toLowerCase() === join.to.toLowerCase())
           
-            const modelId = project?.models?.find((m: any) => m.db_table_name === join.to)?.id
-            const customField = detailsItemTitles?.[modelId || '']
+            const targetSubModel = project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === join.to?.toLowerCase())
+            const modelId = targetSubModel?.id
+            let customField = detailsItemTitles?.[modelId || '']
+            if (!customField && detailsItemTitles) {
+              const toLower = join.to?.toLowerCase()
+              for (const [k, v] of Object.entries(detailsItemTitles)) {
+                if (k.toLowerCase() === toLower) {
+                  customField = v
+                  break
+                }
+                const m = project?.models?.find((pm: any) => pm.id === k)
+                if (m && (m.db_table_name || m.table_name || '').toLowerCase() === toLower) {
+                  customField = v
+                  break
+                }
+              }
+            }
             if (customField && customField.includes('.')) {
               const relatedTable = customField.split('.')[0]
-              const hasJoin = fetchJoins.some((j: any) => j.to === relatedTable || j.toTable === relatedTable)
+              const relTableLower = relatedTable.toLowerCase()
+              const hasJoin = fetchJoins.some((j: any) => (j.to || j.toTable)?.toLowerCase() === relTableLower)
               if (!hasJoin) {
-                const sourceModel = project?.models?.find((m: any) => m.db_table_name === join.to)
-              const linkField = sourceModel?.fields?.find((f: any) => 
-                f.foreign_key_table === relatedTable || 
-                f.db_column_name === `${relatedTable}_id` ||
-                (relatedTable.endsWith('s') && f.db_column_name === `${relatedTable.slice(0, -1)}_id`) ||
-                (relatedTable.endsWith('es') && f.db_column_name === `${relatedTable.slice(0, -2)}_id`)
-              )
-              if (linkField) {
+                const sourceModel = targetSubModel || project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === join.to?.toLowerCase())
+                const linkField = sourceModel?.fields?.find((f: any) => {
+                  const fCol = (f.db_column_name || '').toLowerCase()
+                  const fTbl = (f.foreign_key_table || '').toLowerCase()
+                  return fTbl === relTableLower ||
+                    fCol === `${relTableLower}_id` ||
+                    (relTableLower.endsWith('s') && fCol === `${relTableLower.slice(0, -1)}_id`) ||
+                    (relTableLower.endsWith('es') && fCol === `${relTableLower.slice(0, -2)}_id`)
+                })
+                if (linkField) {
+                  const targetRelModel = project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === relTableLower)
+                  const targetDbTable = targetRelModel?.db_table_name || relatedTable
                   fetchJoins.push({
                     from: join.to,
                     local: linkField.db_column_name,
                     localKey: linkField.db_column_name,
-                    to: relatedTable,
+                    to: targetDbTable,
                     foreignKey: linkField.foreign_key_column || 'id',
                     type: 'left'
                   })

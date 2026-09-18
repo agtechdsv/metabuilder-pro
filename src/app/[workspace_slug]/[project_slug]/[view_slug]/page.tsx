@@ -491,7 +491,13 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     modelId = view.model_id
     displayType = view.layout_config?.display_type || 'list'
     
-    const allComponents = view.ui_components || []
+    const allComponents = (view.ui_components || []).map((c: any) => {
+      let cfg = c.config
+      if (typeof cfg === 'string') {
+        try { cfg = JSON.parse(cfg) } catch (_) {}
+      }
+      return { ...c, config: cfg || {} }
+    })
 
     const resolveSqlExpression = (field: any) => {
       const dbColName = field.db_column_name

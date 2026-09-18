@@ -342,7 +342,28 @@ export default function RecordForm({
                       {tabTables.map(tableName => {
                         const targetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === tableName?.toLowerCase());
                         const modelId = targetModel?.id || getModelIdForTable(tableName);
-                        const title = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find((f: any) => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName;
+                        let title = detailsTabTitles?.[modelId || ''];
+                        if (!title && detailsTabTitles) {
+                          const tLower = tableName?.toLowerCase();
+                          for (const [k, v] of Object.entries(detailsTabTitles)) {
+                            if (k.toLowerCase() === tLower || (targetModel?.db_table_name && k.toLowerCase() === targetModel.db_table_name.toLowerCase())) {
+                              title = v;
+                              break;
+                            }
+                          }
+                        }
+                        if (!title && detailsTabTitles && Object.keys(detailsTabTitles).length > 0) {
+                          const entries = Object.entries(detailsTabTitles);
+                          if (entries.length === 1) {
+                            title = entries[0][1];
+                          }
+                        }
+                        if (!title) {
+                          title = dictionary[modelId || ''] || targetModel?.display_name || fields.find((f: any) => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName;
+                        }
+                        if (title && title === title.toUpperCase() && title.length > 2) {
+                          title = title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
+                        }
                         return (
                           <button
                             key={tableName}

@@ -84,7 +84,25 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     return tbl === tableName?.toLowerCase();
   })
   const modelId = targetModel?.id || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.model_id
-  const displayLabel = detailsTabTitles?.[modelId || ''] || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
+  let resolvedTabTitle = detailsTabTitles?.[modelId || '']
+  if (!resolvedTabTitle && detailsTabTitles) {
+    const tLower = tableName?.toLowerCase()
+    for (const [k, v] of Object.entries(detailsTabTitles)) {
+      if (k.toLowerCase() === tLower) {
+        resolvedTabTitle = v
+        break
+      }
+      const m = project?.models?.find((pm: any) => pm.id === k)
+      if (m && (m.db_table_name || m.table_name || '').toLowerCase() === tLower) {
+        resolvedTabTitle = v
+        break
+      }
+    }
+  }
+  let displayLabel = resolvedTabTitle || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
+  if (displayLabel && typeof displayLabel === 'string' && displayLabel === displayLabel.toUpperCase() && displayLabel.length > 2) {
+    displayLabel = displayLabel.charAt(0).toUpperCase() + displayLabel.slice(1).toLowerCase().replace(/_/g, ' ')
+  }
 
   return (
     <div className="space-y-2">
@@ -256,6 +274,20 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                         }
 
                         let customField = detailsItemTitles?.[detailModelId || ''];
+                        if (!customField && detailsItemTitles) {
+                          const tLower = tableName?.toLowerCase();
+                          for (const [k, v] of Object.entries(detailsItemTitles)) {
+                            if (k.toLowerCase() === tLower) {
+                              customField = v;
+                              break;
+                            }
+                            const m = project?.models?.find((pm: any) => pm.id === k);
+                            if (m && (m.db_table_name || m.table_name || '').toLowerCase() === tLower) {
+                              customField = v;
+                              break;
+                            }
+                          }
+                        }
 
                         if (customField) {
                           const { resolveDynamicFieldDef, extractRawValue } = require('@/lib/field-resolver');
@@ -281,6 +313,29 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                             if (matchedOpt && matchedOpt.label) {
                               val = matchedOpt.label;
+                            }
+                          }
+
+                          // Se não encontrou valor direto e o campo customizado referencia outra tabela (ex: produtos.nome):
+                          // Procura chave estrangeira correspondente no registro (ex: produto_id ou PRODUTO_ID) e busca no relationalOptions
+                          if ((val === undefined || val === null || val === '') && typeof customField === 'string' && customField.includes('.')) {
+                            const [relTable] = customField.split('.');
+                            const relTableLower = relTable.toLowerCase();
+                            const fkKey = Object.keys(detail).find(k => {
+                              const kl = k.toLowerCase();
+                              return kl === `${relTableLower}_id` ||
+                                (relTableLower.endsWith('s') && kl === `${relTableLower.slice(0, -1)}_id`) ||
+                                (relTableLower.endsWith('es') && kl === `${relTableLower.slice(0, -2)}_id`);
+                            });
+                            if (fkKey && detail[fkKey]) {
+                              const fkVal = detail[fkKey];
+                              for (const key of Object.keys(relationalOptions)) {
+                                const matched = relationalOptions[key]?.find((o: any) => String(o.value).toLowerCase() === String(fkVal).toLowerCase());
+                                if (matched?.label) {
+                                  val = matched.label;
+                                  break;
+                                }
+                              }
                             }
                           }
 
@@ -320,7 +375,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                           if (val !== undefined && val !== null && val !== '') {
                             if (typeof val === 'object') {
-                              return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || JSON.stringify(val));
+                              return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || val.ID || JSON.stringify(val));
                             }
                             return String(val);
                           }
@@ -334,7 +389,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                             }
                           }
                         }
-                        return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || `Item #${idx + 1}`;
+                        return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || detail.id || detail.ID || `Item #${idx + 1}`;
                       })()}
                     </span>
                   </div>
@@ -556,7 +611,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 }
 
                                 if (['select', 'Combo (Select)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0)) {
-                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.options);
+                                  let options = relationalOptions[field.id] || parseFixedOptions(fieldConfig.component?.fixed_options || fieldConfig.component?.options || fieldConfig.fixed_options || fieldConfig.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
                                     const depName = fieldConfig.component.depends_on;
                                     const depBase = depName.split('.').pop() || depName;
@@ -726,9 +781,29 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                         return (
                           <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
                             {subTables.map(st => {
-                              const stTargetModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === st?.toLowerCase());
+                              const stTargetModel = project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === st?.toLowerCase());
                               const stModelId = stTargetModel?.id || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.model_id;
-                              const stTitle = detailsTabTitles?.[stModelId || ''] || dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
+                              let stTitle = detailsTabTitles?.[stModelId || ''];
+                              if (!stTitle && detailsTabTitles) {
+                                const stLower = st?.toLowerCase();
+                                for (const [k, v] of Object.entries(detailsTabTitles)) {
+                                  if (k.toLowerCase() === stLower) {
+                                    stTitle = v;
+                                    break;
+                                  }
+                                  const m = project?.models?.find((pm: any) => pm.id === k);
+                                  if (m && (m.db_table_name || m.table_name || '').toLowerCase() === stLower) {
+                                    stTitle = v;
+                                    break;
+                                  }
+                                }
+                              }
+                              if (!stTitle) {
+                                stTitle = dictionary?.[stModelId || ''] || stTargetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === st?.toLowerCase())?.display_model_name || st;
+                              }
+                              if (stTitle && typeof stTitle === 'string' && stTitle === stTitle.toUpperCase() && stTitle.length > 2) {
+                                stTitle = stTitle.charAt(0).toUpperCase() + stTitle.slice(1).toLowerCase().replace(/_/g, ' ');
+                              }
 
                               return (
                                 <div key={st} className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900/30">

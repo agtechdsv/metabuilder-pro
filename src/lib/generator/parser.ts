@@ -534,7 +534,14 @@ function resolveViewZones(
   const formFieldsOrder: string[] = layoutConfig.form_fields || []
   const filterFieldsOrder: string[] = layoutConfig.filter_fields || []
 
-  const components: any[] = view.ui_components || []
+  const rawComponents: any[] = view.ui_components || []
+  const components = rawComponents.map((c: any) => {
+    let cfg = c.config
+    if (typeof cfg === 'string') {
+      try { cfg = JSON.parse(cfg) } catch (_) {}
+    }
+    return { ...c, config: cfg || {} }
+  })
   const viewModelId: string = view.model_id
 
   // ── Grid Fields ──

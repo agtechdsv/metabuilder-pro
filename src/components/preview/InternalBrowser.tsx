@@ -67,6 +67,47 @@ export function InternalBrowser({
   const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set(tabs[0]?.id ? [tabs[0].id] : []))
   const [urlInput, setUrlInput] = useState('')
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceTarget[]>([])
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedTabId(id)
+    e.dataTransfer.setData('text/plain', id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverTabId !== id) {
+      setDragOverTabId(id)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!draggedTabId || draggedTabId === targetId) {
+      setDraggedTabId(null)
+      setDragOverTabId(null)
+      return
+    }
+    setTabs(prev => {
+      const fromIndex = prev.findIndex(t => t.id === draggedTabId)
+      const toIndex = prev.findIndex(t => t.id === targetId)
+      if (fromIndex === -1 || toIndex === -1) return prev
+      const newTabs = [...prev]
+      const [movedTab] = newTabs.splice(fromIndex, 1)
+      newTabs.splice(toIndex, 0, movedTab)
+      return newTabs
+    })
+    setDraggedTabId(null)
+    setDragOverTabId(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedTabId(null)
+    setDragOverTabId(null)
+  }
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({})
   const { toast } = useToast()
@@ -544,6 +585,11 @@ export function InternalBrowser({
             return (
               <div
                 key={tab.id}
+                draggable={!tab.isSelecting}
+                onDragStart={(e) => handleDragStart(e, tab.id)}
+                onDragOver={(e) => handleDragOver(e, tab.id)}
+                onDrop={(e) => handleDrop(e, tab.id)}
+                onDragEnd={handleDragEnd}
                 onClick={() => setActiveTabId(tab.id)}
                 onMouseDown={(e) => {
                   if (e.button === 1) {
@@ -556,7 +602,9 @@ export function InternalBrowser({
                   setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
                 }}
                 className={`
-                  group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-colors border border-b-0 cursor-pointer
+                  group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-all border border-b-0 cursor-pointer select-none
+                  ${draggedTabId === tab.id ? 'opacity-40 scale-95' : ''}
+                  ${dragOverTabId === tab.id && draggedTabId !== tab.id ? 'border-r-2 !border-r-indigo-500 shadow-[2px_0_8px_rgba(99,102,241,0.5)]' : ''}
                   ${isActive
                     ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm'
                     : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
