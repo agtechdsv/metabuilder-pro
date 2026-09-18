@@ -515,7 +515,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         const comp = field._injected_rel || field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
         const isRelationalComp = comp && (
            comp.rel_table || 
-           (['select', 'radio', 'checkbox', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group'].includes(comp.type)) || 
+           (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group', 'Autocomplete (Busca Dinâmica)'].includes(comp.type)) || 
            comp.options_type === 'relational' || 
            comp.options_type === 'enumeration'
         );

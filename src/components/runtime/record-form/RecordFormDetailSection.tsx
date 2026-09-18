@@ -5,6 +5,7 @@ import { getActionContexts } from '@/lib/customActionsHelper';
 import { getActionIcon, getActionColorClasses, getFontFamily, getFontSize, applyMask, parseMaskedNumber, parseFixedOptions } from './RecordFormUtils';
 import { RecordFormField } from './RecordFormField';
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput';
+import { AutocompleteInput } from '@/components/runtime/AutocompleteInput';
 import { useI18n } from '@/i18n/I18nContext';
 
 interface RecordFormDetailSectionProps {
@@ -663,6 +664,40 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                           DEBUG VIRT: val={rawValue}, detail_keys={Object.keys(detail).filter(k => k.startsWith('virt_')).join(',')}
                                         </div>
                                       )}
+                                    </div>
+                                  );
+                                }
+
+                                if (['autocomplete', 'Autocomplete (Busca Dinâmica)', 'Autocomplete'].includes(type)) {
+                                  let options = relationalOptions[field.id] || relationalOptions[field.db_column_name] || [];
+                                  if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
+                                    const depName = fieldConfig.component.depends_on;
+                                    const depBase = depName.split('.').pop() || depName;
+                                    let depValue = detail[depName] ?? detail[depBase] ?? detail[depBase.toUpperCase()] ?? detail[depBase.toLowerCase()];
+                                    if (depValue === undefined || depValue === null) {
+                                      depValue = formData[depName] ?? formData[depBase] ?? formData[depBase.toUpperCase()] ?? formData[depBase.toLowerCase()];
+                                    }
+                                    if (depValue !== undefined && depValue !== null && depValue !== '') {
+                                      options = options.filter((o: any) => String(o.filter_value) === String(depValue));
+                                    } else {
+                                      options = [];
+                                    }
+                                  }
+                                  return (
+                                    <div className="flex flex-col gap-1">
+                                      <AutocompleteInput
+                                        value={rawValue}
+                                        onChange={(val) => handleInlineChange(val)}
+                                        options={options}
+                                        table={fieldConfig.component?.rel_table}
+                                        labelCol={fieldConfig.component?.rel_label}
+                                        valueCol={fieldConfig.component?.rel_value}
+                                        minChars={fieldConfig.component?.min_chars ?? 2}
+                                        debounceMs={fieldConfig.component?.debounce_ms ?? 300}
+                                        limit={fieldConfig.component?.limit}
+                                        placeholder={fieldConfig.component?.search_placeholder || 'Digite para buscar...'}
+                                        disabled={isInlineDisabled}
+                                      />
                                     </div>
                                   );
                                 }

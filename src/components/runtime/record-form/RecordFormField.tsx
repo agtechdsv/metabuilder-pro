@@ -62,6 +62,7 @@ const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compi
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput';
+import { AutocompleteInput } from '@/components/runtime/AutocompleteInput';
 import { getActionContexts, getActionGroupFields } from '@/lib/customActionsHelper';
 import {
   getCaseInsensitiveValue,
@@ -308,6 +309,22 @@ export function RecordFormField(props: RecordFormFieldProps) {
                   <option key={i} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            ) : ['autocomplete', 'Autocomplete (Busca Dinâmica)', 'Autocomplete'].includes(fieldType) ? (
+              <AutocompleteInput
+                value={value}
+                onChange={handleChange}
+                disabled={isDisabled}
+                options={options}
+                table={comp.rel_table}
+                labelCol={comp.rel_label}
+                valueCol={comp.rel_value}
+                minChars={comp.min_chars ?? 2}
+                debounceMs={comp.debounce_ms ?? 300}
+                limit={comp.limit}
+                placeholder={comp.search_placeholder || (mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name))}
+                style={inputStyle}
+                className={commonClasses}
+              />
             ) : ['radio', 'Radio Buttons'].includes(fieldType) ? (
               <div className="flex flex-wrap gap-4 p-4 bg-neutral-50/50 dark:bg-neutral-950/30 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 {options.map((opt: any, i: number) => (

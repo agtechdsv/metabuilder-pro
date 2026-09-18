@@ -126,7 +126,7 @@ export function useViewFilters({
       for (const field of uniqueFields) {
         const config = field.config?.filter_config || field.config?.grid_config || field.config
         const comp = config?.component || field.config?.component
-        const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'Combo (Select)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
+        const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Autocomplete (Busca Dinâmica)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {

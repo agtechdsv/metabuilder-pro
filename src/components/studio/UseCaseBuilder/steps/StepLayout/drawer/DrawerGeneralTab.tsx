@@ -543,6 +543,7 @@ export function DrawerGeneralTab({
               <option value="textarea">{t('wizard.layout.drawer.component_types.textarea')}</option>
               <option value="number">{t('wizard.layout.drawer.component_types.number')}</option>
               <option value="select">{t('wizard.layout.drawer.component_types.select')}</option>
+              <option value="autocomplete">{t('wizard.layout.drawer.component_types.autocomplete', 'Autocomplete (Busca Dinâmica)')}</option>
               <option value="radio">{t('wizard.layout.drawer.component_types.radio')}</option>
               <option value="checkbox">{t('wizard.layout.drawer.component_types.checkbox')}</option>
               <option value="switch">{t('wizard.layout.drawer.component_types.switch')}</option>
@@ -554,6 +555,200 @@ export function DrawerGeneralTab({
               <option value="file_uploader">{t('wizard.layout.drawer.component_types.file_uploader')}</option>
             </select>
           </div>
+
+          {currentFieldMeta.component?.type === 'autocomplete' && (
+            <div className="space-y-4 p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/50">
+              <div className="flex items-center gap-2 pb-1 border-b border-emerald-100 dark:border-emerald-900/40">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-black tracking-wider text-emerald-700 dark:text-emerald-400 uppercase">
+                  {t('wizard.layout.drawer.autocomplete_config', 'Configuração do Autocomplete')}
+                </span>
+              </div>
+
+              {/* Tabela de Origem */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                  {t('wizard.layout.drawer.rel_table', 'Tabela de Origem')}
+                </label>
+                <select
+                  value={currentFieldMeta.component?.rel_table || ''}
+                  onChange={(e) => updateMeta('component', 'rel_table', e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                >
+                  <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione a tabela alvo...')}</option>
+                  {models.map((m: any) => (
+                    <option key={m.id} value={m.db_table_name}>
+                      {m.display_name || m.db_table_name} ({m.db_table_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Campo de Busca/Exibição & Campo de Valor (ID) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.rel_label', 'Campo de Busca / Exibição')}
+                  </label>
+                  <select
+                    value={currentFieldMeta.component?.rel_label || ''}
+                    onChange={(e) => updateMeta('component', 'rel_label', e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    disabled={!currentFieldMeta.component?.rel_table}
+                  >
+                    <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione...')}</option>
+                    {models
+                      .find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)
+                      ?.fields.map((f: any) => (
+                        <option key={f.id} value={f.db_column_name}>
+                          {f.display_name || f.db_column_name} ({f.db_column_name})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.rel_value', 'Campo de Valor (ID)')}
+                  </label>
+                  <select
+                    value={currentFieldMeta.component?.rel_value || ''}
+                    onChange={(e) => updateMeta('component', 'rel_value', e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    disabled={!currentFieldMeta.component?.rel_table}
+                  >
+                    <option value="">{t('wizard.layout.drawer.options_select_placeholder', 'Selecione...')}</option>
+                    {models
+                      .find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)
+                      ?.fields.map((f: any) => (
+                        <option key={f.id} value={f.db_column_name}>
+                          {f.display_name || f.db_column_name} ({f.db_column_name})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Qtd Mínima de Caracteres & Tempo de Debounce */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.min_chars', 'Qtd. Mínima de Caracteres')}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    placeholder="Padrão: 2"
+                    value={currentFieldMeta.component?.min_chars ?? 2}
+                    onChange={(e) => updateMeta('component', 'min_chars', parseInt(e.target.value) || 1)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.debounce_ms', 'Tempo de Debounce (ms)')}
+                  </label>
+                  <input
+                    type="number"
+                    min="50"
+                    step="50"
+                    placeholder="Padrão: 300"
+                    value={currentFieldMeta.component?.debounce_ms ?? 300}
+                    onChange={(e) => updateMeta('component', 'debounce_ms', parseInt(e.target.value) || 300)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Limite de Resultados (Vazio = 100% / Ilimitado) */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                  {t('wizard.layout.drawer.result_limit', 'Limite de Resultados')} <span className="text-neutral-400 font-normal normal-case">({t('wizard.layout.drawer.result_limit_hint', 'Vazio = Sem Limite / 100%')})</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Ex: 20 (Vazio = Ilimitado / 100%)"
+                  value={currentFieldMeta.component?.limit ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value)
+                    updateMeta('component', 'limit', val)
+                  }}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                />
+              </div>
+
+              {/* Placeholder do Campo de Busca */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                  {t('wizard.layout.drawer.search_placeholder', 'Placeholder da Busca')}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Digite para pesquisar..."
+                  value={currentFieldMeta.component?.search_placeholder || ''}
+                  onChange={(e) => updateMeta('component', 'search_placeholder', e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                />
+              </div>
+
+              {/* Filtro em Cascata (Opcional) */}
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-emerald-100 dark:border-emerald-900/40">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.depends_on', 'Depende de (Filtro Em Cascata)')}
+                  </label>
+                  <select
+                    value={currentFieldMeta.component?.depends_on || ''}
+                    onChange={(e) => updateMeta('component', 'depends_on', e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                  >
+                    <option value="">
+                      {t('wizard.layout.drawer.options_select_placeholder', 'Nenhum')}
+                    </option>
+                    {(() => {
+                      const allZoneFields = [
+                        ...(config.layout_config?.form_fields || []),
+                        ...(config.layout_config?.filter_fields || []),
+                      ]
+                      const uniqueFields = Array.from(new Set(allZoneFields))
+                      return uniqueFields.map((fid: any) => {
+                        const fObj = models.flatMap((m: any) => m.fields).find((f: any) => f.id === fid)
+                        const val = fObj?.db_column_name || fid
+                        return (
+                          <option key={`dep-ac-${fid}`} value={val}>
+                            {getFieldName(fid)} ({val})
+                          </option>
+                        )
+                      })
+                    })()}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
+                    {t('wizard.layout.drawer.filter_column', 'Filtrar Coluna Por')}
+                  </label>
+                  <select
+                    value={currentFieldMeta.component?.filter_column || ''}
+                    onChange={(e) => updateMeta('component', 'filter_column', e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold outline-none disabled:opacity-50"
+                    disabled={!currentFieldMeta.component?.depends_on || !currentFieldMeta.component?.rel_table}
+                  >
+                    <option value="">
+                      {t('wizard.layout.drawer.options_select_placeholder', 'Selecione a coluna alvo')}
+                    </option>
+                    {models
+                      .find((m: any) => m.db_table_name === currentFieldMeta.component?.rel_table)
+                      ?.fields.map((f: any) => (
+                        <option key={`fc-ac-${f.id}`} value={f.db_column_name}>
+                          {f.display_name || f.db_column_name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {currentFieldMeta.component?.type === 'textarea' && (
             <div className="space-y-2">
