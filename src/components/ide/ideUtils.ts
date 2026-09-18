@@ -32,8 +32,11 @@ export const updateJavaClasses = (classes: (string | JavaClassInfo)[]) => {
 }
 
 export const STANDARD_JAVA_IMPORTS: Record<string, string> = {
-  // Annotations
+  // Lombok
   '@RequiredArgsConstructor': 'lombok.RequiredArgsConstructor',
+  '@Data': 'lombok.Data',
+
+  // Spring Web Annotations
   '@PathVariable': 'org.springframework.web.bind.annotation.PathVariable',
   '@RequestParam': 'org.springframework.web.bind.annotation.RequestParam',
   '@RequestBody': 'org.springframework.web.bind.annotation.RequestBody',
@@ -43,10 +46,30 @@ export const STANDARD_JAVA_IMPORTS: Record<string, string> = {
   '@PostMapping': 'org.springframework.web.bind.annotation.PostMapping',
   '@PutMapping': 'org.springframework.web.bind.annotation.PutMapping',
   '@DeleteMapping': 'org.springframework.web.bind.annotation.DeleteMapping',
+  '@RestControllerAdvice': 'org.springframework.web.bind.annotation.RestControllerAdvice',
+  '@ExceptionHandler': 'org.springframework.web.bind.annotation.ExceptionHandler',
+  '@ResponseStatus': 'org.springframework.web.bind.annotation.ResponseStatus',
+
+  // Spring Core / Stereotypes
   '@Autowired': 'org.springframework.beans.factory.annotation.Autowired',
   '@Service': 'org.springframework.stereotype.Service',
   '@Repository': 'org.springframework.stereotype.Repository',
   '@Component': 'org.springframework.stereotype.Component',
+
+  // Spring Security
+  '@PreAuthorize': 'org.springframework.security.access.prepost.PreAuthorize',
+
+  // Jakarta Validation
+  '@Valid': 'jakarta.validation.Valid',
+  '@NotNull': 'jakarta.validation.constraints.NotNull',
+  '@NotEmpty': 'jakarta.validation.constraints.NotEmpty',
+  '@NotBlank': 'jakarta.validation.constraints.NotBlank',
+  '@Size': 'jakarta.validation.constraints.Size',
+  '@Min': 'jakarta.validation.constraints.Min',
+  '@Max': 'jakarta.validation.constraints.Max',
+  '@Email': 'jakarta.validation.constraints.Email',
+
+  // JPA Persistence
   '@Entity': 'jakarta.persistence.Entity',
   '@Table': 'jakarta.persistence.Table',
   '@Id': 'jakarta.persistence.Id',
@@ -55,10 +78,11 @@ export const STANDARD_JAVA_IMPORTS: Record<string, string> = {
   '@ManyToOne': 'jakarta.persistence.ManyToOne',
   '@OneToMany': 'jakarta.persistence.OneToMany',
   '@JoinColumn': 'jakarta.persistence.JoinColumn',
-  '@Data': 'lombok.Data',
+
+  // Jackson
   '@JsonIgnore': 'com.fasterxml.jackson.annotation.JsonIgnore',
 
-  // Types
+  // Wrappers & Types
   'Optional': 'java.util.Optional',
   'ResponseEntity': 'org.springframework.http.ResponseEntity',
   'HttpEntity': 'org.springframework.http.HttpEntity',
@@ -66,6 +90,13 @@ export const STANDARD_JAVA_IMPORTS: Record<string, string> = {
   'UUID': 'java.util.UUID',
   'List': 'java.util.List',
   'ArrayList': 'java.util.ArrayList',
+  'Map': 'java.util.Map',
+  'HashMap': 'java.util.HashMap',
+  'Set': 'java.util.Set',
+  'HashSet': 'java.util.HashSet',
+  'Collectors': 'java.util.stream.Collectors',
+  'Arrays': 'java.util.Arrays',
+  'Collections': 'java.util.Collections',
   'BigDecimal': 'java.math.BigDecimal',
   'LocalDateTime': 'java.time.LocalDateTime',
   'OffsetDateTime': 'java.time.OffsetDateTime',
@@ -237,16 +268,21 @@ const WRAPPER_DOT_SUGGESTIONS: Record<string, { label: string, insertText: strin
   ResponseEntity: [
     { label: 'ok', insertText: 'ok(${1:body})', isSnippet: true, detail: 'ResponseEntity.ok(body) - HTTP 200' },
     { label: 'ok().build()', insertText: 'ok().build()', isSnippet: true, detail: 'ResponseEntity.ok().build() - HTTP 200 vazio' },
-    { label: 'created', insertText: 'created(java.net.URI.create("${1:/api/resource}")).body(${2:body})', isSnippet: true, detail: 'HTTP 201 Created com URI' },
-    { label: 'badRequest().build()', insertText: 'badRequest().build()', isSnippet: true, detail: 'HTTP 400 Bad Request' },
+    { label: 'status', insertText: 'status(org.springframework.http.HttpStatus.${1:OK}).body(${2:body})', isSnippet: true, detail: 'ResponseEntity.status(status).body(body)' },
+    { label: 'created', insertText: 'created(java.net.URI.create("${1:/api/resource/}" + ${2:id})).body(${3:body})', isSnippet: true, detail: 'HTTP 201 Created com URI' },
+    { label: 'badRequest', insertText: 'badRequest().body(${1:error})', isSnippet: true, detail: 'ResponseEntity.badRequest().body(error) - HTTP 400' },
+    { label: 'badRequest().build()', insertText: 'badRequest().build()', isSnippet: true, detail: 'HTTP 400 Bad Request vazio' },
     { label: 'notFound().build()', insertText: 'notFound().build()', isSnippet: true, detail: 'HTTP 404 Not Found' },
     { label: 'noContent().build()', insertText: 'noContent().build()', isSnippet: true, detail: 'HTTP 204 No Content' },
-    { label: 'status', insertText: 'status(org.springframework.http.HttpStatus.${1:OK}).body(${2:body})', isSnippet: true, detail: 'HTTP Status customizado' },
   ],
   Optional: [
-    { label: 'of', insertText: 'of(${1:value})', isSnippet: true, detail: 'Optional.of(value) - Não nulo' },
-    { label: 'ofNullable', insertText: 'ofNullable(${1:value})', isSnippet: true, detail: 'Optional.ofNullable(value) - Aceita nulo' },
-    { label: 'empty', insertText: 'empty()', isSnippet: true, detail: 'Optional.empty() - Vazio' },
+    { label: 'ofNullable', insertText: 'ofNullable(${1:value})', isSnippet: true, detail: 'Optional.ofNullable(obj) - Permite nulo' },
+    { label: 'of', insertText: 'of(${1:value})', isSnippet: true, detail: 'Optional.of(obj) - Lança NPE se nulo' },
+    { label: 'empty', insertText: 'empty()', isSnippet: true, detail: 'Optional.empty() - Retorna Optional vazio' },
+  ],
+  UUID: [
+    { label: 'randomUUID', insertText: 'randomUUID()', isSnippet: true, detail: 'UUID.randomUUID() - Gera UUID v4 aleatório' },
+    { label: 'fromString', insertText: 'fromString("${1:uuidString}")', isSnippet: true, detail: 'UUID.fromString(String) - Converte texto em UUID' },
   ]
 }
 
@@ -392,6 +428,41 @@ export const registerJavaSnippets = (monaco: any) => {
         { label: 'UUID', insertText: 'UUID', kind: monaco.languages.CompletionItemKind.Class, detail: 'java.util.UUID' },
         { label: 'LocalDateTime', insertText: 'LocalDateTime', kind: monaco.languages.CompletionItemKind.Class, detail: 'Data e hora sem timezone' },
         { label: 'OffsetDateTime', insertText: 'OffsetDateTime', kind: monaco.languages.CompletionItemKind.Class, detail: 'Data e hora com offset UTC' },
+        // Jakarta Validation Annotations
+        { label: '@Valid', insertText: '@Valid', isAnnotation: true, detail: 'Jakarta: Dispara validação de DTO/Bean' },
+        { label: '@NotNull', insertText: '@NotNull(message = "${1:Campo obrigatório}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Não permite valor nulo' },
+        { label: '@NotEmpty', insertText: '@NotEmpty(message = "${1:Não pode ser vazio}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Não nulo e não vazio' },
+        { label: '@NotBlank', insertText: '@NotBlank(message = "${1:Campo não pode ficar em branco}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: String com caracteres visíveis' },
+        { label: '@Size', insertText: '@Size(min = ${1:1}, max = ${2:100}, message = "${3:Tamanho inválido}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Limites de tamanho' },
+        { label: '@Min', insertText: '@Min(value = ${1:0}, message = "${2:Valor mínimo é 0}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Valor numérico mínimo' },
+        { label: '@Max', insertText: '@Max(value = ${1:100}, message = "${2:Valor máximo é 100}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Valor numérico máximo' },
+        { label: '@Email', insertText: '@Email(message = "${1:E-mail inválido}")', isAnnotation: true, isSnippet: true, detail: 'Jakarta: Formato de e-mail' },
+
+        // Spring MVC Exceptions & Responses
+        { label: '@RestControllerAdvice', insertText: '@RestControllerAdvice', isAnnotation: true, detail: 'Spring: Tratamento global de exceções' },
+        { label: '@ExceptionHandler', insertText: '@ExceptionHandler(${1:Exception}.class)', isAnnotation: true, isSnippet: true, detail: 'Spring: Captura exceção em ControllerAdvice' },
+        { label: '@ResponseStatus', insertText: '@ResponseStatus(org.springframework.http.HttpStatus.${1:NOT_FOUND})', isAnnotation: true, isSnippet: true, detail: 'Spring: Status HTTP padrão da exceção' },
+
+        // Spring Security
+        { label: '@PreAuthorize', insertText: '@PreAuthorize("hasRole(\'${1:ADMIN}\')")', isAnnotation: true, isSnippet: true, detail: 'Spring Security: Controle de acesso' },
+
+        // Modern Java 21 / 17 Constructs & Snippets
+        { label: 'record', insertText: 'public record ${1:RecordName}(${2:Long id, String nome}) {}', isSnippet: true, kind: monaco.languages.CompletionItemKind.Snippet, detail: 'Java 17/21: Definição de Record imutável' },
+        { label: 'switch-pattern', insertText: 'switch (${1:obj}) {\n\tcase ${2:String s} -> ${3:System.out.println(s);}\n\tdefault -> ${4:throw new IllegalStateException();}\n}', isSnippet: true, kind: monaco.languages.CompletionItemKind.Snippet, detail: 'Java 21: Pattern Matching no switch' },
+        { label: 'virtual-threads', insertText: 'try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {\n\texecutor.submit(() -> {\n\t\t${1:// Código concorrente em Virtual Thread}\n\t});\n}', isSnippet: true, kind: monaco.languages.CompletionItemKind.Snippet, detail: 'Java 21: Executor de Virtual Threads' },
+
+        // Spring Data JPA Query Methods
+        { label: 'findBy', insertText: 'findBy${1:Field}(${2:Type} ${3:field});', isSnippet: true, kind: monaco.languages.CompletionItemKind.Method, detail: 'Spring Data: Query method por campo' },
+        { label: 'existsBy', insertText: 'existsBy${1:Field}(${2:Type} ${3:field});', isSnippet: true, kind: monaco.languages.CompletionItemKind.Method, detail: 'Spring Data: Verifica existência' },
+        { label: 'countBy', insertText: 'countBy${1:Field}(${2:Type} ${3:field});', isSnippet: true, kind: monaco.languages.CompletionItemKind.Method, detail: 'Spring Data: Contagem por campo' },
+        { label: 'deleteBy', insertText: 'deleteBy${1:Field}(${2:Type} ${3:field});', isSnippet: true, kind: monaco.languages.CompletionItemKind.Method, detail: 'Spring Data: Exclusão por campo' },
+
+        // Collections & Utilities
+        { label: 'Map', insertText: 'Map<${1:String}, ${2:Object}>', isSnippet: true, kind: monaco.languages.CompletionItemKind.Interface, detail: 'java.util.Map' },
+        { label: 'HashMap', insertText: 'new HashMap<>()', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'Instanciação java.util.HashMap' },
+        { label: 'Set', insertText: 'Set<${1:Type}>', isSnippet: true, kind: monaco.languages.CompletionItemKind.Interface, detail: 'java.util.Set (elementos únicos)' },
+        { label: 'HashSet', insertText: 'new HashSet<>()', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'Instanciação java.util.HashSet' },
+        { label: 'Collectors', insertText: 'Collectors.toList()', isSnippet: true, kind: monaco.languages.CompletionItemKind.Class, detail: 'java.util.stream.Collectors' },
         { label: 'BigDecimal', insertText: 'BigDecimal', kind: monaco.languages.CompletionItemKind.Class, detail: 'Ponto flutuante exato monetário' }
       ]
 
