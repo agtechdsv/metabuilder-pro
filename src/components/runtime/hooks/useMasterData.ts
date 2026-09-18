@@ -104,9 +104,13 @@ export function useMasterData({
       const masterModelDef = project?.models?.find((m: any) => 
         m.db_table_name?.toLowerCase() === modelName?.toLowerCase() || m.name?.toLowerCase() === modelName?.toLowerCase()
       )
-      const masterValidCols = new Set(
-        (masterModelDef?.fields || []).map((f: any) => (f.db_column_name || '').split('.').pop().toLowerCase())
-      )
+      const masterValidColsMap = new Map<string, string>()
+      if (masterModelDef?.fields) {
+        masterModelDef.fields.forEach((f: any) => {
+          const col = (f.db_column_name || '').split('.').pop()
+          if (col) masterValidColsMap.set(col.toLowerCase(), col)
+        })
+      }
 
       const sanitizedData: any = {}
       for (const [k, v] of Object.entries(formData)) {
@@ -130,7 +134,7 @@ export function useMasterData({
           typeof v === 'object' ||       // skip objects and arrays (joined relations)
           masterOtherTableNames.has(lowKey) ||
           masterJoinedTableNames.has(lowKey) ||
-          (isJsonStr && (masterOtherTableNames.has(lowKey) || masterJoinedTableNames.has(lowKey) || (masterValidCols.size > 0 && !masterValidCols.has(lowKey))))
+          (masterValidColsMap.size > 0 && !masterValidColsMap.has(lowKey))
         ) continue
 
         const newValue = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
@@ -143,7 +147,8 @@ export function useMasterData({
           if (newValueString === originalValue) continue
         }
 
-        sanitizedData[k] = newValue
+        const finalKey = masterValidColsMap.has(lowKey) ? masterValidColsMap.get(lowKey)! : k
+        sanitizedData[finalKey] = newValue
       }
 
       const sendWithRetry = async (): Promise<{ success: boolean; data?: any[] }> => {
@@ -364,19 +369,19 @@ export function useMasterData({
               .map((j: any) => (j.to || j.toTable || j.table || '').toLowerCase())
               .filter((name: string) => name && name !== rowTable.toLowerCase())
           )
-          const detailValidCols = new Set<string>()
+          const detailValidColsMap = new Map<string, string>()
           if (modelDef?.fields) {
             modelDef.fields.forEach((f: any) => {
-              const col = (f.db_column_name || '').split('.').pop().toLowerCase()
-              if (col) detailValidCols.add(col)
+              const col = (f.db_column_name || '').split('.').pop()
+              if (col) detailValidColsMap.set(col.toLowerCase(), col)
             })
           }
           if (detailFields) {
             detailFields
               .filter((f: any) => f.model_name?.toLowerCase() === rowTable.toLowerCase())
               .forEach((f: any) => {
-                const col = (f.db_column_name || '').split('.').pop().toLowerCase()
-                if (col) detailValidCols.add(col)
+                const col = (f.db_column_name || '').split('.').pop()
+                if (col) detailValidColsMap.set(col.toLowerCase(), col)
               })
           }
 
@@ -395,7 +400,7 @@ export function useMasterData({
               v === undefined || typeof v === 'object' ||
               detailOtherTableNames.has(lk) ||
               detailJoinedTableNames.has(lk) ||
-              (isJsonStr && (detailOtherTableNames.has(lk) || detailJoinedTableNames.has(lk) || (detailValidCols.size > 0 && !detailValidCols.has(lk))))
+              (detailValidColsMap.size > 0 && !detailValidColsMap.has(lk))
             ) continue
 
             const newVal = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
@@ -412,7 +417,8 @@ export function useMasterData({
               if (newVal === origVal) continue // Se for igual, pula
             }
 
-            sanitized[k] = newVal
+            const finalKey = detailValidColsMap.has(lk) ? detailValidColsMap.get(lk)! : k
+            sanitized[finalKey] = newVal
           }
 
           if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
