@@ -281,7 +281,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       }
 
       if (data) {
-        allSubDetails.push(...data.map((d: any) => ({ ...d, model_name: join.to })))
+        allSubDetails.push(...data.map((d: any) => ({ ...d, model_name: join.to, _origRow: { ...d } })))
       }
     }
 
@@ -431,7 +431,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           allDetails.push(...detailData.map((d: any) => ({
             ...d,
             model_name: join.to,
-            display_model_name: join.to
+            display_model_name: join.to,
+            _origRow: { ...d }
           })))
         }
       }

@@ -1035,42 +1035,101 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           console.log(chalk.green(`[ OK ] GET_USERS: Retornou ${safeRows.length} usuários.`));
         }
         else if (action === 'insert') {
-          let data = payload.payload.data || {}; // { coluna: "valor" }
+          let currentData = { ...(payload.payload.data || {}) }; // { coluna: "valor" }
+
+          // Remove any nested objects/arrays from payload data before attempting SQL
+          for (const [k, v] of Object.entries(currentData)) {
+            if (v !== null && typeof v === 'object') {
+              delete currentData[k];
+            }
+          }
           
           if (dbType === 'oracle') {
             const upperData = {};
-            for (const [k, v] of Object.entries(data)) {
+            for (const [k, v] of Object.entries(currentData)) {
               upperData[k.toUpperCase()] = v;
             }
-            data = upperData;
+            currentData = upperData;
           }
 
-          const keys = Object.keys(data).map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
-          const values = Object.values(data);
-          let placeholders;
-          
-          if (dbType === 'oracle') {
-            placeholders = values.map((val, i) => {
-              if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(val)) {
-                values[i] = val.substring(0, 19).replace('T', ' ');
-                return `TO_TIMESTAMP(:${i + 1}, 'YYYY-MM-DD HH24:MI:SS')`;
+          let insertResult = null;
+          let insertAttempts = 0;
+          const MAX_INSERT_RETRIES = 5;
+
+          while (insertAttempts < MAX_INSERT_RETRIES) {
+            insertAttempts++;
+            const colNames = Object.keys(currentData);
+
+            if (colNames.length === 0) {
+              console.log(chalk.yellow(`[ AVISO ] Nenhuma coluna restante para INSERT em '${safeTable}'. INSERT ignorado.`));
+              result = { rows: [] };
+              break;
+            }
+
+            const keys = colNames.map(k => `"${k.replace(/[^a-zA-Z0-9_]/g, '')}"`);
+            const values = Object.values(currentData);
+            let placeholders;
+            
+            if (dbType === 'oracle') {
+              placeholders = values.map((val, i) => {
+                if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?Z?$/.test(val)) {
+                  values[i] = val.substring(0, 19).replace('T', ' ');
+                  return `TO_TIMESTAMP(:${i + 1}, 'YYYY-MM-DD HH24:MI:SS')`;
+                }
+                return `:${i + 1}`;
+              });
+              const sqlTable = safeTable.toUpperCase();
+              sql = `INSERT INTO "${sqlTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
+            } else {
+              placeholders = values.map((_, i) => `$${i + 1}`);
+              sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+            }
+            
+            params = values;
+            try {
+              if (dbType === 'oracle') {
+                await oracleConnection.execute(sql, params, { autoCommit: true });
+                insertResult = { rows: [] };
+              } else {
+                insertResult = await pgClient.query(sql, params);
               }
-              return `:${i + 1}`;
-            });
-            const sqlTable = safeTable.toUpperCase();
-            sql = `INSERT INTO "${sqlTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`;
-          } else {
-            placeholders = values.map((_, i) => `$${i + 1}`);
-            sql = `INSERT INTO "${safeTable}" (${keys.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+              result = insertResult;
+              break; // Sucesso — sai do loop
+            } catch (insertErr) {
+              const errMsg = insertErr.message || '';
+              const oraInvalidColMatch = errMsg.match(/ORA-00904:\s*["\u201c\u201d]?([^:"\u201c\u201d\s]+)["\u201c\u201d]?/i);
+              const genColMatch = errMsg.match(/["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/);
+              const isGenColError = errMsg.includes('DEFAULT') && genColMatch;
+              const pgColNotExistMatch = (insertErr.code === '42703' || /does not exist|não existe/i.test(errMsg)) && errMsg.match(/(?:column|coluna)\s+["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/i);
+              const mysqlColMatch = errMsg.match(/Unknown column\s+'([^']+)'/i);
+
+              let badCol = null;
+              if (oraInvalidColMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === oraInvalidColMatch[1].toLowerCase()) || oraInvalidColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" é inválida no Oracle (ORA-00904) — removendo e repetindo INSERT (tentativa ${insertAttempts})...`));
+              } else if (isGenColError) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === genColMatch[1].toLowerCase()) || genColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" é GENERATED — removendo e repetindo INSERT (tentativa ${insertAttempts})...`));
+              } else if (pgColNotExistMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === pgColNotExistMatch[1].toLowerCase()) || pgColNotExistMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" não existe no Postgres (42703) — removendo e repetindo INSERT (tentativa ${insertAttempts})...`));
+              } else if (mysqlColMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === mysqlColMatch[1].toLowerCase()) || mysqlColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" não existe no MySQL (1054) — removendo e repetindo INSERT (tentativa ${insertAttempts})...`));
+              }
+
+              if (badCol) {
+                delete currentData[badCol];
+              } else {
+                throw insertErr;
+              }
+            }
           }
-          
-          params = values;
-          if (dbType === 'oracle') {
-            await oracleConnection.execute(sql, params, { autoCommit: true });
-            result = { rows: [] };
-          } else {
-            result = await pgClient.query(sql, params);
+
+          if (!result) {
+            throw new Error(`Não foi possível executar o INSERT após ${MAX_INSERT_RETRIES} tentativas.`);
           }
+
           if (bpmEngine && result.rows && result.rows.length > 0) {
             bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]).then(async () => {
               let finalData = result.rows[0];
@@ -1100,9 +1159,17 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             ? idColumn.replace(/[^a-zA-Z0-9_]/g, '').toUpperCase()
             : idColumn.replace(/[^a-zA-Z0-9_]/g, '');
 
-          // Detecta e remove colunas GENERATED ALWAYS AS antes de executar o UPDATE.
-          // Faz até 5 tentativas removendo automaticamente a coluna rejeitada pelo Postgres.
+          // Detecta e remove colunas GENERATED ALWAYS AS ou colunas inválidas antes de executar o UPDATE.
+          // Faz até 5 tentativas removendo automaticamente a coluna rejeitada pelo banco.
           let currentData = { ...data };
+
+          // Remove any nested objects/arrays from payload data before attempting SQL
+          for (const [k, v] of Object.entries(currentData)) {
+            if (v !== null && typeof v === 'object') {
+              delete currentData[k];
+            }
+          }
+
           if (dbType === 'oracle') {
             const upperData = {};
             for (const [k, v] of Object.entries(currentData)) {
@@ -1178,18 +1245,32 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               break; // Sucesso — sai do loop
             } catch (updateErr) {
               const errMsg = updateErr.message || '';
-              // Detecta erro de coluna gerada: 'column "col" can only be updated to DEFAULT'
-              // ou versão PT: 'a coluna "col" só pode ser atualizada para DEFAULT'
+              const oraInvalidColMatch = errMsg.match(/ORA-00904:\s*["\u201c\u201d]?([^:"\u201c\u201d\s]+)["\u201c\u201d]?/i);
               const genColMatch = errMsg.match(/["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/);
               const isGenColError = errMsg.includes('DEFAULT') && genColMatch;
+              const pgColNotExistMatch = (updateErr.code === '42703' || /does not exist|não existe/i.test(errMsg)) && errMsg.match(/(?:column|coluna)\s+["\u201c\u201d]([^"\u201c\u201d]+)["\u201c\u201d]/i);
+              const mysqlColMatch = errMsg.match(/Unknown column\s+'([^']+)'/i);
 
-              if (isGenColError) {
-                const genColName = genColMatch[1];
-                console.log(chalk.yellow(`[ AVISO ] Coluna "${genColName}" é GENERATED — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
-                delete currentData[genColName];
+              let badCol = null;
+              if (oraInvalidColMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === oraInvalidColMatch[1].toLowerCase()) || oraInvalidColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" é inválida no Oracle (ORA-00904) — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
+              } else if (isGenColError) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === genColMatch[1].toLowerCase()) || genColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" é GENERATED — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
+              } else if (pgColNotExistMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === pgColNotExistMatch[1].toLowerCase()) || pgColNotExistMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" não existe no Postgres (42703) — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
+              } else if (mysqlColMatch) {
+                badCol = Object.keys(currentData).find(k => k.toLowerCase() === mysqlColMatch[1].toLowerCase()) || mysqlColMatch[1];
+                console.log(chalk.yellow(`[ AVISO ] Coluna "${badCol}" não existe no MySQL (1054) — removendo e repetindo UPDATE (tentativa ${updateAttempts})...`));
+              }
+
+              if (badCol) {
+                delete currentData[badCol];
                 // Continua para a próxima tentativa
               } else {
-                // Erro não relacionado a coluna gerada — relança para o catch externo
+                // Erro não relacionado a coluna — relança para o catch externo
                 throw updateErr;
               }
             }

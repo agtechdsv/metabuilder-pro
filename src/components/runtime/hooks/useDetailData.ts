@@ -359,7 +359,8 @@ export function useDetailData({
           allDetails.push(...detailData.map((d: any) => ({ 
             ...d, 
             model_name: join.to,
-            display_model_name: friendlyName
+            display_model_name: friendlyName,
+            _origRow: { ...d }
           })))
         }
       }

@@ -90,13 +90,36 @@ export function useMasterData({
       }
 
       // Blacklist: exclude internal keys, system columns, PK, objects, and arrays.
-      const MASTER_INTERNAL = new Set(['_details', 'model_name', 'display_model_name'])
+      const MASTER_INTERNAL = new Set(['_details', 'model_name', 'display_model_name', '_isnew', '_origrow', '_tempid'])
+      const masterOtherTableNames = new Set(
+        (project?.models || [])
+          .map((m: any) => (m.db_table_name || m.table_name || m.name || '').toLowerCase())
+          .filter((name: string) => name && name !== modelName.toLowerCase())
+      )
+      const masterJoinedTableNames = new Set(
+        (joins || [])
+          .map((j: any) => (j.to || j.toTable || j.table || '').toLowerCase())
+          .filter((name: string) => name && name !== modelName.toLowerCase())
+      )
+      const masterModelDef = project?.models?.find((m: any) => 
+        m.db_table_name?.toLowerCase() === modelName?.toLowerCase() || m.name?.toLowerCase() === modelName?.toLowerCase()
+      )
+      const masterValidCols = new Set(
+        (masterModelDef?.fields || []).map((f: any) => (f.db_column_name || '').split('.').pop().toLowerCase())
+      )
+
       const sanitizedData: any = {}
       for (const [k, v] of Object.entries(formData)) {
         const lowKey = k.toLowerCase()
+        const isJsonStr = typeof v === 'string' && (
+          (v.trim().startsWith('{') && v.trim().endsWith('}')) ||
+          (v.trim().startsWith('[') && v.trim().endsWith(']'))
+        )
+
         if (
           MASTER_INTERNAL.has(lowKey) ||
           k.startsWith('_') ||           // skip _key, _details, etc.
+          k.startsWith('virt_') ||
           k.includes('.') ||             // skip table-prefixed duplicates
           lowKey === pkName.toLowerCase() ||
           lowKey === cleanPkName.toLowerCase() ||
@@ -104,7 +127,10 @@ export function useMasterData({
           lowKey === 'created_at' ||
           lowKey === 'updated_at' ||
           v === undefined ||
-          typeof v === 'object'           // skip objects and arrays (joined relations)
+          typeof v === 'object' ||       // skip objects and arrays (joined relations)
+          masterOtherTableNames.has(lowKey) ||
+          masterJoinedTableNames.has(lowKey) ||
+          (isJsonStr && (masterOtherTableNames.has(lowKey) || masterJoinedTableNames.has(lowKey) || (masterValidCols.size > 0 && !masterValidCols.has(lowKey))))
         ) continue
 
         const newValue = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
@@ -327,29 +353,63 @@ export function useMasterData({
 
           const rowPkVal = row[actualRowPkName]
 
-          const SKIP = new Set(['_details', 'model_name', 'display_model_name', '_isNew'])
+          const SKIP = new Set(['_details', 'model_name', 'display_model_name', '_isnew', '_origrow', '_tempid'])
+          const detailOtherTableNames = new Set(
+            (project?.models || [])
+              .map((m: any) => (m.db_table_name || m.table_name || m.name || '').toLowerCase())
+              .filter((name: string) => name && name !== rowTable.toLowerCase())
+          )
+          const detailJoinedTableNames = new Set(
+            (joins || [])
+              .map((j: any) => (j.to || j.toTable || j.table || '').toLowerCase())
+              .filter((name: string) => name && name !== rowTable.toLowerCase())
+          )
+          const detailValidCols = new Set<string>()
+          if (modelDef?.fields) {
+            modelDef.fields.forEach((f: any) => {
+              const col = (f.db_column_name || '').split('.').pop().toLowerCase()
+              if (col) detailValidCols.add(col)
+            })
+          }
+          if (detailFields) {
+            detailFields
+              .filter((f: any) => f.model_name?.toLowerCase() === rowTable.toLowerCase())
+              .forEach((f: any) => {
+                const col = (f.db_column_name || '').split('.').pop().toLowerCase()
+                if (col) detailValidCols.add(col)
+              })
+          }
+
           const sanitized: any = {}
           for (const [k, v] of Object.entries(row)) {
             const lk = k.toLowerCase()
+            const isJsonStr = typeof v === 'string' && (
+              (v.trim().startsWith('{') && v.trim().endsWith('}')) ||
+              (v.trim().startsWith('[') && v.trim().endsWith(']'))
+            )
+
             if (
               SKIP.has(lk) || k.startsWith('_') || k.startsWith('virt_') ||
               k.includes('.') || lk === rowPkName.toLowerCase() || lk === actualRowPkName.toLowerCase() ||
               lk === 'created_at' || lk === 'updated_at' ||
-              v === undefined || typeof v === 'object'
+              v === undefined || typeof v === 'object' ||
+              detailOtherTableNames.has(lk) ||
+              detailJoinedTableNames.has(lk) ||
+              (isJsonStr && (detailOtherTableNames.has(lk) || detailJoinedTableNames.has(lk) || (detailValidCols.size > 0 && !detailValidCols.has(lk))))
             ) continue
 
             const newVal = (v === null || v === '' || (typeof v === 'string' && v.trim() === '')) ? null : (typeof v === 'number' ? v : String(v))
 
             // Dirty tracking
-            if (!isNew && origParentRow?._details) {
-              const origRow = origParentRow._details.find(
+            const origRow = row._origRow || (
+              origParentRow?._details?.find(
                 (d: any) => d[actualRowPkName] === rowPkVal || d[rowPkName.toUpperCase()] === rowPkVal || d.id === rowPkVal || d.ID === rowPkVal
               )
-              if (origRow) {
-                const origRaw = origRow[k] ?? origRow[lk] ?? origRow[k.toUpperCase()]
-                const origVal = (origRaw === null || origRaw === '' || String(origRaw).trim() === '') ? null : String(origRaw)
-                if (newVal === origVal) continue // Se for igual, pula
-              }
+            )
+            if (!isNew && origRow) {
+              const origRaw = origRow[k] ?? origRow[lk] ?? origRow[k.toUpperCase()]
+              const origVal = (origRaw === null || origRaw === '' || String(origRaw).trim() === '') ? null : String(origRaw)
+              if (newVal === origVal) continue // Se for igual, pula
             }
 
             sanitized[k] = newVal
@@ -404,8 +464,6 @@ export function useMasterData({
                 || (project?.db_type === 'oracle' ? fkCol.toUpperCase() : fkCol)
 
               if (isNew) {
-                sanitized[actualFkCol] = String(parentPkVal)
-              } else if (Object.keys(sanitized).length > 0) {
                 sanitized[actualFkCol] = String(parentPkVal)
               }
             }
@@ -501,7 +559,7 @@ export function useMasterData({
           }
 
           if (Array.isArray(row._details) && row._details.length > 0) {
-            const origRow = origParentRow?._details?.find(
+            const origRow = row._origRow || origParentRow?._details?.find(
               (d: any) => d[rowPkName] === rowPkVal || d[rowPkName.toUpperCase()] === rowPkVal || d.id === rowPkVal || d.ID === rowPkVal
             )
             await saveNestedDetails(row._details, rowTable, rowPkVal, origRow ? { _details: origRow._details } : undefined)
