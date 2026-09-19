@@ -700,16 +700,22 @@ export function useMasterData({
 
         // Build a dependency tree starting from actualModelName
         const order: string[] = []
-        const buildQueries = (parentTbl: string, parentCondition: string) => {
-           const children = childRelations.get(parentTbl.toLowerCase()) || []
+        const buildQueries = (parentTbl: string, parentCondition: string, path: string[]) => {
+           const safeParentTbl = (parentTbl || '').toLowerCase()
+           if (!safeParentTbl || path.includes(safeParentTbl)) return // Cycle detection
+           
+           const currentPath = [...path, safeParentTbl]
+           const children = childRelations.get(safeParentTbl) || []
+           
            for (const child of children) {
+              if (!child.table) continue
               const childCondition = `${child.fk} IN (SELECT ${child.pk} FROM ${parentTbl} WHERE ${parentCondition})`
-              buildQueries(child.table, childCondition)
+              buildQueries(child.table, childCondition, currentPath)
               queries.push(`DELETE FROM ${child.table} WHERE ${childCondition}`)
            }
         }
         
-        buildQueries(actualModelName, `${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`)
+        buildQueries(actualModelName, `${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`, [])
         
         // Filter unique queries (we only need to delete from a path once if it's the same condition)
         queries = Array.from(new Set(queries))
@@ -797,8 +803,9 @@ export function useMasterData({
         }
         toast(errorMsg, 'error')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting:', error)
+      toast(`Erro interno ao excluir: ${error?.message || 'Erro desconhecido'}`, 'error')
       setIsProcessing(false)
     }
   }
