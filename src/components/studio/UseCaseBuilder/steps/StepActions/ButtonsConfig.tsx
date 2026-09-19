@@ -99,6 +99,26 @@ export function ButtonsConfig({
                     </span>
                   </button>
 
+                  {/* Checkbox Em Cascata specifically for delete */}
+                  {btn.id === 'delete' && btn.visible && (
+                    <label className="flex items-center justify-center gap-1.5 mt-2.5 cursor-pointer group/cascade" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={!!btn.cascade_delete}
+                        onChange={(e) => {
+                          setConfig({
+                            ...config,
+                            buttons_config: config.buttons_config.map((b: any) =>
+                              b.id === 'delete' ? { ...b, cascade_delete: e.target.checked } : b
+                            )
+                          })
+                        }}
+                        className="w-3.5 h-3.5 rounded-sm border-neutral-300 text-red-500 focus:ring-red-500 focus:ring-1 bg-white dark:bg-neutral-900 cursor-pointer"
+                      />
+                      <span className="text-[9px] font-bold text-neutral-500 group-hover/cascade:text-neutral-700 dark:group-hover/cascade:text-neutral-300 uppercase tracking-widest">{t('wizard.actions.cascade', 'Em cascata')}</span>
+                    </label>
+                  )}
+
                   {/* Settings Trigger Icon */}
                   {!isDisabled && (
                     <button

@@ -413,6 +413,7 @@ export default function ViewPageContent({
     setOpen,
     fetchDetails,
     setIsDeleteModalOpen,
+    buttonsConfig,
   })
 
   const handleOpenAdd = (inData: any = {}) => {

@@ -26,6 +26,7 @@ interface UseMasterDataProps {
   setOpen: (val: boolean) => void
   fetchDetails: (parentRow: any, parentModel: string) => Promise<any[]>
   setIsDeleteModalOpen: React.Dispatch<React.SetStateAction<boolean>>
+  buttonsConfig?: any[]
 }
 
 export function useMasterData({
@@ -50,7 +51,8 @@ export function useMasterData({
   setRefreshKey,
   setOpen,
   fetchDetails,
-  setIsDeleteModalOpen
+  setIsDeleteModalOpen,
+  buttonsConfig = []
 }: UseMasterDataProps) {
   const { toast } = useToast()
 
@@ -664,7 +666,58 @@ export function useMasterData({
     try {
       const queryId = crypto.randomUUID()
       const actualModelName = selectedRow.__model_name || modelName
-      const rawQuery = `DELETE FROM ${actualModelName} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`
+      
+      const btnDelete = buttonsConfig?.find((b: any) => b.id === 'delete')
+      const cascade = btnDelete?.cascade_delete
+
+      let queries: string[] = []
+      
+      if (cascade && projectRelations && projectRelations.length > 0) {
+        // Opção 2 (Santo Graal) - Gera os deletes bottom-up usando subqueries.
+        // Mapeia todos os relacionamentos para encontrar a hierarquia (níveis).
+        const childRelations = new Map<string, { table: string, fk: string, pk: string }[]>()
+        
+        projectRelations.forEach((r: any) => {
+           const parentModelDef = project?.models?.find((m: any) => m.id === r.master_model_id || m.id === r.to_model_id)
+           const childModelDef = project?.models?.find((m: any) => m.id === r.detail_model_id || m.id === r.from_model_id)
+           if (parentModelDef && childModelDef) {
+              const pTable = (parentModelDef.db_table_name || parentModelDef.name).toLowerCase()
+              const cTable = (childModelDef.db_table_name || childModelDef.name).toLowerCase()
+              
+              const parentPkField = parentModelDef.fields?.find((f: any) => f.id === (r.referenced_column_id || r.to_field_id))
+              const childFkField = childModelDef.fields?.find((f: any) => f.id === (r.foreign_column_id || r.from_field_id))
+              
+              if (parentPkField && childFkField) {
+                 if (!childRelations.has(pTable)) childRelations.set(pTable, [])
+                 childRelations.get(pTable)!.push({
+                    table: childModelDef.db_table_name,
+                    fk: childFkField.db_column_name,
+                    pk: parentPkField.db_column_name
+                 })
+              }
+           }
+        })
+
+        // Build a dependency tree starting from actualModelName
+        const order: string[] = []
+        const buildQueries = (parentTbl: string, parentCondition: string) => {
+           const children = childRelations.get(parentTbl.toLowerCase()) || []
+           for (const child of children) {
+              const childCondition = `${child.fk} IN (SELECT ${child.pk} FROM ${parentTbl} WHERE ${parentCondition})`
+              buildQueries(child.table, childCondition)
+              queries.push(`DELETE FROM ${child.table} WHERE ${childCondition}`)
+           }
+        }
+        
+        buildQueries(actualModelName, `${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`)
+        
+        // Filter unique queries (we only need to delete from a path once if it's the same condition)
+        queries = Array.from(new Set(queries))
+      }
+
+      queries.push(`DELETE FROM ${actualModelName} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`)
+      
+      const rawQuery = queries.join('; ')
 
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
