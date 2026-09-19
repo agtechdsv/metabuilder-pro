@@ -738,7 +738,7 @@ export function useMasterData({
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
       } else {
         let errorMsg = result.error || 'Erro ao excluir o registro.'
-        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira')) {
+        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira') || errorMsg.includes('ORA-02292')) {
           const defaultFkError = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
           errorMsg = getFkErrorMessage(errorMsg, defaultFkError)
         }
