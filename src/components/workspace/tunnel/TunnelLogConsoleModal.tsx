@@ -518,6 +518,8 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                 ? 'text-green-400'
                 : isWarningOrDebug
                 ? 'text-yellow-400'
+                : item.level === 'SQL'
+                ? 'text-neutral-500'
                 : 'text-neutral-300'
 
               return (
@@ -528,7 +530,14 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                     </span>
                   )}
                   {item.level && !['LOG'].includes(item.level) && (
-                    <span className="text-neutral-500 font-bold mr-1.5 select-none">
+                    <span className={`font-bold mr-1.5 select-none ${
+                       item.level === 'EXEC' && translated.toUpperCase().includes('SELECT') ? 'text-cyan-400' :
+                       item.level === 'EXEC' && translated.toUpperCase().includes('INSERT') ? 'text-green-400' :
+                       item.level === 'EXEC' && translated.toUpperCase().includes('UPDATE') ? 'text-fuchsia-400' :
+                       item.level === 'EXEC' && translated.toUpperCase().includes('DELETE') ? 'text-red-400' :
+                       item.level === 'SQL' ? 'text-cyan-600' :
+                       'text-neutral-500'
+                    }`}>
                       [{item.level}]
                     </span>
                   )}
