@@ -1,28 +1,4 @@
 {
-  "v1.0.2": {
-    "date": "2026-09-19",
-    "pt": [
-      "Visualização aprimorada de logs: novo realce de sintaxe dinâmico para operações SQL, tornando a leitura e o monitoramento de consultas mais intuitivos, rápidos e agradáveis."
-    ],
-    "en": [
-      "Enhanced log viewer: dynamic SQL syntax highlighting is now applied directly in the interface, making query tracking and analysis significantly faster and clearer."
-    ],
-    "es": [
-      "Visualización de registros mejorada: nuevo resaltado de sintaxis dinámico para operaciones SQL, optimizando el análisis y monitoreo de consultas con mayor claridad e intuición."
-    ]
-  },
-  "v1.0.1": {
-    "date": "2026-09-18",
-    "pt": [
-      "Atualização de versão e melhorias gerais."
-    ],
-    "en": [
-      "Version update and general improvements."
-    ],
-    "es": [
-      "Actualización de versión y mejoras generales."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
