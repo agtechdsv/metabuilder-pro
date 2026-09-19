@@ -5,6 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
 import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 export interface PreviewTab {
   id: string
@@ -67,46 +84,20 @@ export function InternalBrowser({
   const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set(tabs[0]?.id ? [tabs[0].id] : []))
   const [urlInput, setUrlInput] = useState('')
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceTarget[]>([])
-  const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
-  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedTabId(id)
-    e.dataTransfer.setData('text/plain', id)
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (dragOverTabId !== id) {
-      setDragOverTabId(id)
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setTabs((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id)
+        const newIndex = items.findIndex((i) => i.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
     }
-  }
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    if (!draggedTabId || draggedTabId === targetId) {
-      setDraggedTabId(null)
-      setDragOverTabId(null)
-      return
-    }
-    setTabs(prev => {
-      const fromIndex = prev.findIndex(t => t.id === draggedTabId)
-      const toIndex = prev.findIndex(t => t.id === targetId)
-      if (fromIndex === -1 || toIndex === -1) return prev
-      const newTabs = [...prev]
-      const [movedTab] = newTabs.splice(fromIndex, 1)
-      newTabs.splice(toIndex, 0, movedTab)
-      return newTabs
-    })
-    setDraggedTabId(null)
-    setDragOverTabId(null)
-  }
-
-  const handleDragEnd = () => {
-    setDraggedTabId(null)
-    setDragOverTabId(null)
   }
 
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({})
@@ -580,91 +571,26 @@ export function InternalBrowser({
       {/* Header Superior com as Abas */}
       <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-end pt-2 px-2 shrink-0 shadow-lg relative">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-[calc(100%-250px)]">
-          {tabs.map(tab => {
-            const isActive = activeTabId === tab.id
-            return (
-              <div
-                key={tab.id}
-                draggable={!tab.isSelecting}
-                onDragStart={(e) => handleDragStart(e, tab.id)}
-                onDragOver={(e) => handleDragOver(e, tab.id)}
-                onDrop={(e) => handleDrop(e, tab.id)}
-                onDragEnd={handleDragEnd}
-                onClick={() => setActiveTabId(tab.id)}
-                onMouseDown={(e) => {
-                  if (e.button === 1) {
-                    e.preventDefault()
-                    closeTab(e, tab.id)
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault()
-                  setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
-                }}
-                className={`
-                  group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-all border border-b-0 cursor-pointer select-none
-                  ${draggedTabId === tab.id ? 'opacity-40 scale-95' : ''}
-                  ${dragOverTabId === tab.id && draggedTabId !== tab.id ? 'border-r-2 !border-r-indigo-500 shadow-[2px_0_8px_rgba(99,102,241,0.5)]' : ''}
-                  ${isActive
-                    ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm'
-                    : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
-                  }
-                `}
-              >
-                {/* Bolinha na aba ativa */}
-                {isActive && (
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.9)] shrink-0 animate-pulse" />
-                )}
-
-                <AppWindow className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : 'text-neutral-500'}`} />
-
-                {/* Nome da aba ou Combo de Seleção de Workspace/Projetos */}
-                {tab.isSelecting ? (
-                  <select
-                    autoFocus
-                    value=""
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => handleSelectTarget(tab.id, e.target.value)}
-                    className="bg-neutral-800 text-neutral-200 text-xs font-semibold rounded px-2 py-0.5 border border-indigo-500/60 outline-none cursor-pointer flex-1 truncate max-w-[180px]"
-                  >
-                    <option value="" disabled>Selecione...</option>
-                    {availableWorkspaces.map(ws => (
-                      <React.Fragment key={ws.id}>
-                        {ws.has_portal_project && (
-                          <optgroup label="Workspace (Portal)">
-                            <option value={`portal:${ws.slug}:${ws.name}`}>
-                              {ws.name}
-                            </option>
-                          </optgroup>
-                        )}
-                        {ws.projects.length > 0 && (
-                          <optgroup label="Projetos">
-                            {ws.projects.map((proj: any) => (
-                              <option key={proj.id} value={`project:${ws.slug}:${proj.slug}:${proj.name}`}>
-                                {proj.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="text-xs truncate flex-1 text-left">
-                    {tab.title}
-                  </span>
-                )}
-
-                <div
-                  onClick={(e) => closeTab(e, tab.id)}
-                  className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700/50 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Fechar Aba"
-                >
-                  <X className="w-3 h-3" />
-                </div>
-              </div>
-            )
-          })}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={tabs.map(t => t.id)} strategy={horizontalListSortingStrategy}>
+              {tabs.map(tab => (
+                <SortableBrowserTab
+                  key={tab.id}
+                  tab={tab}
+                  isActive={activeTabId === tab.id}
+                  availableWorkspaces={availableWorkspaces}
+                  setActiveTabId={setActiveTabId}
+                  closeTab={closeTab}
+                  handleSelectTarget={handleSelectTarget}
+                  setContextMenu={setContextMenu}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           {/* Botão + para adicionar nova aba */}
           <button
@@ -869,6 +795,122 @@ export function InternalBrowser({
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function SortableBrowserTab({
+  tab,
+  isActive,
+  availableWorkspaces,
+  setActiveTabId,
+  closeTab,
+  handleSelectTarget,
+  setContextMenu
+}: {
+  tab: PreviewTab
+  isActive: boolean
+  availableWorkspaces: WorkspaceTarget[]
+  setActiveTabId: (id: string) => void
+  closeTab: (e: React.MouseEvent | null, id: string) => void
+  handleSelectTarget: (id: string, val: string) => void
+  setContextMenu: (menu: any) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tab.id, disabled: tab.isSelecting })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.8 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => setActiveTabId(tab.id)}
+      onMouseDown={(e) => {
+        if (e.button === 1) {
+          e.preventDefault()
+          closeTab(e, tab.id)
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
+      }}
+      className={`
+        group relative flex items-center gap-2 ${tab.isSelecting ? 'min-w-[190px] max-w-[280px]' : 'min-w-[140px] max-w-[240px]'} h-9 px-3 rounded-t-lg transition-all border border-b-0 cursor-pointer select-none
+        ${isDragging ? 'shadow-[2px_0_8px_rgba(99,102,241,0.5)] bg-neutral-800 scale-105' : ''}
+        ${isActive
+          ? 'bg-neutral-900 border-neutral-800 z-10 text-white font-medium shadow-sm'
+          : 'bg-[#2a2b2f] border-transparent hover:bg-[#34353a] text-neutral-400 z-0 font-normal'
+        }
+      `}
+    >
+      {/* Bolinha na aba ativa */}
+      {isActive && (
+        <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.9)] shrink-0 animate-pulse" />
+      )}
+
+      <AppWindow className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : 'text-neutral-500'}`} />
+
+      {/* Nome da aba ou Combo de Seleção de Workspace/Projetos */}
+      {tab.isSelecting ? (
+        <select
+          autoFocus
+          value=""
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => handleSelectTarget(tab.id, e.target.value)}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="bg-neutral-800 text-neutral-200 text-xs font-semibold rounded px-2 py-0.5 border border-indigo-500/60 outline-none cursor-pointer flex-1 truncate max-w-[180px]"
+        >
+          <option value="" disabled>Selecione...</option>
+          {availableWorkspaces.map(ws => (
+            <React.Fragment key={ws.id}>
+              {ws.has_portal_project && (
+                <optgroup label="Workspace (Portal)">
+                  <option value={`portal:${ws.slug}:${ws.name}`}>
+                    {ws.name}
+                  </option>
+                </optgroup>
+              )}
+              {ws.projects.length > 0 && (
+                <optgroup label="Projetos">
+                  {ws.projects.map((proj: any) => (
+                    <option key={proj.id} value={`project:${ws.slug}:${proj.slug}:${proj.name}`}>
+                      {proj.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </React.Fragment>
+          ))}
+        </select>
+      ) : (
+        <span className="text-xs truncate flex-1 text-left">
+          {tab.title}
+        </span>
+      )}
+
+      <div
+        onClick={(e) => closeTab(e, tab.id)}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="w-5 h-5 flex items-center justify-center rounded hover:bg-neutral-700/50 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Fechar Aba"
+      >
+        <X className="w-3 h-3" />
       </div>
     </div>
   )
