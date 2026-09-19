@@ -690,9 +690,9 @@ export function useMasterData({
               if (parentPkField && childFkField) {
                  if (!childRelations.has(pTable)) childRelations.set(pTable, [])
                  childRelations.get(pTable)!.push({
-                    table: childModelDef.db_table_name,
-                    fk: childFkField.db_column_name,
-                    pk: parentPkField.db_column_name
+                    table: childModelDef.db_table_name || childModelDef.name,
+                    fk: childFkField.db_column_name || childFkField.name,
+                    pk: parentPkField.db_column_name || parentPkField.name
                  })
               }
            }
