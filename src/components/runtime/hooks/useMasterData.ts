@@ -762,7 +762,7 @@ export function useMasterData({
             payload: {
               queryId,
               table: actualModelName,
-              action: 'delete',
+              action: cascade ? 'execute_custom' : 'delete',
               query: rawQuery,
               sql: rawQuery,
               token: project?.secret_token || 'test-token',
