@@ -307,7 +307,7 @@ export default function ViewPageContent({
     setRefreshKey,
     setDetailRefreshKey,
     getFkErrorMessage: (e, fb) => getFkErrorMessage(e, fb),
-    logicType,
+    logicType: 'master_detail',
     dictionary,
   })
 

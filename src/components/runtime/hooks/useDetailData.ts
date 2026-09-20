@@ -643,7 +643,7 @@ export function useDetailData({
       else if (selectedDetail?.ID !== undefined) actualPkKey = 'ID'
       else if (selectedDetail?.id !== undefined) actualPkKey = 'id'
 
-      const dPkValue = selectedDetail?.[actualPkKey]
+      const dPkValue = formData?.[actualPkKey] ?? formData?.id ?? formData?.ID ?? selectedDetail?.[actualPkKey]
 
       const INTERNAL_KEYS = new Set(['_details', 'model_name', 'display_model_name'])
 
