@@ -153,6 +153,31 @@ export function useMasterData({
         sanitizedData[finalKey] = newValue
       }
 
+      // Remove duplicate keys (case insensitive), keep the first one
+      const dedupedMaster: any = {}
+      for (const [k, v] of Object.entries(sanitizedData)) {
+        const lowerK = k.toLowerCase()
+        const existing = Object.keys(dedupedMaster).find(x => x.toLowerCase() === lowerK)
+        if (!existing) dedupedMaster[k] = v
+      }
+      for (const k of Object.keys(sanitizedData)) delete sanitizedData[k]
+      for (const [k, v] of Object.entries(dedupedMaster)) sanitizedData[k] = v
+
+      // Convert number fields for Master Data
+      for (const [k, v] of Object.entries(sanitizedData)) {
+        if (v !== null && v !== '') {
+          const fieldDef = masterModelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+          const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
+          const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
+          if (isNumber && typeof v === 'string') {
+            const parsed = Number(v.replace(/\./g, '').replace(',', '.'))
+            sanitizedData[k] = isNaN(parsed) ? Number(v) : parsed
+          } else if (isNumber) {
+            sanitizedData[k] = Number(v)
+          }
+        }
+      }
+
       const sendWithRetry = async (): Promise<{ success: boolean; data?: any[] }> => {
         let currentData = { ...sanitizedData }
         let attempts = 0
@@ -477,12 +502,30 @@ export function useMasterData({
             }
           }
 
+          // Remove duplicate keys (case insensitive), keep the first one
+          const dedupedSanitized: any = {}
+          for (const [k, v] of Object.entries(sanitized)) {
+            const lowerK = k.toLowerCase()
+            const existing = Object.keys(dedupedSanitized).find(x => x.toLowerCase() === lowerK)
+            if (!existing) dedupedSanitized[k] = v
+          }
+          for (const k of Object.keys(sanitized)) delete sanitized[k]
+          for (const [k, v] of Object.entries(dedupedSanitized)) sanitized[k] = v
+
           for (const [k, v] of Object.entries(sanitized)) {
             if (v !== null && v !== '') {
-              const fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              let fieldDef = modelDef?.fields?.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              if (!fieldDef && detailFields) {
+                fieldDef = detailFields.find((f: any) => f.db_column_name?.toLowerCase() === k.toLowerCase())
+              }
               const typeStr = fieldDef?.db_data_type?.toLowerCase() || ''
               const isNumber = fieldDef && (typeStr.startsWith('number') || typeStr.startsWith('numeric') || typeStr.startsWith('int') || typeStr.startsWith('float') || typeStr.startsWith('decimal') || typeStr.startsWith('double') || typeStr.startsWith('real'))
-              if (isNumber) sanitized[k] = Number(v)
+              if (isNumber && typeof v === 'string') {
+                const parsed = Number(v.replace(/\./g, '').replace(',', '.'))
+                sanitized[k] = isNaN(parsed) ? Number(v) : parsed
+              } else if (isNumber) {
+                sanitized[k] = Number(v)
+              }
             }
           }
 

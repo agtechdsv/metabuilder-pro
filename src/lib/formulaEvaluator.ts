@@ -16,6 +16,16 @@ const parseNumericString = (val: any) => {
   return Number(val);
 };
 
+// Helper for case-insensitive object lookup
+const getInsensitive = (obj: any, key: string) => {
+  if (!obj || !key) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+  const lowerKey = key.toLowerCase();
+  const matchKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+  return matchKey ? obj[matchKey] : undefined;
+};
+
+
 // Safe evaluator using Function constructor with bound variables
 const evaluateExpression = (expr: string, context: Record<string, any>) => {
   try {
@@ -70,11 +80,11 @@ export const evaluateFormula = (
       if (currentRow && currentTableName && fieldPath.startsWith(`${currentTableName}.`)) {
         // We are evaluating a detail row's formula, and accessing a column from the SAME row
         const colName = fieldPath.split('.')[1];
-        const val = currentRow[colName];
+        const val = getInsensitive(currentRow, colName);
         const numVal = parseNumericString(val);
         context[varName] = val === '' || val === null || val === undefined ? 0 : (isNaN(numVal) ? val : numVal);
-      } else if (formData[fieldPath] !== undefined) {
-        const val = formData[fieldPath];
+      } else if (getInsensitive(formData, fieldPath) !== undefined) {
+        const val = getInsensitive(formData, fieldPath);
         const numVal = parseNumericString(val);
         context[varName] = val === '' || val === null || val === undefined ? 0 : (isNaN(numVal) ? val : numVal);
       } else if (fieldPath.includes('.')) {
@@ -83,13 +93,13 @@ export const evaluateFormula = (
         const childRows = detailsData[tableName] || [];
         // Map the array of values so grouping functions (like SOMA) can receive it
         context[varName] = childRows.map((row: any) => {
-          const val = row[colName];
+          const val = getInsensitive(row, colName);
           const numVal = parseNumericString(val);
           return val === '' || val === null || val === undefined ? 0 : (isNaN(numVal) ? val : numVal);
         });
       } else {
         // It's a main form field
-        const val = formData[fieldPath];
+        const val = getInsensitive(formData, fieldPath);
         const numVal = parseNumericString(val);
         context[varName] = val === '' || val === null || val === undefined ? 0 : (isNaN(numVal) ? val : numVal);
       }
