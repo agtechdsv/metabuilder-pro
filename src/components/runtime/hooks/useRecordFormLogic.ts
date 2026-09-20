@@ -37,9 +37,23 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData)
+      const data = { ...initialData }
+      if (data._isNew && fields?.length > 0) {
+        const pkField = fields.find(f => f.is_primary_key) || fields.find(f => (f.db_column_name || '').toLowerCase() === 'id')
+        if (pkField) {
+          const typeStr = pkField.db_data_type?.toLowerCase() || ''
+          const isInt = typeStr.includes('int') || typeStr.includes('serial') || typeStr.includes('number')
+          const pkName = pkField.db_column_name.split('.').pop() || 'id'
+          if (!data[pkName] && !isInt) {
+            data[pkName] = crypto.randomUUID()
+          }
+        } else if (!data.id && !data.ID) {
+          data.id = crypto.randomUUID()
+        }
+      }
+      setFormData(data)
     }
-  }, [initialData])
+  }, [initialData, fields])
 
   const formRef = useRef<HTMLFormElement>(null)
   

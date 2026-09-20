@@ -733,7 +733,7 @@ export function useDetailData({
         delete sanitizedData[gc]
       }
 
-      const sendWithRetry = async (): Promise<boolean> => {
+      const sendWithRetry = async (): Promise<any> => {
         if (project?.db_type === 'postgres') {
           try {
             const method = action === 'edit' ? 'PUT' : 'POST'
@@ -876,7 +876,7 @@ export function useDetailData({
           })
 
           if (result.success) {
-            return true
+            return result.data ? (Array.isArray(result.data) ? result.data[0] : result.data) : true
           }
 
           const genCol = parseGeneratedColError(result.error || '')
@@ -897,7 +897,8 @@ export function useDetailData({
         return false
       }
 
-      const saveSucceeded = await sendWithRetry()
+      const saveResult = await sendWithRetry()
+      const saveSucceeded = !!saveResult
 
       const saveNestedDetails = async (
         detailRows: any[],
@@ -944,15 +945,6 @@ export function useDetailData({
             sanitized[k] = newVal
           }
 
-          // Remove duplicate keys (case insensitive), keep the first one
-          const dedupedSanitized: any = {}
-          for (const [k, v] of Object.entries(sanitized)) {
-            const lowerK = k.toLowerCase()
-            const existing = Object.keys(dedupedSanitized).find(x => x.toLowerCase() === lowerK)
-            if (!existing) dedupedSanitized[k] = v
-          }
-          for (const k of Object.keys(sanitized)) delete sanitized[k]
-          for (const [k, v] of Object.entries(dedupedSanitized)) sanitized[k] = v
 
           if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
             let fkCol = ''
@@ -998,6 +990,16 @@ export function useDetailData({
 
             if (fkCol) sanitized[fkCol] = String(parentPkVal)
           }
+
+          // Remove duplicate keys (case insensitive), keep the first one
+          const dedupedSanitized: any = {}
+          for (const [k, v] of Object.entries(sanitized)) {
+            const lowerK = k.toLowerCase()
+            const existing = Object.keys(dedupedSanitized).find(x => x.toLowerCase() === lowerK)
+            if (!existing) dedupedSanitized[k] = v
+          }
+          for (const k of Object.keys(sanitized)) delete sanitized[k]
+          for (const [k, v] of Object.entries(dedupedSanitized)) sanitized[k] = v
 
           let sql = ''
           if (!isNew && rowPkVal && Object.keys(sanitized).length > 0) {
@@ -1068,7 +1070,9 @@ export function useDetailData({
       }
 
       if (saveSucceeded && formData._details && formData._details.length > 0) {
-        await saveNestedDetails(formData._details, tableName, dPkValue, selectedDetail)
+        const insertedId = typeof saveResult === 'object' ? (saveResult?.[actualPkKey] ?? saveResult?.[actualPkKey.toUpperCase()] ?? saveResult?.[actualPkKey.toLowerCase()] ?? saveResult?.id ?? saveResult?.ID) : null;
+        const finalParentPkVal = insertedId ?? dPkValue;
+        await saveNestedDetails(formData._details, tableName, finalParentPkVal, selectedDetail)
       }
 
       const parentHistory = [...detailHistory]
