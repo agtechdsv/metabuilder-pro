@@ -208,6 +208,10 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
         // Escuta logs do túnel em tempo real
         if (logType === 'tunnel' && isToday) {
           unlistenTunnel = await listen<string>('tunnel-log', (event) => {
+            if (event.payload.includes('Node.js 18 and below are deprecated')) return
+            if (event.payload.includes('ExperimentalWarning: The Fetch API')) return
+            if (event.payload.includes('cli --trace-warnings')) return
+
             const nowTime = new Date().toLocaleTimeString()
             const parsed = parseLogLine(event.payload, nowTime)
             setLogs((prev) => [...prev, parsed])
@@ -218,6 +222,9 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
         if (logType === 'sync' && isToday) {
           unlistenSync = await listen<string>('sync-log', (event) => {
             if (event.payload.includes('Node.js 18 and below are deprecated')) return
+            if (event.payload.includes('ExperimentalWarning: The Fetch API')) return
+            if (event.payload.includes('cli --trace-warnings')) return
+
             const nowTime = new Date().toLocaleTimeString()
             const parsed = parseLogLine(event.payload, nowTime)
             setLogs((prev) => [...prev, parsed])
