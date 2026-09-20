@@ -46,32 +46,39 @@ function parseLogLine(raw: string, defaultTime?: string): LogItem {
     }
   }
 
-  // Matches [16:49:15(UTC-03:00)] [LOG] text
+  // Matches [16:49:15(UTC-03:00)] [ LOG ] text
   // or [16:49:15] [LOG] text
   // or [16:49:15] text
-  const matchWithTime = clean.match(/^\[(\d{2}:\d{2}:\d{2})(?:\([^\)]+\))?\]\s*(?:\[([A-Z0-9_\-]+)\]\s*)?(.*)$/)
-  if (matchWithTime) {
+  const matchWithTime = clean.match(/^\[(\d{2}:\d{2}:\d{2})(?:\([^\)]+\))?\]\s*(?:\[\s*([A-Z0-9_\-\s]+?)\s*\]\s*)?(.*)$/)
+  if (matchWithTime && matchWithTime[2]) {
     return {
       id: Math.random().toString(36).substring(2, 9),
       time: matchWithTime[1],
-      level: matchWithTime[2],
+      level: matchWithTime[2].trim(),
+      text: matchWithTime[3] || '',
+    }
+  } else if (matchWithTime && !matchWithTime[2]) {
+    // If it only matches the time but no level
+    return {
+      id: Math.random().toString(36).substring(2, 9),
+      time: matchWithTime[1],
       text: matchWithTime[3] || '',
     }
   }
 
   // If starts with [LEVEL] text without time
-  const matchLevelOnly = clean.match(/^\[([A-Z0-9_\-]+)\]\s*(.*)$/)
-  if (
-    matchLevelOnly &&
-    ['LOG', 'ERR', 'WRN', 'CRIT', 'ERROR', 'WARN', 'SYNC', 'DEBUG', 'BPM', 'BPM-DEBUG', 'EXEC', 'SQL', 'INFO', 'SYSTEM'].includes(
-      matchLevelOnly[1]
-    )
-  ) {
-    return {
-      id: Math.random().toString(36).substring(2, 9),
-      time: defaultTime,
-      level: matchLevelOnly[1],
-      text: matchLevelOnly[2] || '',
+  const matchLevelOnly = clean.match(/^\[\s*([A-Z0-9_\-\s]+?)\s*\]\s*(.*)$/)
+  if (matchLevelOnly) {
+    const level = matchLevelOnly[1].trim()
+    if (
+      ['LOG', 'ERR', 'WRN', 'CRIT', 'ERROR', 'WARN', 'SYNC', 'DEBUG', 'BPM', 'BPM-DEBUG', 'EXEC', 'SQL', 'SQL FAILED', 'INFO', 'SYSTEM'].includes(level)
+    ) {
+      return {
+        id: Math.random().toString(36).substring(2, 9),
+        time: defaultTime,
+        level: level,
+        text: matchLevelOnly[2] || '',
+      }
     }
   }
 
