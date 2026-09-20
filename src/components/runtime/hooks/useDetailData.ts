@@ -823,6 +823,16 @@ export function useDetailData({
 
             const doSend = () => {
               let payloadData = currentData
+
+              // Remove duplicate keys (case insensitive) from payloadData
+              const dedupedPayload: any = {}
+              for (const [k, v] of Object.entries(payloadData || {})) {
+                const lowerK = k.toLowerCase()
+                const existing = Object.keys(dedupedPayload).find(x => x.toLowerCase() === lowerK)
+                if (!existing) dedupedPayload[k] = v
+              }
+              payloadData = dedupedPayload
+
               let payloadIdCol = actualPkKey
               if (project?.db_type === 'oracle') {
                 payloadData = {}
@@ -933,6 +943,16 @@ export function useDetailData({
 
             sanitized[k] = newVal
           }
+
+          // Remove duplicate keys (case insensitive), keep the first one
+          const dedupedSanitized: any = {}
+          for (const [k, v] of Object.entries(sanitized)) {
+            const lowerK = k.toLowerCase()
+            const existing = Object.keys(dedupedSanitized).find(x => x.toLowerCase() === lowerK)
+            if (!existing) dedupedSanitized[k] = v
+          }
+          for (const k of Object.keys(sanitized)) delete sanitized[k]
+          for (const [k, v] of Object.entries(dedupedSanitized)) sanitized[k] = v
 
           if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
             let fkCol = ''
