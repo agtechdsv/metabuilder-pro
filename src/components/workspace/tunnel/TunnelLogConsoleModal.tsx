@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
-import { X, Trash2, Copy, Calendar, RefreshCw } from 'lucide-react'
+import { X, Trash2, Copy, Calendar, RefreshCw, Lock, Unlock, ArrowDownToLine } from 'lucide-react'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -107,6 +107,8 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
   const [selectedDate, setSelectedDate] = useState<string>(todayStr)
   const [logs, setLogs] = useState<LogItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isScrollLocked, setIsScrollLocked] = useState(false)
+  const userExplicitLockRef = useRef(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { t, language } = useI18n()
@@ -114,12 +116,45 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
   const isToday = selectedDate === todayStr
   const isLive = isToday && logType === 'tunnel'
 
-  // Scroll para o fim quando chegam novos logs
+  // Scroll para o fim quando chegam novos logs (respeitando o Scroll Lock)
   useEffect(() => {
-    if (logsEndRef.current) {
+    if (!isScrollLocked && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [logs])
+  }, [logs, isScrollLocked])
+
+  const toggleScrollLock = () => {
+    setIsScrollLocked((prev) => {
+      const next = !prev
+      userExplicitLockRef.current = next
+      if (!next && logsEndRef.current) {
+        logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      }
+      return next
+    })
+  }
+
+  const scrollToBottom = () => {
+    userExplicitLockRef.current = false
+    setIsScrollLocked(false)
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Se o desenvolvedor rolar para cima, ativa o Scroll Lock automaticamente para não interromper a leitura
+    if (e.deltaY < 0 && !isScrollLocked) {
+      setIsScrollLocked(true)
+    }
+  }
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 40
+    // Se o desenvolvedor rolou de volta até o final e o travamento não foi fixado explicitamente pelo botão, reativa auto-scroll
+    if (isAtBottom && isScrollLocked && !userExplicitLockRef.current) {
+      setIsScrollLocked(false)
+    }
+  }
 
   const loadLogs = useCallback(async () => {
     if (!isOpen) return
@@ -462,6 +497,31 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
+
+            {/* Scroll Lock */}
+            <button
+              type="button"
+              onClick={toggleScrollLock}
+              className={`transition-all p-1.5 rounded-lg border flex items-center gap-1.5 text-xs ${
+                isScrollLocked
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 font-semibold shadow-sm shadow-amber-500/10 hover:bg-amber-500/30'
+                  : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800'
+              }`}
+              title={
+                isScrollLocked
+                  ? t('tunnel_log.scroll_lock_active', 'Scroll Lock Ativo (Auto-rolagem pausada — clique para destravar)')
+                  : t('tunnel_log.scroll_lock_inactive', 'Scroll Lock Inativo (Auto-rolagem ativa — clique para travar)')
+              }
+            >
+              {isScrollLocked ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="text-[11px] hidden sm:inline">{t('tunnel_log.scroll_locked_badge', 'Scroll Travado')}</span>
+                </>
+              ) : (
+                <Unlock className="w-3.5 h-3.5 shrink-0" />
+              )}
+            </button>
           </div>
 
           {/* Lado Direito: Ações (Copiar, Limpar, Fechar) */}
@@ -503,6 +563,8 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
           className="flex-1 p-4 font-mono text-xs overflow-y-auto bg-[#0c0c0c] min-h-[300px] select-text"
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+          onScroll={handleScroll}
         >
           {isLoading ? (
             <div className="text-neutral-400 animate-pulse">{t('tunnel_log.loading', 'Carregando logs...')}</div>
@@ -683,6 +745,19 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
           )}
           <div ref={logsEndRef} />
         </div>
+
+        {/* Botão Flutuante de Rolar para o Fim quando Scroll Lock estiver ativo */}
+        {isScrollLocked && (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className="absolute bottom-4 right-6 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xl shadow-black/70 border border-indigo-400/30 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2 hover:scale-105 active:scale-95"
+            title={t('tunnel_log.scroll_to_bottom', 'Rolar para o fim')}
+          >
+            <ArrowDownToLine className="w-3.5 h-3.5" />
+            <span>{t('tunnel_log.scroll_to_bottom', 'Rolar para o fim')}</span>
+          </button>
+        )}
       </div>
     </div>
   )

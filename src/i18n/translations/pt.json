@@ -22,6 +22,10 @@
     "today_tooltip": "Voltar para hoje (tempo real)",
     "live": "Tempo Real",
     "reload": "Recarregar",
+    "scroll_lock_active": "Scroll Lock Ativo (Auto-rolagem pausada — clique para destravar)",
+    "scroll_lock_inactive": "Scroll Lock Inativo (Auto-rolagem ativa — clique para travar)",
+    "scroll_locked_badge": "Scroll Travado",
+    "scroll_to_bottom": "Rolar para o fim",
     "no_logs_date": "Nenhum arquivo de log encontrado para {type} na data {date}."
   },
   "agtech": {
