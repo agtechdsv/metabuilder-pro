@@ -46,54 +46,58 @@ function parseLogLine(raw: string, defaultTime?: string): LogItem {
     }
   }
 
+  let time = defaultTime
+  let rest = clean
+
+  // 1. Check for timestamp: [HH:MM:SS] or [HH:MM:SS(UTC±HH:MM)]
   const matchWithTime = clean.match(/^\[(\d{2}:\d{2}:\d{2})(?:\([^\)]+\))?\]\s*(.*)$/)
   if (matchWithTime) {
-    const time = matchWithTime[1]
-    const rest = matchWithTime[2] || ''
-    
-    // Check if rest starts with [ LEVEL ]
-    const levelMatch = rest.match(/^\[\s*([^\]]+)\s*\]\s*(.*)$/)
-    if (levelMatch) {
-      const level = levelMatch[1].trim()
-      if (
-        ['LOG', 'ERR', 'WRN', 'CRIT', 'ERROR', 'WARN', 'SYNC', 'DEBUG', 'BPM', 'BPM-DEBUG', 'EXEC', 'SQL', 'SQL FAILED', 'INFO', 'SYSTEM'].includes(level)
-      ) {
-        return {
-          id: Math.random().toString(36).substring(2, 9),
-          time,
-          level,
-          text: levelMatch[2] || '',
-        }
+    time = matchWithTime[1]
+    rest = matchWithTime[2] || ''
+  }
+
+  // 2. Unwrap outer file logger wrapper if present: [LOG], [ERR], or [WRN]
+  let outerLevel: string | undefined
+  const wrapperMatch = rest.match(/^\[(LOG|ERR|WRN)\]\s*(.*)$/)
+  if (wrapperMatch) {
+    outerLevel = wrapperMatch[1]
+    rest = wrapperMatch[2] || ''
+  }
+
+  // 3. Match inner tag [ LEVEL ] or [LEVEL]
+  const tagMatch = rest.match(/^\[\s*([^\]]+)\s*\]\s*(.*)$/)
+  if (tagMatch) {
+    const candidate = tagMatch[1].trim()
+    const candidateUpper = candidate.toUpperCase()
+    const knownLevels = [
+      'LOG', 'ERR', 'WRN', 'CRIT', 'ERROR', 'WARN', 'AVISO', 'SYNC',
+      'DEBUG', 'BPM', 'BPM-DEBUG', 'EXEC', 'SQL', 'SQL FAILED', 'OK',
+      'INFO', 'SYSTEM', 'CLI', 'DBeaver SQL', 'FALHA', 'BUILD'
+    ]
+    if (knownLevels.some((k) => k.toUpperCase() === candidateUpper)) {
+      return {
+        id: Math.random().toString(36).substring(2, 9),
+        time,
+        level: candidate,
+        text: tagMatch[2] || '',
       }
-    }
-    
-    return {
-      id: Math.random().toString(36).substring(2, 9),
-      time,
-      text: rest,
     }
   }
 
-  // If starts with [LEVEL] text without time
-  const matchLevelOnly = clean.match(/^\[\s*([^\]]+)\s*\]\s*(.*)$/)
-  if (matchLevelOnly) {
-    const level = matchLevelOnly[1].trim()
-    if (
-      ['LOG', 'ERR', 'WRN', 'CRIT', 'ERROR', 'WARN', 'SYNC', 'DEBUG', 'BPM', 'BPM-DEBUG', 'EXEC', 'SQL', 'SQL FAILED', 'INFO', 'SYSTEM'].includes(level)
-    ) {
-      return {
-        id: Math.random().toString(36).substring(2, 9),
-        time: defaultTime,
-        level: level,
-        text: matchLevelOnly[2] || '',
-      }
+  if (outerLevel && outerLevel !== 'LOG') {
+    return {
+      id: Math.random().toString(36).substring(2, 9),
+      time,
+      level: outerLevel === 'ERR' ? 'ERROR' : 'WARN',
+      text: rest,
     }
   }
 
   return {
     id: Math.random().toString(36).substring(2, 9),
-    time: defaultTime,
-    text: clean,
+    time,
+    level: undefined,
+    text: rest,
   }
 }
 
@@ -293,8 +297,15 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
         if (l.isSeparator) return l.text
         const trans = translateTunnelLog(l.text, language)
         const timePart = l.time ? `[${l.time}] ` : ''
-        const levelPart = l.level ? `[${l.level}] ` : ''
-        return `${timePart}${levelPart}${trans}`
+        const levelPart = l.level && !['LOG'].includes(l.level)
+          ? (l.level.length <= 4 ? `[ ${l.level} ] ` : `[${l.level}] `)
+          : ''
+        let body = trans
+        if (l.level) {
+          const dupRegex = new RegExp(`^\\s*\\[\\s*${l.level.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*\\]\\s*`, 'i')
+          body = body.replace(dupRegex, '')
+        }
+        return `${timePart}${levelPart}${body}`
       })
       navigator.clipboard.writeText(translatedLines.join('\n'))
       toast(t('tunnel_log.copied_all', 'Todos os logs copiados!'), 'success')
@@ -508,69 +519,164 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
               }
 
               const translated = translateTunnelLog(item.text, language)
+
+              // Strip redundant tag from beginning of displayText if already extracted into item.level
+              let displayText = translated
+              if (item.level) {
+                const dupRegex = new RegExp(`^\\s*\\[\\s*${item.level.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s*\\]\\s*`, 'i')
+                displayText = displayText.replace(dupRegex, '')
+              }
+
+              const fullCheckText = `${item.level || ''} ${item.text} ${displayText}`.toUpperCase()
+
+              // 1. Error check (highest priority)
               const isError =
                 item.level === 'ERR' ||
                 item.level === 'CRIT' ||
                 item.level === 'ERROR' ||
-                translated.includes('ERROR') ||
-                translated.includes('ERRO') ||
-                translated.includes('FALHA') ||
-                translated.includes('FAILED') ||
-                translated.includes('FAIL') ||
-                translated.includes('FALLO')
+                item.level === 'SQL FAILED' ||
+                item.level === 'FALHA' ||
+                fullCheckText.includes('ERROR') ||
+                fullCheckText.includes('ERRO') ||
+                fullCheckText.includes('FALHA') ||
+                fullCheckText.includes('FAILED') ||
+                fullCheckText.includes('FAIL') ||
+                fullCheckText.includes('FALLO') ||
+                fullCheckText.includes('ORA-') ||
+                fullCheckText.includes('EXCEPTION')
+
+              // 2. Specific debug / warning (keep debug traces distinctly yellow)
+              const isDebugOrWarning =
+                !isError &&
+                (item.level === 'WRN' ||
+                 item.level === 'WARN' ||
+                 item.level === 'AVISO' ||
+                 item.level === 'DEBUG' ||
+                 item.level === 'BPM-DEBUG' ||
+                 fullCheckText.includes('DEBUG') ||
+                 fullCheckText.includes('AVISO') ||
+                 fullCheckText.includes('WARNING') ||
+                 fullCheckText.includes('ADVERTENCIA'))
+
+              // 3. SQL operations (INSERT, DELETE, UPDATE, SELECT)
+              const isSqlContext =
+                item.level === 'EXEC' ||
+                item.level === 'SQL' ||
+                item.level === 'OK' ||
+                fullCheckText.includes('EXEC') ||
+                fullCheckText.includes('SQL')
+
+              const isInsert =
+                !isError &&
+                !isDebugOrWarning &&
+                (isSqlContext || fullCheckText.includes('INSERT')) &&
+                (fullCheckText.includes('INSERT') ||
+                 fullCheckText.includes('LINHA CRIADA') ||
+                 fullCheckText.includes('LINHAS CRIADAS') ||
+                 fullCheckText.includes('ROW CREATED') ||
+                 fullCheckText.includes('ROWS CREATED'))
+
+              const isDelete =
+                !isError &&
+                !isDebugOrWarning &&
+                (isSqlContext || fullCheckText.includes('DELETE')) &&
+                (fullCheckText.includes('DELETE') ||
+                 fullCheckText.includes('LINHA REMOVIDA') ||
+                 fullCheckText.includes('LINHAS REMOVIDAS') ||
+                 fullCheckText.includes('ROW DELETED') ||
+                 fullCheckText.includes('ROWS DELETED'))
+
+              const isUpdate =
+                !isError &&
+                !isDebugOrWarning &&
+                !isInsert &&
+                !isDelete &&
+                (isSqlContext || fullCheckText.includes('UPDATE')) &&
+                (fullCheckText.includes('UPDATE') ||
+                 fullCheckText.includes('LINHA ATUALIZADA') ||
+                 fullCheckText.includes('LINHAS ATUALIZADAS') ||
+                 fullCheckText.includes('ROW UPDATED') ||
+                 fullCheckText.includes('ROWS UPDATED'))
+
+              const isSelect =
+                !isError &&
+                !isDebugOrWarning &&
+                !isInsert &&
+                !isDelete &&
+                !isUpdate &&
+                (isSqlContext || fullCheckText.includes('SELECT')) &&
+                (fullCheckText.includes('SELECT') ||
+                 fullCheckText.includes('RETORNOU') ||
+                 fullCheckText.includes('RETURNED') ||
+                 fullCheckText.includes('COUNT') ||
+                 fullCheckText.includes('GET_USERS') ||
+                 fullCheckText.includes('BUSCANDO USUÁRIO') ||
+                 fullCheckText.includes('BUSCANDO USUARIOS'))
+
+              // 4. Generic Success (for non-SQL statements)
               const isSuccess =
-                translated.includes('sucesso') ||
-                translated.includes('successfully') ||
-                translated.includes('éxito') ||
-                translated.includes('✓') ||
-                translated.includes('✅')
-              const isWarningOrDebug =
-                item.level === 'WRN' ||
-                item.level === 'WARN' ||
-                item.level === 'DEBUG' ||
-                item.level === 'BPM-DEBUG' ||
-                translated.includes('DEBUG') ||
-                translated.includes('AVISO') ||
-                translated.includes('WARNING') ||
-                translated.includes('ADVERTENCIA')
+                !isError &&
+                !isDebugOrWarning &&
+                !isInsert &&
+                !isDelete &&
+                !isUpdate &&
+                !isSelect &&
+                (item.level === 'OK' ||
+                 fullCheckText.includes('SUCESSO') ||
+                 fullCheckText.includes('SUCCESSFULLY') ||
+                 fullCheckText.includes('ÉXITO') ||
+                 fullCheckText.includes('✓') ||
+                 fullCheckText.includes('✅'))
 
-              const textUpper = translated.toUpperCase()
-              const isExecSelect = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('SELECT')
-              const isExecInsert = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('INSERT')
-              const isExecUpdate = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('UPDATE')
-              const isExecDelete = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('DELETE')
+              // Determine tag badge color & line text color
+              let tagBadgeColor = 'text-neutral-500 font-bold'
+              let lineColor = 'text-neutral-300'
 
-              let actionColor = ''
-              if (isExecInsert) actionColor = 'text-green-400'
-              else if (isExecDelete) actionColor = 'text-red-500 font-bold'
-              else if (isExecUpdate) actionColor = 'text-fuchsia-400'
-              else if (isExecSelect) actionColor = 'text-cyan-400'
-
-              const colorClass = isError
-                ? 'text-red-400'
-                : actionColor
-                ? actionColor
-                : isSuccess
-                ? 'text-green-400'
-                : isWarningOrDebug
-                ? 'text-yellow-400'
-                : item.level === 'SQL'
-                ? 'text-neutral-400'
-                : 'text-neutral-300'
+              if (isError) {
+                tagBadgeColor = 'text-red-500 font-bold'
+                lineColor = 'text-red-400 font-medium'
+              } else if (isDebugOrWarning) {
+                tagBadgeColor = 'text-yellow-400 font-bold'
+                lineColor = 'text-yellow-400'
+              } else if (isInsert) {
+                tagBadgeColor = 'text-green-400 font-bold'
+                lineColor = 'text-green-400'
+              } else if (isDelete) {
+                tagBadgeColor = 'text-red-500 font-black'
+                lineColor = 'text-red-400 font-semibold'
+              } else if (isUpdate) {
+                tagBadgeColor = 'text-fuchsia-400 font-bold'
+                lineColor = 'text-fuchsia-400'
+              } else if (isSelect) {
+                tagBadgeColor = 'text-cyan-400 font-bold'
+                lineColor = 'text-cyan-400'
+              } else if (isSuccess) {
+                tagBadgeColor = 'text-emerald-400 font-bold'
+                lineColor = 'text-emerald-400'
+              } else if (item.level === 'EXEC') {
+                tagBadgeColor = 'text-amber-400 font-bold'
+                lineColor = 'text-neutral-200'
+              } else if (item.level === 'SQL') {
+                tagBadgeColor = 'text-neutral-400 font-bold'
+                lineColor = 'text-neutral-400'
+              } else if (item.level === 'SYNC') {
+                tagBadgeColor = 'text-blue-400 font-bold'
+                lineColor = 'text-neutral-300'
+              }
 
               return (
-                <div key={item.id} className={`mb-1 leading-relaxed ${colorClass}`}>
+                <div key={item.id} className={`mb-1 leading-relaxed ${lineColor}`}>
                   {item.time && (
                     <span className="text-neutral-600 mr-2 select-none font-mono">
                       [{item.time}]
                     </span>
                   )}
                   {item.level && !['LOG'].includes(item.level) && (
-                    <span className={`font-bold mr-1.5 select-none ${actionColor || (item.level === 'SQL' ? 'text-cyan-600' : 'text-neutral-500')}`}>
-                      [{item.level}]
+                    <span className={`font-mono mr-1.5 select-none ${tagBadgeColor}`}>
+                      {item.level.length <= 4 ? `[ ${item.level} ]` : `[${item.level}]`}
                     </span>
                   )}
-                  <span>{translated}</span>
+                  <span>{displayText}</span>
                 </div>
               )
             })
