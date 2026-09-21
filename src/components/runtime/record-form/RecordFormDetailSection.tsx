@@ -201,7 +201,27 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                 if (true) {
                   const newTempId = `temp-${Date.now()}`
                   const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
-                  setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
+                  
+                  if (parentData === formData) {
+                    setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
+                  } else {
+                    const updatedParentData = { ...parentData, _details: [...(parentData._details || []), newRecord] };
+                    const matchRecords = (r1: any, r2: any) => {
+                      if (r1 === r2) return true;
+                      if (r1.id && r2.id && String(r1.id) === String(r2.id)) return true;
+                      if (r1.ID && r2.ID && String(r1.ID) === String(r2.ID)) return true;
+                      const cleanRecord = (r: any) => { const c = { ...r }; delete c._details; return c; };
+                      return JSON.stringify(cleanRecord(r1)) === JSON.stringify(cleanRecord(r2));
+                    };
+                    setFormData((prev: any) => {
+                      const newTopDetails = (prev._details || []).map((td: any) => {
+                        if (matchRecords(td, parentData)) return updatedParentData;
+                        return td;
+                      });
+                      return { ...prev, _details: newTopDetails };
+                    });
+                  }
+
                   setExpandedDetails((prev: any) => ({ ...prev, [`detail-${tableName}-${newTempId}`]: true }))
 
                   // Foco no primeiro campo do novo item

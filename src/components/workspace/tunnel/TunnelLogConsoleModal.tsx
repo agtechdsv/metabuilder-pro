@@ -534,27 +534,28 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                 translated.includes('WARNING') ||
                 translated.includes('ADVERTENCIA')
 
-              const isExecSelect = item.level === 'EXEC' && translated.toUpperCase().includes('SELECT')
-              const isExecInsert = item.level === 'EXEC' && translated.toUpperCase().includes('INSERT')
-              const isExecUpdate = item.level === 'EXEC' && translated.toUpperCase().includes('UPDATE')
-              const isExecDelete = item.level === 'EXEC' && translated.toUpperCase().includes('DELETE')
+              const textUpper = translated.toUpperCase()
+              const isExecSelect = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('SELECT')
+              const isExecInsert = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('INSERT')
+              const isExecUpdate = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('UPDATE')
+              const isExecDelete = (item.level === 'EXEC' || item.level === 'SQL') && textUpper.includes('DELETE')
+
+              let actionColor = ''
+              if (isExecInsert) actionColor = 'text-green-400'
+              else if (isExecDelete) actionColor = 'text-red-500 font-bold'
+              else if (isExecUpdate) actionColor = 'text-fuchsia-400'
+              else if (isExecSelect) actionColor = 'text-cyan-400'
 
               const colorClass = isError
                 ? 'text-red-400'
-                : isExecDelete
-                ? 'text-red-400'
-                : isExecInsert
-                ? 'text-green-400'
-                : isExecSelect
-                ? 'text-cyan-400'
-                : isExecUpdate
-                ? 'text-fuchsia-400'
+                : actionColor
+                ? actionColor
                 : isSuccess
                 ? 'text-green-400'
                 : isWarningOrDebug
                 ? 'text-yellow-400'
                 : item.level === 'SQL'
-                ? 'text-neutral-500'
+                ? 'text-neutral-400'
                 : 'text-neutral-300'
 
               return (
@@ -565,14 +566,7 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                     </span>
                   )}
                   {item.level && !['LOG'].includes(item.level) && (
-                    <span className={`font-bold mr-1.5 select-none ${
-                       item.level === 'EXEC' && translated.toUpperCase().includes('SELECT') ? 'text-cyan-400' :
-                       item.level === 'EXEC' && translated.toUpperCase().includes('INSERT') ? 'text-green-400' :
-                       item.level === 'EXEC' && translated.toUpperCase().includes('UPDATE') ? 'text-fuchsia-400' :
-                       item.level === 'EXEC' && translated.toUpperCase().includes('DELETE') ? 'text-red-400' :
-                       item.level === 'SQL' ? 'text-cyan-600' :
-                       'text-neutral-500'
-                    }`}>
+                    <span className={`font-bold mr-1.5 select-none ${actionColor || (item.level === 'SQL' ? 'text-cyan-600' : 'text-neutral-500')}`}>
                       [{item.level}]
                     </span>
                   )}
