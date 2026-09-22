@@ -40,8 +40,8 @@ export function MarketingSections() {
     fetchRules()
 
     // Get initial session/user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
+    supabase.auth.getUser().then(({ data }: any) => {
+      setUser(data?.user ?? null)
     })
 
     // Listen for auth changes

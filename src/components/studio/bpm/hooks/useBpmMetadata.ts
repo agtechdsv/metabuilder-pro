@@ -79,7 +79,7 @@ export function useBpmMetadata({
               if (channel.state === 'joined') {
                 sendQuery()
               } else {
-                channel.subscribe(async (status) => {
+                channel.subscribe(async (status: string) => {
                   if (unmounted || isFinished) return
                   if (status === 'SUBSCRIBED') {
                     await sendQuery()

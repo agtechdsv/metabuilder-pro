@@ -6,6 +6,7 @@ import type { Model, Enumeration, Relation, UseCase, BpmWorkflow } from '../type
 
 interface UseWizardDataParams {
   projectSlug: string | string[]
+  workspaceSlug?: string | string[]
 }
 
 interface UseWizardDataReturn {
@@ -32,7 +33,7 @@ interface UseWizardDataReturn {
  *  5. UI Views (for use-case selectors)
  *  6. BPM Workflows
  */
-export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDataReturn {
+export function useWizardData({ projectSlug, workspaceSlug }: UseWizardDataParams): UseWizardDataReturn {
   const supabase = createClient()
 
   const [models, setModels] = useState<Model[]>([])
@@ -48,91 +49,115 @@ export function useWizardData({ projectSlug }: UseWizardDataParams): UseWizardDa
   const [byocComponents, setByocComponents] = useState<any[]>([])
 
   useEffect(() => {
+    let isMounted = true
+
     const loadData = async () => {
-      // 1. Fetch the current project by slug
-      const { data: project } = await supabase
-        .from('projects')
-        .select('id, workspace_id, theme_config')
-        .eq('slug', projectSlug)
-        .single()
+      try {
+        // 1. Fetch the current project by slug (and workspace_id if available)
+        let query = supabase
+          .from('projects')
+          .select('id, workspace_id, theme_config')
+          .eq('slug', projectSlug)
 
-      if (!project) return
+        if (workspaceSlug) {
+          const { data: ws } = await supabase
+            .from('workspaces')
+            .select('id')
+            .eq('slug', workspaceSlug)
+            .maybeSingle()
 
-      setIsDownloadsActive(project.theme_config?.enable_downloads !== false)
-      setCurrentProjectId(project.id)
-      setCurrentWorkspaceId(project.workspace_id)
+          if (ws?.id) {
+            query = query.eq('workspace_id', ws.id)
+          }
+        }
 
-      // Fetch virtual_fields (calculated fields)
-      const { data: projectFull } = await supabase
-        .from('projects')
-        .select('virtual_fields')
-        .eq('id', project.id)
-        .single()
-      if (projectFull?.virtual_fields) {
-        const vf = typeof projectFull.virtual_fields === 'string'
-          ? JSON.parse(projectFull.virtual_fields)
-          : projectFull.virtual_fields
-        if (Array.isArray(vf)) setVirtualFields(vf)
+        const { data: project } = await query.maybeSingle()
+
+        if (!project || !isMounted) return
+
+        setIsDownloadsActive(project.theme_config?.enable_downloads !== false)
+        setCurrentProjectId(project.id)
+        setCurrentWorkspaceId(project.workspace_id)
+
+        // Fetch virtual_fields (calculated fields)
+        const { data: projectFull } = await supabase
+          .from('projects')
+          .select('virtual_fields')
+          .eq('id', project.id)
+          .maybeSingle()
+
+        if (projectFull?.virtual_fields && isMounted) {
+          const vf = typeof projectFull.virtual_fields === 'string'
+            ? JSON.parse(projectFull.virtual_fields)
+            : projectFull.virtual_fields
+          if (Array.isArray(vf)) setVirtualFields(vf)
+        }
+
+        // 2. Fetch models for this project (with their fields)
+        const { data: modelsData } = await supabase
+          .from('models')
+          .select('*, fields(*)')
+          .eq('project_id', project.id)
+          .order('db_table_name')
+
+        if (modelsData && isMounted) setModels(modelsData as Model[])
+
+        // 2.5. Fetch project enumerations
+        const { data: enumsData } = await supabase
+          .from('project_enumerations')
+          .select('*')
+          .eq('project_id', project.id)
+          .order('name')
+
+        if (enumsData && isMounted) setEnumerations(enumsData as Enumeration[])
+
+        // 3. Fetch relations for this project
+        const { data: relsData } = await supabase
+          .from('relations')
+          .select('*')
+          .eq('project_id', project.id)
+
+        if (relsData && isMounted) setRelations(relsData as Relation[])
+
+        // 4. Fetch UI views (use cases) for reference selectors
+        const { data: viewsData } = await supabase
+          .from('ui_views')
+          .select('name, slug, logic_type, draft_config, model_id')
+          .eq('project_id', project.id)
+          .order('name')
+
+        if (viewsData && isMounted) setUseCases(viewsData as UseCase[])
+
+        // 5. Fetch BPM Workflows for automations tab
+        const { data: bpmData } = await supabase
+          .from('bpm_workflows')
+          .select('id, name')
+          .eq('project_id', project.id)
+          .order('name')
+
+        if (bpmData && isMounted) setBpmWorkflows(bpmData as BpmWorkflow[])
+
+        // 6. Fetch BYOC Components
+        const { data: byocData } = await supabase
+          .from('ui_custom_components')
+          .select('id, name, description, compiled_code')
+          .eq('project_id', project.id)
+          .order('name')
+
+        if (byocData && isMounted) setByocComponents(byocData)
+      } catch (err) {
+        console.error('[useWizardData] Error loading wizard data:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
       }
-
-      // 2. Fetch models for this project (with their fields)
-      const { data: modelsData } = await supabase
-        .from('models')
-        .select('*, fields(*)')
-        .eq('project_id', project.id)
-        .order('db_table_name')
-
-      if (modelsData) setModels(modelsData as Model[])
-
-      // 2.5. Fetch project enumerations
-      const { data: enumsData } = await supabase
-        .from('project_enumerations')
-        .select('*')
-        .eq('project_id', project.id)
-        .order('name')
-
-      if (enumsData) setEnumerations(enumsData as Enumeration[])
-
-      // 3. Fetch relations for this project
-      const { data: relsData } = await supabase
-        .from('relations')
-        .select('*')
-        .eq('project_id', project.id)
-
-      if (relsData) setRelations(relsData as Relation[])
-
-      // 4. Fetch UI views (use cases) for reference selectors
-      const { data: viewsData } = await supabase
-        .from('ui_views')
-        .select('name, slug, logic_type, draft_config, model_id')
-        .eq('project_id', project.id)
-        .order('name')
-
-      if (viewsData) setUseCases(viewsData as UseCase[])
-
-      // 5. Fetch BPM Workflows for automations tab
-      const { data: bpmData } = await supabase
-        .from('bpm_workflows')
-        .select('id, name')
-        .eq('project_id', project.id)
-        .order('name')
-
-      if (bpmData) setBpmWorkflows(bpmData as BpmWorkflow[])
-
-      // 6. Fetch BYOC Components
-      const { data: byocData } = await supabase
-        .from('ui_custom_components')
-        .select('id, name, description, compiled_code')
-        .eq('project_id', project.id)
-        .order('name')
-
-      if (byocData) setByocComponents(byocData)
-
-      setIsLoading(false)
     }
 
     loadData()
-  }, [projectSlug, supabase])
+
+    return () => {
+      isMounted = false
+    }
+  }, [projectSlug, workspaceSlug])
 
   return {
     models,

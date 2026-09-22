@@ -64,7 +64,7 @@ export function UseCaseBuilderWizard({
     models, enumerations, relations, useCases, bpmWorkflows,
     isLoading, isDownloadsActive,
     currentProjectId, currentWorkspaceId, virtualFields, byocComponents
-  } = useWizardData({ projectSlug: project_slug })
+  } = useWizardData({ projectSlug: project_slug, workspaceSlug: workspace_slug })
 
   // ── Telemetry ────────────────────────────────────────────────────────────────
   const { logAction, flush } = useTelemetry({
@@ -181,8 +181,18 @@ export function UseCaseBuilderWizard({
     if (!config.name || !config.slug) { toast(t('wizard.buttons.validation.name_slug_required'), 'error'); return }
 
     setIsSaving(true)
-    try {
-      const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
+
+    const saveOperation = async () => {
+      // 1. Resolve project ID reliably
+      const effectiveProjectId = currentProjectId || (
+        await supabase.from('projects').select('id').eq('slug', project_slug).maybeSingle()
+      )?.data?.id
+
+      if (!effectiveProjectId) {
+        throw new Error('Projeto não identificado. Por favor recarregue a página.')
+      }
+
+      const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('id', effectiveProjectId).maybeSingle()
 
       const validFieldIds = new Set(models.flatMap(m => (m.fields ?? []).map(f => f.id)))
       const filterValid = (arr: string[]) => (arr || []).filter(fid => validFieldIds.has(fid) || fid.startsWith('virt_') || fid.startsWith('byoc_'))
@@ -213,34 +223,32 @@ export function UseCaseBuilderWizard({
         layout_config: { ...cleanLayoutConfig, fields_metadata: populatedFieldsMeta, is_active: true },
         buttons_config: config.buttons_config,
         model_id: config.selected_models[0] || null,
-        project_id: currentProjectId,
+        project_id: effectiveProjectId,
         view_type: 'advanced_use_case'
       }
 
       // Check for slug conflict
       const { data: existingBySlug } = await supabase
         .from('ui_views').select('id')
-        .eq('project_id', currentProjectId)
+        .eq('project_id', effectiveProjectId)
         .eq('slug', config.slug)
         .maybeSingle()
 
       if (existingBySlug && (!initialData || existingBySlug.id !== initialData.id)) {
         toast('Já existe um caso de uso com este slug neste projeto.', 'error')
-        setIsSaving(false)
         return
       }
 
       // Check Freemium Use Case Limit (4)
       if (!initialData?.id && currentWorkspaceId) {
-        const { data: workspace } = await supabase.from('workspaces').select('owner_id').eq('id', currentWorkspaceId).single()
-        if (workspace) {
-          const { data: profile } = await supabase.from('workspace_profiles').select('subscription_status').eq('user_id', workspace.owner_id).single()
+        const { data: workspace } = await supabase.from('workspaces').select('owner_id').eq('id', currentWorkspaceId).maybeSingle()
+        if (workspace?.owner_id) {
+          const { data: profile } = await supabase.from('profiles').select('subscription_status').eq('id', workspace.owner_id).maybeSingle()
           
           if (profile && (profile.subscription_status === 'pending' || profile.subscription_status === 'blocked')) {
-            const { count } = await supabase.from('ui_views').select('*', { count: 'exact', head: true }).eq('project_id', currentProjectId)
+            const { count } = await supabase.from('ui_views').select('*', { count: 'exact', head: true }).eq('project_id', effectiveProjectId)
             if (count !== null && count >= 4) {
               openUpgrade('Novo Caso de Uso')
-              setIsSaving(false)
               return
             }
           }
@@ -251,18 +259,18 @@ export function UseCaseBuilderWizard({
       let viewError: any
 
       if (initialData?.id) {
-        const { data, error } = await supabase.from('ui_views').update({ draft_config: draftPayload }).eq('id', initialData.id).select().single()
+        const { data, error } = await supabase.from('ui_views').update({ draft_config: draftPayload }).eq('id', initialData.id).select().maybeSingle()
         view = data; viewError = error
       } else {
         const { data, error } = await supabase.from('ui_views').insert({
-          project_id: projectData?.id,
+          project_id: effectiveProjectId,
           name: config.name,
           slug: config.slug,
           view_type: 'advanced_use_case',
           logic_type: config.logic_type,
           model_id: config.selected_models[0] || null,
           draft_config: draftPayload
-        }).select().single()
+        }).select().maybeSingle()
         view = data; viewError = error
       }
 
@@ -281,15 +289,24 @@ export function UseCaseBuilderWizard({
 
       flushTextChanges()
       logAction('SAVE', 'Salvou rascunho do caso de uso')
-      await flush(view.id)
+      if (view?.id) {
+        flush(view.id).catch(err => console.warn('[Telemetry] flush warning:', err))
+      }
       toast('Rascunho salvo! Clique em Publicar para liberar aos usuários.', 'success')
       onSaveSuccess()
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('A operação de salvamento demorou mais que o esperado. Verifique sua conexão e tente novamente.')), 25000)
+      )
+      await Promise.race([saveOperation(), timeoutPromise])
     } catch (err: any) {
       console.error(err)
       if (!initialData?.id && err?.code === '42501') {
         openUpgrade('Novo Caso de Uso')
       } else {
-        toast(t('wizard.buttons.error_save') + err.message, 'error')
+        toast(t('wizard.buttons.error_save') + (err?.message ? ': ' + err.message : ''), 'error')
       }
     } finally {
       setIsSaving(false)
@@ -300,12 +317,13 @@ export function UseCaseBuilderWizard({
   const handlePublish = async () => {
     if (!initialData?.id) return
     setIsSaving(true)
-    try {
+
+    const publishOperation = async () => {
       const { data: currentView, error: readError } = await supabase.from('ui_views').select('status, draft_config').eq('id', initialData.id).single()
       if (readError) throw readError
 
       const draft = currentView?.draft_config
-      if (!draft) { toast('Nenhum rascunho encontrado para publicar.', 'error'); setIsSaving(false); return }
+      if (!draft) { toast('Nenhum rascunho encontrado para publicar.', 'error'); return }
 
       const { error: publishError } = await supabase.from('ui_views').update({
         name: draft.name, slug: draft.slug, logic_type: draft.logic_type,
@@ -351,7 +369,11 @@ export function UseCaseBuilderWizard({
       }
 
       // Ensure the view is present in the project navigation. If not, add it.
-      const { data: projectData } = await supabase.from('projects').select('id, navigation').eq('slug', project_slug).single()
+      const targetProjId = currentProjectId || (await supabase.from('projects').select('id').eq('slug', project_slug).maybeSingle())?.data?.id
+      const { data: projectData } = targetProjId
+        ? await supabase.from('projects').select('id, navigation').eq('id', targetProjId).maybeSingle()
+        : await supabase.from('projects').select('id, navigation').eq('slug', project_slug).maybeSingle()
+
       if (projectData) {
         const navigationArray = Array.isArray(projectData.navigation) ? projectData.navigation : []
         const hasMenuItem = (items: any[]): boolean => {
@@ -379,10 +401,18 @@ export function UseCaseBuilderWizard({
       setCurrentStatus('delivered')
       flushTextChanges()
       logAction('LIFECYCLE', 'Publicou o Caso de Uso')
+      flush(initialData.id).catch(err => console.warn('[Telemetry] flush warning:', err))
       toast('Caso de Uso publicado com sucesso! Os usuários já podem acessar.', 'success')
       onSaveSuccess()
+    }
+
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('A operação de publicação demorou mais que o esperado. Verifique sua conexão e tente novamente.')), 25000)
+      )
+      await Promise.race([publishOperation(), timeoutPromise])
     } catch (err: any) {
-      toast('Erro ao publicar: ' + err.message, 'error')
+      toast('Erro ao publicar: ' + (err?.message || err), 'error')
     } finally {
       setIsSaving(false)
       setIsPublishModalOpen(false)

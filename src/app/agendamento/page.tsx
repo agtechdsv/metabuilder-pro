@@ -44,7 +44,8 @@ function AppointmentPageContent() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: any) => {
+      const user = data?.user
       if (user) {
         setUser(user)
         supabase
@@ -52,7 +53,7 @@ function AppointmentPageContent() {
           .select('*')
           .eq('id', user.id)
           .single()
-          .then(({ data }) => {
+          .then(({ data }: any) => {
             setProfile(data)
           })
       }

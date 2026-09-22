@@ -142,7 +142,7 @@ export default function ViewConfigurator() {
         const finalSelected: Record<string, boolean> = {}
         const finalLabels: Record<string, string> = {}
         
-        fieldsData.forEach(f => {
+        fieldsData.forEach((f: any) => {
           finalSelected[f.id] = true
           finalLabels[f.id] = f.display_name || f.db_column_name
         })

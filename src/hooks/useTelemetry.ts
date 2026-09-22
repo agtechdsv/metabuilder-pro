@@ -25,9 +25,23 @@ export function useTelemetry({
   const supabase = createClient()
   const [userId, setUserId] = useState<string | null>(null)
 
+  // Keep latest props in refs so flush never needs to change identity
+  const workspaceIdRef = useRef(workspaceId)
+  const projectIdRef = useRef(projectId)
+  const uiViewIdRef = useRef(uiViewId)
+  const userIdRef = useRef<string | null>(null)
+
+  useEffect(() => { workspaceIdRef.current = workspaceId }, [workspaceId])
+  useEffect(() => { projectIdRef.current = projectId }, [projectId])
+  useEffect(() => { uiViewIdRef.current = uiViewId }, [uiViewId])
+  useEffect(() => { userIdRef.current = userId }, [userId])
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUserId(data.user.id)
+      if (data?.user) {
+        setUserId(data.user.id)
+        userIdRef.current = data.user.id
+      }
     })
   }, [supabase])
   
@@ -66,9 +80,13 @@ export function useTelemetry({
     }
   }, [userId, logAction, uiViewName])
 
-  // The Heartbeat
+  // The Heartbeat (stable reference, does not re-trigger effects)
   const flush = useCallback(async (overrideUiViewId?: string) => {
-    if (eventsBufferRef.current.length === 0 || !userId || !workspaceId || !projectId) return
+    const currentUserId = userIdRef.current
+    const currentWorkspaceId = workspaceIdRef.current
+    const currentProjectId = projectIdRef.current
+
+    if (eventsBufferRef.current.length === 0 || !currentUserId || !currentWorkspaceId || !currentProjectId) return
 
     const now = new Date()
     // Calculate final active time for this chunk if they just clicked something
@@ -78,18 +96,19 @@ export function useTelemetry({
        lastActiveRef.current = now
     }
 
-    const finalUiViewId = overrideUiViewId || uiViewId || null
+    const finalUiViewId = overrideUiViewId || uiViewIdRef.current || null
+    const eventsToSend = [...eventsBufferRef.current]
 
     const payload = {
-      workspace_id: workspaceId,
-      project_id: projectId,
-      user_id: userId,
+      workspace_id: currentWorkspaceId,
+      project_id: currentProjectId,
+      user_id: currentUserId,
       ui_view_id: finalUiViewId,
       session_start: sessionStartRef.current.toISOString(),
       session_end: now.toISOString(),
       active_time_seconds: Math.floor(activeTimeSecondsRef.current),
-      actions_count: eventsBufferRef.current.length,
-      events: eventsBufferRef.current, // Sending all accumulated events
+      actions_count: eventsToSend.length,
+      events: eventsToSend,
     }
 
     try {
@@ -106,31 +125,31 @@ export function useTelemetry({
           })
           .eq('id', logIdRef.current)
           
-        if (error) console.error('Telemetry flush update error:', error)
+        if (error) console.warn('Telemetry flush update warning:', error.message)
       } else {
         // Insert new row
         const { data, error } = await supabase
           .from('activity_logs')
           .insert(payload)
           .select('id')
-          .single()
+          .maybeSingle()
 
         if (error) {
-          console.error('Telemetry flush insert error:', error)
-        } else if (data) {
+          console.warn('Telemetry flush insert warning:', error.message)
+        } else if (data?.id) {
           logIdRef.current = data.id
         }
       }
-    } catch (err) {
-      console.error('Telemetry flush exception:', err)
+    } catch (err: any) {
+      console.warn('Telemetry flush exception:', err?.message || err)
     }
-  }, [supabase, workspaceId, projectId, uiViewId, userId])
+  }, [supabase])
 
   // Setup Heartbeat interval
   useEffect(() => {
     const interval = setInterval(flush, heartbeatIntervalMs)
     
-    // Flush on unmount (component closed)
+    // Flush on true unmount (component closed)
     return () => {
       clearInterval(interval)
       flush()

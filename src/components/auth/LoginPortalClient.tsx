@@ -156,7 +156,7 @@ export function LoginPortalClient({
       })
 
       // 2. Inscreve-se e envia o comando de autenticação
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           // Envia a solicitação de login
           await channel.send({
@@ -249,7 +249,7 @@ export function LoginPortalClient({
         }
       })
 
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           await channel.send({
             type: 'broadcast',

@@ -133,7 +133,8 @@ export function AIBuilderChat({
           content: t('ai_builder.welcome_edit_no_history', '✏️ **Modo Edição** — Você está editando **"{name}"**.\n\nO código atual foi carregado na aba **Componente**. Você pode:\n- Editar o código diretamente\n- Enviar uma mensagem pedindo que eu faça alterações\n- Ajustar as Configurações na aba correspondente\n\nQuando estiver pronto, clique em **Atualizar Projeto**.').replace('{name}', initialView.name),
         }])
         // Cria uma sessão de edição se não tinha uma anterior
-        supabase.auth.getUser().then(async ({ data: { user } }) => {
+        supabase.auth.getUser().then(async ({ data }: any) => {
+          const user = data?.user
           if (!user) return
           const { data: session } = await supabase.from('ai_builder_sessions').insert({
             project_id: projectId,

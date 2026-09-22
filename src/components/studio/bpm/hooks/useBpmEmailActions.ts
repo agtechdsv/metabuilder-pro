@@ -88,7 +88,7 @@ export function useBpmEmailActions({
               await channel.send({ type: 'broadcast', event: 'sql_query', payload: { action: 'select', schemaName, query: sql, limit: 1000, offset: 0, queryId, token: project!.secret_token } })
             }
             if (channel.state === 'joined') { sendQ(); } else {
-              channel.subscribe(async (status) => { if (isFinished) return; if (status === 'SUBSCRIBED') await sendQ(); })
+              channel.subscribe(async (status: string) => { if (isFinished) return; if (status === 'SUBSCRIBED') await sendQ(); })
             }
           }, 200)
           setTimeout(() => { if (!isFinished) { cleanup(); reject(new Error('Timeout')); } }, 6000)

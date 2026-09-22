@@ -215,7 +215,7 @@ export default function AuthSettingsPage() {
           if (dbViews && isMounted) {
             viewsData = [...dbViews]
             // Verifica se "Central de Downloads" com o slug "downloads" já existe
-            const hasDownloads = dbViews.some(v => v.slug === 'downloads')
+            const hasDownloads = dbViews.some((v: any) => v.slug === 'downloads')
             if (!hasDownloads) {
               // Cria a view "Central de Downloads" automaticamente para o projeto
               const { data: newView, error: insertError } = await supabase
@@ -343,7 +343,7 @@ export default function AuthSettingsPage() {
         }
       })
 
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           await channel.send({
             type: 'broadcast', event: 'sql_query',
@@ -781,7 +781,7 @@ export default function AuthSettingsPage() {
       const channelName = `tunnel:${project.id}`
       const channel = supabase.channel(channelName)
       
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           if (editingUserId) {
             delete dataToSave[pkField]
@@ -838,7 +838,7 @@ export default function AuthSettingsPage() {
       const channelName = `tunnel:${project.id}`
       const channel = supabase.channel(channelName)
 
-      channel.subscribe(async (status) => {
+      channel.subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           await channel.send({
             type: 'broadcast',

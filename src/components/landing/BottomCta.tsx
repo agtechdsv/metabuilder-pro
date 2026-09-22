@@ -21,8 +21,8 @@ export function BottomCta({ className, buttonClassName }: BottomCtaProps) {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
+    supabase.auth.getUser().then(({ data }: any) => {
+      setUser(data?.user ?? null)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)

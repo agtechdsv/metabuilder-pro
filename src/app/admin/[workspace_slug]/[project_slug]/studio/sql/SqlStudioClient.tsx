@@ -43,7 +43,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
     const channel = supabase.channel(channelName)
 
     // Inscreve-se para receber o resultado da query específica
-    channel.on('broadcast', { event: `query_result_${newQueryId}` }, (payload) => {
+    channel.on('broadcast', { event: `query_result_${newQueryId}` }, (payload: any) => {
       setLoading(false)
       const data = payload.payload
       
@@ -74,7 +74,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
     })
 
     // Envia o comando
-    channel.subscribe((status) => {
+    channel.subscribe((status: string) => {
       if (status === 'SUBSCRIBED') {
         channel.send({
           type: 'broadcast',

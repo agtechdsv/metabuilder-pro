@@ -59,7 +59,7 @@ export async function GET(request: Request) {
         // Event listener for chunks
         const eventName = `download_chunk_${jobId}`
         
-        channel.on('broadcast', { event: eventName }, (payloadEvent) => {
+        channel.on('broadcast', { event: eventName }, (payloadEvent: any) => {
           if (isDone) return
           
           const { chunk, isLast, error } = payloadEvent.payload

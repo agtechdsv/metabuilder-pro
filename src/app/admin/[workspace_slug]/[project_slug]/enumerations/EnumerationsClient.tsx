@@ -67,7 +67,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
     const channelName = `tunnel:${project.id}`
     const channel = supabase.channel(channelName)
     
-    channel.on('broadcast', { event: 'sql_result' }, (payload) => {
+    channel.on('broadcast', { event: 'sql_result' }, (payload: any) => {
       if (payload.payload?.queryId === 'fetch_distinct_enum') {
         const results = payload.payload.data || []
         if (results.length > 0) {

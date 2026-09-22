@@ -139,7 +139,7 @@ export function useBpmWorkflows({
       
       try {
         const channel = supabase.channel(`tunnel:${projectId}`)
-        channel.subscribe(async (status) => {
+        channel.subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
             await channel.send({
               type: 'broadcast',
