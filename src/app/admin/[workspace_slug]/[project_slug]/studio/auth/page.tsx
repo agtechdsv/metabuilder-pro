@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
@@ -98,7 +98,7 @@ export default function AuthSettingsPage() {
     login_tooltip: t('dashboard.projects.studio.auth.default_tooltip')
   })
 
-  const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users' | 'permissions'>('permissions')
+  const [activeTab, setActiveTab] = useState<'visual' | 'strategy' | 'users' | 'permissions'>('strategy')
   const [usersSubTab, setUsersSubTab] = useState<'list' | 'groups' | 'permissions'>('list')
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editingRoleName, setEditingRoleName] = useState('')
@@ -110,174 +110,214 @@ export default function AuthSettingsPage() {
   const [userToDelete, setUserToDelete] = useState<any>(null)
   const [isSavingUser, setIsSavingUser] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
   const { theme: globalTheme } = useTheme()
 
   const resolvedPreviewTheme = visualConfig.theme === 'auto' ? globalTheme : visualConfig.theme
 
   useEffect(() => {
+    let isMounted = true
+
     async function loadData() {
-      // Resolve Workspace
-      const { data: ws } = await supabase
-        .from('workspaces')
-        .select('*')
-        .eq('slug', workspace_slug)
-        .single()
-      
-      if (ws) setWorkspace(ws)
-
-      // Resolve Project
-      const { data: proj } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('slug', project_slug)
-        .single()
-      
-      if (proj) {
-        setProject(proj)
-
-        // Load existing config
-        const { data: config } = await supabase
-          .from('project_auth_config')
+      setIsLoading(true)
+      try {
+        // Resolve Workspace
+        const { data: ws, error: wsError } = await supabase
+          .from('workspaces')
           .select('*')
-          .eq('project_id', proj.id)
-          .single()
-
-        if (config) {
-          setAuthConfig({
-            ...config,
-            allow_signup: config.ui_config?.allow_signup || false,
-            sync_legacy_groups: config.ui_config?.sync_legacy_groups || false,
-            db_groups_table: config.ui_config?.db_groups_table || '',
-            db_groups_name_column: config.ui_config?.db_groups_name_column || '',
-            db_user_groups_type: config.ui_config?.db_user_groups_type || '1_to_n',
-            db_user_role_column: config.ui_config?.db_user_role_column || '',
-            db_user_roles_table: config.ui_config?.db_user_roles_table || '',
-            db_user_roles_user_id_column: config.ui_config?.db_user_roles_user_id_column || '',
-            db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || '',
-            db_display_name_column: config.ui_config?.db_display_name_column || ''
-          })
-          if (config.ui_config) {
-            setVisualConfig(prev => ({
-              ...prev,
-              ...config.ui_config
-            }))
-          }
-        }
-
-        // Load models for the "Database" option dropdowns
-        const { data: modelsData } = await supabase
-          .from('models')
-          .select('*, fields(*)')
-          .eq('project_id', proj.id)
+          .eq('slug', workspace_slug)
+          .maybeSingle()
         
-        if (modelsData) setModels(modelsData)
+        if (!isMounted) return
 
-        // Load UI Views for Permissions Mapping
-        let viewsData: any[] = []
-        const { data: dbViews, error: viewsError } = await supabase
-          .from('ui_views')
-          .select('id, name, slug')
-          .eq('project_id', proj.id)
+        if (wsError) {
+          console.error("Erro ao buscar workspace:", wsError)
+        }
+        if (ws) setWorkspace(ws)
 
-        if (viewsError) {
-          console.error("Error fetching views:", viewsError)
+        // Resolve Project (filtrando também por workspace_id para evitar colisão entre workspaces com mesmo slug)
+        let projectQuery = supabase
+          .from('projects')
+          .select('*')
+          .eq('slug', project_slug)
+
+        if (ws?.id) {
+          projectQuery = projectQuery.eq('workspace_id', ws.id)
         }
 
-        if (dbViews) {
-          viewsData = [...dbViews]
-          // Verifica se "Central de Downloads" com o slug "downloads" já existe
-          const hasDownloads = dbViews.some(v => v.slug === 'downloads')
-          if (!hasDownloads) {
-            // Cria a view "Central de Downloads" automaticamente para o projeto
-            const { data: newView, error: insertError } = await supabase
-              .from('ui_views')
-              .upsert({
-                project_id: proj.id,
-                model_id: null,
-                name: 'Central de Downloads',
-                slug: 'downloads',
-                logic_type: 'personalizado',
-                view_type: 'advanced_use_case',
-                layout_config: { is_active: true }
-              }, { onConflict: 'project_id, slug' })
-              .select('id, name, slug')
-              .single()
-            
-            if (newView && !insertError) {
-              viewsData.push(newView)
-            } else if (insertError) {
-              console.error("Error inserting default downloads view:", insertError)
+        const { data: proj, error: projError } = await projectQuery.maybeSingle()
+        
+        if (!isMounted) return
+
+        if (projError) {
+          console.error("Erro ao buscar projeto:", projError)
+        }
+        
+        if (proj) {
+          setProject(proj)
+
+          // Load existing config usando maybeSingle
+          const { data: config, error: configError } = await supabase
+            .from('project_auth_config')
+            .select('*')
+            .eq('project_id', proj.id)
+            .maybeSingle()
+
+          if (configError) {
+            console.error("Erro ao carregar project_auth_config:", configError)
+          }
+
+          if (config && isMounted) {
+            setAuthConfig({
+              ...config,
+              allow_signup: config.ui_config?.allow_signup || false,
+              sync_legacy_groups: config.ui_config?.sync_legacy_groups || false,
+              db_groups_table: config.ui_config?.db_groups_table || '',
+              db_groups_name_column: config.ui_config?.db_groups_name_column || '',
+              db_user_groups_type: config.ui_config?.db_user_groups_type || '1_to_n',
+              db_user_role_column: config.ui_config?.db_user_role_column || '',
+              db_user_roles_table: config.ui_config?.db_user_roles_table || '',
+              db_user_roles_user_id_column: config.ui_config?.db_user_roles_user_id_column || '',
+              db_user_roles_role_id_column: config.ui_config?.db_user_roles_role_id_column || '',
+              db_display_name_column: config.ui_config?.db_display_name_column || ''
+            })
+            if (config.ui_config) {
+              setVisualConfig(prev => ({
+                ...prev,
+                ...config.ui_config
+              }))
             }
           }
-        }
-        setUiViews(viewsData)
-      }
 
-      // Fetch User & Profile for Navbar
-      const { data: { user: userData } } = await supabase.auth.getUser()
-      if (userData) {
-        setUser(userData)
-        const { data: profData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userData.id)
-          .single()
-        if (profData) setProfile(profData)
-      } else {
-        router.replace('/')
-        return
-      }
-
-      if (ws && proj && userData) {
-        const { data: memberData } = await supabase
-          .from('workspace_members')
-          .select('role')
-          .eq('workspace_id', ws.id)
-          .eq('user_id', userData.id)
-          .maybeSingle()
-
-        const isOwner = userData.id === ws.owner_id
-        const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
-
-        // Para convidados, verifica o nível de acesso global
-        let guestAccessLevel: string | null = null
-        if (!isOwner) {
-          const { data: guestRecord } = await supabase
-            .from('owner_guests')
-            .select('access_level')
-            .eq('user_id', userData.id)
-            .maybeSingle()
-          guestAccessLevel = guestRecord?.access_level ?? null
-        }
-
-        const isGlobalGuest = guestAccessLevel === 'global'
-
-        let canCreate = false
-        if (isOwner || isGlobalGuest || userRole === 'admin') {
-          canCreate = true
-        } else if (userRole === 'developer') {
-          const { data: projPerm } = await supabase
-            .from('workspace_member_projects')
-            .select('can_create')
+          // Load models for the "Database" option dropdowns
+          const { data: modelsData, error: modelsError } = await supabase
+            .from('models')
+            .select('*, fields(*)')
             .eq('project_id', proj.id)
-            .eq('user_id', userData.id)
-            .maybeSingle()
-          canCreate = projPerm?.can_create === true
+          
+          if (modelsError) {
+            console.error("Erro ao buscar models:", modelsError)
+          }
+          if (modelsData && isMounted) setModels(modelsData)
+
+          // Load UI Views for Permissions Mapping
+          let viewsData: any[] = []
+          const { data: dbViews, error: viewsError } = await supabase
+            .from('ui_views')
+            .select('id, name, slug')
+            .eq('project_id', proj.id)
+
+          if (viewsError) {
+            console.error("Error fetching views:", viewsError)
+          }
+
+          if (dbViews && isMounted) {
+            viewsData = [...dbViews]
+            // Verifica se "Central de Downloads" com o slug "downloads" já existe
+            const hasDownloads = dbViews.some(v => v.slug === 'downloads')
+            if (!hasDownloads) {
+              // Cria a view "Central de Downloads" automaticamente para o projeto
+              const { data: newView, error: insertError } = await supabase
+                .from('ui_views')
+                .upsert({
+                  project_id: proj.id,
+                  model_id: null,
+                  name: 'Central de Downloads',
+                  slug: 'downloads',
+                  logic_type: 'personalizado',
+                  view_type: 'advanced_use_case',
+                  layout_config: { is_active: true }
+                }, { onConflict: 'project_id, slug' })
+                .select('id, name, slug')
+                .single()
+              
+              if (newView && !insertError) {
+                viewsData.push(newView)
+              } else if (insertError) {
+                console.error("Error inserting default downloads view:", insertError)
+              }
+            }
+            setUiViews(viewsData)
+          }
         }
 
-        if (!canCreate) {
-          toast('Você não tem permissão para acessar esta configuração.', 'error')
-          router.replace(`/admin/${workspace_slug}/${project_slug}/studio`)
+        // Fetch User & Profile for Navbar
+        const { data: { user: userData }, error: userError } = await supabase.auth.getUser()
+        if (userError) {
+          console.error("Erro ao buscar usuário logado:", userError)
+        }
+        if (userData && isMounted) {
+          setUser(userData)
+          const { data: profData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userData.id)
+            .maybeSingle()
+          if (profData && isMounted) setProfile(profData)
+        } else {
+          router.replace('/')
           return
         }
-      }
 
-      setIsLoading(false)
+        if (ws && proj && userData) {
+          const { data: memberData } = await supabase
+            .from('workspace_members')
+            .select('role')
+            .eq('workspace_id', ws.id)
+            .eq('user_id', userData.id)
+            .maybeSingle()
+
+          const isOwner = userData.id === ws.owner_id
+          const userRole = isOwner ? 'owner' : (memberData?.role || 'guest')
+
+          // Para convidados, verifica o nível de acesso global
+          let guestAccessLevel: string | null = null
+          if (!isOwner) {
+            const { data: guestRecord } = await supabase
+              .from('owner_guests')
+              .select('access_level')
+              .eq('user_id', userData.id)
+              .maybeSingle()
+            guestAccessLevel = guestRecord?.access_level ?? null
+          }
+
+          const isGlobalGuest = guestAccessLevel === 'global'
+
+          let canCreate = false
+          if (isOwner || isGlobalGuest || userRole === 'admin') {
+            canCreate = true
+          } else if (userRole === 'developer') {
+            const { data: projPerm } = await supabase
+              .from('workspace_member_projects')
+              .select('can_create')
+              .eq('project_id', proj.id)
+              .eq('user_id', userData.id)
+              .maybeSingle()
+            canCreate = projPerm?.can_create === true
+          }
+
+          if (!canCreate) {
+            toast('Você não tem permissão para acessar esta configuração.', 'error')
+            router.replace(`/admin/${workspace_slug}/${project_slug}/studio`)
+            return
+          }
+        }
+      } catch (err: any) {
+        console.error("Erro ao carregar dados do projeto em auth/page:", err)
+        toast('Erro ao carregar dados: ' + (err?.message || 'Erro inesperado'), 'error')
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
     }
 
     loadData()
+
+    return () => {
+      isMounted = false
+    }
   }, [project_slug, workspace_slug, supabase, router, toast])
 
   const executeTunnelQuery = useCallback((payload: any): Promise<any> => {
@@ -855,7 +895,7 @@ export default function AuthSettingsPage() {
             db_user_roles_role_id_column: authConfig.db_user_roles_role_id_column,
             db_display_name_column: authConfig.db_display_name_column
           }
-        })
+        }, { onConflict: 'project_id' })
 
       if (error) throw error
       setIsSuccess(true)
@@ -869,7 +909,16 @@ export default function AuthSettingsPage() {
     }
   }
 
-  if (isLoading) return <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">{t('common.loading')}...</div>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#050505] flex items-center justify-center text-neutral-900 dark:text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
+          <span className="text-sm font-semibold">{t('common.loading') || 'Carregando...'}</span>
+        </div>
+      </div>
+    )
+  }
 
   // Helper to get fields of selected table
   const selectedModel = models.find(m => m.db_table_name === authConfig.db_table_name)
@@ -955,10 +1004,12 @@ export default function AuthSettingsPage() {
         </div>
         {activeTab === 'permissions' ? (
           <div className="bg-white dark:bg-neutral-900/30 p-8 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm animate-in fade-in duration-300 pb-20">
-            <ProjectSecuritySettings 
-              project={project}
-              canEdit={true}
-            />
+            {project && (
+              <ProjectSecuritySettings 
+                project={project}
+                canEdit={true}
+              />
+            )}
           </div>
         ) : activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
