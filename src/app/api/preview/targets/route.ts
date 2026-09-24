@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/utils/supabase/server'
 
 export async function GET() {
   try {
+    // Requer sessão autenticada — lista todos os workspaces/projetos, não pode ser pública
+    const sessionClient = await createServerClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
 
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +8,13 @@ const REPO = 'metabuilder-pro'
 
 export async function GET() {
   try {
+    // Requer sessão autenticada — lista releases internos da plataforma
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const token = process.env.GITHUB_PAT
     if (!token) {
       return NextResponse.json({ error: 'GITHUB_PAT is missing' }, { status: 500 })

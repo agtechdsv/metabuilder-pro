@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 import * as esbuild from 'esbuild'
+import { createClient } from '@/utils/supabase/server'
 
 export async function POST(req: Request) {
   try {
+    // Requer sessão autenticada — compilador esbuild não deve ser público
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const { code } = await req.json()
 
     if (!code) {

@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import ws from 'ws'
 
 export async function GET(request: Request) {
   try {
+    // Requer sessão autenticada — download de arquivos não pode ser público
+    const sessionClient = await createServerClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return new NextResponse('Não autorizado', { status: 401 })
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
@@ -20,15 +28,20 @@ export async function GET(request: Request) {
       return new NextResponse('Missing jobId or projectId', { status: 400 })
     }
 
-    // 1. Validate Job and fetch original filename
+    // 1. Validate Job, fetch filename e verifica ownership
     const { data: job, error: jobError } = await supabase
       .from('download_jobs')
-      .select('file_name, local_path')
+      .select('file_name, local_path, user_id')
       .eq('id', jobId)
       .single()
 
     if (jobError || !job) {
       return new NextResponse('Job not found', { status: 404 })
+    }
+
+    // Garante que o job pertence ao usuário autenticado (IDOR fix)
+    if (job.user_id !== user.id) {
+      return new NextResponse('Não autorizado', { status: 403 })
     }
 
     const fileName = job.file_name || `export_${jobId}.csv`
@@ -131,3 +144,4 @@ export async function GET(request: Request) {
     return new NextResponse('Internal Server Error', { status: 500 })
   }
 }
+
