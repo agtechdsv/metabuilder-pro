@@ -239,8 +239,9 @@ export function RecordFormField(props: RecordFormFieldProps) {
       ['autocomplete', 'Autocomplete (Busca Dinâmica)', 'Autocomplete'].includes(fieldType) || 
       !!comp.rel_table;
 
+    const cleanCol = field.db_column_name ? field.db_column_name.split('.').pop() : undefined
     let options = isRelationalComp
-      ? (relationalOptions[field.id] || relationalOptions[field.db_column_name] || [])
+      ? (relationalOptions[field.id] || (field.db_column_name ? relationalOptions[field.db_column_name] : undefined) || (cleanCol ? relationalOptions[cleanCol] : undefined) || [])
       : parseFixedOptions(comp.fixed_options)
       
     if (comp.depends_on && comp.filter_column) {
@@ -308,11 +309,13 @@ export function RecordFormField(props: RecordFormFieldProps) {
                 className={cn(commonClasses, "resize-none")}
                 placeholder={mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name)}
               />
-            ) : ['select', 'Combo (Select)'].includes(fieldType) ? (
+            ) : ['select', 'Combo (Select)', 'Seleção (Dropdown)'].includes(fieldType) ? (
               <select
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
-                value={value}
+                value={
+                  options.find((opt: any) => String(opt.value ?? opt.id ?? '').toLowerCase() === String(value ?? '').toLowerCase())?.value ?? value
+                }
                 onChange={e => handleChange(e.target.value)}
                 style={inputStyle}
                 className={commonClasses}

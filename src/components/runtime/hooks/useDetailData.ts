@@ -231,7 +231,7 @@ export function useDetailData({
         }
         
         let detailData: any[] = []
-        if (project?.id && project.db_type !== 'postgres') {
+        if (project?.id && (project.db_type !== 'postgres' || tunnelChannel || isTunnelReady)) {
           try {
             detailData = await new Promise<any[]>((resolve, reject) => {
             const isTemporary = !tunnelChannel || !isTunnelReady
@@ -496,8 +496,9 @@ export function useDetailData({
 
     try {
       let result: { success: boolean; error?: string } = { success: false }
+      const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
 
-      if (project?.db_type === 'postgres') {
+      if (isEjectedApp) {
         const res = await fetch(`/api/${tableName}?id=${pkValue}`, { method: 'DELETE' })
         if (!res.ok) { 
           const err = await res.json()
@@ -734,7 +735,8 @@ export function useDetailData({
       }
 
       const sendWithRetry = async (): Promise<any> => {
-        if (project?.db_type === 'postgres') {
+        const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
+        if (isEjectedApp) {
           try {
             const method = action === 'edit' ? 'PUT' : 'POST'
             const payload = action === 'edit' ? { pkValue: dPkValue, data: sanitizedData } : sanitizedData
@@ -1016,7 +1018,8 @@ export function useDetailData({
           }
 
           if (sql) {
-            if (project?.db_type === 'postgres') {
+            const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
+            if (isEjectedApp) {
               const method = (!isNew && rowPkVal) ? 'PUT' : 'POST'
               const payload = method === 'PUT' ? { pkValue: rowPkVal, data: sanitized } : sanitized
               await fetch(`/api/${rowTable}`, {

@@ -170,15 +170,16 @@ export default function DynamicGrid({
             }
             
             // Resolve label if it is a relational combo
-            const comp = field.config?.grid_config?.component || field.config?.component || {}
+            const comp = field.config?.grid_config?.component || field.config?.form_config?.component || field.config?.component || {}
             let finalVal = rawVal
-            if (comp.type === 'select' || comp.type === 'Combo (Select)' || comp.options_type === 'relational') {
-               const opts = relationalOptions[field.id]
+            const isRelComp = comp.type === 'select' || comp.type === 'Combo (Select)' || comp.options_type === 'relational' || comp.options_type === 'enumeration'
+            if (isRelComp && relationalOptions) {
+               const cleanCol = field.db_column_name ? field.db_column_name.split('.').pop() : undefined
+               const opts = relationalOptions[field.id] || (field.db_column_name ? relationalOptions[field.db_column_name] : undefined) || (cleanCol ? relationalOptions[cleanCol] : undefined)
                if (opts && opts.length > 0) {
-                 // Convert both to string to avoid mismatch between number and string IDs
-                 const found = opts.find((o: any) => String(o.value) === String(rawVal))
+                 const found = opts.find((o: any) => String(o.value ?? o.id ?? o.ID ?? '').toLowerCase() === String(rawVal ?? '').toLowerCase())
                  if (found) {
-                   finalVal = found.label
+                   finalVal = found.label ?? found.name ?? found.nome ?? found.display_label
                  }
                }
             }

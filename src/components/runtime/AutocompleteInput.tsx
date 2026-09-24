@@ -165,7 +165,7 @@ export function AutocompleteInput({
       const limitNum = limit ? Number(limit) : 0
 
       // Caso 1: Projeto com Túnel ativo
-      if (projectId && project?.db_type !== 'postgres' && tunnelChannel && isTunnelReady) {
+      if (projectId && tunnelChannel && isTunnelReady) {
         const queryId = crypto.randomUUID()
         const schemaToUse = project ? getModelSchemaName(project, table) : 'public'
 

@@ -735,8 +735,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   );
                                 }
 
-                                if (['select', 'Combo (Select)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0) || (relationalOptions[field.db_column_name] && relationalOptions[field.db_column_name].length > 0)) {
-                                  let options = relationalOptions[field.id] || relationalOptions[field.db_column_name] || parseFixedOptions(fieldConfig.component?.fixed_options || fieldConfig.component?.options || fieldConfig.fixed_options || fieldConfig.options);
+                                if (['select', 'Combo (Select)', 'Seleção (Dropdown)'].includes(type) || (relationalOptions[field.id] && relationalOptions[field.id].length > 0) || (relationalOptions[field.db_column_name] && relationalOptions[field.db_column_name].length > 0)) {
+                                  const cleanCol = field.db_column_name ? field.db_column_name.split('.').pop() : undefined
+                                  let options = relationalOptions[field.id] || relationalOptions[field.db_column_name] || (cleanCol ? relationalOptions[cleanCol] : undefined) || parseFixedOptions(fieldConfig.component?.fixed_options || fieldConfig.component?.options || fieldConfig.fixed_options || fieldConfig.options);
                                   if (fieldConfig.component?.depends_on && fieldConfig.component?.filter_column) {
                                     const depName = fieldConfig.component.depends_on;
                                     const depBase = depName.split('.').pop() || depName;
@@ -753,7 +754,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   return (
                                     <div className="flex flex-col gap-1">
                                       <select
-                                        value={rawValue !== undefined && rawValue !== null ? String(rawValue) : ''}
+                                        value={
+                                          options.find((opt: any) => String(opt.value ?? opt.id ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.value ?? (rawValue !== undefined && rawValue !== null ? String(rawValue) : '')
+                                        }
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         disabled={isInlineDisabled}
                                         className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"

@@ -98,7 +98,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
       let data: any[] = []
 
-      if (projectId && project?.db_type !== 'postgres') {
+      if (projectId) {
         // Query via the secure data tunnel
         const queryId = crypto.randomUUID()
 
@@ -341,7 +341,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         const localVal = masterId
 
         let detailData: any[] = []
-        if (projectId && project?.db_type !== 'postgres') {
+        if (projectId) {
           const queryId = crypto.randomUUID()
           try {
             detailData = await new Promise<any[]>((resolve, reject) => {
@@ -536,10 +536,16 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         );
         if (isRelationalComp && comp.rel_table && comp.options_type !== 'enumeration') {
           try {
-            if (projectId && project?.db_type !== 'postgres') {
+            if (projectId) {
               const queryId = crypto.randomUUID()
-              const colsToSelect = Array.from(new Set([comp.rel_label, comp.rel_value, comp.filter_column].filter(Boolean))).join(', ')
-              const rawQuery = `SELECT ${colsToSelect} FROM ${comp.rel_table}`
+              const dbType = (project?.db_type || 'postgres').toLowerCase()
+              const isOracle = dbType === 'oracle'
+              const relLabel = isOracle ? comp.rel_label.toUpperCase() : comp.rel_label
+              const relVal = isOracle ? comp.rel_value.toUpperCase() : comp.rel_value
+              const filterCol = comp.filter_column ? (isOracle ? comp.filter_column.toUpperCase() : comp.filter_column) : null
+              const colsToSelect = Array.from(new Set([`"${relLabel}"`, `"${relVal}"`, filterCol ? `"${filterCol}"` : null].filter(Boolean))).join(', ')
+              const relTable = isOracle ? `"${comp.rel_table.toUpperCase()}"` : `"${comp.rel_table}"`
+              const rawQuery = `SELECT ${colsToSelect} FROM ${relTable}`
 
               const schemaToUse = getModelSchemaName(project, comp.rel_table)
               // console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
@@ -638,13 +644,18 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 newOptions[field.id] = mappedOpts
                 if (field.db_column_name) {
                   newOptions[field.db_column_name] = mappedOpts
+                  const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
+                  if (cleanCol) {
+                    newOptions[cleanCol] = mappedOpts
+                  }
                 }
                 // console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
               }
             } else {
               // Direct query or Postgres API fallback
               let relData = null
-              if (project?.db_type === 'postgres') {
+              const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
+              if (isEjectedApp) {
                  const res = await fetch(`/api/${comp.rel_table}?limit=1000`)
                  const json = await res.json()
                  if (json.data) relData = json.data
@@ -662,6 +673,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 newOptions[field.id] = mappedDirect
                 if (field.db_column_name) {
                   newOptions[field.db_column_name] = mappedDirect
+                  const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
+                  if (cleanCol) {
+                    newOptions[cleanCol] = mappedDirect
+                  }
                 }
               }
             }
@@ -838,7 +853,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
     
     // ======== BPM SYNC EVENT ========
     // Se o túnel estiver pronto e tivermos os dados necessários, disparamos o fluxo síncrono.
-    if (projectId && project?.db_type !== 'postgres' && tunnelChannel && isTunnelReady && masterModelName) {
+    if (projectId && tunnelChannel && isTunnelReady && masterModelName) {
       const eventType = mode === 'create' ? 'BEFORE_INSERT' : 'BEFORE_UPDATE';
       const queryId = crypto.randomUUID();
       

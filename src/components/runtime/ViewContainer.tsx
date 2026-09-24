@@ -245,6 +245,7 @@ export default function ViewContainer({
     isTunnelReady: isTunnelReady ?? false,
     filterFields,
     displayFields,
+    formFields,
     externalFilters,
     onFiltersChange,
     refreshTrigger,

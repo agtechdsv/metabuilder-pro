@@ -10,6 +10,7 @@ export function useViewFilters({
   isTunnelReady,
   filterFields,
   displayFields,
+  formFields = [],
   externalFilters,
   onFiltersChange,
   refreshTrigger,
@@ -23,6 +24,7 @@ export function useViewFilters({
   isTunnelReady: boolean
   filterFields: any[]
   displayFields: any[]
+  formFields?: any[]
   externalFilters: Record<string, string>
   onFiltersChange?: (filters: Record<string, string>) => void
   refreshTrigger: number
@@ -100,15 +102,15 @@ export function useViewFilters({
       // Mescla displayFields e filterFields garantindo que configurações de filtro ricas
       // (como enums e dropdowns) NUNCA sejam sobrescritas por campos brutos ou dummies da zona grid/kanban
       const fieldsMap = new Map<string, any>()
-      const allFields = [...(displayFields || []), ...(filterFields || [])]
+      const allFields = [...(displayFields || []), ...(filterFields || []), ...(formFields || [])]
       for (const f of allFields) {
         if (!f || !f.id) continue
         const existing = fieldsMap.get(f.id)
         if (!existing) {
           fieldsMap.set(f.id, f)
         } else {
-          const existingComp = existing.config?.filter_config?.component || existing.config?.component
-          const newComp = f.config?.filter_config?.component || f.config?.component
+          const existingComp = existing.config?.filter_config?.component || existing.config?.grid_config?.component || existing.config?.form_config?.component || existing.config?.component
+          const newComp = f.config?.filter_config?.component || f.config?.grid_config?.component || f.config?.form_config?.component || f.config?.component
           fieldsMap.set(f.id, {
             ...existing,
             ...f,
@@ -124,34 +126,45 @@ export function useViewFilters({
       const uniqueFields = Array.from(fieldsMap.values())
 
       for (const field of uniqueFields) {
-        const config = field.config?.filter_config || field.config?.grid_config || field.config
-        const comp = config?.component || field.config?.component
-        const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Autocomplete (Busca Dinâmica)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
+        const config = field.config?.filter_config || field.config?.grid_config || field.config?.form_config || field.config
+        const comp = config?.component || field.config?.component || field._injected_rel
+        const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Autocomplete (Busca Dinâmica)', 'Seleção (Dropdown)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
           try {
             let data: any[] = []
-            if (project?.db_type === 'postgres') {
+            const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true'
+
+            if (isEjectedApp) {
               const res = await fetch(`/api/${comp.rel_table}?limit=1000`)
               const json = await res.json()
               if (json.data) data = json.data
-            } else if (tunnelChannel && isTunnelReady) {
+            } else if (tunnelChannel || isTunnelReady || projectId) {
               const queryId = crypto.randomUUID()
-              const colsToSelect = Array.from(new Set([`"${comp.rel_label}"`, `"${comp.rel_value}"`, comp.filter_column ? `"${comp.filter_column}"` : null].filter(Boolean))).join(', ')
-              const rawQuery = `SELECT ${colsToSelect} FROM "${comp.rel_table}"`
+              const dbType = (project?.db_type || 'postgres').toLowerCase()
+              const isOracle = dbType === 'oracle'
+              const relLabel = isOracle ? comp.rel_label.toUpperCase() : comp.rel_label
+              const relVal = isOracle ? comp.rel_value.toUpperCase() : comp.rel_value
+              const filterCol = comp.filter_column ? (isOracle ? comp.filter_column.toUpperCase() : comp.filter_column) : null
+              const colsToSelect = Array.from(new Set([`"${relLabel}"`, `"${relVal}"`, filterCol ? `"${filterCol}"` : null].filter(Boolean))).join(', ')
+              const relTable = isOracle ? `"${comp.rel_table.toUpperCase()}"` : `"${comp.rel_table}"`
+              const rawQuery = `SELECT ${colsToSelect} FROM ${relTable}`
               const schemaToUse = getModelSchemaName(project, comp.rel_table)
+
+              const isTemp = !tunnelChannel || !isTunnelReady
+              const channel = isTemp ? supabaseClient.channel(`tunnel:${projectId}`) : tunnelChannel
 
               data = await new Promise<any[]>((resolve, reject) => {
                 let resolved = false
                 const cleanup = () => {
                   try {
-                    if (tunnelChannel.removeListener) {
-                      tunnelChannel.removeListener(`query_result_${queryId}`, handleResult)
-                      tunnelChannel.removeListener('sql_result', handleResult)
-                    }
-                    const bindings = tunnelChannel.bindings?.broadcast
+                    const bindings = channel.bindings?.broadcast
                     if (Array.isArray(bindings)) {
-                      tunnelChannel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+                      channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== handleResult)
+                    }
+                    if (isTemp) {
+                      channel.unsubscribe()
+                      supabaseClient.removeChannel(channel)
                     }
                   } catch (e) { }
                 }
@@ -165,10 +178,10 @@ export function useViewFilters({
                   }
                 }
 
-                tunnelChannel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
-                tunnelChannel.on('broadcast', { event: 'sql_result' }, handleResult)
+                channel.on('broadcast', { event: `query_result_${queryId}` }, handleResult)
+                channel.on('broadcast', { event: 'sql_result' }, handleResult)
 
-                tunnelChannel.send({
+                const sendPayload = {
                   type: 'broadcast',
                   event: 'sql_query',
                   payload: {
@@ -183,7 +196,17 @@ export function useViewFilters({
                     limit: 1000,
                     offset: 0
                   }
-                })
+                }
+
+                if (isTemp) {
+                  channel.subscribe((status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                      channel.send(sendPayload)
+                    }
+                  })
+                } else {
+                  channel.send(sendPayload)
+                }
 
                 setTimeout(() => {
                   if (!resolved) {
@@ -201,12 +224,30 @@ export function useViewFilters({
               if (directData) data = directData
             }
 
-            if (data) {
-              newOptions[field.id] = data.map((item: any) => ({
-                label: item[comp.rel_label] || item[comp.rel_label?.toLowerCase()] || item[comp.rel_label?.toUpperCase()],
-                value: item[comp.rel_value] || item[comp.rel_value?.toLowerCase()] || item[comp.rel_value?.toUpperCase()],
-                filter_value: comp.filter_column ? (item[comp.filter_column] || item[comp.filter_column?.toLowerCase()] || item[comp.filter_column?.toUpperCase()]) : undefined
-              }))
+            if (data && data.length > 0) {
+              const mappedOpts = data.map((item: any) => {
+                const getVal = (key: string) => {
+                  if (!key) return undefined
+                  const searchKey = key.includes('.') ? key.split('.').pop()! : key
+                  const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase())
+                  return foundKey ? item[foundKey] : undefined
+                }
+                return {
+                  label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
+                  value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
+                  filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
+                  ...item
+                }
+              })
+
+              newOptions[field.id] = mappedOpts
+              if (field.db_column_name) {
+                newOptions[field.db_column_name] = mappedOpts
+                const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
+                if (cleanCol) {
+                  newOptions[cleanCol] = mappedOpts
+                }
+              }
             }
           } catch (err) {
             console.error(`Error fetching relational options for field ${field.id}:`, err)

@@ -210,7 +210,7 @@ export function useMasterData({
           
           let result: { success: boolean; error?: string; data?: any[] } = { success: false }
           
-          if (project?.id && project?.db_type !== 'postgres') {
+          if (project?.id && (project?.db_type !== 'postgres' || tunnelChannel || isTunnelReady || project?.secret_token)) {
 
           result = await new Promise<{ success: boolean; error?: string; data?: any[] }>((resolve) => {
             const isTemp = !tunnelChannel || !isTunnelReady
