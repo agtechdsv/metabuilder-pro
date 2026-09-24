@@ -205,7 +205,17 @@ export default function ViewPageContent({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const search = new URLSearchParams(window.location.search)
-      const editId = search.get('edit_id')
+      const rawEditId = search.get('edit_id')
+
+      // Valida formato do edit_id: aceita UUID, inteiro positivo ou string alfanumérica simples
+      // Descarta qualquer valor malformado (ex: scripts, paths, injeções)
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const INT_RE = /^\d{1,20}$/
+      const ALNUM_RE = /^[a-zA-Z0-9_-]{1,128}$/
+      const editId = rawEditId && (UUID_RE.test(rawEditId) || INT_RE.test(rawEditId) || ALNUM_RE.test(rawEditId))
+        ? rawEditId
+        : null
+
       const force = search.get('force_form') === 'true' || (search.get('embedded') === 'true' && !!editId)
 
       if (editId) {
@@ -217,6 +227,7 @@ export default function ViewPageContent({
       }
     }
   }, [logicType])
+
 
   const [autoOpenSlotConfig, setAutoOpenSlotConfig] = useState<{ id: string; type: 'modal' | 'drawer' } | null>(null)
   const [iframeUrl, setIframeUrl] = useState<string>('')

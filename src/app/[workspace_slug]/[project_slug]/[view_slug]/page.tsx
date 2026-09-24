@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/utils/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { cookies, headers } from 'next/headers'
 import { Table, LayoutGrid, Plus, Search, Filter, AlertCircle } from 'lucide-react'
@@ -29,7 +30,13 @@ interface PageProps {
 export default async function SlugPage({ params, searchParams }: PageProps) {
   const { workspace_slug, project_slug, view_slug } = await params
   const search = await searchParams
-  const isPreview = search?.preview === 'draft'
+  // ?preview=draft só é ativado se o usuário for um admin autenticado no Supabase Studio
+  let isPreview = false
+  if (search?.preview === 'draft') {
+    const adminClient = await createServerClient()
+    const { data: { user: adminUser } } = await adminClient.auth.getUser()
+    isPreview = !!adminUser
+  }
 
   // Usamos a Service Role para resolver os slugs e metadados com bypass de RLS
   const supabase = createClient(
