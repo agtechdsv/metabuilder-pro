@@ -536,18 +536,44 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         if (idxB === -1) return -1
         return idxA - idxB
       })
-      .map((c: any) => ({
-        id: c.field.id,
-        model_id: c.field.model_id,
-        model_name: tableDictionary[c.field.model_id],
-        display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveResultKey(c.field),
-        sql_expression: resolveSqlExpression(c.field),
-        is_primary_key: c.field.is_primary_key,
-        data_type: c.field.data_type,
-        is_sortable: c.field.is_sortable,
-        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config
-      }))
+      .map((c: any) => {
+        const fieldBaseCfg = c.field.config || {}
+        const uiCompCfg = c.config || {}
+        let mergedConfig: any = Object.keys(uiCompCfg).length > 0
+          ? { ...fieldBaseCfg, ...uiCompCfg }
+          : fieldBaseCfg
+        // Deep-merge das sub-zonas para preservar component relacional do campo base
+        for (const zoneKey of ['grid_config', 'form_config', 'filter_config']) {
+          if (fieldBaseCfg[zoneKey] || uiCompCfg[zoneKey]) {
+            mergedConfig[zoneKey] = { ...(fieldBaseCfg[zoneKey] || {}), ...(uiCompCfg[zoneKey] || {}) }
+            if ((fieldBaseCfg[zoneKey]?.component || uiCompCfg[zoneKey]?.component) && !mergedConfig[zoneKey].component?.rel_table) {
+              mergedConfig[zoneKey].component = {
+                ...(fieldBaseCfg[zoneKey]?.component || {}),
+                ...(uiCompCfg[zoneKey]?.component || {})
+              }
+            }
+          }
+        }
+        // Preserva component de nível raiz
+        if ((fieldBaseCfg.component || uiCompCfg.component) && !mergedConfig.component?.rel_table) {
+          mergedConfig.component = {
+            ...(fieldBaseCfg.component || {}),
+            ...(uiCompCfg.component || {})
+          }
+        }
+        return {
+          id: c.field.id,
+          model_id: c.field.model_id,
+          model_name: tableDictionary[c.field.model_id],
+          display_name: c.label || c.field.display_name || c.field.db_column_name,
+          db_column_name: resolveResultKey(c.field),
+          sql_expression: resolveSqlExpression(c.field),
+          is_primary_key: c.field.is_primary_key,
+          data_type: c.field.data_type,
+          is_sortable: c.field.is_sortable,
+          config: mergedConfig
+        }
+      })
 
     // Extrai os campos do Formulário (Zona Form)
     const formFields = allComponents
@@ -560,18 +586,44 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         if (idxB === -1) return -1
         return idxA - idxB
       })
-      .map((c: any) => ({
-        id: c.field.id,
-        model_id: c.field.model_id,
-        model_name: tableDictionary[c.field.model_id],
-        display_name: c.label || c.field.display_name || c.field.db_column_name,
-        db_column_name: resolveResultKey(c.field),
-        sql_expression: resolveSqlExpression(c.field),
-        data_type: c.field.data_type,
-        is_primary_key: c.field.is_primary_key,
-        config: Object.keys(c.config || {}).length > 0 ? { ...(c.field.config || {}), ...(c.config || {}) } : c.field.config,
-        zone: 3
-      }))
+      .map((c: any) => {
+        const fieldBaseCfg = c.field.config || {}
+        const uiCompCfg = c.config || {}
+        let mergedConfig: any = Object.keys(uiCompCfg).length > 0
+          ? { ...fieldBaseCfg, ...uiCompCfg }
+          : fieldBaseCfg
+        // Deep-merge das sub-zonas para preservar component relacional do campo base
+        for (const zoneKey of ['form_config', 'grid_config', 'filter_config']) {
+          if (fieldBaseCfg[zoneKey] || uiCompCfg[zoneKey]) {
+            mergedConfig[zoneKey] = { ...(fieldBaseCfg[zoneKey] || {}), ...(uiCompCfg[zoneKey] || {}) }
+            if ((fieldBaseCfg[zoneKey]?.component || uiCompCfg[zoneKey]?.component) && !mergedConfig[zoneKey].component?.rel_table) {
+              mergedConfig[zoneKey].component = {
+                ...(fieldBaseCfg[zoneKey]?.component || {}),
+                ...(uiCompCfg[zoneKey]?.component || {})
+              }
+            }
+          }
+        }
+        // Preserva component de nível raiz
+        if ((fieldBaseCfg.component || uiCompCfg.component) && !mergedConfig.component?.rel_table) {
+          mergedConfig.component = {
+            ...(fieldBaseCfg.component || {}),
+            ...(uiCompCfg.component || {})
+          }
+        }
+        return {
+          id: c.field.id,
+          model_id: c.field.model_id,
+          model_name: tableDictionary[c.field.model_id],
+          display_name: c.label || c.field.display_name || c.field.db_column_name,
+          db_column_name: resolveResultKey(c.field),
+          sql_expression: resolveSqlExpression(c.field),
+          data_type: c.field.data_type,
+          is_primary_key: c.field.is_primary_key,
+          config: mergedConfig,
+          zone: 3
+        }
+      })
 
     // Inject Virtual and BYOC Fields into Grid
     gridFieldsOrder.filter((id: string) => id.startsWith('virt_') || id.startsWith('byoc_')).forEach((id: string) => {
