@@ -1,3 +1,4 @@
+import { createClient as createSupabaseServerClient } from '@/utils/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { executeExportBackground } from '@/utils/export/worker'
@@ -37,10 +38,18 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
 export async function POST(request: Request) {
   try {
     const supabase = getSupabase()
+
+    // Extrai userId da sessão — nunca confia no body
+    const sessionClient = await createSupabaseServerClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+    const userId = user.id
+
     const body = await request.json()
     const {
       projectId,
-      userId,
       workspaceSlug,
       viewName,
       modelName,
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
       recordId = null
     } = body
 
-    if (!projectId || !userId || !workspaceSlug || !viewName || !modelName || !fileType || !columnsList) {
+    if (!projectId || !workspaceSlug || !viewName || !modelName || !fileType || !columnsList) {
       return NextResponse.json(
         { error: 'Parâmetros incompletos para a exportação' },
         { status: 400 }
@@ -97,7 +106,7 @@ export async function POST(request: Request) {
     const jobId = jobData.id
     console.log(`[Export API] Registered Job ${jobId} (pending). Launching background execution...`)
 
-    // 2. Fire and forget background execution (awaited to prevent Vercel suspension)
+    // 2. Fire and forget background execution
     await executeExportBackground({
       jobId,
       projectId,
@@ -138,15 +147,17 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const supabase = getSupabase()
-    const body = await request.json()
-    const { userId, jobId, clearAll, projectId, cleanup } = body
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
+    // Extrai userId da sessão — nunca confia no body
+    const sessionClient = await createSupabaseServerClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
+    const userId = user.id
+
+    const body = await request.json()
+    const { jobId, clearAll, projectId, cleanup } = body
 
     // --- CASE 1: Expired jobs cleanup ---
     if (cleanup) {
@@ -156,7 +167,6 @@ export async function DELETE(request: Request) {
       let totalCleaned = 0
 
       for (const project of (projects || [])) {
-        // Se for null/vazio, significa que nunca deve apagar automaticamente
         if (project.download_retention_hours === null) continue
 
         const retentionMs = project.download_retention_hours * 60 * 60 * 1000
@@ -180,7 +190,6 @@ export async function DELETE(request: Request) {
             await broadcastDelete(project.id, localPaths)
           }
 
-          // Delete from database
           const ids = expiredJobs.map((j: any) => j.id)
           const { error: deleteError } = await supabase
             .from('download_jobs')
@@ -201,7 +210,6 @@ export async function DELETE(request: Request) {
 
     // --- CASE 2: Single job deletion ---
     if (jobId) {
-      // Find the job to get the file_name
       const { data: job, error: fetchError } = await supabase
         .from('download_jobs')
         .select('*')
@@ -215,7 +223,7 @@ export async function DELETE(request: Request) {
         )
       }
 
-      // Check authorization
+      // Verifica autorização usando userId da sessão (não do body)
       if (job.user_id !== userId) {
         return NextResponse.json(
           { error: 'Unauthorized' },
@@ -223,12 +231,10 @@ export async function DELETE(request: Request) {
         )
       }
 
-      // Broadcast deletion to local agent
       if (job.local_path) {
         await broadcastDelete(job.project_id, [job.local_path])
       }
 
-      // Delete database record
       const { error: deleteError } = await supabase
         .from('download_jobs')
         .delete()
@@ -243,7 +249,6 @@ export async function DELETE(request: Request) {
 
     // --- CASE 3: Clear all completed/failed history for project ---
     if (clearAll && projectId) {
-      // Find all completed/failed jobs for this user and project
       const { data: jobsToDelete, error: fetchError } = await supabase
         .from('download_jobs')
         .select('*')
@@ -258,12 +263,10 @@ export async function DELETE(request: Request) {
       if (jobsToDelete && jobsToDelete.length > 0) {
         const localPaths = jobsToDelete.map((j: any) => j.local_path).filter(Boolean)
 
-        // Broadcast deletion
         if (localPaths.length > 0) {
           await broadcastDelete(projectId, localPaths)
         }
 
-        // Remove from database
         const ids = jobsToDelete.map((j: any) => j.id)
         const { error: deleteError } = await supabase
           .from('download_jobs')
@@ -294,11 +297,18 @@ export async function GET(request: Request) {
     const supabase = getSupabase()
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
-    const userId = searchParams.get('userId')
 
-    if (!projectId || !userId) {
+    if (!projectId) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
     }
+
+    // Extrai userId da sessão — nunca do query param
+    const sessionClient = await createSupabaseServerClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+    const userId = user.id
 
     const { data, error } = await supabase
       .from('download_jobs')

@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
+import { createClient } from '@/utils/supabase/server'
 
 export async function POST(request: Request) {
   try {
+    // Requer sessão autenticada — impede abuso como proxy de hash público
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const { text, type } = await request.json()
 
     if (!text || !type) {
@@ -30,3 +38,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+

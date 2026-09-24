@@ -2,16 +2,26 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { createClient } from '@/utils/supabase/server';
 
 // Usamos uma variável global no Node.js para manter o processo do túnel
-// Isso garante que se houver reload na API (em dev), o processo original pode se perder da memória,
-// mas em produção o estado se mantém. 
 let tunnelProcess: any = null;
 
 const CLI_PATH = path.join(process.cwd(), 'cli', 'cli-win.exe');
 
+// Valores permitidos para argumentos do CLI (whitelist)
+const ALLOWED_MODES = ['1', '2', '3'];
+const ALLOWED_LANGS = ['pt', 'en', 'es'];
+
 export async function POST(req: Request) {
   try {
+    // Requer sessão autenticada
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Não autorizado' }, { status: 401 });
+    }
+
     const { action, mode, lang } = await req.json();
 
     if (action === 'start') {
@@ -23,12 +33,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, message: 'Executável do CLI não encontrado na pasta cli/' }, { status: 404 });
       }
 
-      // Executa o CLI em background (detached) ou atrelado a este processo.
-      // Vamos atrelar para podermos dar kill.
-      const args = ['--mode', String(mode || 1)];
+      // Sanitiza argumentos via whitelist (previne command injection)
+      const safeMode = ALLOWED_MODES.includes(String(mode)) ? String(mode) : '1';
+      const args = ['--mode', safeMode];
       if (lang) {
-        args.push(`--lang=${lang}`);
+        const safeLang = ALLOWED_LANGS.includes(String(lang)) ? String(lang) : 'pt';
+        args.push(`--lang=${safeLang}`);
       }
+
       tunnelProcess = spawn(CLI_PATH, args, {
         cwd: path.join(process.cwd(), 'cli')
       });
@@ -38,13 +50,11 @@ export async function POST(req: Request) {
         tunnelProcess = null;
       });
 
-      // Se der erro ao iniciar
       tunnelProcess.on('error', (err: any) => {
         console.error('Falha ao iniciar o CLI:', err);
         tunnelProcess = null;
       });
 
-      // Opcional: printar stdout/stderr no console local para debug
       tunnelProcess.stdout?.on('data', (data: Buffer) => {
         console.log(`[CLI]: ${data.toString().trim()}`);
       });
@@ -60,7 +70,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, message: 'Nenhum túnel rodando no momento.' }, { status: 400 });
       }
 
-      // Mata o processo
       tunnelProcess.kill('SIGINT');
       tunnelProcess = null;
 
@@ -79,3 +88,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Erro ao controlar o processo do túnel' }, { status: 500 });
   }
 }
+
