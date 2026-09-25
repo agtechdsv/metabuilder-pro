@@ -146,7 +146,13 @@ export function RecordFormField(props: RecordFormFieldProps) {
     let value = rawValue
 
     const zoneConfig = field.config?.form_config || field.config || {}
-    const comp = zoneConfig.component || { type: 'text' }
+    // Busca o component em todas as zonas — form_config pode existir sem component
+    const comp = field.config?.form_config?.component ||
+      field.config?.grid_config?.component ||
+      field.config?.filter_config?.component ||
+      field.config?.component ||
+      zoneConfig.component ||
+      { type: 'text' }
     const fieldType = comp.type || 'text'
     let width = isPageMode ? (comp.width || '100%') : (comp.modalWidth || comp.width || '100%')
 

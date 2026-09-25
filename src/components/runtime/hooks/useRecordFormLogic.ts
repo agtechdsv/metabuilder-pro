@@ -527,7 +527,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       // console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
 
       for (const field of fieldsToFetch) {
-        const comp = field._injected_rel || field.config?.form_config?.component || field.config?.component || field.widget_options?.component;
+        // Busca o componente em TODAS as zonas de config — não parar na primeira zona que existir
+        // pois form_config pode ter label/content mas não ter component definido.
+        // Ordem: _injected_rel > form_config > grid_config > filter_config > raiz > widget
+        const comp = field._injected_rel ||
+          field.config?.form_config?.component ||
+          field.config?.grid_config?.component ||
+          field.config?.filter_config?.component ||
+          field.config?.component ||
+          field.widget_options?.component;
         const isRelationalComp = comp && (
            comp.rel_table || 
            (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group', 'Autocomplete (Busca Dinâmica)'].includes(comp.type)) || 

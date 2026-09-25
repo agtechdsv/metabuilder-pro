@@ -126,8 +126,16 @@ export function useViewFilters({
       const uniqueFields = Array.from(fieldsMap.values())
 
       for (const field of uniqueFields) {
-        const config = field.config?.filter_config || field.config?.grid_config || field.config?.form_config || field.config
-        const comp = config?.component || field.config?.component || field._injected_rel
+        // Busca o componente em TODAS as zonas — não para na primeira zona que existir,
+        // pois grid_config pode existir sem componente (só com content/label).
+        // Ordem de prioridade: filter_config > form_config > grid_config > raiz
+        const comp =
+          field.config?.filter_config?.component ||
+          field.config?.form_config?.component ||
+          field.config?.grid_config?.component ||
+          field.config?.component ||
+          field._injected_rel
+        const config = field.config?.filter_config || field.config?.form_config || field.config?.grid_config || field.config
         const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Autocomplete (Busca Dinâmica)', 'Seleção (Dropdown)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         
         if (isRelationalComp && comp.options_type === 'relational' && comp.rel_table) {
