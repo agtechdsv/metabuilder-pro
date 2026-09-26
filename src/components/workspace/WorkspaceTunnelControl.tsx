@@ -164,10 +164,28 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     const isDesktop = isTauri()
     setIsDesktopEnv(isDesktop)
 
+    checkStatus()
+
+    let bc: BroadcastChannel | null = null
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      bc = new BroadcastChannel('metabuilder-tunnel-sync')
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'STATUS_CHANGE') {
+          setTunnelStatus(event.data.status)
+        }
+      }
+    }
+
     if (isDesktop) {
-      checkStatus()
       const interval = setInterval(checkStatus, 5000)
-      return () => clearInterval(interval)
+      return () => {
+        if (bc) bc.close()
+        clearInterval(interval)
+      }
+    }
+
+    return () => {
+      if (bc) bc.close()
     }
   }, [])
 
@@ -265,6 +283,16 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     }
   }
 
+  const broadcastTunnelStatus = (status: 'stopped' | 'running') => {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel('metabuilder-tunnel-sync')
+        bc.postMessage({ type: 'STATUS_CHANGE', status })
+        bc.close()
+      } catch (_) {}
+    }
+  }
+
   const handleProcessControl = async (action: 'start' | 'stop', mode?: number) => {
     setTunnelStatus('loading')
     try {
@@ -273,6 +301,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         if (action === 'stop') {
           await invoke('stopcli')
           toast(t('workspace_components.tunnel_control.process_stopped_success', 'Processo parado com sucesso'), 'success')
+          broadcastTunnelStatus('stopped')
         } else {
           const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
           const dir = await appLocalDataDir()
@@ -284,6 +313,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             lang: language,
           })
           toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success')
+          broadcastTunnelStatus('running')
         }
         checkStatus()
         return
@@ -299,8 +329,10 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       if (data.success) {
         if (action === 'start') {
           toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success')
+          broadcastTunnelStatus('running')
         } else if (action === 'stop') {
           toast(t('workspace_components.tunnel_control.tunnel_stopped_success', 'Túnel parado com sucesso'), 'success')
+          broadcastTunnelStatus('stopped')
         } else {
           toast(data.message, 'success')
         }

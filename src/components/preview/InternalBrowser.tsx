@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban } from 'lucide-react'
+import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban, Play, Square } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n'
+import { useTunnelControl } from '@/hooks/useTunnelControl'
 import {
   DndContext,
   closestCenter,
@@ -60,6 +62,9 @@ export function InternalBrowser({
   const searchParams = useSearchParams()
   const initialUrl = propUrl || searchParams?.get('url') || ''
   const initialTitle = propTitle || searchParams?.get('title') || 'Aplicação'
+
+  const { t } = useI18n()
+  const { tunnelStatus, isActionLoading, toggleTunnel } = useTunnelControl()
 
   const [tabs, setTabs] = useState<PreviewTab[]>(() => {
     if (initialUrl) {
@@ -686,6 +691,35 @@ export function InternalBrowser({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Botão Start / Stop Tunnel */}
+          <button
+            type="button"
+            onClick={toggleTunnel}
+            disabled={tunnelStatus === 'loading' || isActionLoading}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${
+              tunnelStatus === 'loading' || isActionLoading
+                ? 'text-neutral-500 hover:bg-neutral-800 cursor-wait'
+                : tunnelStatus === 'running'
+                ? 'text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95'
+                : 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 active:scale-95'
+            }`}
+            title={
+              tunnelStatus === 'loading' || isActionLoading
+                ? t('workspace_components.tunnel_control.status_loading', 'Verificando...')
+                : tunnelStatus === 'running'
+                ? t('workspace_components.tunnel_control.stop_tunnel', 'Parar Túnel')
+                : t('workspace_components.tunnel_control.start_tunnel', 'Iniciar Túnel')
+            }
+          >
+            {tunnelStatus === 'loading' || isActionLoading ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-neutral-400" />
+            ) : tunnelStatus === 'running' ? (
+              <Square className="w-4 h-4 fill-rose-500" />
+            ) : (
+              <Play className="w-4 h-4 fill-emerald-500 ml-0.5" />
+            )}
+          </button>
+
           <button
             onClick={handleOpenDevTools}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-neutral-800 transition-colors"
