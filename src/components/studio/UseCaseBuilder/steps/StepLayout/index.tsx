@@ -702,10 +702,15 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
       const newMeta = { ...currentFieldMeta } // current meta being edited
       newMeta[section] = { ...newMeta[section], [key]: value }
 
-      // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
-      newFieldsMetadata[editingFieldId] = newMeta
+      // Merge the new property deeply with what already exists in the base config, so we don't wipe it
+      const existingBaseMeta = newFieldsMetadata[editingFieldId] || { label: {}, component: { type: 'text' } }
+      const newBaseMeta = { ...existingBaseMeta }
+      newBaseMeta[section] = { ...(existingBaseMeta[section] || {}), [key]: value }
 
-      // 2. Atualizar as zonas existentes
+      // 1. Atualizar a chave base (para servir de herança quando arrastar para uma nova zona)
+      newFieldsMetadata[editingFieldId] = newBaseMeta
+
+      // 2. Atualizar as zonas existentes e a zona atual
       const zones = ['form', 'grid', 'filter']
       zones.forEach(z => {
         const zKey = `${z}-${editingFieldId}`

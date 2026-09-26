@@ -170,9 +170,15 @@ export default function DynamicGrid({
             }
             
             // Resolve label if it is a relational combo
-            const comp = field.config?.grid_config?.component || field.config?.form_config?.component || field.config?.component || field._injected_rel || {}
+            // Deep merge to ensure if grid_config lacks rel_table but form_config has it, we still identify it as relational
+            const comp = {
+              ...(field.config?.component || {}),
+              ...(field.config?.form_config?.component || {}),
+              ...(field.config?.grid_config?.component || {}),
+              ...(field._injected_rel || {})
+            }
             let finalVal = rawVal
-            const isRelComp = comp.type === 'select' || comp.type === 'Combo (Select)' || comp.options_type === 'relational' || comp.options_type === 'enumeration' || field._injected_rel
+            const isRelComp = comp.type === 'select' || comp.type === 'Combo (Select)' || comp.type === 'Seleção (Dropdown)' || comp.options_type === 'relational' || comp.options_type === 'enumeration' || !!field._injected_rel
             if (isRelComp && relationalOptions) {
                const cleanCol = field.db_column_name ? field.db_column_name.split('.').pop() : undefined
                const opts = relationalOptions[field.id] || (field.db_column_name ? relationalOptions[field.db_column_name] : undefined) || (cleanCol ? relationalOptions[cleanCol] : undefined)

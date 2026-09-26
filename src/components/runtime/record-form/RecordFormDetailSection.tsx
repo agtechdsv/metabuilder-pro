@@ -574,7 +574,14 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                 const fieldConfigRaw = field.config?.form_config || field.config || {};
                                 const fieldConfig = {
                                   ...fieldConfigRaw,
-                                  component: field.config?.form_config?.component || field.config?.grid_config?.component || field.config?.filter_config?.component || field.config?.component || field._injected_rel || {}
+                                  component: {
+                                    type: 'text',
+                                    ...(field.config?.component || {}),
+                                    ...(field.config?.filter_config?.component || {}),
+                                    ...(field.config?.grid_config?.component || {}),
+                                    ...(field.config?.form_config?.component || {}),
+                                    ...(field._injected_rel || {})
+                                  }
                                 };
                                 const type = fieldConfig.component?.type || 'text';
                                 const maskStr = fieldConfig.content?.mask;
