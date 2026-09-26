@@ -130,10 +130,10 @@ export const formatFieldValue = (
 
   if (!field) return displayVal;
 
-  const comp = zoneConfig?.component || field?.config?.grid_config?.component || field?.config?.form_config?.component || field?.config?.component || {}
+  const comp = zoneConfig?.component || field?.config?.grid_config?.component || field?.config?.form_config?.component || field?.config?.component || field?._injected_rel || {}
   
   // 1. Resolve Relational Labels (Enumerations, Relational)
-  const isRelComp = ['select', 'radio', 'checkbox', 'Combo (Select)', 'Seleção (Dropdown)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration'
+  const isRelComp = ['select', 'radio', 'checkbox', 'Combo (Select)', 'Seleção (Dropdown)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration' || !!field?._injected_rel
     
   if (isRelComp && relationalOptions) {
     const cleanCol = field.db_column_name ? field.db_column_name.split('.').pop() : undefined

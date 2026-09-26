@@ -152,6 +152,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
       field.config?.filter_config?.component ||
       field.config?.component ||
       zoneConfig.component ||
+      field._injected_rel ||
       { type: 'text' }
     const fieldType = comp.type || 'text'
     let width = isPageMode ? (comp.width || '100%') : (comp.modalWidth || comp.width || '100%')
@@ -320,16 +321,19 @@ export function RecordFormField(props: RecordFormFieldProps) {
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
                 value={
-                  options.find((opt: any) => String(opt.value ?? opt.id ?? '').toLowerCase() === String(value ?? '').toLowerCase())?.value ?? value
+                  options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(value ?? '').toLowerCase())?.value ?? 
+                  options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(value ?? '').toLowerCase())?.id ?? value
                 }
                 onChange={e => handleChange(e.target.value)}
                 style={inputStyle}
                 className={commonClasses}
               >
                 <option value="">{t('common.select', 'Selecione...')}</option>
-                {options.map((opt: any, i: number) => (
-                  <option key={i} value={opt.value}>{opt.label}</option>
-                ))}
+                {options.map((opt: any, i: number) => {
+                  const optVal = opt.value ?? opt.id ?? opt.ID ?? '';
+                  const optLabel = opt.label ?? opt.name ?? opt.nome ?? opt.titulo ?? String(optVal);
+                  return <option key={i} value={optVal}>{optLabel}</option>
+                })}
               </select>
             ) : ['autocomplete', 'Autocomplete (Busca Dinâmica)', 'Autocomplete'].includes(fieldType) ? (
               <AutocompleteInput

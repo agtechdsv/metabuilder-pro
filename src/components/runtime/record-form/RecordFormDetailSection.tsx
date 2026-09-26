@@ -571,7 +571,11 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   return '';
                                 })();
 
-                                const fieldConfig = field.config?.form_config || field.config || {};
+                                const fieldConfigRaw = field.config?.form_config || field.config || {};
+                                const fieldConfig = {
+                                  ...fieldConfigRaw,
+                                  component: field.config?.form_config?.component || field.config?.grid_config?.component || field.config?.filter_config?.component || field.config?.component || field._injected_rel || {}
+                                };
                                 const type = fieldConfig.component?.type || 'text';
                                 const maskStr = fieldConfig.content?.mask;
                                 const isDateType = type === 'date' || type === 'datetime-local' || type === 'datetime' || type === 'time';
@@ -755,16 +759,19 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     <div className="flex flex-col gap-1">
                                       <select
                                         value={
-                                          options.find((opt: any) => String(opt.value ?? opt.id ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.value ?? (rawValue !== undefined && rawValue !== null ? String(rawValue) : '')
+                                          options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.value ?? 
+                                          options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.id ?? (rawValue !== undefined && rawValue !== null ? String(rawValue) : '')
                                         }
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         disabled={isInlineDisabled}
                                         className="w-full px-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm text-neutral-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
                                         <option value="">Selecione...</option>
-                                        {options.map((opt: any) => (
-                                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
+                                        {options.map((opt: any, i: number) => {
+                                          const optVal = opt.value ?? opt.id ?? opt.ID ?? '';
+                                          const optLabel = opt.label ?? opt.name ?? opt.nome ?? opt.titulo ?? String(optVal);
+                                          return <option key={i} value={optVal}>{optLabel}</option>
+                                        })}
                                       </select>
                                     </div>
                                   );
