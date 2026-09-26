@@ -502,7 +502,17 @@ export function StudioDashboardClient({
           if (fid.startsWith('virt_') || fid.startsWith('byoc_')) return
           const zoneMeta = draftMeta[`${zone}-${fid}`]
           const globalMeta = draftMeta[fid] || {}
-          const metadata = zoneMeta || globalMeta
+          // Always merge global meta into zone meta so relational component config is never lost
+          const metadata = zoneMeta
+            ? {
+                ...globalMeta,
+                ...zoneMeta,
+                component: {
+                  ...(globalMeta.component || {}),
+                  ...(zoneMeta.component || {})
+                }
+              }
+            : globalMeta
           const labelText = metadata.label?.text || fid
           if (!componentMap[fid]) {
             componentMap[fid] = {
@@ -516,6 +526,10 @@ export function StudioDashboardClient({
           } else {
             if (!componentMap[fid].config.zones.includes(zone)) componentMap[fid].config.zones.push(zone)
             componentMap[fid].config[`${zone}_config`] = metadata
+            // Also propagate component config to base level if relational and missing
+            if (!componentMap[fid].config.component?.rel_table && metadata.component?.rel_table) {
+              componentMap[fid].config.component = { ...(componentMap[fid].config.component || {}), ...metadata.component }
+            }
             if (zone === 'form' && metadata.label?.text) componentMap[fid].label = metadata.label.text
           }
         }
