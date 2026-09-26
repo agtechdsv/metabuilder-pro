@@ -141,7 +141,13 @@ export function UseCaseBuilderWizard({
 
   const nextStep = () => {
     if (!isStepValid(currentStep)) {
-      if (currentStep === 1) toast(t('wizard.buttons.validation.name_slug_required'), 'error')
+      if (currentStep === 1) {
+        if (!config.name || !config.slug) {
+          toast(t('wizard.buttons.validation.name_slug_required'), 'error')
+        } else if (!config.logic_type) {
+          toast('Por favor, selecione uma lógica para o caso de uso.', 'error')
+        }
+      }
       if (currentStep === 2 && config.selected_models.length < 1) { toast(t('dashboard.projects.studio.config.db_fields_desc').replace('{table}', ''), 'error'); return }
       if (currentStep === 3) {
         const { logic_type, has_arguments, layout_config } = config
