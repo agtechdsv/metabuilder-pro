@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { cn } from '@/lib/utils'
+import { WorkspaceProjectCombo } from '@/components/layout/WorkspaceProjectCombo'
 
 interface NavbarProps {
   user: any // Supabase user object
@@ -509,6 +510,8 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
             )}
           </div>
           
+          <WorkspaceProjectCombo user={user} />
+
           <div className="flex items-center gap-3 md:gap-4">
             <HeaderActions user={user} profile={profile} />
             {showLogin && !user && (
