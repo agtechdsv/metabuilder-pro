@@ -123,7 +123,7 @@ export function InternalBrowser({
   const openNewTab = (targetUrl: string, targetTitle: string) => {
     if (!targetUrl) return
     setTabs(prev => {
-      const exists = prev.find(t => t.url === targetUrl || t.title === targetTitle)
+      const exists = prev.find(t => t.url === targetUrl)
       if (exists) {
         setActiveTabId(exists.id)
         setLoadingTabs(current => new Set([...current, exists.id]))
@@ -147,13 +147,24 @@ export function InternalBrowser({
   // Cross-window and Tauri communication
   useEffect(() => {
     let bc: BroadcastChannel | null = null
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      bc = new BroadcastChannel('metabuilder-preview-channel')
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'OPEN_TAB') {
-          openNewTab(event.data.url, event.data.title)
+    const handleCustomEvent = (e: CustomEvent) => {
+      if (e.detail?.url) {
+        openNewTab(e.detail.url, e.detail.title || 'Aplicação')
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      if ('BroadcastChannel' in window) {
+        bc = new BroadcastChannel('metabuilder-preview-channel')
+        bc.onmessage = (event) => {
+          if (event.data?.type === 'OPEN_TAB') {
+            openNewTab(event.data.url, event.data.title)
+          }
         }
       }
+
+      // Listener for same-window events
+      window.addEventListener('metabuilder-open-tab', handleCustomEvent as EventListener)
     }
 
     let unlistenTauri: (() => void) | null = null
@@ -173,6 +184,9 @@ export function InternalBrowser({
     return () => {
       if (bc) bc.close()
       if (unlistenTauri) unlistenTauri()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('metabuilder-open-tab', handleCustomEvent as EventListener)
+      }
     }
   }, [])
 

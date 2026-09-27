@@ -99,7 +99,15 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     }
 
     // Web fallback
-    openInternalModal(targetUrl, targetTitle)
+    if (isOpen) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('metabuilder-open-tab', { 
+          detail: { url: targetUrl, title: targetTitle } 
+        }))
+      }
+    } else {
+      openInternalModal(targetUrl, targetTitle)
+    }
   }
 
   return (
