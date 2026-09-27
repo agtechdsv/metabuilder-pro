@@ -77,7 +77,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
 
   const handleToggle = () => setIsOpen(!isOpen)
 
-  if (!user || (!currentWorkspace && !isLoading)) return null // Só exibe se logado ou se tiver carregado e não achou contexto, mas a ui fica feia? Melhor exibir sempre se logado
+  if (!user) return null
 
   return (
     <div className="relative z-50 flex items-center justify-center flex-1 mx-8" ref={dropdownRef}>
@@ -93,12 +93,12 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
         <div className="flex flex-col items-start mr-2">
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none mb-0.5">
             <Briefcase className="w-3 h-3" />
-            {currentWorkspace?.name || 'Workspace'}
+            {currentWorkspace?.name || 'Home'}
           </div>
           <div className="flex items-center gap-1.5 text-sm font-black text-neutral-800 dark:text-neutral-200 leading-none">
             <Boxes className="w-3.5 h-3.5 text-indigo-500" />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate max-w-[200px]">
-              {currentProject?.name || 'Selecione um Projeto...'}
+              {currentProject?.name || 'Navegue para...'}
             </span>
           </div>
         </div>
