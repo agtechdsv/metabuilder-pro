@@ -84,7 +84,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
       <button
         onClick={handleToggle}
         className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 group hover:shadow-md",
+          "flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 group hover:shadow-md w-[480px]",
           isOpen
             ? "bg-indigo-50/80 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800/60 shadow-inner"
             : "bg-white/50 border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900/50 dark:border-neutral-800 dark:hover:bg-neutral-800/70"
