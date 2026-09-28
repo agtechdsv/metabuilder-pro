@@ -25,7 +25,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const router = useRouter()
@@ -33,13 +33,13 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
   useEffect(() => {
     const fetchContext = async () => {
       const supabase = createClient()
-      
+
       const { data: wData } = await supabase.from('workspaces').select('id, name, slug').order('name')
       if (wData) setWorkspaces(wData)
-        
+
       const { data: pData } = await supabase.from('projects').select('id, workspace_id, name, slug').order('name')
       if (pData) setProjects(pData)
-        
+
       setIsLoading(false)
     }
     fetchContext()
@@ -60,7 +60,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
   const parts = pathname?.split('/').filter(Boolean) || []
   let currentWorkspaceSlug = null
   let currentProjectSlug = null
-  
+
   if (parts[0] === 'admin' && parts.length > 1) {
     currentWorkspaceSlug = parts[1]
     if (parts.length > 2 && parts[2] !== 'settings' && parts[2] !== 'platform') {
@@ -81,12 +81,12 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
 
   return (
     <div className="relative z-50 flex items-center justify-center flex-1 mx-8" ref={dropdownRef}>
-      <button 
+      <button
         onClick={handleToggle}
         className={cn(
           "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 group hover:shadow-md",
-          isOpen 
-            ? "bg-indigo-50/80 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800/60 shadow-inner" 
+          isOpen
+            ? "bg-indigo-50/80 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800/60 shadow-inner"
             : "bg-white/50 border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-900/50 dark:border-neutral-800 dark:hover:bg-neutral-800/70"
         )}
       >
@@ -97,7 +97,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
           </div>
           <div className="flex items-center gap-1.5 text-sm font-black text-neutral-800 dark:text-neutral-200 leading-none">
             <Boxes className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate max-w-[200px]">
+            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate max-w-[300px]">
               {currentProject?.name || 'Navegue para...'}
             </span>
           </div>
@@ -109,7 +109,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[340px] max-h-[400px] overflow-y-auto bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[480px] max-h-[400px] overflow-y-auto bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2">
           {isLoading ? (
             <div className="p-4 flex items-center justify-center">
               <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
@@ -124,13 +124,13 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
 
                 return (
                   <div key={ws.id} className="flex flex-col gap-1">
-                    <Link 
+                    <Link
                       href={`/admin/${ws.slug}`}
                       onClick={() => setIsOpen(false)}
                       className={cn(
                         "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-colors group",
-                        isWsActive 
-                          ? "bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-white" 
+                        isWsActive
+                          ? "bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-white"
                           : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                       )}
                     >
@@ -139,7 +139,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
                         {ws.name}
                       </div>
                     </Link>
-                    
+
                     {wsProjects.length > 0 ? (
                       <div className="flex flex-col gap-0.5 ml-4 pl-3 border-l border-neutral-200 dark:border-neutral-800/80 mt-0.5">
                         {wsProjects.map(proj => {
