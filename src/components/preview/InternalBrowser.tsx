@@ -7,6 +7,8 @@ import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, 
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n'
 import { useTunnelControl } from '@/hooks/useTunnelControl'
+import { openTunnelLogsWindow } from '@/utils/tunnelLogsWindow'
+import { ScrollText } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -764,6 +766,15 @@ export function InternalBrowser({
             ) : (
               <Play className="w-4 h-4 fill-emerald-500 ml-0.5" />
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { openTunnelLogsWindow() }}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-400 hover:bg-neutral-800 transition-colors"
+            title={t('workspace_components.tunnel_control.view_tunnel_logs', 'Ver Logs do Túnel')}
+          >
+            <ScrollText className="w-4 h-4" />
           </button>
 
           <button

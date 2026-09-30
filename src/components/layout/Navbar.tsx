@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
+import { openTunnelLogsWindow } from '@/utils/tunnelLogsWindow'
+import { ScrollText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { WorkspaceProjectCombo } from '@/components/layout/WorkspaceProjectCombo'
 
@@ -513,6 +515,16 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
           <WorkspaceProjectCombo user={user} />
 
           <div className="flex items-center gap-3 md:gap-4">
+            {isDesktop && (
+              <button
+                type="button"
+                onClick={() => { openTunnelLogsWindow() }}
+                className="w-10 h-10 flex items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all active:scale-95 shadow-sm"
+                title={t('workspace_components.tunnel_control.view_tunnel_logs', 'Ver Logs do Túnel')}
+              >
+                <ScrollText className="w-4 h-4" />
+              </button>
+            )}
             <HeaderActions user={user} profile={profile} />
             {showLogin && !user && (
               <button 
