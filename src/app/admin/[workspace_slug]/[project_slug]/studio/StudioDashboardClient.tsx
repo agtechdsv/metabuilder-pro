@@ -719,6 +719,40 @@ export function StudioDashboardClient({
 
       if (viewError) throw viewError
 
+      // Mantém o menu de navegação em sincronia (antes só era ajustado ao abrir a aba Navegação)
+      const hasDownloadsItem = (items: any[]): boolean =>
+        items.some(item => item.target === 'downloads' || (item.children && hasDownloadsItem(item.children)))
+      const stripDownloads = (items: any[]): any[] =>
+        items.filter(item => item.target !== 'downloads').map(item => ({
+          ...item,
+          children: item.children ? stripDownloads(item.children) : undefined
+        }))
+      const currentMenu: any[] = project.navigation || []
+      let nextMenu = currentMenu
+      if (newActiveState && !hasDownloadsItem(currentMenu)) {
+        nextMenu = [...currentMenu, {
+          id: 'downloads_auto_' + Math.random().toString(36).substr(2, 9),
+          label: 'Central de Downloads',
+          description: '',
+          icon: 'Layout',
+          type: 'view',
+          target: 'downloads',
+          show_dashboard: true,
+        }]
+      } else if (!newActiveState) {
+        nextMenu = stripDownloads(currentMenu)
+      }
+
+      const { error: projError } = await supabase
+        .from('projects')
+        .update({
+          navigation: nextMenu,
+          theme_config: { ...(project.theme_config || {}), enable_downloads: newActiveState }
+        })
+        .eq('id', project.id)
+
+      if (projError) throw projError
+
       toast(newActiveState ? t('dashboard.projects.studio.toasts.downloads_active_success') : t('dashboard.projects.studio.toasts.downloads_inactive_success'), 'success')
       router.refresh()
     } catch (err: any) {

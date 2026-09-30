@@ -69,7 +69,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
   const { data: projects, error: projectError } = await supabase
     .from('projects')
-    .select('id, name, slug, navigation, secret_token')
+    .select('id, name, slug, navigation, secret_token, theme_config')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
@@ -80,6 +80,17 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     console.error('Project not found:', project_slug, projectError)
     notFound()
   }
+
+  // Exportar só aparece com a Central de Downloads ativa (estado da view 'downloads' + flag legada)
+  const { data: downloadsViewRow } = await supabase
+    .from('ui_views')
+    .select('layout_config')
+    .eq('slug', 'downloads')
+    .eq('project_id', project.id)
+    .maybeSingle()
+  const isDownloadsEnabled =
+    downloadsViewRow?.layout_config?.is_active !== false &&
+    (project as any).theme_config?.enable_downloads !== false
 
   const navigation = project.navigation || []
   const headersList = await headers()
@@ -1043,7 +1054,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         )}
         <ViewPageContent 
           workspace={workspace}
-          project={{ ...project, models: allModels }}
+          project={{ ...project, theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels }}
           canExport={canExport}
           viewName={viewName}
           modelName={modelName}

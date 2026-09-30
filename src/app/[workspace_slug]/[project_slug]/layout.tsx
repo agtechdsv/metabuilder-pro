@@ -282,7 +282,15 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     }).filter(Boolean) // Remove os nulos (views negadas e pastas vazias)
   }
 
-  const navigation = filterNavigation(rawNavigation)
+  // Central de Downloads desativada no Studio: o item não deve aparecer no menu
+  const downloadsRow = uiViews?.find(v => v.slug?.toLowerCase() === 'downloads')
+  const isDownloadsInactive = downloadsRow?.layout_config?.is_active === false
+  const stripDownloads = (items: any[]): any[] =>
+    items
+      .filter(item => !(item.type === 'view' && item.target?.toLowerCase() === 'downloads'))
+      .map(item => item.children ? { ...item, children: stripDownloads(item.children) } : item)
+
+  const navigation = filterNavigation(isDownloadsInactive ? stripDownloads(rawNavigation) : rawNavigation)
 
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'
