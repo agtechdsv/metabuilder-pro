@@ -161,6 +161,14 @@ export function InternalBrowser({
       if (exists) {
         setActiveTabId(exists.id)
         setLoadingTabs(current => new Set([...current, exists.id]))
+        // A aba já existe com a mesma URL: o iframe não recarrega sozinho (src igual => sem onLoad),
+        // o que deixava o overlay "Carregando aplicação..." para sempre. Recarregamos explicitamente,
+        // o que também traz a versão recém-publicada.
+        setTimeout(() => {
+          const iframe = iframeRefs.current[exists.id]
+          if (iframe) iframe.src = exists.url
+          else setLoadingTabs(current => { const n = new Set(current); n.delete(exists.id); return n })
+        }, 0)
         return prev
       }
 
