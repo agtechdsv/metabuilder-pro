@@ -580,7 +580,23 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
 
               {selectedProjectId && (
                 <div className="space-y-3">
-                  <h4 className="text-sm font-bold">{t('dashboard.projects.studio.enums.available_enums')}</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold">{t('dashboard.projects.studio.enums.available_enums')}</h4>
+                    {!importLoading && projectEnums.length > 0 && (
+                      <label className="flex items-center gap-2 text-xs font-bold text-neutral-500 cursor-pointer hover:text-indigo-600 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedEnums.size === projectEnums.length}
+                          ref={el => { if (el) el.indeterminate = selectedEnums.size > 0 && selectedEnums.size < projectEnums.length }}
+                          onChange={() => setSelectedEnums(
+                            selectedEnums.size === projectEnums.length ? new Set() : new Set(projectEnums.map(e => e.id))
+                          )}
+                          className="w-4 h-4 accent-indigo-600 rounded"
+                        />
+                        {t('dashboard.projects.studio.enums.select_all', 'Selecionar todos')}
+                      </label>
+                    )}
+                  </div>
                   {importLoading ? (
                     <div className="text-center py-8">
                       <div className="w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>

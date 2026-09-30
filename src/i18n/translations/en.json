@@ -518,6 +518,7 @@
           "registered_values": "registered values",
           "importing": "Importing...",
           "import_selected": "Import Selected ({count})",
+          "select_all": "Select all",
           "import_success": "{count} values imported successfully!",
           "no_value_found": "No values found.",
           "select_table_column_error": "Select Table and Column first.",
