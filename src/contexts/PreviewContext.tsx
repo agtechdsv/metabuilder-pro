@@ -98,15 +98,9 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Web fallback
-    if (isOpen) {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('metabuilder-open-tab', { 
-          detail: { url: targetUrl, title: targetTitle } 
-        }))
-      }
-    } else {
-      openInternalModal(targetUrl, targetTitle)
+    // Web: o navegador interno é exclusivo da IDE (Tauri). No browser abrimos uma nova aba nativa.
+    if (typeof window !== 'undefined') {
+      window.open(targetUrl, '_blank', 'noopener')
     }
   }
 
