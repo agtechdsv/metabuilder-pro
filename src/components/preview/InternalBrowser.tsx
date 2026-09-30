@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban, Play, Square } from 'lucide-react'
+import { X, RefreshCw, ExternalLink, Terminal, Minimize2, AppWindow, ArrowLeft, Plus, Lock, Globe, Building2, FolderKanban, Play, Square, ArrowRight, Search, Sparkles, Layers } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n'
 import { useTunnelControl } from '@/hooks/useTunnelControl'
@@ -89,6 +89,38 @@ export function InternalBrowser({
   const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set(tabs[0]?.id ? [tabs[0].id] : []))
   const [urlInput, setUrlInput] = useState('')
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceTarget[]>([])
+  const [selectionSearch, setSelectionSearch] = useState('')
+  const [selectedFilterWorkspace, setSelectedFilterWorkspace] = useState<string>('all')
+
+  const totalPortalsCount = availableWorkspaces.filter(ws => ws.has_portal_project).length
+  const totalProjectsCount = availableWorkspaces.reduce((acc, ws) => acc + ws.projects.length, 0)
+
+  const filteredWorkspaces = availableWorkspaces
+    .filter(ws => selectedFilterWorkspace === 'all' || ws.id === selectedFilterWorkspace)
+    .map(ws => {
+      const q = selectionSearch.trim().toLowerCase()
+      if (!q) return ws
+
+      const wsMatches = ws.name.toLowerCase().includes(q) || ws.slug.toLowerCase().includes(q) || (q.includes('portal') && ws.has_portal_project)
+      const matchingProjects = ws.projects.filter(p =>
+        p.name.toLowerCase().includes(q) || p.slug.toLowerCase().includes(q)
+      )
+
+      if (wsMatches) {
+        return ws
+      }
+
+      if (matchingProjects.length > 0) {
+        return {
+          ...ws,
+          projects: matchingProjects,
+          has_portal_project: false
+        }
+      }
+
+      return null
+    })
+    .filter((ws): ws is WorkspaceTarget => ws !== null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -761,55 +793,227 @@ export function InternalBrowser({
             return (
               <div
                 key={tab.id}
-                className={`w-full h-full absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-8 text-neutral-300 overflow-y-auto ${isTabActive ? 'z-10' : 'z-0 pointer-events-none opacity-0'}`}
+                className={`w-full h-full absolute inset-0 bg-[#0b0c10] flex flex-col items-center justify-start p-6 md:p-10 text-neutral-300 overflow-y-auto ${isTabActive ? 'z-10' : 'z-0 pointer-events-none opacity-0'}`}
               >
-                <div className="max-w-2xl w-full text-center space-y-6">
+                {/* Background Ambient Glow */}
+                <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[850px] h-[340px] bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl pointer-events-none" />
+
+                <div className="max-w-4xl w-full text-center space-y-7 relative z-10 my-auto py-6">
+                  {/* Hero Header */}
                   <div>
-                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20 text-[11px] font-bold text-indigo-400 uppercase tracking-wider mb-2">
-                      Nova Aba
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20 text-[11px] font-bold text-indigo-400 uppercase tracking-wider mb-3">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                      Nova Aba • Hub de Aplicações
                     </span>
-                    <h2 className="text-2xl font-black text-white">Escolha o que deseja abrir</h2>
-                    <p className="text-sm text-neutral-400 mt-1">Selecione o Portal do Workspace ou um Projeto específico abaixo:</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Escolha o que deseja abrir</h2>
+                    <p className="text-xs sm:text-sm text-neutral-400 mt-1.5 max-w-lg mx-auto">
+                      Selecione o Portal de um Workspace para uma visão integrada ou acesse diretamente um projeto específico abaixo:
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                    {availableWorkspaces.map(ws => (
-                      <React.Fragment key={ws.id}>
-                        {ws.has_portal_project && (
-                          <div
-                            onClick={() => handleSelectTarget(tab.id, `portal:${ws.slug}:${ws.name}`)}
-                            className="bg-[#1a1b1e] hover:bg-[#25272c] border border-neutral-800 hover:border-indigo-500/50 rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] shadow-lg group"
+                  {/* Search and Filters */}
+                  {availableWorkspaces.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-2xl mx-auto w-full">
+                      {/* Search Bar */}
+                      <div className="relative w-full sm:flex-1">
+                        <Search className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={selectionSearch}
+                          onChange={(e) => setSelectionSearch(e.target.value)}
+                          placeholder="Buscar portal ou projeto (ex: CRM, Vendas)..."
+                          className="w-full bg-[#14151b] border border-neutral-800 focus:border-indigo-500/60 rounded-xl pl-9.5 pr-8 py-2 text-xs sm:text-sm text-white placeholder-neutral-500 outline-none transition-all shadow-inner"
+                        />
+                        {selectionSearch && (
+                          <button
+                            onClick={() => setSelectionSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1 cursor-pointer"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-3 group-hover:bg-indigo-500/20 transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Workspaces Filter Tabs (if > 1 workspace) */}
+                      {availableWorkspaces.length > 1 && (
+                        <div className="flex items-center gap-1 bg-[#14151b] p-1 rounded-xl border border-neutral-800 self-stretch sm:self-auto shrink-0 overflow-x-auto">
+                          <button
+                            onClick={() => setSelectedFilterWorkspace('all')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                              selectedFilterWorkspace === 'all'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                            }`}
+                          >
+                            Todos ({totalPortalsCount + totalProjectsCount})
+                          </button>
+                          {availableWorkspaces.map(ws => (
+                            <button
+                              key={ws.id}
+                              onClick={() => setSelectedFilterWorkspace(ws.id)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all truncate max-w-[130px] cursor-pointer ${
+                                selectedFilterWorkspace === ws.id
+                                  ? 'bg-indigo-600 text-white shadow-sm'
+                                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
+                              }`}
+                              title={ws.name}
+                            >
+                              {ws.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Workspace Groups */}
+                  <div className="space-y-6 text-left">
+                    {filteredWorkspaces.map(ws => (
+                      <div
+                        key={ws.id}
+                        className="bg-[#121319]/90 border border-neutral-800/80 hover:border-neutral-700/80 rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-sm transition-all group/ws relative overflow-hidden"
+                      >
+                        {/* Subtle top glow line on hover */}
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-0 group-hover/ws:opacity-100 transition-opacity" />
+
+                        {/* Workspace Group Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800/80 mb-4.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
                               <Building2 className="w-5 h-5" />
                             </div>
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-400">Portal de Aplicações</span>
-                            <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{ws.name}</h3>
-                            <p className="text-xs text-neutral-500 mt-1">Acesso unificado aos projetos configurados no portal</p>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">{ws.name}</h3>
+                                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-neutral-700/60">
+                                  /{ws.slug}
+                                </span>
+                              </div>
+                              <p className="text-xs text-neutral-400 mt-0.5">
+                                {ws.projects.length} {ws.projects.length === 1 ? 'projeto configurado' : 'projetos configurados'}
+                                {ws.has_portal_project && ' • Portal Unificado Ativo'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {ws.has_portal_project && (
+                            <button
+                              onClick={() => handleSelectTarget(tab.id, `portal:${ws.slug}:${ws.name}`)}
+                              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 hover:border-indigo-500 text-indigo-300 hover:text-white text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-auto cursor-pointer group/btn"
+                            >
+                              <Layers className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition-colors" />
+                              <span>Abrir Portal Completo</span>
+                              <ArrowRight className="w-3.5 h-3.5 ml-0.5 transition-transform group-hover/btn:translate-x-0.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Cards Grid: Portal Hub + Projects */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                          {/* Portal Hub Card */}
+                          {ws.has_portal_project && (
+                            <div
+                              onClick={() => handleSelectTarget(tab.id, `portal:${ws.slug}:${ws.name}`)}
+                              className="relative group/card cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br from-indigo-950/40 via-[#181a24] to-[#121319] hover:from-indigo-900/50 hover:to-[#1b1d28] border border-indigo-500/40 hover:border-indigo-400/80 p-4.5 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-0.5 flex flex-col justify-between min-h-[148px]"
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="w-9 h-9 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 group-hover/card:scale-105 transition-transform">
+                                    <Layers className="w-4 h-4" />
+                                  </div>
+                                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                                    Portal Principal
+                                  </span>
+                                </div>
+                                <h4 className="text-sm sm:text-base font-bold text-white group-hover/card:text-indigo-200 transition-colors">
+                                  {ws.name}
+                                </h4>
+                                <p className="text-xs text-neutral-400 mt-1 line-clamp-2">
+                                  Acesso unificado com todos os módulos e navegação integrada do portal.
+                                </p>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-indigo-500/20 flex items-center justify-between text-xs text-indigo-400 font-semibold group-hover/card:text-indigo-300">
+                                <span className="text-[11px] text-indigo-400/80">Hub do Workspace</span>
+                                <div className="flex items-center gap-1 text-indigo-400 group-hover/card:text-white transition-colors">
+                                  <span>Acessar</span>
+                                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/card:translate-x-1" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Projects Cards */}
+                          {ws.projects.map(proj => (
+                            <div
+                              key={proj.id}
+                              onClick={() => handleSelectTarget(tab.id, `project:${ws.slug}:${proj.slug}:${proj.name}`)}
+                              className="relative group/card cursor-pointer overflow-hidden rounded-xl bg-[#16171d] hover:bg-[#1e202a] border border-neutral-800/90 hover:border-neutral-600/90 p-4.5 transition-all duration-200 hover:shadow-xl hover:shadow-black/50 hover:-translate-y-0.5 flex flex-col justify-between min-h-[148px]"
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="w-9 h-9 rounded-lg bg-neutral-800/80 border border-neutral-700/60 flex items-center justify-center text-neutral-400 group-hover/card:text-indigo-400 group-hover/card:bg-indigo-500/10 group-hover/card:border-indigo-500/30 transition-all">
+                                    <FolderKanban className="w-4 h-4" />
+                                  </div>
+                                  <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-neutral-800/80 text-neutral-400 border border-neutral-700/50">
+                                    Projeto
+                                  </span>
+                                </div>
+                                <h4 className="text-sm sm:text-base font-bold text-neutral-100 group-hover/card:text-white transition-colors truncate">
+                                  {proj.name}
+                                </h4>
+                                <p className="text-xs font-mono text-neutral-400 mt-1 truncate">
+                                  /{ws.slug}/{proj.slug}
+                                </p>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-neutral-800/80 flex items-center justify-between text-xs text-neutral-400 group-hover/card:text-neutral-200">
+                                <span className="text-[11px] text-neutral-500">Aplicação direta</span>
+                                <div className="flex items-center gap-1 font-medium group-hover/card:text-indigo-400 transition-colors">
+                                  <span>Abrir</span>
+                                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/card:translate-x-1" />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Empty state if workspace has neither portal nor projects */}
+                        {!ws.has_portal_project && ws.projects.length === 0 && (
+                          <div className="py-6 text-center text-xs text-neutral-500">
+                            Nenhum projeto ou portal disponível neste workspace.
                           </div>
                         )}
-
-                        {ws.projects.map(proj => (
-                          <div
-                            key={proj.id}
-                            onClick={() => handleSelectTarget(tab.id, `project:${ws.slug}:${proj.slug}:${proj.name}`)}
-                            className="bg-[#1a1b1e] hover:bg-[#25272c] border border-neutral-800 hover:border-indigo-500/50 rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] shadow-lg group"
-                          >
-                            <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-300 mb-3 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-colors">
-                              <FolderKanban className="w-5 h-5" />
-                            </div>
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400">Projeto ({ws.name})</span>
-                            <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{proj.name}</h3>
-                            <p className="text-xs text-neutral-500 mt-1">/{ws.slug}/{proj.slug}</p>
-                          </div>
-                        ))}
-                      </React.Fragment>
+                      </div>
                     ))}
                   </div>
 
+                  {/* Empty Search Result */}
+                  {filteredWorkspaces.length === 0 && availableWorkspaces.length > 0 && (
+                    <div className="py-12 px-4 text-center rounded-2xl bg-[#121319]/50 border border-neutral-800/60">
+                      <Search className="w-8 h-8 text-neutral-600 mx-auto mb-3" />
+                      <h4 className="text-base font-bold text-white mb-1">Nenhum resultado encontrado</h4>
+                      <p className="text-xs text-neutral-400 mb-4">
+                        Nenhum portal ou projeto corresponde a &quot;{selectionSearch}&quot;.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSelectionSearch('')
+                          setSelectedFilterWorkspace('all')
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-white transition-all cursor-pointer"
+                      >
+                        Limpar busca
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Loading State */}
                   {availableWorkspaces.length === 0 && (
-                    <div className="py-8 text-neutral-500 text-sm animate-pulse">
-                      Carregando opções disponíveis...
+                    <div className="py-12 text-center text-neutral-400 space-y-3">
+                      <div className="w-8 h-8 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+                      <p className="text-xs sm:text-sm">Carregando portais e projetos disponíveis...</p>
                     </div>
                   )}
                 </div>
@@ -926,24 +1130,18 @@ function SortableBrowserTab({
         >
           <option value="" disabled>Selecione...</option>
           {availableWorkspaces.map(ws => (
-            <React.Fragment key={ws.id}>
+            <optgroup key={ws.id} label={`🏢 ${ws.name}`}>
               {ws.has_portal_project && (
-                <optgroup label="Workspace (Portal)">
-                  <option value={`portal:${ws.slug}:${ws.name}`}>
-                    {ws.name}
-                  </option>
-                </optgroup>
+                <option value={`portal:${ws.slug}:${ws.name}`}>
+                  🌐 Portal: {ws.name}
+                </option>
               )}
-              {ws.projects.length > 0 && (
-                <optgroup label="Projetos">
-                  {ws.projects.map((proj: any) => (
-                    <option key={proj.id} value={`project:${ws.slug}:${proj.slug}:${proj.name}`}>
-                      {proj.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </React.Fragment>
+              {ws.projects.map((proj: any) => (
+                <option key={proj.id} value={`project:${ws.slug}:${proj.slug}:${proj.name}`}>
+                  📁 {proj.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       ) : (
