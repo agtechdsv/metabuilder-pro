@@ -1,6 +1,7 @@
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseMasterDataProps {
@@ -660,6 +661,7 @@ export function useMasterData({
         setRefreshKey(prev => prev + 1)
       }
 
+      invalidateRelOptions(project.id, modelName)
       toast(
         drawerMode === 'create'
           ? t('runtime.create_success', 'Registro criado com sucesso!')
@@ -836,6 +838,7 @@ export function useMasterData({
       setIsProcessing(false)
 
       if (result.success) {
+        invalidateRelOptions(project.id, modelName)
         setRefreshKey(prev => prev + 1)
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
       } else {

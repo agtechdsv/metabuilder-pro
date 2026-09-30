@@ -3,6 +3,7 @@ import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
+import { relOptionsKey, getCachedRelOptions, setCachedRelOptions, dedupeRelFetch } from '@/lib/relationalOptionsCache'
 
 export interface UseRecordFormLogicProps {
   mode: 'create' | 'edit' | 'view';
@@ -461,6 +462,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   }, [mode, masterModelName, joins, projectId, secretToken, isTunnelReady, formData?.id, formData?.ID])
 
   useEffect(() => {
+    let cancelled = false
     const fetchAllRelational = async () => {
       const supabase = createClient()
       const newOptions: Record<string, any[]> = {}
@@ -526,16 +528,62 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
       // console.log(`[MetaBuilder:RecordForm] fetchAllRelational trigger. fieldsToFetch mapped count: ${fieldsToFetch.length} | project db_type: ${project?.db_type}`);
 
-      for (const field of fieldsToFetch) {
-        // Busca o componente em TODAS as zonas de config — não parar na primeira zona que existir
-        // pois form_config pode ter label/content mas não ter component definido.
-        // Ordem: _injected_rel > form_config > grid_config > filter_config > raiz > widget
-        const comp = field._injected_rel ||
-          field.config?.form_config?.component ||
-          field.config?.grid_config?.component ||
-          field.config?.filter_config?.component ||
-          field.config?.component ||
-          field.widget_options?.component;
+      // Busca o componente em TODAS as zonas de config — não parar na primeira zona que existir
+      // pois form_config pode ter label/content mas não ter component definido.
+      // Ordem: _injected_rel > form_config > grid_config > filter_config > raiz > widget
+      const resolveComp = (field: any) => field._injected_rel ||
+        field.config?.form_config?.component ||
+        field.config?.grid_config?.component ||
+        field.config?.filter_config?.component ||
+        field.config?.component ||
+        field.widget_options?.component;
+
+      const mapRelOptions = (data: any[], comp: any) => data.map((item: any) => {
+        const getVal = (key: string) => {
+          if (!key) return undefined;
+          const searchKey = key.includes('.') ? key.split('.').pop()! : key;
+          const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase());
+          return foundKey ? item[foundKey] : undefined;
+        }
+        return {
+          label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
+          value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
+          filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
+          ...item
+        }
+      })
+
+      const assignOptions = (target: Record<string, any[]>, field: any, opts: any[]) => {
+        target[field.id] = opts
+        if (field.db_column_name) {
+          target[field.db_column_name] = opts
+          const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
+          if (cleanCol) target[cleanCol] = opts
+        }
+      }
+
+      const relCacheKey = (comp: any) =>
+        relOptionsKey(projectId || '', comp.rel_table, `${comp.rel_label}|${comp.rel_value}|${comp.filter_column || ''}`)
+
+      // Passo 1 (instantâneo): aplica listas já em cache para o formulário não abrir com "Selecione..."
+      // enquanto a revalidação abaixo ainda está a caminho. Não sobrescreve nada que já esteja carregado.
+      if (projectId && process.env.NEXT_PUBLIC_IS_EJECTED_APP !== 'true') {
+        const cachedOptions: Record<string, any[]> = {}
+        for (const field of fieldsToFetch) {
+          const comp = resolveComp(field)
+          if (comp && comp.rel_table && comp.options_type !== 'enumeration' && comp.rel_label && comp.rel_value) {
+            const cached = getCachedRelOptions(relCacheKey(comp))
+            if (cached && cached.length > 0) assignOptions(cachedOptions, field, mapRelOptions(cached, comp))
+          }
+        }
+        if (Object.keys(cachedOptions).length > 0 && !cancelled) {
+          setRelationalOptions(prev => ({ ...cachedOptions, ...prev }))
+        }
+      }
+
+      // Passo 2: busca/revalida todos os campos em paralelo (antes era um a um, somando as idas e voltas pelo túnel)
+      await Promise.all(fieldsToFetch.map(async (field) => {
+        const comp = resolveComp(field);
         const isRelationalComp = comp && (
            comp.rel_table || 
            (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Radio Buttons', 'Checkbox Group', 'Autocomplete (Busca Dinâmica)'].includes(comp.type)) || 
@@ -545,6 +593,11 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         if (isRelationalComp && comp.rel_table && comp.options_type !== 'enumeration') {
           try {
             if (projectId) {
+              // Não abrir canal temporário: supabase.channel() devolve o MESMO canal do túnel (mesmo tópico) e o
+              // cleanup do temporário derrubava o canal compartilhado. Este efeito re-executa quando o túnel fica pronto.
+              if ((!tunnelChannel || !isTunnelReady) && process.env.NEXT_PUBLIC_IS_EJECTED_APP !== 'true') return
+
+              const cacheKey = relCacheKey(comp)
               const queryId = crypto.randomUUID()
               const dbType = (project?.db_type || 'postgres').toLowerCase()
               const isOracle = dbType === 'oracle'
@@ -559,7 +612,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               // console.log(`[MetaBuilder:RecordForm] Fetching relational options for ${comp.rel_table} with schemaName:`, schemaToUse)
               // console.log(`[MetaBuilder:RecordForm] Query:`, rawQuery)
 
-              const data = await new Promise<any[]>((resolve, reject) => {
+              const data = await dedupeRelFetch(cacheKey, () => new Promise<any[]>((resolve, reject) => {
                 const isTemporary = !tunnelChannel || !isTunnelReady
                 const channelName = `tunnel:${projectId}`
                 const channel = isTemporary ? supabase.channel(channelName) : tunnelChannel
@@ -630,34 +683,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     resolve([])
                   }
                 }, 25000)
-              })
+              }))
 
               // Guard: only store if we actually got data (timeout resolves with [])
               if (data && data.length > 0) {
-                // console.log(`[MetaBuilder:RecordForm] Raw data from tunnel for ${comp.rel_table}:`, data[0])
-                const mappedOpts = data.map(item => {
-                  const getVal = (key: string) => {
-                     if (!key) return undefined;
-                     const searchKey = key.includes('.') ? key.split('.').pop()! : key;
-                     const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase());
-                     return foundKey ? item[foundKey] : undefined;
-                  }
-                  return {
-                    label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
-                    value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
-                    filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
-                    ...item
-                  }
-                })
-                newOptions[field.id] = mappedOpts
-                if (field.db_column_name) {
-                  newOptions[field.db_column_name] = mappedOpts
-                  const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
-                  if (cleanCol) {
-                    newOptions[cleanCol] = mappedOpts
-                  }
-                }
-                // console.log(`[MetaBuilder:RecordForm] Mapped opts for ${comp.rel_table}:`, newOptions[field.id][0])
+                setCachedRelOptions(cacheKey, data)
+                assignOptions(newOptions, field, mapRelOptions(data, comp))
               }
             } else {
               // Direct query or Postgres API fallback
@@ -714,7 +745,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
             console.error(`Error fetching enumeration options for field ${field.id}:`, err)
           }
         }
-      }
+      }))
+      if (cancelled) return
       // Merge into existing options: never let a stale/timed-out call wipe out good data
       setRelationalOptions(prev => {
         const merged: Record<string, any[]> = { ...prev }
@@ -793,6 +825,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
     if (fields.length > 0) {
       fetchAllRelational()
     }
+    return () => { cancelled = true }
   }, [fields, isTunnelReady, tunnelChannel, project, projectId, refreshTrigger])
 
 

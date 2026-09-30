@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
+import { relOptionsKey, getCachedRelOptions, setCachedRelOptions, dedupeRelFetch } from '@/lib/relationalOptionsCache'
 
 export function useViewFilters({
   projectId,
@@ -95,6 +96,7 @@ export function useViewFilters({
 
   // Busca opções relacionais
   useEffect(() => {
+    let cancelled = false
     const fetchAllRelational = async () => {
       const supabaseClient = createClient()
       const newOptions: Record<string, any[]> = {}
@@ -125,19 +127,65 @@ export function useViewFilters({
       }
       const uniqueFields = Array.from(fieldsMap.values())
 
-      for (const field of uniqueFields) {
-        // Busca o componente em TODAS as zonas — não para na primeira zona que existir,
-        // pois grid_config pode existir sem componente (só com content/label).
-        // Ordem de prioridade: filter_config > form_config > grid_config > raiz
-        // Deep merge the component config so that missing relational keys in one zone don't shadow keys in another
-        const comp = {
-          type: 'text',
-          ...(field.config?.component || {}),
-          ...(field.config?.grid_config?.component || {}),
-          ...(field.config?.form_config?.component || {}),
-          ...(field.config?.filter_config?.component || {}),
-          ...(field._injected_rel || {})
+      // Busca o componente em TODAS as zonas — não para na primeira zona que existir,
+      // pois grid_config pode existir sem componente (só com content/label).
+      // Ordem de prioridade: filter_config > form_config > grid_config > raiz
+      // Deep merge the component config so that missing relational keys in one zone don't shadow keys in another
+      const getComp = (field: any): any => ({
+        type: 'text',
+        ...(field.config?.component || {}),
+        ...(field.config?.grid_config?.component || {}),
+        ...(field.config?.form_config?.component || {}),
+        ...(field.config?.filter_config?.component || {}),
+        ...(field._injected_rel || {})
+      })
+
+      const mapRelOptions = (data: any[], comp: any) => data.map((item: any) => {
+        const getVal = (key: string) => {
+          if (!key) return undefined
+          const searchKey = key.includes('.') ? key.split('.').pop()! : key
+          const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase())
+          return foundKey ? item[foundKey] : undefined
         }
+        return {
+          label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
+          value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
+          filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
+          ...item
+        }
+      })
+
+      const assignOptions = (target: Record<string, any[]>, field: any, opts: any[]) => {
+        target[field.id] = opts
+        if (field.db_column_name) {
+          target[field.db_column_name] = opts
+          const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
+          if (cleanCol) target[cleanCol] = opts
+        }
+      }
+
+      const relCacheKey = (comp: any) =>
+        relOptionsKey(projectId, comp.rel_table, `${comp.rel_label}|${comp.rel_value}|${comp.filter_column || ''}`)
+
+      // Passo 1 (instantâneo): aplica as listas já em cache para a tela não abrir com ids / "Selecione...".
+      // Elas são revalidadas logo abaixo, em segundo plano.
+      if (process.env.NEXT_PUBLIC_IS_EJECTED_APP !== 'true') {
+        const cachedOptions: Record<string, any[]> = {}
+        for (const field of uniqueFields) {
+          const comp = getComp(field)
+          if (comp.options_type === 'relational' && comp.rel_table) {
+            const cached = getCachedRelOptions(relCacheKey(comp))
+            if (cached && cached.length > 0) assignOptions(cachedOptions, field, mapRelOptions(cached, comp))
+          }
+        }
+        if (Object.keys(cachedOptions).length > 0 && !cancelled) {
+          setRelationalOptions(prev => ({ ...cachedOptions, ...prev }))
+        }
+      }
+
+      // Passo 2: busca/revalida TODOS os campos em paralelo (antes era um a um, somando as idas e voltas pelo túnel)
+      await Promise.all(uniqueFields.map(async (field) => {
+        const comp = getComp(field)
         const config = field.config?.filter_config || field.config?.form_config || field.config?.grid_config || field.config
         const isRelationalComp = comp && (['select', 'radio', 'checkbox', 'autocomplete', 'Combo (Select)', 'Autocomplete (Busca Dinâmica)', 'Seleção (Dropdown)'].includes(comp.type) || comp.options_type === 'relational' || comp.options_type === 'enumeration')
         
@@ -157,8 +205,9 @@ export function useViewFilters({
               // subscribe() num canal já aberto (no-op, SUBSCRIBED nunca disparava) e o cleanup do
               // temporário derrubava o canal compartilhado -> "Conectando ao banco..." infinito.
               // Basta aguardar o túnel ficar pronto; este efeito re-executa quando isso acontecer.
-              if (!tunnelChannel || !isTunnelReady) continue
+              if (!tunnelChannel || !isTunnelReady) return
 
+              const cacheKey = relCacheKey(comp)
               const queryId = crypto.randomUUID()
               const dbType = (project?.db_type || 'postgres').toLowerCase()
               const isOracle = dbType === 'oracle'
@@ -173,7 +222,7 @@ export function useViewFilters({
               const isTemp = !tunnelChannel || !isTunnelReady
               const channel = isTemp ? supabaseClient.channel(`tunnel:${projectId}`) : tunnelChannel
 
-              data = await new Promise<any[]>((resolve, reject) => {
+              data = await dedupeRelFetch(cacheKey, () => new Promise<any[]>((resolve, reject) => {
                 let resolved = false
                 const cleanup = () => {
                   try {
@@ -234,7 +283,9 @@ export function useViewFilters({
                     resolve([])
                   }
                 }, 8000)
-              })
+              }))
+              // Só guarda listas não vazias (vazio também é o resultado do timeout)
+              if (data.length > 0) setCachedRelOptions(cacheKey, data)
             } else {
               const filterCol = comp.filter_column ? `, ${comp.filter_column}` : ''
               const { data: directData } = await supabaseClient
@@ -244,29 +295,7 @@ export function useViewFilters({
             }
 
             if (data && data.length > 0) {
-              const mappedOpts = data.map((item: any) => {
-                const getVal = (key: string) => {
-                  if (!key) return undefined
-                  const searchKey = key.includes('.') ? key.split('.').pop()! : key
-                  const foundKey = Object.keys(item).find(k => k.toLowerCase() === searchKey.toLowerCase())
-                  return foundKey ? item[foundKey] : undefined
-                }
-                return {
-                  label: getVal(comp.rel_label) || item.display_label || Object.values(item)[1] || Object.values(item)[0],
-                  value: getVal(comp.rel_value) || item.id || item.ID || Object.values(item)[0],
-                  filter_value: comp.filter_column ? getVal(comp.filter_column) : undefined,
-                  ...item
-                }
-              })
-
-              newOptions[field.id] = mappedOpts
-              if (field.db_column_name) {
-                newOptions[field.db_column_name] = mappedOpts
-                const cleanCol = field.db_column_name.includes('.') ? field.db_column_name.split('.').pop() : field.db_column_name
-                if (cleanCol) {
-                  newOptions[cleanCol] = mappedOpts
-                }
-              }
+              assignOptions(newOptions, field, mapRelOptions(data, comp))
             }
           } catch (err) {
             console.error(`Error fetching relational options for field ${field.id}:`, err)
@@ -294,13 +323,14 @@ export function useViewFilters({
             console.error(`Error fetching enum options for field ${field.id}:`, err)
           }
         }
-      }
-      setRelationalOptions(newOptions)
+      }))
+      if (!cancelled) setRelationalOptions(prev => ({ ...prev, ...newOptions }))
     }
 
     if ((filterFields && filterFields.length > 0) || (displayFields && displayFields.length > 0)) {
       fetchAllRelational()
     }
+    return () => { cancelled = true }
   }, [filterFields, displayFields, isTunnelReady, tunnelChannel, project, projectId, refreshTrigger])
 
   const parseFixedOptions = (str: string) => {

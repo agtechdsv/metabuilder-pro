@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseDetailDataProps {
@@ -588,6 +589,7 @@ export function useDetailData({
       setItemToDelete(null)
 
       if (result.success) {
+        invalidateRelOptions(project.id, tableName)
         setRefreshKey(prev => prev + 1)
         setDetailRefreshKey(prev => prev + 1)
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
@@ -1104,6 +1106,7 @@ export function useDetailData({
       const parentHistory = [...detailHistory]
 
       if (saveSucceeded) {
+        invalidateRelOptions(project.id, tableName)
         toast(
           detailModalMode === 'create'
             ? t('runtime.create_success', 'Registro criado com sucesso!')
