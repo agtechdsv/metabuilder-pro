@@ -65,16 +65,22 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
       })
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // IMPORTANTE: o callback roda DENTRO do lock de auth do supabase-js. Fazer `await supabase.from(...)`
+    // aqui dentro causa deadlock (a query espera o lock que só é liberado quando o callback termina) e
+    // TODAS as consultas do client no navegador ficam penduradas (combo de navegação, enums, etc.).
+    // Por isso a consulta é adiada com setTimeout, fora do lock.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null
       setUser(currentUser)
       if (currentUser) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single()
-        if (data) setProfile(data)
+        setTimeout(async () => {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+          if (data) setProfile(data)
+        }, 0)
       } else {
         setProfile(null)
       }
