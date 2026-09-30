@@ -878,7 +878,9 @@ export function useDetailData({
           })
 
           if (result.success) {
-            return result.data ? (Array.isArray(result.data) ? result.data[0] : result.data) : true
+            // UPDATE no Oracle (sem RETURNING) devolve data vazio: sucesso não pode depender de haver linha retornada
+            const firstRow = Array.isArray(result.data) ? result.data[0] : result.data
+            return firstRow ?? true
           }
 
           const genCol = parseGeneratedColError(result.error || '')
