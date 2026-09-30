@@ -61,9 +61,11 @@ export function useDetailData({
   const [detailHistory, setDetailHistory] = useState<any[]>([])
   const [activeTabForDetail, setActiveTabForDetail] = useState<string>('master')
 
-  const fetchDetails = async (parentRow: any, parentModel: string) => {
+  // Resolve os joins mestre→detalhe (prop joins → relações do projeto → heurística de nomenclatura).
+  // Usado tanto para buscar detalhes quanto para saber qual FK preencher ao criar um detalhe.
+  const resolveEffectiveJoins = (parentModel: string): any[] => {
     let effectiveJoins = joins || []
-    
+
     // ── DIAGNOSTIC (comentado para produção) ────────────────────────────────────
     // console.log('[🔍 fetchDetails] START')
     // console.log('[🔍 fetchDetails] parentModel:', parentModel, '| db_type:', project?.db_type)
@@ -145,6 +147,12 @@ export function useDetailData({
         if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins
       }
     }
+
+    return effectiveJoins
+  }
+
+  const fetchDetails = async (parentRow: any, parentModel: string) => {
+    const effectiveJoins = resolveEffectiveJoins(parentModel)
 
     if (!effectiveJoins || effectiveJoins.length === 0) {
        // console.log('[🔍 fetchDetails] NO JOINS RESOLVED! effectiveJoins is empty. Returning [] early.')
@@ -685,11 +693,24 @@ export function useDetailData({
         }
       }
 
-      if (action === 'create' && logicType === 'master_detail' && joins) {
-        const join = joins.find(j => j.to?.toLowerCase() === tableName?.toLowerCase())
+      if (action === 'create' && logicType === 'master_detail') {
+        // Pai imediato: o registro de onde o modal foi aberto (histórico) ou o mestre da tela
+        const lastHistory = detailHistory.length > 0 ? detailHistory[detailHistory.length - 1] : null
+        const parentTable = lastHistory?.tableName || modelName
+        const parentRecord = lastHistory?.record || selectedRow
+        const join = resolveEffectiveJoins(parentTable).find((j: any) =>
+          j.to?.toLowerCase() === tableName?.toLowerCase() && j.from?.toLowerCase() === parentTable?.toLowerCase()
+        ) || resolveEffectiveJoins(modelName).find((j: any) => j.to?.toLowerCase() === tableName?.toLowerCase())
         if (join) {
-          const parentId = parentRowIdForDetail || (selectedRow[join.localKey] || selectedRow[join.localKey.toUpperCase()] || selectedRow.id || selectedRow.ID)
-          sanitizedData[join.foreignKey] = String(parentId)
+          const fromRecord = (r: any) => r && (r[join.localKey] ?? r[join.localKey?.toUpperCase?.()] ?? r[join.localKey?.toLowerCase?.()])
+          const parentId = fromRecord(parentRecord) ?? fromRecord(selectedRow) ?? parentRowIdForDetail ?? parentRecord?.id ?? parentRecord?.ID ?? selectedRow?.id ?? selectedRow?.ID
+          if (parentId !== undefined && parentId !== null) {
+            sanitizedData[join.foreignKey] = String(parentId)
+          } else {
+            console.warn('[MetaBuilder:handleSaveDetail] Não foi possível resolver o ID do mestre para a FK', join)
+          }
+        } else {
+          console.warn(`[MetaBuilder:handleSaveDetail] Nenhum join encontrado de ${parentTable} para ${tableName}`)
         }
       }
 
