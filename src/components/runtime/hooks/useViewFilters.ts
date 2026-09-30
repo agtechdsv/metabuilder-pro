@@ -151,6 +151,14 @@ export function useViewFilters({
               const json = await res.json()
               if (json.data) data = json.data
             } else if (tunnelChannel || isTunnelReady || projectId) {
+              // NUNCA abrir canal temporário aqui: o supabase.channel() devolve o MESMO canal para o
+              // mesmo tópico (`tunnel:<projectId>`). Como este efeito (filho) roda antes do efeito do
+              // useTunnelConnection (pai), o canal temporário "roubava" o tópico: o pai chamava
+              // subscribe() num canal já aberto (no-op, SUBSCRIBED nunca disparava) e o cleanup do
+              // temporário derrubava o canal compartilhado -> "Conectando ao banco..." infinito.
+              // Basta aguardar o túnel ficar pronto; este efeito re-executa quando isso acontecer.
+              if (!tunnelChannel || !isTunnelReady) continue
+
               const queryId = crypto.randomUUID()
               const dbType = (project?.db_type || 'postgres').toLowerCase()
               const isOracle = dbType === 'oracle'
