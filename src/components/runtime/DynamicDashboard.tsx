@@ -56,11 +56,12 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
           label={t('runtime.card_size', 'Tamanho dos cards')}
           resetLabel={t('runtime.card_size_reset', 'Restaurar tamanho padrão')}
           stepLabels={[
-            t('runtime.card_size_s0', 'Compacto'),
-            t('runtime.card_size_s1', 'Pequeno'),
-            t('runtime.card_size_s2', 'Normal'),
-            t('runtime.card_size_s3', 'Grande'),
-            t('runtime.card_size_s4', 'Extra grande'),
+            t('runtime.card_size_s0', 'Mini'),
+            t('runtime.card_size_s1', 'Compacto'),
+            t('runtime.card_size_s2', 'Pequeno'),
+            t('runtime.card_size_s3', 'Normal'),
+            t('runtime.card_size_s4', 'Grande'),
+            t('runtime.card_size_s5', 'Extra grande'),
           ]}
         >
 

@@ -7,23 +7,35 @@ import { cn } from '@/lib/utils'
 /**
  * Grade de cards cujo tamanho o USUÁRIO FINAL escolhe num slider de pontos fixos (preferência salva no navegador).
  *
- * São 5 níveis. Cada nível define DE UMA VEZ a largura mínima do card e a escala do conteúdo
+ * São 6 níveis. Cada nível define DE UMA VEZ a largura mínima do card e a escala do conteúdo
  * (`--card-scale`, usada pelos cards em `calc(... * var(--card-scale,1))`), então card e texto mudam juntos,
  * sem "saltos" no meio do arraste (o número de colunas é inteiro, por isso o tamanho não pode ser contínuo).
  */
 
 // Fator da largura (relativo ao `baseWidth`) e escala do conteúdo de cada nível
 const STEPS = [
-  { width: 0.65, scale: 0.8 },
-  { width: 0.82, scale: 0.9 },
-  { width: 1, scale: 1 }, // Normal
-  { width: 1.22, scale: 1.12 },
-  { width: 1.5, scale: 1.25 },
+  { id: 'mini', width: 0.5, scale: 0.7 },
+  { id: 'compact', width: 0.65, scale: 0.8 },
+  { id: 'small', width: 0.82, scale: 0.9 },
+  { id: 'normal', width: 1, scale: 1 },
+  { id: 'large', width: 1.22, scale: 1.12 },
+  { id: 'xlarge', width: 1.5, scale: 1.25 },
 ] as const
-const NORMAL_STEP = 2
+const NORMAL_STEP = 3
 const LAST_STEP = STEPS.length - 1
 
-const DEFAULT_LABELS = ['Compacto', 'Pequeno', 'Normal', 'Grande', 'Extra grande']
+const DEFAULT_LABELS = ['Mini', 'Compacto', 'Pequeno', 'Normal', 'Grande', 'Extra grande']
+
+/** A preferência é salva pelo NOME do nível (estável se novos níveis forem adicionados). */
+function parseSaved(saved: string): number | null {
+  const byId = STEPS.findIndex((s) => s.id === saved)
+  if (byId >= 0) return byId
+  const n = Number(saved)
+  if (!Number.isFinite(n)) return null
+  // Formatos antigos: 0–4 = os 5 níveis anteriores (agora deslocados +1 pelo novo nível "Mini"); >4 = slider contínuo 0–100
+  const old = n > 4 ? Math.round(n / 25) : Math.round(n)
+  return Math.min(LAST_STEP, Math.max(0, old + 1))
+}
 
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -36,7 +48,7 @@ interface ResizableCardGridProps {
   className?: string
   label?: string
   resetLabel?: string
-  /** Nomes dos 5 níveis, do menor para o maior. */
+  /** Nomes dos 6 níveis, do menor para o maior. */
   stepLabels?: string[]
 }
 
@@ -56,12 +68,8 @@ export function ResizableCardGrid({
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved !== null) {
-        const n = Number(saved)
-        if (Number.isFinite(n)) {
-          // Versões anteriores guardavam 0–100 (slider contínuo): converte para o nível mais próximo
-          const idx = n > LAST_STEP ? Math.round(n / (100 / LAST_STEP)) : Math.round(n)
-          setStep(Math.min(LAST_STEP, Math.max(0, idx)))
-        }
+        const idx = parseSaved(saved)
+        if (idx !== null) setStep(idx)
       }
     } catch (_) {}
   }, [storageKey])
@@ -70,7 +78,7 @@ export function ResizableCardGrid({
     const v = Math.min(LAST_STEP, Math.max(0, Math.round(n)))
     setStep(v)
     try {
-      localStorage.setItem(storageKey, String(v))
+      localStorage.setItem(storageKey, STEPS[v].id)
     } catch (_) {}
   }
 
