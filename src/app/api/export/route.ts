@@ -161,9 +161,16 @@ export async function DELETE(request: Request) {
 
     // --- CASE 1: Expired jobs cleanup ---
     if (cleanup) {
-      console.log('[Export API] Running auto-cleanup for expired download jobs...')
-      
-      const { data: projects } = await supabase.from('projects').select('id, download_retention_hours')
+      // A limpeza vale SÓ para o projeto aberto e só para os jobs do usuário logado (mesmo escopo da listagem).
+      if (!projectId) {
+        return NextResponse.json({ error: 'projectId é obrigatório para a limpeza' }, { status: 400 })
+      }
+      console.log(`[Export API] Running auto-cleanup for expired download jobs (project ${projectId})...`)
+
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, download_retention_hours')
+        .eq('id', projectId)
       let totalCleaned = 0
 
       for (const project of (projects || [])) {
@@ -176,6 +183,7 @@ export async function DELETE(request: Request) {
           .from('download_jobs')
           .select('id, local_path, project_id')
           .eq('project_id', project.id)
+          .eq('user_id', userId)
           .lt('created_at', cutoffDate)
 
         if (fetchError) {
@@ -205,7 +213,7 @@ export async function DELETE(request: Request) {
       }
 
       console.log(`[Export API] Cleaned up ${totalCleaned} expired download jobs across all projects.`)
-      return NextResponse.json({ success: true, message: `Cleaned up ${totalCleaned} jobs.` })
+      return NextResponse.json({ success: true, cleaned: totalCleaned, message: `Cleaned up ${totalCleaned} jobs.` })
     }
 
     // --- CASE 2: Single job deletion ---

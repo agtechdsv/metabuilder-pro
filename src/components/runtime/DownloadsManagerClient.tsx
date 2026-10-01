@@ -61,6 +61,7 @@ export function DownloadsManagerClient({
   const { t } = useI18n()
 
   const [jobs, setJobs] = useState<DownloadJob[]>([])
+  const [isLoadingJobs, setIsLoadingJobs] = useState(true)
   const [filter, setFilter] = useState<'all' | 'completed' | 'processing' | 'failed'>('all')
   const [isClearing, setIsClearing] = useState(false)
   const [isDeletingConfirm, setIsDeletingConfirm] = useState(false)
@@ -78,33 +79,51 @@ export function DownloadsManagerClient({
     try {
       const response = await fetch(`/api/export?projectId=${projectId}&userId=${userId}`)
       const data = await response.json()
-      
+
       if (data.error) throw new Error(data.error)
-      
-      setJobs(data.jobs || [])
+
+      // Mescla com o que já chegou em tempo real (broadcast/realtime) enquanto a busca estava a caminho:
+      // a resposta do servidor é a fonte da verdade, mas não pode apagar jobs novos que só existem localmente.
+      const serverJobs: DownloadJob[] = data.jobs || []
+      setJobs(prev => {
+        const serverIds = new Set(serverJobs.map(j => j.id))
+        const onlyLocal = prev.filter(j => !serverIds.has(j.id))
+        return [...onlyLocal, ...serverJobs]
+      })
     } catch (err: any) {
       console.error('[DownloadsPage] Fetch error:', err)
       toast(err.message || 'Não foi possível carregar as exportações.', 'error')
+    } finally {
+      setIsLoadingJobs(false)
     }
   }
 
-  // Trigger a quick, silent background cleanup of expired jobs (>24 hours old)
-  const runCleanup = async () => {
-    if (!userId) return
+  // Limpeza silenciosa de jobs expirados deste projeto/usuário. Roda em segundo plano e pode
+  // demorar (avisa o agente para apagar arquivos), então NUNCA deve bloquear a listagem.
+  // Retorna quantos jobs foram removidos.
+  const runCleanup = async (): Promise<number> => {
+    if (!userId) return 0
     try {
-      await fetch('/api/export', {
+      const res = await fetch('/api/export', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, cleanup: true })
+        body: JSON.stringify({ userId, projectId, cleanup: true })
       })
+      const data = await res.json().catch(() => ({}))
+      return Number(data?.cleaned) || 0
     } catch (err) {
       console.error('[DownloadsPage] Expiry cleanup failed:', err)
+      return 0
     }
   }
 
   useEffect(() => {
     if (userId && projectId) {
-      runCleanup().then(() => fetchJobs())
+      // 1) lista imediatamente; 2) limpeza em segundo plano e só recarrega se algo foi removido
+      fetchJobs()
+      runCleanup().then(cleaned => { if (cleaned > 0) fetchJobs() })
+    } else {
+      setIsLoadingJobs(false)
     }
   }, [userId, projectId])
 
@@ -472,7 +491,11 @@ export function DownloadsManagerClient({
           </div>
 
           {/* List Area */}
-          {filteredJobs.length === 0 ? (
+          {isLoadingJobs && jobs.length === 0 ? (
+            <div className="px-8 py-20 flex flex-col items-center justify-center text-center gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            </div>
+          ) : filteredJobs.length === 0 ? (
             <div className="px-8 py-20 flex flex-col items-center justify-center text-center">
               <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-400 dark:text-neutral-500 mb-4 animate-bounce">
                 <Download className="w-8 h-8" />
