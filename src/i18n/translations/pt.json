@@ -1,4 +1,17 @@
 {
+  "studio_downloads_path": {
+    "title": "Pasta de Downloads",
+    "load_error": "Erro ao ler o metabuilder.config.json.",
+    "project_not_found": "Este projeto ainda não existe no metabuilder.config.json. Adicione-o em \"Configurar (metabuilder.config.json)\" na tela de projetos.",
+    "saved": "Pasta de downloads salva. Vale a partir do próximo início do túnel.",
+    "save_error": "Erro ao salvar: ",
+    "desc": "Pasta da máquina do agente onde os arquivos exportados deste projeto são gravados. Fica salva no metabuilder.config.json, dentro deste projeto.",
+    "label": "Caminho da pasta",
+    "browse": "Procurar pasta",
+    "global_hint": "Se ficar vazio, será usado o padrão global:",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
   "tunnel_log": {
     "not_found": "[SYSTEM] Arquivo de log não encontrado. O túnel pode não ter sido iniciado ainda.",
     "error_read_console": "Erro ao ler logs do túnel:",
@@ -3692,6 +3705,13 @@
       "new_connection_for": "+ Nova Conexão para {name}",
       "new_connection_this_project": "este projeto",
       "ldap_enable": "Habilitar Autenticação LDAP",
+      "global_defaults_title": "Padrões Globais",
+      "global_defaults_desc": "LDAP e Pasta de Downloads são configurados por projeto, acima. Estes valores só são usados pelos projetos que não definirem os seus.",
+      "download_path_default": "Pasta de Downloads padrão",
+      "download_path_label": "Pasta de Downloads",
+      "download_path_hint": "Vazio = usa o padrão global.",
+      "add_ldap_project": "+ Configurar LDAP para este projeto",
+      "ldap_remove": "Remover configuração LDAP",
       "ldap_server_url": "URL do Servidor",
       "ldap_server_placeholder": "Ex: ldap://10.0.0.15:389",
       "ldap_base_dn": "Base DN",

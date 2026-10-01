@@ -1,4 +1,17 @@
 {
+  "studio_downloads_path": {
+    "title": "Download Folder",
+    "load_error": "Error reading metabuilder.config.json.",
+    "project_not_found": "This project does not exist in metabuilder.config.json yet. Add it via \"Configure (metabuilder.config.json)\" on the projects screen.",
+    "saved": "Download folder saved. Takes effect from the next tunnel start.",
+    "save_error": "Error saving: ",
+    "desc": "Folder on the agent machine where this project's exported files are written. Saved in metabuilder.config.json, inside this project.",
+    "label": "Folder path",
+    "browse": "Browse folder",
+    "global_hint": "If empty, the global default is used:",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
   "tunnel_log": {
     "not_found": "[SYSTEM] Log file not found. The tunnel may not have been started yet.",
     "error_read_console": "Error reading tunnel logs:",
@@ -3691,6 +3704,13 @@
       "new_connection_for": "+ New Connection for {name}",
       "new_connection_this_project": "this project",
       "ldap_enable": "Enable LDAP Authentication",
+      "global_defaults_title": "Global Defaults",
+      "global_defaults_desc": "LDAP and Download Folder are configured per project, above. These values are only used by projects that do not define their own.",
+      "download_path_default": "Default download folder",
+      "download_path_label": "Download Folder",
+      "download_path_hint": "Empty = uses the global default.",
+      "add_ldap_project": "+ Configure LDAP for this project",
+      "ldap_remove": "Remove LDAP configuration",
       "ldap_server_url": "Server URL",
       "ldap_server_placeholder": "Ex: ldap://10.0.0.15:389",
       "ldap_base_dn": "Base DN",

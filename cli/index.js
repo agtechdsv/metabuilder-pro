@@ -1635,6 +1635,16 @@ async function run() {
       const SUPABASE_URL = configData.supabaseUrl || 'https://chmstvtepzmjhpyxjjam.supabase.co';
       const SUPABASE_ANON_KEY = configData.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNobXN0dnRlcHptamhweXhqamFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMjk1ODgsImV4cCI6MjA5MzYwNTU4OH0.eMw33Jv7lco6uXWJnz0bdMSbHRAQFW0Ala7K6S_R8To';
       
+      // LDAP e downloadPath são configurados POR PROJETO (dentro de cada item de "connections").
+      // Os valores globais (raiz do arquivo) continuam valendo como padrão para projetos sem configuração própria.
+      // - ldap: se o projeto define "ldap" (mesmo com enabled=false) ele prevalece; senão usa o global.
+      // - downloadPath: projeto tem prioridade quando preenchido; senão usa o global.
+      const resolveProjectLdap = (conn) => (conn.ldap !== undefined && conn.ldap !== null ? conn.ldap : configData.ldap);
+      const resolveProjectConfigData = (conn) => ({
+        ...configData,
+        downloadPath: (typeof conn.downloadPath === 'string' && conn.downloadPath.trim()) ? conn.downloadPath.trim() : configData.downloadPath
+      });
+
       const tunnelPromises = [];
       configData.connections.forEach(conn => {
         if (Array.isArray(conn.connectionsString)) {
@@ -1642,7 +1652,7 @@ async function run() {
           conn.connectionsString.forEach(dbConfig => {
             const dbType = dbConfig.type || 'postgres';
             tunnelPromises.push(
-              startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData, totalConnsForProject)
+              startTunnel(conn.projectId, conn.secretToken, dbConfig.name, dbConfig.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, resolveProjectLdap(conn), dbType, resolveProjectConfigData(conn), totalConnsForProject)
                 .catch(err => {
                   console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${dbConfig.name}' (${dbType}):`), err.message);
                 })
@@ -1651,7 +1661,7 @@ async function run() {
         } else if (conn.connectionString) {
           const dbType = conn.type || 'postgres';
           tunnelPromises.push(
-            startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, configData.ldap, dbType, configData, 1)
+            startTunnel(conn.projectId, conn.secretToken, 'public', conn.connectionString, SUPABASE_URL, SUPABASE_ANON_KEY, resolveProjectLdap(conn), dbType, resolveProjectConfigData(conn), 1)
               .catch(err => {
                 console.error(chalk.red.bold(`❌ Falha ao iniciar túnel para '${conn.projectId}':`), err.message);
               })

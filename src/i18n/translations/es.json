@@ -1,4 +1,17 @@
 {
+  "studio_downloads_path": {
+    "title": "Carpeta de Descargas",
+    "load_error": "Error al leer metabuilder.config.json.",
+    "project_not_found": "Este proyecto aún no existe en metabuilder.config.json. Agréguelo en \"Configurar (metabuilder.config.json)\" en la pantalla de proyectos.",
+    "saved": "Carpeta de descargas guardada. Vale desde el próximo inicio del túnel.",
+    "save_error": "Error al guardar: ",
+    "desc": "Carpeta de la máquina del agente donde se guardan los archivos exportados de este proyecto. Se guarda en metabuilder.config.json, dentro de este proyecto.",
+    "label": "Ruta de la carpeta",
+    "browse": "Buscar carpeta",
+    "global_hint": "Si queda vacío, se usa el valor global:",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
   "tunnel_log": {
     "not_found": "[SYSTEM] Archivo de log no encontrado. Es posible que el túnel aún no se haya iniciado.",
     "error_read_console": "Error al leer los logs del túnel:",
@@ -3751,6 +3764,13 @@
       "new_connection_for": "+ Nueva Conexión para {name}",
       "new_connection_this_project": "este proyecto",
       "ldap_enable": "Habilitar Autenticación LDAP",
+      "global_defaults_title": "Valores Globales",
+      "global_defaults_desc": "LDAP y Carpeta de Descargas se configuran por proyecto, arriba. Estos valores solo los usan los proyectos que no definan los suyos.",
+      "download_path_default": "Carpeta de descargas predeterminada",
+      "download_path_label": "Carpeta de Descargas",
+      "download_path_hint": "Vacío = usa el valor global.",
+      "add_ldap_project": "+ Configurar LDAP para este proyecto",
+      "ldap_remove": "Quitar configuración LDAP",
       "ldap_server_url": "URL del Servidor",
       "ldap_server_placeholder": "Ej: ldap://10.0.0.15:389",
       "ldap_base_dn": "Base DN",

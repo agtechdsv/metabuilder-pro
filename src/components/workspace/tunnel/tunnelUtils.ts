@@ -62,6 +62,7 @@ export const defaultTunnelConfigTemplate = `{
     {
       "projectId": "",
       "secretToken": "",
+      "downloadPath": "",
       "connectionsString": [
         {
           "name": "public",

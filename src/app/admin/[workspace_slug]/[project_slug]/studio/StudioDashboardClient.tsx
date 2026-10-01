@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useTransition, useEffect } from 'react'
-import { openExternalUrl } from '@/utils/tauriUtils'
+import { openExternalUrl, isTauri } from '@/utils/tauriUtils'
+import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
 
 import {
   LayoutDashboard,
@@ -260,6 +261,9 @@ export function StudioDashboardClient({
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
   const automationsView = views?.find(view => view.slug === 'automations')
   const isAutomationsActive = automationsView ? (automationsView.layout_config?.is_active !== false) : false
+  const [isDownloadPathModalOpen, setIsDownloadPathModalOpen] = useState(false)
+  const [isDesktopApp, setIsDesktopApp] = useState(false)
+  useEffect(() => { setIsDesktopApp(isTauri()) }, [])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isBpmConfigModalOpen, setIsBpmConfigModalOpen] = useState(false)
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false)
@@ -762,6 +766,12 @@ export function StudioDashboardClient({
 
   return (
     <>
+      <DownloadPathModal
+        isOpen={isDownloadPathModalOpen}
+        onClose={() => setIsDownloadPathModalOpen(false)}
+        projectId={project.id}
+        projectName={project.name}
+      />
       <Breadcrumbs
         workspaceName={workspace.name}
         workspaceSlug={workspace_slug}
@@ -1256,6 +1266,15 @@ export function StudioDashboardClient({
                          >
                            {isDownloadsActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                          </span>
+                       )}
+                       {canCreate && isDesktopApp && (
+                         <button
+                           onClick={() => setIsDownloadPathModalOpen(true)}
+                           className="p-1.5 rounded-xl text-blue-500 hover:bg-blue-500/20 transition-colors"
+                           title={t('studio_downloads_path.title', 'Pasta de Downloads')}
+                         >
+                           <Settings className="w-4 h-4" />
+                         </button>
                        )}
                       <div className="p-1.5"><Download className="w-4 h-4" /></div>
                     </div>

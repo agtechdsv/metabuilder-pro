@@ -394,6 +394,49 @@ export function TunnelConfigModal({
                               )}
                             </button>
                           </div>
+
+                          {/* Configurações por projeto: Pasta de Downloads e LDAP */}
+                          <div className="mt-6 pt-5 border-t border-neutral-100 dark:border-neutral-800 space-y-4">
+                            <div>
+                              <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+                                {t('workspace_components.tunnel_control.download_path_label', 'Pasta de Downloads')}
+                              </label>
+                              <input
+                                value={projConfig.downloadPath || ''}
+                                onChange={(e) => {
+                                  const newConfig = { ...parsedConfig }
+                                  newConfig.connections[originalIdx].downloadPath = e.target.value
+                                  updateParsedConfig(newConfig)
+                                }}
+                                placeholder={parsedConfig.downloadPath || 'C:\AgTech\DownloadsMetaBuilder'}
+                                className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono outline-none focus:ring-2 focus:ring-indigo-500/50"
+                              />
+                              <p className="text-[11px] text-neutral-400 mt-1">
+                                {t(
+                                  'workspace_components.tunnel_control.download_path_hint',
+                                  'Vazio = usa o padrão global.'
+                                )}
+                              </p>
+                            </div>
+
+                            <div>
+                              <h5 className="font-bold text-sm text-neutral-700 dark:text-neutral-300 mb-2">LDAP</h5>
+                              <LdapEditor
+                                ldap={projConfig.ldap}
+                                t={t}
+                                addLabel={t(
+                                  'workspace_components.tunnel_control.add_ldap_project',
+                                  '+ Configurar LDAP para este projeto'
+                                )}
+                                onChange={(ldap) => {
+                                  const newConfig = { ...parsedConfig }
+                                  if (ldap) newConfig.connections[originalIdx].ldap = ldap
+                                  else delete newConfig.connections[originalIdx].ldap
+                                  updateParsedConfig(newConfig)
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       )
                     })}
@@ -411,150 +454,48 @@ export function TunnelConfigModal({
                     </button>
                   </div>
 
-                  {/* LDAP */}
-                  <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                    <h4 className="font-bold text-lg text-neutral-800 dark:text-neutral-200 mb-4 flex items-center gap-2">
-                      <Network className="w-5 h-5 text-indigo-500" /> LDAP
-                    </h4>
+                  {/* Padrões globais (valem para projetos que não definem a própria configuração) */}
+                  <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+                    <div>
+                      <h4 className="font-bold text-lg text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                        <Network className="w-5 h-5 text-indigo-500" />{' '}
+                        {t('workspace_components.tunnel_control.global_defaults_title', 'Padrões Globais')}
+                      </h4>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {t(
+                          'workspace_components.tunnel_control.global_defaults_desc',
+                          'LDAP e Pasta de Downloads são configurados por projeto, acima. Estes valores só são usados pelos projetos que não definirem os seus.'
+                        )}
+                      </p>
+                    </div>
 
-                    {parsedConfig.ldap ? (
-                      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl shadow-sm">
-                        <label className="flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-6 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-xl cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={parsedConfig.ldap.enabled || false}
-                            onChange={(e) => {
-                              const newConfig = { ...parsedConfig }
-                              newConfig.ldap.enabled = e.target.checked
-                              updateParsedConfig(newConfig)
-                            }}
-                            className="w-5 h-5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
-                          />
-                          {t('workspace_components.tunnel_control.ldap_enable', 'Habilitar Autenticação LDAP')}
-                        </label>
-
-                        <div
-                          className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${
-                            !parsedConfig.ldap.enabled ? 'opacity-40 pointer-events-none' : ''
-                          }`}
-                        >
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
-                              {t('workspace_components.tunnel_control.ldap_server_url', 'URL do Servidor')}
-                            </label>
-                            <input
-                              value={parsedConfig.ldap.url || ''}
-                              onChange={(e) => {
-                                const newConfig = { ...parsedConfig }
-                                newConfig.ldap.url = e.target.value
-                                updateParsedConfig(newConfig)
-                              }}
-                              placeholder={t(
-                                'workspace_components.tunnel_control.ldap_server_placeholder',
-                                'Ex: ldap://10.0.0.15:389'
-                              )}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
-                              {t('workspace_components.tunnel_control.ldap_base_dn', 'Base DN')}
-                            </label>
-                            <input
-                              value={parsedConfig.ldap.baseDn || ''}
-                              onChange={(e) => {
-                                const newConfig = { ...parsedConfig }
-                                newConfig.ldap.baseDn = e.target.value
-                                updateParsedConfig(newConfig)
-                              }}
-                              placeholder={t(
-                                'workspace_components.tunnel_control.ldap_base_placeholder',
-                                'Ex: dc=empresa,dc=local'
-                              )}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
-                              {t(
-                                'workspace_components.tunnel_control.ldap_bind_dn',
-                                'Bind DN (Usuário Serviço)'
-                              )}
-                            </label>
-                            <input
-                              value={parsedConfig.ldap.bindDn || ''}
-                              onChange={(e) => {
-                                const newConfig = { ...parsedConfig }
-                                newConfig.ldap.bindDn = e.target.value
-                                updateParsedConfig(newConfig)
-                              }}
-                              placeholder={t(
-                                'workspace_components.tunnel_control.ldap_bind_placeholder',
-                                'Ex: cn=servico,ou=Services,dc=empresa,dc=local'
-                              )}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
-                              {t(
-                                'workspace_components.tunnel_control.ldap_bind_pass',
-                                'Senha (Bind Password)'
-                              )}
-                            </label>
-                            <input
-                              type="password"
-                              value={parsedConfig.ldap.bindPassword || ''}
-                              onChange={(e) => {
-                                const newConfig = { ...parsedConfig }
-                                newConfig.ldap.bindPassword = e.target.value
-                                updateParsedConfig(newConfig)
-                              }}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
-                              {t('workspace_components.tunnel_control.ldap_search_filter', 'Search Filter')}
-                            </label>
-                            <input
-                              value={parsedConfig.ldap.searchFilter || ''}
-                              onChange={(e) => {
-                                const newConfig = { ...parsedConfig }
-                                newConfig.ldap.searchFilter = e.target.value
-                                updateParsedConfig(newConfig)
-                              }}
-                              placeholder={t(
-                                'workspace_components.tunnel_control.ldap_filter_placeholder',
-                                'Ex: (sAMAccountName={{username}})'
-                              )}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">
+                        {t('workspace_components.tunnel_control.download_path_default', 'Pasta de Downloads padrão')}
+                      </label>
+                      <input
+                        value={parsedConfig.downloadPath || ''}
+                        onChange={(e) => {
                           const newConfig = { ...parsedConfig }
-                          newConfig.ldap = {
-                            enabled: true,
-                            url: 'ldap://10.0.0.15:389',
-                            baseDn: 'dc=empresa,dc=local',
-                            bindDn: 'cn=metabuilder_service,ou=Services,dc=empresa,dc=local',
-                            bindPassword: 'senha',
-                            searchFilter: '(sAMAccountName={{username}})',
-                          }
+                          newConfig.downloadPath = e.target.value
                           updateParsedConfig(newConfig)
                         }}
-                        className="w-full py-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
-                      >
-                        {t(
-                          'workspace_components.tunnel_control.add_ldap_config',
-                          '+ Adicionar Configuração LDAP'
-                        )}
-                      </button>
-                    )}
+                        placeholder="C:\AgTech\DownloadsMetaBuilder"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
+
+                    <LdapEditor
+                      ldap={parsedConfig.ldap}
+                      t={t}
+                      addLabel={t('workspace_components.tunnel_control.add_ldap_config', '+ Adicionar Configuração LDAP')}
+                      onChange={(ldap) => {
+                        const newConfig = { ...parsedConfig }
+                        if (ldap) newConfig.ldap = ldap
+                        else delete newConfig.ldap
+                        updateParsedConfig(newConfig)
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -597,6 +538,130 @@ export function TunnelConfigModal({
           </div>
         </div>
       </Rnd>
+    </div>
+  )
+}
+
+const DEFAULT_LDAP = {
+  enabled: true,
+  url: 'ldap://10.0.0.15:389',
+  baseDn: 'dc=empresa,dc=local',
+  bindDn: 'cn=metabuilder_service,ou=Services,dc=empresa,dc=local',
+  bindPassword: 'senha',
+  searchFilter: '(sAMAccountName={{username}})',
+}
+
+/** Editor dos campos LDAP — reutilizado no nível do projeto e no padrão global. */
+function LdapEditor({
+  ldap,
+  onChange,
+  t,
+  addLabel,
+}: {
+  ldap: any
+  onChange: (ldap: any | undefined) => void
+  t: (key: string, fallback?: string) => string
+  addLabel: string
+}) {
+  const inputCls =
+    'w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 outline-none focus:ring-2 focus:ring-indigo-500/50'
+  const labelCls = 'block text-[10px] uppercase font-bold text-neutral-400 mb-1.5'
+
+  if (!ldap) {
+    return (
+      <button
+        onClick={() => onChange({ ...DEFAULT_LDAP })}
+        className="w-full py-3 border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 font-bold text-sm rounded-2xl hover:border-indigo-500 hover:text-indigo-500 dark:hover:border-indigo-400 dark:hover:text-indigo-400 transition-colors"
+      >
+        {addLabel}
+      </button>
+    )
+  }
+
+  const set = (key: string, value: any) => onChange({ ...ldap, [key]: value })
+
+  return (
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 rounded-2xl shadow-sm">
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <label className="flex flex-1 items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-xl cursor-pointer">
+          <input
+            type="checkbox"
+            checked={ldap.enabled || false}
+            onChange={(e) => set('enabled', e.target.checked)}
+            className="w-5 h-5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          {t('workspace_components.tunnel_control.ldap_enable', 'Habilitar Autenticação LDAP')}
+        </label>
+        <button
+          onClick={() => onChange(undefined)}
+          className="p-2.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+          title={t('workspace_components.tunnel_control.ldap_remove', 'Remover configuração LDAP')}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div
+        className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${
+          !ldap.enabled ? 'opacity-40 pointer-events-none' : ''
+        }`}
+      >
+        <div>
+          <label className={labelCls}>{t('workspace_components.tunnel_control.ldap_server_url', 'URL do Servidor')}</label>
+          <input
+            value={ldap.url || ''}
+            onChange={(e) => set('url', e.target.value)}
+            placeholder={t('workspace_components.tunnel_control.ldap_server_placeholder', 'Ex: ldap://10.0.0.15:389')}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>{t('workspace_components.tunnel_control.ldap_base_dn', 'Base DN')}</label>
+          <input
+            value={ldap.baseDn || ''}
+            onChange={(e) => set('baseDn', e.target.value)}
+            placeholder={t('workspace_components.tunnel_control.ldap_base_placeholder', 'Ex: dc=empresa,dc=local')}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>
+            {t('workspace_components.tunnel_control.ldap_bind_dn', 'Bind DN (Usuário Serviço)')}
+          </label>
+          <input
+            value={ldap.bindDn || ''}
+            onChange={(e) => set('bindDn', e.target.value)}
+            placeholder={t(
+              'workspace_components.tunnel_control.ldap_bind_placeholder',
+              'Ex: cn=servico,ou=Services,dc=empresa,dc=local'
+            )}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>
+            {t('workspace_components.tunnel_control.ldap_bind_pass', 'Senha (Bind Password)')}
+          </label>
+          <input
+            type="password"
+            value={ldap.bindPassword || ''}
+            onChange={(e) => set('bindPassword', e.target.value)}
+            className={inputCls}
+          />
+        </div>
+        <div className="col-span-2">
+          <label className={labelCls}>{t('workspace_components.tunnel_control.ldap_search_filter', 'Search Filter')}</label>
+          <input
+            value={ldap.searchFilter || ''}
+            onChange={(e) => set('searchFilter', e.target.value)}
+            placeholder={t(
+              'workspace_components.tunnel_control.ldap_filter_placeholder',
+              'Ex: (sAMAccountName={{username}})'
+            )}
+            className={inputCls}
+          />
+        </div>
+      </div>
     </div>
   )
 }
