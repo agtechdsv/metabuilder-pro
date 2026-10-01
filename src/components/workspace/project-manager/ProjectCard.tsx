@@ -15,7 +15,8 @@ import {
   Download,
   FolderGit2,
   Database,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
@@ -107,6 +108,18 @@ export function ProjectCard({
               }`}>
               {project.is_active ? t('dashboard.projects.status_active') : t('dashboard.projects.status_inactive')}
             </div>
+
+            {project.sync_status === 'draft_pending' && (
+              <Link
+                href={`/admin/${workspaceSlug}/${project.slug}/sync-resolution`}
+                onClick={(e) => e.stopPropagation()}
+                className="pointer-events-auto px-3 py-1 text-[10px] font-bold rounded-full border uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
+                title={t('workspace_components.sync_pending_badge_title', 'Há alterações estruturais aguardando a sua revisão. Clique para revisar.')}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                {t('workspace_components.sync_pending_badge', 'Sincronização pendente')}
+              </Link>
+            )}
 
             {!isNavigating && (
               <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">

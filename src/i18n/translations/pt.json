@@ -3634,6 +3634,8 @@
     "pending_suffix": "pendente(s)",
     "tabs_your_workspaces": "Seus Workspaces",
     "tabs_your_projects": "Seus Projetos",
+    "sync_pending_badge": "Sincronização pendente",
+    "sync_pending_badge_title": "Há alterações estruturais aguardando a sua revisão. Clique para revisar.",
     "tabs_tunnel_manager": "Gerenciador do Túnel",
     "tabs_synced_dbs": "Bancos Sincronizados",
     "refresh_tooltip": "Atualizar",

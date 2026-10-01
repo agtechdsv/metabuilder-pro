@@ -3633,6 +3633,8 @@
     "pending_suffix": "pending",
     "tabs_your_workspaces": "Your Workspaces",
     "tabs_your_projects": "Your Projects",
+    "sync_pending_badge": "Pending sync",
+    "sync_pending_badge_title": "There are structural changes waiting for your review. Click to review.",
     "tabs_tunnel_manager": "Tunnel Manager",
     "tabs_synced_dbs": "Synced Databases",
     "refresh_tooltip": "Refresh",

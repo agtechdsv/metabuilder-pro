@@ -5,6 +5,7 @@ export interface Project {
   description?: string
   icon?: string
   is_active: boolean
+  sync_status?: string | null
   workspace_id: string
   models?: { count: number }[]
   can_create?: boolean

@@ -237,6 +237,10 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
             query = query.eq('workspace_id', workspace.id)
           }
         }
+        // No escopo de projeto, só interessa a pendência DESTE projeto (não a de outros do mesmo workspace)
+        if (projectSlug) {
+          query = query.eq('slug', projectSlug)
+        }
 
         const { data: projects } = await query
 
