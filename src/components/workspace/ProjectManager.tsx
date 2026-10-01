@@ -412,7 +412,7 @@ export function ProjectManager({
               : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
           )}
         >
-          {t('workspace_components.tabs_your_workspaces', 'Projetos do Ecossistema')}
+          {t('workspace_components.tabs_your_projects', 'Seus Projetos')}
           {activeTab === 'projects' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]" />
           )}
