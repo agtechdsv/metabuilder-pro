@@ -3705,6 +3705,7 @@
       "new_connection_for": "+ New Connection for {name}",
       "new_connection_this_project": "this project",
       "ldap_enable": "Enable LDAP Authentication",
+      "loading_config": "Loading configuration...",
       "scope_global_title": "Global (Workspaces / Projects)",
       "scope_workspace_title": "Global (Projects of {name})",
       "scope_project_title": "{project} in {workspace}",

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Rnd } from 'react-rnd'
 import Editor from '@monaco-editor/react'
-import { X, Network, AlertTriangle, Save, Undo2, SlidersHorizontal } from 'lucide-react'
+import { X, Network, AlertTriangle, Save, Undo2, SlidersHorizontal, Loader2 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import {
   parseConnString,
@@ -27,6 +27,8 @@ interface TunnelConfigModalProps {
   availableProjects: any[]
   /** Nível de configuração que a aba Formulário edita (global, workspace ou projeto). */
   scope: ConfigScope
+  /** Enquanto o arquivo e o escopo estão sendo carregados. */
+  isLoading?: boolean
 }
 
 type TFn = (key: string, fallback?: string) => string
@@ -52,6 +54,7 @@ export function TunnelConfigModal({
   hasProjects,
   availableProjects,
   scope,
+  isLoading = false,
 }: TunnelConfigModalProps) {
   const { t } = useI18n() as { t: TFn }
   const [activeConfigTab, setActiveConfigTab] = useState<'form' | 'json'>('form')
@@ -258,7 +261,13 @@ export function TunnelConfigModal({
           </div>
 
           <div className="flex-1 min-h-0 w-full bg-white dark:bg-[#1e1e1e] border-y border-neutral-200 dark:border-neutral-800 relative overflow-hidden flex flex-col">
-            {activeConfigTab === 'json' && (
+            {isLoading && (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-neutral-400">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                <span className="text-sm">{t('workspace_components.tunnel_control.loading_config', 'Carregando configuração...')}</span>
+              </div>
+            )}
+            {!isLoading && activeConfigTab === 'json' && (
               <>
                 <div className="px-4 py-2 text-[11px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-b border-amber-500/20 shrink-0">
                   {t(
@@ -284,7 +293,7 @@ export function TunnelConfigModal({
                 </div>
               </>
             )}
-            {activeConfigTab === 'form' &&
+            {!isLoading && activeConfigTab === 'form' &&
               (!parsedConfig ? (
                 <div className="p-8 text-center flex flex-col items-center justify-center h-full text-red-500">
                   <AlertTriangle className="w-12 h-12 mb-4 opacity-50" />
@@ -413,7 +422,7 @@ export function TunnelConfigModal({
             </button>
             <button
               onClick={onSaveConfig}
-              disabled={isSavingConfig}
+              disabled={isSavingConfig || isLoading}
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all disabled:opacity-50"
             >
               {isSavingConfig ? (

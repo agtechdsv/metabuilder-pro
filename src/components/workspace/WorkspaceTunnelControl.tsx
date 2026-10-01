@@ -44,6 +44,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
   )
 
   const [configScope, setConfigScope] = useState<ConfigScope>({ type: 'global' })
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false)
 
   const scopeType: ConfigScope['type'] = projectSlug ? 'project' : workspaceSlug === 'global' ? 'global' : 'workspace'
 
@@ -82,6 +83,9 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
   }
 
   const handleOpenConfig = async () => {
+    // Abre a modal já em estado de carregamento (sem conteúdo antigo/"JSON Inválido" piscando) até o arquivo e o escopo estarem prontos
+    setConfigContent('')
+    setIsLoadingConfig(true)
     setIsConfigModalOpen(true)
     try {
       const { appLocalDataDir, join } = await import('@tauri-apps/api/path')
@@ -137,6 +141,8 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
       setConfigContent(configText)
     } catch (e: any) {
       toast(t('workspace_components.tunnel_control.config_load_error', 'Erro ao carregar configuração.') + (e?.message ? ` ${e.message}` : ''), 'error')
+    } finally {
+      setIsLoadingConfig(false)
     }
   }
 
@@ -569,6 +575,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
         hasProjects={hasProjects}
         availableProjects={availableProjects}
         scope={configScope}
+        isLoading={isLoadingConfig}
       />
 
       {/* Modal de Sincronização */}
