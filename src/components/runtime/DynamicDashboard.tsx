@@ -52,11 +52,16 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
 
         <ResizableCardGrid
           storageKey="mb_card_size_dashboard"
-          defaultSize={70}
+          baseWidth={396}
           label={t('runtime.card_size', 'Tamanho dos cards')}
           resetLabel={t('runtime.card_size_reset', 'Restaurar tamanho padrão')}
-          compactLabel={t('runtime.card_size_smaller', 'Cards menores')}
-          largeLabel={t('runtime.card_size_larger', 'Cards maiores')}
+          stepLabels={[
+            t('runtime.card_size_s0', 'Compacto'),
+            t('runtime.card_size_s1', 'Pequeno'),
+            t('runtime.card_size_s2', 'Normal'),
+            t('runtime.card_size_s3', 'Grande'),
+            t('runtime.card_size_s4', 'Extra grande'),
+          ]}
         >
 
         {items.map((item) => {

@@ -103,7 +103,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
       {/* Projects Grid */}
       <main className="relative z-20 flex-grow w-full max-w-6xl mx-auto px-6 pb-24">
         {portalProjects.length > 0 ? (
-          <ResizableCardGrid storageKey="mb_card_size_portal" defaultSize={50}>
+          <ResizableCardGrid storageKey="mb_card_size_portal" baseWidth={340}>
             {portalProjects.map((project) => (
               <Link
                 key={project.id}
