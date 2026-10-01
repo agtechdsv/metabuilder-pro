@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import DynamicIcon from './DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
 
+import { ResizableCardGrid } from '@/components/ui/ResizableCardGrid'
 import { RuntimeHeader } from './RuntimeHeader'
 import { RuntimeBreadcrumbs } from './RuntimeBreadcrumbs'
 
@@ -49,7 +50,14 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
 
       <div className="px-10 py-2 space-y-6 animate-in fade-in duration-700">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <ResizableCardGrid
+          storageKey="mb_card_size_dashboard"
+          defaultSize={70}
+          label={t('runtime.card_size', 'Tamanho dos cards')}
+          resetLabel={t('runtime.card_size_reset', 'Restaurar tamanho padrão')}
+          compactLabel={t('runtime.card_size_smaller', 'Cards menores')}
+          largeLabel={t('runtime.card_size_larger', 'Cards maiores')}
+        >
 
         {items.map((item) => {
           const isFolder = item.type === 'folder'
@@ -64,25 +72,27 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
               key={item.id}
               href={href}
               target={item.type === 'link' ? '_blank' : undefined}
-              className="group relative p-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500 transition-all shadow-sm hover:shadow-2xl dark:shadow-none overflow-hidden"
+              className="group relative p-[calc(2rem*var(--card-scale,1))] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] hover:border-indigo-500 transition-all shadow-sm hover:shadow-2xl dark:shadow-none overflow-hidden"
             >
               {/* Glow Effect */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl group-hover:bg-indigo-500/10 transition-all duration-500" />
               
-              <div className="relative z-10 flex flex-col h-full gap-6">
-                <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-sm">
-                  <DynamicIcon icon={item.icon} size={28} />
+              <div className="relative z-10 flex flex-col h-full gap-[calc(1.5rem*var(--card-scale,1))]">
+                <div className="w-[calc(3.5rem*var(--card-scale,1))] h-[calc(3.5rem*var(--card-scale,1))] bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-sm">
+                  <span className="inline-flex" style={{ transform: 'scale(var(--card-scale,1))' }}>
+                    <DynamicIcon icon={item.icon} size={28} />
+                  </span>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h3 className="text-[length:calc(1.25rem*var(--card-scale,1))] leading-tight font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {item.label}
                   </h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-500 font-medium uppercase tracking-widest">
+                  <p className="text-[length:calc(0.75rem*var(--card-scale,1))] text-neutral-500 dark:text-neutral-500 font-medium uppercase tracking-widest">
                     {isFolder ? t('runtime.dashboard_folder') : item.type === 'view' ? t('runtime.dashboard_use_case') : t('runtime.dashboard_external')}
                   </p>
                   {item.description && (
-                    <p className="text-[10px] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
+                    <p className="text-[length:calc(10px*var(--card-scale,1))] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
                       {item.description}
                     </p>
                   )}
@@ -100,7 +110,7 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
             </Link>
           )
         })}
-        </div>
+        </ResizableCardGrid>
       </div>
     </div>
   )

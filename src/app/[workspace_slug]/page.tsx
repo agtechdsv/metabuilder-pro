@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronRight, Database, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HeaderActions } from '@/components/layout/HeaderActions'
+import { ResizableCardGrid } from '@/components/ui/ResizableCardGrid'
 
 interface PortalPageProps {
   params: Promise<{
@@ -102,35 +103,35 @@ export default async function PortalPage({ params }: PortalPageProps) {
       {/* Projects Grid */}
       <main className="relative z-20 flex-grow w-full max-w-6xl mx-auto px-6 pb-24">
         {portalProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <ResizableCardGrid storageKey="mb_card_size_portal" defaultSize={50}>
             {portalProjects.map((project) => (
               <Link
                 key={project.id}
                 href={isCustomDomain ? `/${project.slug}/login` : `/${workspace.slug}/${project.slug}/login`}
-                className="group relative bg-white/80 dark:bg-white/[0.02] backdrop-blur-xl border border-neutral-200/50 dark:border-white/10 hover:border-indigo-500/50 rounded-[2rem] p-8 transition-all duration-500 hover:bg-white dark:hover:bg-white/[0.04] hover:-translate-y-1 overflow-hidden flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(79,70,229,0.1)] dark:shadow-none"
+                className="group relative bg-white/80 dark:bg-white/[0.02] backdrop-blur-xl border border-neutral-200/50 dark:border-white/10 hover:border-indigo-500/50 rounded-[2rem] p-[calc(2rem*var(--card-scale,1))] transition-all duration-500 hover:bg-white dark:hover:bg-white/[0.04] hover:-translate-y-1 overflow-hidden flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(79,70,229,0.1)] dark:shadow-none"
               >
                 {/* Glow on hover */}
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 
                 {/* Project Banner or Icon Area */}
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-white/10 dark:to-white/5 border border-neutral-200/50 dark:border-white/10 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 shadow-sm">
+                <div className="w-[calc(4rem*var(--card-scale,1))] h-[calc(4rem*var(--card-scale,1))] rounded-2xl bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-white/10 dark:to-white/5 border border-neutral-200/50 dark:border-white/10 flex items-center justify-center mb-[calc(2rem*var(--card-scale,1))] group-hover:scale-110 transition-transform duration-500 shadow-sm">
                   {project.theme_config?.login_logo_url ? (
-                    <img src={project.theme_config.login_logo_url} alt={project.name} className="w-10 h-10 object-contain" />
+                    <img src={project.theme_config.login_logo_url} alt={project.name} className="w-1/2 h-1/2 object-contain" />
                   ) : (
-                    <Database className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
+                    <Database className="w-1/2 h-1/2 text-indigo-500 dark:text-indigo-400" />
                   )}
                 </div>
 
                 <div className="flex-1 relative z-10">
-                  <h3 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <h3 className="text-[length:calc(1.5rem*var(--card-scale,1))] leading-tight font-black tracking-tight text-neutral-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {project.name}
                   </h3>
-                  <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                  <p className="text-[length:calc(0.875rem*var(--card-scale,1))] font-medium text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                     {project.description || 'Acesse o ambiente completo desta aplicação.'}
                   </p>
                 </div>
 
-                <div className="mt-10 flex items-center text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-500 transition-colors relative z-10">
+                <div className="mt-[calc(2.5rem*var(--card-scale,1))] flex items-center text-[length:calc(0.75rem*var(--card-scale,1))] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-500 transition-colors relative z-10">
                   Entrar no Sistema
                   <div className="ml-3 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-colors">
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
@@ -138,7 +139,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
                 </div>
               </Link>
             ))}
-          </div>
+          </ResizableCardGrid>
         ) : (
           <div className="flex flex-col items-center justify-center py-32 text-center bg-white/50 dark:bg-white/5 backdrop-blur-xl rounded-[3rem] border border-neutral-200/50 dark:border-white/10">
             <div className="w-20 h-20 bg-neutral-100 dark:bg-black/20 rounded-full flex items-center justify-center mb-6 shadow-inner">
