@@ -3,6 +3,7 @@ import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
+import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, readKey, type ParentJoin } from '@/lib/detailRelations'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseDetailDataProps {
@@ -58,6 +59,8 @@ export function useDetailData({
   const [detailModalMode, setDetailModalMode] = useState<'create' | 'edit'>('edit')
   const [currentDetailTable, setCurrentDetailTable] = useState('')
   const [parentRowIdForDetail, setParentRowIdForDetail] = useState<any>(null)
+  // Tabela do registro pai de onde o modal "novo detalhe" foi aberto (ex.: PEDIDOS ao criar um item de pedido)
+  const [parentTableForDetail, setParentTableForDetail] = useState<string | null>(null)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [detailHistory, setDetailHistory] = useState<any[]>([])
   const [activeTabForDetail, setActiveTabForDetail] = useState<string>('master')
@@ -150,6 +153,21 @@ export function useDetailData({
     }
 
     return effectiveJoins
+  }
+
+  /**
+   * Join que liga a tabela PAI à tabela FILHA. Com a tabela pai conhecida procura só nela; sem ela, procura em todos os
+   * modelos do projeto (ex.: ITENS_PEDIDO é filha de PEDIDOS, não do mestre CLIENTES).
+   */
+  const findJoinFor = (childTable: string, parentTable?: string | null): ParentJoin | null => {
+    const parents: string[] = parentTable
+      ? [parentTable]
+      : ((project as any)?.models || []).map((m: any) => m.db_table_name).filter(Boolean)
+    for (const p of parents) {
+      const j = findParentJoin(resolveEffectiveJoins(p), childTable, p)
+      if (j) return j
+    }
+    return null
   }
 
   const fetchDetails = async (parentRow: any, parentModel: string) => {
@@ -390,7 +408,7 @@ export function useDetailData({
     })
   }
 
-  const handleOpenAddDetail = (tableName: string, parentId?: any) => {
+  const handleOpenAddDetail = (tableName: string, parentId?: any, parentTable?: string) => {
     if (selectedDetail && (isDetailModalOpen || isDetailDrawerOpen)) {
       setDetailHistory(prev => [...prev, {
         record: selectedDetail,
@@ -404,10 +422,15 @@ export function useDetailData({
     setIsDetailDrawerOpen(false)
 
     setDetailFieldsToRender(detailFields)
-    setSelectedDetail({})
+    // Pai do novo registro: o informado por quem abriu o modal (sub-detalhe) ou o mestre da tela
+    const effectiveParentId = parentId ?? getParentKeyValue(null, selectedRow, getPrimaryKeyColumn((project as any)?.models, modelName))
+    const addJoin = findJoinFor(tableName, parentTable || null)
+    // Pré-preenche a coluna FK (ex.: cliente_id / pedido_id) para o combo já vir com o registro pai selecionado
+    setSelectedDetail(addJoin && effectiveParentId !== undefined && effectiveParentId !== null ? { [addJoin.foreignKey]: effectiveParentId } : {})
     setDetailModalMode('create')
     setCurrentDetailTable(tableName)
-    setParentRowIdForDetail(parentId || (selectedRow?.id || selectedRow?.ID))
+    setParentRowIdForDetail(effectiveParentId)
+    setParentTableForDetail(parentTable || null)
     setActiveTabForDetail('master')
     
     const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === tableName.toLowerCase())
@@ -441,6 +464,7 @@ export function useDetailData({
     setCurrentDetailTable(detail.model_name)
     setActiveTabForDetail('master')
     setParentRowIdForDetail(null)
+    setParentTableForDetail(null)
     setIsProcessing(false)
     
     const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === detail.model_name?.toLowerCase())
@@ -453,6 +477,7 @@ export function useDetailData({
   }
 
   const handleCloseDetail = () => {
+    setParentTableForDetail(null)
     if (detailHistory.length > 0) {
       const last = detailHistory[detailHistory.length - 1]
       setDetailHistory(prev => prev.slice(0, -1))
@@ -696,20 +721,27 @@ export function useDetailData({
       }
 
       if (action === 'create' && logicType === 'master_detail') {
-        // Pai imediato: o registro de onde o modal foi aberto (histórico) ou o mestre da tela
+        // Pai imediato: o informado ao abrir o modal (ex.: PEDIDOS ao criar item de pedido) > registro do histórico > mestre da tela
         const lastHistory = detailHistory.length > 0 ? detailHistory[detailHistory.length - 1] : null
-        const parentTable = lastHistory?.tableName || modelName
+        const explicitParent = parentTableForDetail
+        const parentTable = explicitParent || lastHistory?.tableName || modelName
         const parentRecord = lastHistory?.record || selectedRow
-        const join = resolveEffectiveJoins(parentTable).find((j: any) =>
-          j.to?.toLowerCase() === tableName?.toLowerCase() && j.from?.toLowerCase() === parentTable?.toLowerCase()
-        ) || resolveEffectiveJoins(modelName).find((j: any) => j.to?.toLowerCase() === tableName?.toLowerCase())
+        const join = findJoinFor(tableName, parentTable) || findJoinFor(tableName)
         if (join) {
-          const fromRecord = (r: any) => r && (r[join.localKey] ?? r[join.localKey?.toUpperCase?.()] ?? r[join.localKey?.toLowerCase?.()])
-          const parentId = fromRecord(parentRecord) ?? fromRecord(selectedRow) ?? parentRowIdForDetail ?? parentRecord?.id ?? parentRecord?.ID ?? selectedRow?.id ?? selectedRow?.ID
-          if (parentId !== undefined && parentId !== null) {
-            sanitizedData[join.foreignKey] = String(parentId)
-          } else {
-            console.warn('[MetaBuilder:handleSaveDetail] Não foi possível resolver o ID do mestre para a FK', join)
+          // Se o formulário já traz a FK preenchida (pré-preenchida ou escolhida pelo usuário), ela vale
+          const alreadyHasFk = readKey(sanitizedData, join.foreignKey) !== undefined && readKey(sanitizedData, join.foreignKey) !== null && readKey(sanitizedData, join.foreignKey) !== ''
+          if (!alreadyHasFk) {
+            const models = (project as any)?.models
+            const parentPk = getPrimaryKeyColumn(models, parentTable)
+            const masterPk = getPrimaryKeyColumn(models, modelName)
+            const parentId = (explicitParent && parentRowIdForDetail !== null && parentRowIdForDetail !== undefined)
+              ? parentRowIdForDetail
+              : (getParentKeyValue(join, parentRecord, parentPk) ?? getParentKeyValue(join, selectedRow, masterPk) ?? parentRowIdForDetail)
+            if (parentId !== undefined && parentId !== null) {
+              sanitizedData[join.foreignKey] = String(parentId)
+            } else {
+              console.warn('[MetaBuilder:handleSaveDetail] Não foi possível resolver o ID do registro pai para a FK', join)
+            }
           }
         } else {
           console.warn(`[MetaBuilder:handleSaveDetail] Nenhum join encontrado de ${parentTable} para ${tableName}`)

@@ -1,4 +1,5 @@
 import React from 'react';
+import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { Loader2, Pencil, Plus, Trash2, ChevronDown, ChevronUp, PanelRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getActionContexts } from '@/lib/customActionsHelper';
@@ -36,7 +37,9 @@ interface RecordFormDetailSectionProps {
   detailsTabTitles?: Record<string, string>;
   dictionary?: Record<string, string>;
   detailsItemTitles?: Record<string, string>;
-  onAddDetail?: (tableName: string, parentId?: any) => void;
+  onAddDetail?: (tableName: string, parentId?: any, parentTable?: string) => void;
+  /** Tabela do registro mestre (nível 1) — necessária para descobrir a FK dos detalhes diretos do mestre */
+  masterTableName?: string;
   onEditDetail?: (detail: any) => void;
   onDeleteDetail?: (detail: any) => void;
   buildActionContext: (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => any;
@@ -85,7 +88,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
     tabsStyleConfig,
     t,
     mode,
-    isPageMode
+    isPageMode,
+    masterTableName
   } = props;
 
   const targetModel = project?.models?.find((m: any) => {
@@ -108,6 +112,12 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
       }
     }
   }
+  // Pai imediato desta seção e coluna FK que o aponta (ex.: seção ITENS_PEDIDO dentro de um PEDIDO → pedido_id)
+  const parentTableName: string | undefined = parentData === formData ? masterTableName : parentData?.model_name
+  const parentJoin = findParentJoin(joins, tableName, parentTableName)
+  const parentKeyValue = getParentKeyValue(parentJoin, parentData, getPrimaryKeyColumn(project?.models, parentTableName))
+  const canPrefillParentKey = !!parentJoin && !isUnsavedRecord(parentData) && parentKeyValue !== undefined && parentKeyValue !== null
+
   let displayLabel = resolvedTabTitle || dictionary[modelId || ''] || targetModel?.display_name || fields.find(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())?.display_model_name || tableName
   if (displayLabel && typeof displayLabel === 'string' && displayLabel === displayLabel.toUpperCase() && displayLabel.length > 2) {
     displayLabel = displayLabel.charAt(0).toUpperCase() + displayLabel.slice(1).toLowerCase().replace(/_/g, ' ')
@@ -200,7 +210,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
               onClick={() => {
                 if (true) {
                   const newTempId = `temp-${Date.now()}`
-                  const newRecord = { id: newTempId, model_name: tableName, _isNew: true }
+                  const newRecord: any = { id: newTempId, model_name: tableName, _isNew: true }
+                  // Já nasce vinculado ao registro pai (o combo da FK vem selecionado)
+                  if (canPrefillParentKey && parentJoin) newRecord[parentJoin.foreignKey] = parentKeyValue
                   
                   if (parentData === formData) {
                     setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), newRecord] }))
@@ -244,7 +256,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             {true && (
               <button
                 type="button"
-                onClick={() => onAddDetail?.(tableName, parentData.id || parentData.ID)}
+                onClick={() => onAddDetail?.(tableName, parentKeyValue, parentTableName)}
                 title={detailsInterfaceTypes[modelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
                 className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
               >
@@ -985,6 +997,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                     detailsTabTitles={detailsTabTitles}
                                     dictionary={dictionary}
                                     onAddDetail={onAddDetail}
+                                    masterTableName={masterTableName}
                                     onEditDetail={onEditDetail}
                                     onDeleteDetail={onDeleteDetail}
                                     buildActionContext={buildActionContext}

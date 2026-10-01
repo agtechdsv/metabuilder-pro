@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -46,7 +47,7 @@ export interface RecordFormProps {
   isPageMode?: boolean;
   onEditDetail?: (detail: any) => void;
   onDeleteDetail?: (detail: any) => void;
-  onAddDetail?: (tableName: string, parentId?: any) => void;
+  onAddDetail?: (tableName: string, parentId?: any, parentTable?: string) => void;
   joins?: any[];
   dictionary?: Record<string, string>;
   initialTab?: string;
@@ -150,6 +151,9 @@ export default function RecordForm({
     edit: <Pencil className="w-5 h-5 text-indigo-500" />,
     view: <Eye className="w-5 h-5 text-indigo-500" />
   }
+
+  // Tabela do mestre deste formulário (usada para achar a FK dos detalhes diretos)
+  const masterTableName = masterModelName || project?.models?.find((m: any) => String(m.id) === String(masterModelId))?.db_table_name
 
   const buildActionContext = (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => {
     // Base object starts with master data so root fields (e.g. "id") map to the master record.
@@ -469,7 +473,12 @@ export default function RecordForm({
                             onClick={() => {
                               if (true) {
                                 const newTempId = `temp-${Date.now()}`
-                                setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), { id: newTempId, model_name: activeTab, _isNew: true }] }))
+                                const tabJoin = findParentJoin(effectiveJoins, activeTab, masterTableName)
+                                const tabParentKey = getParentKeyValue(tabJoin, formData, getPrimaryKeyColumn(project?.models, masterTableName))
+                                const tabRecord: any = { id: newTempId, model_name: activeTab, _isNew: true }
+                                // Já nasce vinculado ao registro mestre (o combo da FK vem selecionado)
+                                if (tabJoin && !isUnsavedRecord(formData) && tabParentKey !== undefined && tabParentKey !== null) tabRecord[tabJoin.foreignKey] = tabParentKey
+                                setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), tabRecord] }))
                                 setExpandedDetails((prev: any) => ({ ...prev, [`detail-${activeTab}-${newTempId}`]: true }))
                                 
                                 // Foco no primeiro campo do novo item
@@ -490,7 +499,7 @@ export default function RecordForm({
                           {true && (
                             <button
                               type="button"
-                              onClick={() => onAddDetail?.(activeTab, formData.id || formData.ID)}
+                              onClick={() => onAddDetail?.(activeTab, getParentKeyValue(findParentJoin(effectiveJoins, activeTab, masterTableName), formData, getPrimaryKeyColumn(project?.models, masterTableName)), masterTableName)}
                               title={detailsInterfaceTypes[activeModelId || ''] === 'drawer' ? t('common.open_drawer', 'Abrir Gaveta') : t('common.open_modal', 'Abrir Modal')}
                               className="p-1.5 bg-neutral-50 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors border border-transparent hover:border-indigo-200"
                             >
@@ -588,6 +597,7 @@ export default function RecordForm({
     setFormData={setFormData}
     fields={fields}
     joins={effectiveJoins}
+    masterTableName={masterTableName}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}
@@ -629,6 +639,7 @@ export default function RecordForm({
     setFormData={setFormData}
     fields={fields}
     joins={effectiveJoins}
+    masterTableName={masterTableName}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}
@@ -666,6 +677,7 @@ export default function RecordForm({
     setFormData={setFormData}
     fields={fields}
     joins={effectiveJoins}
+    masterTableName={masterTableName}
     detailFields={detailFields}
     customActions={customActions}
     onCustomAction={onCustomAction}
