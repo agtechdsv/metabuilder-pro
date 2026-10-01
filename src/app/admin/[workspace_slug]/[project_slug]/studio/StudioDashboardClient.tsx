@@ -801,7 +801,7 @@ export function StudioDashboardClient({
                <button 
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                  "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all",
                   viewMode === 'list' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                 )}
                >
@@ -812,7 +812,7 @@ export function StudioDashboardClient({
                    <button 
                     onClick={() => setViewMode('navigation')}
                     className={cn(
-                      "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all",
                       viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                     )}
                    >
@@ -821,7 +821,7 @@ export function StudioDashboardClient({
                    <button 
                      onClick={() => setViewMode('enumerations')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
                        viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
@@ -830,7 +830,7 @@ export function StudioDashboardClient({
                    <button
                      onClick={() => setViewMode('tunnel')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
                        viewMode === 'tunnel' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
@@ -839,7 +839,7 @@ export function StudioDashboardClient({
                    <button
                      onClick={() => setViewMode('synced-dbs')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
                        viewMode === 'synced-dbs' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
