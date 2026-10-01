@@ -1,4 +1,5 @@
 import { useToast } from '@/components/ui/Toast'
+import { readKey } from '@/lib/detailRelations'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
@@ -558,16 +559,18 @@ export function useMasterData({
             sql = `INSERT INTO ${rowTable} (${keys}) VALUES (${vals})`
           }
 
+          // Linhas devolvidas pelo INSERT (trazem o ID gerado pelo banco, ex.: PK por DEFAULT no Oracle)
+          let insertedRows: any[] | undefined
           if (sql) {
             const qId = crypto.randomUUID()
-            await new Promise<void>((resolve, reject) => {
+            insertedRows = await new Promise<any[] | undefined>((resolve, reject) => {
               let done = false
               const onResult = (payload: any) => {
                 if (payload.payload?.queryId === qId) { 
                   done = true; 
                   cleanup(); 
                   if (payload.payload.success !== false) {
-                    resolve() 
+                    resolve(payload.payload.data)
                   } else {
                     reject(new Error(payload.payload.error || 'Erro no túnel ao salvar detalhe'))
                   }
@@ -606,7 +609,7 @@ export function useMasterData({
                   slug: project?.slug
                 }
               })
-              setTimeout(() => { if (!done) { done = true; cleanup(); resolve() } }, 4000)
+              setTimeout(() => { if (!done) { done = true; cleanup(); resolve(undefined) } }, 4000)
             })
           }
 
@@ -614,7 +617,17 @@ export function useMasterData({
             const origRow = row._origRow || origParentRow?._details?.find(
               (d: any) => d[rowPkName] === rowPkVal || d[rowPkName.toUpperCase()] === rowPkVal || d.id === rowPkVal || d.ID === rowPkVal
             )
-            await saveNestedDetails(row._details, rowTable, rowPkVal, origRow ? { _details: origRow._details } : undefined)
+            // Registro NOVO: o pai dos filhos é o ID gerado pelo banco no INSERT, nunca o id temporário da tela
+            let childParentPk = rowPkVal
+            if (isNew) {
+              const inserted = insertedRows && insertedRows.length > 0 ? insertedRows[0] : null
+              const generated = inserted ? (readKey(inserted, rowPkName) ?? readKey(inserted, actualRowPkName)) : undefined
+              if (generated !== undefined && generated !== null) childParentPk = generated
+              if (childParentPk === undefined || childParentPk === null || String(childParentPk).startsWith('temp-')) {
+                throw new Error(`Não foi possível obter o ID gerado do novo registro de ${rowTable} para vincular os itens filhos. Nada foi salvo nos filhos.`)
+              }
+            }
+            await saveNestedDetails(row._details, rowTable, childParentPk, origRow ? { _details: origRow._details } : undefined)
           }
         }
       }

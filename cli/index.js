@@ -1098,8 +1098,39 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
             try {
               if (dbType === 'oracle') {
-                await oracleConnection.execute(sql, params, { autoCommit: true });
-                insertResult = { rows: [] };
+                // Pede o ROWID da linha inserida para devolver a linha completa — inclusive a PK gerada por DEFAULT no banco.
+                // Sem isso o cliente não descobre o ID do registro novo (o Postgres já devolve via RETURNING *).
+                let insertedRows = [];
+                let insertedWithReturning = false;
+                try {
+                  const execRes = await oracleConnection.execute(
+                    sql + ' RETURNING ROWID INTO :' + (params.length + 1),
+                    [...params, { type: oracledb.STRING, dir: oracledb.BIND_OUT }],
+                    { autoCommit: true }
+                  );
+                  insertedWithReturning = true;
+                  const out = Array.isArray(execRes.outBinds) ? execRes.outBinds[0] : null;
+                  const rid = Array.isArray(out) ? out[0] : out;
+                  if (rid) {
+                    try {
+                      const sel = await oracleConnection.execute(
+                        'SELECT * FROM "' + safeTable.toUpperCase() + '" WHERE ROWID = :1',
+                        [rid],
+                        { outFormat: oracledb.OUT_FORMAT_OBJECT }
+                      );
+                      insertedRows = sel.rows || [];
+                    } catch (selErr) {
+                      console.log(chalk.yellow('[ AVISO ] INSERT feito, mas não foi possível reler a linha inserida: ' + selErr.message));
+                    }
+                  }
+                } catch (retErr) {
+                  const m = retErr.message || '';
+                  // Erros de coluna/DEFAULT são tratados pelo laço de tentativas abaixo (removem a coluna e repetem)
+                  if (insertedWithReturning || /ORA-00904|DEFAULT/i.test(m)) throw retErr;
+                  // Demais falhas do RETURNING (ex.: tabela sem ROWID): tenta o INSERT simples, como antes
+                  await oracleConnection.execute(sql, params, { autoCommit: true });
+                }
+                insertResult = { rows: insertedRows };
               } else {
                 insertResult = await pgClient.query(sql, params);
               }
