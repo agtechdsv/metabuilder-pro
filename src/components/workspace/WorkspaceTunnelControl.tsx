@@ -8,13 +8,19 @@ import { createClient } from '@/utils/supabase/client'
 import { usePathname } from 'next/navigation'
 import { useI18n } from '@/i18n'
 
-import { defaultTunnelConfigTemplate } from './tunnel/tunnelUtils'
+import { defaultTunnelConfigTemplate, normalizeTunnelConfig, type ConfigScope } from './tunnel/tunnelUtils'
 import { TunnelConfigModal } from './tunnel/TunnelConfigModal'
 import { TunnelSyncConsoleModal } from './tunnel/TunnelSyncConsoleModal'
 import { TunnelPendingResolutionModal } from './tunnel/TunnelPendingResolutionModal'
 import { TunnelLogConsoleModal } from './tunnel/TunnelLogConsoleModal'
 
-export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: string }) {
+/**
+ * Escopo do componente (define o que o botão "Configurar" edita e o que a Sincronização abrange):
+ *  - workspaceSlug === 'global' e sem projectSlug → nível 1: global (todos os workspaces/projetos)
+ *  - workspaceSlug de um workspace → nível 2: projetos deste workspace
+ *  - projectSlug informado → nível 3: somente este projeto
+ */
+export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspaceSlug: string; projectSlug?: string }) {
   const { t, language } = useI18n()
   const { toast } = useToast()
   const pathname = usePathname()
@@ -37,6 +43,44 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
     null
   )
 
+  const [configScope, setConfigScope] = useState<ConfigScope>({ type: 'global' })
+
+  const scopeType: ConfigScope['type'] = projectSlug ? 'project' : workspaceSlug === 'global' ? 'global' : 'workspace'
+
+  /** Resolve o escopo atual e os projetos que ele abrange (para a modal e para a sincronização). */
+  const loadScope = async (): Promise<{ scope: ConfigScope; projects: any[] }> => {
+    const supabase = createClient()
+    const cols = 'id, name, slug, secret_token, workspace_id'
+
+    if (workspaceSlug === 'global' && !projectSlug) {
+      const { data } = await supabase.from('projects').select(cols)
+      return { scope: { type: 'global' }, projects: data || [] }
+    }
+
+    const { data: ws } = await supabase.from('workspaces').select('id, name').eq('slug', workspaceSlug).single()
+    let query = supabase.from('projects').select(cols)
+    if (ws) query = query.eq('workspace_id', ws.id)
+    if (projectSlug) query = query.eq('slug', projectSlug)
+    const { data } = await query
+    const projects = data || []
+
+    if (projectSlug) {
+      const p = projects[0]
+      return {
+        scope: {
+          type: 'project',
+          workspaceId: ws?.id,
+          workspaceName: ws?.name,
+          projectId: p?.id,
+          projectName: p?.name,
+          secretToken: p?.secret_token || '',
+        },
+        projects,
+      }
+    }
+    return { scope: { type: 'workspace', workspaceId: ws?.id, workspaceName: ws?.name }, projects }
+  }
+
   const handleOpenConfig = async () => {
     setIsConfigModalOpen(true)
     try {
@@ -56,54 +100,38 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
       }
 
       try {
-        const supabase = createClient()
-        let query = supabase.from('projects').select('id, name, secret_token')
+        const { scope, projects: projectsData } = await loadScope()
+        setConfigScope(scope)
+        setHasProjects(projectsData.length > 0)
+        setAvailableProjects(projectsData)
 
-        if (workspaceSlug !== 'global') {
-          const { data: workspace } = await supabase.from('workspaces').select('id').eq('slug', workspaceSlug).single()
-          if (workspace) {
-            query = query.eq('workspace_id', workspace.id)
+        // Formato em cascata: migra ldap/downloadPath antigos da raiz para "defaults" e garante uma entrada por projeto.
+        // As entradas novas NÃO levam string de conexão de exemplo: sem string própria o projeto herda do workspace/global.
+        const currentConfig = normalizeTunnelConfig(JSON.parse(configText))
+        currentConfig.connections = currentConfig.connections.filter(
+          (c: any) => c.projectId || c.connectionsString?.length || c.connectionString
+        )
+        for (const p of projectsData) {
+          const existing = currentConfig.connections.find((c: any) => c.projectId === p.id)
+          if (!existing) {
+            currentConfig.connections.push({
+              projectId: p.id,
+              workspaceId: p.workspace_id,
+              secretToken: p.secret_token || '',
+            })
+          } else {
+            if (!existing.workspaceId) existing.workspaceId = p.workspace_id
+            if (!existing.secretToken && p.secret_token) existing.secretToken = p.secret_token
           }
         }
-
-        const { data: projectsData } = await query
-
-        setHasProjects(projectsData && projectsData.length > 0)
-        setAvailableProjects(projectsData || [])
-
-        if (projectsData && projectsData.length > 0) {
-          const currentConfig = JSON.parse(configText)
-
-          if (currentConfig && Array.isArray(currentConfig.connections)) {
-            const existingProjectIds = new Set(currentConfig.connections.map((c: any) => c.projectId))
-
-            if (currentConfig.connections.length === 1 && currentConfig.connections[0].projectId === '') {
-              currentConfig.connections = []
-              existingProjectIds.clear()
-            }
-
-            for (const p of projectsData) {
-              if (!existingProjectIds.has(p.id)) {
-                const safeName = p.name ? p.name.toLowerCase().replace(/\s+/g, '') : 'public'
-                currentConfig.connections.push({
-                  projectId: p.id,
-                  secretToken: p.secret_token || '',
-                  connectionsString: [
-                    {
-                      name: safeName,
-                      type: 'postgres',
-                      connectionString: 'postgresql://postgres:postgres@localhost:5432/' + safeName,
-                    },
-                  ],
-                })
-              }
-            }
-
-            configText = JSON.stringify(currentConfig, null, 2)
-          }
+        // Mantém o nome do workspace no arquivo para facilitar a leitura do JSON
+        if (scope.type !== 'global' && scope.workspaceId) {
+          const wsEntry = currentConfig.workspaces.find((w: any) => w?.workspaceId === scope.workspaceId)
+          if (wsEntry && scope.workspaceName) wsEntry.name = scope.workspaceName
         }
+        configText = JSON.stringify(currentConfig, null, 2)
       } catch (dbErr) {
-        console.warn('Falha ao buscar projetos do banco para sugerir no config:', dbErr)
+        console.warn('Falha ao preparar o config (projetos/escopo):', dbErr)
       }
 
       setConfigContent(configText)
@@ -241,7 +269,17 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         })
 
         try {
-          const result = await invoke<string>('runsynccli', { configPath, lang: language })
+          // Escopo da sincronização: global = todos; workspace = projetos do workspace; projeto = somente ele
+          let scopedProjectIds: string[] | undefined
+          if (scopeType !== 'global') {
+            const { projects } = await loadScope()
+            scopedProjectIds = projects.map((p: any) => p.id)
+            setSyncLogs((prev) => [
+              ...prev,
+              t('workspace_components.tunnel_control.sync_scope_log', 'Escopo: {n} projeto(s).').replace('{n}', String(scopedProjectIds!.length)),
+            ])
+          }
+          const result = await invoke<string>('runsynccli', { configPath, lang: language, projects: scopedProjectIds })
           setSyncLogs((prev) => [...prev, result])
           setSyncStatus('success')
         } catch (error: any) {
@@ -489,13 +527,21 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
           <div>
             <h4 className="font-bold text-sm flex items-center gap-2 text-neutral-700 dark:text-neutral-300 mb-2">
               <RefreshCw className="w-4 h-4 text-indigo-500" />{' '}
-              {t('workspace_components.tunnel_control.global_sync_title', 'Sincronização Global (Introspecção)')}
+              {scopeType === 'project'
+                ? t('workspace_components.tunnel_control.sync_title_project', 'Sincronização deste Projeto (Introspecção)')
+                : scopeType === 'workspace'
+                  ? t('workspace_components.tunnel_control.sync_title_workspace', 'Sincronização do Workspace (Introspecção)')
+                  : t('workspace_components.tunnel_control.global_sync_title', 'Sincronização Global (Introspecção)')}
             </h4>
             <p className="text-xs text-neutral-500 mb-4">
-              {t(
-                'workspace_components.tunnel_control.global_sync_desc',
-                'Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. Não afeta a execução do túnel.'
-              )}
+              {scopeType === 'project'
+                ? t('workspace_components.tunnel_control.sync_desc_project', 'Força a leitura da estrutura do banco de dados somente deste projeto. Não afeta a execução do túnel.')
+                : scopeType === 'workspace'
+                  ? t('workspace_components.tunnel_control.sync_desc_workspace', 'Força a leitura da estrutura dos bancos de dados dos projetos deste workspace. Não afeta a execução do túnel.')
+                  : t(
+                      'workspace_components.tunnel_control.global_sync_desc',
+                      'Força a leitura de estrutura de todos os bancos de dados configurados no `metabuilder.config.json` ativo na máquina. Não afeta a execução do túnel.'
+                    )}
             </p>
           </div>
           <button
@@ -503,7 +549,11 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />{' '}
-            {t('workspace_components.tunnel_control.trigger_sync', 'Disparar Sincronização Geral')}
+            {scopeType === 'project'
+              ? t('workspace_components.tunnel_control.trigger_sync_project', 'Sincronizar este Projeto')
+              : scopeType === 'workspace'
+                ? t('workspace_components.tunnel_control.trigger_sync_workspace', 'Sincronizar o Workspace')
+                : t('workspace_components.tunnel_control.trigger_sync', 'Disparar Sincronização Geral')}
           </button>
         </div>
       </div>
@@ -518,6 +568,7 @@ export function WorkspaceTunnelControl({ workspaceSlug }: { workspaceSlug: strin
         isSavingConfig={isSavingConfig}
         hasProjects={hasProjects}
         availableProjects={availableProjects}
+        scope={configScope}
       />
 
       {/* Modal de Sincronização */}

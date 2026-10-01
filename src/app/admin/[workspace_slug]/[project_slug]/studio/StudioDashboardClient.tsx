@@ -3,6 +3,8 @@
 import React, { useState, useTransition, useEffect } from 'react'
 import { openExternalUrl, isTauri } from '@/utils/tauriUtils'
 import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
+import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
+import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
 
 import {
   LayoutDashboard,
@@ -245,7 +247,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'ai-editor' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'ai-editor' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security' | 'tunnel' | 'synced-dbs'>('list')
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -825,6 +827,24 @@ export function StudioDashboardClient({
                     >
                       <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
+                   <button
+                     onClick={() => setViewMode('tunnel')}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       viewMode === 'tunnel' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                    >
+                      <Network className="w-3.5 h-3.5" /> {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
+                    </button>
+                   <button
+                     onClick={() => setViewMode('synced-dbs')}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                       viewMode === 'synced-dbs' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                    >
+                      <Server className="w-3.5 h-3.5" /> {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
+                    </button>
                  </>
                )}
             </div>
@@ -1000,9 +1020,18 @@ export function StudioDashboardClient({
           </div>
         ) : viewMode === 'enumerations' ? (
           <div className="">
-            <EnumerationsClient 
+            <EnumerationsClient
               project={project}
             />
+          </div>
+        ) : viewMode === 'tunnel' ? (
+          <div className="">
+            {/* Iniciar/Parar continuam globais (um único agente atende todos os projetos); Configurar e Sincronizar valem para este projeto */}
+            <WorkspaceTunnelControl workspaceSlug={workspace_slug} projectSlug={project_slug} />
+          </div>
+        ) : viewMode === 'synced-dbs' ? (
+          <div className="">
+            <WorkspaceSyncedDatabases workspaceId={workspace.id} projectId={project.id} />
           </div>
         ) : (
           <section className="space-y-4">

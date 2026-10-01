@@ -1575,6 +1575,61 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
 const fs = require('fs');
 
+/**
+ * Resolve a configuração EFETIVA de cada projeto em cascata, bloco a bloco:
+ *   projeto (connections[]) > workspace (workspaces[].defaults) > global (defaults) > legado (raiz do arquivo)
+ * Blocos (herdados por inteiro, nunca campo a campo): connectionsString, downloadPath, ldap.
+ * projectId e secretToken são sempre do próprio projeto.
+ *
+ * Compatibilidade: arquivos antigos (ldap/downloadPath na raiz, connectionString único na entrada) seguem válidos.
+ * Retorna { connections, skipped }: "skipped" lista projetos sem nenhuma string de conexão em nenhum nível.
+ */
+function resolveEffectiveConnections(configData) {
+  const defaults = configData.defaults || {};
+  const workspaces = Array.isArray(configData.workspaces) ? configData.workspaces : [];
+  const isStr = (v) => typeof v === 'string' && v.trim() !== '';
+  const nonEmptyArr = (v) => Array.isArray(v) && v.length > 0;
+  const connections = [];
+  const skipped = [];
+
+  for (const conn of configData.connections || []) {
+    const ws = conn.workspaceId ? workspaces.find(w => w && w.workspaceId === conn.workspaceId) : null;
+    const wsDef = (ws && ws.defaults) || {};
+
+    // Strings de Conexão
+    let connectionsString = null, connOrigin = null;
+    if (nonEmptyArr(conn.connectionsString)) { connectionsString = conn.connectionsString; connOrigin = 'projeto'; }
+    else if (isStr(conn.connectionString)) {
+      connectionsString = [{ name: 'public', type: conn.type || 'postgres', connectionString: conn.connectionString }]; connOrigin = 'projeto';
+    }
+    else if (nonEmptyArr(wsDef.connectionsString)) { connectionsString = wsDef.connectionsString; connOrigin = 'workspace'; }
+    else if (nonEmptyArr(defaults.connectionsString)) { connectionsString = defaults.connectionsString; connOrigin = 'global'; }
+
+    // Pasta de Downloads
+    let downloadPath, dlOrigin;
+    if (isStr(conn.downloadPath)) { downloadPath = conn.downloadPath.trim(); dlOrigin = 'projeto'; }
+    else if (isStr(wsDef.downloadPath)) { downloadPath = wsDef.downloadPath.trim(); dlOrigin = 'workspace'; }
+    else if (isStr(defaults.downloadPath)) { downloadPath = defaults.downloadPath.trim(); dlOrigin = 'global'; }
+    else if (isStr(configData.downloadPath)) { downloadPath = configData.downloadPath.trim(); dlOrigin = 'global'; }
+
+    // LDAP (um bloco "ldap" presente, mesmo com enabled=false, encerra a busca naquele nível)
+    const has = (v) => v !== undefined && v !== null;
+    let ldap, ldapOrigin;
+    if (has(conn.ldap)) { ldap = conn.ldap; ldapOrigin = 'projeto'; }
+    else if (has(wsDef.ldap)) { ldap = wsDef.ldap; ldapOrigin = 'workspace'; }
+    else if (has(defaults.ldap)) { ldap = defaults.ldap; ldapOrigin = 'global'; }
+    else if (has(configData.ldap)) { ldap = configData.ldap; ldapOrigin = 'global'; }
+
+    if (!connectionsString) { skipped.push(conn.projectId); continue; }
+
+    const effective = { ...conn, connectionsString, downloadPath, ldap, _origin: { connections: connOrigin, downloadPath: dlOrigin || '-', ldap: ldapOrigin || '-' } };
+    delete effective.connectionString;
+    delete effective.type;
+    connections.push(effective);
+  }
+  return { connections, skipped };
+}
+
 async function run() {
   const langArg = process.argv.find(arg => arg.startsWith('--lang='));
   if (langArg) {
@@ -1626,6 +1681,32 @@ async function run() {
   logger.init(mode, getLanguage());
   process.on('exit', () => logger.close());
   process.on('SIGINT', () => { logger.close(); process.exit(0); });
+
+  // 2.1 Resolve a configuração efetiva de cada projeto (cascata projeto > workspace > global).
+  // --projects=id1,id2 restringe a SINCRONIZAÇÃO a esses projetos (o túnel sempre sobe para todos).
+  if (configData && Array.isArray(configData.connections) && configData.connections.length > 0) {
+    const projectsArg = process.argv.find(arg => arg.startsWith('--projects='));
+    const projectFilter = projectsArg
+      ? new Set(projectsArg.substring('--projects='.length).split(',').map(s => s.trim()).filter(Boolean))
+      : null;
+
+    const { connections, skipped } = resolveEffectiveConnections(configData);
+    skipped.forEach(id => console.log(chalk.yellow(`⚠️  Projeto ${id}: sem string de conexão (nem própria, nem do workspace, nem global) — ignorado.`)));
+
+    let effective = connections;
+    if (mode === 'sync' && projectFilter) {
+      effective = connections.filter(c => projectFilter.has(c.projectId));
+      console.log(chalk.gray(`🎯 Sincronização restrita a ${effective.length} projeto(s) do escopo selecionado.`));
+    }
+    effective.forEach(c => console.log(chalk.gray(`   • ${c.projectId} → conexão: ${c._origin.connections} | downloads: ${c._origin.downloadPath} | ldap: ${c._origin.ldap}`)));
+
+    if (effective.length === 0) {
+      console.log(chalk.yellow('⚠️  Nenhum projeto elegível para executar a ação. Verifique o metabuilder.config.json.'));
+      logger.close();
+      process.exit(mode === 'sync' ? 0 : 1);
+    }
+    configData.connections = effective;
+  }
 
   // 3. Executa a Ação com base no ConfigFile (Gateway)
   if (configData && configData.connections && configData.connections.length > 0) {

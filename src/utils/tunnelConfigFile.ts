@@ -34,9 +34,12 @@ export interface ProjectDownloadPath {
 export async function getProjectDownloadPath(projectId: string): Promise<ProjectDownloadPath> {
   const config = await readTunnelConfig()
   const conn = (config?.connections || []).find((c: any) => c.projectId === projectId)
+  // Valor que o projeto herdaria: workspace > global (defaults) > legado (raiz do arquivo)
+  const ws = (config?.workspaces || []).find((w: any) => w?.workspaceId === conn?.workspaceId)
+  const pick = (v: any) => (typeof v === 'string' && v.trim() ? v : '')
   return {
     projectPath: typeof conn?.downloadPath === 'string' ? conn.downloadPath : '',
-    globalPath: typeof config?.downloadPath === 'string' ? config.downloadPath : '',
+    globalPath: pick(ws?.defaults?.downloadPath) || pick(config?.defaults?.downloadPath) || pick(config?.downloadPath),
     found: !!conn,
   }
 }

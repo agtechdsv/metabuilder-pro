@@ -24,9 +24,11 @@ interface GroupedData {
 }
 interface WorkspaceSyncedDatabasesProps {
   workspaceId?: string
+  /** Quando informado, lista apenas os bancos sincronizados deste projeto. */
+  projectId?: string
 }
 
-export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabasesProps = {}) {
+export function WorkspaceSyncedDatabases({ workspaceId, projectId }: WorkspaceSyncedDatabasesProps = {}) {
   const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [groupedData, setGroupedData] = useState<GroupedData[]>([])
@@ -46,6 +48,9 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
       let projectsQuery = supabase.from('projects').select('id, name, slug')
       if (workspaceId) {
         projectsQuery = projectsQuery.eq('workspace_id', workspaceId)
+      }
+      if (projectId) {
+        projectsQuery = projectsQuery.eq('id', projectId)
       }
       
       const { data: projectsData, error: projectsError } = await projectsQuery
@@ -97,7 +102,7 @@ export function WorkspaceSyncedDatabases({ workspaceId }: WorkspaceSyncedDatabas
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [workspaceId, projectId])
 
   const handleEditClick = (projectId: string, projectName: string, schemaName: string) => {
     setSelectedItem({ projectId, projectName, schemaName })

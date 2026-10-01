@@ -635,11 +635,19 @@ fn statuscli(state: State<'_, CliState>) -> Result<bool, String> {
 }
 
 #[command]
-async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>, lang: Option<String>) -> Result<String, String> {
+async fn runsynccli(app: tauri::AppHandle, config_path: Option<String>, lang: Option<String>, projects: Option<Vec<String>>) -> Result<String, String> {
     let mut args = vec!["--headless".to_string(), "--action=sync".to_string()];
 
     if let Some(cfg) = config_path {
         args.push(format!("--config={}", cfg));
+    }
+
+    // Escopo da sincronização: apenas estes projetos (ids). Sem o parâmetro, sincroniza todos.
+    if let Some(ids) = projects {
+        let ids: Vec<String> = ids.into_iter().filter(|s| !s.trim().is_empty()).collect();
+        if !ids.is_empty() {
+            args.push(format!("--projects={}", ids.join(",")));
+        }
     }
 
     if let Ok(local_data_dir) = app.path().app_local_data_dir() {
