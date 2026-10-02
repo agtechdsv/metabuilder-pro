@@ -1139,7 +1139,13 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
     const result = evaluateRowFormulas(formData, formData, true);
     
     if (result.hasChanges) {
-      setFormData(result.row);
+      // Reaplica as fórmulas sobre o estado MAIS RECENTE (atualização funcional). Antes gravava 'result.row', montado
+      // a partir de um instantâneo antigo do formData: se duas buscas de itens (Expandir Tudo) terminavam quase juntas,
+      // a gravação das fórmulas sobrescrevia o resultado da segunda e aquele pedido ficava sem os itens.
+      setFormData((prev: any) => {
+        const latest = evaluateRowFormulas(prev, prev, true)
+        return latest.hasChanges ? latest.row : prev
+      })
     }
   }, [formData, fields]);
   return {
