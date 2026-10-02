@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import ws from 'ws'
+import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 
 export async function GET(request: Request) {
   try {
@@ -56,7 +57,9 @@ export async function GET(request: Request) {
     const stream = new ReadableStream({
       start(controller) {
         const channelName = `tunnel:${projectId}`
-        const channel = supabase.channel(channelName)
+        // O agente envia pedaços grandes divididos em "chunked_message"; o wrapper os remonta (sem ele o arquivo chegava com 0 bytes)
+        const rawChannel = supabase.channel(channelName)
+        const channel = wrapChannelWithChunking(rawChannel)
 
         let isDone = false
 
@@ -65,7 +68,7 @@ export async function GET(request: Request) {
           if (!isDone) {
             isDone = true
             controller.error(new Error('Timeout aguardando chunks do CLI'))
-            supabase.removeChannel(channel)
+            supabase.removeChannel(rawChannel)
           }
         }, 60000)
 
@@ -81,7 +84,7 @@ export async function GET(request: Request) {
             console.log(`[Stream API] Received ERROR for job ${jobId}:`, error)
             isDone = true
             controller.error(new Error(error))
-            supabase.removeChannel(channel)
+            supabase.removeChannel(rawChannel)
             return
           }
 
@@ -94,7 +97,7 @@ export async function GET(request: Request) {
                 console.log(`[Stream API] Timeout waiting for NEXT chunk for job ${jobId}`)
                 isDone = true
                 controller.error(new Error('Timeout aguardando proximo chunk'))
-                supabase.removeChannel(channel)
+                supabase.removeChannel(rawChannel)
               }
             }, 30000)
 
@@ -104,15 +107,19 @@ export async function GET(request: Request) {
           }
 
           if (isLast) {
-            console.log(`[Stream API] Received IS_LAST for job ${jobId}. Closing stream.`)
-            isDone = true
-            clearTimeout(timeout)
-            controller.close()
-            supabase.removeChannel(channel)
+            console.log(`[Stream API] Received IS_LAST for job ${jobId}. Closing stream shortly.`)
+            // Folga curta: o último pedaço grande (remontado) pode chegar logo depois do aviso de fim
+            setTimeout(() => {
+              if (isDone) return
+              isDone = true
+              clearTimeout(timeout)
+              controller.close()
+              supabase.removeChannel(rawChannel)
+            }, 800)
           }
         })
 
-        channel.subscribe(async (status) => {
+        channel.subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
             // Ask CLI to start sending chunks
             channel.send({
@@ -122,12 +129,12 @@ export async function GET(request: Request) {
                 jobId,
                 localPath: job.local_path
               }
-            }).catch(err => {
+            }).catch((err: any) => {
               if (!isDone) {
                 isDone = true
                 clearTimeout(timeout)
                 controller.error(err)
-                supabase.removeChannel(channel)
+                supabase.removeChannel(rawChannel)
               }
             })
           }

@@ -22,6 +22,18 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
 
     console.log(chalk.yellow(`[ EXPORT ] Gerando arquivo localmente para o Job ${jobId}...`));
 
+    // Progresso por etapas: atualiza o banco (a Central de Downloads escuta essa tabela) e avisa por broadcast
+    const reportProgress = async (pct) => {
+      try {
+        if (supabase) {
+          await supabase.from('download_jobs')
+            .update({ status: 'processing', progress: pct, updated_at: new Date().toISOString() })
+            .eq('id', jobId);
+        }
+        await channel.send({ type: 'broadcast', event: 'download_progress', payload: { jobId, status: 'processing', progress: pct, viewName } });
+      } catch (_) { /* progresso é informativo: nunca derruba a exportação */ }
+    };
+
     try {
       // Step 1: Execute query locally
       let rows = [];
@@ -74,6 +86,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
       }
 
       console.log(chalk.green(`[ EXPORT ] Query retornou ${rows.length} registros (base).`));
+      await reportProgress(35);
 
       // Step 2: Format data into Buffer
       let buffer;
@@ -322,7 +335,9 @@ NEWFILEUID:NONE
       }
 
       // Step 3: Save to local disk
+      await reportProgress(70);
       fs.writeFileSync(localFilePath, buffer);
+      await reportProgress(90);
       console.log(chalk.green(`[ EXPORT ] Arquivo salvo com sucesso em: ${localFilePath}`));
 
       // Step 4: Update database status via Supabase client (passed in from index.js)
@@ -426,13 +441,9 @@ NEWFILEUID:NONE
          console.log(chalk.cyan(`[ STREAM ] isLast: true enviado.`));
        }, 200);
 
-       // Delete file after successful streaming
-       setTimeout(() => {
-         if (fs.existsSync(localPath)) {
-           fs.unlinkSync(localPath);
-           console.log(chalk.yellow(`[ STREAM ] Arquivo temporário excluído: ${localPath}`));
-         }
-       }, 1000);
+       // O arquivo NÃO é apagado aqui: ele permanece "disponível para download" até a política de retenção do projeto
+       // (limpeza automática) ou até o usuário excluí-lo. Apagar após o 1º envio fazia o 2º download falhar e, se o
+       // 1º tivesse chegado incompleto, perdia o arquivo para sempre.
     });
 
     readStream.on('error', async (err) => {

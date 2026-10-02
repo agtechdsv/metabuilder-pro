@@ -280,17 +280,30 @@ export function DownloadsManagerClient({
 
     try {
       const downloadUrl = `/api/download/stream?jobId=${jobId}&projectId=${projectId}`
-      
-      // Let the browser handle the streaming directly to disk
+      const fileName = jobs.find(j => j.id === jobId)?.file_name || `export_${jobId}`
+
+      // Baixa aqui mesmo (com a sessão deste navegador/IDE) e entrega como arquivo. Abrir o link em outra aba
+      // mandava a IDE para o navegador do sistema, que não tem a sessão: "Não autorizado".
+      const res = await fetch(downloadUrl, { credentials: 'same-origin' })
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '')
+        throw new Error(msg || `Falha ao baixar (HTTP ${res.status}).`)
+      }
+      const blob = await res.blob()
+      if (blob.size === 0) throw new Error('O arquivo chegou vazio. Gere a exportação novamente.')
+
+      const objectUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = downloadUrl
-      link.setAttribute('target', '_blank')
+      link.href = objectUrl
+      link.download = fileName
       document.body.appendChild(link)
       link.click()
       link.parentNode?.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
+      toast('Download concluído.', 'success')
     } catch (err: any) {
       console.error('Erro ao iniciar o download:', err)
-      toast('Falha ao iniciar o download.', 'error')
+      toast(err?.message || 'Falha ao iniciar o download.', 'error')
     }
   }
 

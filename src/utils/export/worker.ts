@@ -18,7 +18,10 @@ function getSupabase(): any {
 let _dbPool: any = null;
 function getDbPool(): any {
   if (!_dbPool) {
-    const dbConnectionString = "postgresql://postgres.chmstvtepzmjhpyxjjam:Goeta815617%40@aws-1-sa-east-1.pooler.supabase.com:6543/postgres"
+    const dbConnectionString = process.env.EXPORT_DB_URL
+    if (!dbConnectionString) {
+      throw new Error('EXPORT_DB_URL não configurada: defina a string de conexão do banco nas variáveis de ambiente do servidor.')
+    }
     _dbPool = new Pool({ connectionString: dbConnectionString })
   }
   return _dbPool;
@@ -80,6 +83,21 @@ export async function executeExportBackground(params: {
     }).join(', ') || `"${safeTable}".*`
 
     let joinClause = ''
+    // DISTINCT esconderia linhas legitimamente iguais (ex.: dois funcionários "Ana Silva / Vendas / Analista").
+    // Ele só é necessário se algum JOIN puder MULTIPLICAR linhas (1:N): ou seja, quando a coluna usada na tabela
+    // que entra no JOIN não é a chave primária dela. Sem metadado, assume que pode multiplicar (comportamento antigo).
+    let joinMayMultiply = false
+    let exportModels: any[] = []
+    if (joins && joins.length > 0) {
+      const { data: modelsData } = await getSupabase()
+        .from('models').select('db_table_name, fields(db_column_name, is_primary_key)').eq('project_id', projectId)
+      exportModels = modelsData || []
+    }
+    const isPkColumn = (table: string, column: string) =>
+      exportModels.some((m: any) =>
+        (m.db_table_name || '').toLowerCase() === table.toLowerCase() &&
+        (m.fields || []).some((f: any) => f.is_primary_key && (f.db_column_name || '').split('.').pop()?.toLowerCase() === column.toLowerCase())
+      )
     if (joins && joins.length > 0) {
       const joinedTables = new Set([safeTable])
       let pendingJoins = [...joins]
@@ -103,10 +121,12 @@ export async function executeExportBackground(params: {
 
           if (joinedTables.has(fromT)) {
             joinClause += ` LEFT JOIN "${toT}" ON "${fromT}"."${local}" = "${toT}"."${foreign}"`
+            if (!isPkColumn(toT, foreign)) joinMayMultiply = true
             joinedTables.add(toT)
             progress = true
           } else if (joinedTables.has(toT)) {
             joinClause += ` LEFT JOIN "${fromT}" ON "${toT}"."${foreign}" = "${fromT}"."${local}"`
+            if (!isPkColumn(fromT, local)) joinMayMultiply = true
             joinedTables.add(fromT)
             progress = true
           } else {
@@ -138,7 +158,7 @@ export async function executeExportBackground(params: {
       if (conditions.length > 0) whereClause = ` WHERE ${conditions.join(' AND ')}`
     }
 
-    const rawSql = `SELECT DISTINCT ${selectCols} FROM "${safeTable}"${joinClause}${whereClause}`
+    const rawSql = `SELECT ${joinMayMultiply ? 'DISTINCT ' : ''}${selectCols} FROM "${safeTable}"${joinClause}${whereClause}`
 
     // 4. Send request to CLI Tunnel
     const channelName = `tunnel:${projectId}`
