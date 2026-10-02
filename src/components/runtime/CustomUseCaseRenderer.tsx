@@ -507,7 +507,8 @@ export default function CustomUseCaseRenderer({
       })
     }
 
-    const isMasterTabEditingMasterRecord = (getSlotId(slot, visibleSlots.findIndex(s => s === slot)) === getSlotId(customSlots[0], 0)) && (!ucModelId || ucModelId === masterModelId);
+    const isFirstSlot = getSlotId(slot, visibleSlots.findIndex(s => s === slot)) === getSlotId(customSlots[0], 0);
+    const isMasterTabEditingMasterRecord = isFirstSlot && (!ucModelId || ucModelId === masterModelId);
 
     // Se for a aba principal do mestre, podemos reutilizar os 'fields' cacheados do componente pai (ViewPageContent)
     // para evitar reconstruir a árvore toda (útil para byoc e layouts pesados).
@@ -515,7 +516,8 @@ export default function CustomUseCaseRenderer({
     const needsParentFields = (isMasterTabEditingMasterRecord || ucLogicType === 'personalizado' || ucLogicType === 'mestre_detalhe' || ucLogicType === 'pesquisa_cadastro') && fields && fields.length > 0
     const finalFormFields = needsParentFields ? fields : (ucFormFields.length > 0 ? ucFormFields : fields);
 
-    if (ucLogicType === 'cadastro' || ucLogicType === 'personalizado' || ucLogicType === 'mestre_detalhe' || ucLogicType === 'pesquisa_cadastro' || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
+    const isCrudLikeUseCase = ucLogicType === 'mestre_detalhe' || ucLogicType === 'pesquisa_cadastro';
+    if (ucLogicType === 'cadastro' || ucLogicType === 'personalizado' || (isCrudLikeUseCase && isFirstSlot) || isMasterTabEditingMasterRecord || slot.render_mode === 'form') {
       return (
         <div key={slot.id} className="h-full relative overflow-y-auto w-full p-4 lg:p-6 bg-white dark:bg-neutral-900 rounded-b-3xl">
           <RecordForm
@@ -536,6 +538,12 @@ export default function CustomUseCaseRenderer({
             joins={ucJoins || joins}
             dictionary={ucDictionary || dictionary}
             hiddenDetails={uc.hiddenDetails || []}
+            detailsDisplayMode={uc.detailsDisplayMode}
+            detailsInlineTypes={uc.detailsInlineTypes}
+            detailsInterfaceTypes={uc.detailsInterfaceTypes}
+            detailsTabTitles={uc.detailsTabTitles}
+            detailsItemTitles={uc.detailsItemTitles}
+            masterTabTitle={uc.masterTabTitle}
             hideHeader={isMasterTabEditingMasterRecord}
           />
         </div>
