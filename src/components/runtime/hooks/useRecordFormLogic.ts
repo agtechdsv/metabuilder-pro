@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn, readCol, pickPkField } from '@/lib/schemaResolver'
+import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn, readCol, pickPkField, inferJoins } from '@/lib/schemaResolver'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -902,31 +902,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
   // FILTRAGEM HIERÁRQUICA: 
   // Só mostramos como aba as tabelas que são FILHAS DIRETAS do mestre atual no array de JOINS ou via heurística
-  const effectiveJoins = Array.isArray(joins) && joins.length > 0 ? joins : (() => {
-    if (!project?.models || !masterModelName) return [];
-    const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === masterModelName?.toLowerCase());
-    if (!parentModelDef) return [];
-    const heuristicJoins: any[] = [];
-    for (const childModel of project.models) {
-      if (childModel.id === parentModelDef.id) continue;
-      const fkField = childModel.fields?.find((f: any) => {
-            const fName = (f.db_column_name || '').toLowerCase();
-            const pName = (parentModelDef.db_table_name || '').toLowerCase();
-            const fTbl = (f.foreign_key_table || '').toLowerCase();
-            return fTbl === pName ||
-              fName === `${pName}_id` ||
-              (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`) ||
-              (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
-          });
-      if (fkField) {
-        heuristicJoins.push({
-          from: parentModelDef.db_table_name,
-          to: childModel.db_table_name
-        });
-      }
-    }
-    return heuristicJoins;
-  })();
+  // Sem joins no caso de uso: deduz do esquema (metadado primeiro; nome só em último caso, avisado)
+  const effectiveJoins = Array.isArray(joins) && joins.length > 0 ? joins : inferJoins((project as any)?.models, masterModelName);
 
   const detailTables = Array.from(new Set(
     detailFields

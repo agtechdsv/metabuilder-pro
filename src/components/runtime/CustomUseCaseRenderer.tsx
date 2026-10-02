@@ -587,6 +587,8 @@ export default function CustomUseCaseRenderer({
         tabsStyleConfig: uc.tabsStyleConfig,
         masterTabTitle: uc.masterTabTitle,
         joins: Array.isArray(uc.joins) && uc.joins.length > 0 ? uc.joins : undefined,
+        // Campos do formulário do PRÓPRIO caso de uso do slot (a tabela dele pode nem existir nos campos da página)
+        formFields: Array.isArray(uc.formFields) && uc.formFields.length > 0 ? uc.formFields : undefined,
       })
       return true
     }

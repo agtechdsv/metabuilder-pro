@@ -441,7 +441,8 @@ export function useDetailData({
     setIsProcessing(true)
     const subDetails = await fetchDetails(detail, detail.model_name, uiOverride?.joins)
     
-    setDetailFieldsToRender(detailFields)
+    // Campos do caso de uso de origem do registro (slot do Personalizado); sem isso, os campos da página
+    setDetailFieldsToRender(uiOverride?.formFields?.length ? uiOverride.formFields : detailFields)
     setSelectedDetail({ ...detail, _details: subDetails })
     setDetailModalMode('edit')
     setCurrentDetailTable(detail.model_name)
