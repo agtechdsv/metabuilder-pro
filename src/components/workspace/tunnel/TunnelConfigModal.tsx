@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Rnd } from 'react-rnd'
 import Editor from '@monaco-editor/react'
-import { X, Network, AlertTriangle, Save, Undo2, SlidersHorizontal, Loader2 } from 'lucide-react'
+import { X, Network, AlertTriangle, Save, Undo2, SlidersHorizontal, Loader2, FolderOpen } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import {
   parseConnString,
@@ -360,12 +360,33 @@ export function TunnelConfigModal({
                         const inheritedPath = resolveInheritedBlock(parsedConfig, scope, 'downloadPath').value
                         return (
                           <div>
-                            <input
-                              value={v ?? ''}
-                              onChange={(e) => onChange(e.target.value)}
-                              placeholder={(typeof inheritedPath === 'string' && inheritedPath) || DEFAULT_DOWNLOAD_PATH}
-                              className="w-full bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono outline-none focus:ring-2 focus:ring-indigo-500/50"
-                            />
+                            <div className="flex gap-2">
+                              <input
+                                value={v ?? ''}
+                                onChange={(e) => onChange(e.target.value)}
+                                placeholder={(typeof inheritedPath === 'string' && inheritedPath) || DEFAULT_DOWNLOAD_PATH}
+                                className="flex-1 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm p-2.5 font-mono outline-none focus:ring-2 focus:ring-indigo-500/50"
+                              />
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const { open } = await import('@tauri-apps/plugin-dialog')
+                                    const selected = await open({
+                                      directory: true,
+                                      defaultPath: v || (typeof inheritedPath === 'string' && inheritedPath) || undefined,
+                                    })
+                                    if (selected && typeof selected === 'string') onChange(selected)
+                                  } catch (err) {
+                                    console.error('Erro ao abrir seletor de pasta', err)
+                                  }
+                                }}
+                                className="px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-indigo-600 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                                title={t('studio_downloads_path.browse', 'Procurar pasta')}
+                              >
+                                <FolderOpen className="w-4 h-4" />
+                              </button>
+                            </div>
                             {scope.type !== 'global' && (
                               <p className="text-[11px] text-neutral-400 mt-1">
                                 {t('workspace_components.tunnel_control.download_path_hint', 'Vazio = usa o padrão herdado.')}

@@ -85,6 +85,7 @@
       ]
     },
     "deep-link:default",
+    "dialog:default",
     "fs:default",
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-read-recursive",

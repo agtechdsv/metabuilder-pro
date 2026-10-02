@@ -18,6 +18,7 @@
   },
   "permissions": [
     "updater:default",
+    "dialog:default",
     "opener:default",
     "opener:allow-open-url",
     "opener:allow-default-urls",
