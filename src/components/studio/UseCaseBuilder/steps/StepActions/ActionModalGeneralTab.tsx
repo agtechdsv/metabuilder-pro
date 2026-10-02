@@ -1,4 +1,5 @@
 import React from 'react'
+import { flattenGroupChildren } from '@/lib/slotGroups'
 import { cn } from '@/lib/utils'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { IconPicker } from '../../../IconPicker'
@@ -107,7 +108,7 @@ export function ActionModalGeneralTab({
     }
 
     if (config.logic_type === 'personalizado') {
-      const flatSlots = (config.layout_config.custom_slots || []).flatMap((sl: any) => (sl?.type === 'group' ? (sl.children || []) : [sl]))
+      const flatSlots = (config.layout_config.custom_slots || []).flatMap((sl: any) => (sl?.type === 'group' ? flattenGroupChildren(sl) : [sl]))
       flatSlots.forEach((slot: any) => {
         const slotUc = useCases?.find((uc: any) => uc.slug === slot.use_case_slug);
         const slotLabel = t('wizard.actions.locations.custom_tab', 'Aba {title} ({name})')

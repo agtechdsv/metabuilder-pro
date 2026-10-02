@@ -32,6 +32,7 @@ import {
 } from './ast'
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
+import { flattenGroupChildren } from '@/lib/slotGroups'
 
 /**
  * parser.ts
@@ -2645,7 +2646,7 @@ export function parseMetaBuilderJSON(
     const rawSlotsDeclared = resolvedView.layout_config?.custom_slots || rv.layout_config?.custom_slots
     // Grupos (subabas/quadros) ainda não existem no app exportado: seus casos de uso viram abas comuns
     const rawSlots = Array.isArray(rawSlotsDeclared)
-      ? rawSlotsDeclared.flatMap((sl: any) => (sl?.type === 'group' ? (sl.children || []) : [sl]))
+      ? rawSlotsDeclared.flatMap((sl: any) => (sl?.type === 'group' ? flattenGroupChildren(sl) : [sl]))
       : rawSlotsDeclared
     let customSlots: CustomSlotTab[] | undefined = undefined
 

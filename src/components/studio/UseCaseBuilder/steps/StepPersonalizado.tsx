@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { getGroupBlocks, type GroupBlock } from '@/lib/slotGroups'
 import {
   Database, Layout, Share2, Plus, Trash2,
   ChevronUp, ChevronDown, Check, X
@@ -208,23 +209,27 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   }
 
 
-  // Atualiza um filho (subaba/quadro) dentro de um grupo
-  const updateChild = (idx: number, childIdx: number, updater: (slot: any) => any) => {
+  // Edita os blocos de um grupo. Grupos antigos (children + group_mode) são convertidos para blocos ao primeiro uso.
+  const updateBlocks = (idx: number, fn: (blocks: GroupBlock[]) => GroupBlock[]) => {
     updateSlot(idx, group => {
-      const children = [...(group.children || [])]
-      children[childIdx] = updater({ ...children[childIdx] })
-      return { ...group, children }
+      const { children: _legacyChildren, group_mode: _legacyMode, ...rest } = group
+      return { ...rest, blocks: fn(getGroupBlocks(group)) }
     })
   }
 
+  // Atualiza um filho (subaba/quadro) dentro de um bloco de um grupo
+  const updateChild = (idx: number, bIdx: number, cIdx: number, updater: (slot: any) => any) => {
+    updateBlocks(idx, blocks => blocks.map((b, i) => i !== bIdx ? b : { ...b, children: b.children.map((c: any, j: number) => j !== cIdx ? c : updater({ ...c })) }))
+  }
+
   // Card de um slot: aba normal (idx) ou filho de um grupo (idx + childIdx)
-  const renderSlotCard = (slot: any, idx: number, childIdx?: number) => {
-    const isChild = childIdx !== undefined
-    const cardKey = isChild ? `${idx}.${childIdx}` : `${idx}`
-    const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childIdx as number, updater) : updateSlot(idx, updater))
+  const renderSlotCard = (slot: any, idx: number, childPath?: { b: number; c: number }) => {
+    const isChild = !!childPath
+    const cardKey = isChild ? `${idx}.${childPath!.b}.${childPath!.c}` : `${idx}`
+    const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childPath!.b, childPath!.c, updater) : updateSlot(idx, updater))
     const removeCard = () => {
       if (isChild) {
-        updateSlot(idx, group => ({ ...group, children: (group.children || []).filter((_: any, i: number) => i !== childIdx) }))
+        updateBlocks(idx, blocks => blocks.map((bl, i) => i !== childPath!.b ? bl : { ...bl, children: bl.children.filter((_: any, j: number) => j !== childPath!.c) }))
       } else {
         const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx)
         setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
@@ -585,19 +590,23 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   const GROUP_WIDTHS: Array<[string, string]> = [['1/4', '1/4 (25%)'], ['1/3', '1/3 (33%)'], ['1/2', '1/2 (50%)'], ['2/3', '2/3 (66%)'], ['3/4', '3/4 (75%)'], ['full', 'Total (100%)']]
   const GROUP_HEIGHTS: Array<[string, string]> = [['compact', 'Compacta (320px)'], ['medium', 'Média (480px)'], ['large', 'Grande (640px)'], ['auto', 'Automática'], ['custom', 'Personalizada (px)']]
 
-  // Card de um grupo: contém vários casos de uso, exibidos como subabas ou como quadros (grade)
+  // Card de um grupo: contém BLOCOS; cada bloco é "Subabas" (um caso de uso por vez) ou "Quadros" (todos visíveis, em grade)
   const renderGroupCard = (group: any, idx: number) => {
     const cardKey = `${idx}`
-    const children: any[] = group.children || []
-    const mode = group.group_mode || 'tabs'
-    const moveChild = (from: number, to: number) => {
-      if (to < 0 || to >= children.length) return
-      updateSlot(idx, g => {
-        const list = [...(g.children || [])]
-        const [item] = list.splice(from, 1)
-        list.splice(to, 0, item)
-        return { ...g, children: list }
-      })
+    const blocks = getGroupBlocks(group)
+    const modeLabel = (m: string) => (m === 'grid' ? t('wizard.personalizado.group_mode_grid', 'Quadros') : t('wizard.personalizado.group_mode_tabs', 'Subabas'))
+    const addBlock = (mode: 'tabs' | 'grid') =>
+      updateBlocks(idx, bl => [...bl, { id: `block-${Date.now()}`, mode, children: [] }])
+    const moveBlock = (from: number, to: number) => {
+      if (to < 0 || to >= blocks.length) return
+      updateBlocks(idx, bl => { const list = [...bl]; const [item] = list.splice(from, 1); list.splice(to, 0, item); return list })
+    }
+    const moveChild = (bIdx: number, from: number, to: number) => {
+      updateBlocks(idx, bl => bl.map((b, i) => {
+        if (i !== bIdx || to < 0 || to >= b.children.length) return b
+        const list = [...b.children]; const [item] = list.splice(from, 1); list.splice(to, 0, item)
+        return { ...b, children: list }
+      }))
     }
     return (
       <div key={group.id} className="p-4 bg-white dark:bg-neutral-950 border-2 border-rose-200 dark:border-rose-900/50 rounded-xl flex flex-col gap-4">
@@ -628,27 +637,6 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.group_mode_label', 'Exibir casos de uso como')}</label>
-            <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800">
-              {[
-                { value: 'tabs', label: t('wizard.personalizado.group_mode_tabs', 'Subabas') },
-                { value: 'grid', label: t('wizard.personalizado.group_mode_grid', 'Quadros') },
-              ].map(opt => (
-                <button
-                  key={opt.value} type="button"
-                  onClick={() => updateSlot(idx, g => ({ ...g, group_mode: opt.value }))}
-                  className={cn(
-                    'px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all',
-                    mode === opt.value ? 'bg-rose-500 text-white' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {tabToDelete === cardKey ? (
             <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
               <button
@@ -673,82 +661,144 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
         </div>
 
         <p className="text-[10px] text-neutral-400 -mt-2">
-          {mode === 'tabs'
-            ? t('wizard.personalizado.group_hint_tabs', 'Cada caso de uso vira uma subaba dentro desta aba.')
-            : t('wizard.personalizado.group_hint_grid', 'Todos os casos de uso ficam visíveis ao mesmo tempo, em quadros. Defina a largura e a altura de cada um.')}
+          {t('wizard.personalizado.group_hint_blocks', 'Um grupo é feito de blocos, empilhados de cima para baixo. Cada bloco pode ser de Subabas (um caso de uso por vez) ou de Quadros (vários visíveis ao mesmo tempo).')}
         </p>
 
-        <div className="space-y-3 pl-4 border-l-2 border-rose-200 dark:border-rose-900/50">
-          {children.length === 0 && (
-            <p className="text-[11px] text-neutral-400 italic">{t('wizard.personalizado.group_empty', 'Nenhum caso de uso neste grupo ainda.')}</p>
-          )}
-          {children.map((child: any, cIdx: number) => (
-            <div key={child.id} className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-rose-50/60 dark:bg-rose-900/10 rounded-lg">
-                <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                  {mode === 'tabs' ? t('wizard.personalizado.subtab_n', 'Subaba') : t('wizard.personalizado.panel_n', 'Quadro')} {cIdx + 1}
+        {blocks.map((block, bIdx) => {
+          const blockKey = `${idx}.b${bIdx}`
+          return (
+            <div key={block.id} className="space-y-3 p-3 border border-rose-200 dark:border-rose-900/50 rounded-xl bg-rose-50/30 dark:bg-rose-900/5">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">
+                  {t('wizard.personalizado.block_n', 'Bloco')} {bIdx + 1}
                 </span>
-                {mode === 'grid' && (
-                  <>
-                    <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
-                      {t('wizard.personalizado.panel_width', 'Largura')}
-                      <select
-                        value={child.col_span || '1/2'}
-                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, col_span: e.target.value }))}
-                        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
-                      >
-                        {GROUP_WIDTHS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
-                    </label>
-                    <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
-                      {t('wizard.personalizado.panel_height', 'Altura')}
-                      <select
-                        value={child.height || 'medium'}
-                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, height: e.target.value }))}
-                        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
-                      >
-                        {GROUP_HEIGHTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
-                    </label>
-                    {child.height === 'custom' && (
-                      <input
-                        type="number" min={120} max={2000} step={10} placeholder="px"
-                        value={child.height_px || ''}
-                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, height_px: e.target.value ? parseInt(e.target.value, 10) : undefined }))}
-                        className="w-24 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-rose-500"
-                      />
-                    )}
-                  </>
-                )}
-                <div className="ml-auto flex items-center gap-1">
-                  <button type="button" disabled={cIdx === 0} onClick={() => moveChild(cIdx, cIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
+                <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800">
+                  {(['tabs', 'grid'] as const).map(m => (
+                    <button
+                      key={m} type="button"
+                      onClick={() => updateBlocks(idx, bl => bl.map((b, i) => i === bIdx ? { ...b, mode: m } : b))}
+                      className={cn(
+                        'px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all',
+                        block.mode === m ? 'bg-rose-500 text-white' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      )}
+                    >
+                      {modeLabel(m)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-neutral-400 flex-1 min-w-[200px]">
+                  {block.mode === 'tabs'
+                    ? t('wizard.personalizado.group_hint_tabs', 'Cada caso de uso vira uma subaba dentro desta aba.')
+                    : t('wizard.personalizado.group_hint_grid', 'Todos os casos de uso ficam visíveis ao mesmo tempo, em quadros. Defina a largura e a altura de cada um.')}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={bIdx === 0} onClick={() => moveBlock(bIdx, bIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
                     <ChevronUp className="w-4 h-4" />
                   </button>
-                  <button type="button" disabled={cIdx === children.length - 1} onClick={() => moveChild(cIdx, cIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
+                  <button type="button" disabled={bIdx === blocks.length - 1} onClick={() => moveBlock(bIdx, bIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
                     <ChevronDown className="w-4 h-4" />
                   </button>
+                  {tabToDelete === blockKey ? (
+                    <div className="flex items-center gap-1 ml-1">
+                      <button
+                        onClick={() => { updateBlocks(idx, bl => bl.filter((_, i) => i !== bIdx)); setTabToDelete(null) }}
+                        className="px-2 py-1 text-white bg-red-500 hover:bg-red-600 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" /> {t('common.yes', 'Sim')}
+                      </button>
+                      <button onClick={() => setTabToDelete(null)} className="p-1.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 rounded-lg"><X className="w-3 h-3" /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setTabToDelete(blockKey)} className="p-1.5 text-neutral-400 hover:text-red-500 rounded-md" title={t('wizard.personalizado.remove_block', 'Remover bloco')}>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
-              {renderSlotCard(child, idx, cIdx)}
-            </div>
-          ))}
 
-          <button
-            onClick={() => updateSlot(idx, g => ({
-              ...g,
-              children: [...(g.children || []), {
-                id: `sub-${Date.now()}`,
-                title: mode === 'tabs' ? t('wizard.personalizado.new_subtab_title', 'Nova Subaba') : t('wizard.personalizado.new_panel_title', 'Novo Quadro'),
-                type: 'form',
-                model_id: config.selected_models[0],
-                col_span: '1/2',
-                height: 'medium',
-              }],
-            }))}
-            className="w-full p-3 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest"
-          >
-            <Plus className="w-4 h-4" />
-            {mode === 'tabs' ? t('wizard.personalizado.add_subtab', 'Adicionar Subaba') : t('wizard.personalizado.add_panel', 'Adicionar Quadro')}
+              <div className="space-y-3 pl-4 border-l-2 border-rose-200 dark:border-rose-900/50">
+                {block.children.length === 0 && (
+                  <p className="text-[11px] text-neutral-400 italic">{t('wizard.personalizado.group_empty', 'Nenhum caso de uso neste bloco ainda.')}</p>
+                )}
+                {block.children.map((child: any, cIdx: number) => (
+                  <div key={child.id} className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-rose-50/60 dark:bg-rose-900/10 rounded-lg">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
+                        {block.mode === 'tabs' ? t('wizard.personalizado.subtab_n', 'Subaba') : t('wizard.personalizado.panel_n', 'Quadro')} {cIdx + 1}
+                      </span>
+                      {block.mode === 'grid' && (
+                        <>
+                          <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
+                            {t('wizard.personalizado.panel_width', 'Largura')}
+                            <select
+                              value={child.col_span || '1/2'}
+                              onChange={e => updateChild(idx, bIdx, cIdx, c => ({ ...c, col_span: e.target.value }))}
+                              className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
+                            >
+                              {GROUP_WIDTHS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          </label>
+                          <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
+                            {t('wizard.personalizado.panel_height', 'Altura')}
+                            <select
+                              value={child.height || 'medium'}
+                              onChange={e => updateChild(idx, bIdx, cIdx, c => ({ ...c, height: e.target.value }))}
+                              className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
+                            >
+                              {GROUP_HEIGHTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          </label>
+                          {child.height === 'custom' && (
+                            <input
+                              type="number" min={120} max={2000} step={10} placeholder="px"
+                              value={child.height_px || ''}
+                              onChange={e => updateChild(idx, bIdx, cIdx, c => ({ ...c, height_px: e.target.value ? parseInt(e.target.value, 10) : undefined }))}
+                              className="w-24 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-rose-500"
+                            />
+                          )}
+                        </>
+                      )}
+                      <div className="ml-auto flex items-center gap-1">
+                        <button type="button" disabled={cIdx === 0} onClick={() => moveChild(bIdx, cIdx, cIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button type="button" disabled={cIdx === block.children.length - 1} onClick={() => moveChild(bIdx, cIdx, cIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {renderSlotCard(child, idx, { b: bIdx, c: cIdx })}
+                  </div>
+                ))}
+
+                <button
+                  onClick={() => updateBlocks(idx, bl => bl.map((b, i) => i !== bIdx ? b : {
+                    ...b,
+                    children: [...b.children, {
+                      id: `sub-${Date.now()}`,
+                      title: b.mode === 'tabs' ? t('wizard.personalizado.new_subtab_title', 'Nova Subaba') : t('wizard.personalizado.new_panel_title', 'Novo Quadro'),
+                      type: 'form',
+                      model_id: config.selected_models[0],
+                      col_span: '1/2',
+                      height: 'medium',
+                    }],
+                  }))}
+                  className="w-full p-3 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest"
+                >
+                  <Plus className="w-4 h-4" />
+                  {block.mode === 'tabs' ? t('wizard.personalizado.add_subtab', 'Adicionar Subaba') : t('wizard.personalizado.add_panel', 'Adicionar Quadro')}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button onClick={() => addBlock('tabs')} className="p-3 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest">
+            <Plus className="w-4 h-4" /> {t('wizard.personalizado.add_block_tabs', 'Adicionar Bloco de Subabas')}
+          </button>
+          <button onClick={() => addBlock('grid')} className="p-3 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest">
+            <Plus className="w-4 h-4" /> {t('wizard.personalizado.add_block_grid', 'Adicionar Bloco de Quadros')}
           </button>
         </div>
       </div>
@@ -875,7 +925,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 disabled={(config.layout_config.custom_slots || []).length === 0}
                 title={(config.layout_config.custom_slots || []).length === 0 ? t('wizard.personalizado.add_group_disabled', 'Adicione primeiro a aba do Mestre.') : ''}
                 onClick={() => {
-                  const newSlots = [...(config.layout_config.custom_slots || []), { id: `group-${Date.now()}`, type: 'group', title: t('wizard.personalizado.new_group_title', 'Novo Grupo'), icon: 'LayoutGrid', group_mode: 'tabs', children: [], model_id: config.selected_models[0] }]
+                  const newSlots = [...(config.layout_config.custom_slots || []), { id: `group-${Date.now()}`, type: 'group', title: t('wizard.personalizado.new_group_title', 'Novo Grupo'), icon: 'LayoutGrid', blocks: [{ id: `block-${Date.now()}`, mode: 'tabs', children: [] }], model_id: config.selected_models[0] }]
                   setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
                 }}
                 className="w-full p-4 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
