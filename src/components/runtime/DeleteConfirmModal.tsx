@@ -10,6 +10,8 @@ interface DeleteConfirmModalProps {
   onConfirm: () => Promise<void>
   isLoading?: boolean
   recordName?: string
+  /** Camada da modal: deve ficar ACIMA de qualquer modal aberta que a originou (padrão da Modal: 200) */
+  zIndex?: number
 }
 
 export default function DeleteConfirmModal({ 
@@ -17,13 +19,15 @@ export default function DeleteConfirmModal({
   onClose, 
   onConfirm, 
   isLoading = false,
-  recordName 
+  recordName,
+  zIndex
 }: DeleteConfirmModalProps) {
   const { t } = useI18n()
   return (
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
+      zIndex={zIndex}
       title={t('runtime.delete_confirm.title')}
       description={t('runtime.delete_confirm.desc')}
     >
