@@ -625,6 +625,14 @@ export function useDetailData({
           setSelectedRow((prev: any) => prev ? { ...prev, _details: freshMasterDetails } : prev)
         }
 
+        // Registro aberto NA MODAL de detalhe (ex.: o pedido, ao excluir um item dele): recarrega os filhos dele para que a
+        // lista da modal reflita a exclusão (antes só a página e o histórico eram recarregados e o item continuava na tela).
+        if (selectedDetail && (isDetailModalOpen || isDetailDrawerOpen) && currentDetailTable &&
+            currentDetailTable.toLowerCase() !== String(tableName).toLowerCase()) {
+          const freshOwn = await fetchDetails(selectedDetail, currentDetailTable, detailUiOverride?.joins)
+          setSelectedDetail((prev: any) => prev ? { ...prev, _details: freshOwn } : prev)
+        }
+
       } else {
         let errorMsg = result.error || 'Erro ao excluir o registro.'
         if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira') || errorMsg.includes('ORA-02292')) {
