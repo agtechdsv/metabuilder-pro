@@ -67,6 +67,10 @@ interface CustomUseCaseRendererProps {
   onAddDetail?: (tableName: string, parentId?: any) => void
   autoOpenSlotConfig?: { id: string, type: 'modal' | 'drawer' } | null
   projectRelations?: any[]
+  // Mantêm a aba interna (Dados Principais / detalhes) e forçam recarga após salvar, como no caso de uso original
+  initialTab?: string
+  onTabChange?: (tab: string) => void
+  relationalRefreshTrigger?: number
 }
 
 export default function CustomUseCaseRenderer({
@@ -97,7 +101,10 @@ export default function CustomUseCaseRenderer({
   onDeleteDetail,
   onAddDetail,
   autoOpenSlotConfig,
-  projectRelations = []
+  projectRelations = [],
+  initialTab,
+  onTabChange,
+  relationalRefreshTrigger
 }: CustomUseCaseRendererProps) {
   const getSlotId = (slot: any, idx: number) => slot?.id || slot?.use_case_slug || `slot-${idx}`;
   const [activeTabId, setActiveTabId] = useState<string>(customSlots && customSlots.length > 0 ? getSlotId(customSlots[0], 0) : '')
@@ -521,12 +528,20 @@ export default function CustomUseCaseRenderer({
       return (
         <div key={slot.id} className="h-full relative overflow-y-auto w-full p-4 lg:p-6 bg-white dark:bg-neutral-900 rounded-b-3xl">
           <RecordForm
+            key={`master-form-${relationalRefreshTrigger ?? 0}-${refreshTrigger ?? 0}`}
             mode={mode}
             fields={finalFormFields}
             initialData={initialData}
             onSave={onSave}
             onCancel={onClose}
             isLoading={isLoading}
+            onEditDetail={onEditDetail}
+            onDeleteDetail={onDeleteDetail}
+            onAddDetail={onAddDetail}
+            refreshTrigger={refreshTrigger}
+            projectRelations={projectRelations}
+            initialTab={initialTab}
+            onTabChange={onTabChange}
             logicType="cadastro"
             masterModelId={ucModelId || masterModelId}
             masterModelName={ucModelName || masterModelName}

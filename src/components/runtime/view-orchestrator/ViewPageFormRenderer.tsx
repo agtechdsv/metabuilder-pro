@@ -150,6 +150,9 @@ export function ViewPageFormRenderer({
           onDeleteDetail={handleDeleteDetail}
           onAddDetail={handleOpenAddDetail}
           projectRelations={projectRelations}
+          initialTab={activeTabForMaster}
+          onTabChange={setActiveTabForMaster}
+          relationalRefreshTrigger={relationalRefreshKey}
         />
       </div>
     )
