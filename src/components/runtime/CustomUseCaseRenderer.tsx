@@ -570,7 +570,7 @@ export default function CustomUseCaseRenderer({
     // de modal inline existente no CustomUseCaseRenderer.
     // Sem estes handlers, os botões aparecem mas não fazem nada.
 
-    const effectiveSlotJoins = ucJoins || slotProps[slot.use_case_slug]?.joins || joins || []
+    const effectiveSlotJoins = [ucJoins, slotProps[slot.use_case_slug]?.joins, joins].find((j: any) => Array.isArray(j) && j.length > 0) || []
 
     const handleSlotEdit = (row: any) => {
       setInlineModalState({
@@ -1053,7 +1053,7 @@ export default function CustomUseCaseRenderer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[300] flex items-center justify-center bg-neutral-900/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[190] flex items-center justify-center bg-neutral-900/60 backdrop-blur-sm"
             onClick={() => setInlineModalState(null)}
           >
             <motion.div
@@ -1066,7 +1066,7 @@ export default function CustomUseCaseRenderer({
             >
               <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 dark:border-neutral-800">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                  {inlineModalState.mode === 'create' ? 'Novo Registro' : 'Editar Registro'}
+                  {slotProps[inlineModalState.useCaseSlug || '']?.formHeaderTitle?.trim() || (inlineModalState.mode === 'create' ? 'Novo Registro' : 'Editar Registro')}
                 </h3>
                 <button
                   onClick={() => setInlineModalState(null)}
@@ -1091,9 +1091,20 @@ export default function CustomUseCaseRenderer({
                   tunnelChannel={tunnelChannel}
                   isTunnelReady={isTunnelReady}
                   project={project}
-                  joins={inlineModalState.joins || slotProps[inlineModalState.useCaseSlug || '']?.joins || joins || []}
+                  joins={[inlineModalState.joins, slotProps[inlineModalState.useCaseSlug || '']?.joins, joins].find((j: any) => Array.isArray(j) && j.length > 0) || []}
                   projectRelations={projectRelations}
-                  dictionary={dictionary}
+                  dictionary={slotProps[inlineModalState.useCaseSlug || '']?.dictionary || dictionary}
+                  detailsDisplayMode={slotProps[inlineModalState.useCaseSlug || '']?.detailsDisplayMode}
+                  detailsInlineTypes={slotProps[inlineModalState.useCaseSlug || '']?.detailsInlineTypes}
+                  detailsInterfaceTypes={slotProps[inlineModalState.useCaseSlug || '']?.detailsInterfaceTypes}
+                  detailsTabTitles={slotProps[inlineModalState.useCaseSlug || '']?.detailsTabTitles}
+                  detailsItemTitles={slotProps[inlineModalState.useCaseSlug || '']?.detailsItemTitles}
+                  masterTabTitle={slotProps[inlineModalState.useCaseSlug || '']?.masterTabTitle}
+                  hiddenDetails={slotProps[inlineModalState.useCaseSlug || '']?.hiddenDetails || []}
+                  tabsStyleConfig={slotProps[inlineModalState.useCaseSlug || '']?.tabsStyleConfig}
+                  onEditDetail={onEditDetail}
+                  onDeleteDetail={onDeleteDetail}
+                  onAddDetail={onAddDetail}
                   hideHeader={true}
                 />
               </div>

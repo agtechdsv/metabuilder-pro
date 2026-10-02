@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
@@ -115,11 +115,18 @@ export default function RecordForm({
   const { t } = useI18n()
   
   // Calculate effective joins in case view_config.joins is empty or missing (e.g., dynamically created views)
-  const effectiveJoins = Array.isArray(joins) && joins.length > 0 
-    ? joins 
-    : (typeof calculateEffectiveJoins === 'function' && project
-        ? calculateEffectiveJoins(joins, projectRelations, project) 
-        : joins);
+  // Memoizado: calculateEffectiveJoins devolve um array NOVO a cada chamada. Sem o useMemo, as 'joins' mudavam de identidade
+  // a cada render e o efeito que carrega os detalhes automaticamente (modal aberta pela lista) era refeito/cancelado
+  // sem parar, descartando a resposta ("Nenhum registro de itens encontrado" mesmo com itens no banco).
+  const joinsKey = JSON.stringify(joins || [])
+  const effectiveJoins = useMemo(() => (
+    Array.isArray(joins) && joins.length > 0
+      ? joins
+      : (typeof calculateEffectiveJoins === 'function' && project
+          ? calculateEffectiveJoins(joins, projectRelations, project)
+          : joins)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [joinsKey, projectRelations?.length, project?.id])
 
   const {
     formData, setFormData,

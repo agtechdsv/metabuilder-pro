@@ -56,6 +56,9 @@ export interface BuiltViewProps {
   masterTabTitle?: string
   detailsItemTitles?: Record<string, string>
   hiddenDetails?: string[]
+  tabsStyleConfig?: any
+  formHeaderTitle?: string
+  formHeaderSubtitleField?: string
   actionInterfaceType?: string
   masterModelId?: string
   customSlots?: any[]
@@ -676,6 +679,9 @@ export async function buildViewProps(
     masterTabTitle: view.layout_config?.master_tab_title,
     detailsItemTitles: view.layout_config?.details_item_titles,
     hiddenDetails: view.layout_config?.hidden_details,
+    tabsStyleConfig: view.layout_config?.fields_metadata?.['form-TABS'] || view.layout_config?.fields_metadata?.['TABS'],
+    formHeaderTitle: view.layout_config?.form_header_title,
+    formHeaderSubtitleField: view.layout_config?.form_header_subtitle_field,
     actionInterfaceType: view.layout_config?.action_interface_type || view.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (view.logic_type === 'mapa_mental' ? 'modal' : undefined),
     masterModelId: view.layout_config?.master_model_id || view.model_id,
     customSlots: view.layout_config?.custom_slots,
