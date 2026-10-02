@@ -184,10 +184,10 @@ interface StepPersonalizadoProps extends StepBaseProps {
 
 export function StepPersonalizado({ config, setConfig, models, useCases = [], relations = [] }: StepPersonalizadoProps) {
   const { t } = useI18n()
-  const [expandedCustomSlot, setExpandedCustomSlot] = useState<number | null>(null)
-  const [tabToDelete, setTabToDelete]               = useState<number | null>(null)
-  const [editingSlotTabIconIndex, setEditingSlotTabIconIndex] = useState<number | null>(null)
-  const [editingSlotIconIndex, setEditingSlotIconIndex]       = useState<number | null>(null)
+  const [expandedCustomSlot, setExpandedCustomSlot] = useState<string | null>(null)
+  const [tabToDelete, setTabToDelete]               = useState<string | null>(null)
+  const [editingSlotTabIconIndex, setEditingSlotTabIconIndex] = useState<string | null>(null)
+  const [editingSlotIconIndex, setEditingSlotIconIndex]       = useState<string | null>(null)
 
   function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
     if (!slotModelId) return includeNone ? <option value="">Selecione primeiro o modelo...</option> : null
@@ -205,6 +205,554 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const newSlots = [...(config.layout_config.custom_slots || [])]
     newSlots[idx] = updater({ ...newSlots[idx] })
     setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
+  }
+
+
+  // Atualiza um filho (subaba/quadro) dentro de um grupo
+  const updateChild = (idx: number, childIdx: number, updater: (slot: any) => any) => {
+    updateSlot(idx, group => {
+      const children = [...(group.children || [])]
+      children[childIdx] = updater({ ...children[childIdx] })
+      return { ...group, children }
+    })
+  }
+
+  // Card de um slot: aba normal (idx) ou filho de um grupo (idx + childIdx)
+  const renderSlotCard = (slot: any, idx: number, childIdx?: number) => {
+    const isChild = childIdx !== undefined
+    const cardKey = isChild ? `${idx}.${childIdx}` : `${idx}`
+    const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childIdx as number, updater) : updateSlot(idx, updater))
+    const removeCard = () => {
+      if (isChild) {
+        updateSlot(idx, group => ({ ...group, children: (group.children || []).filter((_: any, i: number) => i !== childIdx) }))
+      } else {
+        const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx)
+        setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
+      }
+    }
+    return (
+              <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
+                {/* Slot header row */}
+                <div className="flex gap-4 items-start w-full">
+                  {/* Icon */}
+                  <div className="space-y-2 flex-initial">
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
+                    <div className="relative">
+                      <button type="button" onClick={() => setEditingSlotTabIconIndex(cardKey)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50">
+                        <DynamicIcon icon={slot.icon || 'Layout'} className="w-5 h-5 text-neutral-500" />
+                      </button>
+                      {editingSlotTabIconIndex === cardKey && (
+                        <IconPicker
+                          currentIcon={slot.icon || 'Layout'}
+                          onSelect={(icon: string) => { upd(s => ({ ...s, icon })); setEditingSlotTabIconIndex(null) }}
+                          onClose={() => setEditingSlotTabIconIndex(null)}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.tab_title_label', 'Título da Aba')}</label>
+                    <input
+                      type="text" value={slot.title || ''}
+                      onChange={e => upd(s => ({ ...s, title: e.target.value }))}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
+                      placeholder={t('wizard.personalizado.tab_title_placeholder', 'Ex: Detalhes')}
+                    />
+                  </div>
+
+                  {/* Use case selector */}
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.use_case_label', 'Caso de Uso')}</label>
+                    <select
+                      value={slot.use_case_slug || ''}
+                      onChange={e => {
+                        const selectedUc = useCases?.find(uc => uc.slug === e.target.value)
+                        upd(s => ({ ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }))
+                      }}
+                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
+                    >
+                      <option value="">{t('wizard.personalizado.select_use_case_placeholder', 'Selecione o Caso de Uso...')}</option>
+                      {useCases?.map(uc => <option key={uc.slug} value={uc.slug}>{uc.name}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Widget type (read-only) */}
+                  <div className="space-y-2 flex-1">
+                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.widget_label', 'Widget')}</label>
+                    <select
+                      value={useCases?.find(uc => uc.slug === slot.use_case_slug)?.logic_type || slot.type || 'form'}
+                      disabled
+                      className="w-full bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-not-allowed"
+                    >
+                      <option value="form">{t('wizard.logic.types.pesquisa_cadastro.title', 'Formulário')}</option>
+                      <option value="pesquisa_cadastro">{t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro')}</option>
+                      <option value="kanban">{t('wizard.logic.types.kanban.title', 'Kanban')}</option>
+                      <option value="timeline">{t('wizard.logic.types.timeline.title', 'Linha do Tempo')}</option>
+                      <option value="scheduler">{t('wizard.logic.types.scheduler.title', 'Agenda / Calendário')}</option>
+                      <option value="gantt">{t('wizard.logic.types.gantt.title', 'Gráfico de Gantt')}</option>
+                      <option value="mapa_mental">{t('wizard.logic.types.mapa_mental.title', 'Mapa Mental')}</option>
+                      <option value="analytics">{t('wizard.logic.types.analytics.title', 'Dashboard BI')}</option>
+                      <option value="galeria">{t('wizard.logic.types.galeria.title', 'Galeria Assets')}</option>
+                      <option value="map">{t('wizard.logic.types.map.title', 'Mapa Geospatial')}</option>
+                      <option value="blueprint">{t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)')}</option>
+                      <option value="personalizado">{t('wizard.personalizado.widget_master_detail', 'Mestre/Detalhe (Abas)')}</option>
+                    </select>
+                  </div>
+
+                  {/* Expand / Delete */}
+                  <button
+                    onClick={() => setExpandedCustomSlot(expandedCustomSlot === cardKey ? null : cardKey)}
+                    className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
+                    title={expandedCustomSlot === cardKey ? t('wizard.personalizado.collapse_config', 'Recolher Configurações') : t('wizard.personalizado.expand_config', 'Expandir Configurações')}
+                  >
+                    {expandedCustomSlot === cardKey ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {tabToDelete === cardKey ? (
+                    <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                      <button
+                        onClick={() => { removeCard(); setTabToDelete(null) }}
+                        className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" /> {t('common.yes', 'Sim')}
+                      </button>
+                      <button onClick={() => setTabToDelete(null)} className="p-2.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-all">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setTabToDelete(cardKey)} className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all" title={t('wizard.personalizado.remove_tab', 'Remover Aba')}>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Expanded slot config */}
+                {expandedCustomSlot === cardKey && (
+                  <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    {(isChild || idx > 0) && (
+                      <div className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
+                        {/* Permissions */}
+                        <div className="flex flex-col gap-2">
+                          <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Permissões de Ação na Aba</h5>
+                          <p className="text-[10px] text-neutral-500">Escolha quais ações os usuários poderão realizar nos registros desta aba.</p>
+                          <div className="flex flex-wrap gap-6 mt-2">
+                            {[
+                              { key: 'can_view',      label: 'Visualizar' },
+                              { key: 'can_view_lupa', label: 'Visualizar (Lupa)' },
+                              { key: 'can_add',       label: 'Novo' },
+                              { key: 'can_edit',      label: 'Editar' },
+                              { key: 'can_delete',    label: 'Excluir' }
+                            ].map(({ key, label }) => (
+                              <label key={key} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={(slot as any)[key] !== false}
+                                  onChange={e => upd(s => ({ ...s, [key]: e.target.checked }))}
+                                  className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {!isChild && (<>
+                        {/* Render mode */}
+                        <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Modo de Exibição da Aba</h5>
+                        <div className="flex gap-4 mt-2">
+                          {[
+                            { value: 'tab',    label: 'Aba (Padrão)' },
+                            { value: 'button', label: 'Botão (Oculta Aba)' },
+                            { value: 'both',   label: 'Ambos' }
+                          ].map(({ value, label }) => (
+                            <label key={value} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio" name={`render_mode_${idx}`} value={value}
+                                checked={!slot.render_mode ? value === 'tab' : slot.render_mode === value}
+                                onChange={() => upd(s => ({ ...s, render_mode: value }))}
+                              />
+                              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{label}</span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {/* Button config (when render_mode is button or both) */}
+                        {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
+                          <div className="mt-4 p-4 bg-white dark:bg-neutral-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
+                            <h6 className="text-[10px] font-black uppercase text-indigo-500">Configurações do Botão</h6>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Localização do Botão</label>
+                                <select
+                                  value={slot.button_config?.location || 'master_top'}
+                                  onChange={e => upd(s => ({ ...s, button_config: { ...(s.button_config || {}), location: e.target.value } }))}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                >
+                                  <option value="master_top">Aba Mestre (Topo)</option>
+                                  <option value="search_grid_record">Tela de Pesquisa (Linha do Grid)</option>
+                                  <option value="specific_tab_top">Outra Aba (Topo)</option>
+                                  <option value="specific_tab_grid">Outra Aba (Linha do Grid)</option>
+                                </select>
+                              </div>
+                              {(slot.button_config?.location === 'specific_tab_top' || slot.button_config?.location === 'specific_tab_grid') && (
+                                <div>
+                                  <label className="text-[9px] font-black uppercase text-neutral-400">Aba Alvo</label>
+                                  <select
+                                    value={slot.button_config?.target_tab_id || ''}
+                                    onChange={e => upd(s => ({ ...s, button_config: { ...(s.button_config || {}), target_tab_id: e.target.value } }))}
+                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                  >
+                                    <option value="">Selecione a aba...</option>
+                                    {(config.layout_config.custom_slots || []).filter((_: any, i: number) => isChild || i !== idx).map((otherSlot: any) => (
+                                      <option key={otherSlot.id} value={otherSlot.id}>{otherSlot.title}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Como deve abrir?</label>
+                                <select
+                                  value={slot.button_config?.action_type || 'modal'}
+                                  onChange={e => upd(s => ({ ...s, button_config: { ...(s.button_config || {}), action_type: e.target.value } }))}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                >
+                                  <option value="modal">Modal Centralizada</option>
+                                  <option value="drawer">Drawer Lateral (Menu Esquerdo)</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Nome Específico do Botão (Opcional)</label>
+                                <input
+                                  type="text" placeholder={slot.title || 'Usar título da aba'}
+                                  value={slot.button_config?.label || ''}
+                                  onChange={e => upd(s => ({ ...s, button_config: { ...(s.button_config || {}), label: e.target.value } }))}
+                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-black uppercase text-neutral-400">Ícone do Botão (Opcional)</label>
+                                <button
+                                  onClick={() => setEditingSlotIconIndex(cardKey)}
+                                  className="w-full flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 mt-1 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-left"
+                                >
+                                  {slot.button_config?.icon ? (
+                                    <>
+                                      <div className="w-5 h-5 flex items-center justify-center text-indigo-500"><DynamicIcon icon={slot.button_config.icon} /></div>
+                                      <span className="text-sm font-medium text-neutral-900 dark:text-white truncate">{slot.button_config.icon}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-5 h-5 flex items-center justify-center text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded">?</div>
+                                      <span className="text-sm font-medium text-neutral-400">Escolher ícone...</span>
+                                    </>
+                                  )}
+                                </button>
+                                {editingSlotIconIndex === cardKey && (
+                                  <IconPicker
+                                    currentIcon={slot.button_config?.icon || ''}
+                                    onSelect={(icon: string) => { upd(s => ({ ...s, button_config: { ...(s.button_config || {}), icon } })); setEditingSlotIconIndex(null) }}
+                                    onClose={() => setEditingSlotIconIndex(null)}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        </>)}
+                      </div>
+                    )}
+
+                    <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />
+
+                    {/* Data retrieval */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h5 className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">Recuperação de Dados</h5>
+                          <p className="text-[10px] text-neutral-500 mt-0.5">Defina como os dados serão carregados nesta aba.</p>
+                        </div>
+                        <button
+                          onClick={() => upd(s => ({ ...s, use_master_id: s.use_master_id === false ? true : false }))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                            slot.use_master_id !== false ? "bg-indigo-600 text-white shadow-md" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
+                          )}
+                        >
+                          Vincular ao Mestre: {slot.use_master_id !== false ? 'SIM' : 'NÃO'}
+                        </button>
+                      </div>
+
+                      {slot.use_master_id !== false && (
+                        <RelationPathSelector 
+                          path={slot.relation_path || []} 
+                          onChange={(newPath) => upd(s => ({ ...s, relation_path: newPath }))}
+                          relations={relations}
+                          models={models}
+                        />
+                      )}
+
+                      {/* Static filters */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros Estáticos (Opcional)</label>
+                          <button
+                            onClick={() => upd(s => ({ ...s, static_filters: [...(s.static_filters || []), { field: '', operator: '=', value: '', logic: 'AND' }] }))}
+                            className="text-[9px] font-black uppercase text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Adicionar Filtro
+                          </button>
+                        </div>
+                        <div className="space-y-4">
+                          {(slot.static_filters || []).map((filter: any, fIdx: number) => (
+                            <div key={fIdx} className="flex flex-col gap-2 p-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                              {fIdx > 0 && (
+                                <div className="flex justify-center -mt-6">
+                                  <select
+                                    value={filter.logic || 'AND'}
+                                    onChange={e => upd(s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], logic: e.target.value }; return { ...s, static_filters: sf } })}
+                                    className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-0.5 text-[10px] font-black tracking-widest uppercase text-indigo-600 dark:text-indigo-400 outline-none"
+                                  >
+                                    <option value="AND">E (AND)</option>
+                                    <option value="OR">OU (OR)</option>
+                                  </select>
+                                </div>
+                              )}
+                              <div className="flex gap-2 items-center">
+                                <select value={filter.field || ''} onChange={e => upd(s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], field: e.target.value }; return { ...s, static_filters: sf } })} className="flex-[2] bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500">
+                                  {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo...')}
+                                </select>
+                                <select value={filter.operator || '='} onChange={e => upd(s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], operator: e.target.value }; return { ...s, static_filters: sf } })} className="flex-[1] bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500 text-center">
+                                  <option value="=">=</option>
+                                  <option value=">">&gt;</option>
+                                  <option value="<">&lt;</option>
+                                  <option value=">=">&ge;</option>
+                                  <option value="<=">&le;</option>
+                                  <option value="between">Entre</option>
+                                </select>
+                                <div className="flex-[2] flex gap-2">
+                                  <input type="text" value={filter.value || ''} onChange={e => upd(s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], value: e.target.value }; return { ...s, static_filters: sf } })} placeholder={filter.operator === 'between' ? 'Valor inicial' : 'Valor desejado'} className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
+                                  {filter.operator === 'between' && (
+                                    <input type="text" value={filter.value2 || ''} onChange={e => upd(s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], value2: e.target.value }; return { ...s, static_filters: sf } })} placeholder="Valor final" className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
+                                  )}
+                                </div>
+                                <button onClick={() => upd(s => { const sf = [...(s.static_filters || [])].filter((_: any, i: number) => i !== fIdx); return { ...s, static_filters: sf } })} className="p-2 text-neutral-400 hover:text-red-500 rounded-lg transition-colors flex-shrink-0">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Dynamic filters */}
+                      <div className="space-y-3 pt-4 border-t border-rose-200/50 dark:border-rose-900/30">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros de Tela (Usuário Final)</label>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">Campos que aparecerão como barras de pesquisa acima do Kanban/Grid.</p>
+                          </div>
+                          <button onClick={() => upd(s => ({ ...s, dynamic_filters: [...(s.dynamic_filters || []), { field: '', label: '' }] }))} className="text-[9px] font-black uppercase text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                            <Plus className="w-3 h-3" /> Adicionar Filtro de Tela
+                          </button>
+                        </div>
+                        {(slot.dynamic_filters || []).map((filterItem: any, fIdx: number) => {
+                          const isObject = typeof filterItem === 'object' && filterItem !== null
+                          const fieldVal = isObject ? filterItem.field : filterItem
+                          const labelVal = isObject ? filterItem.label : ''
+                          return (
+                            <div key={`dyn-${fIdx}`} className="flex gap-2 items-center">
+                              <select value={fieldVal || ''} onChange={e => upd(s => { const df = [...(s.dynamic_filters || [])]; df[fIdx] = { field: e.target.value, label: labelVal }; return { ...s, dynamic_filters: df } })} className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500">
+                                {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo para pesquisa...')}
+                              </select>
+                              <input type="text" value={labelVal || ''} onChange={e => upd(s => { const df = [...(s.dynamic_filters || [])]; df[fIdx] = { field: fieldVal, label: e.target.value }; return { ...s, dynamic_filters: df } })} placeholder="Rótulo (opcional)" className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
+                              <button onClick={() => upd(s => { const df = [...(s.dynamic_filters || [])].filter((_: any, i: number) => i !== fIdx); return { ...s, dynamic_filters: df } })} className="p-2 text-neutral-400 hover:text-red-500 rounded-lg transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+    )
+  }
+
+  const GROUP_WIDTHS: Array<[string, string]> = [['1/4', '1/4 (25%)'], ['1/3', '1/3 (33%)'], ['1/2', '1/2 (50%)'], ['2/3', '2/3 (66%)'], ['3/4', '3/4 (75%)'], ['full', 'Total (100%)']]
+  const GROUP_HEIGHTS: Array<[string, string]> = [['compact', 'Compacta (320px)'], ['medium', 'Média (480px)'], ['large', 'Grande (640px)'], ['auto', 'Automática'], ['custom', 'Personalizada (px)']]
+
+  // Card de um grupo: contém vários casos de uso, exibidos como subabas ou como quadros (grade)
+  const renderGroupCard = (group: any, idx: number) => {
+    const cardKey = `${idx}`
+    const children: any[] = group.children || []
+    const mode = group.group_mode || 'tabs'
+    const moveChild = (from: number, to: number) => {
+      if (to < 0 || to >= children.length) return
+      updateSlot(idx, g => {
+        const list = [...(g.children || [])]
+        const [item] = list.splice(from, 1)
+        list.splice(to, 0, item)
+        return { ...g, children: list }
+      })
+    }
+    return (
+      <div key={group.id} className="p-4 bg-white dark:bg-neutral-950 border-2 border-rose-200 dark:border-rose-900/50 rounded-xl flex flex-col gap-4">
+        <div className="flex gap-4 items-start w-full">
+          <div className="space-y-2 flex-initial">
+            <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
+            <div className="relative">
+              <button type="button" onClick={() => setEditingSlotTabIconIndex(cardKey)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50">
+                <DynamicIcon icon={group.icon || 'LayoutGrid'} className="w-5 h-5 text-neutral-500" />
+              </button>
+              {editingSlotTabIconIndex === cardKey && (
+                <IconPicker
+                  currentIcon={group.icon || 'LayoutGrid'}
+                  onSelect={(icon: string) => { updateSlot(idx, g => ({ ...g, icon })); setEditingSlotTabIconIndex(null) }}
+                  onClose={() => setEditingSlotTabIconIndex(null)}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2 flex-1">
+            <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.group_title_label', 'Título da Aba (Grupo)')}</label>
+            <input
+              type="text" value={group.title || ''}
+              onChange={e => updateSlot(idx, g => ({ ...g, title: e.target.value }))}
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
+              placeholder={t('wizard.personalizado.group_title_placeholder', 'Ex: Logística')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.group_mode_label', 'Exibir casos de uso como')}</label>
+            <div className="flex rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800">
+              {[
+                { value: 'tabs', label: t('wizard.personalizado.group_mode_tabs', 'Subabas') },
+                { value: 'grid', label: t('wizard.personalizado.group_mode_grid', 'Quadros') },
+              ].map(opt => (
+                <button
+                  key={opt.value} type="button"
+                  onClick={() => updateSlot(idx, g => ({ ...g, group_mode: opt.value }))}
+                  className={cn(
+                    'px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all',
+                    mode === opt.value ? 'bg-rose-500 text-white' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {tabToDelete === cardKey ? (
+            <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+              <button
+                onClick={() => {
+                  const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx)
+                  setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
+                  setTabToDelete(null)
+                }}
+                className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
+              >
+                <Check className="w-3.5 h-3.5" /> {t('common.yes', 'Sim')}
+              </button>
+              <button onClick={() => setTabToDelete(null)} className="p-2.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-all">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setTabToDelete(cardKey)} className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all" title={t('wizard.personalizado.remove_tab', 'Remover Aba')}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <p className="text-[10px] text-neutral-400 -mt-2">
+          {mode === 'tabs'
+            ? t('wizard.personalizado.group_hint_tabs', 'Cada caso de uso vira uma subaba dentro desta aba.')
+            : t('wizard.personalizado.group_hint_grid', 'Todos os casos de uso ficam visíveis ao mesmo tempo, em quadros. Defina a largura e a altura de cada um.')}
+        </p>
+
+        <div className="space-y-3 pl-4 border-l-2 border-rose-200 dark:border-rose-900/50">
+          {children.length === 0 && (
+            <p className="text-[11px] text-neutral-400 italic">{t('wizard.personalizado.group_empty', 'Nenhum caso de uso neste grupo ainda.')}</p>
+          )}
+          {children.map((child: any, cIdx: number) => (
+            <div key={child.id} className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-rose-50/60 dark:bg-rose-900/10 rounded-lg">
+                <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
+                  {mode === 'tabs' ? t('wizard.personalizado.subtab_n', 'Subaba') : t('wizard.personalizado.panel_n', 'Quadro')} {cIdx + 1}
+                </span>
+                {mode === 'grid' && (
+                  <>
+                    <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
+                      {t('wizard.personalizado.panel_width', 'Largura')}
+                      <select
+                        value={child.col_span || '1/2'}
+                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, col_span: e.target.value }))}
+                        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
+                      >
+                        {GROUP_WIDTHS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-[9px] font-black uppercase text-neutral-400">
+                      {t('wizard.personalizado.panel_height', 'Altura')}
+                      <select
+                        value={child.height || 'medium'}
+                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, height: e.target.value }))}
+                        className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500 normal-case"
+                      >
+                        {GROUP_HEIGHTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </label>
+                    {child.height === 'custom' && (
+                      <input
+                        type="number" min={120} max={2000} step={10} placeholder="px"
+                        value={child.height_px || ''}
+                        onChange={e => updateChild(idx, cIdx, c => ({ ...c, height_px: e.target.value ? parseInt(e.target.value, 10) : undefined }))}
+                        className="w-24 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-rose-500"
+                      />
+                    )}
+                  </>
+                )}
+                <div className="ml-auto flex items-center gap-1">
+                  <button type="button" disabled={cIdx === 0} onClick={() => moveChild(cIdx, cIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  <button type="button" disabled={cIdx === children.length - 1} onClick={() => moveChild(cIdx, cIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {renderSlotCard(child, idx, cIdx)}
+            </div>
+          ))}
+
+          <button
+            onClick={() => updateSlot(idx, g => ({
+              ...g,
+              children: [...(g.children || []), {
+                id: `sub-${Date.now()}`,
+                title: mode === 'tabs' ? t('wizard.personalizado.new_subtab_title', 'Nova Subaba') : t('wizard.personalizado.new_panel_title', 'Novo Quadro'),
+                type: 'form',
+                model_id: config.selected_models[0],
+                col_span: '1/2',
+                height: 'medium',
+              }],
+            }))}
+            className="w-full p-3 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest"
+          >
+            <Plus className="w-4 h-4" />
+            {mode === 'tabs' ? t('wizard.personalizado.add_subtab', 'Adicionar Subaba') : t('wizard.personalizado.add_panel', 'Adicionar Quadro')}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -308,369 +856,34 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
 
           <div className="space-y-4">
             {(config.layout_config.custom_slots || []).map((slot: any, idx: number) => (
-              <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
-                {/* Slot header row */}
-                <div className="flex gap-4 items-start w-full">
-                  {/* Icon */}
-                  <div className="space-y-2 flex-initial">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
-                    <div className="relative">
-                      <button type="button" onClick={() => setEditingSlotTabIconIndex(idx)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50">
-                        <DynamicIcon icon={slot.icon || 'Layout'} className="w-5 h-5 text-neutral-500" />
-                      </button>
-                      {editingSlotTabIconIndex === idx && (
-                        <IconPicker
-                          currentIcon={slot.icon || 'Layout'}
-                          onSelect={(icon: string) => { updateSlot(idx, s => ({ ...s, icon })); setEditingSlotTabIconIndex(null) }}
-                          onClose={() => setEditingSlotTabIconIndex(null)}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.tab_title_label', 'Título da Aba')}</label>
-                    <input
-                      type="text" value={slot.title || ''}
-                      onChange={e => updateSlot(idx, s => ({ ...s, title: e.target.value }))}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
-                      placeholder={t('wizard.personalizado.tab_title_placeholder', 'Ex: Detalhes')}
-                    />
-                  </div>
-
-                  {/* Use case selector */}
-                  <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.use_case_label', 'Caso de Uso')}</label>
-                    <select
-                      value={slot.use_case_slug || ''}
-                      onChange={e => {
-                        const selectedUc = useCases?.find(uc => uc.slug === e.target.value)
-                        updateSlot(idx, s => ({ ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }))
-                      }}
-                      className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
-                    >
-                      <option value="">{t('wizard.personalizado.select_use_case_placeholder', 'Selecione o Caso de Uso...')}</option>
-                      {useCases?.map(uc => <option key={uc.slug} value={uc.slug}>{uc.name}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Widget type (read-only) */}
-                  <div className="space-y-2 flex-1">
-                    <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.widget_label', 'Widget')}</label>
-                    <select
-                      value={useCases?.find(uc => uc.slug === slot.use_case_slug)?.logic_type || slot.type || 'form'}
-                      disabled
-                      className="w-full bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-500 dark:text-neutral-400 outline-none cursor-not-allowed"
-                    >
-                      <option value="form">{t('wizard.logic.types.pesquisa_cadastro.title', 'Formulário')}</option>
-                      <option value="pesquisa_cadastro">{t('wizard.logic.types.pesquisa_cadastro.title', 'Pesquisa / Cadastro')}</option>
-                      <option value="kanban">{t('wizard.logic.types.kanban.title', 'Kanban')}</option>
-                      <option value="timeline">{t('wizard.logic.types.timeline.title', 'Linha do Tempo')}</option>
-                      <option value="scheduler">{t('wizard.logic.types.scheduler.title', 'Agenda / Calendário')}</option>
-                      <option value="gantt">{t('wizard.logic.types.gantt.title', 'Gráfico de Gantt')}</option>
-                      <option value="mapa_mental">{t('wizard.logic.types.mapa_mental.title', 'Mapa Mental')}</option>
-                      <option value="analytics">{t('wizard.logic.types.analytics.title', 'Dashboard BI')}</option>
-                      <option value="galeria">{t('wizard.logic.types.galeria.title', 'Galeria Assets')}</option>
-                      <option value="map">{t('wizard.logic.types.map.title', 'Mapa Geospatial')}</option>
-                      <option value="blueprint">{t('wizard.logic.types.blueprint.title', 'Fluxograma (Blueprint)')}</option>
-                      <option value="personalizado">{t('wizard.personalizado.widget_master_detail', 'Mestre/Detalhe (Abas)')}</option>
-                    </select>
-                  </div>
-
-                  {/* Expand / Delete */}
-                  <button
-                    onClick={() => setExpandedCustomSlot(expandedCustomSlot === idx ? null : idx)}
-                    className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
-                    title={expandedCustomSlot === idx ? t('wizard.personalizado.collapse_config', 'Recolher Configurações') : t('wizard.personalizado.expand_config', 'Expandir Configurações')}
-                  >
-                    {expandedCustomSlot === idx ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-
-                  {tabToDelete === idx ? (
-                    <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
-                      <button
-                        onClick={() => {
-                          const newSlots = (config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx)
-                          setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
-                          setTabToDelete(null)
-                        }}
-                        className="p-2.5 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1"
-                      >
-                        <Check className="w-3.5 h-3.5" /> {t('common.yes', 'Sim')}
-                      </button>
-                      <button onClick={() => setTabToDelete(null)} className="p-2.5 text-neutral-500 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-all">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setTabToDelete(idx)} className="mt-6 p-2.5 text-neutral-400 hover:text-red-500 bg-neutral-50 hover:bg-red-50 dark:bg-neutral-900 dark:hover:bg-red-900/20 rounded-lg transition-all" title={t('wizard.personalizado.remove_tab', 'Remover Aba')}>
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Expanded slot config */}
-                {expandedCustomSlot === idx && (
-                  <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
-                    {idx > 0 && (
-                      <div className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
-                        {/* Permissions */}
-                        <div className="flex flex-col gap-2">
-                          <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Permissões de Ação na Aba</h5>
-                          <p className="text-[10px] text-neutral-500">Escolha quais ações os usuários poderão realizar nos registros desta aba.</p>
-                          <div className="flex flex-wrap gap-6 mt-2">
-                            {[
-                              { key: 'can_view',      label: 'Visualizar' },
-                              { key: 'can_view_lupa', label: 'Visualizar (Lupa)' },
-                              { key: 'can_add',       label: 'Novo' },
-                              { key: 'can_edit',      label: 'Editar' },
-                              { key: 'can_delete',    label: 'Excluir' }
-                            ].map(({ key, label }) => (
-                              <label key={key} className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={(slot as any)[key] !== false}
-                                  onChange={e => updateSlot(idx, s => ({ ...s, [key]: e.target.checked }))}
-                                  className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{label}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Render mode */}
-                        <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Modo de Exibição da Aba</h5>
-                        <div className="flex gap-4 mt-2">
-                          {[
-                            { value: 'tab',    label: 'Aba (Padrão)' },
-                            { value: 'button', label: 'Botão (Oculta Aba)' },
-                            { value: 'both',   label: 'Ambos' }
-                          ].map(({ value, label }) => (
-                            <label key={value} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio" name={`render_mode_${idx}`} value={value}
-                                checked={!slot.render_mode ? value === 'tab' : slot.render_mode === value}
-                                onChange={() => updateSlot(idx, s => ({ ...s, render_mode: value }))}
-                              />
-                              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{label}</span>
-                            </label>
-                          ))}
-                        </div>
-
-                        {/* Button config (when render_mode is button or both) */}
-                        {(slot.render_mode === 'button' || slot.render_mode === 'both') && (
-                          <div className="mt-4 p-4 bg-white dark:bg-neutral-950/50 border border-indigo-200 dark:border-indigo-800 rounded-lg space-y-4">
-                            <h6 className="text-[10px] font-black uppercase text-indigo-500">Configurações do Botão</h6>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-[9px] font-black uppercase text-neutral-400">Localização do Botão</label>
-                                <select
-                                  value={slot.button_config?.location || 'master_top'}
-                                  onChange={e => updateSlot(idx, s => ({ ...s, button_config: { ...(s.button_config || {}), location: e.target.value } }))}
-                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
-                                >
-                                  <option value="master_top">Aba Mestre (Topo)</option>
-                                  <option value="search_grid_record">Tela de Pesquisa (Linha do Grid)</option>
-                                  <option value="specific_tab_top">Outra Aba (Topo)</option>
-                                  <option value="specific_tab_grid">Outra Aba (Linha do Grid)</option>
-                                </select>
-                              </div>
-                              {(slot.button_config?.location === 'specific_tab_top' || slot.button_config?.location === 'specific_tab_grid') && (
-                                <div>
-                                  <label className="text-[9px] font-black uppercase text-neutral-400">Aba Alvo</label>
-                                  <select
-                                    value={slot.button_config?.target_tab_id || ''}
-                                    onChange={e => updateSlot(idx, s => ({ ...s, button_config: { ...(s.button_config || {}), target_tab_id: e.target.value } }))}
-                                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
-                                  >
-                                    <option value="">Selecione a aba...</option>
-                                    {(config.layout_config.custom_slots || []).filter((_: any, i: number) => i !== idx).map((otherSlot: any) => (
-                                      <option key={otherSlot.id} value={otherSlot.id}>{otherSlot.title}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-                              <div>
-                                <label className="text-[9px] font-black uppercase text-neutral-400">Como deve abrir?</label>
-                                <select
-                                  value={slot.button_config?.action_type || 'modal'}
-                                  onChange={e => updateSlot(idx, s => ({ ...s, button_config: { ...(s.button_config || {}), action_type: e.target.value } }))}
-                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
-                                >
-                                  <option value="modal">Modal Centralizada</option>
-                                  <option value="drawer">Drawer Lateral (Menu Esquerdo)</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black uppercase text-neutral-400">Nome Específico do Botão (Opcional)</label>
-                                <input
-                                  type="text" placeholder={slot.title || 'Usar título da aba'}
-                                  value={slot.button_config?.label || ''}
-                                  onChange={e => updateSlot(idx, s => ({ ...s, button_config: { ...(s.button_config || {}), label: e.target.value } }))}
-                                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-medium outline-none mt-1"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black uppercase text-neutral-400">Ícone do Botão (Opcional)</label>
-                                <button
-                                  onClick={() => setEditingSlotIconIndex(idx)}
-                                  className="w-full flex items-center gap-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 mt-1 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-left"
-                                >
-                                  {slot.button_config?.icon ? (
-                                    <>
-                                      <div className="w-5 h-5 flex items-center justify-center text-indigo-500"><DynamicIcon icon={slot.button_config.icon} /></div>
-                                      <span className="text-sm font-medium text-neutral-900 dark:text-white truncate">{slot.button_config.icon}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="w-5 h-5 flex items-center justify-center text-neutral-400 bg-neutral-100 dark:bg-neutral-800 rounded">?</div>
-                                      <span className="text-sm font-medium text-neutral-400">Escolher ícone...</span>
-                                    </>
-                                  )}
-                                </button>
-                                {editingSlotIconIndex === idx && (
-                                  <IconPicker
-                                    currentIcon={slot.button_config?.icon || ''}
-                                    onSelect={(icon: string) => { updateSlot(idx, s => ({ ...s, button_config: { ...(s.button_config || {}), icon } })); setEditingSlotIconIndex(null) }}
-                                    onClose={() => setEditingSlotIconIndex(null)}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="h-px w-full bg-rose-200 dark:bg-rose-900/50" />
-
-                    {/* Data retrieval */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h5 className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-300">Recuperação de Dados</h5>
-                          <p className="text-[10px] text-neutral-500 mt-0.5">Defina como os dados serão carregados nesta aba.</p>
-                        </div>
-                        <button
-                          onClick={() => updateSlot(idx, s => ({ ...s, use_master_id: s.use_master_id === false ? true : false }))}
-                          className={cn(
-                            "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                            slot.use_master_id !== false ? "bg-indigo-600 text-white shadow-md" : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500"
-                          )}
-                        >
-                          Vincular ao Mestre: {slot.use_master_id !== false ? 'SIM' : 'NÃO'}
-                        </button>
-                      </div>
-
-                      {slot.use_master_id !== false && (
-                        <RelationPathSelector 
-                          path={slot.relation_path || []} 
-                          onChange={(newPath) => updateSlot(idx, s => ({ ...s, relation_path: newPath }))}
-                          relations={relations}
-                          models={models}
-                        />
-                      )}
-
-                      {/* Static filters */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros Estáticos (Opcional)</label>
-                          <button
-                            onClick={() => updateSlot(idx, s => ({ ...s, static_filters: [...(s.static_filters || []), { field: '', operator: '=', value: '', logic: 'AND' }] }))}
-                            className="text-[9px] font-black uppercase text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" /> Adicionar Filtro
-                          </button>
-                        </div>
-                        <div className="space-y-4">
-                          {(slot.static_filters || []).map((filter: any, fIdx: number) => (
-                            <div key={fIdx} className="flex flex-col gap-2 p-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
-                              {fIdx > 0 && (
-                                <div className="flex justify-center -mt-6">
-                                  <select
-                                    value={filter.logic || 'AND'}
-                                    onChange={e => updateSlot(idx, s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], logic: e.target.value }; return { ...s, static_filters: sf } })}
-                                    className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-2 py-0.5 text-[10px] font-black tracking-widest uppercase text-indigo-600 dark:text-indigo-400 outline-none"
-                                  >
-                                    <option value="AND">E (AND)</option>
-                                    <option value="OR">OU (OR)</option>
-                                  </select>
-                                </div>
-                              )}
-                              <div className="flex gap-2 items-center">
-                                <select value={filter.field || ''} onChange={e => updateSlot(idx, s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], field: e.target.value }; return { ...s, static_filters: sf } })} className="flex-[2] bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500">
-                                  {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo...')}
-                                </select>
-                                <select value={filter.operator || '='} onChange={e => updateSlot(idx, s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], operator: e.target.value }; return { ...s, static_filters: sf } })} className="flex-[1] bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500 text-center">
-                                  <option value="=">=</option>
-                                  <option value=">">&gt;</option>
-                                  <option value="<">&lt;</option>
-                                  <option value=">=">&ge;</option>
-                                  <option value="<=">&le;</option>
-                                  <option value="between">Entre</option>
-                                </select>
-                                <div className="flex-[2] flex gap-2">
-                                  <input type="text" value={filter.value || ''} onChange={e => updateSlot(idx, s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], value: e.target.value }; return { ...s, static_filters: sf } })} placeholder={filter.operator === 'between' ? 'Valor inicial' : 'Valor desejado'} className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
-                                  {filter.operator === 'between' && (
-                                    <input type="text" value={filter.value2 || ''} onChange={e => updateSlot(idx, s => { const sf = [...(s.static_filters || [])]; sf[fIdx] = { ...sf[fIdx], value2: e.target.value }; return { ...s, static_filters: sf } })} placeholder="Valor final" className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
-                                  )}
-                                </div>
-                                <button onClick={() => updateSlot(idx, s => { const sf = [...(s.static_filters || [])].filter((_: any, i: number) => i !== fIdx); return { ...s, static_filters: sf } })} className="p-2 text-neutral-400 hover:text-red-500 rounded-lg transition-colors flex-shrink-0">
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Dynamic filters */}
-                      <div className="space-y-3 pt-4 border-t border-rose-200/50 dark:border-rose-900/30">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros de Tela (Usuário Final)</label>
-                            <p className="text-[10px] text-neutral-400 mt-0.5">Campos que aparecerão como barras de pesquisa acima do Kanban/Grid.</p>
-                          </div>
-                          <button onClick={() => updateSlot(idx, s => ({ ...s, dynamic_filters: [...(s.dynamic_filters || []), { field: '', label: '' }] }))} className="text-[9px] font-black uppercase text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-                            <Plus className="w-3 h-3" /> Adicionar Filtro de Tela
-                          </button>
-                        </div>
-                        {(slot.dynamic_filters || []).map((filterItem: any, fIdx: number) => {
-                          const isObject = typeof filterItem === 'object' && filterItem !== null
-                          const fieldVal = isObject ? filterItem.field : filterItem
-                          const labelVal = isObject ? filterItem.label : ''
-                          return (
-                            <div key={`dyn-${fIdx}`} className="flex gap-2 items-center">
-                              <select value={fieldVal || ''} onChange={e => updateSlot(idx, s => { const df = [...(s.dynamic_filters || [])]; df[fIdx] = { field: e.target.value, label: labelVal }; return { ...s, dynamic_filters: df } })} className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500">
-                                {renderSlotFieldOptions(slot.model_id, true, 'Selecione o campo para pesquisa...')}
-                              </select>
-                              <input type="text" value={labelVal || ''} onChange={e => updateSlot(idx, s => { const df = [...(s.dynamic_filters || [])]; df[fIdx] = { field: fieldVal, label: e.target.value }; return { ...s, dynamic_filters: df } })} placeholder="Rótulo (opcional)" className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500" />
-                              <button onClick={() => updateSlot(idx, s => { const df = [...(s.dynamic_filters || [])].filter((_: any, i: number) => i !== fIdx); return { ...s, dynamic_filters: df } })} className="p-2 text-neutral-400 hover:text-red-500 rounded-lg transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              slot.type === 'group' ? renderGroupCard(slot, idx) : renderSlotCard(slot, idx)
             ))}
 
             {/* Add tab button */}
-            <button
-              onClick={() => {
-                const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: t('wizard.personalizado.new_tab_title', 'Nova Aba'), type: 'form', model_id: config.selected_models[0] }]
-                setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
-              }}
-              className="w-full p-4 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              {t('wizard.personalizado.add_tab', 'Adicionar Aba')}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: t('wizard.personalizado.new_tab_title', 'Nova Aba'), type: 'form', model_id: config.selected_models[0] }]
+                  setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
+                }}
+                className="w-full p-4 border-2 border-dashed border-rose-200 dark:border-rose-900/50 rounded-xl flex items-center justify-center gap-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                {t('wizard.personalizado.add_tab', 'Adicionar Aba')}
+              </button>
+              <button
+                disabled={(config.layout_config.custom_slots || []).length === 0}
+                title={(config.layout_config.custom_slots || []).length === 0 ? t('wizard.personalizado.add_group_disabled', 'Adicione primeiro a aba do Mestre.') : ''}
+                onClick={() => {
+                  const newSlots = [...(config.layout_config.custom_slots || []), { id: `group-${Date.now()}`, type: 'group', title: t('wizard.personalizado.new_group_title', 'Novo Grupo'), icon: 'LayoutGrid', group_mode: 'tabs', children: [], model_id: config.selected_models[0] }]
+                  setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
+                }}
+                className="w-full p-4 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-xs uppercase tracking-widest shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Layout className="w-4 h-4" />
+                {t('wizard.personalizado.add_group', 'Adicionar Grupo (Subabas / Quadros)')}
+              </button>
+            </div>
           </div>
         </div>
       )}

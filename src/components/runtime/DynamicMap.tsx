@@ -133,7 +133,7 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   }
 
   return (
-    <div className="w-full h-[600px] rounded-[2rem] overflow-hidden border-4 border-white dark:border-neutral-900 shadow-xl relative z-0">
+    <div className="w-full h-[600px] max-h-full rounded-[2rem] overflow-hidden border-4 border-white dark:border-neutral-900 shadow-xl relative z-0">
       <RL.MapContainer 
         center={center} 
         zoom={5} 

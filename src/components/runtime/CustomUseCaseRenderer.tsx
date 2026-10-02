@@ -14,6 +14,27 @@ import { useToast } from '@/components/ui/Toast'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import DeleteConfirmModal from './DeleteConfirmModal'
 
+// Um slot do tipo "group" contém vários casos de uso (children), exibidos como subabas ou como quadros (grade).
+// Esta função devolve todos os slots, incluindo os filhos dos grupos (usada para buscas por id/slug).
+const flattenSlots = (slots: any[] = []): any[] =>
+  slots.flatMap((s: any) => (s?.type === 'group' ? [s, ...(s.children || [])] : [s]))
+
+// Largura do quadro na grade de 12 colunas (classes literais para o Tailwind enxergar); em telas pequenas empilha
+const GROUP_COL_CLASS: Record<string, string> = {
+  '1/4': 'md:col-span-3',
+  '1/3': 'md:col-span-4',
+  '1/2': 'md:col-span-6',
+  '2/3': 'md:col-span-8',
+  '3/4': 'md:col-span-9',
+  'full': 'md:col-span-12',
+}
+const GROUP_HEIGHT_PX: Record<string, number> = { compact: 320, medium: 480, large: 640 }
+const getPanelHeight = (child: any): number | undefined => {
+  if (child?.height === 'auto') return undefined
+  if (child?.height === 'custom') return Math.min(2000, Math.max(120, Number(child.height_px) || 480))
+  return GROUP_HEIGHT_PX[child?.height as string] ?? GROUP_HEIGHT_PX.medium
+}
+
 // Use dynamic import for ViewContainer to avoid SSR issues
 const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
 
@@ -80,13 +101,15 @@ export default function CustomUseCaseRenderer({
 }: CustomUseCaseRendererProps) {
   const getSlotId = (slot: any, idx: number) => slot?.id || slot?.use_case_slug || `slot-${idx}`;
   const [activeTabId, setActiveTabId] = useState<string>(customSlots && customSlots.length > 0 ? getSlotId(customSlots[0], 0) : '')
+  // Subaba ativa de cada grupo (modo "tabs"), keyed pelo id do grupo
+  const [subTabIds, setSubTabIds] = useState<Record<string, string>>({})
   // slotProps: props completas vindas do servidor para cada slot, keyed by use_case_slug
   const [slotProps, setSlotProps] = useState<Record<string, any>>({})
 
   React.useEffect(() => {
     async function fetchAllSlotProps() {
       if (!customSlots || !projectId) return;
-      const slugsToFetch = customSlots.map((s: any) => s.use_case_slug).filter(Boolean);
+      const slugsToFetch = Array.from(new Set(flattenSlots(customSlots).map((s: any) => s.use_case_slug).filter(Boolean))) as string[];
       if (slugsToFetch.length === 0) return;
 
       // Busca props de todos os slots em paralelo via API Route server-side
@@ -177,11 +200,76 @@ export default function CustomUseCaseRenderer({
       case 'mapa_mental': return <Settings className="w-4 h-4 mr-2" />
       case 'analytics': return <BarChart3 className="w-4 h-4 mr-2" />
       case 'galeria': return <ImageIcon className="w-4 h-4 mr-2" />
+      case 'group': return <Layout className="w-4 h-4 mr-2" />
       default: return <List className="w-4 h-4 mr-2" />
     }
   }
 
+  // Renderiza um grupo: subabas (um caso de uso por vez) ou quadros (todos visíveis, em grade)
+  const renderGroup = (group: any) => {
+    const children = (group.children || []).filter((c: any) => c.render_mode !== 'button')
+    if (children.length === 0) {
+      return (
+        <div key={group.id} className="p-8 text-center text-neutral-500">
+          Nenhum caso de uso configurado neste grupo.
+        </div>
+      )
+    }
+
+    if ((group.group_mode || 'tabs') === 'grid') {
+      return (
+        <div key={group.id} className="p-4 lg:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+          {children.map((child: any) => {
+            const height = getPanelHeight(child)
+            return (
+              <div key={child.id} className={cn('col-span-1 min-w-0', GROUP_COL_CLASS[child.col_span || '1/2'] || 'md:col-span-6')}>
+                <div className="flex flex-col rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                    {child.icon ? <DynamicIcon icon={child.icon} className="w-4 h-4" /> : getSlotIcon(child.type)}
+                    {child.title}
+                  </div>
+                  <div className="relative overflow-hidden" style={height ? { height } : { minHeight: 200 }}>
+                    {renderSlotContent(child)}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+
+    const activeChild = children.find((c: any) => c.id === subTabIds[group.id]) || children[0]
+    return (
+      <div key={group.id} className="flex flex-col h-full">
+        <div className="px-6 pt-4">
+          <div className="inline-flex flex-wrap gap-1 p-1 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl">
+            {children.map((child: any) => (
+              <button
+                key={child.id}
+                onClick={() => setSubTabIds(prev => ({ ...prev, [group.id]: child.id }))}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap',
+                  activeChild.id === child.id
+                    ? 'bg-white dark:bg-neutral-900 text-indigo-600 shadow-sm'
+                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                )}
+              >
+                {child.icon ? <DynamicIcon icon={child.icon} className="w-3.5 h-3.5" /> : null}
+                {child.title}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          {renderSlotContent(activeChild)}
+        </div>
+      </div>
+    )
+  }
+
   const renderSlotContent = (slot: any) => {
+    if (slot?.type === 'group') return renderGroup(slot)
     const uc = slotProps[slot.use_case_slug];
     if (!uc) {
       return (
@@ -610,7 +698,7 @@ export default function CustomUseCaseRenderer({
 
     // Ensure FK to parent is set on create
     if (saveMode === 'create' && parentId) {
-      const slot = customSlots.find(s => s.id === inlineModalState.slotId)
+      const slot = flattenSlots(customSlots).find(s => s.id === inlineModalState.slotId)
       const fk = slot?.foreign_key
       if (fk && fk !== 'id') {
         sanitized[fk] = String(parentId)
@@ -811,7 +899,7 @@ export default function CustomUseCaseRenderer({
   }
 
   // Se tem um slot aberto como Modal ou Drawer, precisamos encontrar ele
-  const openedSlot = openSlotConfig ? customSlots.find(s => s.id === openSlotConfig.id) : null;
+  const openedSlot = openSlotConfig ? flattenSlots(customSlots).find(s => s.id === openSlotConfig.id) : null;
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#050505]">

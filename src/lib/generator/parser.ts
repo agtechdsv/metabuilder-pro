@@ -2642,7 +2642,11 @@ export function parseMetaBuilderJSON(
     }
 
     // ── Custom Slots (para logic_type === 'personalizado' ou views com layout_config.custom_slots configurado no Studio) ──
-    const rawSlots = resolvedView.layout_config?.custom_slots || rv.layout_config?.custom_slots
+    const rawSlotsDeclared = resolvedView.layout_config?.custom_slots || rv.layout_config?.custom_slots
+    // Grupos (subabas/quadros) ainda não existem no app exportado: seus casos de uso viram abas comuns
+    const rawSlots = Array.isArray(rawSlotsDeclared)
+      ? rawSlotsDeclared.flatMap((sl: any) => (sl?.type === 'group' ? (sl.children || []) : [sl]))
+      : rawSlotsDeclared
     let customSlots: CustomSlotTab[] | undefined = undefined
 
     if (Array.isArray(rawSlots) && rawSlots.length > 0) {

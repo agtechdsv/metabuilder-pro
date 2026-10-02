@@ -107,7 +107,8 @@ export function ActionModalGeneralTab({
     }
 
     if (config.logic_type === 'personalizado') {
-      (config.layout_config.custom_slots || []).forEach((slot: any) => {
+      const flatSlots = (config.layout_config.custom_slots || []).flatMap((sl: any) => (sl?.type === 'group' ? (sl.children || []) : [sl]))
+      flatSlots.forEach((slot: any) => {
         const slotUc = useCases?.find((uc: any) => uc.slug === slot.use_case_slug);
         const slotLabel = t('wizard.actions.locations.custom_tab', 'Aba {title} ({name})')
           .replace('{title}', slot.title || '')
