@@ -62,6 +62,8 @@ interface ViewContainerProps {
   actionInterfaceType?: 'drawer' | 'modal' | 'page'
   externalFilters?: Record<string, string>
   advancedStaticFilters?: any[]
+  /** As joins informadas são o caminho exato escolhido no Studio (não deve ser trocado por um caminho mais curto) */
+  explicitJoins?: boolean
   onFiltersChange?: (filters: Record<string, string>) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
@@ -150,6 +152,7 @@ export default function ViewContainer({
   actionInterfaceType = 'drawer',
   externalFilters = {},
   advancedStaticFilters = [],
+  explicitJoins = false,
   onFiltersChange,
   tunnelChannel,
   isTunnelReady,
@@ -273,6 +276,7 @@ export default function ViewContainer({
     isTunnelReady,
     primaryKeyName,
     joins,
+    explicitJoins,
     projectRelations,
     displayFields,
     filterFields,

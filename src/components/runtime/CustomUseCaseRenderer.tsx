@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
+import { flattenSlots, getGroupBlocks } from '@/lib/slotGroups'
 import { getPkColumn, findModelByTable, getRecordPk, readCol, resolveRecordLabel, resolveFkColumn, warnFkResolution } from '@/lib/schemaResolver'
 import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react'
@@ -18,8 +19,6 @@ import DeleteConfirmModal from './DeleteConfirmModal'
 
 // Um slot do tipo "group" contém vários casos de uso (children), exibidos como subabas ou como quadros (grade).
 // Esta função devolve todos os slots, incluindo os filhos dos grupos (usada para buscas por id/slug).
-const flattenSlots = (slots: any[] = []): any[] =>
-  slots.flatMap((s: any) => (s?.type === 'group' ? [s, ...(s.children || [])] : [s]))
 
 // Largura do quadro na grade de 12 colunas (classes literais para o Tailwind enxergar); em telas pequenas empilha
 const GROUP_COL_CLASS: Record<string, string> = {
@@ -215,20 +214,14 @@ export default function CustomUseCaseRenderer({
     }
   }
 
-  // Renderiza um grupo: subabas (um caso de uso por vez) ou quadros (todos visíveis, em grade)
-  const renderGroup = (group: any) => {
-    const children = (group.children || []).filter((c: any) => c.render_mode !== 'button')
-    if (children.length === 0) {
-      return (
-        <div key={group.id} className="p-8 text-center text-neutral-500">
-          Nenhum caso de uso configurado neste grupo.
-        </div>
-      )
-    }
+  // Renderiza um BLOCO de um grupo: subabas (um caso de uso por vez) ou quadros (todos visíveis, em grade)
+  const renderGroupBlock = (block: { id: string; mode: string; children: any[] }) => {
+    const children = (block.children || []).filter((c: any) => c.render_mode !== 'button')
+    if (children.length === 0) return null
 
-    if ((group.group_mode || 'tabs') === 'grid') {
+    if (block.mode === 'grid') {
       return (
-        <div key={group.id} className="p-4 lg:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+        <div key={block.id} className="px-4 lg:px-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
           {children.map((child: any) => {
             const height = getPanelHeight(child)
             return (
@@ -249,15 +242,15 @@ export default function CustomUseCaseRenderer({
       )
     }
 
-    const activeChild = children.find((c: any) => c.id === subTabIds[group.id]) || children[0]
+    const activeChild = children.find((c: any) => c.id === subTabIds[block.id]) || children[0]
     return (
-      <div key={group.id} className="flex flex-col h-full">
-        <div className="px-6 pt-4">
+      <div key={block.id} className="flex flex-col">
+        <div className="px-6">
           <div className="inline-flex flex-wrap gap-1 p-1 bg-neutral-100 dark:bg-neutral-800/60 rounded-xl">
             {children.map((child: any) => (
               <button
                 key={child.id}
-                onClick={() => setSubTabIds(prev => ({ ...prev, [group.id]: child.id }))}
+                onClick={() => setSubTabIds(prev => ({ ...prev, [block.id]: child.id }))}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap',
                   activeChild.id === child.id
@@ -271,9 +264,26 @@ export default function CustomUseCaseRenderer({
             ))}
           </div>
         </div>
-        <div className="flex-1 min-h-0">
+        <div className="mt-3">
           {renderSlotContent(activeChild)}
         </div>
+      </div>
+    )
+  }
+
+  // Renderiza um grupo: seus blocos, empilhados na ordem configurada (cada um em modo subabas ou quadros)
+  const renderGroup = (group: any) => {
+    const blocks = getGroupBlocks(group).filter(b => b.children.some((c: any) => c.render_mode !== 'button'))
+    if (blocks.length === 0) {
+      return (
+        <div key={group.id} className="p-8 text-center text-neutral-500">
+          Nenhum caso de uso configurado neste grupo.
+        </div>
+      )
+    }
+    return (
+      <div key={group.id} className="flex flex-col gap-6 py-4">
+        {blocks.map(block => renderGroupBlock(block))}
       </div>
     )
   }
@@ -736,6 +746,7 @@ export default function CustomUseCaseRenderer({
           locale="pt-BR"
           project={project}
           joins={customJoinsResolved ? [...(ucJoins || []), ...customJoins] : ucJoins}
+          explicitJoins={customJoinsResolved}
           dictionary={ucDictionary}
           projectRelations={ucProjectRelations}
           tunnelChannel={tunnelChannel}

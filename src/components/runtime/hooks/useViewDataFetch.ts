@@ -25,6 +25,9 @@ export function useViewDataFetch({
   isTunnelReady,
   primaryKeyName,
   joins,
+  // true = as joins recebidas são o caminho EXATO escolhido no Studio (ex.: relation_path de uma aba do Personalizado):
+  // montá-las na ordem dada, sem trocar por um caminho mais curto achado no grafo de relações do projeto
+  explicitJoins = false,
   projectRelations,
   displayFields,
   filterFields,
@@ -276,7 +279,7 @@ export function useViewDataFetch({
 
         if (additionalTables.length === 0) return ''
 
-        if (projectRelations && projectRelations.length > 0) {
+        if (projectRelations && projectRelations.length > 0 && !explicitJoins) {
           const resolvedRelations = resolveRelations(projectRelations, allModels)
           const steps = resolveAllJoins(resolvedRelations, modelName, additionalTables)
           return buildJoinSql(steps, filterTables)
@@ -301,7 +304,7 @@ export function useViewDataFetch({
           return null
         }).filter(Boolean)
 
-        if (requiredTables.size > 0 && allModels.length > 0) {
+        if (!explicitJoins && requiredTables.size > 0 && allModels.length > 0) {
           const findRelation = (modelA: any, modelB: any) => {
             if (!modelA || !modelB) return null
             const modelBNameSingular = modelB.db_table_name.endsWith('s') ? modelB.db_table_name.slice(0, -1) : modelB.db_table_name
