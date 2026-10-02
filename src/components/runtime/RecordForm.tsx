@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { Loader2, Save, Eye, Pencil, Plus, Trash2, ArrowLeft, Check, ChevronDown, ChevronUp, Zap, Link, Database, Globe, Maximize2, PanelRight, ExternalLink } from 'lucide-react'
@@ -86,7 +87,7 @@ export default function RecordForm({
   isPageMode = false,
   onEditDetail,
   onDeleteDetail,
-  onAddDetail,
+  onAddDetail: onAddDetailProp,
   joins = [],
   dictionary = {},
   initialTab = 'master',
@@ -154,6 +155,42 @@ export default function RecordForm({
 
   // Tabela do mestre deste formulário (usada para achar a FK dos detalhes diretos)
   const masterTableName = masterModelName || project?.models?.find((m: any) => String(m.id) === String(masterModelId))?.db_table_name
+
+  // "Abrir Modal" de um registro filho cujo PAI ainda não foi gravado (id ausente/temporário):
+  // não dá para fazer INSERT do filho antes do pai. O filho é preenchido numa modal local e entra na lista de
+  // filhos do pai (como o botão "+"), sendo gravado junto quando o pai for salvo. O formulário do pai nunca é
+  // fechado nem recarregado, então nada do que foi digitado nele se perde.
+  const [localChild, setLocalChild] = useState<{ tableName: string; parentTable?: string; parentId?: any; isTop: boolean } | null>(null)
+
+  const onAddDetail = (tableName: string, parentId?: any, parentTable?: string) => {
+    const isTop = !parentTable || parentTable.toLowerCase() === (masterTableName || '').toLowerCase()
+    const parentUnsaved = parentId === undefined || parentId === null || parentId === '' || String(parentId).startsWith('temp-')
+    if (parentUnsaved && (!isTop || mode === 'create')) {
+      setLocalChild({ tableName, parentTable, parentId, isTop })
+      return
+    }
+    onAddDetailProp?.(tableName, parentId, parentTable)
+  }
+
+  const addLocalChildRecord = (values: any) => {
+    if (!localChild) return
+    const { tableName, parentTable, parentId, isTop } = localChild
+    const record: any = { ...values, id: `temp-${Date.now()}`, model_name: tableName, _isNew: true }
+    delete record.ID
+    if (isTop) {
+      setFormData((prev: any) => ({ ...prev, _details: [...(prev._details || []), record] }))
+    } else {
+      setFormData((prev: any) => ({
+        ...prev,
+        _details: (prev._details || []).map((d: any) =>
+          String(d.id ?? d.ID) === String(parentId) && (!parentTable || d.model_name?.toLowerCase() === parentTable.toLowerCase())
+            ? { ...d, _details: [...(d._details || []), record] }
+            : d
+        )
+      }))
+    }
+    setLocalChild(null)
+  }
 
   const buildActionContext = (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => {
     // Base object starts with master data so root fields (e.g. "id") map to the master record.
@@ -733,6 +770,43 @@ export default function RecordForm({
           )}
         </div>
       </form>
+
+      {localChild && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm"
+          onClick={(e) => { e.stopPropagation(); setLocalChild(null) }}
+          onSubmit={(e) => e.stopPropagation()}
+        >
+          <div
+            className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-neutral-200 dark:border-neutral-800 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RecordForm
+              mode="create"
+              fields={fields}
+              initialData={{}}
+              onSave={async (data: any) => { addLocalChildRecord(data) }}
+              onCancel={() => setLocalChild(null)}
+              isLoading={false}
+              logicType="master_detail"
+              masterModelName={localChild.tableName}
+              joins={effectiveJoins}
+              dictionary={dictionary}
+              detailsInlineTypes={detailsInlineTypes}
+              detailsInterfaceTypes={detailsInterfaceTypes}
+              detailsTabTitles={detailsTabTitles}
+              detailsItemTitles={detailsItemTitles}
+              projectId={projectId}
+              secretToken={secretToken}
+              tunnelChannel={tunnelChannel}
+              isTunnelReady={isTunnelReady}
+              project={project}
+              projectRelations={projectRelations}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

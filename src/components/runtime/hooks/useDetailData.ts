@@ -410,6 +410,16 @@ export function useDetailData({
   }
 
   const handleOpenAddDetail = (tableName: string, parentId?: any, parentTable?: string) => {
+    // Registro filho (ex.: item) de um pai que é DETALHE e ainda não foi salvo (id ausente ou temporário):
+    // não dá para gravar o filho no banco antes do pai. Sem esta trava, o item era inserido com o id temporário
+    // (erro de uuid) ou com o id do mestre da tela (violação de chave estrangeira).
+    const isParentADetail = !!parentTable && parentTable.toLowerCase() !== (modelName || '').toLowerCase()
+    const isParentUnsaved = parentId === undefined || parentId === null || parentId === '' || String(parentId).startsWith('temp-')
+    if (isParentADetail && isParentUnsaved) {
+      toast(t('runtime.save_parent_first', 'Salve o registro pai antes de adicionar itens por modal. Dica: use o botão + para adicionar o item na própria tela e salvar tudo junto.'), 'error')
+      return
+    }
+
     if (selectedDetail && (isDetailModalOpen || isDetailDrawerOpen)) {
       setDetailHistory(prev => [...prev, {
         record: selectedDetail,
