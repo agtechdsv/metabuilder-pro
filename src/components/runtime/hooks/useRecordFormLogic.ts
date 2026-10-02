@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn } from '@/lib/schemaResolver'
+import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn, readCol } from '@/lib/schemaResolver'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -355,15 +355,18 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       formData ? Object.entries(formData).find(([k]) => /^id$/i.test(k))?.[1] : undefined
     )
     if (!masterId) return
-    if (formData._details && Array.isArray(formData._details) && formData._details.length > 0) return
+    // Linhas vindas de uma LISTA com joins trazem "_details" = as próprias linhas planas do JOIN (sem model_name).
+    // Isso não são detalhes carregados: só pulamos a busca se já houver detalhes rotulados com a tabela (model_name).
+    if (Array.isArray(formData._details) && formData._details.some((d: any) => d?.model_name)) return
     if (!joins || joins.length === 0) return
 
     const mName = (masterModelName || '').toLowerCase()
-    const masterJoins = joins.filter((j: any) =>
-      j.from?.toLowerCase() === mName ||
-      (mName.endsWith('s') && j.from?.toLowerCase() === mName.slice(0, -1)) ||
-      (!mName.endsWith('s') && j.from?.toLowerCase() === mName + 's')
-    )
+    // Tabela do mestre: pelo nome informado e pelo modelo (masterModelId); join do mestre = "from" igual a essa tabela
+    const masterTableNames = new Set([
+      mName,
+      String((project as any)?.models?.find((m: any) => String(m.id) === String(masterModelId))?.db_table_name || '').toLowerCase(),
+    ].filter(Boolean))
+    const masterJoins = joins.filter((j: any) => masterTableNames.has(String(j.from || '').toLowerCase()))
     if (masterJoins.length === 0) return
 
     let isMounted = true
@@ -375,7 +378,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         if (!join.to) continue
         const fk = join.foreignKey || join.foreign_key
         if (!fk) { console.warn('[MetaBuilder] Join sem coluna de chave estrangeira; relação ignorada:', join); continue }
-        const localVal = masterId
+        // Valor do lado pai da join (localKey); só sem ele usa a chave primária do registro
+        const localVal = (join.localKey ? readCol(formData, join.localKey) : undefined) ?? masterId
 
         let detailData: any[] = []
         if (projectId) {

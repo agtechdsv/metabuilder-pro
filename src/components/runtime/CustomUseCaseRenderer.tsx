@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { getPkColumn } from '@/lib/schemaResolver'
+import { getPkColumn, findModelByTable, getRecordPk, readCol } from '@/lib/schemaResolver'
+import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -63,7 +64,7 @@ interface CustomUseCaseRendererProps {
   detailsInterfaceTypes?: Record<string, string>
   detailsInlineTypes?: Record<string, boolean>
   detailsItemTitles?: Record<string, string>
-  onEditDetail?: (detail: any) => void
+  onEditDetail?: (detail: any, uiOverride?: any) => void
   onDeleteDetail?: (detail: any) => void
   onAddDetail?: (tableName: string, parentId?: any) => void
   autoOpenSlotConfig?: { id: string, type: 'modal' | 'drawer' } | null
@@ -572,7 +573,25 @@ export default function CustomUseCaseRenderer({
 
     const effectiveSlotJoins = [ucJoins, slotProps[slot.use_case_slug]?.joins, joins].find((j: any) => Array.isArray(j) && j.length > 0) || []
 
+    // Editar/visualizar um registro da lista pelo MESMO fluxo da aba do mestre (modal de detalhe da página): carrega os
+    // detalhes de verdade, grava registro + itens e atualiza a tela. A aparência (abas/títulos) é a do caso de uso do slot.
+    const openInDetailModal = (row: any): boolean => {
+      if (!onEditDetail || !ucModelName) return false
+      onEditDetail({ ...row, model_name: ucModelName }, {
+        detailsDisplayMode: uc.detailsDisplayMode,
+        detailsTabTitles: uc.detailsTabTitles,
+        detailsItemTitles: uc.detailsItemTitles,
+        detailsInlineTypes: uc.detailsInlineTypes,
+        detailsInterfaceTypes: uc.detailsInterfaceTypes,
+        tabsStyleConfig: uc.tabsStyleConfig,
+        masterTabTitle: uc.masterTabTitle,
+        joins: Array.isArray(uc.joins) && uc.joins.length > 0 ? uc.joins : undefined,
+      })
+      return true
+    }
+
     const handleSlotEdit = (row: any) => {
+      if (openInDetailModal(row)) return
       setInlineModalState({
         isOpen: true,
         mode: 'edit',
@@ -588,6 +607,7 @@ export default function CustomUseCaseRenderer({
     }
 
     const handleSlotView = (row: any) => {
+      if (openInDetailModal(row)) return
       // Reutiliza o modal de edição em modo visualização (read-only via isLoading trick)
       setInlineModalState({
         isOpen: true,
@@ -696,10 +716,21 @@ export default function CustomUseCaseRenderer({
     const supabase = createClient()
     const queryId = crypto.randomUUID()
 
-    const slotModel = project?.models?.find((m: any) => m.db_table_name === slotModelName)
-    const pkField = inlineModalState.formFields.find((f: any) => f.is_primary_key) || { db_column_name: 'id' }
-    const pkName = pkField.db_column_name.split('.').pop() || 'id'
-    const pkValue = rowData?.[pkName] || rowData?.id || rowData?.ID
+    const slotModel = findModelByTable(project?.models, slotModelName)
+    // Chave primária: do MODELO (metadado); o campo marcado no formulário só se o modelo não a traz; 'id' como último recurso
+    const pkName = getPkColumn(project?.models, slotModelName)
+      || (inlineModalState.formFields.find((f: any) => f.is_primary_key)?.db_column_name || '').split('.').pop()
+      || 'id'
+    const pkValue = getRecordPk(rowData, pkName) ?? rowData?.id ?? rowData?.ID
+
+    // Só colunas REAIS da tabela (metadado). O formulário também carrega duplicatas de caixa (STATUS/status), campos
+    // calculados e colunas de JOIN; enviar isso fazia o CLI remover coluna por coluna (até 5 tentativas) e, se nada
+    // sobrasse, ignorar o UPDATE respondendo "sucesso" sem gravar.
+    const validCols = new Map<string, any>()
+    ;(slotModel?.fields || []).forEach((f: any) => {
+      const col = (f.db_column_name || '').split('.').pop()
+      if (col && !f.is_virtual) validCols.set(col.toLowerCase(), f)
+    })
 
     const SKIP_KEYS = new Set(['_details', 'model_name', 'display_model_name'])
     const sanitized: any = {}
@@ -710,13 +741,21 @@ export default function CustomUseCaseRenderer({
         (saveMode === 'edit' && (lk === pkName.toLowerCase() || lk === 'created_at' || lk === 'updated_at')) ||
         v === undefined || typeof v === 'object'
       ) continue
+      const colDef = validCols.get(lk)
+      if (validCols.size > 0 && !colDef) continue
+      const col = colDef ? ((colDef.db_column_name || '').split('.').pop() as string) : k
       if (saveMode === 'edit') {
-        const origRaw = rowData?.[k] ?? rowData?.[lk] ?? rowData?.[k.toUpperCase()]
-        const orig = origRaw === null || origRaw === '' ? null : String(origRaw)
+        const origRaw = readCol(rowData, col)
+        const orig = origRaw === null || origRaw === undefined || origRaw === '' ? null : String(origRaw)
         const cur = v === null || v === '' ? null : String(v)
         if (cur === orig) continue
       }
-      sanitized[k] = (v === null || v === '') ? null : String(v)
+      let outVal: any = (v === null || v === '') ? null : String(v)
+      if (outVal !== null && colDef && isNumericDbType(colDef.db_data_type)) {
+        const num = parseNumericLoose(outVal)
+        if (num !== null) outVal = num
+      }
+      sanitized[col] = outVal
     }
 
     // Ensure FK to parent is set on create
@@ -1100,7 +1139,12 @@ export default function CustomUseCaseRenderer({
                   detailsTabTitles={slotProps[inlineModalState.useCaseSlug || '']?.detailsTabTitles}
                   detailsItemTitles={slotProps[inlineModalState.useCaseSlug || '']?.detailsItemTitles}
                   masterTabTitle={slotProps[inlineModalState.useCaseSlug || '']?.masterTabTitle}
-                  hiddenDetails={slotProps[inlineModalState.useCaseSlug || '']?.hiddenDetails || []}
+                  hiddenDetails={inlineModalState.mode === 'create'
+                    ? (([inlineModalState.joins, slotProps[inlineModalState.useCaseSlug || '']?.joins, joins].find((j: any) => Array.isArray(j) && j.length > 0) || []) as any[])
+                        .filter((j: any) => String(j.from ?? j.table ?? '').toLowerCase() === String(inlineModalState.slotModelName || '').toLowerCase())
+                        .map((j: any) => j.to ?? j.toTable)
+                        .filter(Boolean)
+                    : (slotProps[inlineModalState.useCaseSlug || '']?.hiddenDetails || [])}
                   tabsStyleConfig={slotProps[inlineModalState.useCaseSlug || '']?.tabsStyleConfig}
                   onEditDetail={onEditDetail}
                   onDeleteDetail={onDeleteDetail}

@@ -8,6 +8,8 @@ import DeleteConfirmModal from '../DeleteConfirmModal'
 
 interface ViewDetailModalsProps {
   detailHistory: any[]
+  /** Aparência do caso de uso de origem do registro aberto (abas, títulos, modo de exibição) */
+  detailUiOverride?: any
   project: any
   detailsInterfaceTypes?: Record<string, string>
   detailsTabTitles?: Record<string, string>
@@ -50,6 +52,7 @@ interface ViewDetailModalsProps {
 
 export function ViewDetailModals({
   detailHistory,
+  detailUiOverride,
   project,
   detailsInterfaceTypes,
   detailsTabTitles,
@@ -94,6 +97,7 @@ export function ViewDetailModals({
   )
 
   const currentTabTitle =
+    detailUiOverride?.masterTabTitle ||
     detailsTabTitles?.[currentModel?.id || ''] ||
     dictionary?.[currentModel?.id || ''] ||
     currentModel?.display_name ||
@@ -109,17 +113,17 @@ export function ViewDetailModals({
     logicType: 'master_detail' as const,
     masterModelName: currentDetailTable,
     masterTabTitle: currentTabTitle,
-    detailsTabTitles,
-    detailsItemTitles,
-    detailsDisplayMode,
-    tabsStyleConfig,
+    detailsTabTitles: detailUiOverride?.detailsTabTitles ?? detailsTabTitles,
+    detailsItemTitles: detailUiOverride?.detailsItemTitles ?? detailsItemTitles,
+    detailsDisplayMode: detailUiOverride?.detailsDisplayMode ?? detailsDisplayMode,
+    tabsStyleConfig: detailUiOverride?.tabsStyleConfig ?? tabsStyleConfig,
     onEditDetail: handleEditDetail,
     onDeleteDetail: handleDeleteDetail,
     onAddDetail: handleOpenAddDetail,
-    joins,
+    joins: detailUiOverride?.joins ?? joins,
     dictionary,
-    detailsInlineTypes,
-    detailsInterfaceTypes,
+    detailsInlineTypes: detailUiOverride?.detailsInlineTypes ?? detailsInlineTypes,
+    detailsInterfaceTypes: detailUiOverride?.detailsInterfaceTypes ?? detailsInterfaceTypes,
     detailsModalSizes,
     detailsModalWidths,
     detailsModalHeights,
@@ -162,11 +166,11 @@ export function ViewDetailModals({
             formFields.find((f) => f.model_name?.toLowerCase() === item.tableName?.toLowerCase())
               ?.display_model_name ||
             item.tableName,
-          detailsTabTitles,
-          detailsItemTitles,
-          detailsDisplayMode,
-          tabsStyleConfig,
-          joins,
+          detailsTabTitles: item.uiOverride?.detailsTabTitles ?? detailsTabTitles,
+          detailsItemTitles: item.uiOverride?.detailsItemTitles ?? detailsItemTitles,
+          detailsDisplayMode: item.uiOverride?.detailsDisplayMode ?? detailsDisplayMode,
+          tabsStyleConfig: item.uiOverride?.tabsStyleConfig ?? tabsStyleConfig,
+          joins: item.uiOverride?.joins ?? joins,
           dictionary,
           detailsInlineTypes,
           detailsInterfaceTypes,

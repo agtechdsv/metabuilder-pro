@@ -300,6 +300,7 @@ export default function ViewPageContent({
     handleDeleteDetail,
     handleConfirmDeleteDetail,
     handleSaveDetail,
+    detailUiOverride,
   } = useDetailData({
     project,
     modelName,
@@ -749,6 +750,7 @@ export default function ViewPageContent({
 
       <ViewDetailModals
         detailHistory={detailHistory}
+        detailUiOverride={detailUiOverride}
         project={project}
         detailsInterfaceTypes={detailsInterfaceTypes}
         detailsTabTitles={detailsTabTitles}

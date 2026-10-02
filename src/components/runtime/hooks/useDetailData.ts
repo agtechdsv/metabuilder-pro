@@ -65,12 +65,15 @@ export function useDetailData({
   const [parentTableForDetail, setParentTableForDetail] = useState<string | null>(null)
   const [itemToDelete, setItemToDelete] = useState<any>(null)
   const [detailHistory, setDetailHistory] = useState<any[]>([])
+  // Aparência (abas/títulos/modo de exibição) do caso de uso de ORIGEM do registro aberto, quando difere da página
+  const [detailUiOverride, setDetailUiOverride] = useState<any>(null)
   const [activeTabForDetail, setActiveTabForDetail] = useState<string>('master')
 
   // Resolve os joins mestre→detalhe (prop joins → relações do projeto → heurística de nomenclatura).
   // Usado tanto para buscar detalhes quanto para saber qual FK preencher ao criar um detalhe.
-  const resolveEffectiveJoins = (parentModel: string): any[] => {
-    let effectiveJoins = joins || []
+  const resolveEffectiveJoins = (parentModel: string, joinsOverride?: any[]): any[] => {
+    // joinsOverride: joins do caso de uso de ORIGEM do registro (ex.: aba do Personalizado), quando diferem das da página
+    let effectiveJoins = (joinsOverride && joinsOverride.length > 0 ? joinsOverride : joins) || []
 
     // ── DIAGNOSTIC (comentado para produção) ────────────────────────────────────
     // console.log('[🔍 fetchDetails] START')
@@ -140,8 +143,8 @@ export function useDetailData({
     return null
   }
 
-  const fetchDetails = async (parentRow: any, parentModel: string) => {
-    const effectiveJoins = resolveEffectiveJoins(parentModel)
+  const fetchDetails = async (parentRow: any, parentModel: string, joinsOverride?: any[]) => {
+    const effectiveJoins = resolveEffectiveJoins(parentModel, joinsOverride)
 
     if (!effectiveJoins || effectiveJoins.length === 0) {
        // console.log('[🔍 fetchDetails] NO JOINS RESOLVED! effectiveJoins is empty. Returning [] early.')
@@ -390,13 +393,15 @@ export function useDetailData({
         record: selectedDetail,
         tableName: currentDetailTable,
         fields: detailFieldsToRender,
-        activeTab: activeTabForDetail
+        activeTab: activeTabForDetail,
+        uiOverride: detailUiOverride
       }])
     }
 
     setIsDetailModalOpen(false)
     setIsDetailDrawerOpen(false)
 
+    setDetailUiOverride(null)
     setDetailFieldsToRender(detailFields)
     // Pai do novo registro: o informado por quem abriu o modal (sub-detalhe) ou o mestre da tela
     const effectiveParentId = parentId ?? getParentKeyValue(null, selectedRow, getPrimaryKeyColumn((project as any)?.models, modelName))
@@ -418,21 +423,23 @@ export function useDetailData({
     }, 0)
   }
 
-  const handleEditDetail = async (detail: any) => {
+  const handleEditDetail = async (detail: any, uiOverride?: any) => {
     if (selectedDetail && (isDetailModalOpen || isDetailDrawerOpen)) {
       setDetailHistory(prev => [...prev, {
         record: selectedDetail,
         tableName: currentDetailTable,
         fields: detailFieldsToRender,
-        activeTab: activeTabForDetail
+        activeTab: activeTabForDetail,
+        uiOverride: detailUiOverride
       }])
     }
 
     setIsDetailModalOpen(false)
     setIsDetailDrawerOpen(false)
     
+    setDetailUiOverride(uiOverride ?? null)
     setIsProcessing(true)
-    const subDetails = await fetchDetails(detail, detail.model_name)
+    const subDetails = await fetchDetails(detail, detail.model_name, uiOverride?.joins)
     
     setDetailFieldsToRender(detailFields)
     setSelectedDetail({ ...detail, _details: subDetails })
@@ -458,6 +465,7 @@ export function useDetailData({
       const last = detailHistory[detailHistory.length - 1]
       setDetailHistory(prev => prev.slice(0, -1))
       setSelectedDetail(last.record)
+      setDetailUiOverride(last.uiOverride ?? null)
       setCurrentDetailTable(last.tableName)
       setDetailFieldsToRender(last.fields)
       setActiveTabForDetail(last.activeTab || 'master')
@@ -478,6 +486,7 @@ export function useDetailData({
       setIsDetailDrawerOpen(false)
       setSelectedDetail(null)
       setActiveTabForDetail('master')
+      setDetailUiOverride(null)
     }
   }
 
@@ -1186,6 +1195,7 @@ export function useDetailData({
     parentRowIdForDetail, setParentRowIdForDetail,
     itemToDelete, setItemToDelete,
     detailHistory, setDetailHistory,
+    detailUiOverride,
     activeTabForDetail, setActiveTabForDetail,
     handleOpenAddDetail,
     handleEditDetail,
