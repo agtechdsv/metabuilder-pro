@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { pickRecordTitle, findModelByTable } from '@/lib/schemaResolver'
 import RecordDrawer from '../RecordDrawer'
 import RecordModal from '../RecordModal'
 import DeleteConfirmModal from '../DeleteConfirmModal'
@@ -230,7 +231,7 @@ export function ViewDetailModals({
         }}
         onConfirm={handleConfirmDeleteDetail}
         isLoading={isProcessing}
-        recordName={itemToDelete?.name || itemToDelete?.id}
+        recordName={pickRecordTitle(itemToDelete, findModelByTable((project as any)?.models, itemToDelete?.model_name))}
       />
     </>
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn } from '@/lib/schemaResolver'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -192,14 +193,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
               const hasJoin = fetchJoins.some((j: any) => (j.to || j.toTable)?.toLowerCase() === relTableLower)
               if (!hasJoin) {
                 const sourceModel = targetSubModel || project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === join.to?.toLowerCase())
-                const linkField = sourceModel?.fields?.find((f: any) => {
-                  const fCol = (f.db_column_name || '').toLowerCase()
-                  const fTbl = (f.foreign_key_table || '').toLowerCase()
-                  return fTbl === relTableLower ||
-                    fCol === `${relTableLower}_id` ||
-                    (relTableLower.endsWith('s') && fCol === `${relTableLower.slice(0, -1)}_id`) ||
-                    (relTableLower.endsWith('es') && fCol === `${relTableLower.slice(0, -2)}_id`)
-                })
+                // FK da filha para a tabela do título: relação declarada > join > metadado (foreign_key_table); nome só em último caso (avisado)
+                const fkRes = resolveFkColumn({ models: (project as any)?.models, relations: (project as any)?.relations, joins, childTable: join.to, parentTable: relatedTable })
+                warnFkResolution(fkRes, join.to, relatedTable)
+                const linkField = fkRes.column
+                  ? sourceModel?.fields?.find((f: any) => (f.db_column_name || '').split('.').pop()?.toLowerCase() === fkRes.column!.toLowerCase())
+                  : undefined
                 if (linkField) {
                   const targetRelModel = project?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === relTableLower)
                   const targetDbTable = targetRelModel?.db_table_name || relatedTable
@@ -208,7 +207,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                     local: linkField.db_column_name,
                     localKey: linkField.db_column_name,
                     to: targetDbTable,
-                    foreignKey: linkField.foreign_key_column || 'id',
+                    foreignKey: linkField.foreign_key_column || getPkColumn((project as any)?.models, targetDbTable) || 'id',
                     type: 'left'
                   })
                 }
@@ -277,6 +276,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                       if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 's')) relatedTable = base + 's';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base + 'es')) relatedTable = base + 'es';
                       else if ((project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === base)) relatedTable = base;
+                      if (relatedTable) warnInferredReference(f.db_column_name, relatedTable);
                    }
                    const isValidModel = relatedTable ? (project as any)?.models?.some((m: any) => (m.db_table_name || m.table_name) === relatedTable) : false;
                    if (relatedTable && isValidModel && !uniqueJoins.find((j: any) => j.to === relatedTable)) {
@@ -284,7 +284,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                          from: join.to,
                          localKey: f.db_column_name,
                          to: relatedTable,
-                         foreignKey: f.foreign_key_column || 'id'
+                         foreignKey: f.foreign_key_column || getPkColumn((project as any)?.models, relatedTable) || 'id'
                       });
                    }
                 });
@@ -373,7 +373,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
       for (const join of masterJoins) {
         if (!join.to) continue
-        const fk = join.foreignKey || join.foreign_key || 'id'
+        const fk = join.foreignKey || join.foreign_key
+        if (!fk) { console.warn('[MetaBuilder] Join sem coluna de chave estrangeira; relação ignorada:', join); continue }
         const localVal = masterId
 
         let detailData: any[] = []

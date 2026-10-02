@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
+import { getPkColumn } from '@/lib/schemaResolver'
 import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -353,7 +354,7 @@ export default function CustomUseCaseRenderer({
                 from: fromModel.db_table_name,
                 to: toModel.db_table_name,
                 localKey: linkField?.db_column_name || 'id', 
-                foreignKey: linkField?.foreign_key_column || 'id'
+                foreignKey: linkField?.foreign_key_column || getPkColumn(project?.models, toModel.db_table_name) || 'id'
               });
             } else {
               hasError = true;
@@ -367,8 +368,7 @@ export default function CustomUseCaseRenderer({
           // This forces the query to traverse the JOIN graph to find matches.
           // Resolve the actual PK column name from the master model (Oracle may use uppercase "ID")
           const masterModel = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === mModelName?.toLowerCase());
-          const masterPkField = masterModel?.fields?.find((f: any) => f.is_primary_key);
-          const masterPkColName = masterPkField?.db_column_name || 'id';
+          const masterPkColName = getPkColumn(project?.models, masterModel?.db_table_name) || 'id';
           advancedStaticFilters.push({
             field: `${mModelName}.${masterPkColName}`,
             operator: '=',

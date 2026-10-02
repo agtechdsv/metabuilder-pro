@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { getPkColumn, warnInferredReference } from '@/lib/schemaResolver'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend 
@@ -326,8 +327,8 @@ export default function AnalyticsDashboard({
           const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
           const fromTable = fromModel?.db_table_name || j.from || j.table
           const toTable = toModel?.db_table_name || j.to || j.toTable
-          const fromField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field || j.local || j.localKey))?.db_column_name || j.local_field || j.local || j.localKey || 'id'
-          const toField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field || j.foreignKey))?.db_column_name || j.foreign_field || j.foreignKey || 'id'
+          const fromField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field || j.local || j.localKey))?.db_column_name || j.local_field || j.local || j.localKey || getPkColumn(allModels as any[], fromTable) || 'id'
+          const toField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field || j.foreignKey))?.db_column_name || j.foreign_field || j.foreignKey || getPkColumn(allModels as any[], toTable) || 'id'
           if (!fromTable || !toTable) return
           if (joinedTables.has(fromTable) && joinedTables.has(toTable)) return
           if (!joinedTables.has(fromTable) && !joinedTables.has(toTable)) return
@@ -350,11 +351,12 @@ export default function AnalyticsDashboard({
           const jtModel = (allModels as any[]).find(m => m.db_table_name === jt)
           if (jtModel) {
              const fields = Array.isArray(jtModel.fields) ? jtModel.fields : Object.values(jtModel.fields || {})
-             const isRel = (f: any) => (f.type === 'relation' && (f.relation?.table === refTable || f.relation_table === refTable)) || f.db_column_name === `${refTable}_id` || f.db_column_name === `${refTable.replace(/s$/, '')}_id`
-             const relField = fields.find(isRel)
+             const isRel = (f: any) => (f.type === 'relation' && (f.relation?.table === refTable || f.relation_table === refTable)) || (!!f.foreign_key_table && String(f.foreign_key_table).toLowerCase() === String(refTable).toLowerCase())
+             const isRelByName = (f: any) => f.db_column_name === `${refTable}_id` || f.db_column_name === `${refTable.replace(/s$/, '')}_id`
+             const relField = fields.find(isRel) || (() => { const g = fields.find(isRelByName); if (g) warnInferredReference(g.db_column_name, refTable); return g })()
              if (relField) {
                 const localCol = relField.db_column_name || 'id'
-                const foreignCol = relField.relation?.foreign_field || relField.relation_key || 'id'
+                const foreignCol = relField.relation?.foreign_field || relField.relation_key || relField.foreign_key_column || getPkColumn(allModels as any[], refTable) || 'id'
                 joinSql += ` LEFT JOIN "${refTable}" ON "${jt}"."${localCol}" = "${refTable}"."${foreignCol}"`
                 joinedTables.add(refTable)
                 break;
@@ -363,11 +365,12 @@ export default function AnalyticsDashboard({
           const refModel = (allModels as any[]).find(m => m.db_table_name === refTable)
           if (refModel) {
              const fields = Array.isArray(refModel.fields) ? refModel.fields : Object.values(refModel.fields || {})
-             const isRelReverse = (f: any) => (f.type === 'relation' && (f.relation?.table === jt || f.relation_table === jt)) || f.db_column_name === `${jt}_id` || f.db_column_name === `${jt.replace(/s$/, '')}_id`
-             const relField = fields.find(isRelReverse)
+             const isRelReverse = (f: any) => (f.type === 'relation' && (f.relation?.table === jt || f.relation_table === jt)) || (!!f.foreign_key_table && String(f.foreign_key_table).toLowerCase() === String(jt).toLowerCase())
+             const isRelReverseByName = (f: any) => f.db_column_name === `${jt}_id` || f.db_column_name === `${jt.replace(/s$/, '')}_id`
+             const relField = fields.find(isRelReverse) || (() => { const g = fields.find(isRelReverseByName); if (g) warnInferredReference(g.db_column_name, jt); return g })()
              if (relField) {
                 const localCol = relField.db_column_name || 'id'
-                const foreignCol = relField.relation?.foreign_field || relField.relation_key || 'id'
+                const foreignCol = relField.relation?.foreign_field || relField.relation_key || relField.foreign_key_column || getPkColumn(allModels as any[], jt) || 'id'
                 joinSql += ` LEFT JOIN "${refTable}" ON "${refTable}"."${localCol}" = "${jt}"."${foreignCol}"`
                 joinedTables.add(refTable)
                 break;

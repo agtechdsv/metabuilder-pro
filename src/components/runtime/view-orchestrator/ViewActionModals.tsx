@@ -1,4 +1,5 @@
 import React from 'react'
+import { pickRecordTitle, findModelByTable } from '@/lib/schemaResolver'
 import RecordDrawer from '../RecordDrawer'
 import RecordModal from '../RecordModal'
 import DeleteConfirmModal from '../DeleteConfirmModal'
@@ -173,7 +174,7 @@ export function ViewActionModals({
           setIsDeleteModalOpen(false)
         }}
         isLoading={isProcessing}
-        recordName={selectedRow?.name || selectedRow?.titulo || selectedRow?.id}
+        recordName={pickRecordTitle(selectedRow, findModelByTable(project?.models, modelName))}
       />
 
       <Modal

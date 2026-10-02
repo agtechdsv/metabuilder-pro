@@ -436,7 +436,10 @@ export async function buildViewProps(
       }
     })
 
-  const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field
+  // Chave primária: do campo marcado entre os campos do caso de uso; se ele não foi adicionado à tela, do MODELO
+  // (metadado). 'id' só como último recurso — uma tabela com PK "CODIGO" não pode depender de existir uma coluna id.
+  const modelPkField = (allModels as any[] | null)?.find((m: any) => m.id === view.model_id)?.fields?.find((f: any) => f.is_primary_key)
+  const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field || modelPkField
   const primaryKeyName = primaryKeyField?.db_column_name || 'id'
 
   const ensureFieldInDisplay = async (fieldId: string) => {

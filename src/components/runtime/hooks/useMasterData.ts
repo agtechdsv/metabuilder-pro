@@ -1,4 +1,5 @@
 import { useToast } from '@/components/ui/Toast'
+import { resolveFkColumn, warnFkResolution, missingRelationMessage } from '@/lib/schemaResolver'
 import { readKey } from '@/lib/detailRelations'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
@@ -451,46 +452,12 @@ export function useMasterData({
           }
 
           if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
-            let fkCol = ''
-
-            if (projectRelations?.length > 0 && project?.models) {
-              const parentModel = project.models.find((m: any) => m.db_table_name === parentTable)
-              const childModel = project.models.find((m: any) => m.db_table_name === rowTable)
-              if (parentModel && childModel) {
-                const rel = projectRelations.find((r: any) =>
-                  (r.from_model_id === parentModel.id && r.to_model_id === childModel.id) ||
-                  (r.from_model_id === childModel.id && r.to_model_id === parentModel.id)
-                )
-                if (rel && rel.from_model_id === childModel.id) {
-                  const f = childModel.fields?.find((f: any) => f.id === rel.from_field_id)
-                  if (f) fkCol = f.db_column_name
-                } else if (rel && rel.to_model_id === childModel.id) {
-                  const f = childModel.fields?.find((f: any) => f.id === rel.to_field_id)
-                  if (f) fkCol = f.db_column_name
-                }
-              }
-            }
-
-            if (!fkCol && joins?.length > 0) {
-              const join = joins.find(j =>
-                (j.to || j.toTable || j.table)?.toLowerCase() === rowTable?.toLowerCase() &&
-                (j.from || j.table)?.toLowerCase() === parentTable?.toLowerCase()
-              )
-              if (join) fkCol = join.foreignKey || join.foreign_field || join.toOn || join.on
-            }
-
-            if (!fkCol && project?.models) {
-              const childModel = project.models.find((m: any) => m.db_table_name === rowTable)
-              const parentSingular = parentTable.endsWith('s') ? parentTable.slice(0, -1) : parentTable
-              const possibleFk = childModel?.fields?.find(
-                (f: any) => f.db_column_name.toLowerCase().includes(parentSingular.toLowerCase()) && f.db_column_name.toLowerCase().endsWith('_id')
-              )
-              if (possibleFk) fkCol = possibleFk.db_column_name
-            }
-
-            if (!fkCol) {
-              fkCol = parentTable.endsWith('s') ? `${parentTable.slice(0, -1)}_id` : `${parentTable}_id`
-            }
+            // FK do filho novo: relação declarada > join do caso de uso > metadado do campo (foreign_key_table).
+            // Palpite por nome só como último recurso (e avisado). Sem nenhuma relação: erro claro, nunca coluna inventada.
+            const fkRes = resolveFkColumn({ models: (project as any)?.models, relations: projectRelations, joins, childTable: rowTable, parentTable })
+            warnFkResolution(fkRes, rowTable, parentTable)
+            if (!fkRes.column) throw new Error(missingRelationMessage(rowTable, parentTable))
+            let fkCol: string = fkRes.column
 
             if (fkCol) {
               // Ajustar o Case da fkCol para bater com o banco, especialmente Oracle

@@ -1,4 +1,5 @@
 import React from 'react';
+import { inferJoins } from '@/lib/schemaResolver'
 import DynamicIcon from '@/components/runtime/DynamicIcon';
 
 // Helper para obter valores de forma insensível a maiúsculas/minúsculas e tolerante a prefixos
@@ -236,40 +237,11 @@ export const calculateEffectiveJoins = (joins: any[], projectRelations: any[], p
       }
     }
 
-    // 2. Fallback via Heurística (Nomenclatura)
+    // 2. Metadado do campo (foreign_key_table) e, só em último caso, palpite por nome (avisado no console)
     if (effectiveJoins.length === 0) {
-      const heuristicJoins: any[] = [];
-      for (const parentModelDef of project.models) {
-        for (const childModel of project.models) {
-          if (childModel.id === parentModelDef.id) continue;
-          
-          const fkField = childModel.fields?.find((f: any) => {
-            const fName = (f.db_column_name || '').toLowerCase();
-            const pName = (parentModelDef.db_table_name || '').toLowerCase();
-            const fTbl = (f.foreign_key_table || '').toLowerCase();
-            
-            const isFkTblMatch = fTbl === pName;
-            const isFNameExact = fName === `${pName}_id`;
-            const isFNameS = (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`);
-            const isFNameEs = (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
-            
-            return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
-          });
-          
-          const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0];
-          
-          if (fkField && pkField) {
-            heuristicJoins.push({
-              from: parentModelDef.db_table_name,
-              localKey: pkField.db_column_name,
-              to: childModel.db_table_name,
-              foreignKey: fkField.db_column_name
-            });
-          }
-        }
-      }
-      if (heuristicJoins.length > 0) {
-        effectiveJoins = heuristicJoins;
+      const inferred = inferJoins(project.models);
+      if (inferred.length > 0) {
+        effectiveJoins = inferred;
       }
     }
   }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { resolveFkColumn, warnFkResolution, missingRelationMessage, inferJoins, readCol, getRecordPk, getPkColumn } from '@/lib/schemaResolver'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
@@ -115,42 +116,10 @@ export function useDetailData({
     }
     // console.log('[🔍 fetchDetails] effectiveJoins after Santo Graal:', JSON.stringify(effectiveJoins))
 
-    // 2. Fallback via Heurística (Nomenclatura)
+    // 2. Metadado do campo (foreign_key_table) e, só em último caso, palpite por nome (avisado no console)
     if (effectiveJoins.length === 0 && project.models) {
-      const parentModelDef = project.models.find((m: any) => m.db_table_name?.toLowerCase() === parentModel?.toLowerCase())
-      if (parentModelDef) {
-        const heuristicJoins: any[] = []
-        for (const childModel of project.models) {
-          if (childModel.id === parentModelDef.id) continue
-          const fkField = childModel.fields?.find((f: any) => {
-            const fName = (f.db_column_name || '').toLowerCase();
-            const pName = (parentModelDef.db_table_name || '').toLowerCase();
-            const fTbl = (f.foreign_key_table || '').toLowerCase();
-            const isFkTblMatch = fTbl === pName;
-            const isFNameExact = fName === `${pName}_id`;
-            const isFNameS = (pName.endsWith('s') && fName === `${pName.slice(0, -1)}_id`);
-            const isFNameEs = (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`);
-            
-            // Log if we suspect this might be the field
-            if (fName.includes('id') && childModel.db_table_name.toLowerCase() === 'produtos') {
-               // console.log(`[🔍 fetchDetails] Heuristic candidate - child: ${childModel.db_table_name}, field: ${fName}, fTbl: ${fTbl}, pName: ${pName}. Matches:`, { isFkTblMatch, isFNameExact, isFNameS, isFNameEs })
-            }
-
-            return isFkTblMatch || isFNameExact || isFNameS || isFNameEs;
-          })
-          const pkField = parentModelDef.fields?.find((f: any) => (f.db_column_name || '').toLowerCase() === 'id') || parentModelDef.fields?.[0]
-          if (fkField && pkField) {
-            heuristicJoins.push({
-              from: parentModelDef.db_table_name,
-              localKey: pkField.db_column_name,
-              to: childModel.db_table_name,
-              foreignKey: fkField.db_column_name
-            })
-          }
-        }
-        // console.log('[🔍 fetchDetails] Heuristic joins found:', heuristicJoins.length)
-        if (heuristicJoins.length > 0) effectiveJoins = heuristicJoins
-      }
+      const inferred = inferJoins(project.models, parentModel)
+      if (inferred.length > 0) effectiveJoins = inferred
     }
 
     return effectiveJoins
@@ -185,7 +154,7 @@ export function useDetailData({
       const isMatch = join.from?.toLowerCase() === parentModel?.toLowerCase()
 
       if (isMatch) {
-        const localValue = parentRow[join.localKey] || parentRow[join.localKey.toUpperCase()] || parentRow.id || parentRow.ID
+        const localValue = readCol(parentRow, join.localKey) ?? getRecordPk(parentRow, getPkColumn((project as any)?.models, parentModel))
         
         // console.log('[🔍 fetchDetails] ▶ join:', JSON.stringify(join))
         // console.log('[🔍 fetchDetails]   localKey:', join.localKey, '→ raw:', parentRow[join.localKey], '| UC:', parentRow[join.localKey?.toUpperCase?.()], '| resolved:', localValue)
@@ -233,24 +202,20 @@ export function useDetailData({
                 linkField = detailModel.fields?.find((f: any) => f.id === fromFieldId)
               }
             }
-            // ── Fallback: name heuristic only if Santo Graal has nothing ──
+            // ── Sem relação declarada: join do caso de uso > metadado (foreign_key_table) > nome (último recurso, avisado) ──
             if (!linkField) {
-              const pName = (relatedTable || '').toLowerCase()
-              linkField = detailModel.fields?.find((f: any) => {
-                const fName = (f.db_column_name || '').toLowerCase()
-                const fTbl  = (f.foreign_key_table || '').toLowerCase()
-                return fTbl === pName ||
-                  fName === `${pName}_id` ||
-                  (pName.endsWith('s')  && fName === `${pName.slice(0, -1)}_id`) ||
-                  (pName.endsWith('es') && fName === `${pName.slice(0, -2)}_id`)
-              })
+              const fkRes = resolveFkColumn({ models: (project as any)?.models, joins, childTable: join.to, parentTable: relatedTable })
+              warnFkResolution(fkRes, join.to, relatedTable)
+              if (fkRes.column) {
+                linkField = detailModel.fields?.find((f: any) => (f.db_column_name || '').split('.').pop()?.toLowerCase() === fkRes.column!.toLowerCase())
+              }
             }
             if (linkField) {
               const titleJoin = {
                 from: join.to,
                 localKey: linkField.db_column_name,
                 to: relatedTable,
-                foreignKey: linkField.foreign_key_column || 'id'
+                foreignKey: linkField.foreign_key_column || getPkColumn((project as any)?.models, relatedTable) || 'id'
               }
               subDetailJoins.push(titleJoin)  // keep for tunnel path
               titleJoins.push(titleJoin)       // use only this for postgres path
@@ -1017,46 +982,12 @@ export function useDetailData({
 
 
           if (isNew && parentPkVal !== undefined && parentPkVal !== null) {
-            let fkCol = ''
-
-            if (projectRelations?.length > 0 && project?.models) {
-              const parentModel = project.models.find((m: any) => m.db_table_name === parentTable)
-              const childModel = project.models.find((m: any) => m.db_table_name === rowTable)
-              if (parentModel && childModel) {
-                const rel = projectRelations.find((r: any) =>
-                  (r.from_model_id === parentModel.id && r.to_model_id === childModel.id) ||
-                  (r.from_model_id === childModel.id && r.to_model_id === parentModel.id)
-                )
-                if (rel && rel.from_model_id === childModel.id) {
-                  const f = childModel.fields?.find((f: any) => f.id === rel.from_field_id)
-                  if (f) fkCol = f.db_column_name
-                } else if (rel && rel.to_model_id === childModel.id) {
-                  const f = childModel.fields?.find((f: any) => f.id === rel.to_field_id)
-                  if (f) fkCol = f.db_column_name
-                }
-              }
-            }
-
-            if (!fkCol && joins?.length > 0) {
-              const join = joins.find(j =>
-                (j.to || j.toTable || j.table)?.toLowerCase() === rowTable?.toLowerCase() &&
-                (j.from || j.table)?.toLowerCase() === parentTable?.toLowerCase()
-              )
-              if (join) fkCol = join.foreignKey || join.foreign_field || join.toOn || join.on
-            }
-
-            if (!fkCol && project?.models) {
-              const childModel = project.models.find((m: any) => m.db_table_name === rowTable)
-              const parentSingular = parentTable.endsWith('s') ? parentTable.slice(0, -1) : parentTable
-              const possibleFk = childModel?.fields?.find(
-                (f: any) => f.db_column_name.toLowerCase().includes(parentSingular.toLowerCase()) && f.db_column_name.toLowerCase().endsWith('_id')
-              )
-              if (possibleFk) fkCol = possibleFk.db_column_name
-            }
-
-            if (!fkCol) {
-              fkCol = parentTable.endsWith('s') ? `${parentTable.slice(0, -1)}_id` : `${parentTable}_id`
-            }
+            // FK do filho novo: relação declarada > join do caso de uso > metadado do campo (foreign_key_table).
+            // Palpite por nome só como último recurso (e avisado). Sem nenhuma relação: erro claro, nunca coluna inventada.
+            const fkRes = resolveFkColumn({ models: (project as any)?.models, relations: projectRelations, joins, childTable: rowTable, parentTable })
+            warnFkResolution(fkRes, rowTable, parentTable)
+            if (!fkRes.column) throw new Error(missingRelationMessage(rowTable, parentTable))
+            let fkCol: string = fkRes.column
 
             if (fkCol) sanitized[fkCol] = String(parentPkVal)
           }

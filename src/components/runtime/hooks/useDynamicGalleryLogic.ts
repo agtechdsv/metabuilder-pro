@@ -61,10 +61,11 @@ export function useDynamicGalleryLogic({
       } else if (galleryConfig?.title_field && getNestedValue(allValues, galleryConfig.title_field) !== undefined) {
         title = String(getNestedValue(allValues, galleryConfig.title_field))
       } else {
-        const titleKey = Object.keys(allValues).find(key => {
-          const k = key.toLowerCase()
-          return k === 'title' || k === 'name' || k === 'nome' || k === 'titulo' || k === 'label'
-        })
+        const titleKey = fields.find((f: any) =>
+          !f.is_primary_key && !f.foreign_key_table &&
+          /(char|text|string)/i.test(String(f.db_data_type || f.data_type || '')) &&
+          allValues[f.db_column_name] !== undefined && allValues[f.db_column_name] !== null && String(allValues[f.db_column_name]).trim() !== ''
+        )?.db_column_name
         if (titleKey) {
           titleFieldObj = fields.find(f => f.db_column_name === titleKey);
           title = titleFieldObj ? formatFieldValue(allValues[titleKey], titleFieldObj, relationalOptions) : String(allValues[titleKey] || '')

@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveFkColumn, warnFkResolution, pickRecordTitle, findModelByTable } from '@/lib/schemaResolver';
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { Loader2, Pencil, Plus, Trash2, ChevronDown, ChevronUp, PanelRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -362,12 +363,9 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           if ((val === undefined || val === null || val === '') && typeof customField === 'string' && customField.includes('.')) {
                             const [relTable] = customField.split('.');
                             const relTableLower = relTable.toLowerCase();
-                            const fkKey = Object.keys(detail).find(k => {
-                              const kl = k.toLowerCase();
-                              return kl === `${relTableLower}_id` ||
-                                (relTableLower.endsWith('s') && kl === `${relTableLower.slice(0, -1)}_id`) ||
-                                (relTableLower.endsWith('es') && kl === `${relTableLower.slice(0, -2)}_id`);
-                            });
+                            const fkRes = resolveFkColumn({ models: project?.models, relations: (project as any)?.relations, joins, childTable: tableName, parentTable: relTable });
+                            warnFkResolution(fkRes, tableName, relTable);
+                            const fkKey = fkRes.column ? Object.keys(detail).find(k => k.toLowerCase() === fkRes.column!.toLowerCase()) : undefined;
                             if (fkKey && detail[fkKey]) {
                               const fkVal = detail[fkKey];
                               for (const key of Object.keys(relationalOptions)) {
@@ -416,7 +414,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                           if (val !== undefined && val !== null && val !== '') {
                             if (typeof val === 'object') {
-                              return String(val.display_name || val.name || val.nome || val.titulo || val.title || val.id || val.ID || JSON.stringify(val));
+                              return String(pickRecordTitle(val, findModelByTable(project?.models, typeof customField === 'string' && customField.includes('.') ? customField.split('.')[0] : null)) ?? JSON.stringify(val));
                             }
                             return String(val);
                           }
@@ -425,12 +423,13 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           for (const key of Object.keys(detail)) {
                             if (detail[key] && typeof detail[key] === 'object' && !Array.isArray(detail[key])) {
                               const nested = detail[key];
-                              const possibleVal = nested.display_name || nested.name || nested.nome || nested.titulo || nested.title || nested.label;
+                              const nestedModel = findModelByTable(project?.models, key);
+                              const possibleVal = nestedModel ? pickRecordTitle(nested, nestedModel) : undefined;
                               if (possibleVal) return String(possibleVal);
                             }
                           }
                         }
-                        return detail.display_name || detail.name || detail.nome || detail.titulo || detail.label || detail.id || detail.ID || `Item #${idx + 1}`;
+                        return pickRecordTitle(detail, targetModel) ?? `Item #${idx + 1}`;
                       })()}
                     </span>
                   </div>

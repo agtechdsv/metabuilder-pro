@@ -817,7 +817,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         }
       })
 
-    const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field
+    // Chave primária: campo marcado no caso de uso ou, se ele não estiver na tela, o do MODELO (metadado); 'id' só como último recurso
+    const modelPkField = (allModels as any[] | null)?.find((m: any) => m.id === view.model_id)?.fields?.find((f: any) => f.is_primary_key)
+    const primaryKeyField = allComponents.find((c: any) => c.field?.is_primary_key)?.field || modelPkField
     const primaryKeyName = primaryKeyField?.db_column_name || 'id'
 
     // Garante que o campo de agrupamento do Kanban esteja presente nos metadados

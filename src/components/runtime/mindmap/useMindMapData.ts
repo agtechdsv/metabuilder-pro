@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { pickRecordTitle } from '@/lib/schemaResolver'
 import { createClient } from '@/utils/supabase/client'
 import { formatFieldValue } from '@/lib/formatters'
 import { useI18n } from '@/i18n/I18nContext'
@@ -109,7 +110,7 @@ export function useMindMapData({
     const rootLevel = mindmapLevels[0]
     const uniqueMap = new Map()
     data.forEach((item, idx) => {
-      const rawName = rootLevel.title_field ? item[rootLevel.title_field] : (item.name || item.nome || item.title || item.titulo || item.id)
+      const rawName = rootLevel.title_field ? item[rootLevel.title_field] : pickRecordTitle(item, models.find(m => m.id === rootLevel.model_id))
       const name = formatValue(rawName, rootLevel.title_field || '', rootLevel.model_id)
       const rawDesc = rootLevel.desc_field ? item[rootLevel.desc_field] : undefined
       const desc = rawDesc ? formatValue(rawDesc, rootLevel.desc_field || '', rootLevel.model_id) : undefined
@@ -332,7 +333,7 @@ export function useMindMapData({
           const childrenData = res.payload.data
           const uniqueChildren = new Map()
           ;(childrenData || []).forEach((item: any, idx: number) => {
-            const rawName = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : (item.name || item.nome || item.title || item.titulo || item.id)
+            const rawName = nextLevelConfig.title_field ? item[nextLevelConfig.title_field] : pickRecordTitle(item, models.find(m => m.id === nextLevelConfig.model_id))
             const name = formatValue(rawName, nextLevelConfig.title_field || '', nextLevelConfig.model_id)
             const rawDesc = nextLevelConfig.desc_field ? item[nextLevelConfig.desc_field] : undefined
             const desc = rawDesc ? formatValue(rawDesc, nextLevelConfig.desc_field || '', nextLevelConfig.model_id) : undefined
