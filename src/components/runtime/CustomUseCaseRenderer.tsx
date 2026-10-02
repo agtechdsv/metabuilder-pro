@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { getPkColumn, findModelByTable, getRecordPk, readCol, resolveRecordLabel } from '@/lib/schemaResolver'
+import { getPkColumn, findModelByTable, getRecordPk, readCol, resolveRecordLabel, resolveFkColumn, warnFkResolution } from '@/lib/schemaResolver'
 import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -66,7 +66,7 @@ interface CustomUseCaseRendererProps {
   detailsItemTitles?: Record<string, string>
   onEditDetail?: (detail: any, uiOverride?: any) => void
   onDeleteDetail?: (detail: any) => void
-  onAddDetail?: (tableName: string, parentId?: any) => void
+  onAddDetail?: (tableName: string, parentId?: any, parentTable?: string, opts?: any) => void
   autoOpenSlotConfig?: { id: string, type: 'modal' | 'drawer' } | null
   projectRelations?: any[]
   // Mantêm a aba interna (Dados Principais / detalhes) e forçam recarga após salvar, como no caso de uso original
@@ -290,7 +290,9 @@ export default function CustomUseCaseRenderer({
       );
     }
 
-    const useMasterId = slot.use_master_id !== false;
+    // A aba do próprio mestre (1ª) não depende de um mestre salvo: em modo "novo" ela é o formulário do registro principal
+    const isMasterSlotEarly = getSlotId(slot, visibleSlots.findIndex(s => s === slot)) === getSlotId(customSlots[0], 0);
+    const useMasterId = slot.use_master_id !== false && !isMasterSlotEarly;
 
     // Props vindas do servidor via /api/runtime/slot-props
     // São idênticas às que page.tsx monta — garantindo paridade 100% com o original
@@ -576,20 +578,38 @@ export default function CustomUseCaseRenderer({
 
     // Editar/visualizar um registro da lista pelo MESMO fluxo da aba do mestre (modal de detalhe da página): carrega os
     // detalhes de verdade, grava registro + itens e atualiza a tela. A aparência (abas/títulos) é a do caso de uso do slot.
+    const buildDetailUiOverride = () => ({
+      detailsDisplayMode: uc.detailsDisplayMode,
+      detailsTabTitles: uc.detailsTabTitles,
+      detailsItemTitles: uc.detailsItemTitles,
+      detailsInlineTypes: uc.detailsInlineTypes,
+      detailsInterfaceTypes: uc.detailsInterfaceTypes,
+      tabsStyleConfig: uc.tabsStyleConfig,
+      masterTabTitle: uc.masterTabTitle,
+      joins: Array.isArray(uc.joins) && uc.joins.length > 0 ? uc.joins : undefined,
+      // Campos do formulário do PRÓPRIO caso de uso do slot (a tabela dele pode nem existir nos campos da página)
+      formFields: Array.isArray(uc.formFields) && uc.formFields.length > 0 ? uc.formFields : undefined,
+    })
+
     const openInDetailModal = (row: any): boolean => {
       if (!onEditDetail || !ucModelName) return false
-      onEditDetail({ ...row, model_name: ucModelName }, {
-        detailsDisplayMode: uc.detailsDisplayMode,
-        detailsTabTitles: uc.detailsTabTitles,
-        detailsItemTitles: uc.detailsItemTitles,
-        detailsInlineTypes: uc.detailsInlineTypes,
-        detailsInterfaceTypes: uc.detailsInterfaceTypes,
-        tabsStyleConfig: uc.tabsStyleConfig,
-        masterTabTitle: uc.masterTabTitle,
-        joins: Array.isArray(uc.joins) && uc.joins.length > 0 ? uc.joins : undefined,
-        // Campos do formulário do PRÓPRIO caso de uso do slot (a tabela dele pode nem existir nos campos da página)
-        formFields: Array.isArray(uc.formFields) && uc.formFields.length > 0 ? uc.formFields : undefined,
-      })
+      onEditDetail({ ...row, model_name: ucModelName }, buildDetailUiOverride())
+      return true
+    }
+
+    // "Novo" pela lista do slot, pelo MESMO fluxo da edição (modal de detalhe: grava o registro e seus filhos).
+    // A FK para o mestre só é preenchida quando há relação DIRETA entre a tabela do slot e a do mestre
+    // (declarada / join / metadado); abas ligadas por vários saltos (ex.: via outra tabela) abrem em branco.
+    const openAddInDetailModal = (): boolean => {
+      if (!onAddDetail || !ucModelName) return false
+      const masterTableForAdd = masterModelName || project?.models?.find((m: any) => m.id === masterModelId)?.db_table_name
+      let prefill: Record<string, any> = {}
+      if (useMasterId && parentId !== undefined && parentId !== null && masterTableForAdd) {
+        const fk = resolveFkColumn({ models: project?.models, relations: projectRelations, joins: ucJoins.length > 0 ? ucJoins : joins, childTable: ucModelName, parentTable: masterTableForAdd })
+        warnFkResolution(fk, ucModelName, masterTableForAdd)
+        if (fk.column && fk.source !== 'name-guess') prefill = { [fk.column]: parentId }
+      }
+      onAddDetail(ucModelName, undefined, undefined, { uiOverride: buildDetailUiOverride(), prefill })
       return true
     }
 
@@ -639,6 +659,11 @@ export default function CustomUseCaseRenderer({
       })
     }
 
+    const handleSlotNew = () => { if (!openAddInDetailModal()) handleSlotAdd() }
+    // Tipos visuais (kanban, timeline...) têm os próprios controles de adicionar; a barra "Novo" é para listas
+    const VISUAL_TYPES = ['kanban', 'timeline', 'scheduler', 'galeria', 'gantt', 'blueprint', 'map', 'mapa_mental', 'analytics']
+    const showSlotAdd = slot.can_add !== false && uc.canAdd !== false && mode !== 'create' && !VISUAL_TYPES.includes(ucLogicType)
+
     const handleSlotDelete = (row: any) => {
       const pkField = ucFormFields.find((f: any) => f.is_primary_key) || { db_column_name: ucPrimaryKeyName }
       const pkName = pkField.db_column_name.split('.').pop() || ucPrimaryKeyName || 'id'
@@ -664,6 +689,17 @@ export default function CustomUseCaseRenderer({
 
     return (
       <div key={slot.id} className="h-full relative overflow-y-auto w-full">
+        {showSlotAdd && (
+          <div className="flex justify-end px-4 pt-3">
+            <button
+              type="button"
+              onClick={handleSlotNew}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-md transition-all active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" /> Novo
+            </button>
+          </div>
+        )}
         <ViewContainer
           externalRefreshTrigger={inlineRefreshKey + (refreshTrigger || 0)}
           projectId={projectId!}
@@ -689,7 +725,7 @@ export default function CustomUseCaseRenderer({
           buttonsConfig={uc.buttonsConfig || []}
           customActions={uc.customActions || []}
 
-          onAdd={handleSlotAdd}
+          onAdd={handleSlotNew}
           onView={handleSlotView}
           onEdit={handleSlotEdit}
           onDelete={handleSlotDelete}

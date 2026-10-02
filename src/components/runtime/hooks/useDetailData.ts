@@ -377,13 +377,16 @@ export function useDetailData({
     })
   }
 
-  const handleOpenAddDetail = (tableName: string, parentId?: any, parentTable?: string) => {
+  // opts (opcional) = "novo" aberto pela lista de uma aba/subaba/quadro do Personalizado: traz a aparência e os campos do
+  // caso de uso do slot e a FK já preenchida (só quando existe relação direta com o mestre); nesse modo não se infere pai.
+  const handleOpenAddDetail = (tableName: string, parentId?: any, parentTable?: string, opts?: { uiOverride?: any; prefill?: Record<string, any> }) => {
+    const isSlotAdd = !!opts
     // Registro filho (ex.: item) de um pai que é DETALHE e ainda não foi salvo (id ausente ou temporário):
     // não dá para gravar o filho no banco antes do pai. Sem esta trava, o item era inserido com o id temporário
     // (erro de uuid) ou com o id do mestre da tela (violação de chave estrangeira).
     const isParentADetail = !!parentTable && parentTable.toLowerCase() !== (modelName || '').toLowerCase()
     const isParentUnsaved = parentId === undefined || parentId === null || parentId === '' || String(parentId).startsWith('temp-')
-    if (isParentADetail && isParentUnsaved) {
+    if (!isSlotAdd && isParentADetail && isParentUnsaved) {
       toast(t('runtime.save_parent_first', 'Salve o registro pai antes de adicionar itens por modal. Dica: use o botão + para adicionar o item na própria tela e salvar tudo junto.'), 'error')
       return
     }
@@ -401,17 +404,17 @@ export function useDetailData({
     setIsDetailModalOpen(false)
     setIsDetailDrawerOpen(false)
 
-    setDetailUiOverride(null)
-    setDetailFieldsToRender(detailFields)
+    setDetailUiOverride(opts?.uiOverride ?? null)
+    setDetailFieldsToRender(opts?.uiOverride?.formFields?.length ? opts.uiOverride.formFields : detailFields)
     // Pai do novo registro: o informado por quem abriu o modal (sub-detalhe) ou o mestre da tela
-    const effectiveParentId = parentId ?? getParentKeyValue(null, selectedRow, getPrimaryKeyColumn((project as any)?.models, modelName))
-    const addJoin = findJoinFor(tableName, parentTable || null)
+    const effectiveParentId = isSlotAdd ? undefined : (parentId ?? getParentKeyValue(null, selectedRow, getPrimaryKeyColumn((project as any)?.models, modelName)))
+    const addJoin = isSlotAdd ? null : findJoinFor(tableName, parentTable || null)
     // Pré-preenche a coluna FK (ex.: cliente_id / pedido_id) para o combo já vir com o registro pai selecionado
-    setSelectedDetail(addJoin && effectiveParentId !== undefined && effectiveParentId !== null ? { [addJoin.foreignKey]: effectiveParentId } : {})
+    setSelectedDetail(isSlotAdd ? (opts?.prefill || {}) : (addJoin && effectiveParentId !== undefined && effectiveParentId !== null ? { [addJoin.foreignKey]: effectiveParentId } : {}))
     setDetailModalMode('create')
     setCurrentDetailTable(tableName)
     setParentRowIdForDetail(effectiveParentId)
-    setParentTableForDetail(parentTable || null)
+    setParentTableForDetail(isSlotAdd ? null : (parentTable || null))
     setActiveTabForDetail('master')
     
     const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === tableName.toLowerCase())
