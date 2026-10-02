@@ -26,6 +26,22 @@ export interface UseRecordFormLogicProps {
   isPageMode?: boolean;
 }
 
+// "Expandir Tudo" disparava uma busca por registro ao mesmo tempo (dezenas de queries pelo túnel de uma vez).
+// As excedentes estouravam o timeout e voltavam vazias, sem erro visível. Aqui limitamos a 3 simultâneas;
+// o timeout só começa a contar depois que a busca ganha a vez.
+const SUB_FETCH_LIMIT = 3
+let subFetchActive = 0
+const subFetchWaiters: Array<() => void> = []
+const acquireSubFetchSlot = async () => {
+  if (subFetchActive < SUB_FETCH_LIMIT) { subFetchActive++; return }
+  await new Promise<void>((resolve) => subFetchWaiters.push(resolve))
+}
+const releaseSubFetchSlot = () => {
+  const next = subFetchWaiters.shift()
+  if (next) next()
+  else subFetchActive--
+}
+
 export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   const {
     mode, fields, initialData, onSave, onCancel, logicType, masterModelId, masterModelName,
@@ -86,13 +102,14 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
 
   // Busca sub-detalhes de um registro sob demanda (lazy loading)
   // chamado ao expandir a cortina de um detalhe pela primeira vez
-  const fetchSubDetailsForRecord = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
+  const fetchSubDetailsInner = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
     let subJoins = joins.filter((j: any) => j.from?.toLowerCase() === tableName?.toLowerCase())
 
     if (subJoins.length === 0) return
 
     const supabaseClient = createClient()
     const allSubDetails: any[] = []
+    let loadFailed = false
 
     for (const join of subJoins) {
       if (!pkValue) continue
@@ -100,10 +117,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       let data: any[] = []
 
       if (projectId) {
-        // Query via the secure data tunnel
+        // Query via the secure data tunnel (até 3 tentativas se o agente não responder a tempo)
+        let attempt = 0
+        while (true) {
         const queryId = crypto.randomUUID()
-
-        // console.log(`[MetaBuilder] RecordForm fetching sub-details from ${join.to} via tunnel where ${join.foreignKey} = ${pkValue}`)
 
         try {
           data = await new Promise<any[]>((resolve, reject) => {
@@ -230,12 +247,17 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 resolved = true
                 cleanup()
                 console.warn(`[MetaBuilder] Timeout fetching sub-details in RecordForm for queryId ${queryId}`)
-                resolve([])
+                reject(new Error('__timeout__'))
               }
             }, 8000)
           })
-        } catch (err) {
+          break
+        } catch (err: any) {
+          if (err?.message === '__timeout__' && attempt < 2) { attempt++; continue }
+          if (err?.message === '__timeout__') loadFailed = true
           console.error(`[MetaBuilder] Error fetching sub-details from ${join.to} via tunnel:`, err)
+          break
+        }
         }
       } else {
         // Fallback to direct fetch or supabase query
@@ -300,6 +322,10 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       }
     }
 
+    // Se a busca falhou de vez (sem resposta do agente), não grava lista vazia: o registro continua "não carregado"
+    // e uma nova expansão tenta de novo, em vez de mostrar "Nenhum registro" por engano.
+    if (loadFailed) return
+
     // Injeta os sub-detalhes no registro correto dentro de formData._details
     setFormData((prev: any) => {
       const newDetails = (prev._details || []).map((d: any) => {
@@ -311,6 +337,15 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       })
       return { ...prev, _details: newDetails }
     })
+  }
+
+  const fetchSubDetailsForRecord = async (detail: any, tableName: string, pkCol: string, pkValue: any) => {
+    await acquireSubFetchSlot()
+    try {
+      return await fetchSubDetailsInner(detail, tableName, pkCol, pkValue)
+    } finally {
+      releaseSubFetchSlot()
+    }
   }
 
   // Busca detalhes de 1º nível automaticamente caso não venham preenchidos (ex: aberto em modal inline ou abas de timeline)
