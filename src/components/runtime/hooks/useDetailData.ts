@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, readKey, type ParentJoin } from '@/lib/detailRelations'
+import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseDetailDataProps {
@@ -988,7 +989,7 @@ export function useDetailData({
               v === undefined || typeof v === 'object'
             ) continue
 
-            const newVal = (v === null || v === '' || String(v).trim() === '') ? null : String(v)
+            const newVal = (v === null || v === '' || String(v).trim() === '') ? null : (typeof v === 'number' ? v : String(v))
 
             if (!isNew && origParentRow?._details) {
               const origRow = origParentRow._details.find(
@@ -1059,6 +1060,19 @@ export function useDetailData({
           }
           for (const k of Object.keys(sanitized)) delete sanitized[k]
           for (const [k, v] of Object.entries(dedupedSanitized)) sanitized[k] = v
+
+          // Colunas numéricas devem ir como número, não como texto (ex.: "0.01" em NUMBER → ORA-01722 no Oracle)
+          const nestedModelDef = (project as any)?.models?.find((m: any) => (m.db_table_name || m.table_name || '').toLowerCase() === rowTable?.toLowerCase())
+          for (const [k, v] of Object.entries(sanitized)) {
+            if (v === null || v === undefined || v === '') continue
+            const colDef =
+              nestedModelDef?.fields?.find((fd: any) => (fd.db_column_name || '').split('.').pop()?.toLowerCase() === k.toLowerCase()) ||
+              detailFields.find((fd: any) => fd.model_name?.toLowerCase() === rowTable?.toLowerCase() && (fd.db_column_name || '').split('.').pop()?.toLowerCase() === k.toLowerCase())
+            if (colDef && isNumericDbType(colDef.db_data_type)) {
+              const num = parseNumericLoose(v)
+              if (num !== null) sanitized[k] = num
+            }
+          }
 
           let sql = ''
           if (!isNew && rowPkVal && Object.keys(sanitized).length > 0) {
