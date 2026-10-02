@@ -611,7 +611,7 @@ export function useDetailData({
           const pRec = detailHistory[lastIdx].record
           const pTab = detailHistory[lastIdx].tableName
           if (pRec && pTab) {
-            const freshDetails = await fetchDetails(pRec, pTab)
+            const freshDetails = await fetchDetails(pRec, pTab, detailHistory[lastIdx].uiOverride?.joins)
             freshParentRecord = { ...pRec, _details: freshDetails }
             const newHistory = [...detailHistory]
             newHistory[lastIdx].record = freshParentRecord
@@ -1142,7 +1142,7 @@ export function useDetailData({
         const pRec = parentHistory[lastIdx].record
         const pTab = parentHistory[lastIdx].tableName
         if (pRec && pTab) {
-          const freshDetails = await fetchDetails(pRec, pTab)
+          const freshDetails = await fetchDetails(pRec, pTab, parentHistory[lastIdx].uiOverride?.joins)
           freshParentRecord = { ...pRec, _details: freshDetails }
         }
       }
@@ -1164,6 +1164,8 @@ export function useDetailData({
         setDetailFieldsToRender(last.fields)
         setActiveTabForDetail(last.activeTab || 'master')
         setDetailModalMode('edit')
+        // O pai volta com a MESMA aparência (abas/títulos configurados no Studio) com que foi aberto
+        setDetailUiOverride(last.uiOverride ?? null)
 
         const model = (project as any)?.models?.find((m: any) => m.db_table_name.toLowerCase() === last.tableName?.toLowerCase())
         const interfaceType = detailsInterfaceTypes?.[model?.id || ''] || (project.ui_config as any)?.details_interface_types?.[model?.id || ''] || 'modal'
@@ -1179,6 +1181,7 @@ export function useDetailData({
         setIsDetailModalOpen(false)
         setIsDetailDrawerOpen(false)
         setSelectedDetail(null)
+        setDetailUiOverride(null)
       }
 
       setDetailRefreshKey(prev => prev + 1)
