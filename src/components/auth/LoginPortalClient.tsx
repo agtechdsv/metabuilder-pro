@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getSafeNext } from '@/lib/safe-next'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { LayoutTemplate, AlertCircle, Loader2, Eye, EyeOff, Fingerprint, ArrowLeft } from 'lucide-react'
@@ -284,6 +285,13 @@ export function LoginPortalClient({
     const cookieName = `client_session_${project.id}`
     document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Lax`
     
+    // Volta para a tela que o usuário tentou abrir antes do login (ex.: ...?preview=draft), se houver
+    const nextDest = getSafeNext(window.location.search)
+    if (nextDest) {
+      window.location.href = nextDest
+      return
+    }
+
     // Redireciona para o portal principal
     const appendStandalone = isStandalone ? '?standalone=true' : ''
     if (isCustomDomain && customDomainType === 'workspace') {

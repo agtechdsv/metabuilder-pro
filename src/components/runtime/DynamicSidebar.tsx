@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { withPreview } from '@/lib/safe-next'
 import { 
   Layout, 
   Layers, 
@@ -42,6 +43,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const { t } = useI18n()
   const projectIcon = project.icon || 'Box'
   const pathname = usePathname()
+  const isPreview = useSearchParams()?.get('preview') === 'draft'
   const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
   const router = useRouter()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
@@ -162,7 +164,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
     return (
       <Link
         key={item.id}
-        href={href || '#'}
+        href={item.type === 'view' ? withPreview(href, isPreview) : (href || '#')}
         target={item.type === 'link' ? '_blank' : undefined}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",

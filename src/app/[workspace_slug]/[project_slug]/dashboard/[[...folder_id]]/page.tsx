@@ -72,13 +72,21 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
   // 3. Resolve ui_views para mapeamento de slug -> view_id
   const { data: uiViews } = await supabase
     .from('ui_views')
-    .select('id, slug')
+    .select('id, slug, layout_config')
     .eq('project_id', project.id)
 
+  const isPreview = resolvedSearchParams?.preview === 'draft'
   const viewSlugToIdMap = new Map<string, string>()
+  // Mesmo critério do menu lateral (layout.tsx): view sem layout publicado = nunca publicada
+  const unpublishedViewIds: string[] = []
+  const unpublishedViewSlugs: string[] = []
   if (uiViews) {
     uiViews.forEach(v => {
       if (v.slug) viewSlugToIdMap.set(v.slug.toLowerCase(), v.id)
+      if (!v.layout_config || Object.keys(v.layout_config).length === 0) {
+        unpublishedViewIds.push(v.id)
+        if (v.slug) unpublishedViewSlugs.push(v.slug.toLowerCase())
+      }
     })
   }
 
@@ -189,7 +197,23 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     }).filter(Boolean) // Remove os nulos (views negadas e pastas vazias)
   }
 
-  const navigation = filterNavigation(rawNavigation)
+  const hideUnpublished = (items: any[]): any[] => {
+    if (isPreview || (!unpublishedViewIds.length && !unpublishedViewSlugs.length)) return items
+    return items.map(item => {
+      if (item.type === 'folder' && item.children) {
+        const filteredChildren = hideUnpublished(item.children)
+        if (filteredChildren.length === 0) return null
+        return { ...item, children: filteredChildren }
+      }
+      if (item.type === 'view') {
+        if (item.view_id && unpublishedViewIds.includes(item.view_id)) return null
+        if (item.target && unpublishedViewSlugs.includes(item.target.toLowerCase())) return null
+      }
+      return item
+    }).filter(Boolean)
+  }
+
+  const navigation = hideUnpublished(filterNavigation(rawNavigation))
   const activeFolderId = folder_id?.[0]
 
   let displayItems = []

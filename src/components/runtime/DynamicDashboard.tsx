@@ -5,6 +5,8 @@ import {
   ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { withPreview } from '@/lib/safe-next'
 import { cn } from '@/lib/utils'
 import DynamicIcon from './DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
@@ -39,6 +41,7 @@ interface DynamicDashboardProps {
 
 export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, subtitle, icon, baseNavUrl }: DynamicDashboardProps) {
   const { t } = useI18n()
+  const isPreview = useSearchParams()?.get('preview') === 'draft'
   const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
   return (
     <div className="space-y-6">
@@ -67,11 +70,12 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
 
         {items.map((item) => {
           const isFolder = item.type === 'folder'
-          const href = isFolder 
+          const rawHref = isFolder 
             ? `${finalBaseNavUrl}/dashboard/${item.id}`
             : item.type === 'view' 
               ? `${finalBaseNavUrl}/${item.target}`
               : item.target
+          const href = (isFolder || item.type === 'view') ? withPreview(rawHref, isPreview) : rawHref
 
           return (
             <Link

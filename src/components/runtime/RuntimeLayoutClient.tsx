@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { getSafeNext } from '@/lib/safe-next'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { DynamicSidebar } from './DynamicSidebar'
 import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
@@ -110,13 +111,15 @@ export function RuntimeLayoutClient({
 
     if (isLoginPage) {
       if (hasSession || isNoAuth) {
-        window.location.href = `${finalBaseNavUrl}/`
+        window.location.href = getSafeNext(window.location.search) || `${finalBaseNavUrl}/`
       } else {
         setIsCheckingAuth(false)
       }
     } else {
       if (!hasSession && !isNoAuth) {
-        window.location.href = `${finalBaseNavUrl}/login`
+        // Guarda a tela de origem (inclui ?preview=draft) para voltar a ela depois do login
+        const here = window.location.pathname + window.location.search
+        window.location.href = `${finalBaseNavUrl}/login?next=${encodeURIComponent(here)}`
       } else {
         setIsCheckingAuth(false)
       }

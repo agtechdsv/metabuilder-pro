@@ -242,7 +242,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
 
     if (!sessionCookie && !isNoAuth) {
-      redirect(`/${workspace_slug}/${project_slug}/login`)
+      // Preserva o destino (inclusive ?preview=draft) para voltar a esta tela depois do login
+      const originPath = `/${workspace_slug}/${project_slug}/${view_slug}${search?.preview === 'draft' ? '?preview=draft' : ''}`
+      redirect(`/${workspace_slug}/${project_slug}/login?next=${encodeURIComponent(originPath)}`)
     }
 
     let allowed = true
