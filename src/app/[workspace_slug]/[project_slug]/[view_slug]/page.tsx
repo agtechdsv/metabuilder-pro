@@ -133,7 +133,10 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
   const view = views?.[0]
 
-  if (view && view.logic_type === 'personalizado') {
+  // Personalizado herda colunas/campos do caso de uso mestre. Roda também depois que o rascunho (?preview=draft)
+  // sobrescreve o layout, senão o rascunho perdia todas as colunas herdadas (grade vazia, só o id).
+  const applyPersonalizadoInheritance = async () => {
+    if (!view) return
     const masterSlug = view.layout_config?.master_use_case_slug
     let resolvedMasterView: any = null
 
@@ -216,6 +219,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       view.buttons_config = resolvedMasterView.buttons_config
     }
   }
+  if (view && view.logic_type === 'personalizado') await applyPersonalizadoInheritance()
   // RBAC Permission Check
   if (view) {
     const rawAuthConfig = await supabase
@@ -500,6 +504,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       view.logic_type = view.draft_config.logic_type || view.logic_type
       view.model_id = view.draft_config.model_id || view.model_id
       view.ui_components = Object.values(componentMap)
+      if (view.logic_type === 'personalizado') await applyPersonalizadoInheritance()
     }
 
     const { data: rawProjectRelations } = await supabase
