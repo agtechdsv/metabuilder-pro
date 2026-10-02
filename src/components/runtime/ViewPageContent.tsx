@@ -697,6 +697,7 @@ export default function ViewPageContent({
       </main>
 
       <ViewActionModals
+        formHeaderSubtitleField={formHeaderSubtitleField}
         isDrawerOpen={isDrawerOpen}
         isModalOpen={isModalOpen}
         isDeleteModalOpen={isDeleteModalOpen}

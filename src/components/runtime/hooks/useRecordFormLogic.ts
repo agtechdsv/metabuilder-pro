@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn, readCol } from '@/lib/schemaResolver'
+import { resolveFkColumn, warnFkResolution, warnInferredReference, getPkColumn, readCol, pickPkField } from '@/lib/schemaResolver'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -539,7 +539,7 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                       const targetModel = project.models.find((m: any) => String(m.id) === String(targetModelId));
                       if (targetModel) {
                           const targetField = targetModel.fields?.find((f: any) => String(f.id) === String(targetFieldId));
-                          const targetPk = targetModel.fields?.find((f: any) => f.is_primary_key) || { db_column_name: 'id' };
+                          const targetPk = targetModel.fields?.find((f: any) => f.is_primary_key) || pickPkField(targetModel) || { db_column_name: 'id' };
                           if (targetField && targetPk) {
                               const cleanVal = targetPk.db_column_name.includes('.') ? targetPk.db_column_name.split('.').pop() : targetPk.db_column_name;
                               const cleanLbl = targetField.db_column_name.includes('.') ? targetField.db_column_name.split('.').pop() : targetField.db_column_name;

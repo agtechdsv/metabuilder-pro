@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict'
 import {
-  getPkColumn, getRecordPk, pickPkField, resolveFkColumn, pickRecordTitle, readCol, missingRelationMessage, inferJoins
+  getPkColumn, getRecordPk, pickPkField, resolveFkColumn, pickRecordTitle, readCol, missingRelationMessage, inferJoins, resolveRecordLabel, getPkFieldOrDefault
 } from '../src/lib/schemaResolver'
 
 let passed = 0
@@ -136,6 +136,20 @@ test('sem campo textual preenchido, usa a chave primária (nunca JSON)', () => {
 })
 test('readCol ignora caixa', () => {
   assert.equal(readCol({ razao_social: 'x' }, 'RAZAO_SOCIAL'), 'x')
+})
+
+console.log('Rótulo de registro e PK padrão')
+test('rótulo usa o campo configurado no Studio quando existe', () => {
+  assert.equal(resolveRecordLabel({ NUM_PED: 7, OBS: 'x', 'TB_CLI.RAZAO_SOCIAL': 'ACME' }, models[1], 'TB_CLI.RAZAO_SOCIAL'), 'ACME')
+})
+test('sem campo configurado usa o 1º campo textual; sem texto, a PK', () => {
+  assert.equal(resolveRecordLabel({ CODIGO: 5, RAZAO_SOCIAL: 'Globex' }, models[0], null), 'Globex')
+  const semTexto = { ...models[2], fields: [models[2].fields[0], models[2].fields[1]] }
+  assert.equal(resolveRecordLabel({ SEQ: 9, COD_PED: 1 }, semTexto, null), '9')
+})
+test('getPkFieldOrDefault: metadado; tabela desconhecida cai em id', () => {
+  assert.equal(getPkFieldOrDefault(models, 'TB_PED_ITM').db_column_name, 'SEQ')
+  assert.equal(getPkFieldOrDefault(models, 'NAO_EXISTE').db_column_name, 'id')
 })
 
 console.log(`\n${passed} verificações passaram${process.exitCode ? ' (HÁ FALHAS)' : ''}.`)

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { getPkColumn, findModelByTable, getRecordPk, readCol } from '@/lib/schemaResolver'
+import { getPkColumn, findModelByTable, getRecordPk, readCol, resolveRecordLabel } from '@/lib/schemaResolver'
 import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { Layout, Table, CheckSquare, X, Activity, Plus, List, Grid, Calendar, Clock, Maximize2, ChevronRight, Minimize2, MoreVertical, Settings, BarChart3, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -167,6 +167,7 @@ export default function CustomUseCaseRenderer({
     pkName: string
     pkValue: any
     isDeleting: boolean
+    recordName?: string
   } | null>(null)
 
   const [inlineRefreshKey, setInlineRefreshKey] = useState(0)
@@ -653,7 +654,8 @@ export default function CustomUseCaseRenderer({
         pkField,
         pkName,
         pkValue,
-        isDeleting: false
+        isDeleting: false,
+        recordName: resolveRecordLabel(row, findModelByTable(project?.models, ucModelName), uc.formHeaderSubtitleField)
       })
     }
     // ──────────────────────────────────────────────────────────────────────────
@@ -1162,6 +1164,7 @@ export default function CustomUseCaseRenderer({
         onClose={() => setDeleteModalState(null)} 
         onConfirm={handleConfirmDelete}
         isLoading={deleteModalState?.isDeleting}
+        recordName={deleteModalState?.recordName}
       />
     </div>
   )

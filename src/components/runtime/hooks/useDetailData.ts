@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { resolveFkColumn, warnFkResolution, missingRelationMessage, inferJoins, readCol, getRecordPk, getPkColumn } from '@/lib/schemaResolver'
+import { resolveFkColumn, warnFkResolution, missingRelationMessage, inferJoins, readCol, getRecordPk, getPkColumn, getPkFieldOrDefault } from '@/lib/schemaResolver'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
@@ -490,8 +490,9 @@ export function useDetailData({
     }
   }
 
-  const handleDeleteDetail = (detail: any) => {
-    setItemToDelete(detail)
+  const handleDeleteDetail = (detail: any, displayName?: string) => {
+    // displayName = o mesmo texto que a lista mostra para o item (título configurado no Studio); a confirmação reaproveita
+    setItemToDelete(displayName ? { ...detail, _displayName: displayName } : detail)
     setIsDetailDeleteModalOpen(true)
   }
 
@@ -501,7 +502,7 @@ export function useDetailData({
 
     const tableName = itemToDelete.model_name
     const fields = detailFields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase())
-    const pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+    const pkField = fields.find(f => f.is_primary_key) || getPkFieldOrDefault((project as any)?.models, tableName)
     const basePkName = pkField.db_column_name.split('.').pop() || 'id'
     
     let actualPkKey = basePkName
@@ -653,7 +654,7 @@ export function useDetailData({
       let pkField = modelDef?.fields?.find((f: any) => f.is_primary_key)
 
       if (!pkField) {
-        pkField = fields.find(f => f.is_primary_key) || { db_column_name: 'id' }
+        pkField = fields.find(f => f.is_primary_key) || getPkFieldOrDefault((project as any)?.models, tableName)
       }
       const basePkName = pkField?.db_column_name?.split('.').pop() || 'id'
       
@@ -958,7 +959,7 @@ export function useDetailData({
 
           const rowPkField =
             detailFields.find(f => f.model_name?.toLowerCase() === rowTable?.toLowerCase() && f.is_primary_key) ||
-            { db_column_name: 'id' }
+            getPkFieldOrDefault((project as any)?.models, rowTable)
           const rowPkName = rowPkField.db_column_name.split('.').pop() || 'id'
           const rowPkVal = row[rowPkName] ?? row[rowPkName.toUpperCase()] ?? row.id ?? row.ID
 

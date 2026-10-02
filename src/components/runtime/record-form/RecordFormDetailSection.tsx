@@ -1,5 +1,5 @@
 import React from 'react';
-import { resolveFkColumn, warnFkResolution, pickRecordTitle, findModelByTable } from '@/lib/schemaResolver';
+import { resolveFkColumn, warnFkResolution, pickRecordTitle, findModelByTable, getPkFieldOrDefault } from '@/lib/schemaResolver';
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { Loader2, Pencil, Plus, Trash2, ChevronDown, ChevronUp, PanelRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -42,7 +42,7 @@ interface RecordFormDetailSectionProps {
   /** Tabela do registro mestre (nível 1) — necessária para descobrir a FK dos detalhes diretos do mestre */
   masterTableName?: string;
   onEditDetail?: (detail: any) => void;
-  onDeleteDetail?: (detail: any) => void;
+  onDeleteDetail?: (detail: any, displayName?: string) => void;
   buildActionContext: (masterData: any, parentData?: any, parentTableName?: string, detailData?: any, detailTableName?: string) => any;
   tabsStyleConfig?: any;
   t: (key: string, defaultText?: string) => string;
@@ -157,7 +157,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                   type="button"
                   onClick={async () => {
                     const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
-                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || getPkFieldOrDefault(project?.models, tableName)
                     const pkCol = pkField.db_column_name.split('.').pop() || 'id'
                     const newState = { ...expandedDetails }
                     currentDetails.forEach((d: any, idx: number) => {
@@ -188,7 +188,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                   type="button"
                   onClick={() => {
                     const currentDetails = (parentData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === tableName?.toLowerCase())
-                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' }
+                    const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || getPkFieldOrDefault(project?.models, tableName)
                     const pkCol = pkField.db_column_name.split('.').pop() || 'id'
                     const newState = { ...expandedDetails }
                     currentDetails.forEach((d: any, idx: number) => {
@@ -277,7 +277,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
           console.log('[RecordForm Render] detailsToRender for', tableName, 'is', detailsToRender.length, 'items', { detailsToRender, parentDetails: parentData?._details });
 
           return detailsToRender.map((detail: any, idx: number) => {
-            const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || { db_column_name: 'id' };
+            const pkField = fields.filter(f => f.model_name?.toLowerCase() === tableName?.toLowerCase()).find(f => f.is_primary_key) || getPkFieldOrDefault(project?.models, tableName);
             const pkCol = pkField.db_column_name.split('.').pop() || 'id';
             const detailIdValue = detail[pkCol] ?? detail[pkCol.toUpperCase()] ?? detail[pkCol.toLowerCase()] ?? detail.id ?? detail.ID ?? detail._tempId ?? `idx-${idx}`;
             const uniqueKey = `detail-${tableName}-${detailIdValue}`;
@@ -285,20 +285,8 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             if (seenIds.has(uniqueKey)) return null;
             seenIds.add(uniqueKey);
 
-            return (
-              <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
-                <div className={cn(
-                  "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
-                  expandedDetails[uniqueKey]
-                    ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5"
-                    : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
-                )}>
-                  <div className="flex flex-col gap-1">
-                    <span className={cn(
-                      "text-xs font-bold transition-colors",
-                      expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
-                    )}>
-                      {(() => {
+            // Texto do item: título configurado no Studio (pode vir de outra tabela) — usado na linha e na confirmação de exclusão
+            const itemTitle: string = (() => {
                         if (detail._isNew || String(detailIdValue).startsWith('temp-')) {
                           return t('common.new_record', 'Novo Registro');
                         }
@@ -430,7 +418,22 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           }
                         }
                         return pickRecordTitle(detail, targetModel) ?? `Item #${idx + 1}`;
-                      })()}
+            })();
+
+            return (
+              <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
+                <div className={cn(
+                  "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
+                  expandedDetails[uniqueKey]
+                    ? "bg-white dark:bg-neutral-900 border-indigo-200 dark:border-indigo-800 shadow-lg shadow-indigo-500/5"
+                    : "bg-neutral-50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800"
+                )}>
+                  <div className="flex flex-col gap-1">
+                    <span className={cn(
+                      "text-xs font-bold transition-colors",
+                      expandedDetails[uniqueKey] ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-700 dark:text-neutral-200"
+                    )}>
+                      {itemTitle}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 transition-all">
@@ -508,7 +511,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                           }));
                         } else {
                           // Registro persistido: chama o fluxo normal de exclusão
-                          onDeleteDetail?.(detail);
+                          onDeleteDetail?.(detail, itemTitle);
                         }
                       }}
                       className="p-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-all"

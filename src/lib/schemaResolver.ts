@@ -223,3 +223,21 @@ export function warnInferredReference(column?: string | null, table?: string | n
   warnedRefs.add(key)
   console.warn(`[MetaBuilder] A coluna "${column}" foi associada à tabela "${table}" apenas pelo NOME. Declare a relação/chave estrangeira no Studio para não depender de convenção de nomes.`)
 }
+
+/** Campo de chave primária da tabela pelo METADADO; só se a tabela não for conhecida devolve { db_column_name: 'id' }. */
+export function getPkFieldOrDefault(models: any[] | undefined | null, table?: string | null): any {
+  return pickPkField(findModelByTable(models, table)) || { db_column_name: 'id' }
+}
+
+/**
+ * Texto que identifica um registro para o usuário (ex.: confirmação de exclusão).
+ * Ordem: campo configurado no Studio (ex.: subtítulo do formulário) > primeiro campo textual do modelo > chave primária.
+ */
+export function resolveRecordLabel(record: any, model: any, configuredField?: string | null): string | undefined {
+  if (!record) return undefined
+  if (configuredField) {
+    const direct = record[configuredField] ?? readCol(record, colOf(configuredField))
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') return String(direct)
+  }
+  return pickRecordTitle(record, model)
+}

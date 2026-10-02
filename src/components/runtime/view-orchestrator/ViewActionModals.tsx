@@ -1,5 +1,5 @@
 import React from 'react'
-import { pickRecordTitle, findModelByTable } from '@/lib/schemaResolver'
+import { resolveRecordLabel, findModelByTable } from '@/lib/schemaResolver'
 import RecordDrawer from '../RecordDrawer'
 import RecordModal from '../RecordModal'
 import DeleteConfirmModal from '../DeleteConfirmModal'
@@ -32,6 +32,8 @@ export interface ViewActionModalsProps {
   cleanFormFields: any[]
   modelName: string
   project: any
+  /** Campo configurado como subtítulo do formulário: identifica o registro na confirmação de exclusão */
+  formHeaderSubtitleField?: string
   dictionary?: any
   detailsDisplayMode?: Record<string, 'tabs' | 'sections'>
   detailsInterfaceTypes?: Record<string, string>
@@ -84,6 +86,7 @@ export function ViewActionModals({
   cleanFormFields,
   modelName,
   project,
+  formHeaderSubtitleField,
   dictionary,
   detailsDisplayMode,
   detailsInterfaceTypes,
@@ -174,7 +177,7 @@ export function ViewActionModals({
           setIsDeleteModalOpen(false)
         }}
         isLoading={isProcessing}
-        recordName={pickRecordTitle(selectedRow, findModelByTable(project?.models, modelName))}
+        recordName={resolveRecordLabel(selectedRow, findModelByTable(project?.models, modelName), formHeaderSubtitleField)}
       />
 
       <Modal

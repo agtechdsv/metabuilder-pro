@@ -236,7 +236,7 @@ export function ViewDetailModals({
         onConfirm={handleConfirmDeleteDetail}
         isLoading={isProcessing}
         zIndex={200 + (detailHistory.length + 2) * 100}
-        recordName={pickRecordTitle(itemToDelete, findModelByTable((project as any)?.models, itemToDelete?.model_name))}
+        recordName={itemToDelete?._displayName || pickRecordTitle(itemToDelete, findModelByTable((project as any)?.models, itemToDelete?.model_name))}
       />
     </>
   )

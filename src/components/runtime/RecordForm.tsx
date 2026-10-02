@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { getPkFieldOrDefault } from '@/lib/schemaResolver'
 import { createPortal } from 'react-dom'
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, isUnsavedRecord } from '@/lib/detailRelations'
 import { evaluateFormula } from '@/lib/formulaEvaluator'
@@ -468,7 +469,7 @@ export default function RecordForm({
                                 type="button"
                                 onClick={async () => {
                                   const currentDetails = (formData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === String(activeTab)?.toLowerCase())
-                                  const pkField = fields.filter((f: any) => f.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()).find((f: any) => f.is_primary_key) || { db_column_name: 'id' }
+                                  const pkField = fields.filter((f: any) => f.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()).find((f: any) => f.is_primary_key) || getPkFieldOrDefault(project?.models, String(activeTab))
                                   const pkCol = pkField.db_column_name.split('.').pop() || 'id'
                                   const newState = { ...expandedDetails }
                                   currentDetails.forEach((d: any, idx: number) => {
@@ -496,7 +497,7 @@ export default function RecordForm({
                                 type="button"
                                 onClick={() => {
                                   const currentDetails = (formData?._details || []).filter((d: any) => d.model_name?.toLowerCase() === String(activeTab)?.toLowerCase())
-                                  const pkField = fields.filter((f: any) => f.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()).find((f: any) => f.is_primary_key) || { db_column_name: 'id' }
+                                  const pkField = fields.filter((f: any) => f.model_name?.toLowerCase() === String(activeTab)?.toLowerCase()).find((f: any) => f.is_primary_key) || getPkFieldOrDefault(project?.models, String(activeTab))
                                   const pkCol = pkField.db_column_name.split('.').pop() || 'id'
                                   const newState = { ...expandedDetails }
                                   currentDetails.forEach((d: any, idx: number) => {
