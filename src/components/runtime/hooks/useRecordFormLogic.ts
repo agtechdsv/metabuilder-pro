@@ -562,6 +562,9 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         }
       }
 
+      // Enums (ex.: Status) também são cacheados — antes cada abertura do formulário fazia uma chamada HTTP nova
+      const enumCacheKey = (comp: any) => relOptionsKey(projectId || '', '__enum__' + comp.rel_table, '')
+
       const relCacheKey = (comp: any) =>
         relOptionsKey(projectId || '', comp.rel_table, `${comp.rel_label}|${comp.rel_value}|${comp.filter_column || ''}`)
 
@@ -574,6 +577,12 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           if (comp && comp.rel_table && comp.options_type !== 'enumeration' && comp.rel_label && comp.rel_value) {
             const cached = getCachedRelOptions(relCacheKey(comp))
             if (cached && cached.length > 0) assignOptions(cachedOptions, field, mapRelOptions(cached, comp))
+          } else if (comp && comp.options_type === 'enumeration' && comp.rel_table) {
+            const cachedEnum = getCachedRelOptions(enumCacheKey(comp))
+            if (cachedEnum && cachedEnum.length > 0) {
+              cachedOptions[field.id] = cachedEnum
+              if (field.db_column_name) cachedOptions[field.db_column_name] = cachedEnum
+            }
           }
         }
         if (Object.keys(cachedOptions).length > 0 && !cancelled) {
@@ -724,21 +733,25 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
           }
         } else if (isRelationalComp && comp.options_type === 'enumeration' && comp.rel_table) {
           try {
-            const res = await fetch(`/api/enumerations?id=${encodeURIComponent(comp.rel_table)}`)
-            if (res.ok) {
+            const enumKey = enumCacheKey(comp)
+            const formatted = await dedupeRelFetch(enumKey, async () => {
+              const res = await fetch(`/api/enumerations?id=${encodeURIComponent(comp.rel_table)}`)
+              if (!res.ok) return []
               const result = await res.json()
-              if (result.data && result.data.values) {
-                const formatted = result.data.values.map((v: any) => {
-                  if (typeof v === 'string') return { label: v, value: v }
-                  return {
-                    label: v.description || v.label || v.value || '',
-                    value: v.value !== undefined ? v.value : (v.description || '')
-                  }
-                })
-                newOptions[field.id] = formatted
-                if (field.db_column_name) {
-                  newOptions[field.db_column_name] = formatted
+              if (!(result.data && result.data.values)) return []
+              return result.data.values.map((v: any) => {
+                if (typeof v === 'string') return { label: v, value: v }
+                return {
+                  label: v.description || v.label || v.value || '',
+                  value: v.value !== undefined ? v.value : (v.description || '')
                 }
+              })
+            })
+            if (formatted.length > 0) {
+              setCachedRelOptions(enumKey, formatted)
+              newOptions[field.id] = formatted
+              if (field.db_column_name) {
+                newOptions[field.db_column_name] = formatted
               }
             }
           } catch (err) {
