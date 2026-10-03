@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import { SortableList, SortableItem } from './SortableList'
+import { SlotDndProvider, SortableContainer, SortableItem, DropZone } from './SortableList'
+import { arrayMove } from '@dnd-kit/sortable'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { getGroupBlocks, type GroupBlock } from '@/lib/slotGroups'
 import {
   Database, Layout, Share2, Plus, Trash2,
@@ -190,6 +192,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   const [tabToDelete, setTabToDelete]               = useState<string | null>(null)
   const [editingSlotTabIconIndex, setEditingSlotTabIconIndex] = useState<string | null>(null)
   const [editingSlotIconIndex, setEditingSlotIconIndex]       = useState<string | null>(null)
+  // id (com prefixo slot:/block:/child:) do item que está sendo arrastado
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
   function renderSlotFieldOptions(slotModelId: string, includeNone = true, noneLabel = 'Selecione o campo...') {
     if (!slotModelId) return includeNone ? <option value="">Selecione primeiro o modelo...</option> : null
@@ -210,6 +214,136 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const [item] = list.splice(from, 1)
     list.splice(to, 0, item)
     setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: list } })
+  }
+
+  // ───────── Arrastar e soltar ─────────
+  const parseDnd = (id: any) => { const str = String(id); const i = str.indexOf(':'); return { kind: str.slice(0, i), key: str.slice(i + 1) } }
+  const insertAt = (arr: any[], index: number, item: any) => {
+    const next = [...arr]
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, item)
+    return next
+  }
+  const withBlocks = (group: any, fn: (blocks: GroupBlock[]) => GroupBlock[]) => {
+    const { children: _legacyChildren, group_mode: _legacyMode, ...rest } = group
+    return { ...rest, blocks: fn(getGroupBlocks(group)) }
+  }
+  const findChildLoc = (slots: any[], childId: string) => {
+    for (let si = 0; si < slots.length; si++) {
+      if (slots[si]?.type !== 'group') continue
+      const blocks = getGroupBlocks(slots[si])
+      for (let bi = 0; bi < blocks.length; bi++) {
+        const ci = blocks[bi].children.findIndex((c: any) => c.id === childId)
+        if (ci >= 0) return { si, bi, ci, child: blocks[bi].children[ci] }
+      }
+    }
+    return null
+  }
+  const findBlockLoc = (slots: any[], blockId: string) => {
+    for (let si = 0; si < slots.length; si++) {
+      if (slots[si]?.type !== 'group') continue
+      const bi = getGroupBlocks(slots[si]).findIndex(b => b.id === blockId)
+      if (bi >= 0) return { si, bi }
+    }
+    return null
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null)
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const a = parseDnd(active.id)
+    const o = parseDnd(over.id)
+    const slots: any[] = [...(config.layout_config.custom_slots || [])]
+    const commit = (next: any[]) => setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: next } })
+
+    // Quando o alvo é um bloco, um filho dele ou a área do bloco: devolve "grupo + bloco + posição"
+    const blockTarget = (): { si: number; bi: number; index: number } | null => {
+      if (o.kind === 'child') { const l = findChildLoc(slots, o.key); return l ? { si: l.si, bi: l.bi, index: l.ci } : null }
+      if (o.kind === 'zone' && o.key !== 'top') { const l = findBlockLoc(slots, o.key); return l ? { si: l.si, bi: l.bi, index: Number.MAX_SAFE_INTEGER } : null }
+      if (o.kind === 'block') { const l = findBlockLoc(slots, o.key); return l ? { si: l.si, bi: l.bi, index: Number.MAX_SAFE_INTEGER } : null }
+      return null
+    }
+
+    // 1) Aba de primeiro nível
+    if (a.kind === 'slot') {
+      const from = slots.findIndex(sl => sl.id === a.key)
+      if (from < 1) return // a aba do mestre é fixa
+      if (o.kind === 'slot') {
+        const to = slots.findIndex(sl => sl.id === o.key)
+        if (to >= 1) moveTopSlot(from, to)
+        return
+      }
+      const target = blockTarget()
+      if (!target) return
+      const moved = slots[from]
+      if (moved.type === 'group') return // grupos não entram em blocos
+      const targetGroupId = slots[target.si].id
+      slots.splice(from, 1)
+      const gi = slots.findIndex(sl => sl.id === targetGroupId)
+      if (gi < 0) return
+      // a aba vira subaba/quadro do bloco (mantém título, ícone, caso de uso e demais configurações)
+      const child = { ...moved, col_span: moved.col_span || '1/2', height: moved.height || 'medium' }
+      slots[gi] = withBlocks(slots[gi], bl => bl.map((b, i) => i !== target.bi ? b : { ...b, children: insertAt(b.children, target.index, child) }))
+      commit(slots)
+      return
+    }
+
+    // 2) Subaba / quadro
+    if (a.kind === 'child') {
+      const src = findChildLoc(slots, a.key)
+      if (!src) return
+      const removeFromSource = () => {
+        slots[src.si] = withBlocks(slots[src.si], bl => bl.map((b, i) => i !== src.bi ? b : { ...b, children: b.children.filter((_: any, j: number) => j !== src.ci) }))
+      }
+      // para aba de primeiro nível (antes da aba alvo, ou no fim)
+      if (o.kind === 'slot' || (o.kind === 'zone' && o.key === 'top')) {
+        const toIdx = o.kind === 'slot' ? slots.findIndex(sl => sl.id === o.key) : slots.length
+        if (toIdx < 1) return
+        if (o.kind === 'slot' && slots[toIdx].id === slots[src.si].id) return // soltou sobre o próprio grupo
+        removeFromSource()
+        slots.splice(toIdx, 0, src.child)
+        commit(slots)
+        return
+      }
+      const target = blockTarget()
+      if (!target) return
+      if (src.si === target.si && src.bi === target.bi) {
+        // reordenar dentro do mesmo bloco
+        const last = getGroupBlocks(slots[src.si])[src.bi].children.length - 1
+        const to = Math.min(target.index, last)
+        if (to === src.ci) return
+        slots[src.si] = withBlocks(slots[src.si], bl => bl.map((b, i) => i !== src.bi ? b : { ...b, children: arrayMove(b.children, src.ci, to) }))
+      } else {
+        // mover para outro bloco (do mesmo grupo ou de outro)
+        removeFromSource()
+        slots[target.si] = withBlocks(slots[target.si], bl => bl.map((b, i) => i !== target.bi ? b : { ...b, children: insertAt(b.children, target.index, src.child) }))
+      }
+      commit(slots)
+      return
+    }
+
+    // 3) Bloco: só reordena dentro do próprio grupo
+    if (a.kind === 'block') {
+      const src = findBlockLoc(slots, a.key)
+      if (!src) return
+      let toBi = -1
+      if (o.kind === 'block') { const l = findBlockLoc(slots, o.key); if (l && l.si === src.si) toBi = l.bi }
+      else if (o.kind === 'child') { const l = findChildLoc(slots, o.key); if (l && l.si === src.si) toBi = l.bi }
+      else if (o.kind === 'zone' && o.key !== 'top') { const l = findBlockLoc(slots, o.key); if (l && l.si === src.si) toBi = l.bi }
+      if (toBi < 0 || toBi === src.bi) return
+      slots[src.si] = withBlocks(slots[src.si], bl => arrayMove(bl, src.bi, toBi))
+      commit(slots)
+    }
+  }
+
+  const dragLabel = (id: string | null): string => {
+    if (!id) return ''
+    const d = parseDnd(id)
+    const slots: any[] = config.layout_config.custom_slots || []
+    if (d.kind === 'slot') return slots.find(sl => sl.id === d.key)?.title || 'Aba'
+    if (d.kind === 'child') return findChildLoc(slots, d.key)?.child?.title || 'Item'
+    if (d.kind === 'block') { const l = findBlockLoc(slots, d.key); return l ? `Bloco ${l.bi + 1}` : 'Bloco' }
+    return ''
   }
 
   const ARROW_BTN = 'p-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-900/70 text-neutral-600 dark:text-neutral-300 hover:text-rose-600 disabled:opacity-25 disabled:hover:text-neutral-600'
@@ -711,11 +845,11 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
           {t('wizard.personalizado.group_hint_blocks', 'Um grupo é feito de blocos, empilhados de cima para baixo. Cada bloco pode ser de Subabas (um caso de uso por vez) ou de Quadros (vários visíveis ao mesmo tempo).')}
         </p>
 
-        <SortableList ids={blocks.map(b => b.id)} onReorder={moveBlock}>
+        <SortableContainer ids={blocks.map(b => `block:${b.id}`)}>
         {blocks.map((block, bIdx) => {
           const blockKey = `${idx}.b${bIdx}`
           return (
-            <SortableItem key={block.id} id={block.id}>{(blockHandle) => (
+            <SortableItem key={block.id} id={`block:${block.id}`}>{(blockHandle) => (
             <div className="space-y-3 p-3 border border-rose-200 dark:border-rose-900/50 rounded-xl bg-rose-50/30 dark:bg-rose-900/5 my-2">
               <div className="flex flex-wrap items-center gap-3">
                 {blockHandle}
@@ -766,13 +900,13 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 </div>
               </div>
 
-              <div className="space-y-3 pl-4 border-l-2 border-rose-200 dark:border-rose-900/50">
+              <DropZone id={`zone:${block.id}`} className="space-y-3 pl-4 border-l-2 border-rose-200 dark:border-rose-900/50 rounded-md transition-colors" activeClassName="bg-rose-100/70 dark:bg-rose-900/20">
                 {block.children.length === 0 && (
                   <p className="text-[11px] text-neutral-400 italic">{t('wizard.personalizado.group_empty', 'Nenhum caso de uso neste bloco ainda.')}</p>
                 )}
-                <SortableList ids={block.children.map((c: any) => c.id)} onReorder={(from, to) => moveChild(bIdx, from, to)}>
+                <SortableContainer ids={block.children.map((c: any) => `child:${c.id}`)}>
                 {block.children.map((child: any, cIdx: number) => (
-                  <SortableItem key={child.id} id={child.id}>{(childHandle) => (
+                  <SortableItem key={child.id} id={`child:${child.id}`}>{(childHandle) => (
                   <div className="space-y-2 mb-3">
                     <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-rose-50/60 dark:bg-rose-900/10 rounded-lg">
                       {childHandle}
@@ -837,7 +971,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                   </div>
                   )}</SortableItem>
                 ))}
-                </SortableList>
+                </SortableContainer>
 
                 <button
                   onClick={() => updateBlocks(idx, bl => bl.map((b, i) => i !== bIdx ? b : {
@@ -856,12 +990,12 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                   <Plus className="w-4 h-4" />
                   {block.mode === 'tabs' ? t('wizard.personalizado.add_subtab', 'Adicionar Subaba') : t('wizard.personalizado.add_panel', 'Adicionar Quadro')}
                 </button>
-              </div>
+              </DropZone>
             </div>
             )}</SortableItem>
           )
         })}
-        </SortableList>
+        </SortableContainer>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button onClick={() => addBlock('tabs')} className="p-3 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest">
@@ -980,14 +1114,32 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               const renderTop = (slot: any, idx: number, handle?: ReactNode) =>
                 slot.type === 'group' ? renderGroupCard(slot, idx, handle) : renderSlotCard(slot, idx, undefined, handle)
               return (
-                <>
+                <SlotDndProvider
+                  onDragStart={(e: DragStartEvent) => setActiveDragId(String(e.active.id))}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setActiveDragId(null)}
+                  overlay={activeDragId ? (
+                    <div className="px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 border-2 border-rose-400 shadow-xl text-xs font-black uppercase tracking-widest text-rose-600">
+                      {dragLabel(activeDragId)}
+                    </div>
+                  ) : null}
+                >
                   {allSlots.length > 0 && renderTop(allSlots[0], 0)}
-                  <SortableList ids={allSlots.slice(1).map((sl: any) => sl.id)} onReorder={(from, to) => moveTopSlot(from + 1, to + 1)}>
+                  <SortableContainer ids={allSlots.slice(1).map((sl: any) => `slot:${sl.id}`)}>
                     {allSlots.slice(1).map((slot: any, i: number) => (
-                      <SortableItem key={slot.id} id={slot.id}>{(handle) => <div className="mt-4">{renderTop(slot, i + 1, handle)}</div>}</SortableItem>
+                      <SortableItem key={slot.id} id={`slot:${slot.id}`}>{(handle) => <div className="mt-4">{renderTop(slot, i + 1, handle)}</div>}</SortableItem>
                     ))}
-                  </SortableList>
-                </>
+                  </SortableContainer>
+                  {activeDragId && parseDnd(activeDragId).kind === 'child' && (
+                    <DropZone
+                      id="zone:top"
+                      className="mt-4 p-4 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl text-center text-[10px] font-black uppercase tracking-widest text-rose-500 transition-colors"
+                      activeClassName="bg-rose-100 dark:bg-rose-900/30"
+                    >
+                      {t('wizard.personalizado.drop_to_tab', 'Solte aqui para transformar em aba de primeiro nível')}
+                    </DropZone>
+                  )}
+                </SlotDndProvider>
               )
             })()}
 
