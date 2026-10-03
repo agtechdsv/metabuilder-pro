@@ -30,6 +30,8 @@ export function StackInterestCard() {
   const [recipient, setRecipient] = useState<Recipient | null>(null)
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
+  const [useEmail, setUseEmail] = useState(true)
+  const [useChat, setUseChat] = useState(true)
   const [sending, setSending] = useState(false)
   const [results, setResults] = useState<StackMessageResult[] | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
@@ -57,6 +59,8 @@ export function StackInterestCard() {
 
   const openCompose = (r: Recipient) => {
     setRecipient(r)
+    setUseEmail(true)
+    setUseChat(true)
     setResults(null)
     setSendError(null)
     applyTemplate('progress')
@@ -73,7 +77,7 @@ export function StackInterestCard() {
     if (!recipient || !stack) return
     setSending(true)
     setSendError(null)
-    const r = await sendStackInterestMessage({ stack, userIds: recipient.userIds, subject, message })
+    const r = await sendStackInterestMessage({ stack, userIds: recipient.userIds, subject, message, channels: { email: useEmail, chat: useChat } })
     setSending(false)
     if (r.success) setResults(r.results || []); else setSendError(r.error || 'Erro ao enviar')
   }
@@ -171,10 +175,30 @@ export function StackInterestCard() {
 
             {!results ? (
               <>
-                <p className="text-[11px] text-neutral-500 flex items-center gap-3">
-                  <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> E-mail</span>
-                  <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> Chat do MetaBuilders</span>
-                </p>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Enviar por</p>
+                  <div className="flex items-center gap-2">
+                    {([
+                      { key: 'email', label: 'E-mail', icon: Mail, on: useEmail, set: setUseEmail },
+                      { key: 'chat', label: 'Chat do MetaBuilders', icon: MessageCircle, on: useChat, set: setUseChat },
+                    ] as const).map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={c.on}
+                        onClick={() => c.set(!c.on)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-colors ${c.on ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-300' : 'border-neutral-200 dark:border-neutral-700 text-neutral-400'}`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${c.on ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-neutral-300 dark:border-neutral-600'}`}>
+                          {c.on && <Check className="w-3 h-3" />}
+                        </span>
+                        <c.icon className="w-3.5 h-3.5" /> {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  {!useEmail && !useChat && <p className="text-[10px] text-amber-600">Marque ao menos um canal.</p>}
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Modelo de mensagem</label>
                   <select
@@ -197,7 +221,7 @@ export function StackInterestCard() {
                 {sendError && <p className="text-[11px] text-red-500">{sendError}</p>}
                 <div className="flex justify-end gap-2">
                   <button type="button" disabled={sending} onClick={() => setRecipient(null)} className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancelar</button>
-                  <button type="button" disabled={sending || !subject.trim() || !message.trim()} onClick={send} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold">
+                  <button type="button" disabled={sending || !subject.trim() || !message.trim() || (!useEmail && !useChat)} onClick={send} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold">
                     {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Enviar
                   </button>
                 </div>
@@ -207,21 +231,21 @@ export function StackInterestCard() {
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-100 dark:border-neutral-800">
                     <p className="text-[10px] font-black uppercase text-neutral-400">E-mails enviados</p>
-                    <p className="text-xl font-black dark:text-white">{okCount('email')}/{results.length}</p>
+                    <p className="text-xl font-black dark:text-white">{useEmail ? `${okCount('email')}/${results.length}` : '—'}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-100 dark:border-neutral-800">
                     <p className="text-[10px] font-black uppercase text-neutral-400">Mensagens no chat</p>
-                    <p className="text-xl font-black dark:text-white">{okCount('chat')}/{results.length}</p>
+                    <p className="text-xl font-black dark:text-white">{useChat ? `${okCount('chat')}/${results.length}` : '—'}</p>
                   </div>
                 </div>
                 <div className="max-h-48 overflow-y-auto space-y-1.5">
-                  {results.filter(r => !r.email.ok || !r.chat.ok).map(r => (
+                  {results.filter(r => (!r.email.ok && !r.email.skipped) || (!r.chat.ok && !r.chat.skipped)).map(r => (
                     <div key={r.userId} className="flex items-start gap-2 text-[11px] text-amber-600">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                      <span><strong>{r.name}</strong>: {[!r.email.ok && `e-mail (${r.email.error})`, !r.chat.ok && `chat (${r.chat.error})`].filter(Boolean).join(' · ')}</span>
+                      <span><strong>{r.name}</strong>: {[!r.email.ok && !r.email.skipped && `e-mail (${r.email.error})`, !r.chat.ok && !r.chat.skipped && `chat (${r.chat.error})`].filter(Boolean).join(' · ')}</span>
                     </div>
                   ))}
-                  {results.every(r => r.email.ok && r.chat.ok) && (
+                  {results.every(r => (r.email.ok || r.email.skipped) && (r.chat.ok || r.chat.skipped)) && (
                     <p className="flex items-center gap-2 text-[11px] text-emerald-600"><Check className="w-3.5 h-3.5" /> Tudo enviado.</p>
                   )}
                 </div>

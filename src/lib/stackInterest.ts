@@ -86,6 +86,6 @@ export interface StackInterestUser {
 export interface StackMessageResult {
   userId: string
   name: string
-  email: { ok: boolean; error?: string }
-  chat: { ok: boolean; error?: string }
+  email: { ok: boolean; error?: string; skipped?: boolean }
+  chat: { ok: boolean; error?: string; skipped?: boolean }
 }

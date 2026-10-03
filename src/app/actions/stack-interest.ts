@@ -115,9 +115,14 @@ export async function sendStackInterestMessage(input: {
   userIds: string[]
   subject: string
   message: string
+  /** Canais marcados no envio (padrão: os dois) */
+  channels?: { email: boolean; chat: boolean }
 }): Promise<{ success: boolean; results?: StackMessageResult[]; error?: string }> {
   try {
     const adminUser = await requireSuperAdmin()
+    const useEmail = input.channels?.email ?? true
+    const useChat = input.channels?.chat ?? true
+    if (!useEmail && !useChat) throw new Error('Marque ao menos um canal de envio')
     if (!VALID_STACKS.has(input.stack)) throw new Error('Stack inválida')
     const rawSubject = input.subject.trim()
     const rawMessage = input.message.trim()
@@ -152,10 +157,11 @@ export async function sendStackInterestMessage(input: {
       const subject = fillStackTemplate(rawSubject, vars)
       const message = fillStackTemplate(rawMessage, vars)
       const emailMessage = fillStackTemplate(rawMessage, { ...vars, stack: `\u0001${stackLabel}\u0002` })
-      const r: StackMessageResult = { userId: p.id, name, email: { ok: false }, chat: { ok: false } }
+      const r: StackMessageResult = { userId: p.id, name, email: { ok: false, skipped: !useEmail }, chat: { ok: false, skipped: !useChat } }
 
       // E-mail
-      if (!transporter) r.email.error = 'SMTP não configurado no servidor'
+      if (!useEmail) { /* canal desmarcado */ }
+      else if (!transporter) r.email.error = 'SMTP não configurado no servidor'
       else if (!p.email) r.email.error = 'Usuário sem e-mail'
       else {
         try {
@@ -171,7 +177,7 @@ export async function sendStackInterestMessage(input: {
 
       // Chat do MetaBuilders (sala entre o administrador e o usuário).
       // A tela só lista conversas de conexões ACEITAS, então garantimos a conexão com o administrador.
-      try {
+      if (useChat) try {
         if (p.id === adminUser.id) throw new Error('Você é o próprio destinatário (sem chat consigo mesmo)')
         const { data: existing } = await admin
           .from('community_connections')
