@@ -76,8 +76,10 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   const validPoints = data.filter(record => {
     const lat = extractRawValue(mapConfig.lat_field, record, latFieldDef);
     const lng = extractRawValue(mapConfig.lng_field, record, lngFieldDef);
-    return lat !== null && lat !== undefined && !isNaN(Number(lat)) && 
-           lng !== null && lng !== undefined && !isNaN(Number(lng))
+    return lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat)) && 
+           lng !== null && lng !== undefined && lng !== '' && !isNaN(Number(lng)) &&
+           // coordenadas fora do intervalo real (ex.: lat/lng trocados ou lixo) jogariam o zoom para o mundo todo
+           Math.abs(Number(lat)) <= 85 && Math.abs(Number(lng)) <= 180
   }).map(record => {
     const rawTitle = extractRawValue(mapConfig.title_field, record, titleFieldDef);
     const rawDesc = mapConfig.desc_field ? extractRawValue(mapConfig.desc_field, record, descFieldDef) : null;
@@ -91,6 +93,7 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   })
 
   const tiles = getMapTileConfig()
+  const hiddenPoints = data.length - validPoints.length
 
   let center: [number, number] = [-23.5505, -46.6333] // Default: São Paulo
   let bounds: L.LatLngBounds | null = null
@@ -106,7 +109,7 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     const map = RL.useMap()
     useEffect(() => {
       if (bounds && validPoints.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] })
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
       }
     }, [map])
     return null
@@ -155,6 +158,11 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
 
   return (
     <div className="w-full h-[600px] max-h-full rounded-[2rem] overflow-hidden border-4 border-white dark:border-neutral-900 shadow-xl relative z-0">
+      {hiddenPoints > 0 && (
+        <div className="absolute bottom-3 left-3 z-[500] px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold shadow">
+          {hiddenPoints} registro(s) sem coordenadas válidas não aparecem no mapa
+        </div>
+      )}
       <RL.MapContainer 
         center={center} 
         zoom={5} 
