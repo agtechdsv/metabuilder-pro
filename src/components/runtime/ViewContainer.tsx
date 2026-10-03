@@ -174,8 +174,19 @@ export default function ViewContainer({
 
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   // Campo de agrupamento do Kanban escolhido pelo usuário final em tempo de execução (padrão = o definido no Studio)
-  const [activeKanbanGroupField, setActiveKanbanGroupField] = useState<string | undefined>(defaultKanbanGroupField)
-  useEffect(() => { setActiveKanbanGroupField(defaultKanbanGroupField) }, [defaultKanbanGroupField])
+  // A escolha é guardada na sessão: ao abrir o formulário de novo/edição este componente é desmontado e voltaria ao padrão
+  const kanbanGroupStorageKey = `metabuilder_kanban_group_${projectId}_${modelName}`
+  const [activeKanbanGroupField, setActiveKanbanGroupFieldState] = useState<string | undefined>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? sessionStorage.getItem(kanbanGroupStorageKey) : null
+      if (saved && (saved === defaultKanbanGroupField || (kanbanGroupOptions || []).includes(saved))) return saved
+    } catch {}
+    return defaultKanbanGroupField
+  })
+  const setActiveKanbanGroupField = (id: string) => {
+    setActiveKanbanGroupFieldState(id)
+    try { sessionStorage.setItem(kanbanGroupStorageKey, id) } catch {}
+  }
   const kanbanGroupField = activeKanbanGroupField || defaultKanbanGroupField
   const [timelineDirection, setTimelineDirection] = useState<'horizontal' | 'vertical'>(timelineConfig?.layout_direction || 'vertical')
 
@@ -421,7 +432,11 @@ export default function ViewContainer({
     if (ids.length < 2) return []
     return ids.map(id => {
       const f = displayFields.find((df: any) => df.id === id)
-      return { id, label: f?.display_name || f?.db_column_name || id }
+      const col: string = f?.db_column_name || id
+      const baseLabel = f?.display_name || col.split('.').pop() || id
+      // Campo de outra tabela: identifica a origem para o usuário distinguir nomes iguais (ex.: nome de projeto x nome de departamento)
+      const label = col.includes('.') ? `${baseLabel} (${col.split('.')[0]})` : baseLabel
+      return { id, label }
     })
   })()
 
@@ -516,6 +531,8 @@ export default function ViewContainer({
             fields={displayFields}
             groupField={actualGroupField}
             groupChoices={kanbanGroupChoices}
+            joins={joins}
+            modelName={modelName}
             activeGroupId={kanbanGroupField}
             onGroupChange={setActiveKanbanGroupField}
             kanbanGroupDisplayField={correctedKanbanGroupDisplayField}

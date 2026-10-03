@@ -39,6 +39,8 @@ interface DynamicKanbanProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   onAdd?: (initialData?: any) => void
+  joins?: any[]
+  modelName?: string
   groupChoices?: { id: string; label: string }[]
   activeGroupId?: string
   onGroupChange?: (fieldId: string) => void
@@ -59,6 +61,8 @@ export default function DynamicKanban({
   onEdit,
   onDelete,
   onAdd,
+  joins = [],
+  modelName = '',
   groupChoices = [],
   activeGroupId,
   onGroupChange,
@@ -162,6 +166,28 @@ export default function DynamicKanban({
     setActiveId(null)
   }
 
+  // Valores iniciais do "+" da coluna. Campo da própria tabela: grava o valor da coluna.
+  // Campo de tabela relacionada (ex.: nome do projeto): o valor da coluna é o texto exibido, então preenche a chave estrangeira do registro.
+  const buildAddData = (column: string): Record<string, any> => {
+    if (column === 'Unassigned') return {}
+    if (!groupColumnName.includes('.')) return { [groupColumnName]: column }
+
+    const lc = (s: any) => String(s || '').toLowerCase()
+    const relTable = lc(groupColumnName.split('.')[0])
+    let fk: string | undefined
+    for (const j of joins) {
+      const a = { t: lc(j.from || j.toTable), k: j.localKey || j.toOn }
+      const b = { t: lc(j.to || j.table), k: j.foreignKey || j.on }
+      if (a.t === lc(modelName) && b.t === relTable) { fk = a.k; break }
+      if (b.t === lc(modelName) && a.t === relTable) { fk = b.k; break }
+    }
+    if (!fk) return {}
+    const cleanFk = String(fk).split('.').pop() as string
+    const sample = data.find(item => String(extractRawValue(groupColumnName, item, groupField) || 'Unassigned') === column)
+    const val = sample?.[cleanFk] ?? sample?.[`${modelName}.${cleanFk}`]
+    return val === undefined || val === null ? {} : { [cleanFk]: val }
+  }
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex justify-end items-center gap-3 mb-4 px-4 w-full">
@@ -257,7 +283,7 @@ export default function DynamicKanban({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
-            onAdd={onAdd ? () => onAdd(column === 'Unassigned' ? {} : { [groupColumnName.split('.').pop() as string]: column }) : undefined}
+            onAdd={onAdd ? () => onAdd(buildAddData(column)) : undefined}
             customActions={customActions}
             onCustomAction={onCustomAction}
             relationalOptions={relationalOptions}
