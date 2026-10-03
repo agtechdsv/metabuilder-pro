@@ -1,6 +1,6 @@
 "use client"
 
-import { getMapTileConfig } from '@/lib/mapTiles'
+import { getMapTileConfig, getMapTilerExtraLayers, hasCustomTileProvider, isMapTilerProvider, OSM_URL, OSM_ATTRIBUTION } from '@/lib/mapTiles'
 import React, { useEffect, useState } from 'react'
 import { Eye, Pencil, Trash2, MapPin, Zap } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
@@ -42,6 +42,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   const [isMounted, setIsMounted] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [RL, setRL] = useState<any>(null)
+  // Se o provedor configurado falhar repetidas vezes (cota estourada, domínio bloqueado...), cai para o OpenStreetMap
+  const [tileErrors, setTileErrors] = useState(0)
 
   useEffect(() => {
     setIsMounted(true)
@@ -92,7 +94,13 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     }
   })
 
-  const tiles = getMapTileConfig()
+  const baseTiles = getMapTileConfig()
+  const usingFallback = hasCustomTileProvider() && tileErrors >= 5
+  const tiles = usingFallback
+    ? { standard: { url: OSM_URL, attribution: OSM_ATTRIBUTION }, dark: { url: OSM_URL, attribution: OSM_ATTRIBUTION, invert: true } }
+    : baseTiles
+  const extraLayers = usingFallback ? [] : getMapTilerExtraLayers()
+  const onTileError = () => { if (hasCustomTileProvider()) setTileErrors(n => n + 1) }
   const hiddenPoints = data.length - validPoints.length
 
   let center: [number, number] = [-23.5505, -46.6333] // Default: São Paulo
@@ -156,76 +164,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     return null
   }
 
-  return (
-    <div className="w-full h-[600px] max-h-full rounded-[2rem] overflow-hidden border-4 border-white dark:border-neutral-900 shadow-xl relative z-0">
-      {hiddenPoints > 0 && (
-        <div className="absolute bottom-3 left-3 z-[500] px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold shadow">
-          {hiddenPoints} registro(s) sem coordenadas válidas não aparecem no mapa
-        </div>
-      )}
-      <RL.MapContainer 
-        center={center} 
-        zoom={5} 
-        className="w-full h-full absolute inset-0 z-0"
-        scrollWheelZoom={true}
-      >
-        <RL.LayersControl key={isDarkMode ? 'dark-ctrl' : 'light-ctrl'} position="topright">
-          <RL.LayersControl.BaseLayer checked={!isDarkMode} name="Mapa Padrão">
-            <RL.TileLayer
-              attribution={tiles.standard.attribution}
-              url={tiles.standard.url}
-              maxZoom={19}
-            />
-          </RL.LayersControl.BaseLayer>
-
-          <RL.LayersControl.BaseLayer name="Visualização Satélite">
-            <RL.TileLayer
-              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            />
-          </RL.LayersControl.BaseLayer>
-
-          <RL.LayersControl.BaseLayer checked={isDarkMode} name="Modo Escuro">
-            <RL.TileLayer
-              attribution={tiles.dark.attribution}
-              url={tiles.dark.url}
-              className={tiles.dark.invert ? 'metabuilder-dark-tiles' : undefined}
-              maxZoom={19}
-            />
-          </RL.LayersControl.BaseLayer>
-
-          {/* Overlays / Camadas de Dados */}
-          {validPoints.length > 1 && (
-            <RL.LayersControl.Overlay name="Conectar Obras (Rota)">
-              <RL.Polyline 
-                positions={validPoints.map(p => [p.lat, p.lng])} 
-                pathOptions={{ color: '#6366f1', weight: 3, dashArray: '5, 10' }}
-              />
-            </RL.LayersControl.Overlay>
-          )}
-
-          {validPoints.length > 0 && (
-            <RL.LayersControl.Overlay name="Raio de Influência (10km)">
-              <RL.FeatureGroup>
-                {validPoints.map((point, idx) => (
-                  <RL.Circle 
-                    key={`circle-${point.record.id || idx}`}
-                    center={[point.lat, point.lng]}
-                    radius={10000} // 10km
-                    pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.15, weight: 1.5 }}
-                  />
-                ))}
-              </RL.FeatureGroup>
-            </RL.LayersControl.Overlay>
-          )}
-        </RL.LayersControl>
-        
-        {bounds && validPoints.length > 0 && <BoundsFitter />}
-        <MapResizer />
-        <AttributionTargetBlank />
-
-        {validPoints.map((point, idx) => (
-          <RL.Marker 
+  const renderMarker = (point: any, idx: number) => (
+    <RL.Marker 
             key={point.record.id || idx} 
             position={[point.lat, point.lng]}
             icon={customIcon}
@@ -276,7 +216,145 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
               </div>
             </RL.Popup>
           </RL.Marker>
-        ))}
+  )
+
+  // Agrupa pinos próximos (célula de 60px na tela). Clicar no grupo aproxima o zoom; em zoom alto mostra todos os pinos.
+  const ClusteredMarkers = () => {
+    const map = RL.useMap()
+    const [, setTick] = useState(0)
+    RL.useMapEvents({ zoomend: () => setTick(t => t + 1) })
+    const zoom = map.getZoom()
+    if (zoom >= 16) return <>{validPoints.map((p, i) => renderMarker(p, i))}</>
+
+    const groups = new Map<string, { p: any; i: number }[]>()
+    validPoints.forEach((p, i) => {
+      const pt = map.project([p.lat, p.lng], zoom)
+      const key = `${Math.floor(pt.x / 60)}:${Math.floor(pt.y / 60)}`
+      const arr = groups.get(key) || []
+      arr.push({ p, i })
+      groups.set(key, arr)
+    })
+
+    return (
+      <>
+        {Array.from(groups.entries()).map(([key, items]) => {
+          if (items.length === 1) return renderMarker(items[0].p, items[0].i)
+          const lat = items.reduce((sum, it) => sum + it.p.lat, 0) / items.length
+          const lng = items.reduce((sum, it) => sum + it.p.lng, 0) / items.length
+          const icon = L.divIcon({
+            html: `<div style="width:38px;height:38px;border-radius:9999px;background:#4f46e5;color:#fff;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font:800 13px sans-serif">${items.length}</div>`,
+            className: '',
+            iconSize: [38, 38],
+            iconAnchor: [19, 19],
+          })
+          return (
+            <RL.Marker
+              key={`cluster-${key}`}
+              position={[lat, lng]}
+              icon={icon}
+              eventHandlers={{
+                click: () => map.fitBounds(L.latLngBounds(items.map(it => [it.p.lat, it.p.lng] as [number, number])), { padding: [60, 60], maxZoom: 17 }),
+              }}
+            />
+          )
+        })}
+      </>
+    )
+  }
+
+  return (
+    <div className="w-full h-[600px] max-h-full rounded-[2rem] overflow-hidden border-4 border-white dark:border-neutral-900 shadow-xl relative z-0">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500] flex flex-col items-center gap-1.5 pointer-events-none">
+        {usingFallback && (
+          <div className="px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-700 text-[10px] font-bold shadow">
+            Provedor de mapas indisponível (cota ou domínio): exibindo mapa alternativo do OpenStreetMap
+          </div>
+        )}
+        {hiddenPoints > 0 && (
+          <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold shadow">
+            {hiddenPoints} registro(s) sem coordenadas válidas não aparecem no mapa
+          </div>
+        )}
+      </div>
+      {isMapTilerProvider() && !usingFallback && (
+        <a href="https://www.maptiler.com/" target="_blank" rel="noopener noreferrer" className="absolute bottom-3 left-3 z-[500]" title="MapTiler">
+          <img src="https://api.maptiler.com/resources/logo.svg" alt="MapTiler" className="h-6 w-auto" />
+        </a>
+      )}
+      <RL.MapContainer 
+        center={center} 
+        zoom={5} 
+        className="w-full h-full absolute inset-0 z-0"
+        scrollWheelZoom={true}
+      >
+        <RL.LayersControl key={isDarkMode ? 'dark-ctrl' : 'light-ctrl'} position="topright">
+          <RL.LayersControl.BaseLayer checked={!isDarkMode} name="Mapa Padrão">
+            <RL.TileLayer
+              attribution={tiles.standard.attribution}
+              url={tiles.standard.url}
+              maxZoom={19}
+              eventHandlers={{ tileerror: onTileError }}
+            />
+          </RL.LayersControl.BaseLayer>
+
+          <RL.LayersControl.BaseLayer name="Visualização Satélite">
+            <RL.TileLayer
+              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </RL.LayersControl.BaseLayer>
+
+          {extraLayers.map(layer => (
+            <RL.LayersControl.BaseLayer key={layer.name} name={layer.name}>
+              <RL.TileLayer
+                attribution={baseTiles.standard.attribution}
+                url={layer.url}
+                maxZoom={19}
+              />
+            </RL.LayersControl.BaseLayer>
+          ))}
+
+          <RL.LayersControl.BaseLayer checked={isDarkMode} name="Modo Escuro">
+            <RL.TileLayer
+              attribution={tiles.dark.attribution}
+              url={tiles.dark.url}
+              className={tiles.dark.invert ? 'metabuilder-dark-tiles' : undefined}
+              maxZoom={19}
+              eventHandlers={{ tileerror: onTileError }}
+            />
+          </RL.LayersControl.BaseLayer>
+
+          {/* Overlays / Camadas de Dados */}
+          {validPoints.length > 1 && (
+            <RL.LayersControl.Overlay name="Conectar Obras (Rota)">
+              <RL.Polyline 
+                positions={validPoints.map(p => [p.lat, p.lng])} 
+                pathOptions={{ color: '#6366f1', weight: 3, dashArray: '5, 10' }}
+              />
+            </RL.LayersControl.Overlay>
+          )}
+
+          {validPoints.length > 0 && (
+            <RL.LayersControl.Overlay name="Raio de Influência (10km)">
+              <RL.FeatureGroup>
+                {validPoints.map((point, idx) => (
+                  <RL.Circle 
+                    key={`circle-${point.record.id || idx}`}
+                    center={[point.lat, point.lng]}
+                    radius={10000} // 10km
+                    pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.15, weight: 1.5 }}
+                  />
+                ))}
+              </RL.FeatureGroup>
+            </RL.LayersControl.Overlay>
+          )}
+        </RL.LayersControl>
+        
+        {bounds && validPoints.length > 0 && <BoundsFitter />}
+        <MapResizer />
+        <AttributionTargetBlank />
+
+        <ClusteredMarkers />
       </RL.MapContainer>
       
       {validPoints.length === 0 && (
