@@ -48,6 +48,8 @@ import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { MetaVoiceView } from './MetaVoiceView'
 import CommunityHubView from './CommunityHubView'
+import { UnreadBadge } from './UnreadBadge'
+import { useUnreadChatCount } from './hooks/community/useUnreadChatCount'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -165,6 +167,7 @@ export default function ClientDashboardClient({
   const [localProfile, setLocalProfile] = useState(profile)
   const isGuest = !localProfile?.is_super_admin && !localProfile?.subscription_licenses
   const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'downloads' : 'dashboard')
+  const unreadChat = useUnreadChatCount()
 
   const [isTeamDrawerOpen, setIsTeamDrawerOpen] = useState(false)
 
@@ -402,6 +405,7 @@ export default function ClientDashboardClient({
                       tab.id === 'metavoice' && "text-amber-500 dark:text-amber-400",
                     )} />
                     <span className="hidden sm:block">{getTabLabel(tab.id, tab.label)}</span>
+                    {tab.id === 'community' && activeTab !== 'community' && <UnreadBadge count={unreadChat} />}
                   </button>
                 )
               })}
@@ -469,6 +473,7 @@ export default function ClientDashboardClient({
                     : "text-amber-500 dark:text-amber-400"
                 )} />
                 <span>{getTabLabel(tab.id, tab.label)}</span>
+                {tab.id === 'community' && activeTab !== 'community' && <UnreadBadge count={unreadChat} />}
               </button>
             ))}
             </div>

@@ -492,6 +492,24 @@ export async function getDiscoverySuggestions() {
   }
 }
 
+/** Total de mensagens de chat não lidas do usuário (a RLS limita às salas dele) */
+export async function getUnreadChatCount() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: true, count: 0 }
+    const { count, error } = await supabase
+      .from('community_chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_read', false)
+      .neq('sender_id', user.id)
+    if (error) throw error
+    return { success: true, count: count || 0 }
+  } catch (err: any) {
+    return { success: false, count: 0, error: err.message }
+  }
+}
+
 export async function getOrCreateChatRoom(targetUserId: string) {
   try {
     const supabase = await createClient()
