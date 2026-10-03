@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
+import { createClient } from '@/utils/supabase/client'
 
 const GEN_LANGUAGES = [
   { code: 'pt', label: 'Português', flag: 'https://flagcdn.com/w80/br.png', short: 'PT' },
@@ -490,16 +491,33 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
 }
 
 // ─── Placeholder for upcoming stacks ─────────────────────────────────────────
-function ComingSoonPanel({ icon, label, features }: { icon: string; label: string; features: string[] }) {
+function ComingSoonPanel({ stack, icon, label, features }: { stack: StackTab; icon: string; label: string; features: string[] }) {
   const { t } = useI18n()
-  // "Me avise": por enquanto só guarda neste navegador (não há tabela de interesse no servidor)
-  const storageKey = `mb_stack_interest_${label}`
+  // "Me avise": grava em public.stack_interest (1 linha por usuário e linguagem); o navegador guarda uma cópia local
+  const storageKey = `mb_stack_interest_${stack}`
   const [notify, setNotify] = useState(false)
+  const [saving, setSaving] = useState(false)
   useEffect(() => {
+    let cancelled = false
     try { setNotify(localStorage.getItem(storageKey) === '1') } catch { /* sem storage */ }
-  }, [storageKey])
-  const toggleNotify = () => {
+    createClient().from('stack_interest').select('id').eq('stack', stack).maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        setNotify(!!data)
+        try { data ? localStorage.setItem(storageKey, '1') : localStorage.removeItem(storageKey) } catch { /* sem storage */ }
+      })
+    return () => { cancelled = true }
+  }, [stack, storageKey])
+  const toggleNotify = async () => {
+    if (saving) return
     const next = !notify
+    setSaving(true)
+    const supabase = createClient()
+    const { error } = next
+      ? await supabase.from('stack_interest').upsert({ stack }, { onConflict: 'user_id,stack', ignoreDuplicates: true })
+      : await supabase.from('stack_interest').delete().eq('stack', stack)
+    setSaving(false)
+    if (error) { console.error('stack_interest', error); return }
     setNotify(next)
     try { next ? localStorage.setItem(storageKey, '1') : localStorage.removeItem(storageKey) } catch { /* sem storage */ }
   }
@@ -958,27 +976,27 @@ export function IDEHeader({
                 {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} />}
                 {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} />}
                 {activeTab === 'nestjs' && (
-                  <ComingSoonPanel icon="🦅" label="NestJS + Prisma"
+                  <ComingSoonPanel stack="nestjs" icon="🦅" label="NestJS + Prisma"
                     features={['TypeScript nativo', 'Decorators', 'Prisma ORM', 'Swagger integrado', 'Guards & Interceptors']} />
                 )}
                 {activeTab === 'python' && (
-                  <ComingSoonPanel icon="🐍" label="Python FastAPI"
+                  <ComingSoonPanel stack="python" icon="🐍" label="Python FastAPI"
                     features={['FastAPI', 'SQLAlchemy', 'Pydantic', 'Alembic Migrations', 'Async/await']} />
                 )}
                 {activeTab === 'csharp' && (
-                  <ComingSoonPanel icon="💜" label="C# .NET 8"
+                  <ComingSoonPanel stack="csharp" icon="💜" label="C# .NET 8"
                     features={['.NET 8 Minimal API', 'Entity Framework', 'JWT Auth', 'Swagger', 'Docker ready']} />
                 )}
                 {activeTab === 'php' && (
-                  <ComingSoonPanel icon="🐘" label="PHP (Laravel)"
+                  <ComingSoonPanel stack="php" icon="🐘" label="PHP (Laravel)"
                     features={['Laravel 11', 'Eloquent ORM', 'Sanctum Auth', 'Artisan CLI', 'Blade ou API']} />
                 )}
                 {activeTab === 'go' && (
-                  <ComingSoonPanel icon="🐹" label="Go (Gin + GORM)"
+                  <ComingSoonPanel stack="go" icon="🐹" label="Go (Gin + GORM)"
                     features={['Gin Router', 'GORM', 'JWT', 'Air live-reload', 'Docker multi-stage']} />
                 )}
                 {activeTab === 'rails' && (
-                  <ComingSoonPanel icon="💎" label="Ruby on Rails"
+                  <ComingSoonPanel stack="rails" icon="💎" label="Ruby on Rails"
                     features={['Rails 8 API', 'ActiveRecord', 'Devise Auth', 'Swagger', 'RSpec']} />
                 )}
               </div>
