@@ -234,6 +234,11 @@ LDAP_BIND_PASSWORD=admin_password
 # Export Manager Configuration
 # Defina a pasta onde os arquivos XLS/JSON gerados em background serão salvos e lidos pelo Gerenciador de Downloads
 LOCAL_DOWNLOAD_PATH=C:\\AgTech\\DownloadsMetaBuilder
+
+# Mapas (Visão de Mapa) - opcional. Sem isto usa o OpenStreetMap (só para demo / pouco tráfego).
+# NEXT_PUBLIC_MAP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=SUA_CHAVE
+# NEXT_PUBLIC_MAP_TILE_URL_DARK=
+# NEXT_PUBLIC_MAP_TILE_ATTRIBUTION=
 `
 
   let envExample = `# Authentication
@@ -242,6 +247,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Project Token
 META_PROJECT_TOKEN=your_project_token
+
+# Mapas (Visão de Mapa) - opcional. Sem isto usa o OpenStreetMap (só para demo / pouco tráfego).
+# NEXT_PUBLIC_MAP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=SUA_CHAVE
+# NEXT_PUBLIC_MAP_TILE_URL_DARK=
+# NEXT_PUBLIC_MAP_TILE_ATTRIBUTION=
 `
   if (dbConfig || dataMode === 'postgres' || dataMode === 'legacy' || dataMode === 'oracle' || dataMode === 'mysql') {
     let dummyString = 'postgresql://user:password@localhost:5432/dbname'

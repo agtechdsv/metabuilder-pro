@@ -362,9 +362,9 @@ export function MapBoard({
             {/* Tiles escuros do CARTO passaram a exigir chave de API: usa o OSM padrão e inverte as cores no modo escuro */}
             <style>{'.leaflet-tile-pane .mb-dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }'}</style>
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              className={isDarkMode ? 'mb-dark-tiles' : undefined}
+              attribution={process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION || (process.env.NEXT_PUBLIC_MAP_TILE_URL ? '' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')}
+              url={(isDarkMode && process.env.NEXT_PUBLIC_MAP_TILE_URL_DARK) || process.env.NEXT_PUBLIC_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'}
+              className={isDarkMode && !process.env.NEXT_PUBLIC_MAP_TILE_URL_DARK ? 'mb-dark-tiles' : undefined}
               maxZoom={19}
             />
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { getMapTileConfig } from '@/lib/mapTiles'
 import React, { useEffect, useState } from 'react'
 import { Eye, Pencil, Trash2, MapPin, Zap } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
@@ -89,6 +90,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     }
   })
 
+  const tiles = getMapTileConfig()
+
   let center: [number, number] = [-23.5505, -46.6333] // Default: São Paulo
   let bounds: L.LatLngBounds | null = null
 
@@ -161,8 +164,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
         <RL.LayersControl key={isDarkMode ? 'dark-ctrl' : 'light-ctrl'} position="topright">
           <RL.LayersControl.BaseLayer checked={!isDarkMode} name="Mapa Padrão">
             <RL.TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution={tiles.standard.attribution}
+              url={tiles.standard.url}
               maxZoom={19}
             />
           </RL.LayersControl.BaseLayer>
@@ -176,9 +179,9 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
 
           <RL.LayersControl.BaseLayer checked={isDarkMode} name="Modo Escuro">
             <RL.TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              className="metabuilder-dark-tiles"
+              attribution={tiles.dark.attribution}
+              url={tiles.dark.url}
+              className={tiles.dark.invert ? 'metabuilder-dark-tiles' : undefined}
               maxZoom={19}
             />
           </RL.LayersControl.BaseLayer>
