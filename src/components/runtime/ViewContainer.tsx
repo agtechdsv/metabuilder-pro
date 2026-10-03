@@ -45,6 +45,7 @@ interface ViewContainerProps {
   logicType?: string
   primaryKeyName?: string
   kanbanGroupField?: string
+  kanbanGroupOptions?: string[]
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
   mindmapCentralField?: string
@@ -134,7 +135,8 @@ export default function ViewContainer({
   onDelete,
   logicType,
   primaryKeyName = 'id',
-  kanbanGroupField,
+  kanbanGroupField: defaultKanbanGroupField,
+  kanbanGroupOptions,
   kanbanGroupDisplayField,
   kanbanCardFields,
   mindmapCentralField,
@@ -171,6 +173,10 @@ export default function ViewContainer({
   const { t } = useI18n()
 
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  // Campo de agrupamento do Kanban escolhido pelo usuário final em tempo de execução (padrão = o definido no Studio)
+  const [activeKanbanGroupField, setActiveKanbanGroupField] = useState<string | undefined>(defaultKanbanGroupField)
+  useEffect(() => { setActiveKanbanGroupField(defaultKanbanGroupField) }, [defaultKanbanGroupField])
+  const kanbanGroupField = activeKanbanGroupField || defaultKanbanGroupField
   const [timelineDirection, setTimelineDirection] = useState<'horizontal' | 'vertical'>(timelineConfig?.layout_direction || 'vertical')
 
   useEffect(() => {
@@ -283,6 +289,7 @@ export default function ViewContainer({
     formFields,
     advancedStaticFilters,
     kanbanGroupField,
+    kanbanGroupOptions,
     kanbanCardFields,
     galleryConfig,
     schedulerConfig,
@@ -404,18 +411,30 @@ export default function ViewContainer({
   const labelSearch = btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '' ? btnSearch.custom_label : t('runtime.search')
   const labelClear = btnClear?.custom_label !== undefined && btnClear.custom_label !== '' ? btnClear.custom_label : t('runtime.clear')
 
-  let correctedKanbanGroupDisplayField = kanbanGroupDisplayField;
-  
+  // O campo de exibição do Studio vale só para o agrupamento padrão
+  const isDefaultGroup = !kanbanGroupField || kanbanGroupField === defaultKanbanGroupField
+  const effectiveGroupDisplayField = isDefaultGroup ? kanbanGroupDisplayField : undefined
+  let correctedKanbanGroupDisplayField = effectiveGroupDisplayField;
+
+  const kanbanGroupChoices = (() => {
+    const ids = Array.from(new Set([defaultKanbanGroupField, ...(kanbanGroupOptions || [])].filter(Boolean))) as string[]
+    if (ids.length < 2) return []
+    return ids.map(id => {
+      const f = displayFields.find((df: any) => df.id === id)
+      return { id, label: f?.display_name || f?.db_column_name || id }
+    })
+  })()
+
   const { resolveDynamicFieldDef } = require('@/lib/field-resolver');
   const actualGroupField = resolveDynamicFieldDef(kanbanGroupField, displayFields, modelName) 
     || displayFields.find(f => f.db_column_name === 'status') 
     || { db_column_name: 'status' };
     
-  if (kanbanGroupDisplayField && !kanbanGroupDisplayField.includes('.')) {
+  if (effectiveGroupDisplayField && !effectiveGroupDisplayField.includes('.')) {
     const join = joins?.find(j => j.localKey === actualGroupField.db_column_name || j.foreignKey === actualGroupField.db_column_name);
     if (join) {
       const relTableName = join.to === modelName ? join.from : join.to;
-      correctedKanbanGroupDisplayField = `${relTableName}.${kanbanGroupDisplayField}`;
+      correctedKanbanGroupDisplayField = `${relTableName}.${effectiveGroupDisplayField}`;
     }
   }
 
@@ -496,6 +515,9 @@ export default function ViewContainer({
             data={data}
             fields={displayFields}
             groupField={actualGroupField}
+            groupChoices={kanbanGroupChoices}
+            activeGroupId={kanbanGroupField}
+            onGroupChange={setActiveKanbanGroupField}
             kanbanGroupDisplayField={correctedKanbanGroupDisplayField}
             kanbanCardFields={kanbanCardFields}
             relationalOptions={relationalOptions}

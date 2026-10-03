@@ -37,6 +37,42 @@ export function KanbanLayoutConfig({
         </select>
         <p className="text-[10px] text-neutral-400 font-medium italic ml-1">{t('wizard.layout.kanban.group_desc')}</p>
       </div>
+
+      <div className="space-y-3">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">
+          {t('wizard.layout.kanban.group_options', 'Campos alternativos de agrupamento (usuário final)')}
+        </label>
+        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+          {(orderedModels || []).flatMap((m: any) => (m.fields || []).map((f: any) => ({ f, m }))).map(({ f, m }: any) => {
+            const selected = (config.layout_config.kanban_group_options || []).includes(f.id)
+            return (
+              <button
+                key={`kgo-${f.id}`}
+                type="button"
+                title={m.display_name || m.db_table_name}
+                onClick={() => {
+                  const current: string[] = config.layout_config.kanban_group_options || []
+                  setConfig({
+                    ...config,
+                    layout_config: {
+                      ...config.layout_config,
+                      kanban_group_options: selected ? current.filter(id => id !== f.id) : [...current, f.id]
+                    }
+                  })
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all ${selected
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                  : 'bg-white dark:bg-neutral-950 text-neutral-500 border-neutral-200 dark:border-neutral-800 hover:border-indigo-400'}`}
+              >
+                {String(f.db_column_name).toLowerCase()}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[10px] text-neutral-400 font-medium italic ml-1">
+          {t('wizard.layout.kanban.group_options_desc', 'Os campos marcados aparecem num seletor no Kanban para o usuário trocar o agrupamento em tempo de execução. O campo acima continua sendo o padrão.')}
+        </p>
+      </div>
     </div>
   )
 }

@@ -184,6 +184,7 @@ export function generateFeatures(zip: JSZip, models: any[], uiViews: any[], dbTy
       mindmapCentralField: layoutConfig.mindmap_central_field || layoutConfig.mindmapCentralField,
       blueprintConfig: layoutConfig.blueprint_config || layoutConfig.blueprintConfig,
       kanbanGroupField: layoutConfig.kanban_group_field || layoutConfig.kanbanGroupField,
+      kanbanGroupOptions: layoutConfig.kanban_group_options || layoutConfig.kanbanGroupOptions,
       kanbanGroupDisplayField: layoutConfig.kanban_group_display_field || layoutConfig.kanbanGroupDisplayField,
       kanbanCardFields: layoutConfig.kanban_card_fields || layoutConfig.kanbanCardFields,
       detailsInterfaceTypes: layoutConfig.details_interface_types || layoutConfig.detailsInterfaceTypes,

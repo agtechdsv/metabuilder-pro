@@ -40,6 +40,7 @@ interface ViewPageContentProps {
   primaryKeyName: string
   logicType?: string
   kanbanGroupField?: string
+  kanbanGroupOptions?: string[]
   mindmapCentralField?: string
   mindmapLevels?: any[]
   schedulerConfig?: any
@@ -102,6 +103,7 @@ export default function ViewPageContent({
   primaryKeyName,
   logicType,
   kanbanGroupField,
+  kanbanGroupOptions,
   mindmapCentralField,
   mindmapLevels,
   schedulerConfig,
@@ -663,6 +665,7 @@ export default function ViewPageContent({
               logicType={logicType}
               primaryKeyName={primaryKeyName}
               kanbanGroupField={kanbanGroupField}
+              kanbanGroupOptions={kanbanGroupOptions}
               mindmapCentralField={mindmapCentralField}
               mindmapLevels={mindmapLevels}
               schedulerConfig={schedulerConfig}

@@ -200,6 +200,7 @@ export interface LayoutConfig {
   display_type: string
   default_view: string
   kanban_group_field: string
+  kanban_group_options?: string[]
   master_model_id: string
   detail_display_mode: string
   mindmap_central_field: string

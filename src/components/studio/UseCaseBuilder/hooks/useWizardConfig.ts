@@ -120,6 +120,7 @@ export function useWizardConfig({
           display_type: sourceData.layout_config?.display_type || 'list',
           default_view: sourceData.layout_config?.default_view || 'list',
           kanban_group_field: sourceData.layout_config?.kanban_group_field || '',
+          kanban_group_options: sourceData.layout_config?.kanban_group_options || [],
           master_model_id: sourceData.layout_config?.master_model_id || '',
           detail_display_mode: sourceData.layout_config?.detail_display_mode || 'tabs',
           mindmap_central_field: sourceData.layout_config?.mindmap_central_field || '',

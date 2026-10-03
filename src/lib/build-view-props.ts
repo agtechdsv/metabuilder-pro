@@ -30,6 +30,7 @@ export interface BuiltViewProps {
   canAdd: boolean
   canExport: boolean
   kanbanGroupField?: string
+  kanbanGroupOptions?: string[]
   kanbanGroupDisplayField?: string
   kanbanCardFields?: string[]
   schedulerConfig?: any
@@ -474,6 +475,9 @@ export async function buildViewProps(
 
   if (view.logic_type === 'kanban' && view.layout_config?.kanban_group_field) {
     await ensureFieldInDisplay(view.layout_config.kanban_group_field)
+    for (const fId of (view.layout_config.kanban_group_options || [])) {
+      await ensureFieldInDisplay(fId)
+    }
   }
   if (view.logic_type === 'scheduler' && view.layout_config?.scheduler_config) {
     const sc = view.layout_config.scheduler_config
@@ -656,6 +660,7 @@ export async function buildViewProps(
     canAdd,
     canExport,
     kanbanGroupField: view.layout_config?.kanban_group_field,
+    kanbanGroupOptions: view.layout_config?.kanban_group_options,
     kanbanGroupDisplayField: view.layout_config?.kanban_group_display_field,
     kanbanCardFields: view.layout_config?.kanban_card_fields || view.layout_config?.kanban_cards_fields,
     schedulerConfig: view.layout_config?.scheduler_config,

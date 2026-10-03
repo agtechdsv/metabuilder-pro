@@ -723,6 +723,7 @@ export default function CustomUseCaseRenderer({
           primaryKeyName={ucPrimaryKeyName}
 
           kanbanGroupField={kGroup}
+          kanbanGroupOptions={uc.kanbanGroupOptions}
           kanbanGroupDisplayField={kGroupDisplay}
           kanbanCardFields={kCards}
           timelineConfig={tConfig}

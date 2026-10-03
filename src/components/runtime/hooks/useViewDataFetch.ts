@@ -34,6 +34,7 @@ export function useViewDataFetch({
   formFields,
   advancedStaticFilters,
   kanbanGroupField,
+  kanbanGroupOptions,
   kanbanCardFields,
   galleryConfig,
   schedulerConfig,
@@ -475,6 +476,9 @@ export function useViewDataFetch({
 
       if (kanbanGroupField) {
         safeAddSelectExpr(kanbanGroupField);
+      }
+      if (Array.isArray(kanbanGroupOptions)) {
+        kanbanGroupOptions.forEach((col: any) => safeAddSelectExpr(col));
       }
       if (kanbanCardFields) {
         kanbanCardFields.forEach((col: any) => safeAddSelectExpr(col));

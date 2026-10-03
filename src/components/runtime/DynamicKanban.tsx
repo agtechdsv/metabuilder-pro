@@ -39,6 +39,9 @@ interface DynamicKanbanProps {
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
   onAdd?: (initialData?: any) => void
+  groupChoices?: { id: string; label: string }[]
+  activeGroupId?: string
+  onGroupChange?: (fieldId: string) => void
   dictionary?: any
   customActions?: any[]
   onCustomAction?: (action: any, row?: any) => void
@@ -56,6 +59,9 @@ export default function DynamicKanban({
   onEdit,
   onDelete,
   onAdd,
+  groupChoices = [],
+  activeGroupId,
+  onGroupChange,
   dictionary = {},
   customActions = [],
   onCustomAction,
@@ -158,7 +164,23 @@ export default function DynamicKanban({
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex justify-end mb-4 px-4 w-full">
+      <div className="flex justify-end items-center gap-3 mb-4 px-4 w-full">
+        {groupChoices.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
+              {t('runtime.group_by', 'Agrupar por')}
+            </span>
+            <select
+              value={activeGroupId || ''}
+              onChange={e => onGroupChange?.(e.target.value)}
+              className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-indigo-500 shadow-sm"
+            >
+              {groupChoices.map(c => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800">
           {scales.map(s => (
             <button
@@ -198,8 +220,9 @@ export default function DynamicKanban({
                   displayTitle = sampleItem[labelField];
                 }
               }
-            } else {
-              // Se a coluna está vazia, busca o label nas opções configuradas
+            }
+            if (displayTitle === column) {
+              // Sem label nos dados (coluna vazia ou sem campo _nome), busca o label nas opções configuradas
               const rawOpts = relationalOptions[groupColumnName] 
                 || groupField?.config?.options 
                 || groupField?.options 
@@ -234,7 +257,7 @@ export default function DynamicKanban({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
-            onAdd={onAdd ? () => onAdd(column === 'Unassigned' ? {} : { [groupColumnName]: column }) : undefined}
+            onAdd={onAdd ? () => onAdd(column === 'Unassigned' ? {} : { [groupColumnName.split('.').pop() as string]: column }) : undefined}
             customActions={customActions}
             onCustomAction={onCustomAction}
             relationalOptions={relationalOptions}

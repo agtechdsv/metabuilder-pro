@@ -823,8 +823,11 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     const primaryKeyName = primaryKeyField?.db_column_name || 'id'
 
     // Garante que o campo de agrupamento do Kanban esteja presente nos metadados
-    const kanbanGroupFieldId = view.layout_config?.kanban_group_field
-    if (view.logic_type === 'kanban' && kanbanGroupFieldId) {
+    const kanbanGroupFieldIds: string[] = Array.from(new Set([
+      view.layout_config?.kanban_group_field,
+      ...(view.layout_config?.kanban_group_options || [])
+    ].filter(Boolean)))
+    if (view.logic_type === 'kanban') for (const kanbanGroupFieldId of kanbanGroupFieldIds) {
       // Primeiro busca nos componentes existentes
       let groupFieldData = allComponents.find((c: any) => c.field?.id === kanbanGroupFieldId)?.field
       
@@ -1079,6 +1082,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           primaryKeyName={primaryKeyName}
           logicType={view.logic_type}
           kanbanGroupField={view.layout_config?.kanban_group_field}
+          kanbanGroupOptions={view.layout_config?.kanban_group_options}
           mindmapCentralField={view.layout_config?.mindmap_central_field}
           mindmapLevels={view.layout_config?.mindmap_levels}
           schedulerConfig={view.layout_config?.scheduler_config}
