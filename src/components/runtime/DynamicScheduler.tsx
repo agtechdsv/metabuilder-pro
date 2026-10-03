@@ -284,6 +284,8 @@ export default function DynamicScheduler({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+    // Explícito: sem isso o navegador deduz o efeito (ex.: Ctrl = copiar) e mostra o cursor "proibido" mesmo sobre uma célula válida
+    e.dataTransfer.dropEffect = 'move'
   }
 
   const formatMonthName = (date: Date) => {
@@ -400,6 +402,7 @@ export default function DynamicScheduler({
                     <div
                       key={`month-cell-${idx}`}
                       onDragOver={handleDragOver}
+                      onDragEnter={handleDragOver}
                       onDrop={(e) => handleDrop(e, date)}
                       className={cn(
                         "min-h-[110px] bg-white dark:bg-neutral-900 border rounded-2xl p-2.5 flex flex-col justify-between transition-all group/cell relative overflow-hidden",
@@ -537,6 +540,7 @@ export default function DynamicScheduler({
                   <div
                     key={`week-col-${idx}`}
                     onDragOver={handleDragOver}
+                      onDragEnter={handleDragOver}
                     onDrop={(e) => handleDrop(e, date)}
                     className={cn(
                       "min-h-[400px] bg-neutral-50/30 dark:bg-neutral-900/10 border rounded-[2rem] p-3 flex flex-col gap-3 transition-all",

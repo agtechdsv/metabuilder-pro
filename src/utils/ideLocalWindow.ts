@@ -43,6 +43,8 @@ export async function openIDELocalWindow(target: IDELocalWindowTarget): Promise<
       center: true,
       decorations: true,
       maximized: true,
+      // Mantém o arrastar-e-soltar HTML5 da página funcionando no WebView2
+      dragDropEnabled: false,
     })
     // Se a janela já existia sem termos achado (corrida), só a trazemos para frente
     win.once('tauri://error', async () => {

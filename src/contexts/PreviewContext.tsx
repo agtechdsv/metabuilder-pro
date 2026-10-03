@@ -71,6 +71,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
           height: 800,
           center: true,
           decorations: true,
+          // WebView2 (Windows) intercepta o arrastar-e-soltar nativo e quebra o HTML5 drag & drop da página (calendário, kanban); a janela main já desliga isso
+          dragDropEnabled: false,
         })
 
         previewWin.once('tauri://error', async (e) => {
