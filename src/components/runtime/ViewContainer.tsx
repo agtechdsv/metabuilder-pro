@@ -501,6 +501,7 @@ export default function ViewContainer({
             relationalOptions={relationalOptions}
             dictionary={dictionary}
             onMove={handleMove}
+            onAdd={onAdd}
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}

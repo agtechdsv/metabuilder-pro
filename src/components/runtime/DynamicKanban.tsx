@@ -38,6 +38,7 @@ interface DynamicKanbanProps {
   onView?: (row: any) => void
   onEdit?: (row: any) => void
   onDelete?: (row: any) => void
+  onAdd?: (initialData?: any) => void
   dictionary?: any
   customActions?: any[]
   onCustomAction?: (action: any, row?: any) => void
@@ -54,6 +55,7 @@ export default function DynamicKanban({
   onView,
   onEdit,
   onDelete,
+  onAdd,
   dictionary = {},
   customActions = [],
   onCustomAction,
@@ -232,6 +234,7 @@ export default function DynamicKanban({
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
+            onAdd={onAdd ? () => onAdd(column === 'Unassigned' ? {} : { [groupColumnName]: column }) : undefined}
             customActions={customActions}
             onCustomAction={onCustomAction}
             relationalOptions={relationalOptions}
@@ -258,7 +261,7 @@ export default function DynamicKanban({
   )
 }
 
-function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, relationalOptions, customActions = [], onCustomAction }: any) {
+function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, onAdd, relationalOptions, customActions = [], onCustomAction }: any) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id })
   const { t } = useI18n()
 
@@ -281,7 +284,7 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, rela
             {items.length}
           </span>
         </div>
-        <button className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 transition-all active:scale-90">
+        <button type="button" onClick={() => onAdd?.()} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 transition-all active:scale-90">
           <Plus className="w-3.5 h-3.5" />
         </button>
       </div>
