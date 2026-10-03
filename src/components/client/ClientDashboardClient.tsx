@@ -405,7 +405,7 @@ export default function ClientDashboardClient({
                       tab.id === 'metavoice' && "text-amber-500 dark:text-amber-400",
                     )} />
                     <span className="hidden sm:block">{getTabLabel(tab.id, tab.label)}</span>
-                    {tab.id === 'community' && activeTab !== 'community' && <UnreadBadge count={unreadChat} />}
+                    {tab.id === 'community' && <UnreadBadge count={unreadChat} />}
                   </button>
                 )
               })}
@@ -473,7 +473,7 @@ export default function ClientDashboardClient({
                     : "text-amber-500 dark:text-amber-400"
                 )} />
                 <span>{getTabLabel(tab.id, tab.label)}</span>
-                {tab.id === 'community' && activeTab !== 'community' && <UnreadBadge count={unreadChat} />}
+                {tab.id === 'community' && <UnreadBadge count={unreadChat} />}
               </button>
             ))}
             </div>
