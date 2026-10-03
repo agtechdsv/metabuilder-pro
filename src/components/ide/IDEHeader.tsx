@@ -54,14 +54,15 @@ interface TabDef {
   label: string
   icon: string
   status: 'available' | 'soon' | 'roadmap'
+  beta?: boolean
 }
 
 const TABS: TabDef[] = [
   { id: 'nodejs',  label: 'Node.js',  icon: '🟢', status: 'available' },
+  { id: 'java',    label: 'Java',     icon: '☕', status: 'available', beta: true },
+  { id: 'csharp',  label: 'C#',       icon: '💜', status: 'soon'      },
   { id: 'nestjs',  label: 'NestJS',   icon: '🦅', status: 'soon'      },
-  { id: 'java',    label: 'Java',     icon: '☕', status: 'available' },
   { id: 'python',  label: 'Python',   icon: '🐍', status: 'roadmap'   },
-  { id: 'csharp',  label: 'C#',       icon: '💜', status: 'roadmap'   },
   { id: 'php',     label: 'PHP',      icon: '🐘', status: 'roadmap'   },
   { id: 'go',      label: 'Go',       icon: '🐹', status: 'roadmap'   },
   { id: 'rails',   label: 'Rails',    icon: '💎', status: 'roadmap'   },
@@ -491,6 +492,17 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
 // ─── Placeholder for upcoming stacks ─────────────────────────────────────────
 function ComingSoonPanel({ icon, label, features }: { icon: string; label: string; features: string[] }) {
   const { t } = useI18n()
+  // "Me avise": por enquanto só guarda neste navegador (não há tabela de interesse no servidor)
+  const storageKey = `mb_stack_interest_${label}`
+  const [notify, setNotify] = useState(false)
+  useEffect(() => {
+    try { setNotify(localStorage.getItem(storageKey) === '1') } catch { /* sem storage */ }
+  }, [storageKey])
+  const toggleNotify = () => {
+    const next = !notify
+    setNotify(next)
+    try { next ? localStorage.setItem(storageKey, '1') : localStorage.removeItem(storageKey) } catch { /* sem storage */ }
+  }
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-4">
       <div className="text-5xl p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 shadow-inner">{icon}</div>
@@ -506,6 +518,15 @@ function ComingSoonPanel({ icon, label, features }: { icon: string; label: strin
       <div className="mt-2 px-3.5 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs font-semibold text-amber-400 flex items-center gap-2">
         <Clock className="w-3.5 h-3.5" /> {t('workspace_components.eject_modal.roadmap_badge', 'Roadmap — aguarde novidades nas próximas releases!')}
       </div>
+      <button
+        type="button"
+        onClick={toggleNotify}
+        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${notify ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500'}`}
+      >
+        {notify
+          ? t('workspace_components.eject_modal.notify_on', '✓ Interesse registrado (clique para desfazer)')
+          : t('workspace_components.eject_modal.notify_me', 'Quero ser avisado quando sair')}
+      </button>
     </div>
   )
 }
@@ -905,18 +926,20 @@ export function IDEHeader({
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => !isLocked && setActiveTab(tab.id)}
-                      disabled={isLocked}
+                      onClick={() => setActiveTab(tab.id)}
                       className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors shrink-0 ${
                         isActive
                           ? 'border-indigo-500 text-white'
                           : isLocked
-                            ? 'border-transparent text-neutral-600 cursor-not-allowed'
+                            ? 'border-transparent text-neutral-600 hover:text-neutral-400'
                             : 'border-transparent text-neutral-400 hover:text-neutral-200'
                       }`}
                     >
                       <span className="text-base">{tab.icon}</span>
                       <span>{tab.label}</span>
+                      {tab.beta && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-full leading-none">BETA</span>
+                      )}
                       {isSoon && (
                         <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full leading-none">
                           {t('workspace_components.eject_modal.soon_badge', 'EM BREVE')}
