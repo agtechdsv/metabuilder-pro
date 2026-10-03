@@ -525,7 +525,7 @@ export default function ViewContainer({
           t={t} getFontFamily={getFontFamily} getFontSize={getFontSize}
         />
       ) : viewMode === 'kanban' ? (
-        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicKanban
             data={data}
             fields={displayFields}
@@ -549,7 +549,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'scheduler' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicScheduler
             data={data}
             fields={displayFields}
@@ -567,7 +567,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'timeline' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicTimeline
             data={data}
             fields={displayFields}
@@ -590,7 +590,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'map' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicMap
             data={data}
             fields={displayFields}
@@ -604,7 +604,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'gantt' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicGantt
             data={data}
             fields={displayFields}
@@ -619,7 +619,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'blueprint' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicBlueprint
             data={data}
             fields={displayFields}
@@ -636,7 +636,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'mapa_mental' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicMindMap
             data={data}
             fields={displayFields}
@@ -660,7 +660,7 @@ export default function ViewContainer({
           />
         </div>
       ) : viewMode === 'galeria' ? (
-        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicGallery
             data={data}
             fields={displayFields}
@@ -676,7 +676,7 @@ export default function ViewContainer({
           />
         </div>
       ) : (
-        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <DynamicCardList
             fields={displayFields.filter(f => !f.hidden)}
             data={paginatedData}

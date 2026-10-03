@@ -11,7 +11,7 @@ export function ViewListRenderer({
   t, getFontFamily, getFontSize
 }: any) {
   return (
-        <div className={cn("bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300", isFetchingBackground && "opacity-50 pointer-events-none")}>
+        <div className={cn("bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
           <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               <thead className="sticky top-0 z-20">
