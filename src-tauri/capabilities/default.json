@@ -8,6 +8,7 @@
     "splashscreen",
     "tunnel-logs",
     "app-preview",
+    "ide-local",
     "*"
   ],
   "remote": {
@@ -117,6 +118,8 @@
     "core:webview:default",
     "core:webview:allow-create-webview-window",
     "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-unminimize",
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:event:default",

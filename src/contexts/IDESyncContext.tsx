@@ -29,11 +29,15 @@ export interface IDETarget {
 export type { FileNode, UndoAction }
 
 interface IDESyncContextData {
+  /** Abre a IDE Local em janela própria (desktop); se não der, abre dentro da página atual */
   openIDE: (target: IDETarget) => void
+  /** Abre a IDE dentro da página atual (usado pela própria janela da IDE: detached=true) */
+  openIDEHere: (target: IDETarget, opts?: { detached?: boolean }) => void
 }
 
 const IDESyncContext = createContext<IDESyncContextData>({
-  openIDE: () => {}
+  openIDE: () => {},
+  openIDEHere: () => {}
 })
 
 export function useIDE() {
@@ -45,7 +49,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast()
 
   const [isOpen, setIsOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false)
+  const [isMinimized, setIsMinimizedState] = useState(false)
+  // true quando esta página É a janela própria da IDE (minimizar/fechar agem na janela do sistema)
+  const [isDetached, setIsDetached] = useState(false)
   const [target, setTarget] = useState<IDETarget | null>(null)
   const [syncManager, setSyncManager] = useState<LocalSyncManager | null>(null)
 
@@ -323,25 +329,59 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     }
   }, [serverState.devProcess])
 
-  const openIDE = (newTarget: IDETarget) => {
+  const setIsMinimized = (value: boolean) => {
+    if (isDetached && value) {
+      // Janela própria: minimiza a janela do sistema (a barra flutuante só faz sentido dentro da página)
+      import('@tauri-apps/api/webviewWindow')
+        .then(({ getCurrentWebviewWindow }) => getCurrentWebviewWindow().minimize())
+        .catch(() => {})
+      return
+    }
+    setIsMinimizedState(value)
+  }
+
+  const openIDEHere = (newTarget: IDETarget, opts?: { detached?: boolean }) => {
     if (!isTauri()) {
       toast('A IDE Local está disponível apenas no Desktop App', 'error')
       return
     }
+    // Trocando de projeto com a IDE já aberta: começa limpo
+    if (target && target.slug !== newTarget.slug) {
+      fsState.resetFileSystem()
+      tabsState.resetTabs()
+      gitState.resetGit()
+    }
     consoleState.clearConsole()
+    setIsDetached(!!opts?.detached)
     setTarget(newTarget)
     setIsOpen(true)
-    setIsMinimized(false)
+    setIsMinimizedState(false)
+  }
+
+  const openIDE = async (newTarget: IDETarget) => {
+    if (!isTauri()) {
+      toast('A IDE Local está disponível apenas no Desktop App', 'error')
+      return
+    }
+    const { openIDELocalWindow } = await import('@/utils/ideLocalWindow')
+    const opened = await openIDELocalWindow(newTarget)
+    if (!opened) openIDEHere(newTarget)
   }
 
   const closeIDE = () => {
+    const detached = isDetached
     setIsOpen(false)
-    setIsMinimized(false)
+    setIsMinimizedState(false)
     setTarget(null)
     fsState.resetFileSystem()
     tabsState.resetTabs()
     gitState.resetGit()
     consoleState.clearConsole()
+    if (detached) {
+      import('@tauri-apps/api/webviewWindow')
+        .then(({ getCurrentWebviewWindow }) => getCurrentWebviewWindow().close())
+        .catch(() => {})
+    }
   }
 
   const handleResetProjectToCleanState = async () => {
@@ -386,7 +426,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <IDESyncContext.Provider value={{ openIDE }}>
+    <IDESyncContext.Provider value={{ openIDE, openIDEHere }}>
       {children}
       {mounted &&
         createPortal(
