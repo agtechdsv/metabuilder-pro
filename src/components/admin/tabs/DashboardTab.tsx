@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { CreditCard, TrendingUp, Building2, Users, Activity, Sparkles, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { useDashboardAdmin } from '../hooks/useDashboardAdmin'
+import { StackInterestCard } from '../StackInterestCard'
 
 interface DashboardTabProps {
   hook: ReturnType<typeof useDashboardAdmin>
@@ -241,6 +242,9 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
             MetaBuilderPRO Platform Engine v1.2
           </div>
         </div>
+
+        {/* Interesse por stack (Eject & Sync) */}
+        <StackInterestCard />
 
       </div>
 
