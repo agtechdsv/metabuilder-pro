@@ -79,7 +79,11 @@ const escapeHtml = (s: string) =>
 
 /** Mesmo visual do e-mail de convite do owner para os devs (cabeçalho verde/azul, cartão central, botão verde) */
 function buildEmailHtml(opts: { name: string; title: string; message: string; ctaLabel: string; ctaUrl: string }) {
-  const body = escapeHtml(opts.message).replace(/\r?\n/g, '<br>')
+  // \u0001...\u0002 delimitam o nome da stack (negrito); atravessam o escapeHtml sem alteração
+  const body = escapeHtml(opts.message)
+    .replace(/\r?\n/g, '<br>')
+    .replace(/\u0001/g, '<strong>')
+    .replace(/\u0002/g, '</strong>')
   return `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${escapeHtml(opts.title)}</title></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -113,7 +117,7 @@ export async function sendStackInterestMessage(input: {
   message: string
 }): Promise<{ success: boolean; results?: StackMessageResult[]; error?: string }> {
   try {
-    await requireSuperAdmin()
+    const adminUser = await requireSuperAdmin()
     if (!VALID_STACKS.has(input.stack)) throw new Error('Stack inválida')
     const rawSubject = input.subject.trim()
     const rawMessage = input.message.trim()
@@ -147,6 +151,7 @@ export async function sendStackInterestMessage(input: {
       const vars = { nome: (p.full_name || '').trim().split(/\s+/)[0] || 'tudo bem', stack: stackLabel }
       const subject = fillStackTemplate(rawSubject, vars)
       const message = fillStackTemplate(rawMessage, vars)
+      const emailMessage = fillStackTemplate(rawMessage, { ...vars, stack: `\u0001${stackLabel}\u0002` })
       const r: StackMessageResult = { userId: p.id, name, email: { ok: false }, chat: { ok: false } }
 
       // E-mail
@@ -158,14 +163,30 @@ export async function sendStackInterestMessage(input: {
             from: `"MetaBuilder PRO" <${SMTP_USER}>`,
             to: p.email,
             subject,
-            html: buildEmailHtml({ name, title: subject, message, ctaLabel: 'Abrir o MetaBuilder PRO', ctaUrl: appUrl }),
+            html: buildEmailHtml({ name, title: subject, message: emailMessage, ctaLabel: 'Abrir o MetaBuilder PRO', ctaUrl: appUrl }),
           })
           r.email.ok = true
         } catch (e: any) { r.email.error = e.message || 'Falha no envio' }
       }
 
-      // Chat do MetaBuilders (sala entre o administrador e o usuário)
+      // Chat do MetaBuilders (sala entre o administrador e o usuário).
+      // A tela só lista conversas de conexões ACEITAS, então garantimos a conexão com o administrador.
       try {
+        if (p.id === adminUser.id) throw new Error('Você é o próprio destinatário (sem chat consigo mesmo)')
+        const { data: existing } = await admin
+          .from('community_connections')
+          .select('id, status')
+          .or(`and(requester_id.eq.${adminUser.id},addressee_id.eq.${p.id}),and(requester_id.eq.${p.id},addressee_id.eq.${adminUser.id})`)
+          .limit(1)
+        if (!existing?.length) {
+          const { error: connErr } = await admin.from('community_connections')
+            .insert({ requester_id: adminUser.id, addressee_id: p.id, status: 'ACCEPTED' })
+          if (connErr) throw connErr
+        } else if (existing[0].status !== 'ACCEPTED') {
+          const { error: connErr } = await admin.from('community_connections')
+            .update({ status: 'ACCEPTED', updated_at: new Date().toISOString() }).eq('id', existing[0].id)
+          if (connErr) throw connErr
+        }
         const room = await getOrCreateChatRoom(p.id)
         if (!room.success || !room.roomId) throw new Error(room.error || 'Não foi possível abrir a conversa')
         const sent = await sendChatMessage(room.roomId, `${subject}\n\n${message}`)
