@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { SortableList, SortableItem } from './SortableList'
 import { getGroupBlocks, type GroupBlock } from '@/lib/slotGroups'
 import {
   Database, Layout, Share2, Plus, Trash2,
@@ -202,6 +203,30 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     )
   }
 
+  // Reordena abas de primeiro nível (a 1ª, a do mestre, é fixa)
+  const moveTopSlot = (from: number, to: number) => {
+    const list = [...(config.layout_config.custom_slots || [])]
+    if (from < 1 || to < 1 || from >= list.length || to >= list.length) return
+    const [item] = list.splice(from, 1)
+    list.splice(to, 0, item)
+    setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: list } })
+  }
+
+  const ARROW_BTN = 'p-1.5 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-900/70 text-neutral-600 dark:text-neutral-300 hover:text-rose-600 disabled:opacity-25 disabled:hover:text-neutral-600'
+  const topArrows = (idx: number) => {
+    const total = (config.layout_config.custom_slots || []).length
+    return (
+      <div className="mt-6 flex items-center gap-1">
+        <button type="button" disabled={idx <= 1} onClick={() => moveTopSlot(idx, idx - 1)} className={ARROW_BTN} title={t('common.move_up', 'Mover para cima')}>
+          <ChevronUp className="w-4 h-4" />
+        </button>
+        <button type="button" disabled={idx >= total - 1} onClick={() => moveTopSlot(idx, idx + 1)} className={ARROW_BTN} title={t('common.move_down', 'Mover para baixo')}>
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+    )
+  }
+
   const updateSlot = (idx: number, updater: (slot: any) => any) => {
     const newSlots = [...(config.layout_config.custom_slots || [])]
     newSlots[idx] = updater({ ...newSlots[idx] })
@@ -223,7 +248,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   }
 
   // Card de um slot: aba normal (idx) ou filho de um grupo (idx + childIdx)
-  const renderSlotCard = (slot: any, idx: number, childPath?: { b: number; c: number }) => {
+  const renderSlotCard = (slot: any, idx: number, childPath?: { b: number; c: number }, dragHandle?: ReactNode) => {
     const isChild = !!childPath
     const cardKey = isChild ? `${idx}.${childPath!.b}.${childPath!.c}` : `${idx}`
     const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childPath!.b, childPath!.c, updater) : updateSlot(idx, updater))
@@ -239,6 +264,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
                 {/* Slot header row */}
                 <div className="flex gap-4 items-start w-full">
+                  {dragHandle && <div className="mt-6">{dragHandle}</div>}
                   {/* Icon */}
                   <div className="space-y-2 flex-initial">
                     <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
@@ -305,6 +331,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                       <option value="personalizado">{t('wizard.personalizado.widget_master_detail', 'Mestre/Detalhe (Abas)')}</option>
                     </select>
                   </div>
+
+                  {!isChild && idx > 0 && topArrows(idx)}
 
                   {/* Expand / Delete */}
                   <button
@@ -591,7 +619,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   const GROUP_HEIGHTS: Array<[string, string]> = [['compact', 'Compacta (320px)'], ['medium', 'Média (480px)'], ['large', 'Grande (640px)'], ['auto', 'Automática'], ['custom', 'Personalizada (px)']]
 
   // Card de um grupo: contém BLOCOS; cada bloco é "Subabas" (um caso de uso por vez) ou "Quadros" (todos visíveis, em grade)
-  const renderGroupCard = (group: any, idx: number) => {
+  const renderGroupCard = (group: any, idx: number, dragHandle?: ReactNode) => {
     const cardKey = `${idx}`
     const blocks = getGroupBlocks(group)
     const modeLabel = (m: string) => (m === 'grid' ? t('wizard.personalizado.group_mode_grid', 'Quadros') : t('wizard.personalizado.group_mode_tabs', 'Subabas'))
@@ -600,6 +628,22 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const moveBlock = (from: number, to: number) => {
       if (to < 0 || to >= blocks.length) return
       updateBlocks(idx, bl => { const list = [...bl]; const [item] = list.splice(from, 1); list.splice(to, 0, item); return list })
+    }
+    // Move uma subaba/quadro para OUTRO bloco (no fim dele) ou para um bloco novo
+    const moveChildToBlock = (fromB: number, cIdx: number, target: string) => {
+      updateBlocks(idx, bl => {
+        const child = bl[fromB]?.children[cIdx]
+        if (!child) return bl
+        let next = bl.map((b, i) => i === fromB ? { ...b, children: b.children.filter((_: any, j: number) => j !== cIdx) } : b)
+        if (target === 'new-tabs' || target === 'new-grid') {
+          next = [...next, { id: `block-${Date.now()}`, mode: target === 'new-grid' ? 'grid' : 'tabs', children: [child] }]
+        } else {
+          const tIdx = next.findIndex(b => b.id === target)
+          if (tIdx < 0) return bl
+          next[tIdx] = { ...next[tIdx], children: [...next[tIdx].children, child] }
+        }
+        return next
+      })
     }
     const moveChild = (bIdx: number, from: number, to: number) => {
       updateBlocks(idx, bl => bl.map((b, i) => {
@@ -611,6 +655,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     return (
       <div key={group.id} className="p-4 bg-white dark:bg-neutral-950 border-2 border-rose-200 dark:border-rose-900/50 rounded-xl flex flex-col gap-4">
         <div className="flex gap-4 items-start w-full">
+          {dragHandle && <div className="mt-6">{dragHandle}</div>}
           <div className="space-y-2 flex-initial">
             <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.icon_label', 'Ícone')}</label>
             <div className="relative">
@@ -636,6 +681,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               placeholder={t('wizard.personalizado.group_title_placeholder', 'Ex: Logística')}
             />
           </div>
+
+          {idx > 0 && topArrows(idx)}
 
           {tabToDelete === cardKey ? (
             <div className="mt-6 flex items-center gap-1 animate-in fade-in zoom-in duration-200">
@@ -664,11 +711,14 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
           {t('wizard.personalizado.group_hint_blocks', 'Um grupo é feito de blocos, empilhados de cima para baixo. Cada bloco pode ser de Subabas (um caso de uso por vez) ou de Quadros (vários visíveis ao mesmo tempo).')}
         </p>
 
+        <SortableList ids={blocks.map(b => b.id)} onReorder={moveBlock}>
         {blocks.map((block, bIdx) => {
           const blockKey = `${idx}.b${bIdx}`
           return (
-            <div key={block.id} className="space-y-3 p-3 border border-rose-200 dark:border-rose-900/50 rounded-xl bg-rose-50/30 dark:bg-rose-900/5">
+            <SortableItem key={block.id} id={block.id}>{(blockHandle) => (
+            <div className="space-y-3 p-3 border border-rose-200 dark:border-rose-900/50 rounded-xl bg-rose-50/30 dark:bg-rose-900/5 my-2">
               <div className="flex flex-wrap items-center gap-3">
+                {blockHandle}
                 <span className="text-[10px] font-black uppercase tracking-widest text-rose-600">
                   {t('wizard.personalizado.block_n', 'Bloco')} {bIdx + 1}
                 </span>
@@ -692,10 +742,10 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                     : t('wizard.personalizado.group_hint_grid', 'Todos os casos de uso ficam visíveis ao mesmo tempo, em quadros. Defina a largura e a altura de cada um.')}
                 </p>
                 <div className="flex items-center gap-1">
-                  <button type="button" disabled={bIdx === 0} onClick={() => moveBlock(bIdx, bIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
+                  <button type="button" disabled={bIdx === 0} onClick={() => moveBlock(bIdx, bIdx - 1)} className={ARROW_BTN} title={t('common.move_up', 'Mover para cima')}>
                     <ChevronUp className="w-4 h-4" />
                   </button>
-                  <button type="button" disabled={bIdx === blocks.length - 1} onClick={() => moveBlock(bIdx, bIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
+                  <button type="button" disabled={bIdx === blocks.length - 1} onClick={() => moveBlock(bIdx, bIdx + 1)} className={ARROW_BTN} title={t('common.move_down', 'Mover para baixo')}>
                     <ChevronDown className="w-4 h-4" />
                   </button>
                   {tabToDelete === blockKey ? (
@@ -720,9 +770,12 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 {block.children.length === 0 && (
                   <p className="text-[11px] text-neutral-400 italic">{t('wizard.personalizado.group_empty', 'Nenhum caso de uso neste bloco ainda.')}</p>
                 )}
+                <SortableList ids={block.children.map((c: any) => c.id)} onReorder={(from, to) => moveChild(bIdx, from, to)}>
                 {block.children.map((child: any, cIdx: number) => (
-                  <div key={child.id} className="space-y-2">
+                  <SortableItem key={child.id} id={child.id}>{(childHandle) => (
+                  <div className="space-y-2 mb-3">
                     <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-rose-50/60 dark:bg-rose-900/10 rounded-lg">
+                      {childHandle}
                       <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
                         {block.mode === 'tabs' ? t('wizard.personalizado.subtab_n', 'Subaba') : t('wizard.personalizado.panel_n', 'Quadro')} {cIdx + 1}
                       </span>
@@ -758,18 +811,33 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                           )}
                         </>
                       )}
-                      <div className="ml-auto flex items-center gap-1">
-                        <button type="button" disabled={cIdx === 0} onClick={() => moveChild(bIdx, cIdx, cIdx - 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_up', 'Mover para cima')}>
+                      <select
+                        value=""
+                        onChange={e => { if (e.target.value) moveChildToBlock(bIdx, cIdx, e.target.value) }}
+                        className="ml-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-600 dark:text-neutral-300 outline-none focus:border-rose-500 normal-case"
+                        title={t('wizard.personalizado.move_to', 'Mover para outro bloco')}
+                      >
+                        <option value="">{t('wizard.personalizado.move_to', 'Mover para…')}</option>
+                        {blocks.map((b, i) => i === bIdx ? null : (
+                          <option key={b.id} value={b.id}>{t('wizard.personalizado.block_n', 'Bloco')} {i + 1} ({modeLabel(b.mode)})</option>
+                        ))}
+                        <option value="new-tabs">{t('wizard.personalizado.add_block_tabs', 'Novo bloco de Subabas')}</option>
+                        <option value="new-grid">{t('wizard.personalizado.add_block_grid', 'Novo bloco de Quadros')}</option>
+                      </select>
+                      <div className="flex items-center gap-1">
+                        <button type="button" disabled={cIdx === 0} onClick={() => moveChild(bIdx, cIdx, cIdx - 1)} className={ARROW_BTN} title={t('common.move_up', 'Mover para cima')}>
                           <ChevronUp className="w-4 h-4" />
                         </button>
-                        <button type="button" disabled={cIdx === block.children.length - 1} onClick={() => moveChild(bIdx, cIdx, cIdx + 1)} className="p-1.5 text-neutral-400 hover:text-rose-500 disabled:opacity-30 rounded-md" title={t('common.move_down', 'Mover para baixo')}>
+                        <button type="button" disabled={cIdx === block.children.length - 1} onClick={() => moveChild(bIdx, cIdx, cIdx + 1)} className={ARROW_BTN} title={t('common.move_down', 'Mover para baixo')}>
                           <ChevronDown className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
                     {renderSlotCard(child, idx, { b: bIdx, c: cIdx })}
                   </div>
+                  )}</SortableItem>
                 ))}
+                </SortableList>
 
                 <button
                   onClick={() => updateBlocks(idx, bl => bl.map((b, i) => i !== bIdx ? b : {
@@ -790,8 +858,10 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 </button>
               </div>
             </div>
+            )}</SortableItem>
           )
         })}
+        </SortableList>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button onClick={() => addBlock('tabs')} className="p-3 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-xl flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all font-bold text-[10px] uppercase tracking-widest">
@@ -905,9 +975,21 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
           </div>
 
           <div className="space-y-4">
-            {(config.layout_config.custom_slots || []).map((slot: any, idx: number) => (
-              slot.type === 'group' ? renderGroupCard(slot, idx) : renderSlotCard(slot, idx)
-            ))}
+            {(() => {
+              const allSlots: any[] = config.layout_config.custom_slots || []
+              const renderTop = (slot: any, idx: number, handle?: ReactNode) =>
+                slot.type === 'group' ? renderGroupCard(slot, idx, handle) : renderSlotCard(slot, idx, undefined, handle)
+              return (
+                <>
+                  {allSlots.length > 0 && renderTop(allSlots[0], 0)}
+                  <SortableList ids={allSlots.slice(1).map((sl: any) => sl.id)} onReorder={(from, to) => moveTopSlot(from + 1, to + 1)}>
+                    {allSlots.slice(1).map((slot: any, i: number) => (
+                      <SortableItem key={slot.id} id={slot.id}>{(handle) => <div className="mt-4">{renderTop(slot, i + 1, handle)}</div>}</SortableItem>
+                    ))}
+                  </SortableList>
+                </>
+              )
+            })()}
 
             {/* Add tab button */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
