@@ -5,6 +5,7 @@ import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { getOrCreateChatRoom, sendChatMessage } from '@/app/actions/community'
 import {
   STACK_INTEREST_STACKS,
+  fillStackTemplate,
   type StackInterestSummaryRow,
   type StackInterestUser,
   type StackMessageResult,
@@ -114,9 +115,10 @@ export async function sendStackInterestMessage(input: {
   try {
     await requireSuperAdmin()
     if (!VALID_STACKS.has(input.stack)) throw new Error('Stack inválida')
-    const subject = input.subject.trim()
-    const message = input.message.trim()
-    if (!subject || !message) throw new Error('Informe o assunto e a mensagem')
+    const rawSubject = input.subject.trim()
+    const rawMessage = input.message.trim()
+    if (!rawSubject || !rawMessage) throw new Error('Informe o assunto e a mensagem')
+    const stackLabel = STACK_INTEREST_STACKS.find(s => s.id === input.stack)?.label || input.stack
     if (!input.userIds.length) throw new Error('Nenhum destinatário')
     if (input.userIds.length > 500) throw new Error('Destinatários demais para um envio')
 
@@ -142,6 +144,9 @@ export async function sendStackInterestMessage(input: {
     const results: StackMessageResult[] = []
     for (const p of profiles || []) {
       const name = p.full_name || p.email || 'Usuário'
+      const vars = { nome: (p.full_name || '').trim().split(/\s+/)[0] || 'tudo bem', stack: stackLabel }
+      const subject = fillStackTemplate(rawSubject, vars)
+      const message = fillStackTemplate(rawMessage, vars)
       const r: StackMessageResult = { userId: p.id, name, email: { ok: false }, chat: { ok: false } }
 
       // E-mail

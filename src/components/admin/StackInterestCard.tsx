@@ -9,6 +9,7 @@ import {
 } from '@/app/actions/stack-interest'
 import {
   STACK_INTEREST_STACKS,
+  STACK_MESSAGE_TEMPLATES,
   type StackInterestSummaryRow,
   type StackInterestUser,
   type StackMessageResult,
@@ -58,9 +59,14 @@ export function StackInterestCard() {
     setRecipient(r)
     setResults(null)
     setSendError(null)
-    const label = stackInfo(stack || '')?.label || ''
-    setSubject(`Novidade: exportação ${label} no MetaBuilder PRO`)
-    setMessage('')
+    applyTemplate('progress')
+  }
+
+  const applyTemplate = (id: string) => {
+    const tpl = STACK_MESSAGE_TEMPLATES.find(t => t.id === id)
+    if (!tpl) return
+    setSubject(tpl.subject)
+    setMessage(tpl.message)
   }
 
   const send = async () => {
@@ -169,6 +175,17 @@ export function StackInterestCard() {
                   <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> E-mail</span>
                   <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> Chat do MetaBuilders</span>
                 </p>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Modelo de mensagem</label>
+                  <select
+                    defaultValue="progress"
+                    onChange={e => applyTemplate(e.target.value)}
+                    className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 dark:text-neutral-200"
+                  >
+                    {STACK_MESSAGE_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                  <p className="text-[10px] text-neutral-400">Você pode editar o texto. <code>{'{nome}'}</code> vira o primeiro nome de cada pessoa e <code>{'{stack}'}</code> vira a linguagem.</p>
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Assunto</label>
                   <input value={subject} onChange={e => setSubject(e.target.value)} className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 dark:text-neutral-200" />
