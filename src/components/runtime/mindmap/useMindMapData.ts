@@ -532,6 +532,11 @@ export function useMindMapData({
     if (currentPath.length > 0) setCurrentPath(currentPath.slice(0, -1))
   }
 
+  // Volta direto ao nível 1 (mesma tela inicial: com uma única raiz ela já abre selecionada)
+  const handleResetToRoot = () => {
+    setCurrentPath(treeData.length === 1 ? [0] : [])
+  }
+
   return {
     treeData,
     currentNode,
@@ -539,6 +544,7 @@ export function useMindMapData({
     loadingPath,
     handleNodeClick,
     handleGoBack,
+    handleResetToRoot,
     isRelational,
     relationalTree
   }

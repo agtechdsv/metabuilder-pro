@@ -55,6 +55,7 @@ export default function DynamicMindMap(props: DynamicMindMapProps) {
     loadingPath,
     handleNodeClick,
     handleGoBack,
+    handleResetToRoot,
     isRelational,
     relationalTree
   } = useMindMapData(props)
@@ -71,7 +72,7 @@ export default function DynamicMindMap(props: DynamicMindMapProps) {
 
   const handleReset = () => {
     setZoom(1)
-    handleGoBack() // Reset path could be implemented in hook, but we just trigger back logic or center
+    handleResetToRoot()
     controls.start({ x: 0, y: 0, scale: 1, transition: { type: "spring", stiffness: 150, damping: 22 } })
   }
 
