@@ -163,41 +163,8 @@ export function useWizardConfig({
     }
   }, [initialData, isInitialized]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-suggest button visibility based on selected logic type (create mode only)
-  useEffect(() => {
-    if (initialData) return
-    if (currentStep >= 4) return
-
-    const { logic_type, has_arguments } = config
-    const isPesquisa = logic_type === 'pesquisa'
-    const isCadastro = logic_type === 'cadastro'
-    const isBoth = logic_type === 'pesquisa_cadastro'
-    const isMasterDetail = logic_type === 'master_detail'
-
-    let searchVis = false, viewVis = false, addVis = false, editVis = false, delVis = false
-
-    if (isPesquisa) {
-      searchVis = has_arguments
-      viewVis = true
-    } else if (isBoth || isMasterDetail) {
-      searchVis = true; viewVis = true; addVis = true; editVis = true; delVis = true
-    } else if (isCadastro) {
-      addVis = true
-    }
-
-    setConfig(prev => ({
-      ...prev,
-      buttons_config: prev.buttons_config.map(btn => {
-        if (btn.id === 'search') return { ...btn, visible: searchVis }
-        if (btn.id === 'clear')  return { ...btn, visible: searchVis }
-        if (btn.id === 'view')   return { ...btn, visible: viewVis }
-        if (btn.id === 'add')    return { ...btn, visible: addVis }
-        if (btn.id === 'edit')   return { ...btn, visible: editVis }
-        if (btn.id === 'delete') return { ...btn, visible: delVis }
-        return btn
-      })
-    }))
-  }, [config.logic_type, config.has_arguments, currentStep, isInitialized, initialData]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Os botões da interface nascem todos marcados (buildDefaultButtonsConfig), independente da lógica do caso de uso.
+  // O dev desmarca o que não quiser; só as permissões do modelo (abaixo) desligam botões automaticamente.
 
   // Force disabled buttons according to model permissions
   useEffect(() => {
