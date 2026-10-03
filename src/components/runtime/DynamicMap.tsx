@@ -109,6 +109,24 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     return null
   }
 
+  // O mapa nasce dentro de um container que muda de tamanho depois (layout, rascunho, abas): sem recalcular, só parte dos tiles é desenhada
+  const MapResizer = () => {
+    const map = RL.useMap()
+    useEffect(() => {
+      const refresh = () => map.invalidateSize()
+      const timers = [setTimeout(refresh, 0), setTimeout(refresh, 300), setTimeout(refresh, 1000)]
+      const observer = new ResizeObserver(refresh)
+      observer.observe(map.getContainer())
+      window.addEventListener('resize', refresh)
+      return () => {
+        timers.forEach(clearTimeout)
+        observer.disconnect()
+        window.removeEventListener('resize', refresh)
+      }
+    }, [map])
+    return null
+  }
+
   // Component to dynamically set target="_blank" on leaflet attribution links
   const AttributionTargetBlank = () => {
     const map = RL.useMap()
@@ -143,8 +161,9 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
         <RL.LayersControl key={isDarkMode ? 'dark-ctrl' : 'light-ctrl'} position="topright">
           <RL.LayersControl.BaseLayer checked={!isDarkMode} name="Mapa Padrão">
             <RL.TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              maxZoom={19}
             />
           </RL.LayersControl.BaseLayer>
 
@@ -157,8 +176,10 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
 
           <RL.LayersControl.BaseLayer checked={isDarkMode} name="Modo Escuro">
             <RL.TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              className="metabuilder-dark-tiles"
+              maxZoom={19}
             />
           </RL.LayersControl.BaseLayer>
 
@@ -189,6 +210,7 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
         </RL.LayersControl>
         
         {bounds && validPoints.length > 0 && <BoundsFitter />}
+        <MapResizer />
         <AttributionTargetBlank />
 
         {validPoints.map((point, idx) => (

@@ -359,13 +359,13 @@ export function MapBoard({
           >
             <ChangeView center={currentCenter} zoom={currentZoom} />
 
+            {/* Tiles escuros do CARTO passaram a exigir chave de API: usa o OSM padrão e inverte as cores no modo escuro */}
+            <style>{'.leaflet-tile-pane .mb-dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }'}</style>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url={
-                isDarkMode
-                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              }
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              className={isDarkMode ? 'mb-dark-tiles' : undefined}
+              maxZoom={19}
             />
 
             {validMarkers.map(m => (
