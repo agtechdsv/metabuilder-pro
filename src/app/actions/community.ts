@@ -317,6 +317,15 @@ export async function getConnections() {
 
     const adminSupabase = createAdminClient()
 
+    // Mensagens não lidas recebidas, por remetente (a RLS já limita às salas do usuário)
+    const unreadBySender = new Map<string, number>()
+    const { data: unreadRows } = await supabase
+      .from('community_chat_messages')
+      .select('sender_id')
+      .eq('is_read', false)
+      .neq('sender_id', user.id)
+    for (const m of unreadRows || []) unreadBySender.set(m.sender_id, (unreadBySender.get(m.sender_id) || 0) + 1)
+
     const connections = await Promise.all((conns || []).map(async (conn: any) => {
       const otherUserId = conn.requester_id === user.id ? conn.addressee_id : conn.requester_id
 
@@ -332,6 +341,7 @@ export async function getConnections() {
         id: conn.id,
         status: conn.status,
         isRequester: conn.requester_id === user.id,
+        unread: unreadBySender.get(otherUserId) || 0,
         user: {
           id: otherUserId,
           name: otherProfile?.full_name || 'Usuário',

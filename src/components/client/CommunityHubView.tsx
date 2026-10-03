@@ -635,11 +635,21 @@ export default function CommunityHubView({
                     
                     <div className="flex items-center gap-1 shrink-0">
                       <button 
-                        onClick={() => handleOpenChat(conn)}
-                        className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
-                        title={t('client_views.community.send_dm_tooltip', 'Enviar Mensagem Privada')}
+                        onClick={() => {
+                          handleOpenChat(conn)
+                          setConnections((prev: any[]) => prev.map(c => c.id === conn.id ? { ...c, unread: 0 } : c))
+                        }}
+                        className="relative p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
+                        title={conn.unread > 0
+                          ? `${conn.unread} ${conn.unread === 1 ? 'mensagem nova' : 'mensagens novas'}`
+                          : t('client_views.community.send_dm_tooltip', 'Enviar Mensagem Privada')}
                       >
                         <MessageSquare className="w-4 h-4" />
+                        {conn.unread > 0 && activeConnection?.id !== conn.id && (
+                          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
+                            {conn.unread > 9 ? '9+' : conn.unread}
+                          </span>
+                        )}
                       </button>
                       
                       <button 

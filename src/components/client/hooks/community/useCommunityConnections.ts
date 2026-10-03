@@ -39,6 +39,10 @@ export function useCommunityConnections(supabase: any, isSimulator: boolean) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'community_connections' }, () => {
         fetchConnectionsData(true)
       })
+      // mensagem nova (ou lida) atualiza o contador de não lidas
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_chat_messages' }, () => {
+        fetchConnectionsData(true)
+      })
       .subscribe()
 
     return () => {
