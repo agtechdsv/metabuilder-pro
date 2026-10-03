@@ -58,7 +58,7 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
     >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300"
+        className="absolute inset-0 bg-black/80 transition-opacity duration-300"
         onClick={onClose}
       />
 

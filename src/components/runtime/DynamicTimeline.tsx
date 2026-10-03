@@ -132,7 +132,7 @@ export default function DynamicTimeline({
 
   const renderCardContent = (item: any, title: any, desc: any, iconStatus: any, rawDate: any, alignRight: boolean = false) => (
     <div 
-      className={cn("bg-white dark:bg-neutral-900/80 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 shadow-xl shadow-neutral-200/20 dark:shadow-none hover:border-indigo-500/30 hover:shadow-indigo-500/10 transition-all w-full", alignRight ? "text-right" : "text-left")}
+      className={cn("bg-white dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 shadow-xl shadow-neutral-200/20 dark:shadow-none hover:border-indigo-500/30 hover:shadow-indigo-500/10 transition-all w-full", alignRight ? "text-right" : "text-left")}
       style={{ padding: `${scale * 18}px`, borderRadius: `${scale * 16}px` }}
     >
       <div className={cn("flex flex-wrap items-center gap-2 mb-2", alignRight ? "justify-end" : "justify-start")}>
