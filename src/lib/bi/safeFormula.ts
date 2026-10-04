@@ -7,12 +7,14 @@
  * que passa a valer 0 em todas as linhas.
  */
 
-type Node =
+export type FormulaNode =
   | { t: 'num'; v: number }
-  | { t: 'field'; name: string }
-  | { t: 'neg'; a: Node }
-  | { t: 'bin'; op: string; a: Node; b: Node }
-  | { t: 'fn'; name: string; args: Node[] }
+  | { t: 'field'; name: string; table?: string }
+  | { t: 'neg'; a: FormulaNode }
+  | { t: 'bin'; op: string; a: FormulaNode; b: FormulaNode }
+  | { t: 'fn'; name: string; args: FormulaNode[] }
+
+type Node = FormulaNode
 
 const FUNCTIONS = new Set(['ROUND', 'ABS', 'MIN', 'MAX'])
 
@@ -89,7 +91,9 @@ function parse(tokens: string[]): Node | null {
         return { t: 'fn', name, args }
       }
       // campo: o prefixo "tabela." é descartado (as linhas vêm com o nome simples da coluna)
-      return { t: 'field', name: tok.includes('.') ? tok.split('.').pop()! : tok }
+      return tok.includes('.')
+        ? { t: 'field', table: tok.split('.')[0], name: tok.split('.').pop()! }
+        : { t: 'field', name: tok }
     }
     return null
   }
@@ -148,4 +152,10 @@ export function compileFormula(formula: string): (row: any) => number {
     const v = evaluate(ast, row)
     return Number.isFinite(v) ? v : 0
   }
+}
+
+/** Árvore da fórmula (para gerar SQL). null se a fórmula for inválida. */
+export function parseFormulaAst(formula: string): FormulaNode | null {
+  const tokens = tokenize(formula || '')
+  return tokens ? parse(tokens) : null
 }

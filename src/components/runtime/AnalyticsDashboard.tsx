@@ -82,8 +82,10 @@ interface AnalyticsDashboardProps {
 
 import { compileFormula } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
+import { buildAggregateQuery, filterConditionSql } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
+const BI_MAX_GROUPS = 2000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
 
 export default function AnalyticsDashboard({ 
@@ -157,6 +159,10 @@ export default function AnalyticsDashboard({
 
   // Mapeia IDs de widgets para evitar loops de refresh infinitos
   const lastQueryIds = useRef<Record<string, string>>({})
+  // 'agg' = SQL já agregado no banco; 'raw' = linhas cruas agregadas aqui (caminho antigo, usado como reserva)
+  const queryModes = useRef<Record<string, 'agg' | 'raw'>>({})
+  // sempre aponta para a versão mais recente de fetchWidgetData (o listener do canal guarda uma versão antiga)
+  const fetchWidgetDataRef = useRef<((widget: Widget, opts?: { legacy?: boolean }) => Promise<void>) | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -198,6 +204,21 @@ export default function AnalyticsDashboard({
 
       const widget = widgetsRef.current.find(w => w.id === widgetId)
       if (!widget) return
+
+      const queryMode = queryModes.current[qId]
+      delete queryModes.current[qId]
+      if (queryMode === 'agg') {
+        if (payload.payload.success) {
+          processAggRows(widget, payload.payload.data)
+        } else {
+          // o SQL agregado falhou (dialeto, tipo de coluna...): refaz pelo caminho antigo, com linhas cruas
+          console.warn('[BI] consulta agregada falhou, usando o caminho alternativo:', payload.payload.error)
+          fetchWidgetDataRef.current?.(widget, { legacy: true })
+          return
+        }
+        setLoading(prev => ({ ...prev, [widget.id]: false }))
+        return
+      }
 
       if (payload.payload.success) {
         const records = payload.payload.data
@@ -244,7 +265,7 @@ export default function AnalyticsDashboard({
     return () => clearTimeout(handler)
   }, [isTunnelReady, localWidgets, filters])
 
-  const fetchWidgetData = async (widget: Widget) => {
+  const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
       return
     }
@@ -423,16 +444,92 @@ export default function AnalyticsDashboard({
       }).join(', ')
     }
 
-    // Build Filters
-    let whereClause = '1=1'
+    const dbType = (project?.db_type || 'postgres').toLowerCase()
+    const dialect: 'postgres' | 'oracle' | null = dbType === 'oracle' ? 'oracle' : (dbType === 'postgres' || dbType === 'postgresql') ? 'postgres' : null
+
+    // Filtros da tela: só entram os que apontam para uma coluna do próprio widget (tabela principal ou com JOIN).
+    // Antes todo filtro virava "tabela.coluna ILIKE" e quebrava o SQL quando a coluna não existia ali.
+    const columnExists = (table: string, column: string) => {
+      const m = (allModels as any[]).find(x => x.db_table_name === table)
+      const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
+      return (fs as any[]).some(f => String(f.db_column_name).toLowerCase() === column.toLowerCase())
+    }
+    const validFilters: { col: { table: string; column: string }; value: string }[] = []
     Object.entries(filters).forEach(([key, val]) => {
       if (!val) return
       // o nome da coluna entra no SQL entre aspas: só identificadores simples (tabela.coluna) são aceitos
       if (!/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(key)) return
       const filterTable = key.includes('.') ? key.split('.')[0] : tableName
       const filterCol = key.includes('.') ? key.split('.')[1] : key
-      whereClause += ` AND "${filterTable}"."${filterCol}" ILIKE '%${String(val).replace(/'/g, "''")}%'`
+      if (!joinedTables.has(filterTable) || !columnExists(filterTable, filterCol)) return
+      validFilters.push({ col: { table: filterTable, column: filterCol }, value: String(val) })
     })
+
+    const sendQuery = (sql: string, mode: 'agg' | 'raw', limit: number) => {
+      queryModes.current[queryId] = mode
+      // Pequeno delay para garantir que o canal esteja pronto
+      setTimeout(() => {
+        if (!tunnelChannel || !isTunnelReady) return
+
+        tunnelChannel.send({
+          type: 'broadcast',
+          event: 'sql_query',
+          payload: {
+            queryId,
+            action: 'select',
+            query: sql, // ← 'query' é o campo lido pelo CLI
+            sql,        // ← mantido por compatibilidade
+            schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
+            table: tableName,
+            limit,      // ← o CLI só reconhece o limite se vier aqui ou como LIMIT/FETCH NEXT no SQL
+            // 'filters' não é enviado: o WHERE já está no SQL e o CLI o acrescentaria de novo depois do LIMIT
+            token: project?.secret_token || 'test-token',
+            projectId: project.id
+          }
+        })
+      }, 500)
+    }
+
+    // 1) Caminho novo: o banco agrega (GROUP BY / SUM / COUNT) e devolve só as linhas do gráfico
+    if (dialect && !opts.legacy) {
+      const resolveRef = (s: string) => s.includes('.') ? { table: s.split('.')[0], column: s.split('.')[1] } : { table: tableName, column: s }
+      const rawField = widget.field && widget.field !== '*' ? String(widget.field) : ''
+      const aggFormula = rawField && ((widget as any).use_formula || /[*+/()]/.test(rawField)) ? rawField : null
+      let fieldRef: { table: string; column: string } | null = null
+      if (rawField && !aggFormula) {
+        const fieldMeta = model?.fields?.find((f: any) => String(f.id) === rawField)
+        fieldRef = resolveRef(fieldMeta?.db_column_name || rawField)
+      }
+      const groupRef = typeof groupCol === 'string' && groupCol ? resolveRef(groupCol) : null
+      const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
+      if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
+
+      if ([...usedTables].every(t => joinedTables.has(t))) {
+        const built = buildAggregateQuery({
+          dialect,
+          mainTable: tableName,
+          mainPk: getPkColumn(allModels as any[], tableName) || 'id',
+          joinSql,
+          calc: widget.calc,
+          formula: aggFormula,
+          field: fieldRef,
+          groupBy: groupRef,
+          granularity: widget.date_granularity,
+          sortBy: widget.sort_by,
+          limitTopN: widget.limit_top_n,
+          filters: validFilters,
+          maxGroups: BI_MAX_GROUPS,
+        })
+        if (built.ok) {
+          sendQuery(built.sql, 'agg', BI_MAX_GROUPS + 100)
+          return
+        }
+        console.warn('[BI] consulta agregada não aplicável, usando linhas cruas:', built.reason)
+      }
+    }
+
+    // 2) Caminho de reserva: busca linhas cruas (limitadas) e agrega no navegador
+    const whereClause = ['1=1', ...validFilters.map(f => filterConditionSql(dialect ?? 'other', f))].join(' AND ')
     let sqlSelect = '*'
     if (selectStr !== '*') {
       sqlSelect = selectStr.split(',').map(s => {
@@ -446,30 +543,40 @@ export default function AnalyticsDashboard({
       }).join(', ')
     }
 
-    const dbType = (project?.db_type || 'postgres').toLowerCase()
-    const limitSql = dbType === 'oracle' ? `FETCH FIRST ${BI_ROW_LIMIT} ROWS ONLY` : `LIMIT ${BI_ROW_LIMIT}`
-    const sql = `SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} ${limitSql}`
+    const limitSql = dbType === 'oracle' ? `OFFSET 0 ROWS FETCH NEXT ${BI_ROW_LIMIT} ROWS ONLY` : `LIMIT ${BI_ROW_LIMIT}`
+    sendQuery(`SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} ${limitSql}`, 'raw', BI_ROW_LIMIT)
+  }
 
-    // Pequeno delay para garantir que o canal esteja pronto
-    setTimeout(() => {
-      if (!tunnelChannel || !isTunnelReady) return
-      
-      tunnelChannel.send({
-        type: 'broadcast',
-        event: 'sql_query',
-        payload: {
-          queryId,
-          action: 'select',
-          query: sql, // ← 'query' é o campo lido pelo CLI
-          sql,        // ← mantido por compatibilidade
-          schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
-          table: tableName,
-          filters, // Envia filtros para que o CLI aplique a cláusula WHERE
-          token: project?.secret_token || 'test-token',
-          projectId: project.id
-        }
-      })
-    }, 500)
+  fetchWidgetDataRef.current = fetchWidgetData
+
+  // Resultado do SQL agregado: já vem pronto como { bi_name, bi_value }
+  const processAggRows = (widget: Widget, rows: any[]) => {
+    const read = (r: any, k: string) => r?.[k] ?? r?.[k.toUpperCase()] ?? r?.[k.toLowerCase()]
+    const toNumber = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+
+    if (!widget.group_by) {
+      const value = toNumber(read(rows?.[0], 'bi_value'))
+      const single = widget.type === 'kpi' || widget.type === 'gauge' ? value : [{ name: 'Total', value }]
+      setData(prev => ({ ...prev, [widget.id]: single }))
+      setTruncated(prev => ({ ...prev, [widget.id]: false }))
+      return
+    }
+
+    let finalData = (rows || []).map((r: any) => {
+      const name = read(r, 'bi_name')
+      return { name: name === null || name === undefined || name === '' ? 'N/A' : String(name), value: toNumber(read(r, 'bi_value')) }
+    })
+
+    const sortMode = widget.sort_by || 'value_desc'
+    if (sortMode === 'value_asc') finalData.sort((a, b) => a.value - b.value)
+    else if (sortMode === 'label_asc') finalData.sort((a, b) => a.name.localeCompare(b.name))
+    else if (sortMode === 'label_desc') finalData.sort((a, b) => b.name.localeCompare(a.name))
+    else finalData.sort((a, b) => b.value - a.value)
+    if (widget.limit_top_n && widget.limit_top_n > 0) finalData = finalData.slice(0, widget.limit_top_n)
+
+    setData(prev => ({ ...prev, [widget.id]: finalData }))
+    // mais grupos do que o teto: o gráfico mostra só os maiores
+    setTruncated(prev => ({ ...prev, [widget.id]: !widget.limit_top_n && (rows || []).length >= BI_MAX_GROUPS }))
   }
 
   const processWidgetData = (widget: Widget, records: any[], isFormula: boolean, formula: string, tableName: string) => {
