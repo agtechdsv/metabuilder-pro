@@ -72,6 +72,9 @@ interface AnalyticsDashboardProps {
   projectRelations?: any[]
 }
 
+import { compileFormula } from '@/lib/bi/safeFormula'
+
+const BI_ROW_LIMIT = 1000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
 
 export default function AnalyticsDashboard({ 
@@ -90,6 +93,8 @@ export default function AnalyticsDashboard({
   const [data, setData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // widgets cuja consulta atingiu o limite de linhas: os totais podem estar incompletos
+  const [truncated, setTruncated] = useState<Record<string, boolean>>({})
   const [expandedGaugeId, setExpandedGaugeId] = useState<string | null>(null)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -98,7 +103,6 @@ export default function AnalyticsDashboard({
   // Sincroniza widgets locais quando a config mudar (ex: após load inicial)
   useEffect(() => {
     if (config.widgets) {
-      console.log(`[BI DEBUG] Atualizando localWidgets com ${config.widgets.length} itens da config.`)
       setLocalWidgets(config.widgets)
     }
   }, [config.widgets])
@@ -154,7 +158,6 @@ export default function AnalyticsDashboard({
   useEffect(() => {
     if (!tunnelChannel || !isTunnelReady) return
     
-    console.log(`[BI DEBUG] Configurando listener no canal mestre compartilhado.`)
 
     const handleSqlResult = (payload: any) => {
       const qId = payload.payload?.queryId
@@ -168,6 +171,7 @@ export default function AnalyticsDashboard({
 
       if (payload.payload.success) {
         const records = payload.payload.data
+        setTruncated(prev => ({ ...prev, [widget.id]: Array.isArray(records) && records.length >= BI_ROW_LIMIT }))
         const model = (project as any).models?.find((m: any) => String(m.id) === String(widget.model_id))
         const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && widget.model_id !== 'undefined' && !widget.model_id.includes('-') ? widget.model_id : null)
         const isFormula = (widget as any).use_formula || (widget.field?.includes('*') || widget.field?.includes('+') || widget.field?.includes('/') || widget.field?.includes('-'))
@@ -202,7 +206,6 @@ export default function AnalyticsDashboard({
     if (!isTunnelReady || localWidgets.length === 0) return
 
     const handler = setTimeout(() => {
-      console.log(`[BI DEBUG] ✅ Filtros/widgets mudaram, disparando fetches debotados para ${localWidgets.length} widgets.`)
       localWidgets.forEach(widget => {
         fetchWidgetData(widget)
       })
@@ -213,11 +216,9 @@ export default function AnalyticsDashboard({
 
   const fetchWidgetData = async (widget: Widget) => {
     if (!tunnelChannel || !isTunnelReady) {
-      console.warn(`[BI DEBUG] Busca de widget ignorada: canal do túnel não está pronto ainda.`)
       return
     }
 
-    console.log(`[BI DEBUG] Iniciando busca para widget: "${widget.title}" (ID: ${widget.id})`)
     const queryId = crypto.randomUUID()
     const topicName = `tunnel:${project.id}`
     
@@ -396,6 +397,8 @@ export default function AnalyticsDashboard({
     let whereClause = '1=1'
     Object.entries(filters).forEach(([key, val]) => {
       if (!val) return
+      // o nome da coluna entra no SQL entre aspas: só identificadores simples (tabela.coluna) são aceitos
+      if (!/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(key)) return
       const filterTable = key.includes('.') ? key.split('.')[0] : tableName
       const filterCol = key.includes('.') ? key.split('.')[1] : key
       whereClause += ` AND "${filterTable}"."${filterCol}" ILIKE '%${String(val).replace(/'/g, "''")}%'`
@@ -414,9 +417,8 @@ export default function AnalyticsDashboard({
     }
 
     const dbType = (project?.db_type || 'postgres').toLowerCase()
-    const limitSql = dbType === 'oracle' ? 'FETCH FIRST 1000 ROWS ONLY' : 'LIMIT 1000'
+    const limitSql = dbType === 'oracle' ? `FETCH FIRST ${BI_ROW_LIMIT} ROWS ONLY` : `LIMIT ${BI_ROW_LIMIT}`
     const sql = `SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} ${limitSql}`
-    console.log(`[BI DEBUG] Solicitando dados para widget via Túnel:`, sql)
 
     // Pequeno delay para garantir que o canal esteja pronto
     setTimeout(() => {
@@ -451,6 +453,8 @@ export default function AnalyticsDashboard({
       if (fieldName.includes('.')) fieldName = fieldName.split('.')[1]
     }
 
+    const calcFormula = isFormula ? compileFormula(formula) : null
+
     if (!widget.group_by && (widget.type === 'kpi' || widget.type === 'gauge')) {
       // Bug fix: COUNT sem group_by deve simplesmente contar os registros retornados
       // Não tentar converter campos de texto para Number() pois resulta em NaN -> 0
@@ -459,16 +463,9 @@ export default function AnalyticsDashboard({
         return
       }
 
-      const values = records.map((r, idx) => {
-        if (isFormula) {
-          try {
-            const evalFormula = formula.replace(/[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)/g, "$1")
-            const calcFn = new Function('r', `with(r) { try { return ${evalFormula}; } catch(e) { return 0; } }`)
-            const result = Number(calcFn(r))
-            return isNaN(result) ? 0 : result
-          } catch (e) { return 0 }
-        }
-        
+      const values = records.map((r) => {
+        if (calcFormula) return calcFormula(r)
+
         let rawVal = r[fieldName];
         if (rawVal === undefined) {
           const keys = Object.keys(r);
@@ -480,6 +477,8 @@ export default function AnalyticsDashboard({
             if (deepMatch) rawVal = r[deepMatch];
           }
         }
+        // nulo/vazio fica de fora (NaN é filtrado abaixo): Number(null) = 0 puxaria a média para baixo
+        if (rawVal === null || rawVal === undefined || rawVal === '') return NaN
         return Number(rawVal)
       }).filter(v => !isNaN(v))
 
@@ -566,12 +565,9 @@ export default function AnalyticsDashboard({
       if (!acc[key]) acc[key] = { name: key, value: 0, count: 0 }
       
       let val = 0
-      if (isFormula) {
-        try {
-          const evalFormula = formula.replace(/[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)/g, "$1")
-          const calcFn = new Function('r', `with(r) { try { return ${evalFormula}; } catch(e) { return 0; } }`)
-          val = Number(calcFn(curr))
-        } catch (e) { val = 0 }
+      let hasValue = true
+      if (calcFormula) {
+        val = calcFormula(curr)
       } else {
         let rawVal = curr[fieldName]
         if (rawVal === undefined) {
@@ -584,19 +580,27 @@ export default function AnalyticsDashboard({
             if (deepMatch) rawVal = curr[deepMatch]
           }
         }
+        hasValue = fieldName === '*' || !(rawVal === null || rawVal === undefined || rawVal === '')
         val = fieldName === '*' ? 1 : Number(rawVal)
       }
 
-      if (widget.calc === 'SUM') acc[key].value += (Number(val) || 0)
+      const num = Number(val)
+      if (widget.calc === 'SUM') acc[key].value += (num || 0)
       else if (widget.calc === 'COUNT') acc[key].value += 1
-      else if (widget.calc === 'AVG') { acc[key].value += (Number(val) || 0); acc[key].count += 1 }
+      else if (hasValue && Number.isFinite(num)) {
+        // AVG/MIN/MAX ignoram nulos; count guarda quantos valores válidos entraram
+        if (widget.calc === 'AVG') acc[key].value += num
+        else if (widget.calc === 'MIN') acc[key].value = acc[key].count === 0 ? num : Math.min(acc[key].value, num)
+        else if (widget.calc === 'MAX') acc[key].value = acc[key].count === 0 ? num : Math.max(acc[key].value, num)
+        acc[key].count += 1
+      }
       
       return acc
     }, {})
 
     let finalData = Object.values(grouped).map((item: any) => ({
       name: String(item.name),
-      value: widget.calc === 'AVG' ? item.value / (item.count || 1) : item.value
+      value: widget.calc === 'AVG' ? (item.count ? item.value / item.count : 0) : item.value
     }))
 
     const sortMode = widget.sort_by || 'value_desc'
@@ -618,7 +622,8 @@ export default function AnalyticsDashboard({
     const scaleStart = widget.gauge_start ?? 0
     const scaleEnd = widget.gauge_end ?? 100
     const rawVal = typeof val === 'number' ? val : 0
-    const percentage = Math.min(Math.max(((rawVal - scaleStart) / (scaleEnd - scaleStart)) * 100, 0), 100)
+    const scaleSpan = scaleEnd - scaleStart
+    const percentage = scaleSpan === 0 ? 0 : Math.min(Math.max(((rawVal - scaleStart) / scaleSpan) * 100, 0), 100)
     const radius = size === 'normal' || isExpanded ? 80 : 40
     const strokeWidth = size === 'normal' || isExpanded ? 16 : 10
     const circumference = Math.PI * radius
@@ -799,6 +804,11 @@ export default function AnalyticsDashboard({
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">{widget.title}</h3>
               <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc} ({widget.field_id || 'Toda Tabela'})</p>
+              {truncated[widget.id] && (
+                <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={`A consulta atingiu o limite de ${BI_ROW_LIMIT} linhas: os totais podem estar incompletos.`}>
+                  ⚠ Limitado a {BI_ROW_LIMIT} linhas
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">

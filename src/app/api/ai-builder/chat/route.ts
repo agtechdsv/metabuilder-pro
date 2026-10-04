@@ -23,6 +23,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Este recurso é exclusivo do plano PRO.' }, { status: 403 })
   }
 
+  // O workspace_id vem do corpo da requisição: confirma que este usuário tem acesso a ele (via RLS)
+  // antes de ler a chave de IA com service role, senão dava para usar a chave de outro workspace
+  const { data: workspaceAccess } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('id', workspace_id)
+    .maybeSingle()
+
+  if (!workspaceAccess) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   // Busca a config de IA (usando service role para ler a chave)
   const { createClient: createAdmin } = await import('@supabase/supabase-js')
   const admin = createAdmin(
@@ -148,10 +160,11 @@ NUNCA retorne texto fora do JSON quando for gerar. NUNCA use markdown fences (\`
       })
     } else if (provider === 'gemini') {
       const geminiModel = model || 'gemini-2.0-flash'
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${api_key_enc}`
+      // chave no cabeçalho (e não na URL) para não aparecer em logs de acesso
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse`
       aiResponse = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': api_key_enc },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: messages.map((m) => ({
