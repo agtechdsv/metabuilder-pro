@@ -1046,6 +1046,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  AreaChart,
+  Area,
+  LabelList,
 } from 'recharts'
 import {
   BarChart3,
@@ -1081,6 +1084,12 @@ interface AnalyticsWidget {
   gaugeEnd?: number
   useFormula?: boolean
   color?: string
+  format?: string
+  decimals?: number
+  currency?: string
+  showLabels?: boolean
+  highlightMax?: boolean
+  orientation?: string
 }
 
 interface AnalyticsClientProps {
@@ -1133,10 +1142,29 @@ export function AnalyticsClient({
     return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(num)
   }
 
-  const formatCurrency = (val: any) => {
+  // Formatação por widget (mesma lógica do app web): number | currency | currency_compact | compact | percent
+  const BI_COLORS: Record<string, string> = { indigo: '#6366f1', emerald: '#10b981', sky: '#0ea5e9', violet: '#8b5cf6', amber: '#f59e0b', rose: '#f43f5e', slate: '#64748b' }
+  const biColor = (c?: string) => BI_COLORS[c || ''] || '#6366f1'
+  const fmt = (val: any, widget: AnalyticsWidget, axis = false): string => {
+    if (val === null || val === undefined || val === '') return ''
     const num = Number(val)
-    if (isNaN(num)) return String(val ?? '-')
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 }).format(num)
+    if (!Number.isFinite(num)) return String(val)
+    // compatibilidade: sem formato definido, campos "preco" continuam saindo como moeda
+    let format = widget.format || (widget.field && widget.field.toLowerCase().includes('preco') ? 'currency' : 'number')
+    if (axis) {
+      if (format === 'currency') format = 'currency_compact'
+      else if (format === 'number') format = 'compact'
+    }
+    const dec = typeof widget.decimals === 'number' ? Math.max(0, Math.min(6, Math.trunc(widget.decimals))) : undefined
+    try {
+      if (format === 'currency') return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: dec ?? 2, maximumFractionDigits: dec ?? 2 }).format(num)
+      if (format === 'currency_compact') return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', compactDisplay: 'short', maximumFractionDigits: axis ? Math.min(dec ?? 1, 1) : (dec ?? 1) }).format(num)
+      if (format === 'compact') return new Intl.NumberFormat('pt-BR', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: axis ? Math.min(dec ?? 1, 1) : (dec ?? 1) }).format(num)
+      if (format === 'percent') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: dec ?? 1 }).format(num) + '%'
+      return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: dec ?? 2, minimumFractionDigits: dec ?? 0 }).format(num)
+    } catch {
+      return String(num)
+    }
   }
 
   // ── Renderizador de Gauge Radial ──
@@ -1213,7 +1241,7 @@ export function AnalyticsClient({
           </svg>
           <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none" style={{ top: isExpanded ? '55%' : '45%' }}>
             <span className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">
-              {formatNumber(rawVal)}
+              {fmt(rawVal, widget)}
             </span>
           </div>
         </div>
@@ -1235,7 +1263,7 @@ export function AnalyticsClient({
             <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/40 rounded-2xl border border-neutral-100 dark:border-neutral-800">
               <span className="text-[10px] font-black uppercase text-neutral-400 block truncate">{item.name}</span>
               <span className="text-xl font-black text-neutral-900 dark:text-white mt-1 block">
-                {typeof item.value === 'number' && widget.field?.toLowerCase().includes('preco') ? formatCurrency(item.value) : formatNumber(item.value)}
+                {fmt(item.value, widget)}
               </span>
             </div>
           ))}
@@ -1244,12 +1272,15 @@ export function AnalyticsClient({
     }
 
     const num = Number(val)
-    const formatted = !isNaN(num) && widget.field?.toLowerCase().includes('preco') ? formatCurrency(num) : formatNumber(num)
+    const formatted = fmt(num, widget)
+    const kpiLen = formatted.length
 
     return (
       <div className="flex flex-col items-center justify-center p-6 text-center">
         <span className={\`font-black tracking-tight text-neutral-900 dark:text-white transition-all \${
-          isExpanded ? 'text-7xl' : 'text-5xl sm:text-6xl'
+          isExpanded
+            ? (kpiLen > 14 ? 'text-5xl' : kpiLen > 10 ? 'text-6xl' : 'text-7xl')
+            : (kpiLen > 14 ? 'text-3xl' : kpiLen > 10 ? 'text-4xl' : kpiLen > 8 ? 'text-4xl sm:text-5xl' : 'text-5xl sm:text-6xl')
         }\`}>
           {formatted}
         </span>
@@ -1278,50 +1309,103 @@ export function AnalyticsClient({
       return <div className="flex-1 flex items-center justify-center text-xs font-bold text-neutral-400">Nenhum registro para o período</div>
     }
 
+    const primary = biColor(widget.color)
+    const tick = { fontSize: 10, fontWeight: 700, fill: '#888888' }
+    const tooltipStyle = { borderRadius: '1rem', border: '1px solid #ffffff20', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: '#18181b', color: '#fff' }
+    const tooltipFormatter = (value: any) => [fmt(value, widget), widget.calc]
+    const axisFormatter = (value: any) => fmt(value, widget, true)
+    const labelStyle = { fontSize: 10, fontWeight: 800, fill: '#888888' }
+    const maxValue = Math.max(...chartData.map((r: any) => Number(r.value) || 0))
+    const barFill = (value: any) => (widget.highlightMax && (Number(value) || 0) !== maxValue ? primary + '66' : primary)
+    const horizontal = widget.type === 'bar' && widget.orientation === 'horizontal'
+    const shortName = (v: any) => { const t = String(v); return t.length > 16 ? t.slice(0, 15) + '…' : t }
+    const total = chartData.reduce((acc: number, r: any) => acc + (Number(r.value) || 0), 0)
+    const gradId = 'bi-grad-' + widget.id
+
     return (
-      <div className="w-full mt-2" style={{ height }}>
+      <div className="w-full mt-2 relative" style={{ height }}>
+        {widget.type === 'pie' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 36 }}>
+            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Total</span>
+            <span className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">{fmt(total, widget, true)}</span>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           {widget.type === 'bar' ? (
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
-              <Tooltip
-                cursor={{ fill: '#88888810' }}
-                contentStyle={{ borderRadius: '1rem', border: '1px solid #ffffff20', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: '#18181b', color: '#fff' }}
-                formatter={(value: any) => [formatNumber(value), widget.calc]}
-              />
-              <Bar dataKey="value" fill="#6366f1" radius={[8, 8, 0, 0]} />
+            <BarChart data={chartData} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.showLabels ? 18 : 10, right: horizontal && widget.showLabels ? 56 : 10, left: horizontal ? 0 : -10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="#88888820" />
+              {horizontal ? (
+                <>
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={tick} width={112} tickFormatter={shortName} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+                  <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
+                </>
+              )}
+              <Tooltip cursor={{ fill: '#88888810' }} contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Bar dataKey="value" radius={horizontal ? [0, 8, 8, 0] : [8, 8, 0, 0]}>
+                {chartData.map((r: any, i: number) => (
+                  <Cell key={'bar-' + i} fill={barFill(r.value)} />
+                ))}
+                {widget.showLabels && <LabelList dataKey="value" position={horizontal ? 'right' : 'top'} formatter={axisFormatter} style={labelStyle} />}
+              </Bar>
             </BarChart>
           ) : widget.type === 'line' ? (
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
-              <Tooltip
-                contentStyle={{ borderRadius: '1rem', border: '1px solid #ffffff20', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: '#18181b', color: '#fff' }}
-                formatter={(value: any) => [formatNumber(value), widget.calc]}
-              />
-              <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6 }} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Line type="monotone" dataKey="value" stroke={primary} strokeWidth={3} dot={{ r: 4, fill: primary }} activeDot={{ r: 6 }}>
+                {widget.showLabels && <LabelList dataKey="value" position="top" formatter={axisFormatter} style={labelStyle} />}
+              </Line>
             </LineChart>
+          ) : widget.type === 'area' ? (
+            <AreaChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={primary} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={primary} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Area type="monotone" dataKey="value" stroke={primary} strokeWidth={3} fill={'url(#' + gradId + ')'}>
+                {widget.showLabels && <LabelList dataKey="value" position="top" formatter={axisFormatter} style={labelStyle} />}
+              </Area>
+            </AreaChart>
           ) : (
             <PieChart>
               <Pie
                 data={chartData}
                 innerRadius={height * 0.24}
                 outerRadius={height * 0.36}
-                paddingAngle={4}
+                paddingAngle={chartData.length > 1 ? 4 : 0}
                 dataKey="value"
+                label={widget.showLabels ? ((e: any) => (total > 0 ? Math.round((Number(e.value) / total) * 100) + '%' : '')) : false}
+                labelLine={false}
               >
-                {chartData.map((_, index) => (
-                  <Cell key={\`cell-\${index}\`} fill={PALETTE[index % PALETTE.length]} />
+                {chartData.map((_: any, index: number) => (
+                  <Cell key={'cell-' + index} fill={PALETTE[index % PALETTE.length]} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{ borderRadius: '1rem', border: '1px solid #ffffff20', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: '#18181b', color: '#fff' }}
-                formatter={(value: any) => [formatNumber(value), widget.calc]}
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}
+                formatter={(name: any, entry: any) => {
+                  const v = Number(entry?.payload?.value) || 0
+                  const pct = total > 0 ? ' (' + Math.round((v / total) * 100) + '%)' : ''
+                  return shortName(name) + ' · ' + fmt(v, widget, true) + pct
+                }}
               />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }} />
             </PieChart>
           )}
         </ResponsiveContainer>

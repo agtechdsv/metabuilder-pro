@@ -5,6 +5,7 @@ import { JoinsEditor } from '@/components/studio/JoinsEditor'
 import { cn } from '@/lib/utils'
 import FormulaBuilder from '@/components/studio/FormulaBuilder'
 import { Modal } from '@/components/ui/Modal'
+import { BI_FORMAT_OPTIONS, BI_PALETTES } from '@/lib/bi/format'
 
 interface BIWidgetEditorProps {
   editingWidget: any
@@ -47,6 +48,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
             <option value="bar">Barras</option>
             <option value="pie">Pizza</option>
             <option value="line">Linhas</option>
+            <option value="area">Área</option>
           </select>
         </div>
         <div className="space-y-2">
@@ -249,6 +251,86 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
             </div>
           )}
         </div>
+
+         {/* Aparência */}
+         <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Aparência e formato</label>
+           <div className="grid grid-cols-3 gap-3">
+             <div className="space-y-1.5 col-span-2">
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Formato do valor</label>
+               <select
+                 value={editingWidget?.format || 'number'}
+                 onChange={e => setEditingWidget({...editingWidget, format: e.target.value})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
+               >
+                 {BI_FORMAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+               </select>
+             </div>
+             <div className="space-y-1.5">
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Casas decimais</label>
+               <input
+                 type="number"
+                 min="0"
+                 max="6"
+                 placeholder="Auto"
+                 value={editingWidget?.decimals ?? ''}
+                 onChange={e => setEditingWidget({...editingWidget, decimals: e.target.value === '' ? undefined : Number(e.target.value)})}
+                 className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
+               />
+             </div>
+           </div>
+
+           {['bar', 'line', 'area'].includes(editingWidget?.type) && (
+             <div className="space-y-1.5">
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cor</label>
+               <div className="flex flex-wrap gap-2">
+                 {Object.entries(BI_PALETTES).map(([key, p]) => (
+                   <button
+                     key={key}
+                     type="button"
+                     title={p.label}
+                     onClick={() => setEditingWidget({...editingWidget, color: key})}
+                     className={cn(
+                       "w-7 h-7 rounded-full border-2 transition-all",
+                       (editingWidget?.color || 'indigo') === key ? 'border-neutral-900 dark:border-white scale-110 shadow' : 'border-transparent opacity-80 hover:opacity-100'
+                     )}
+                     style={{ backgroundColor: p.color }}
+                   />
+                 ))}
+               </div>
+             </div>
+           )}
+
+           {['bar', 'line', 'area', 'pie'].includes(editingWidget?.type) && (
+             <div className="flex flex-wrap gap-2">
+               <button
+                 type="button"
+                 onClick={() => setEditingWidget({...editingWidget, show_labels: !editingWidget?.show_labels})}
+                 className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.show_labels ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+               >
+                 Rótulos de valor
+               </button>
+               {editingWidget?.type === 'bar' && (
+                 <>
+                   <button
+                     type="button"
+                     onClick={() => setEditingWidget({...editingWidget, highlight_max: !editingWidget?.highlight_max})}
+                     className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.highlight_max ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+                   >
+                     Destacar maior valor
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => setEditingWidget({...editingWidget, orientation: editingWidget?.orientation === 'horizontal' ? 'vertical' : 'horizontal'})}
+                     className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.orientation === 'horizontal' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+                   >
+                     Barras horizontais
+                   </button>
+                 </>
+               )}
+             </div>
+           )}
+         </div>
 
          {/* Largura do Widget */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">

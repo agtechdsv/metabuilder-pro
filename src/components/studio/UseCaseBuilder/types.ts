@@ -122,6 +122,14 @@ export interface BiWidget {
   group_by?: string
   width?: string
   joins?: JoinConfig[]
+  // aparência
+  format?: string
+  decimals?: number
+  currency?: string
+  color?: string
+  show_labels?: boolean
+  highlight_max?: boolean
+  orientation?: string
 }
 
 export interface JoinConfig {

@@ -311,6 +311,12 @@ export interface AnalyticsWidget {
   useFormula?: boolean
   formulaTokens?: any[]
   color?: string
+  format?: string
+  decimals?: number
+  currency?: string
+  showLabels?: boolean
+  highlightMax?: boolean
+  orientation?: string
 }
 
 export interface AnalyticsConfig {

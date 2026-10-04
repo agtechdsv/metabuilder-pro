@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { getPkColumn, warnInferredReference } from '@/lib/schemaResolver'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, Legend 
+  PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area, LabelList
 } from 'recharts'
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
@@ -35,7 +35,7 @@ import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames } fr
 interface Widget {
   id: string
   title: string
-  type: 'kpi' | 'bar' | 'pie' | 'line' | 'gauge'
+  type: 'kpi' | 'bar' | 'pie' | 'line' | 'gauge' | 'area'
   model_id: string
   model_name?: string
   field: string
@@ -53,6 +53,14 @@ interface Widget {
   date_granularity?: string
   sort_by?: string
   limit_top_n?: number
+  // aparência
+  format?: string
+  decimals?: number
+  currency?: string
+  color?: string
+  show_labels?: boolean
+  highlight_max?: boolean
+  orientation?: 'vertical' | 'horizontal'
 }
 
 interface AnalyticsDashboardProps {
@@ -73,6 +81,7 @@ interface AnalyticsDashboardProps {
 }
 
 import { compileFormula } from '@/lib/bi/safeFormula'
+import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 
 const BI_ROW_LIMIT = 1000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
@@ -116,6 +125,27 @@ export default function AnalyticsDashboard({
     { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
     { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
   ]
+
+  // Tooltips do recharts usam estilo inline: acompanham o tema escuro por estado
+  const [isDark, setIsDark] = useState(false)
+  useEffect(() => {
+    const read = () => setIsDark(document.documentElement.classList.contains('dark'))
+    read()
+    const observer = new MutationObserver(read)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
+  const biLocale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
+  const fmt = (val: any, widget: Widget, axis = false) =>
+    formatBiValue(val, { format: widget.format, decimals: widget.decimals, currency: widget.currency, locale: biLocale }, axis)
+  const tooltipStyle = {
+    borderRadius: '12px',
+    border: 'none',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+    background: isDark ? '#18181b' : '#ffffff',
+    color: isDark ? '#fafafa' : '#171717',
+  }
 
   const formatNumber = (val: any) => {
     if (val === null || val === undefined) return ''
@@ -663,7 +693,7 @@ export default function AnalyticsDashboard({
               (widget.width === 'half') ? 'text-5xl' :
               'text-6xl'
             )}>
-              {formatNumber(rawVal)}
+              {fmt(rawVal, widget)}
             </span>
           </div>
         </div>
@@ -681,16 +711,20 @@ export default function AnalyticsDashboard({
   const renderKPI = (val: number, widget: Widget, size: 'normal' | 'mini' = 'normal', title?: string, isExpanded?: boolean) => {
     const width = widget.width || 'third'
     
-    const fontSize = isExpanded ? 'text-8xl' : 
+    const baseFontSize = isExpanded ? 'text-8xl' :
                    size === 'mini' ? 'text-2xl' :
                    width === 'quarter' ? 'text-3xl' :
                    width === 'third' ? 'text-5xl' :
                    width === 'half' ? 'text-7xl' :
                    'text-9xl'
+    const fontScale = ['text-xl', 'text-2xl', 'text-3xl', 'text-4xl', 'text-5xl', 'text-6xl', 'text-7xl', 'text-8xl', 'text-9xl']
+    const lenOfValue = fmt(typeof val === 'number' ? val : 0, widget).length
+    const stepDown = lenOfValue > 15 ? 3 : lenOfValue > 11 ? 2 : lenOfValue > 8 ? 1 : 0
+    const fontSize = size === 'mini' ? baseFontSize : fontScale[Math.max(0, fontScale.indexOf(baseFontSize) - stepDown)]
 
     const padding = (size === 'normal' || isExpanded) ? (width === 'quarter' ? 'p-4' : 'p-8') : "p-4 text-center"
     const rawVal = typeof val === 'number' ? val : 0
-    const formattedVal = formatNumber(rawVal)
+    const formattedVal = fmt(rawVal, widget)
     return (
       <div className={cn("flex flex-col items-center justify-center transition-all duration-700", padding)}>
         {title && <span className={cn("font-black uppercase tracking-tight text-neutral-400 mb-1 truncate max-w-full", (size === 'normal' || isExpanded) ? "text-sm" : "text-[10px]")}>{title}</span>}
@@ -744,34 +778,100 @@ export default function AnalyticsDashboard({
     }
 
     const height = forceSize === 'large' ? 450 : 250
-    const ChartComp = widget.type === 'bar' ? BarChart : widget.type === 'line' ? LineChart : PieChart
+    const rows: any[] = Array.isArray(val) ? val : []
+    if (rows.length === 0) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">Sem dados</div>
+
+    const primary = biPrimaryColor(widget.color)
+    const tick = { fontSize: 10, fontWeight: 700, fill: '#888888' }
+    const tooltipFormatter = (value: any) => [fmt(value, widget), widget.calc]
+    const labelFormatter = (value: any) => fmt(value, widget, true)
+    const maxValue = Math.max(...rows.map(r => Number(r.value) || 0))
+    const barFill = (value: number) => widget.highlight_max && (Number(value) || 0) !== maxValue ? `${primary}66` : primary
+    const horizontal = widget.type === 'bar' && widget.orientation === 'horizontal'
+    const shortName = (v: any) => { const t = String(v); return t.length > 16 ? `${t.slice(0, 15)}…` : t }
+    const total = rows.reduce((acc, r) => acc + (Number(r.value) || 0), 0)
+    const gradId = `bi-grad-${widget.id}`
 
     return (
-      <div className="w-full mt-4" style={{ height }}>
+      <div className="w-full mt-4 relative" style={{ height }}>
+        {widget.type === 'pie' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 36 }}>
+            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Total</span>
+            <span className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">{fmt(total, widget, true)}</span>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           {widget.type === 'bar' ? (
-            <BarChart data={val || []}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
-              <Tooltip cursor={{ fill: '#88888811' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
-              <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+            <BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.show_labels ? 18 : 6, right: horizontal && widget.show_labels ? 56 : 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="#88888822" />
+              {horizontal ? (
+                <>
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={tick} tickFormatter={labelFormatter} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={tick} width={112} tickFormatter={shortName} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+                  <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={labelFormatter} />
+                </>
+              )}
+              <Tooltip cursor={{ fill: '#88888811' }} contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Bar dataKey="value" radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}>
+                {rows.map((r, i) => <Cell key={`bar-${i}`} fill={barFill(r.value)} />)}
+                {widget.show_labels && <LabelList dataKey="value" position={horizontal ? 'right' : 'top'} formatter={labelFormatter} style={{ fontSize: 10, fontWeight: 800, fill: isDark ? '#e5e5e5' : '#404040' }} />}
+              </Bar>
             </BarChart>
           ) : widget.type === 'line' ? (
-            <LineChart data={val || []}>
+            <LineChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#888888' }} tickFormatter={formatNumber} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
-              <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={labelFormatter} />
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Line type="monotone" dataKey="value" stroke={primary} strokeWidth={3} dot={{ r: 4, fill: primary }} activeDot={{ r: 6 }}>
+                {widget.show_labels && <LabelList dataKey="value" position="top" formatter={labelFormatter} style={{ fontSize: 10, fontWeight: 800, fill: isDark ? '#e5e5e5' : '#404040' }} />}
+              </Line>
             </LineChart>
+          ) : widget.type === 'area' ? (
+            <AreaChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={primary} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={primary} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={labelFormatter} />
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Area type="monotone" dataKey="value" stroke={primary} strokeWidth={3} fill={`url(#${gradId})`}>
+                {widget.show_labels && <LabelList dataKey="value" position="top" formatter={labelFormatter} style={{ fontSize: 10, fontWeight: 800, fill: isDark ? '#e5e5e5' : '#404040' }} />}
+              </Area>
+            </AreaChart>
           ) : (
             <PieChart>
-              <Pie data={val || []} innerRadius={height * 0.25} outerRadius={height * 0.35} paddingAngle={5} dataKey="value">
-                {(val || []).map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              <Pie
+                data={rows}
+                innerRadius={height * 0.25}
+                outerRadius={height * 0.35}
+                paddingAngle={rows.length > 1 ? 4 : 0}
+                dataKey="value"
+                label={widget.show_labels ? ((e: any) => (total > 0 ? `${Math.round((Number(e.value) / total) * 100)}%` : '')) : false}
+                labelLine={false}
+              >
+                {rows.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} formatter={(value: any) => [formatNumber(value), widget.calc]} />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }} />
+              <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900 }}
+                formatter={(name: any, entry: any) => {
+                  const v = Number(entry?.payload?.value) || 0
+                  const pct = total > 0 ? ` (${Math.round((v / total) * 100)}%)` : ''
+                  return `${shortName(name)} · ${fmt(v, widget, true)}${pct}`
+                }}
+              />
             </PieChart>
           )}
         </ResponsiveContainer>

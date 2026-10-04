@@ -2524,6 +2524,12 @@ export function parseMetaBuilderJSON(
           useFormula: !!w.use_formula,
           formulaTokens: w.formula_tokens || [],
           color: w.color || 'indigo',
+          format: w.format || undefined,
+          decimals: w.decimals !== undefined && w.decimals !== null && w.decimals !== '' ? Number(w.decimals) : undefined,
+          currency: w.currency || undefined,
+          showLabels: !!w.show_labels,
+          highlightMax: !!w.highlight_max,
+          orientation: w.orientation || undefined,
         })),
         allowRuntimeEdit: ac.allow_runtime_edit !== false,
         // Pushdown: campo de data para filtro no banco (ex: 'data_pedido', 'created_at')
