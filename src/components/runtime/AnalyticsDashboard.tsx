@@ -1123,14 +1123,23 @@ export default function AnalyticsDashboard({
           const up = rawVal >= prevVal
           const good = widget.compare_invert ? !up : up
           const pct = prevVal === 0 ? null : ((rawVal - prevVal) / Math.abs(prevVal)) * 100
+          // 99,96% não pode aparecer como "100%": só mostramos 100% quando for exatamente isso
+          const absPct = pct === null ? 0 : Math.abs(pct)
+          const shownPct = absPct < 100 && Math.round(absPct * 10) / 10 >= 100 ? 99.9 : absPct
           return (
             <div className="mt-3 flex flex-col items-center gap-0.5">
-              <span className={cn("text-sm font-black tracking-tight", pct === null ? 'text-neutral-400' : good ? 'text-emerald-500' : 'text-red-500')}>
-                {pct === null ? '—' : `${up ? '▲' : '▼'} ${formatBiValue(Math.abs(pct), { format: 'percent', decimals: 1, locale: biLocale })}`}
-              </span>
-              <span className="text-[10px] font-bold text-neutral-400 text-center">
-                vs {fmtDay(pr.from)} – {fmtDay(pr.to)}: {fmt(prevVal, widget)}
-              </span>
+              {pct === null ? (
+                <span className="text-[10px] font-bold text-neutral-400 text-center">sem dados no período anterior ({fmtDay(pr.from)} – {fmtDay(pr.to)})</span>
+              ) : (
+                <>
+                  <span className={cn("text-sm font-black tracking-tight", good ? 'text-emerald-500' : 'text-red-500')}>
+                    {up ? '▲' : '▼'} {formatBiValue(shownPct, { format: 'percent', decimals: 1, locale: biLocale })}
+                  </span>
+                  <span className="text-[10px] font-bold text-neutral-400 text-center">
+                    vs {fmtDay(pr.from)} – {fmtDay(pr.to)}: {fmt(prevVal, widget)}
+                  </span>
+                </>
+              )}
             </div>
           )
         })()}
