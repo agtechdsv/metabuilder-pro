@@ -996,25 +996,24 @@ export default function AnalyticsDashboard({
               <circle cx={cx} cy={cy} r={size === 'normal' || isExpanded ? 6 : 3} className="fill-neutral-900 dark:fill-white" />
             </g>
           </svg>
-          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: (size === 'normal' || isExpanded) ? '40%' : '35%', left: '50%', transform: 'translateX(-50%)' }}>
-            <span className={cn(
-              "font-black tracking-tighter text-neutral-900 dark:text-white transition-all duration-700",
-              isExpanded ? "text-7xl" : 
-              size === 'mini' ? 'text-lg' :
-              (widget.width === 'quarter') ? 'text-2xl' :
-              (widget.width === 'third') ? 'text-4xl' :
-              (widget.width === 'half') ? 'text-5xl' :
-              'text-6xl'
-            )}>
-              {fmt(rawVal, widget)}
-            </span>
-          </div>
         </div>
+        {(() => {
+          const text = fmt(rawVal, widget)
+          const scale = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl', 'text-5xl', 'text-6xl', 'text-7xl']
+          const base = isExpanded ? 'text-7xl' : size === 'mini' ? 'text-lg' : widget.width === 'quarter' ? 'text-2xl' : widget.width === 'third' ? 'text-4xl' : widget.width === 'half' ? 'text-5xl' : 'text-6xl'
+          const step = text.length > 15 ? 3 : text.length > 11 ? 2 : text.length > 8 ? 1 : 0
+          const cls = size === 'mini' ? base : scale[Math.max(0, scale.indexOf(base) - step)]
+          return (
+            <span className={cn("font-black tracking-tighter text-neutral-900 dark:text-white transition-all duration-700 leading-none", cls, size === 'mini' ? 'mt-1' : 'mt-3')}>
+              {text}
+            </span>
+          )
+        })()}
         {(size === 'normal' || isExpanded) && (
           <div className="mt-8 flex gap-8 text-center">
-            <div className="flex flex-col"><span className="text-[10px] font-black text-red-500 uppercase">Min</span><span className="font-bold">{min}</span></div>
-            <div className="flex flex-col"><span className="text-[10px] font-black text-emerald-500 uppercase">Alvo</span><span className="font-bold">{target}</span></div>
-            <div className="flex flex-col"><span className="text-[10px] font-black text-indigo-500 uppercase">Escala</span><span className="font-bold">{scaleStart}-{scaleEnd}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-red-500 uppercase">Min</span><span className="font-bold">{fmt(min, widget, true)}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-emerald-500 uppercase">Alvo</span><span className="font-bold">{fmt(target, widget, true)}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-indigo-500 uppercase">Escala</span><span className="font-bold">{fmt(scaleStart, widget, true)} – {fmt(scaleEnd, widget, true)}</span></div>
           </div>
         )}
       </div>
