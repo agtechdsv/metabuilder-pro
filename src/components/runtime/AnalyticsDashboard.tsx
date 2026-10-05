@@ -71,6 +71,9 @@ interface Widget {
   divide_by?: { calc: string; field?: string }
   /** campo de data que recebe o filtro de período do painel */
   period_field?: string
+  /** de onde vem o período do widget: barra do painel (padrão), período fixo ou seletor próprio no card */
+  period_mode?: 'panel' | 'fixed' | 'own'
+  period_fixed?: string
 }
 
 interface AnalyticsDashboardProps {
@@ -93,6 +96,7 @@ interface AnalyticsDashboardProps {
 import { compileFormula, parseFormulaAst } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
+import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, type PeriodRange } from '@/lib/bi/period'
 import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
@@ -153,25 +157,29 @@ export default function AnalyticsDashboard({
     return () => observer.disconnect()
   }, [])
 
-  const periodRange = useMemo(() => {
-    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    const today = new Date()
-    const back = (days: number) => { const d = new Date(today); d.setDate(d.getDate() - days); return iso(d) }
-    switch (period.preset) {
-      case '7d': return { from: back(6), to: iso(today) }
-      case '30d': return { from: back(29), to: iso(today) }
-      case '90d': return { from: back(89), to: iso(today) }
-      case 'month': return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) }
-      case 'year': return { from: `${today.getFullYear()}-01-01`, to: iso(today) }
-      case 'custom': return /^\d{4}-\d{2}-\d{2}$/.test(period.from) && /^\d{4}-\d{2}-\d{2}$/.test(period.to) ? { from: period.from, to: period.to } : null
-      default: return null
+  const periodRange = useMemo(() => resolvePeriod(period.preset, { from: period.from, to: period.to }), [period])
+  // seletor próprio dos widgets em modo "own": { widgetId: { preset, from, to } }
+  const [ownPeriods, setOwnPeriods] = useState<Record<string, { preset: string; from: string; to: string }>>({})
+  // período efetivo de um widget: da barra do painel, fixo ou do seletor do próprio card
+  const widgetPeriod = (w: Widget): PeriodRange | null => {
+    if (!w.period_field) return null
+    const mode = w.period_mode || 'panel'
+    if (mode === 'fixed') return resolvePeriod(w.period_fixed || 'month')
+    if (mode === 'own') {
+      const o = ownPeriods[w.id]
+      return o ? resolvePeriod(o.preset, { from: o.from, to: o.to }) : null
     }
-  }, [period])
+    return periodRange
+  }
   const nextDay = (d: string) => {
     const [y, m, dd] = d.split('-').map(Number)
     return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
   }
-  const hasPeriodWidgets = localWidgets.some(w => !!w.period_field)
+  // a barra do painel só vale para widgets em modo "segue o painel"
+  const followsPanel = (w: Widget) => !!w.period_field && (w.period_mode || 'panel') === 'panel'
+  const hasPeriodWidgets = localWidgets.some(followsPanel)
+  const periodWidgetCount = localWidgets.filter(followsPanel).length
+  const fmtDay = formatPeriodDay
 
   const biLocale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const fmt = (val: any, widget: Widget, axis = false) =>
@@ -194,6 +202,8 @@ export default function AnalyticsDashboard({
 
   // Mapeia IDs de widgets para evitar loops de refresh infinitos
   const lastQueryIds = useRef<Record<string, string>>({})
+  // assinatura (config + filtros + período) da última busca de cada widget: evita recarregar o que não mudou
+  const fetchedSig = useRef<Record<string, string>>({})
   // 'agg' = SQL já agregado no banco; 'raw' = linhas cruas agregadas aqui (caminho antigo, usado como reserva)
   const queryModes = useRef<Record<string, 'agg' | 'raw'>>({})
   // sempre aponta para a versão mais recente de fetchWidgetData (o listener do canal guarda uma versão antiga)
@@ -289,16 +299,22 @@ export default function AnalyticsDashboard({
   }, [tunnelChannel, isTunnelReady])
 
   useEffect(() => {
-    if (!isTunnelReady || localWidgets.length === 0) return
+    if (!isTunnelReady) { fetchedSig.current = {}; return }
+    if (localWidgets.length === 0) return
 
     const handler = setTimeout(() => {
       localWidgets.forEach(widget => {
+        // Só busca de novo o que mudou para este widget: configuração, filtros da tela e (se ele usa) o período.
+        // Antes, trocar o período recarregava todos os widgets do painel.
+        const sig = JSON.stringify({ w: widget, f: filters, p: widgetPeriod(widget) })
+        if (fetchedSig.current[widget.id] === sig) return
+        fetchedSig.current[widget.id] = sig
         fetchWidgetData(widget)
       })
     }, 400) // Debounce de 400ms para evitar chamadas excessivas durante a digitação
 
     return () => clearTimeout(handler)
-  }, [isTunnelReady, localWidgets, filters, period])
+  }, [isTunnelReady, localWidgets, filters, periodRange, ownPeriods])
 
   const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
@@ -585,10 +601,11 @@ export default function AnalyticsDashboard({
       const ref = resolveRef(String(c.field))
       conditions.push({ col: ref, op: c.op as BiConditionOp, kind: colKind(ref.table, ref.column), value: c.value, value2: c.value2 })
     })
-    if (widget.period_field && periodRange) {
+    const wPeriod = widgetPeriod(widget)
+    if (widget.period_field && wPeriod) {
       const ref = resolveRef(widget.period_field)
-      conditions.push({ col: ref, op: 'gte', kind: 'date', value: periodRange.from })
-      conditions.push({ col: ref, op: 'lt', kind: 'date', value: nextDay(periodRange.to) })
+      conditions.push({ col: ref, op: 'gte', kind: 'date', value: wPeriod.from })
+      conditions.push({ col: ref, op: 'lt', kind: 'date', value: nextDay(wPeriod.to) })
     }
     const seriesRef = widget.series_by && widget.group_by && ['bar', 'line', 'area'].includes(widget.type) ? resolveRef(widget.series_by) : null
     const divideBy = widget.divide_by?.calc
@@ -1229,6 +1246,36 @@ export default function AnalyticsDashboard({
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">{widget.title || 'Sem título'}</h3>
               <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.calc}{widget.divide_by?.calc ? ` ÷ ${widget.divide_by.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.divide_by.calc}` : ''} ({widget.use_formula ? 'fórmula' : (widget.field_id || 'Toda Tabela')})</p>
+              {widget.period_field && (() => {
+                const wp = widgetPeriod(widget)
+                const mode = widget.period_mode || 'panel'
+                const own = ownPeriods[widget.id] || { preset: 'all', from: '', to: '' }
+                return (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
+                      📅 {wp ? `${fmtDay(wp.from)} – ${fmtDay(wp.to)}` : 'Todo o período'}{mode === 'fixed' ? ' · fixo' : ''}
+                    </p>
+                    {mode === 'own' && (
+                      <>
+                        <select
+                          value={own.preset}
+                          onChange={e => setOwnPeriods(prev => ({ ...prev, [widget.id]: { ...own, preset: e.target.value } }))}
+                          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-1 py-0.5 text-[9px] font-bold text-neutral-700 dark:text-neutral-200"
+                        >
+                          {PERIOD_PRESETS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                          <option value="custom">Personalizado</option>
+                        </select>
+                        {own.preset === 'custom' && (
+                          <>
+                            <input type="date" value={own.from} onChange={e => setOwnPeriods(prev => ({ ...prev, [widget.id]: { ...own, from: e.target.value } }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-1 py-0.5 text-[9px] font-bold text-neutral-700 dark:text-neutral-200" />
+                            <input type="date" value={own.to} onChange={e => setOwnPeriods(prev => ({ ...prev, [widget.id]: { ...own, to: e.target.value } }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-1 py-0.5 text-[9px] font-bold text-neutral-700 dark:text-neutral-200" />
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
               {truncated[widget.id] && (
                 <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={`A consulta atingiu o limite de ${BI_ROW_LIMIT} linhas: os totais podem estar incompletos.`}>
                   ⚠ Limitado a {BI_ROW_LIMIT} linhas
@@ -1295,15 +1342,10 @@ export default function AnalyticsDashboard({
       {hasPeriodWidgets && (
         <div className="flex flex-wrap items-center gap-2 px-2">
           <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">Período</span>
-          {[
-            { id: 'all', label: 'Tudo' },
-            { id: '7d', label: '7 dias' },
-            { id: '30d', label: '30 dias' },
-            { id: '90d', label: '90 dias' },
-            { id: 'month', label: 'Mês atual' },
-            { id: 'year', label: 'Ano atual' },
-            { id: 'custom', label: 'Personalizado' },
-          ].map(o => (
+          <span className="text-[9px] font-bold text-neutral-400 mr-2">
+            afeta {periodWidgetCount} {periodWidgetCount === 1 ? 'indicador' : 'indicadores'} (marcados com 📅)
+          </span>
+          {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => (
             <button
               key={o.id}
               type="button"

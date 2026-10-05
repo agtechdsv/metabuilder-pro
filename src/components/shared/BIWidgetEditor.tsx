@@ -7,6 +7,7 @@ import FormulaBuilder from '@/components/studio/FormulaBuilder'
 import { Modal } from '@/components/ui/Modal'
 import { BI_FORMAT_OPTIONS, BI_PALETTES } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
+import { PERIOD_PRESETS } from '@/lib/bi/period'
 
 interface BIWidgetEditorProps {
   editingWidget: any
@@ -411,7 +412,37 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
              {staleOption(editingWidget?.period_field)}
              {fieldOptions}
            </select>
-           <p className="text-[9px] font-bold text-neutral-400 ml-1">O painel mostra a barra de período (7/30/90 dias, mês, ano, personalizado) e aplica neste campo.</p>
+           {editingWidget?.period_field && (
+             <>
+               <label className={labelCls}>De onde vem o período deste widget</label>
+               <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                 {[
+                   { id: 'panel', label: 'Segue o painel' },
+                   { id: 'fixed', label: 'Período fixo' },
+                   { id: 'own', label: 'Seletor no card' },
+                 ].map(opt => (
+                   <button
+                     key={opt.id}
+                     type="button"
+                     onClick={() => setEditingWidget({...editingWidget, period_mode: opt.id, period_fixed: opt.id === 'fixed' ? (editingWidget?.period_fixed || 'month') : editingWidget?.period_fixed})}
+                     className={cn("flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", (editingWidget?.period_mode || 'panel') === opt.id ? 'bg-indigo-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-600')}
+                   >
+                     {opt.label}
+                   </button>
+                 ))}
+               </div>
+               {editingWidget?.period_mode === 'fixed' && (
+                 <select value={editingWidget?.period_fixed || 'month'} onChange={e => setEditingWidget({...editingWidget, period_fixed: e.target.value})} className={selectCls}>
+                   {PERIOD_PRESETS.filter(o => o.id !== 'all').map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                 </select>
+               )}
+             </>
+           )}
+           <p className="text-[9px] font-bold text-neutral-400 ml-1">
+             {(editingWidget?.period_mode || 'panel') === 'panel' && 'A barra de período do painel (7/30/90 dias, mês, ano, personalizado) filtra este campo.'}
+             {editingWidget?.period_mode === 'fixed' && 'O widget sempre mostra o período escolhido e ignora a barra do painel.'}
+             {editingWidget?.period_mode === 'own' && 'O próprio card ganha um seletor de período, independente do painel.'}
+           </p>
          </div>
 
          {/* Aparência */}

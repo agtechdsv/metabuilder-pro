@@ -136,6 +136,8 @@ export interface BiWidget {
   series_by?: string
   divide_by?: { calc: string; field?: string }
   period_field?: string
+  period_mode?: 'panel' | 'fixed' | 'own'
+  period_fixed?: string
 }
 
 export interface JoinConfig {
