@@ -145,6 +145,14 @@ function valueLiteral(dialect: SqlDialect, kind: BiColKind, raw: string | undefi
   return lit(v)
 }
 
+/** Dia seguinte (YYYY-MM-DD), em UTC para não depender do fuso. Valor inválido deixa passar para a validação do literal. */
+function nextDay(v: string | undefined): string {
+  const s = String(v ?? '').trim()
+  if (!DATE_RE.test(s)) return s
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)
+}
+
 const CMP: Record<string, string> = { eq: '=', ne: '<>', gt: '>', gte: '>=', lt: '<', lte: '<=' }
 
 /** Condição com operador (filtro do widget ou período). Lança Unsupported se o valor não combina com o tipo da coluna. */
@@ -165,7 +173,16 @@ export function conditionSql(dialect: SqlDialect, c: BiCondition): string {
       if (items.length === 0) throw new Unsupported('lista vazia')
       return `${ref} IN (${items.map(x => val(x)).join(', ')})`
     }
-    case 'between': return `${ref} BETWEEN ${val(c.value)} AND ${val(c.value2)}`
+    case 'between':
+      // data: o dia final entra inteiro (a coluna pode ter hora): >= início E < dia seguinte ao fim
+      if (c.kind === 'date') return `(${ref} >= ${val(c.value)} AND ${ref} < ${val(nextDay(c.value2))})`
+      return `${ref} BETWEEN ${val(c.value)} AND ${val(c.value2)}`
+    case 'lte':
+      if (c.kind === 'date') return `${ref} < ${val(nextDay(c.value))}`
+      return `${ref} <= ${val(c.value)}`
+    case 'gt':
+      if (c.kind === 'date') return `${ref} >= ${val(nextDay(c.value))}`
+      return `${ref} > ${val(c.value)}`
     case 'eq':
     case 'ne':
       if (c.kind === 'date') {
@@ -173,7 +190,7 @@ export function conditionSql(dialect: SqlDialect, c: BiCondition): string {
         return `${day} ${CMP[c.op]} ${val(c.value)}`
       }
       return `${ref} ${CMP[c.op]} ${val(c.value)}`
-    case 'gt': case 'gte': case 'lt': case 'lte':
+    case 'gte': case 'lt':
       return `${ref} ${CMP[c.op]} ${val(c.value)}`
   }
   throw new Unsupported(`operador ${c.op}`)

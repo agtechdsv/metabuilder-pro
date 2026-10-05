@@ -52,6 +52,15 @@ describe('condições com operador', () => {
     expect(conditionSql('oracle', cond({ kind: 'date', op: 'eq', value: '2026-01-01' }))).toContain('TRUNC(')
     expect(() => conditionSql('postgres', cond({ kind: 'date', op: 'gte', value: "2026-01-01' OR '1'='1" }))).toThrow()
   })
+  it('data: "até", "depois de" e "entre" incluem o dia final inteiro (coluna com hora)', () => {
+    const d = (o: Partial<BiCondition>) => conditionSql('postgres', cond({ kind: 'date', ...o }))
+    expect(d({ op: 'lte', value: '2026-03-31' })).toBe(`"pedidos"."status" < CAST('2026-04-01' AS TIMESTAMP)`)
+    expect(d({ op: 'gt', value: '2026-12-31' })).toBe(`"pedidos"."status" >= CAST('2027-01-01' AS TIMESTAMP)`)
+    expect(d({ op: 'between', value: '2026-01-01', value2: '2026-03-31' })).toBe(
+      `("pedidos"."status" >= CAST('2026-01-01' AS TIMESTAMP) AND "pedidos"."status" < CAST('2026-04-01' AS TIMESTAMP))`)
+    expect(conditionSql('oracle', cond({ kind: 'date', op: 'lte', value: '2026-02-28' }))).toContain(`TO_DATE('2026-03-01', 'YYYY-MM-DD')`)
+    expect(() => d({ op: 'lte', value: 'x' })).toThrow()
+  })
   it('between', () => {
     expect(conditionSql('postgres', cond({ kind: 'number', op: 'between', value: '1', value2: '5' }))).toBe(`"pedidos"."status" BETWEEN 1 AND 5`)
   })
