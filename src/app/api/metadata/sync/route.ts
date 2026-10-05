@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const secretToken = authHeader.replace('Bearer ', '')
     const body = await request.json()
-    const { projectId, metadata, connectionName } = body
+    const { projectId, metadata, connectionName, dbType } = body
 
     if (!projectId || !metadata) {
       return NextResponse.json({ error: 'Payload incompleto' }, { status: 400 })
@@ -38,6 +38,12 @@ export async function POST(request: Request) {
 
     if (project.secret_token && project.secret_token !== secretToken) {
       return NextResponse.json({ error: 'Token secreto inválido' }, { status: 403 })
+    }
+
+    // O Agente informa o tipo do banco; o front usa para gerar o SQL no dialeto certo (BI, listas...)
+    if (typeof dbType === 'string' && ['postgres', 'oracle', 'mysql', 'sqlserver'].includes(dbType)) {
+      const { error: dbTypeError } = await supabase.from('projects').update({ db_type: dbType }).eq('id', projectId)
+      if (dbTypeError) console.warn('[sync] não foi possível gravar projects.db_type (migração aplicada?):', dbTypeError.message)
     }
 
     // 2. Buscar estado atual para comparar (Introspection Diffing)

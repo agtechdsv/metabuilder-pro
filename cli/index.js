@@ -1889,6 +1889,7 @@ async function run() {
               const syncResp = await axios.post(API_URL, {
                 projectId: conn.projectId,
                 connectionName: dbConfig.name,
+                dbType,
                 metadata: schemaDefinition
               }, {
                 headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
@@ -1925,6 +1926,7 @@ async function run() {
             const syncResp = await axios.post(API_URL, {
               projectId: conn.projectId,
               connectionName: 'public',
+              dbType,
               metadata: schemaDefinition
             }, {
               headers: { 'Authorization': `Bearer ${conn.secretToken}`, 'Content-Type': 'application/json' }
@@ -1992,6 +1994,7 @@ async function run() {
         const syncResp = await axios.post('http://localhost:3000/api/metadata/sync', {
           projectId: answers.projectId,
           connectionName: 'public',
+          dbType: answers.dbType || 'postgres',
           metadata: schemaDefinition
         }, {
           headers: { 'Authorization': `Bearer ${answers.secretToken}`, 'Content-Type': 'application/json' }

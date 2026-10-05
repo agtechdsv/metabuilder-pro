@@ -67,12 +67,24 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   }
 
   // 2. Resolve o Projeto pelo Slug e Workspace ID (Defensivo com limit(1))
-  const { data: projects, error: projectError } = await supabase
+  // db_type = dialeto do banco do cliente (o front gera SQL de Postgres ou Oracle conforme ele)
+  let { data: projects, error: projectError } = await supabase
     .from('projects')
-    .select('id, name, slug, navigation, secret_token, theme_config')
+    .select('id, name, slug, navigation, secret_token, theme_config, db_type')
     .eq('slug', project_slug)
     .eq('workspace_id', workspace.id)
     .limit(1)
+  if (projectError?.code === '42703') {
+    // coluna db_type ainda não criada no banco (migração pendente): segue como PostgreSQL
+    const retry = await supabase
+      .from('projects')
+      .select('id, name, slug, navigation, secret_token, theme_config')
+      .eq('slug', project_slug)
+      .eq('workspace_id', workspace.id)
+      .limit(1)
+    projects = retry.data as any
+    projectError = retry.error
+  }
 
   const project = projects?.[0]
 
