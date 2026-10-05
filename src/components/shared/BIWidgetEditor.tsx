@@ -436,13 +436,16 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  {[
                    { id: 'panel', label: 'Segue o painel' },
                    { id: 'fixed', label: 'Período fixo' },
+                   { id: 'group', label: 'Segue o grupo' },
                    { id: 'own', label: 'Seletor no card' },
                  ].map(opt => (
                    <button
                      key={opt.id}
                      type="button"
+                     disabled={opt.id === 'group' && !groups.some(g => g.id === editingWidget?.group_id)}
+                     title={opt.id === 'group' && !groups.some(g => g.id === editingWidget?.group_id) ? 'Coloque o widget em um grupo para usar a barra de período do grupo' : undefined}
                      onClick={() => setEditingWidget({...editingWidget, period_mode: opt.id, period_fixed: opt.id === 'fixed' ? (editingWidget?.period_fixed || 'month') : editingWidget?.period_fixed})}
-                     className={cn("flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", (editingWidget?.period_mode || 'panel') === opt.id ? 'bg-indigo-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-600')}
+                     className={cn("flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed", (editingWidget?.period_mode || 'panel') === opt.id ? 'bg-indigo-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-600')}
                    >
                      {opt.label}
                    </button>
@@ -479,6 +482,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            <p className="text-[9px] font-bold text-neutral-400 ml-1">
              {(editingWidget?.period_mode || 'panel') === 'panel' && 'A barra de período do painel (7/30/90 dias, mês, ano, personalizado) filtra este campo.'}
              {editingWidget?.period_mode === 'fixed' && 'O widget sempre mostra o período escolhido e ignora a barra do painel.'}
+             {editingWidget?.period_mode === 'group' && 'A barra de período aparece acima dos widgets do grupo e vale só para os widgets que escolherem "Segue o grupo".'}
              {editingWidget?.period_mode === 'own' && 'O próprio card ganha um seletor de período, independente do painel.'}
            </p>
          </div>

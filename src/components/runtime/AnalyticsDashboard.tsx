@@ -72,7 +72,7 @@ interface Widget {
   /** campo de data que recebe o filtro de período do painel */
   period_field?: string
   /** de onde vem o período do widget: barra do painel (padrão), período fixo ou seletor próprio no card */
-  period_mode?: 'panel' | 'fixed' | 'own'
+  period_mode?: 'panel' | 'fixed' | 'own' | 'group'
   period_fixed?: string
   /** agrupamento (seção recolhível) a que o widget pertence: id em analytics_config.groups */
   group_id?: string
@@ -202,10 +202,22 @@ export default function AnalyticsDashboard({
   // seletor próprio dos widgets em modo "own": { widgetId: { preset, from, to } }
   const [ownPeriods, setOwnPeriods] = useState<Record<string, { preset: string; from: string; to: string }>>({})
   // período efetivo de um widget: da barra do painel, fixo ou do seletor do próprio card
+  // barra de período de cada grupo: { groupId: { preset, from, to } }
+  const [groupPeriods, setGroupPeriods] = useState<Record<string, { preset: string; from: string; to: string }>>({})
+  // "segue o grupo" só vale se o widget realmente está num grupo; senão ele segue o painel
+  const effectiveMode = (w: Widget): 'panel' | 'fixed' | 'own' | 'group' => {
+    const mode = w.period_mode || 'panel'
+    if (mode === 'group' && !(w.group_id && localGroups.some(g => g.id === w.group_id))) return 'panel'
+    return mode
+  }
   const widgetPeriod = (w: Widget): PeriodRange | null => {
     if (!w.period_field) return null
-    const mode = w.period_mode || 'panel'
+    const mode = effectiveMode(w)
     if (mode === 'fixed') return resolvePeriod(w.period_fixed || 'month')
+    if (mode === 'group') {
+      const gp = groupPeriods[w.group_id as string]
+      return gp ? resolvePeriod(gp.preset, { from: gp.from, to: gp.to }) : null
+    }
     if (mode === 'own') {
       const o = ownPeriods[w.id]
       return o ? resolvePeriod(o.preset, { from: o.from, to: o.to }) : null
@@ -217,7 +229,7 @@ export default function AnalyticsDashboard({
     return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
   }
   // a barra do painel só vale para widgets em modo "segue o painel"
-  const followsPanel = (w: Widget) => !!w.period_field && (w.period_mode || 'panel') === 'panel'
+  const followsPanel = (w: Widget) => !!w.period_field && effectiveMode(w) === 'panel'
   const hasPeriodWidgets = localWidgets.some(followsPanel)
   const periodWidgetCount = localWidgets.filter(followsPanel).length
   const fmtDay = formatPeriodDay
@@ -371,7 +383,7 @@ export default function AnalyticsDashboard({
     }, 400) // Debounce de 400ms para evitar chamadas excessivas durante a digitação
 
     return () => clearTimeout(handler)
-  }, [isTunnelReady, localWidgets, filters, periodRange, ownPeriods])
+  }, [isTunnelReady, localWidgets, localGroups, filters, periodRange, ownPeriods, groupPeriods])
 
   const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
@@ -1400,6 +1412,41 @@ export default function AnalyticsDashboard({
     )
   }
 
+  // Barra de período do grupo: aparece abaixo do cabeçalho quando algum widget do grupo usa "Segue o grupo"
+  const renderGroupPeriodBar = (sec: Section) => {
+    const group = sec.group as BiGroup
+    const followers = sec.widgets.filter(w => !!w.period_field && effectiveMode(w) === 'group')
+    if (followers.length === 0) return null
+    const gp = groupPeriods[group.id] || { preset: 'all', from: '', to: '' }
+    const set = (patch: Partial<typeof gp>) => setGroupPeriods(prev => ({ ...prev, [group.id]: { ...gp, ...patch } }))
+    const inputCls = 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white'
+    return (
+      <div className="flex flex-wrap items-center gap-2 px-2">
+        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">Período do grupo</span>
+        <span className="text-[9px] font-bold text-neutral-400 mr-2">
+          afeta {followers.length} {followers.length === 1 ? 'indicador' : 'indicadores'} (marcados com 📅)
+        </span>
+        {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => set({ preset: o.id })}
+            className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", gp.preset === o.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600')}
+          >
+            {o.label}
+          </button>
+        ))}
+        {gp.preset === 'custom' && (
+          <>
+            <input type="date" value={gp.from} onChange={e => set({ from: e.target.value })} className={inputCls} />
+            <span className="text-[10px] text-neutral-400">até</span>
+            <input type="date" value={gp.to} onChange={e => set({ to: e.target.value })} className={inputCls} />
+          </>
+        )}
+      </div>
+    )
+  }
+
   const renderWidgetCard = (widget: Widget) => {
     const widthClass =
       widget.width === 'full' ? 'col-span-12' :
@@ -1429,12 +1476,12 @@ export default function AnalyticsDashboard({
               <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.calc}{widget.divide_by?.calc ? ` ÷ ${widget.divide_by.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.divide_by.calc}` : ''} ({widget.use_formula ? 'fórmula' : (widget.field_id || 'Toda Tabela')})</p>
               {widget.period_field && (() => {
                 const wp = widgetPeriod(widget)
-                const mode = widget.period_mode || 'panel'
+                const mode = effectiveMode(widget)
                 const own = ownPeriods[widget.id] || { preset: 'all', from: '', to: '' }
                 return (
                   <div className="flex flex-wrap items-center gap-1">
                     <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
-                      📅 {wp ? `${fmtDay(wp.from)} – ${fmtDay(wp.to)}` : 'Todo o período'}{mode === 'fixed' ? ' · fixo' : ''}
+                      📅 {wp ? `${fmtDay(wp.from)} – ${fmtDay(wp.to)}` : 'Todo o período'}{mode === 'fixed' ? ' · fixo' : mode === 'group' ? ' · grupo' : ''}
                     </p>
                     {mode === 'own' && (
                       <>
@@ -1593,6 +1640,7 @@ export default function AnalyticsDashboard({
           {sections.map((sec) => (
             <div key={sec.key} className="space-y-4">
               {sec.group && renderGroupHeader(sec)}
+              {sec.group && !collapsedGroups[sec.key] && renderGroupPeriodBar(sec)}
               {!(sec.group && collapsedGroups[sec.key]) && (
                 <SortableContext items={sec.widgets.map(w => w.id)} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
