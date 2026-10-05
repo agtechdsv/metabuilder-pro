@@ -1023,7 +1023,7 @@ export default function AnalyticsDashboard({
               </div>
             )}
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">{widget.title}</h3>
+              <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">{widget.title || 'Sem título'}</h3>
               <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc} ({widget.field_id || 'Toda Tabela'})</p>
               {truncated[widget.id] && (
                 <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={`A consulta atingiu o limite de ${BI_ROW_LIMIT} linhas: os totais podem estar incompletos.`}>

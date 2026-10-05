@@ -9,7 +9,7 @@ export function useStepLayoutWidgets(config: any, setConfig: any) {
   const handleAddWidget = () => {
     setEditingWidget({
       id: Math.random().toString(36).substr(2, 9),
-      title: 'Novo Widget',
+      title: '',
       type: 'kpi',
       model_id: config.selected_models[0] || '',
       field: '',

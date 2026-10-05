@@ -13,7 +13,7 @@ export function AnalyticsSection({
       id: "widget_" + Date.now(),
       type: 'kpi',
       calc: 'count',
-      title: 'Novo Indicador',
+      title: '',
       size: '1',
       color: 'indigo'
     })

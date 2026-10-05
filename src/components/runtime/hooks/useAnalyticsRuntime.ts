@@ -24,7 +24,7 @@ export function useAnalyticsRuntime({
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
       id: Math.random().toString(36).substr(2, 9),
-      title: 'Novo Widget',
+      title: '',
       type: 'kpi',
       model_id: project.models?.[0]?.id || '',
       field: '',

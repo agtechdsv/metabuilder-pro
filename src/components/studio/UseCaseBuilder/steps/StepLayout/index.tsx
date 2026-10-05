@@ -160,7 +160,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
   const handleAddWidget = () => {
     setEditingWidget({
       id: Math.random().toString(36).substr(2, 9),
-      title: 'Novo Widget',
+      title: '',
       type: 'kpi',
       model_id: config.selected_models[0] || '',
       field: '',
