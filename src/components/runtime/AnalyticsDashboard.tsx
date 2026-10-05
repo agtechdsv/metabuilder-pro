@@ -103,6 +103,28 @@ const BI_ROW_LIMIT = 1000
 const BI_MAX_GROUPS = 2000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
 
+/**
+ * Moldura arrastável de cada widget. Fica FORA de AnalyticsDashboard de propósito: um componente declarado dentro do
+ * outro ganha identidade nova a cada render, e o React desmontava e remontava todos os cards a cada mudança de estado
+ * (todos os widgets recarregavam e a página voltava ao topo ao trocar um período).
+ */
+function SortableCard({ id, widthClass, renderHeader, children }: {
+  id: string
+  widthClass: string
+  renderHeader: (drag: { attributes: any; listeners: any }) => React.ReactNode
+  children: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.5 : 1 }
+  return (
+    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col min-h-[350px] transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", widthClass)}>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all" />
+      {renderHeader({ attributes, listeners })}
+      <div className="flex-1 flex flex-col relative z-10">{children}</div>
+    </div>
+  )
+}
+
 export default function AnalyticsDashboard({ 
   config, 
   project, 
@@ -1221,19 +1243,20 @@ export default function AnalyticsDashboard({
     )
   }
 
-  const SortableWidget = ({ widget }: { widget: Widget }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: widget.id })
-    const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.5 : 1 }
-    const widthClass = 
-      widget.width === 'full' ? 'col-span-12' : 
-      widget.width === 'half' ? 'col-span-12 md:col-span-6' : 
+  const renderWidgetCard = (widget: Widget) => {
+    const widthClass =
+      widget.width === 'full' ? 'col-span-12' :
+      widget.width === 'half' ? 'col-span-12 md:col-span-6' :
       widget.width === 'third' ? 'col-span-12 md:col-span-4' :
       widget.width === 'quarter' ? 'col-span-12 md:col-span-3' :
       'col-span-12 md:col-span-4'
 
     return (
-      <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col min-h-[350px] transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", widthClass)}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all" />
+      <SortableCard
+        key={widget.id}
+        id={widget.id}
+        widthClass={widthClass}
+        renderHeader={({ attributes, listeners }) => (
         <div className="flex items-center justify-between mb-4 relative z-10">
           <div className="flex items-center gap-3">
             {isEditMode ? (
@@ -1299,8 +1322,10 @@ export default function AnalyticsDashboard({
             )}
           </div>
         </div>
-        <div className="flex-1 flex flex-col relative z-10">{renderWidgetContent(widget)}</div>
-      </div>
+        )}
+      >
+        {renderWidgetContent(widget)}
+      </SortableCard>
     )
   }
 
@@ -1408,7 +1433,7 @@ export default function AnalyticsDashboard({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={localWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
-            {localWidgets.map((widget) => <SortableWidget key={widget.id} widget={widget} />)}
+            {localWidgets.map((widget) => renderWidgetCard(widget))}
             {config.allow_runtime_edit && onAddWidget && !isEditMode && (
               <button onClick={onAddWidget} className="col-span-12 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group min-h-[350px]">
                 <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl shadow-neutral-500/5"><Plus className="w-10 h-10" /></div>
