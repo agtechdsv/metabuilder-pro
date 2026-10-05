@@ -47,6 +47,12 @@ export interface BuildAggInput {
   series?: BiColRef | null
   /** métrica derivada: o valor final é (métrica principal) ÷ (esta métrica) */
   divideBy?: BiMetric | null
+  /**
+   * Quando o agrupamento (ou a série) é uma chave estrangeira, mostra o nome do registro relacionado em vez do UUID:
+   * agrupa pela chave do registro e exibe o rótulo (dois registros com o mesmo nome continuam separados).
+   */
+  groupLabel?: { label: BiColRef; key: BiColRef } | null
+  seriesLabel?: { label: BiColRef; key: BiColRef } | null
   /** teto de grupos quando não há Top N */
   maxGroups?: number
 }
@@ -253,23 +259,35 @@ function metricSelect(input: BuildAggInput, m: BiMetric): { sql: string; grouped
     aggExpr = `${calc}(${dedupe ? '"bi_v"' : valueSql})`
   }
 
-  const g = input.groupBy ? groupExpr(dialect, input.groupBy, input.granularity) : null
-  const s = g && input.series ? refSql(input.series) : null
+  // dimensões: expressão de exibição primeiro e, para chave estrangeira, a chave do registro depois
+  const gExprs: string[] = !input.groupBy ? [] : input.groupLabel
+    ? [refSql(input.groupLabel.label), refSql(input.groupLabel.key)]
+    : [groupExpr(dialect, input.groupBy, input.granularity)]
+  const sExprs: string[] = gExprs.length === 0 || !input.series ? [] : input.seriesLabel
+    ? [refSql(input.seriesLabel.label), refSql(input.seriesLabel.key)]
+    : [refSql(input.series)]
 
-  if (!g) {
+  if (gExprs.length === 0) {
     const sql = dedupe
       ? `SELECT ${aggExpr} AS "bi_value" FROM (SELECT DISTINCT ${pk} AS "bi_pk", ${valueSql} AS "bi_v" ${from} WHERE ${where}) bi_sub`
       : `SELECT ${aggExpr} AS "bi_value" ${from} WHERE ${where}`
     return { sql, grouped: false }
   }
   if (dedupe) {
-    const cols = s ? `"bi_g" AS "bi_name", "bi_s" AS "bi_series"` : `"bi_g" AS "bi_name"`
-    const keys = s ? `"bi_g", "bi_s"` : `"bi_g"`
-    const inner = `SELECT DISTINCT ${pk} AS "bi_pk", ${g} AS "bi_g", ${s ? `${s} AS "bi_s", ` : ''}${valueSql} AS "bi_v" ${from} WHERE ${where}`
-    return { sql: `SELECT ${cols}, ${aggExpr} AS "bi_value" FROM (${inner}) bi_sub GROUP BY ${keys}`, grouped: true }
+    const gAl = ['bi_g', 'bi_gk']
+    const sAl = ['bi_s', 'bi_sk']
+    const inner = [
+      `${pk} AS "bi_pk"`,
+      ...gExprs.map((e, i) => `${e} AS "${gAl[i]}"`),
+      ...sExprs.map((e, i) => `${e} AS "${sAl[i]}"`),
+      `${valueSql} AS "bi_v"`,
+    ].join(', ')
+    const cols = sExprs.length ? `"bi_g" AS "bi_name", "bi_s" AS "bi_series"` : `"bi_g" AS "bi_name"`
+    const keys = [...gAl.slice(0, gExprs.length), ...sAl.slice(0, sExprs.length)].map(a => `"${a}"`).join(', ')
+    return { sql: `SELECT ${cols}, ${aggExpr} AS "bi_value" FROM (SELECT DISTINCT ${inner} ${from} WHERE ${where}) bi_sub GROUP BY ${keys}`, grouped: true }
   }
-  const cols = s ? `${g} AS "bi_name", ${s} AS "bi_series"` : `${g} AS "bi_name"`
-  const keys = s ? `${g}, ${s}` : g
+  const cols = sExprs.length ? `${gExprs[0]} AS "bi_name", ${sExprs[0]} AS "bi_series"` : `${gExprs[0]} AS "bi_name"`
+  const keys = [...gExprs, ...sExprs].join(', ')
   return { sql: `SELECT ${cols}, ${aggExpr} AS "bi_value" ${from} WHERE ${where} GROUP BY ${keys}`, grouped: true }
 }
 

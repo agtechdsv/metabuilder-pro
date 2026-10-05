@@ -50,3 +50,31 @@ export function resolvePeriod(preset: string | undefined, custom?: { from?: stri
 export function formatPeriodDay(d: string): string {
   return d.split('-').reverse().join('/')
 }
+
+/**
+ * Período de comparação ("vs período anterior"):
+ *  - do dia 1 até um dia do mesmo mês → mesmo trecho do mês anterior (limitado ao tamanho dele);
+ *  - 1º de janeiro até uma data do mesmo ano → mesmo trecho do ano anterior;
+ *  - qualquer outro → o mesmo número de dias imediatamente antes.
+ */
+export function previousRange(r: PeriodRange): PeriodRange {
+  const [fy, fm, fd] = r.from.split('-').map(Number)
+  const [ty, tm, td] = r.to.split('-').map(Number)
+  if (fd === 1 && fy === ty && fm === tm) {
+    const pm = new Date(fy, fm - 2, 1)
+    const last = new Date(pm.getFullYear(), pm.getMonth() + 1, 0).getDate()
+    return { from: iso(pm), to: iso(new Date(pm.getFullYear(), pm.getMonth(), Math.min(td, last))) }
+  }
+  if (fm === 1 && fd === 1 && fy === ty) {
+    const last = new Date(fy - 1, tm, 0).getDate()
+    return { from: `${fy - 1}-01-01`, to: iso(new Date(fy - 1, tm - 1, Math.min(td, last))) }
+  }
+  const from = new Date(fy, fm - 1, fd)
+  const to = new Date(ty, tm - 1, td)
+  const days = Math.round((to.getTime() - from.getTime()) / 86400000) + 1
+  const prevTo = new Date(from)
+  prevTo.setDate(prevTo.getDate() - 1)
+  const prevFrom = new Date(prevTo)
+  prevFrom.setDate(prevFrom.getDate() - (days - 1))
+  return { from: iso(prevFrom), to: iso(prevTo) }
+}

@@ -15,6 +15,8 @@ interface BIWidgetEditorProps {
   models: any[]
   joins: any[]
   t: (key: string) => string
+  /** títulos de agrupamento já usados no painel (sugestões do campo Grupo) */
+  existingGroups?: string[]
 }
 
 const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
@@ -37,7 +39,7 @@ const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
 const selectCls = 'w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white'
 const labelCls = 'text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1'
 
-export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t }: BIWidgetEditorProps) {
+export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, existingGroups = [] }: BIWidgetEditorProps) {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
   const currentModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
 
@@ -92,6 +94,22 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
           className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           placeholder="Ex: Total de Vendas"
         />
+      </div>
+
+      {/* Agrupamento */}
+      <div className="space-y-2">
+        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Grupo (opcional)</label>
+        <input
+          type="text"
+          list="bi-widget-groups"
+          value={editingWidget?.group_title || ''}
+          onChange={e => setEditingWidget({...editingWidget, group_title: e.target.value || undefined})}
+          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
+          placeholder="Ex: Visão Geral (widgets com o mesmo grupo ficam juntos e recolhíveis)"
+        />
+        <datalist id="bi-widget-groups">
+          {existingGroups.map(g => <option key={g} value={g} />)}
+        </datalist>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -438,6 +456,27 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                )}
              </>
            )}
+           {editingWidget?.period_field && editingWidget?.type === 'kpi' && !editingWidget?.group_by && (
+             <div className="flex flex-wrap gap-2 pt-1">
+               <button
+                 type="button"
+                 onClick={() => setEditingWidget({...editingWidget, compare_previous: !editingWidget?.compare_previous})}
+                 className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.compare_previous ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+               >
+                 Comparar com o período anterior
+               </button>
+               {editingWidget?.compare_previous && (
+                 <button
+                   type="button"
+                   onClick={() => setEditingWidget({...editingWidget, compare_invert: !editingWidget?.compare_invert})}
+                   className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.compare_invert ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+                   title="Marque quando cair é bom (ex.: devoluções, cancelamentos)"
+                 >
+                   Menor é melhor
+                 </button>
+               )}
+             </div>
+           )}
            <p className="text-[9px] font-bold text-neutral-400 ml-1">
              {(editingWidget?.period_mode || 'panel') === 'panel' && 'A barra de período do painel (7/30/90 dias, mês, ano, personalizado) filtra este campo.'}
              {editingWidget?.period_mode === 'fixed' && 'O widget sempre mostra o período escolhido e ignora a barra do painel.'}
@@ -471,6 +510,21 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
                />
              </div>
+             {['currency', 'currency_compact'].includes(editingWidget?.format) && (
+               <div className="space-y-1.5 col-span-3">
+                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Moeda</label>
+                 <select
+                   value={editingWidget?.currency || ''}
+                   onChange={e => setEditingWidget({...editingWidget, currency: e.target.value || undefined})}
+                   className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
+                 >
+                   <option value="">Automática (pelo idioma da tela)</option>
+                   <option value="BRL">Real (R$)</option>
+                   <option value="USD">Dólar (US$)</option>
+                   <option value="EUR">Euro (€)</option>
+                 </select>
+               </div>
+             )}
            </div>
 
            {['bar', 'line', 'area'].includes(editingWidget?.type) && (

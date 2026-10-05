@@ -700,6 +700,7 @@ export default function ViewPageContent({
       </main>
 
       <ViewActionModals
+        analyticsGroups={Array.from(new Set(((localAnalyticsConfig || initialAnalyticsConfig)?.widgets || []).map((w: any) => (w.group_title || '').trim()).filter(Boolean))) as string[]}
         formHeaderSubtitleField={formHeaderSubtitleField}
         isDrawerOpen={isDrawerOpen}
         isModalOpen={isModalOpen}

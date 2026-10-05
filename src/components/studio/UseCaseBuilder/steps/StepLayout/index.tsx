@@ -976,6 +976,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             models={models}
             joins={config.layout_config.joins || []}
             t={t}
+            existingGroups={Array.from(new Set((config.layout_config.analytics_config?.widgets || []).map((w: any) => (w.group_title || '').trim()).filter(Boolean))) as string[]}
           />
 
 

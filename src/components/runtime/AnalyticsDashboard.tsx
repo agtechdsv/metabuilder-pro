@@ -74,6 +74,12 @@ interface Widget {
   /** de onde vem o período do widget: barra do painel (padrão), período fixo ou seletor próprio no card */
   period_mode?: 'panel' | 'fixed' | 'own'
   period_fixed?: string
+  /** título do agrupamento (seção recolhível); widgets com o mesmo título ficam juntos */
+  group_title?: string
+  /** KPI sem agrupamento: mostra a variação contra o período anterior (exige o campo de data do período) */
+  compare_previous?: boolean
+  /** menor é melhor (ex.: devoluções): a seta fica verde quando o valor cai */
+  compare_invert?: boolean
 }
 
 interface AnalyticsDashboardProps {
@@ -96,7 +102,8 @@ interface AnalyticsDashboardProps {
 import { compileFormula, parseFormulaAst } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
-import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, type PeriodRange } from '@/lib/bi/period'
+import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
+import { resolveFkLabel } from '@/lib/bi/fkLabel'
 import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
@@ -108,16 +115,18 @@ const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'
  * outro ganha identidade nova a cada render, e o React desmontava e remontava todos os cards a cada mudança de estado
  * (todos os widgets recarregavam e a página voltava ao topo ao trocar um período).
  */
-function SortableCard({ id, widthClass, renderHeader, children }: {
+function SortableCard({ id, widthClass, compact, renderHeader, children }: {
   id: string
   widthClass: string
+  /** KPI de valor único: não precisa dos 350 px de altura mínima */
+  compact?: boolean
   renderHeader: (drag: { attributes: any; listeners: any }) => React.ReactNode
   children: React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.5 : 1 }
   return (
-    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col min-h-[350px] transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", widthClass)}>
+    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", compact ? "min-h-[180px]" : "min-h-[350px]", widthClass)}>
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all" />
       {renderHeader({ attributes, listeners })}
       <div className="flex-1 flex flex-col relative z-10">{children}</div>
@@ -147,9 +156,13 @@ export default function AnalyticsDashboard({
   const [seriesData, setSeriesData] = useState<Record<string, { rows: any[]; keys: string[] }>>({})
   // período do painel: aplicado aos widgets que têm "campo de data do período"
   const [period, setPeriod] = useState<{ preset: string; from: string; to: string }>({ preset: 'all', from: '', to: '' })
+  // valor do período anterior dos KPIs com comparação
+  const [prevData, setPrevData] = useState<Record<string, number>>({})
   const [expandedGaugeId, setExpandedGaugeId] = useState<string | null>(null)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
+  // agrupamentos recolhidos (só nesta sessão da tela)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [localWidgets, setLocalWidgets] = useState(config.widgets || [])
 
   // Sincroniza widgets locais quando a config mudar (ex: após load inicial)
@@ -224,10 +237,12 @@ export default function AnalyticsDashboard({
 
   // Mapeia IDs de widgets para evitar loops de refresh infinitos
   const lastQueryIds = useRef<Record<string, string>>({})
+  // consulta do período anterior (comparação do KPI): uma por widget
+  const prevQueryIds = useRef<Record<string, string>>({})
   // assinatura (config + filtros + período) da última busca de cada widget: evita recarregar o que não mudou
   const fetchedSig = useRef<Record<string, string>>({})
   // 'agg' = SQL já agregado no banco; 'raw' = linhas cruas agregadas aqui (caminho antigo, usado como reserva)
-  const queryModes = useRef<Record<string, 'agg' | 'raw'>>({})
+  const queryModes = useRef<Record<string, 'agg' | 'raw' | 'prev'>>({})
   // sempre aponta para a versão mais recente de fetchWidgetData (o listener do canal guarda uma versão antiga)
   const fetchWidgetDataRef = useRef<((widget: Widget, opts?: { legacy?: boolean; reason?: string }) => Promise<void>) | null>(null)
 
@@ -240,15 +255,22 @@ export default function AnalyticsDashboard({
     })
   )
 
+  // Arrastar reordena dentro do próprio agrupamento (para mudar um widget de grupo, use o campo "Grupo" do editor)
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    if (over && active.id !== over.id) {
-      setLocalWidgets((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id)
-        const newIndex = items.findIndex((i) => i.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
+    if (!over || active.id === over.id) return
+    setLocalWidgets((items) => {
+      const a = items.find((i) => i.id === active.id)
+      const o = items.find((i) => i.id === over.id)
+      if (!a || !o || (a.group_title || '') !== (o.group_title || '')) return items
+      const g = a.group_title || ''
+      const idxs = items.map((w, i) => ((w.group_title || '') === g ? i : -1)).filter((i) => i >= 0)
+      const section = idxs.map((i) => items[i])
+      const moved = arrayMove(section, section.findIndex((w) => w.id === active.id), section.findIndex((w) => w.id === over.id))
+      const next = [...items]
+      idxs.forEach((idx, k) => { next[idx] = moved[k] })
+      return next
+    })
   }
 
   // Refs para evitar re-subscrições desnecessárias
@@ -265,6 +287,17 @@ export default function AnalyticsDashboard({
     const handleSqlResult = (payload: any) => {
       const qId = payload.payload?.queryId
       if (!qId) return
+
+      const prevWidgetId = Object.keys(prevQueryIds.current).find(id => prevQueryIds.current[id] === qId)
+      if (prevWidgetId) {
+        delete queryModes.current[qId]
+        if (payload.payload.success) {
+          const row = payload.payload.data?.[0]
+          const v = Number(row?.bi_value ?? row?.BI_VALUE)
+          setPrevData(prev => ({ ...prev, [prevWidgetId]: Number.isFinite(v) ? v : 0 }))
+        }
+        return
+      }
 
       const widgetId = Object.keys(lastQueryIds.current).find(id => lastQueryIds.current[id] === qId)
       if (!widgetId) return
@@ -569,8 +602,8 @@ export default function AnalyticsDashboard({
     })
     const validFilters = candidateFilters.filter(f => joinedTables.has(f.col.table))
 
-    const sendQuery = (sql: string, mode: 'agg' | 'raw', limit: number) => {
-      queryModes.current[queryId] = mode
+    const sendQuery = (sql: string, mode: 'agg' | 'raw' | 'prev', limit: number, qid: string = queryId) => {
+      queryModes.current[qid] = mode
       // Pequeno delay para garantir que o canal esteja pronto
       setTimeout(() => {
         if (!tunnelChannel || !isTunnelReady) return
@@ -579,7 +612,7 @@ export default function AnalyticsDashboard({
           type: 'broadcast',
           event: 'sql_query',
           payload: {
-            queryId,
+            queryId: qid,
             action: 'select',
             query: sql, // ← 'query' é o campo lido pelo CLI
             sql,        // ← mantido por compatibilidade
@@ -624,15 +657,27 @@ export default function AnalyticsDashboard({
       conditions.push({ col: ref, op: c.op as BiConditionOp, kind: colKind(ref.table, ref.column), value: c.value, value2: c.value2 })
     })
     const wPeriod = widgetPeriod(widget)
-    if (widget.period_field && wPeriod) {
-      const ref = resolveRef(widget.period_field)
-      conditions.push({ col: ref, op: 'gte', kind: 'date', value: wPeriod.from })
-      conditions.push({ col: ref, op: 'lt', kind: 'date', value: nextDay(wPeriod.to) })
+    const baseConditions = [...conditions]
+    const periodConditions = (range: PeriodRange): BiCondition[] => {
+      const ref = resolveRef(widget.period_field as string)
+      return [
+        { col: ref, op: 'gte', kind: 'date', value: range.from },
+        { col: ref, op: 'lt', kind: 'date', value: nextDay(range.to) },
+      ]
     }
+    if (widget.period_field && wPeriod) conditions.push(...periodConditions(wPeriod))
+    const compare = widget.type === 'kpi' && !widget.group_by && !!widget.compare_previous && !!widget.period_field && !!wPeriod
+    delete prevQueryIds.current[widget.id]
+    if (!compare) setPrevData(prev => { if (!(widget.id in prev)) return prev; const next = { ...prev }; delete next[widget.id]; return next })
     const seriesRef = widget.series_by && widget.group_by && ['bar', 'line', 'area'].includes(widget.type) ? resolveRef(widget.series_by) : null
     const divideBy = widget.divide_by?.calc
       ? { calc: widget.divide_by.calc, field: widget.divide_by.field ? resolveRef(widget.divide_by.field) : null }
       : null
+    // agrupar por chave estrangeira: mostra o nome do registro relacionado em vez do UUID
+    const groupLabel = groupRef ? resolveFkLabel(allModels as any[], resolvedRelations, groupRef) : null
+    const seriesLabel = seriesRef ? resolveFkLabel(allModels as any[], resolvedRelations, seriesRef) : null
+    if (groupLabel) usedTables.add(groupLabel.label.table)
+    if (seriesLabel) usedTables.add(seriesLabel.label.table)
     conditions.forEach(c => usedTables.add(c.col.table))
     if (seriesRef) usedTables.add(seriesRef.table)
     if (divideBy?.field) usedTables.add(divideBy.field.table)
@@ -668,10 +713,34 @@ export default function AnalyticsDashboard({
           conditions,
           series: seriesRef,
           divideBy,
+          groupLabel,
+          seriesLabel,
           maxGroups: BI_MAX_GROUPS,
         })
         if (built.ok) {
           sendQuery(built.sql, 'agg', BI_MAX_GROUPS + 100)
+          // KPI com comparação: segunda consulta, igual à primeira mas no período anterior
+          if (compare && wPeriod) {
+            const prevBuilt = buildAggregateQuery({
+              dialect,
+              mainTable: tableName,
+              mainPk: getPkColumn(allModels as any[], tableName) || 'id',
+              joinSql: minimal.joinSql,
+              calc: widget.calc,
+              formula: aggFormula,
+              field: fieldRef,
+              groupBy: null,
+              filters: aggFilters,
+              conditions: [...baseConditions, ...periodConditions(previousRange(wPeriod))],
+              divideBy,
+              maxGroups: BI_MAX_GROUPS,
+            })
+            if (prevBuilt.ok) {
+              const prevId = crypto.randomUUID()
+              prevQueryIds.current[widget.id] = prevId
+              sendQuery(prevBuilt.sql, 'prev', BI_MAX_GROUPS + 100, prevId)
+            }
+          }
           return
         }
         buildReason = built.reason
@@ -1046,6 +1115,25 @@ export default function AnalyticsDashboard({
             {widget.calc} {widget.field_id && widget.field_id !== '' ? `/ ${widget.field_id}` : ''}
           </span>
         )}
+        {(size === 'normal' || isExpanded) && widget.compare_previous && (() => {
+          const wp = widgetPeriod(widget)
+          const prevVal = prevData[widget.id]
+          if (!wp || prevVal === undefined) return null
+          const pr = previousRange(wp)
+          const up = rawVal >= prevVal
+          const good = widget.compare_invert ? !up : up
+          const pct = prevVal === 0 ? null : ((rawVal - prevVal) / Math.abs(prevVal)) * 100
+          return (
+            <div className="mt-3 flex flex-col items-center gap-0.5">
+              <span className={cn("text-sm font-black tracking-tight", pct === null ? 'text-neutral-400' : good ? 'text-emerald-500' : 'text-red-500')}>
+                {pct === null ? '—' : `${up ? '▲' : '▼'} ${formatBiValue(Math.abs(pct), { format: 'percent', decimals: 1, locale: biLocale })}`}
+              </span>
+              <span className="text-[10px] font-bold text-neutral-400 text-center">
+                vs {fmtDay(pr.from)} – {fmtDay(pr.to)}: {fmt(prevVal, widget)}
+              </span>
+            </div>
+          )
+        })()}
       </div>
     )
   }
@@ -1242,6 +1330,73 @@ export default function AnalyticsDashboard({
     )
   }
 
+  // Seções: widgets com o mesmo group_title ficam juntos; a ordem é a do primeiro widget de cada grupo
+  const sections = (() => {
+    const out: { key: string; title: string | null; widgets: Widget[] }[] = []
+    const byKey = new Map<string, { key: string; title: string | null; widgets: Widget[] }>()
+    for (const w of localWidgets) {
+      const title = (w.group_title || '').trim() || null
+      const key = title ?? '__none__'
+      let sec = byKey.get(key)
+      if (!sec) { sec = { key, title, widgets: [] }; byKey.set(key, sec); out.push(sec) }
+      sec.widgets.push(w)
+    }
+    return out
+  })()
+  const renameGroup = (oldTitle: string, newTitle: string) => {
+    const t = newTitle.trim()
+    if (!t || t === oldTitle) return
+    setLocalWidgets(items => items.map(w => ((w.group_title || '').trim() === oldTitle ? { ...w, group_title: t } : w)))
+  }
+  const ungroup = (title: string) => setLocalWidgets(items => items.map(w => ((w.group_title || '').trim() === title ? { ...w, group_title: undefined } : w)))
+  const moveGroup = (key: string, dir: -1 | 1) => {
+    const i = sections.findIndex(sec => sec.key === key)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= sections.length) return
+    const order = [...sections]
+    ;[order[i], order[j]] = [order[j], order[i]]
+    setLocalWidgets(order.flatMap(sec => sec.widgets))
+  }
+
+  const renderGroupHeader = (sec: { key: string; title: string | null; widgets: Widget[] }, index: number) => {
+    const collapsed = !!collapsedGroups[sec.key]
+    const n = sec.widgets.length
+    return (
+      <div className="flex items-center gap-3 px-2">
+        <button
+          type="button"
+          onClick={() => setCollapsedGroups(prev => ({ ...prev, [sec.key]: !prev[sec.key] }))}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left group/gh"
+          aria-expanded={!collapsed}
+        >
+          <span className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover/gh:text-indigo-600 transition-all">
+            <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", collapsed && "-rotate-90")} />
+          </span>
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{sec.title}</span>
+          <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
+            {n} {n === 1 ? 'indicador' : 'indicadores'}
+          </span>
+          <span className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+        </button>
+        {isEditMode && (
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              key={sec.title || ''}
+              defaultValue={sec.title || ''}
+              onBlur={e => renameGroup(sec.title || '', e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+              title="Renomear o agrupamento"
+              className="w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white"
+            />
+            <button type="button" disabled={index === 0} onClick={() => moveGroup(sec.key, -1)} title="Mover para cima" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4 rotate-180" /></button>
+            <button type="button" disabled={index === sections.length - 1} onClick={() => moveGroup(sec.key, 1)} title="Mover para baixo" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+            <button type="button" onClick={() => ungroup(sec.title || '')} title="Desfazer o agrupamento (os indicadores continuam no painel)" className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">Desagrupar</button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderWidgetCard = (widget: Widget) => {
     const widthClass =
       widget.width === 'full' ? 'col-span-12' :
@@ -1255,6 +1410,7 @@ export default function AnalyticsDashboard({
         key={widget.id}
         id={widget.id}
         widthClass={widthClass}
+        compact={widget.type === 'kpi' && !widget.group_by}
         renderHeader={({ attributes, listeners }) => (
         <div className="flex items-center justify-between mb-4 relative z-10">
           <div className="flex items-center gap-3">
@@ -1430,17 +1586,28 @@ export default function AnalyticsDashboard({
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={localWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
-            {localWidgets.map((widget) => renderWidgetCard(widget))}
-            {config.allow_runtime_edit && onAddWidget && !isEditMode && (
+        <div className="space-y-8">
+          {sections.map((sec, index) => (
+            <div key={sec.key} className="space-y-4">
+              {sec.title && renderGroupHeader(sec, index)}
+              {!(sec.title && collapsedGroups[sec.key]) && (
+                <SortableContext items={sec.widgets.map(w => w.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
+                    {sec.widgets.map((widget) => renderWidgetCard(widget))}
+                  </div>
+                </SortableContext>
+              )}
+            </div>
+          ))}
+          {config.allow_runtime_edit && onAddWidget && !isEditMode && (
+            <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
               <button onClick={onAddWidget} className="col-span-12 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group min-h-[350px]">
                 <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl shadow-neutral-500/5"><Plus className="w-10 h-10" /></div>
                 <div className="text-center"><span className="text-xs font-black uppercase tracking-widest block">Novo Indicador</span><span className="text-[10px] font-bold opacity-60">Expandir Dashbaord</span></div>
               </button>
-            )}
-          </div>
-        </SortableContext>
+            </div>
+          )}
+        </div>
       </DndContext>
     </div>
   )

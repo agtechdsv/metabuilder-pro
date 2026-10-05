@@ -34,3 +34,23 @@ describe('resolvePeriod', () => {
   })
   it('formata o dia', () => expect(formatPeriodDay('2026-03-31')).toBe('31/03/2026'))
 })
+
+import { previousRange } from '../period'
+
+describe('previousRange', () => {
+  it('mês até hoje → mesmo trecho do mês anterior', () => {
+    expect(previousRange({ from: '2026-10-01', to: '2026-10-05' })).toEqual({ from: '2026-09-01', to: '2026-09-05' })
+  })
+  it('mês cheio → mês anterior inteiro, limitado ao tamanho dele', () => {
+    expect(previousRange({ from: '2026-03-01', to: '2026-03-31' })).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+    expect(previousRange({ from: '2026-01-01', to: '2026-01-31' })).toEqual({ from: '2025-12-01', to: '2025-12-31' })
+  })
+  it('ano até hoje → mesmo trecho do ano anterior', () => {
+    expect(previousRange({ from: '2026-01-01', to: '2026-10-05' })).toEqual({ from: '2025-01-01', to: '2025-10-05' })
+    expect(previousRange({ from: '2025-01-01', to: '2025-12-31' })).toEqual({ from: '2024-01-01', to: '2024-12-31' })
+  })
+  it('outros → mesmo número de dias imediatamente antes', () => {
+    expect(previousRange({ from: '2026-09-29', to: '2026-10-05' })).toEqual({ from: '2026-09-22', to: '2026-09-28' })
+    expect(previousRange({ from: '2026-03-15', to: '2026-04-14' })).toEqual({ from: '2026-02-12', to: '2026-03-14' })
+  })
+})
