@@ -367,33 +367,37 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
              const noValue = c.op === 'is_null' || c.op === 'not_null'
              const inputType = kind === 'date' ? 'date' : kind === 'number' && c.op !== 'in' ? 'number' : 'text'
              return (
-               <div key={i} className="grid grid-cols-12 gap-2 items-end p-2 bg-neutral-50/60 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 rounded-xl">
-                 <div className="col-span-4 space-y-1">
-                   <label className={labelCls}>Campo</label>
-                   <select value={c.field} onChange={e => patchCondition(i, { field: e.target.value, op: 'eq', value: '', value2: '' })} className={selectCls}>
-                     <option value="">Selecione...</option>
-                     {staleOption(c.field)}
-                     {fieldOptions}
-                   </select>
+               <div key={i} className="space-y-2 p-2 bg-neutral-50/60 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 rounded-xl">
+                 <div className="grid grid-cols-2 gap-2">
+                   <div className="space-y-1 min-w-0">
+                     <label className={labelCls}>Campo</label>
+                     <select value={c.field} onChange={e => patchCondition(i, { field: e.target.value, op: 'eq', value: '', value2: '' })} className={selectCls}>
+                       <option value="">Selecione...</option>
+                       {staleOption(c.field)}
+                       {fieldOptions}
+                     </select>
+                   </div>
+                   <div className="space-y-1 min-w-0">
+                     <label className={labelCls}>Operador</label>
+                     <select value={c.op} onChange={e => patchCondition(i, { op: e.target.value })} className={selectCls}>
+                       {ops.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                     </select>
+                   </div>
                  </div>
-                 <div className="col-span-3 space-y-1">
-                   <label className={labelCls}>Operador</label>
-                   <select value={c.op} onChange={e => patchCondition(i, { op: e.target.value })} className={selectCls}>
-                     {ops.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                   </select>
+                 <div className="flex items-end gap-2">
+                   <div className="space-y-1 flex-1 min-w-0">
+                     <label className={labelCls}>{c.op === 'between' ? 'Valor inicial e final' : 'Valor'}</label>
+                     {noValue ? (
+                       <div className="px-2 py-2 text-[10px] font-bold text-neutral-300">—</div>
+                     ) : (
+                       <div className="flex gap-2">
+                         <input type={inputType} value={c.value ?? ''} onChange={e => patchCondition(i, { value: e.target.value })} className={cn(selectCls, 'min-w-0 flex-1')} />
+                         {c.op === 'between' && <input type={inputType} value={c.value2 ?? ''} onChange={e => patchCondition(i, { value2: e.target.value })} className={cn(selectCls, 'min-w-0 flex-1')} />}
+                       </div>
+                     )}
+                   </div>
+                   <button type="button" onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))} className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-[12px] font-black text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all" title="Remover filtro">✕</button>
                  </div>
-                 <div className="col-span-4 space-y-1">
-                   <label className={labelCls}>Valor</label>
-                   {noValue ? (
-                     <div className="px-2 py-2 text-[10px] font-bold text-neutral-300">—</div>
-                   ) : (
-                     <div className="flex gap-1">
-                       <input type={inputType} value={c.value ?? ''} onChange={e => patchCondition(i, { value: e.target.value })} className={selectCls} />
-                       {c.op === 'between' && <input type={inputType} value={c.value2 ?? ''} onChange={e => patchCondition(i, { value2: e.target.value })} className={selectCls} />}
-                     </div>
-                   )}
-                 </div>
-                 <button type="button" onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))} className="col-span-1 py-2 text-[10px] font-black text-neutral-400 hover:text-red-500" title="Remover filtro">✕</button>
                </div>
              )
            })}
