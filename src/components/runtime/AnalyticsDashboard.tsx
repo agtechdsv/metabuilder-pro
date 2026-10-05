@@ -498,27 +498,30 @@ export default function AnalyticsDashboard({
       }, 500)
     }
 
+    // Tabelas que o widget realmente usa (grupo, valor, fórmula e filtros) → JOINs mínimos
+    const resolveRef = (s: string) => s.includes('.') ? { table: s.split('.')[0], column: s.split('.')[1] } : { table: tableName, column: s }
+    const rawField = widget.field && widget.field !== '*' ? String(widget.field) : ''
+    const aggFormula = rawField && ((widget as any).use_formula || /[*+/()]/.test(rawField)) ? rawField : null
+    let fieldRef: { table: string; column: string } | null = null
+    if (rawField && !aggFormula) {
+      const fieldMeta = model?.fields?.find((f: any) => String(f.id) === rawField)
+      fieldRef = resolveRef(fieldMeta?.db_column_name || rawField)
+    }
+    const groupRef = typeof groupCol === 'string' && groupCol ? resolveRef(groupCol) : null
+    const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
+    if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
+
+    // JOINs mínimos: só as tabelas que o widget usa (grupo, valor e filtros). Os JOINs do caso de uso inteiro
+    // (entregas, projetos, tarefas...) repetiam cada pedido e inflavam SUM/AVG.
+    const filterTables = candidateFilters.map(f => f.col.table)
+    const minimal = resolveJoinSql([...usedTables, ...filterTables].filter(t => t !== tableName), widget.joins || [])
+    const aggFilters = candidateFilters.filter(f => minimal.joinedTables.has(f.col.table))
+
+    const minimalOk = [...usedTables].every(t => minimal.joinedTables.has(t))
+
     // 1) Caminho novo: o banco agrega (GROUP BY / SUM / COUNT) e devolve só as linhas do gráfico
     if (dialect && !opts.legacy) {
-      const resolveRef = (s: string) => s.includes('.') ? { table: s.split('.')[0], column: s.split('.')[1] } : { table: tableName, column: s }
-      const rawField = widget.field && widget.field !== '*' ? String(widget.field) : ''
-      const aggFormula = rawField && ((widget as any).use_formula || /[*+/()]/.test(rawField)) ? rawField : null
-      let fieldRef: { table: string; column: string } | null = null
-      if (rawField && !aggFormula) {
-        const fieldMeta = model?.fields?.find((f: any) => String(f.id) === rawField)
-        fieldRef = resolveRef(fieldMeta?.db_column_name || rawField)
-      }
-      const groupRef = typeof groupCol === 'string' && groupCol ? resolveRef(groupCol) : null
-      const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
-      if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
-
-      // JOINs mínimos: só as tabelas que o widget usa (grupo, valor e filtros). Os JOINs do caso de uso inteiro
-      // (entregas, projetos, tarefas...) repetiam cada pedido e inflavam SUM/AVG.
-      const filterTables = candidateFilters.map(f => f.col.table)
-      const minimal = resolveJoinSql([...usedTables, ...filterTables].filter(t => t !== tableName), widget.joins || [])
-      const aggFilters = candidateFilters.filter(f => minimal.joinedTables.has(f.col.table))
-
-      if ([...usedTables].every(t => minimal.joinedTables.has(t))) {
+      if (minimalOk) {
         const built = buildAggregateQuery({
           dialect,
           mainTable: tableName,
@@ -543,10 +546,17 @@ export default function AnalyticsDashboard({
     }
 
     // 2) Caminho de reserva: busca linhas cruas (limitadas) e agrega no navegador
-    const whereClause = ['1=1', ...validFilters.map(f => filterConditionSql(dialect ?? 'other', f))].join(' AND ')
+    // Mesmo no caminho de reserva, só junta o necessário quando possível (senão JOINs 1:N repetem as linhas)
+    const rawJoinSql = minimalOk ? minimal.joinSql : joinSql
+    const rawJoined = minimalOk ? minimal.joinedTables : joinedTables
+    const rawFilters = minimalOk ? aggFilters : validFilters
+    const whereClause = ['1=1', ...rawFilters.map(f => filterConditionSql(dialect ?? 'other', f))].join(' AND ')
     let sqlSelect = '*'
     if (selectStr !== '*') {
-      sqlSelect = selectStr.split(',').map(s => {
+      sqlSelect = selectStr.split(',').filter(s => {
+        const col = s.trim()
+        return !col.includes('.') || rawJoined.has(col.split('.')[0]) || col.split('.')[0] === tableName
+      }).map(s => {
         const col = s.trim()
         if (col === '*') return '*'
         if (col.includes('.')) {
@@ -558,7 +568,7 @@ export default function AnalyticsDashboard({
     }
 
     const limitSql = dbType === 'oracle' ? `OFFSET 0 ROWS FETCH NEXT ${BI_ROW_LIMIT} ROWS ONLY` : `LIMIT ${BI_ROW_LIMIT}`
-    sendQuery(`SELECT ${sqlSelect} FROM "${tableName}"${joinSql} WHERE ${whereClause} ${limitSql}`, 'raw', BI_ROW_LIMIT)
+    sendQuery(`SELECT ${sqlSelect} FROM "${tableName}"${rawJoinSql} WHERE ${whereClause} ${limitSql}`, 'raw', BI_ROW_LIMIT)
   }
 
   fetchWidgetDataRef.current = fetchWidgetData
