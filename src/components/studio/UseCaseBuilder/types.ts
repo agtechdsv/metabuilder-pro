@@ -130,6 +130,12 @@ export interface BiWidget {
   show_labels?: boolean
   highlight_max?: boolean
   orientation?: string
+  stacked?: boolean
+  // Fase 2 (só o runtime; o app exportado passa a usar na Fase 2b)
+  conditions?: { field: string; op: string; value?: string; value2?: string }[]
+  series_by?: string
+  divide_by?: { calc: string; field?: string }
+  period_field?: string
 }
 
 export interface JoinConfig {

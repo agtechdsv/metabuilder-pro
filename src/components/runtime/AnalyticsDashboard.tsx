@@ -40,7 +40,7 @@ interface Widget {
   model_name?: string
   field: string
   field_id?: string
-  calc: 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX'
+  calc: 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'MIN' | 'MAX'
   group_by?: string
   width: 'full' | 'half' | 'third' | 'quarter'
   joins?: any[]
@@ -61,6 +61,16 @@ interface Widget {
   show_labels?: boolean
   highlight_max?: boolean
   orientation?: 'vertical' | 'horizontal'
+  stacked?: boolean
+  // Fase 2
+  /** filtros do widget, com operador (campo = "coluna" ou "tabela.coluna") */
+  conditions?: { field: string; op: string; value?: string; value2?: string }[]
+  /** segunda dimensão (série) para barras/linhas/área */
+  series_by?: string
+  /** métrica derivada: valor = (calc/field) ÷ (divide_by.calc/divide_by.field) */
+  divide_by?: { calc: string; field?: string }
+  /** campo de data que recebe o filtro de período do painel */
+  period_field?: string
 }
 
 interface AnalyticsDashboardProps {
@@ -80,9 +90,9 @@ interface AnalyticsDashboardProps {
   projectRelations?: any[]
 }
 
-import { compileFormula } from '@/lib/bi/safeFormula'
+import { compileFormula, parseFormulaAst } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
-import { buildAggregateQuery, filterConditionSql } from '@/lib/bi/queryBuilder'
+import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
 const BI_MAX_GROUPS = 2000
@@ -106,6 +116,10 @@ export default function AnalyticsDashboard({
   const [errors, setErrors] = useState<Record<string, string>>({})
   // widgets cuja consulta atingiu o limite de linhas: os totais podem estar incompletos
   const [truncated, setTruncated] = useState<Record<string, boolean>>({})
+  // dados em colunas por série (2ª dimensão): { rows: [{ name, <serie>: valor }], keys: [serie...] }
+  const [seriesData, setSeriesData] = useState<Record<string, { rows: any[]; keys: string[] }>>({})
+  // período do painel: aplicado aos widgets que têm "campo de data do período"
+  const [period, setPeriod] = useState<{ preset: string; from: string; to: string }>({ preset: 'all', from: '', to: '' })
   const [expandedGaugeId, setExpandedGaugeId] = useState<string | null>(null)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -138,6 +152,26 @@ export default function AnalyticsDashboard({
     return () => observer.disconnect()
   }, [])
 
+  const periodRange = useMemo(() => {
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const today = new Date()
+    const back = (days: number) => { const d = new Date(today); d.setDate(d.getDate() - days); return iso(d) }
+    switch (period.preset) {
+      case '7d': return { from: back(6), to: iso(today) }
+      case '30d': return { from: back(29), to: iso(today) }
+      case '90d': return { from: back(89), to: iso(today) }
+      case 'month': return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(today) }
+      case 'year': return { from: `${today.getFullYear()}-01-01`, to: iso(today) }
+      case 'custom': return /^\d{4}-\d{2}-\d{2}$/.test(period.from) && /^\d{4}-\d{2}-\d{2}$/.test(period.to) ? { from: period.from, to: period.to } : null
+      default: return null
+    }
+  }, [period])
+  const nextDay = (d: string) => {
+    const [y, m, dd] = d.split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
+  }
+  const hasPeriodWidgets = localWidgets.some(w => !!w.period_field)
+
   const biLocale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const fmt = (val: any, widget: Widget, axis = false) =>
     formatBiValue(val, { format: widget.format, decimals: widget.decimals, currency: widget.currency, locale: biLocale }, axis)
@@ -162,7 +196,7 @@ export default function AnalyticsDashboard({
   // 'agg' = SQL já agregado no banco; 'raw' = linhas cruas agregadas aqui (caminho antigo, usado como reserva)
   const queryModes = useRef<Record<string, 'agg' | 'raw'>>({})
   // sempre aponta para a versão mais recente de fetchWidgetData (o listener do canal guarda uma versão antiga)
-  const fetchWidgetDataRef = useRef<((widget: Widget, opts?: { legacy?: boolean }) => Promise<void>) | null>(null)
+  const fetchWidgetDataRef = useRef<((widget: Widget, opts?: { legacy?: boolean; reason?: string }) => Promise<void>) | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -213,7 +247,7 @@ export default function AnalyticsDashboard({
         } else {
           // o SQL agregado falhou (dialeto, tipo de coluna...): refaz pelo caminho antigo, com linhas cruas
           console.warn('[BI] consulta agregada falhou, usando o caminho alternativo:', payload.payload.error)
-          fetchWidgetDataRef.current?.(widget, { legacy: true })
+          fetchWidgetDataRef.current?.(widget, { legacy: true, reason: payload.payload.error })
           return
         }
         setLoading(prev => ({ ...prev, [widget.id]: false }))
@@ -263,9 +297,9 @@ export default function AnalyticsDashboard({
     }, 400) // Debounce de 400ms para evitar chamadas excessivas durante a digitação
 
     return () => clearTimeout(handler)
-  }, [isTunnelReady, localWidgets, filters])
+  }, [isTunnelReady, localWidgets, filters, period])
 
-  const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean } = {}) => {
+  const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
       return
     }
@@ -290,8 +324,31 @@ export default function AnalyticsDashboard({
       return
     }
 
+    // Todo campo do widget é "TABELA.COLUNA": sem o nome da tabela, uma coluna repetida (STATUS, NOME...) poderia vir de qualquer tabela
+    {
+      const isF = (widget as any).use_formula
+      const unqualified: string[] = []
+      const check = (label: string, v?: string) => { if (v && !String(v).includes('.')) unqualified.push(label) }
+      check('Agrupar por', widget.group_by)
+      if (!isF && widget.field && widget.field !== '*') check('Campo do valor', widget.field)
+      check('Segmentar por', widget.series_by)
+      check('Divisor', widget.divide_by?.field)
+      check('Campo do período', widget.period_field)
+      ;(widget.conditions || []).forEach((c, i) => check(`Filtro ${i + 1}`, c.field))
+      if (isF && widget.field) {
+        const ast = parseFormulaAst(String(widget.field))
+        const walk = (n: any): boolean => !n ? false : n.t === 'field' ? !n.table : n.t === 'neg' ? walk(n.a) : n.t === 'bin' ? walk(n.a) || walk(n.b) : n.t === 'fn' ? n.args.some(walk) : false
+        if (walk(ast)) unqualified.push('Fórmula')
+      }
+      if (unqualified.length > 0) {
+        setErrors(prev => ({ ...prev, [widget.id]: `Reabra o widget e selecione novamente (sem a tabela do campo): ${unqualified.join(', ')}` }))
+        setLoading(prev => ({ ...prev, [widget.id]: false }))
+        return
+      }
+    }
+
     const isFormula = (widget as any).use_formula || (widget.field?.includes('*') || widget.field?.includes('+') || widget.field?.includes('/') || widget.field?.includes('-'))
-    
+
     // Build SQL
     let selectStr = '*'
     if (!isFormula && widget.field !== '*') {
@@ -511,6 +568,42 @@ export default function AnalyticsDashboard({
     const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
     if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
 
+    // Fase 2: filtros do widget (com operador), período do painel, série, métrica derivada
+    const colKind = (table: string, column: string): BiColKind => {
+      const m = (allModels as any[]).find(x => x.db_table_name === table)
+      const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
+      const f = (fs as any[]).find(x => String(x.db_column_name).toLowerCase() === column.toLowerCase())
+      const ty = String(f?.db_data_type || '').toLowerCase()
+      if (/date|time/.test(ty)) return 'date'
+      if (/int|numeric|decimal|float|double|real|number|serial|money/.test(ty)) return 'number'
+      return 'text'
+    }
+    const conditions: BiCondition[] = []
+    ;(widget.conditions || []).forEach(c => {
+      if (!c?.field || !c.op) return
+      const noValue = c.op === 'is_null' || c.op === 'not_null'
+      if (!noValue && (c.value === undefined || c.value === '')) return
+      if (c.op === 'between' && (c.value2 === undefined || c.value2 === '')) return
+      const ref = resolveRef(String(c.field))
+      conditions.push({ col: ref, op: c.op as BiConditionOp, kind: colKind(ref.table, ref.column), value: c.value, value2: c.value2 })
+    })
+    if (widget.period_field && periodRange) {
+      const ref = resolveRef(widget.period_field)
+      conditions.push({ col: ref, op: 'gte', kind: 'date', value: periodRange.from })
+      conditions.push({ col: ref, op: 'lt', kind: 'date', value: nextDay(periodRange.to) })
+    }
+    const seriesRef = widget.series_by && widget.group_by && ['bar', 'line', 'area'].includes(widget.type) ? resolveRef(widget.series_by) : null
+    const divideBy = widget.divide_by?.calc
+      ? { calc: widget.divide_by.calc, field: widget.divide_by.field ? resolveRef(widget.divide_by.field) : null }
+      : null
+    conditions.forEach(c => usedTables.add(c.col.table))
+    if (seriesRef) usedTables.add(seriesRef.table)
+    if (divideBy?.field) usedTables.add(divideBy.field.table)
+    // recursos que só o SQL agregado entrega (o caminho de linhas cruas não os implementa)
+    const needsAgg = conditions.length > 0 || !!seriesRef || !!divideBy || widget.calc === 'COUNT_DISTINCT' ||
+      widget.date_granularity === 'week' || widget.date_granularity === 'quarter'
+    let buildReason = ''
+
     // JOINs mínimos: só as tabelas que o widget usa (grupo, valor e filtros). Os JOINs do caso de uso inteiro
     // (entregas, projetos, tarefas...) repetiam cada pedido e inflavam SUM/AVG.
     const filterTables = candidateFilters.map(f => f.col.table)
@@ -535,14 +628,27 @@ export default function AnalyticsDashboard({
           sortBy: widget.sort_by,
           limitTopN: widget.limit_top_n,
           filters: aggFilters,
+          conditions,
+          series: seriesRef,
+          divideBy,
           maxGroups: BI_MAX_GROUPS,
         })
         if (built.ok) {
           sendQuery(built.sql, 'agg', BI_MAX_GROUPS + 100)
           return
         }
+        buildReason = built.reason
         console.warn('[BI] consulta agregada não aplicável, usando linhas cruas:', built.reason)
+      } else {
+        buildReason = 'tabela do indicador sem relação com as demais (verifique o caminho de relacionamento)'
       }
+    }
+
+    if (needsAgg) {
+      const why = opts.reason ? `consulta falhou no banco: ${opts.reason}` : buildReason || 'este indicador exige banco PostgreSQL ou Oracle'
+      setErrors(prev => ({ ...prev, [widget.id]: `Não foi possível calcular: ${why}` }))
+      setLoading(prev => ({ ...prev, [widget.id]: false }))
+      return
     }
 
     // 2) Caminho de reserva: busca linhas cruas (limitadas) e agrega no navegador
@@ -585,6 +691,45 @@ export default function AnalyticsDashboard({
       setTruncated(prev => ({ ...prev, [widget.id]: false }))
       return
     }
+
+    const hasSeries = !!widget.series_by && ['bar', 'line', 'area'].includes(widget.type) && (rows || []).some((r: any) => read(r, 'bi_series') !== undefined)
+    if (hasSeries) {
+      const label = (v: any) => (v === null || v === undefined || v === '' ? 'N/A' : String(v))
+      const byName = new Map<string, Record<string, number>>()
+      const seriesTotals = new Map<string, number>()
+      for (const r of rows || []) {
+        const n = label(read(r, 'bi_name'))
+        const sName = label(read(r, 'bi_series'))
+        const v = toNumber(read(r, 'bi_value'))
+        const cur = byName.get(n) || {}
+        cur[sName] = (cur[sName] || 0) + v
+        byName.set(n, cur)
+        seriesTotals.set(sName, (seriesTotals.get(sName) || 0) + v)
+      }
+      // até 11 séries; o restante vira "Outros"
+      const ordered = [...seriesTotals.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0])
+      const keep = ordered.slice(0, 11)
+      const others = ordered.slice(11)
+      const keys = others.length ? [...keep, 'Outros'] : keep
+      let table = [...byName.entries()].map(([name, vals]) => {
+        const row: any = { name, value: 0 }
+        for (const k of keep) { row[k] = vals[k] || 0 }
+        if (others.length) row['Outros'] = others.reduce((a, k) => a + (vals[k] || 0), 0)
+        row.value = keys.reduce((a, k) => a + (row[k] || 0), 0)
+        return row
+      })
+      const mode = widget.sort_by || 'value_desc'
+      if (mode === 'value_asc') table.sort((a, b) => a.value - b.value)
+      else if (mode === 'label_asc') table.sort((a, b) => a.name.localeCompare(b.name))
+      else if (mode === 'label_desc') table.sort((a, b) => b.name.localeCompare(a.name))
+      else table.sort((a, b) => b.value - a.value)
+      if (widget.limit_top_n && widget.limit_top_n > 0) table = table.slice(0, widget.limit_top_n)
+      setSeriesData(prev => ({ ...prev, [widget.id]: { rows: table, keys } }))
+      setData(prev => ({ ...prev, [widget.id]: table.map(r => ({ name: r.name, value: r.value })) }))
+      setTruncated(prev => ({ ...prev, [widget.id]: (rows || []).length >= BI_MAX_GROUPS * 5 }))
+      return
+    }
+    setSeriesData(prev => { if (!prev[widget.id]) return prev; const next = { ...prev }; delete next[widget.id]; return next })
 
     let finalData = (rows || []).map((r: any) => {
       const name = read(r, 'bi_name')
@@ -909,6 +1054,57 @@ export default function AnalyticsDashboard({
     }
 
     const height = forceSize === 'large' ? 450 : 250
+    const sd = seriesData[widget.id]
+    if (sd && sd.rows.length > 0 && ['bar', 'line', 'area'].includes(widget.type)) {
+      const tickS = { fontSize: 10, fontWeight: 700, fill: '#888888' }
+      const shortS = (v: any) => { const t = String(v); return t.length > 16 ? `${t.slice(0, 15)}…` : t }
+      const axisFmt = (v: any) => fmt(v, widget, true)
+      const horizontalS = widget.type === 'bar' && widget.orientation === 'horizontal'
+      const stack = widget.stacked ? 'a' : undefined
+      return (
+        <div className="w-full mt-4 relative" style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {widget.type === 'bar' ? (
+              <BarChart data={sd.rows} layout={horizontalS ? 'vertical' : 'horizontal'} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={horizontalS} horizontal={!horizontalS} stroke="#88888822" />
+                {horizontalS ? (
+                  <>
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
+                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={tickS} width={112} tickFormatter={shortS} />
+                  </>
+                ) : (
+                  <>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickS} tickFormatter={shortS} />
+                    <YAxis axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
+                  </>
+                )}
+                <Tooltip cursor={{ fill: '#88888811' }} contentStyle={tooltipStyle} formatter={(v: any, n: any) => [fmt(v, widget), n]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800 }} />
+                {sd.keys.map((k, i) => <Bar key={k} dataKey={k} stackId={stack} fill={COLORS[i % COLORS.length]} radius={stack ? undefined : (horizontalS ? [0, 4, 4, 0] : [4, 4, 0, 0])} />)}
+              </BarChart>
+            ) : widget.type === 'line' ? (
+              <LineChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickS} tickFormatter={shortS} />
+                <YAxis axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: any, n: any) => [fmt(v, widget), n]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800 }} />
+                {sd.keys.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} strokeWidth={2.5} dot={{ r: 3 }} />)}
+              </LineChart>
+            ) : (
+              <AreaChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickS} tickFormatter={shortS} />
+                <YAxis axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: any, n: any) => [fmt(v, widget), n]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800 }} />
+                {sd.keys.map((k, i) => <Area key={k} type="monotone" dataKey={k} stackId={stack} stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.25} strokeWidth={2.5} />)}
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )
+    }
     const rows: any[] = Array.isArray(val) ? val : []
     if (rows.length === 0) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">Sem dados</div>
 
@@ -1034,7 +1230,7 @@ export default function AnalyticsDashboard({
             )}
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-white">{widget.title || 'Sem título'}</h3>
-              <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc} ({widget.field_id || 'Toda Tabela'})</p>
+              <p className="text-[8px] font-bold text-neutral-400 uppercase tracking-tighter opacity-70">{widget.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.calc}{widget.divide_by?.calc ? ` ÷ ${widget.divide_by.calc === 'COUNT_DISTINCT' ? 'CONTAGEM DISTINTA' : widget.divide_by.calc}` : ''} ({widget.use_formula ? 'fórmula' : (widget.field_id || 'Toda Tabela')})</p>
               {truncated[widget.id] && (
                 <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={`A consulta atingiu o limite de ${BI_ROW_LIMIT} linhas: os totais podem estar incompletos.`}>
                   ⚠ Limitado a {BI_ROW_LIMIT} linhas
@@ -1097,6 +1293,37 @@ export default function AnalyticsDashboard({
           ))}
         </div>
       </div>
+
+      {hasPeriodWidgets && (
+        <div className="flex flex-wrap items-center gap-2 px-2">
+          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">Período</span>
+          {[
+            { id: 'all', label: 'Tudo' },
+            { id: '7d', label: '7 dias' },
+            { id: '30d', label: '30 dias' },
+            { id: '90d', label: '90 dias' },
+            { id: 'month', label: 'Mês atual' },
+            { id: 'year', label: 'Ano atual' },
+            { id: 'custom', label: 'Personalizado' },
+          ].map(o => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => setPeriod(p => ({ ...p, preset: o.id }))}
+              className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", period.preset === o.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600')}
+            >
+              {o.label}
+            </button>
+          ))}
+          {period.preset === 'custom' && (
+            <>
+              <input type="date" value={period.from} onChange={e => setPeriod(p => ({ ...p, from: e.target.value }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white" />
+              <span className="text-[10px] text-neutral-400">até</span>
+              <input type="date" value={period.to} onChange={e => setPeriod(p => ({ ...p, to: e.target.value }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white" />
+            </>
+          )}
+        </div>
+      )}
 
       {expandedGaugeId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md animate-in fade-in duration-300">

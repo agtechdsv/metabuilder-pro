@@ -15,9 +15,64 @@ interface BIWidgetEditorProps {
   t: (key: string) => string
 }
 
+const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
+  text: [
+    { value: 'eq', label: 'é igual a' }, { value: 'ne', label: 'é diferente de' }, { value: 'contains', label: 'contém' },
+    { value: 'starts', label: 'começa com' }, { value: 'ends', label: 'termina com' }, { value: 'in', label: 'está em (a, b, c)' },
+    { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+  ],
+  number: [
+    { value: 'eq', label: '=' }, { value: 'ne', label: '≠' }, { value: 'gt', label: '>' }, { value: 'gte', label: '≥' },
+    { value: 'lt', label: '<' }, { value: 'lte', label: '≤' }, { value: 'between', label: 'entre' }, { value: 'in', label: 'está em (1, 2, 3)' },
+    { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+  ],
+  date: [
+    { value: 'eq', label: 'é no dia' }, { value: 'gte', label: 'a partir de' }, { value: 'lte', label: 'até' }, { value: 'gt', label: 'depois de' },
+    { value: 'lt', label: 'antes de' }, { value: 'between', label: 'entre' }, { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+  ],
+}
+
+const selectCls = 'w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white'
+const labelCls = 'text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1'
+
 export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t }: BIWidgetEditorProps) {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
   const currentModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
+
+  // "coluna" (tabela principal) ou "tabela.coluna" → tipo da coluna (texto, número ou data)
+  const kindOf = (path: string): 'text' | 'number' | 'date' => {
+    if (!path) return 'text'
+    const [tbl, col] = path.split('.')
+    const m = models.find((x: any) => x.db_table_name === tbl)
+    const f = (m?.fields || []).find((x: any) => String(x.db_column_name).toLowerCase() === String(col).toLowerCase())
+    const ty = String(f?.db_data_type || '').toLowerCase()
+    if (/date|time/.test(ty)) return 'date'
+    if (/int|numeric|decimal|float|double|real|number|serial|money/.test(ty)) return 'number'
+    return 'text'
+  }
+
+  // lista de campos agrupada por tabela (principal primeiro); o valor é "coluna" na principal e "tabela.coluna" nas demais
+  const fieldOptions = (
+    <>
+      <optgroup label={`Tabela: ${currentModel?.display_name || currentModel?.db_table_name || 'Principal'}`}>
+        {currentModel?.fields?.map((f: any) => (
+          <option key={f.id} value={`${currentModel.db_table_name}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
+        ))}
+      </optgroup>
+      {models.filter((m: any) => m.id !== currentModel?.id).map((relModel: any, idx: number) => (
+        <optgroup key={`opt-${idx}`} label={`Tabela: ${relModel.display_name || relModel.db_table_name}`}>
+          {relModel.fields?.map((f: any) => (
+            <option key={f.id} value={`${relModel.db_table_name}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
+          ))}
+        </optgroup>
+      ))}
+    </>
+  )
+
+  const conditions: any[] = editingWidget?.conditions || []
+  const setConditions = (next: any[]) => setEditingWidget({ ...editingWidget, conditions: next })
+  const patchCondition = (i: number, patch: any) => setConditions(conditions.map((c, idx) => (idx === i ? { ...c, ...patch } : c)))
+  const canSeries = !!editingWidget?.group_by && ['bar', 'line', 'area'].includes(editingWidget?.type)
 
   return (
     <div className="space-y-4">
@@ -55,7 +110,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
           <select 
             value={editingWidget?.model_id || ''} 
-            onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value, field: '', group_by: ''})}
+            onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value, field: '', use_formula: false, formula_tokens: [], group_by: '', series_by: undefined, divide_by: undefined, conditions: [], period_field: undefined})}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
             <option value="">Selecione...</option>
@@ -75,6 +130,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
             <option value="COUNT">Contagem (COUNT)</option>
+            <option value="COUNT_DISTINCT">Contagem distinta</option>
             <option value="SUM">Soma (SUM)</option>
             <option value="AVG">Média (AVG)</option>
             <option value="MIN">Mínimo (MIN)</option>
@@ -108,22 +164,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
             >
               <option value="">(Toda a Tabela)</option>
-              <optgroup label={`Tabela: ${currentModel?.display_name || currentModel?.db_table_name || 'Principal'}`}>
-                {currentModel?.fields?.map((f: any) => (
-                  <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-                ))}
-              </optgroup>
-              
-              {models.filter((m: any) => m.id !== currentModel?.id).map((relModel: any, idx: number) => {
-                const relTableName = relModel.db_table_name
-                return (
-                  <optgroup key={`rel-${idx}`} label={`Tabela: ${relModel.display_name || relModel.db_table_name}`}>
-                    {relModel.fields?.map((f: any) => (
-                      <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
-                    ))}
-                  </optgroup>
-                )
-              })}
+              {fieldOptions}
             </select>
           )}
         </div>
@@ -189,22 +230,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
          >
            <option value="">(Nenhum - Valor Único)</option>
-            <optgroup label={`Tabela: ${currentModel?.display_name || currentModel?.db_table_name || 'Principal'}`}>
-              {currentModel?.fields?.map((f: any) => (
-                <option key={f.id} value={f.db_column_name}>{f.display_name || f.db_column_name}</option>
-              ))}
-            </optgroup>
-              
-            {models.filter((m: any) => m.id !== currentModel?.id).map((relModel: any, idx: number) => {
-              const relTableName = relModel.db_table_name
-              return (
-                <optgroup key={`rel-${idx}`} label={`Tabela: ${relModel.display_name || relModel.db_table_name}`}>
-                  {relModel.fields?.map((f: any) => (
-                    <option key={f.id} value={`${relTableName}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
-                  ))}
-                </optgroup>
-              )
-            })}
+           {fieldOptions}
           </select>
           
           {editingWidget?.group_by && (
@@ -220,6 +246,8 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                    <option value="day">Dia (YYYY-MM-DD)</option>
                    <option value="month">Mês (YYYY-MM)</option>
                    <option value="year">Ano (YYYY)</option>
+                   <option value="week">Semana (YYYY-Sww)</option>
+                   <option value="quarter">Trimestre (YYYY-Tn)</option>
                  </select>
                </div>
                
@@ -251,6 +279,127 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
             </div>
           )}
         </div>
+
+         {/* Segunda dimensão (série) */}
+         {canSeries && (
+           <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Segmentar por (2ª dimensão)</label>
+             <select value={editingWidget?.series_by || ''} onChange={e => setEditingWidget({...editingWidget, series_by: e.target.value || undefined})} className={selectCls}>
+               <option value="">(Sem segmentação)</option>
+               {fieldOptions}
+             </select>
+             {editingWidget?.series_by && (
+               <button
+                 type="button"
+                 onClick={() => setEditingWidget({...editingWidget, stacked: !editingWidget?.stacked})}
+                 className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.stacked ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
+               >
+                 Empilhar séries
+               </button>
+             )}
+           </div>
+         )}
+
+         {/* Métrica derivada */}
+         <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+           <div className="flex items-center justify-between ml-1">
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Métrica derivada (dividir por)</label>
+             <button
+               type="button"
+               onClick={() => setEditingWidget({...editingWidget, divide_by: editingWidget?.divide_by ? undefined : { calc: 'COUNT', field: '' }})}
+               className={cn("text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border transition-all", editingWidget?.divide_by ? "bg-indigo-600 border-indigo-600 text-white" : "bg-neutral-100 border-neutral-200 text-neutral-400 hover:bg-neutral-200")}
+             >
+               {editingWidget?.divide_by ? 'Ativa' : 'Desativada'}
+             </button>
+           </div>
+           {editingWidget?.divide_by ? (
+             <>
+               <div className="grid grid-cols-2 gap-3">
+                 <div className="space-y-1.5">
+                   <label className={labelCls}>Operação do divisor</label>
+                   <select value={editingWidget.divide_by.calc} onChange={e => setEditingWidget({...editingWidget, divide_by: { ...editingWidget.divide_by, calc: e.target.value }})} className={selectCls}>
+                     <option value="COUNT">Contagem</option>
+                     <option value="COUNT_DISTINCT">Contagem distinta</option>
+                     <option value="SUM">Soma</option>
+                     <option value="AVG">Média</option>
+                     <option value="MIN">Mínimo</option>
+                     <option value="MAX">Máximo</option>
+                   </select>
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className={labelCls}>Campo do divisor</label>
+                   <select value={editingWidget.divide_by.field || ''} onChange={e => setEditingWidget({...editingWidget, divide_by: { ...editingWidget.divide_by, field: e.target.value }})} className={selectCls}>
+                     <option value="">(Registros da tabela)</option>
+                     {fieldOptions}
+                   </select>
+                 </div>
+               </div>
+               <p className="text-[9px] font-bold text-neutral-400 ml-1">
+                 Ex.: Ticket médio = Soma de valor_total ÷ Contagem de registros. Use o formato Moeda na aparência.
+               </p>
+             </>
+           ) : null}
+         </div>
+
+         {/* Filtros do widget */}
+         <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+           <div className="flex items-center justify-between ml-1">
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Filtros do widget</label>
+             <button
+               type="button"
+               onClick={() => setConditions([...conditions, { field: '', op: 'eq', value: '' }])}
+               className="text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200 transition-all"
+             >
+               + Filtro
+             </button>
+           </div>
+           {conditions.length === 0 && <p className="text-[9px] font-bold text-neutral-400 ml-1">Sem filtros: o widget considera todos os registros.</p>}
+           {conditions.map((c, i) => {
+             const kind = kindOf(c.field)
+             const ops = OPS_BY_KIND[kind]
+             const noValue = c.op === 'is_null' || c.op === 'not_null'
+             const inputType = kind === 'date' ? 'date' : kind === 'number' && c.op !== 'in' ? 'number' : 'text'
+             return (
+               <div key={i} className="grid grid-cols-12 gap-2 items-end p-2 bg-neutral-50/60 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 rounded-xl">
+                 <div className="col-span-4 space-y-1">
+                   <label className={labelCls}>Campo</label>
+                   <select value={c.field} onChange={e => patchCondition(i, { field: e.target.value, op: 'eq', value: '', value2: '' })} className={selectCls}>
+                     <option value="">Selecione...</option>
+                     {fieldOptions}
+                   </select>
+                 </div>
+                 <div className="col-span-3 space-y-1">
+                   <label className={labelCls}>Operador</label>
+                   <select value={c.op} onChange={e => patchCondition(i, { op: e.target.value })} className={selectCls}>
+                     {ops.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                   </select>
+                 </div>
+                 <div className="col-span-4 space-y-1">
+                   <label className={labelCls}>Valor</label>
+                   {noValue ? (
+                     <div className="px-2 py-2 text-[10px] font-bold text-neutral-300">—</div>
+                   ) : (
+                     <div className="flex gap-1">
+                       <input type={inputType} value={c.value ?? ''} onChange={e => patchCondition(i, { value: e.target.value })} className={selectCls} />
+                       {c.op === 'between' && <input type={inputType} value={c.value2 ?? ''} onChange={e => patchCondition(i, { value2: e.target.value })} className={selectCls} />}
+                     </div>
+                   )}
+                 </div>
+                 <button type="button" onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))} className="col-span-1 py-2 text-[10px] font-black text-neutral-400 hover:text-red-500" title="Remover filtro">✕</button>
+               </div>
+             )
+           })}
+         </div>
+
+         {/* Período */}
+         <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo de data do período</label>
+           <select value={editingWidget?.period_field || ''} onChange={e => setEditingWidget({...editingWidget, period_field: e.target.value || undefined})} className={selectCls}>
+             <option value="">(Não usa o filtro de período)</option>
+             {fieldOptions}
+           </select>
+           <p className="text-[9px] font-bold text-neutral-400 ml-1">O painel mostra a barra de período (7/30/90 dias, mês, ano, personalizado) e aplica neste campo.</p>
+         </div>
 
          {/* Aparência */}
          <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
@@ -388,7 +537,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                     (m.fields || []).map((f: any) => ({
                       id: f.id,
                       modelName: m.display_name || m.name,
-                      db_column_name: m.db_table_name === currentModel?.db_table_name ? f.db_column_name : `${m.db_table_name}.${f.db_column_name}`,
+                      db_column_name: `${m.db_table_name}.${f.db_column_name}`,
                       display_name: f.display_name
                     }))
                   )
