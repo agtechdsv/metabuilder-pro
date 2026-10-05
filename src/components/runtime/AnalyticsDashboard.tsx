@@ -359,22 +359,25 @@ export default function AnalyticsDashboard({
       if (toModel?.db_table_name) referencedTables.push(toModel.db_table_name)
     })
 
+    // Monta os JOINs para um conjunto de tabelas. Chamada duas vezes: com tudo (caminho de linhas cruas, como antes)
+    // e só com as tabelas que o widget usa (SQL agregado, para não multiplicar linhas).
+    const resolveJoinSql = (referenced: string[], legacy: any[]) => {
     let joinSql = ''
     const joinedTables = new Set<string>([tableName])
 
-    if (resolvedRelations.length > 0 && referencedTables.length > 0) {
+    if (resolvedRelations.length > 0 && referenced.length > 0) {
       // Use Santo Graal BFS
-      const uniqueReferenced = [...new Set(referencedTables.filter(t => t !== tableName))]
+      const uniqueReferenced = [...new Set(referenced.filter(t => t !== tableName))]
       const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced)
       joinSql += buildJoinSql(steps)
       steps.forEach(s => { joinedTables.add(s.fromTable); joinedTables.add(s.toTable) })
     }
     
-    // Always process legacyJoins just in case
-    if (legacyJoins.length > 0) {
+    // Always process legacy just in case
+    if (legacy.length > 0) {
       const processJoins = () => {
         let added = false
-        legacyJoins.forEach((j: any) => {
+        legacy.forEach((j: any) => {
           const fromModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
           const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
           const fromTable = fromModel?.db_table_name || j.from || j.table
@@ -396,7 +399,7 @@ export default function AnalyticsDashboard({
     }
 
     // Heuristic Auto-Join: If a referenced table is STILL missing, scan models for a foreign key
-    const missingTables = referencedTables.filter(t => !joinedTables.has(t) && t !== tableName)
+    const missingTables = referenced.filter(t => !joinedTables.has(t) && t !== tableName)
     missingTables.forEach(refTable => {
        const joinedList = Array.from(joinedTables)
        for (const jt of joinedList) {
@@ -431,6 +434,10 @@ export default function AnalyticsDashboard({
        }
     })
 
+    return { joinSql, joinedTables }
+    }
+    const { joinSql, joinedTables } = resolveJoinSql(referencedTables, legacyJoins)
+
     // Final safety net: Remove any columns from selectStr that belong to unjoined tables to prevent crashes
     if (selectStr !== '*') {
       selectStr = selectStr.split(',').filter(s => {
@@ -454,16 +461,17 @@ export default function AnalyticsDashboard({
       const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
       return (fs as any[]).some(f => String(f.db_column_name).toLowerCase() === column.toLowerCase())
     }
-    const validFilters: { col: { table: string; column: string }; value: string }[] = []
+    const candidateFilters: { col: { table: string; column: string }; value: string }[] = []
     Object.entries(filters).forEach(([key, val]) => {
       if (!val) return
       // o nome da coluna entra no SQL entre aspas: só identificadores simples (tabela.coluna) são aceitos
       if (!/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(key)) return
       const filterTable = key.includes('.') ? key.split('.')[0] : tableName
       const filterCol = key.includes('.') ? key.split('.')[1] : key
-      if (!joinedTables.has(filterTable) || !columnExists(filterTable, filterCol)) return
-      validFilters.push({ col: { table: filterTable, column: filterCol }, value: String(val) })
+      if (!columnExists(filterTable, filterCol)) return
+      candidateFilters.push({ col: { table: filterTable, column: filterCol }, value: String(val) })
     })
+    const validFilters = candidateFilters.filter(f => joinedTables.has(f.col.table))
 
     const sendQuery = (sql: string, mode: 'agg' | 'raw', limit: number) => {
       queryModes.current[queryId] = mode
@@ -504,12 +512,18 @@ export default function AnalyticsDashboard({
       const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
       if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
 
-      if ([...usedTables].every(t => joinedTables.has(t))) {
+      // JOINs mínimos: só as tabelas que o widget usa (grupo, valor e filtros). Os JOINs do caso de uso inteiro
+      // (entregas, projetos, tarefas...) repetiam cada pedido e inflavam SUM/AVG.
+      const filterTables = candidateFilters.map(f => f.col.table)
+      const minimal = resolveJoinSql([...usedTables, ...filterTables].filter(t => t !== tableName), widget.joins || [])
+      const aggFilters = candidateFilters.filter(f => minimal.joinedTables.has(f.col.table))
+
+      if ([...usedTables].every(t => minimal.joinedTables.has(t))) {
         const built = buildAggregateQuery({
           dialect,
           mainTable: tableName,
           mainPk: getPkColumn(allModels as any[], tableName) || 'id',
-          joinSql,
+          joinSql: minimal.joinSql,
           calc: widget.calc,
           formula: aggFormula,
           field: fieldRef,
@@ -517,7 +531,7 @@ export default function AnalyticsDashboard({
           granularity: widget.date_granularity,
           sortBy: widget.sort_by,
           limitTopN: widget.limit_top_n,
-          filters: validFilters,
+          filters: aggFilters,
           maxGroups: BI_MAX_GROUPS,
         })
         if (built.ok) {
