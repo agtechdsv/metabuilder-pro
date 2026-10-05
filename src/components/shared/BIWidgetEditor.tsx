@@ -69,6 +69,11 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
     </>
   )
 
+  // valores válidos = "TABELA.COLUNA" de todas as tabelas; qualquer outro valor guardado (widget antigo) aparece como inválido
+  const validFieldValues = new Set<string>(models.flatMap((m: any) => (m.fields || []).map((f: any) => `${m.db_table_name}.${f.db_column_name}`)))
+  const staleOption = (v?: string) =>
+    v && !validFieldValues.has(v) ? <option value={v}>⚠ {v} (sem tabela, selecione novamente)</option> : null
+
   const conditions: any[] = editingWidget?.conditions || []
   const setConditions = (next: any[]) => setEditingWidget({ ...editingWidget, conditions: next })
   const patchCondition = (i: number, patch: any) => setConditions(conditions.map((c, idx) => (idx === i ? { ...c, ...patch } : c)))
@@ -164,6 +169,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
             >
               <option value="">(Toda a Tabela)</option>
+              {staleOption(editingWidget?.field)}
               {fieldOptions}
             </select>
           )}
@@ -230,6 +236,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
          >
            <option value="">(Nenhum - Valor Único)</option>
+           {staleOption(editingWidget?.group_by)}
            {fieldOptions}
           </select>
           
@@ -286,6 +293,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
              <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Segmentar por (2ª dimensão)</label>
              <select value={editingWidget?.series_by || ''} onChange={e => setEditingWidget({...editingWidget, series_by: e.target.value || undefined})} className={selectCls}>
                <option value="">(Sem segmentação)</option>
+               {staleOption(editingWidget?.series_by)}
                {fieldOptions}
              </select>
              {editingWidget?.series_by && (
@@ -330,6 +338,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                    <label className={labelCls}>Campo do divisor</label>
                    <select value={editingWidget.divide_by.field || ''} onChange={e => setEditingWidget({...editingWidget, divide_by: { ...editingWidget.divide_by, field: e.target.value }})} className={selectCls}>
                      <option value="">(Registros da tabela)</option>
+                     {staleOption(editingWidget.divide_by.field)}
                      {fieldOptions}
                    </select>
                  </div>
@@ -365,6 +374,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                    <label className={labelCls}>Campo</label>
                    <select value={c.field} onChange={e => patchCondition(i, { field: e.target.value, op: 'eq', value: '', value2: '' })} className={selectCls}>
                      <option value="">Selecione...</option>
+                     {staleOption(c.field)}
                      {fieldOptions}
                    </select>
                  </div>
@@ -396,6 +406,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo de data do período</label>
            <select value={editingWidget?.period_field || ''} onChange={e => setEditingWidget({...editingWidget, period_field: e.target.value || undefined})} className={selectCls}>
              <option value="">(Não usa o filtro de período)</option>
+             {staleOption(editingWidget?.period_field)}
              {fieldOptions}
            </select>
            <p className="text-[9px] font-bold text-neutral-400 ml-1">O painel mostra a barra de período (7/30/90 dias, mês, ano, personalizado) e aplica neste campo.</p>

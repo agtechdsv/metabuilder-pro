@@ -328,7 +328,7 @@ export default function AnalyticsDashboard({
     {
       const isF = (widget as any).use_formula
       const unqualified: string[] = []
-      const check = (label: string, v?: string) => { if (v && !String(v).includes('.')) unqualified.push(label) }
+      const check = (label: string, v?: string) => { if (v && !String(v).includes('.')) unqualified.push(`${label} ("${v}")`) }
       check('Agrupar por', widget.group_by)
       if (!isF && widget.field && widget.field !== '*') check('Campo do valor', widget.field)
       check('Segmentar por', widget.series_by)
