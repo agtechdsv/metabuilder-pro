@@ -29,8 +29,8 @@ export interface ViewActionModalsProps {
   handleSave: (payload: any) => Promise<void>
   handleDelete: (row: any) => Promise<void>
   handleSaveWidgetRuntime: (widget: any) => Promise<void>
-  /** títulos de agrupamento do dashboard (sugestões no editor do widget) */
-  analyticsGroups?: string[]
+  /** grupos do dashboard (o editor do widget escolhe um) */
+  analyticsGroups?: { id: string; title: string }[]
   cleanFormFields: any[]
   modelName: string
   project: any
@@ -221,7 +221,7 @@ export function ViewActionModals({
             models={project?.models || []}
             joins={joins || []}
             t={t}
-            existingGroups={analyticsGroups}
+            groups={analyticsGroups}
           />
           <div className="flex gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800">
              <button onClick={() => setIsWidgetModalOpen(false)} className="flex-1 px-4 py-3.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-2xl font-black text-[10px] capitalize tracking-wider transition-all">Cancelar</button>

@@ -102,9 +102,9 @@ export function useAnalyticsRuntime({
     }
   }
 
-  const handleSaveDashboardLayout = async (newWidgets: any[]) => {
+  const handleSaveDashboardLayout = async (newWidgets: any[], newGroups?: any[]) => {
     const currentConfig = localAnalyticsConfig || initialAnalyticsConfig || { widgets: [], allow_runtime_edit: true }
-    const newConfig = { ...currentConfig, widgets: newWidgets }
+    const newConfig = { ...currentConfig, widgets: newWidgets, ...(newGroups ? { groups: newGroups } : {}) }
     setLocalAnalyticsConfig(newConfig)
 
     try {

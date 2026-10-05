@@ -74,8 +74,8 @@ interface Widget {
   /** de onde vem o período do widget: barra do painel (padrão), período fixo ou seletor próprio no card */
   period_mode?: 'panel' | 'fixed' | 'own'
   period_fixed?: string
-  /** título do agrupamento (seção recolhível); widgets com o mesmo título ficam juntos */
-  group_title?: string
+  /** agrupamento (seção recolhível) a que o widget pertence: id em analytics_config.groups */
+  group_id?: string
   /** KPI sem agrupamento: mostra a variação contra o período anterior (exige o campo de data do período) */
   compare_previous?: boolean
   /** menor é melhor (ex.: devoluções): a seta fica verde quando o valor cai */
@@ -85,6 +85,7 @@ interface Widget {
 interface AnalyticsDashboardProps {
   config: {
     widgets: Widget[]
+    groups?: BiGroup[]
     allow_runtime_edit?: boolean
   }
   project: any
@@ -93,7 +94,7 @@ interface AnalyticsDashboardProps {
   onEditWidget?: (widget: Widget) => void
   onAddWidget?: () => void
   onDeleteWidget?: (id: string) => void
-  onSaveLayout?: (newWidgets: Widget[]) => void
+  onSaveLayout?: (newWidgets: Widget[], newGroups?: BiGroup[]) => void
   tunnelChannel?: any
   isTunnelReady?: boolean
   projectRelations?: any[]
@@ -104,6 +105,7 @@ import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
 import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
 import { resolveFkLabel } from '@/lib/bi/fkLabel'
+import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, type BiGroup } from '@/lib/bi/groups'
 import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
@@ -164,6 +166,7 @@ export default function AnalyticsDashboard({
   // agrupamentos recolhidos (só nesta sessão da tela)
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
   const [localWidgets, setLocalWidgets] = useState(config.widgets || [])
+  const [localGroups, setLocalGroups] = useState<BiGroup[]>(config.groups || [])
 
   // Sincroniza widgets locais quando a config mudar (ex: após load inicial)
   useEffect(() => {
@@ -171,6 +174,9 @@ export default function AnalyticsDashboard({
       setLocalWidgets(config.widgets)
     }
   }, [config.widgets])
+  useEffect(() => {
+    setLocalGroups(config.groups || [])
+  }, [config.groups])
   
   const { t, language } = useI18n()
 
@@ -255,21 +261,17 @@ export default function AnalyticsDashboard({
     })
   )
 
-  // Arrastar reordena dentro do próprio agrupamento (para mudar um widget de grupo, use o campo "Grupo" do editor)
+  // Arrastar reordena dentro do próprio agrupamento (para mudar um widget de grupo, use o Studio ou o campo "Grupo" do editor)
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
     setLocalWidgets((items) => {
       const a = items.find((i) => i.id === active.id)
       const o = items.find((i) => i.id === over.id)
-      if (!a || !o || (a.group_title || '') !== (o.group_title || '')) return items
-      const g = a.group_title || ''
-      const idxs = items.map((w, i) => ((w.group_title || '') === g ? i : -1)).filter((i) => i >= 0)
-      const section = idxs.map((i) => items[i])
-      const moved = arrayMove(section, section.findIndex((w) => w.id === active.id), section.findIndex((w) => w.id === over.id))
-      const next = [...items]
-      idxs.forEach((idx, k) => { next[idx] = moved[k] })
-      return next
+      if (!a || !o || (a.group_id || '') !== (o.group_id || '')) return items
+      const section = sectionsOf(items, localGroups).find(sec => (sec.group?.id ?? '') === (a.group_id || ''))
+      const toIndex = section ? section.widgets.findIndex(w => w.id === o.id) : -1
+      return toIndex < 0 ? items : moveWidget(items, localGroups, a.id, a.group_id || null, toIndex)
     })
   }
 
@@ -1339,49 +1341,40 @@ export default function AnalyticsDashboard({
     )
   }
 
-  // Seções: widgets com o mesmo group_title ficam juntos; a ordem é a do primeiro widget de cada grupo
-  const sections = (() => {
-    const out: { key: string; title: string | null; widgets: Widget[] }[] = []
-    const byKey = new Map<string, { key: string; title: string | null; widgets: Widget[] }>()
-    for (const w of localWidgets) {
-      const title = (w.group_title || '').trim() || null
-      const key = title ?? '__none__'
-      let sec = byKey.get(key)
-      if (!sec) { sec = { key, title, widgets: [] }; byKey.set(key, sec); out.push(sec) }
-      sec.widgets.push(w)
-    }
-    return out
-  })()
-  const renameGroup = (oldTitle: string, newTitle: string) => {
-    const t = newTitle.trim()
-    if (!t || t === oldTitle) return
-    setLocalWidgets(items => items.map(w => ((w.group_title || '').trim() === oldTitle ? { ...w, group_title: t } : w)))
+  // Seções: soltos no topo e, depois, os grupos na ordem definida (grupo sem widget não aparece no painel)
+  const sections = sectionsOf(localWidgets, localGroups)
+    .filter(sec => sec.widgets.length > 0)
+    .map(sec => ({ key: sec.group?.id ?? '__none__', group: sec.group, title: sec.group?.title ?? null, widgets: sec.widgets }))
+  type Section = (typeof sections)[number]
+  const renameGroup = (id: string, newTitle: string) => setLocalGroups(gs => renameGroupInList(gs, id, newTitle))
+  const ungroup = (id: string) => {
+    const r = removeGroupFromList(localGroups, localWidgets, id)
+    setLocalGroups(r.groups)
+    setLocalWidgets(r.widgets)
   }
-  const ungroup = (title: string) => setLocalWidgets(items => items.map(w => ((w.group_title || '').trim() === title ? { ...w, group_title: undefined } : w)))
-  const moveGroup = (key: string, dir: -1 | 1) => {
-    const i = sections.findIndex(sec => sec.key === key)
-    const j = i + dir
-    if (i < 0 || j < 0 || j >= sections.length) return
-    const order = [...sections]
-    ;[order[i], order[j]] = [order[j], order[i]]
-    setLocalWidgets(order.flatMap(sec => sec.widgets))
+  const moveGroup = (id: string, dir: -1 | 1) => {
+    const i = localGroups.findIndex(g => g.id === id)
+    if (i < 0) return
+    setLocalGroups(moveGroupInList(localGroups, id, i + dir))
   }
 
-  const renderGroupHeader = (sec: { key: string; title: string | null; widgets: Widget[] }, index: number) => {
-    const collapsed = !!collapsedGroups[sec.key]
+  const renderGroupHeader = (sec: Section) => {
+    const group = sec.group as BiGroup
+    const index = localGroups.findIndex(g => g.id === group.id)
+    const collapsed = !!collapsedGroups[group.id]
     const n = sec.widgets.length
     return (
       <div className="flex items-center gap-3 px-2">
         <button
           type="button"
-          onClick={() => setCollapsedGroups(prev => ({ ...prev, [sec.key]: !prev[sec.key] }))}
+          onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))}
           className="flex items-center gap-3 flex-1 min-w-0 text-left group/gh"
           aria-expanded={!collapsed}
         >
           <span className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover/gh:text-indigo-600 transition-all">
             <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", collapsed && "-rotate-90")} />
           </span>
-          <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{sec.title}</span>
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{group.title}</span>
           <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
             {n} {n === 1 ? 'indicador' : 'indicadores'}
           </span>
@@ -1390,16 +1383,16 @@ export default function AnalyticsDashboard({
         {isEditMode && (
           <div className="flex items-center gap-1 shrink-0">
             <input
-              key={sec.title || ''}
-              defaultValue={sec.title || ''}
-              onBlur={e => renameGroup(sec.title || '', e.target.value)}
+              key={group.title}
+              defaultValue={group.title}
+              onBlur={e => renameGroup(group.id, e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
               title="Renomear o agrupamento"
               className="w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white"
             />
-            <button type="button" disabled={index === 0} onClick={() => moveGroup(sec.key, -1)} title="Mover para cima" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4 rotate-180" /></button>
-            <button type="button" disabled={index === sections.length - 1} onClick={() => moveGroup(sec.key, 1)} title="Mover para baixo" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
-            <button type="button" onClick={() => ungroup(sec.title || '')} title="Desfazer o agrupamento (os indicadores continuam no painel)" className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">Desagrupar</button>
+            <button type="button" disabled={index <= 0} onClick={() => moveGroup(group.id, -1)} title="Mover para cima" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4 rotate-180" /></button>
+            <button type="button" disabled={index < 0 || index === localGroups.length - 1} onClick={() => moveGroup(group.id, 1)} title="Mover para baixo" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+            <button type="button" onClick={() => ungroup(group.id)} title="Desfazer o agrupamento (os indicadores continuam no painel)" className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">Desagrupar</button>
           </div>
         )}
       </div>
@@ -1500,7 +1493,7 @@ export default function AnalyticsDashboard({
         <button 
           onClick={() => {
             if (isEditMode && onSaveLayout) {
-              onSaveLayout(localWidgets)
+              onSaveLayout(localWidgets, localGroups)
             }
             setIsEditMode(!isEditMode)
           }} 
@@ -1596,10 +1589,10 @@ export default function AnalyticsDashboard({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="space-y-8">
-          {sections.map((sec, index) => (
+          {sections.map((sec) => (
             <div key={sec.key} className="space-y-4">
-              {sec.title && renderGroupHeader(sec, index)}
-              {!(sec.title && collapsedGroups[sec.key]) && (
+              {sec.group && renderGroupHeader(sec)}
+              {!(sec.group && collapsedGroups[sec.key]) && (
                 <SortableContext items={sec.widgets.map(w => w.id)} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
                     {sec.widgets.map((widget) => renderWidgetCard(widget))}

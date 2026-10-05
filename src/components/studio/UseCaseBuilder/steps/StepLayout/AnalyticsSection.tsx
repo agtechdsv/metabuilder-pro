@@ -1,21 +1,90 @@
+import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { Plus, BarChart3, GripVertical, Pencil, Trash2, Gauge, Activity, Layers, Share2, LayoutGrid, X } from 'lucide-react'
-import { SortableContext, horizontalListSortingStrategy, rectSortingStrategy } from '@dnd-kit/sortable'
+import { Plus, BarChart3, GripVertical, Pencil, Trash2, Gauge, Activity, Layers, Share2, LayoutGrid, X, ChevronDown, FolderPlus } from 'lucide-react'
+import { SortableContext, horizontalListSortingStrategy, rectSortingStrategy, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { useDroppable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { DroppableZone, SortableWidgetCard } from './dnd'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
+import { sectionsOf, addGroup, renameGroup, removeGroup, type BiGroup } from '@/lib/bi/groups'
+
+/** Bloco de um grupo: arrastável pela alça (muda a ordem dos grupos) e área onde os widgets podem ser soltos. */
+function SortableGroupBlock({ group, count, collapsed, onToggle, onRename, onRemove, onAddWidget, children }: {
+  group: BiGroup
+  count: number
+  collapsed: boolean
+  onToggle: () => void
+  onRename: (title: string) => void
+  onRemove: () => void
+  onAddWidget: () => void
+  children: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `bigroup-${group.id}` })
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 40 : 'auto', opacity: isDragging ? 0.6 : 1 }
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-[1.75rem] border border-indigo-200/70 dark:border-indigo-800/60 bg-white/70 dark:bg-neutral-950/40 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Arraste para mudar a ordem dos grupos">
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <button type="button" onClick={onToggle} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all" title={collapsed ? 'Expandir' : 'Recolher'}>
+          <ChevronDown className={cn('w-4 h-4 transition-transform duration-300', collapsed && '-rotate-90')} />
+        </button>
+        <input
+          key={group.title}
+          defaultValue={group.title}
+          onBlur={e => onRename(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          className="flex-1 min-w-0 bg-transparent text-xs font-black uppercase tracking-[0.15em] text-neutral-800 dark:text-neutral-100 outline-none border-b border-transparent hover:border-neutral-300 focus:border-indigo-500 py-1"
+          title="Clique para renomear o grupo"
+        />
+        <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
+          {count} {count === 1 ? 'widget' : 'widgets'}
+        </span>
+        <button type="button" onClick={onAddWidget} className="shrink-0 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">+ Widget</button>
+        <button type="button" onClick={onRemove} className="shrink-0 p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Remover o grupo (os widgets continuam no painel, sem grupo)">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {!collapsed && children}
+    </div>
+  )
+}
+
+/** Área dos widgets sem grupo (também aceita soltar widgets para tirá-los de um grupo). */
+function LooseZone({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'bicontainer-none' })
+  return (
+    <div ref={setNodeRef} className={cn('rounded-[1.75rem] p-1 transition-colors', isOver && 'bg-indigo-100/50 dark:bg-indigo-900/20')}>
+      {children}
+    </div>
+  )
+}
 
 export function AnalyticsSection({
   config, setConfig, models, relations, useCases = [],
   setEditingWidget, setIsWidgetModalOpen, getFieldName, t, orderedModels
 }: any) {
-  const handleAddWidget = () => {
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const analytics = config.layout_config.analytics_config || {}
+  const allWidgets: any[] = analytics.widgets || []
+  const groups: BiGroup[] = analytics.groups || []
+  const sections = sectionsOf(allWidgets, groups)
+  const setAnalytics = (patch: any) =>
+    setConfig((prev: any) => ({
+      ...prev,
+      layout_config: { ...prev.layout_config, analytics_config: { ...(prev.layout_config.analytics_config || {}), ...patch } },
+    }))
+
+  const handleAddWidget = (groupId?: string) => {
     setEditingWidget({
       id: "widget_" + Date.now(),
       type: 'kpi',
       calc: 'count',
       title: '',
       size: '1',
-      color: 'indigo'
+      color: 'indigo',
+      ...(groupId ? { group_id: groupId } : {})
     })
     setIsWidgetModalOpen(true)
   }
@@ -67,25 +136,81 @@ export function AnalyticsSection({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <SortableContext items={(config.layout_config.analytics_config?.widgets || []).map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
-                    {(config.layout_config.analytics_config?.widgets || []).map((widget: any) => (
-                      <SortableWidgetCard
-                        key={`widget-${widget.id}`}
-                        widget={widget}
-                        onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
-                        onDelete={() => handleDeleteWidget(widget.id)}
-                        getFieldName={getFieldName}
-                      />
-                    ))}
+                <div className="space-y-4">
+                  {/* Widgets sem grupo */}
+                  <LooseZone>
+                    {groups.length > 0 && (
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">Sem grupo</p>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <SortableContext items={sections[0].widgets.map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
+                        {sections[0].widgets.map((widget: any) => (
+                          <SortableWidgetCard
+                            key={`widget-${widget.id}`}
+                            widget={widget}
+                            onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
+                            onDelete={() => handleDeleteWidget(widget.id)}
+                            getFieldName={getFieldName}
+                          />
+                        ))}
+                      </SortableContext>
+                      <button
+                        onClick={() => handleAddWidget()}
+                        className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
+                      >
+                        <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
+                      </button>
+                    </div>
+                  </LooseZone>
+
+                  {/* Grupos (recolhíveis; arraste a alça para mudar a ordem, arraste os widgets entre grupos) */}
+                  <SortableContext items={groups.map(g => `bigroup-${g.id}`)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {sections.slice(1).map((sec: any) => (
+                        <SortableGroupBlock
+                          key={sec.group.id}
+                          group={sec.group}
+                          count={sec.widgets.length}
+                          collapsed={!!collapsedGroups[sec.group.id]}
+                          onToggle={() => setCollapsedGroups(prev => ({ ...prev, [sec.group.id]: !prev[sec.group.id] }))}
+                          onRename={(title) => setAnalytics({ groups: renameGroup(groups, sec.group.id, title) })}
+                          onRemove={() => {
+                            const r = removeGroup(groups, allWidgets, sec.group.id)
+                            setAnalytics({ groups: r.groups, widgets: r.widgets })
+                          }}
+                          onAddWidget={() => handleAddWidget(sec.group.id)}
+                        >
+                          <SortableContext items={sec.widgets.map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[56px]">
+                              {sec.widgets.map((widget: any) => (
+                                <SortableWidgetCard
+                                  key={`widget-${widget.id}`}
+                                  widget={widget}
+                                  onEdit={() => { setEditingWidget(widget); setIsWidgetModalOpen(true); }}
+                                  onDelete={() => handleDeleteWidget(widget.id)}
+                                  getFieldName={getFieldName}
+                                />
+                              ))}
+                              {sec.widgets.length === 0 && (
+                                <div className="col-span-full py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-center text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                                  Arraste widgets para este grupo
+                                </div>
+                              )}
+                            </div>
+                          </SortableContext>
+                        </SortableGroupBlock>
+                      ))}
+                    </div>
                   </SortableContext>
 
                   <button
-                    onClick={handleAddWidget}
-                    className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
+                    type="button"
+                    onClick={() => setAnalytics({ groups: addGroup(groups, `Grupo ${groups.length + 1}`) })}
+                    className="w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                   >
-                    <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
+                    <FolderPlus className="w-4 h-4" />
+                    Novo grupo
                   </button>
                 </div>
               </div>

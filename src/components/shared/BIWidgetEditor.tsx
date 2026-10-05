@@ -15,8 +15,8 @@ interface BIWidgetEditorProps {
   models: any[]
   joins: any[]
   t: (key: string) => string
-  /** títulos de agrupamento já usados no painel (sugestões do campo Grupo) */
-  existingGroups?: string[]
+  /** grupos do painel (criados e organizados no Studio); o widget escolhe um deles */
+  groups?: { id: string; title: string }[]
 }
 
 const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
@@ -39,7 +39,7 @@ const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
 const selectCls = 'w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white'
 const labelCls = 'text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1'
 
-export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, existingGroups = [] }: BIWidgetEditorProps) {
+export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, groups = [] }: BIWidgetEditorProps) {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
   const currentModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
 
@@ -96,21 +96,20 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
         />
       </div>
 
-      {/* Agrupamento */}
-      <div className="space-y-2">
-        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Grupo (opcional)</label>
-        <input
-          type="text"
-          list="bi-widget-groups"
-          value={editingWidget?.group_title || ''}
-          onChange={e => setEditingWidget({...editingWidget, group_title: e.target.value || undefined})}
-          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
-          placeholder="Ex: Visão Geral (widgets com o mesmo grupo ficam juntos e recolhíveis)"
-        />
-        <datalist id="bi-widget-groups">
-          {existingGroups.map(g => <option key={g} value={g} />)}
-        </datalist>
-      </div>
+      {/* Agrupamento: os grupos são criados e organizados no Studio (Painel de Indicadores) */}
+      {groups.length > 0 && (
+        <div className="space-y-2">
+          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Grupo</label>
+          <select
+            value={groups.some(g => g.id === editingWidget?.group_id) ? editingWidget?.group_id : ''}
+            onChange={e => setEditingWidget({...editingWidget, group_id: e.target.value || undefined})}
+            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
+          >
+            <option value="">(Sem grupo)</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

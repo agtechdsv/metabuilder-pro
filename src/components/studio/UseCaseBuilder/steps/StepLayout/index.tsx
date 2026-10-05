@@ -1,3 +1,4 @@
+import { sectionsOf, moveWidget as moveBiWidget, moveGroup as moveBiGroup, normalizeOrder as normalizeBiOrder, type BiGroup } from '@/lib/bi/groups'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import FormulaBuilder from '../../../FormulaBuilder'
 import {
@@ -408,26 +409,56 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
 
     if (active.id === over.id) return
 
+    // Painel de BI: arrastar grupos (bigroup-) e widgets (widget-) entre grupos
+    const biOf = (prev: any) => {
+      const ac = prev.layout_config.analytics_config || {}
+      return { ac, groups: (ac.groups || []) as BiGroup[], widgets: (ac.widgets || []) as any[] }
+    }
+    const withBi = (prev: any, ac: any, patch: any) => ({
+      ...prev,
+      layout_config: { ...prev.layout_config, analytics_config: { ...ac, ...patch } },
+    })
+
+    if (activeIdStr.startsWith('bigroup-')) {
+      const gid = activeIdStr.replace('bigroup-', '')
+      setConfig((prev: any) => {
+        const { ac, groups, widgets } = biOf(prev)
+        let overGroup: string | null = null
+        if (overIdStr.startsWith('bigroup-')) overGroup = overIdStr.replace('bigroup-', '')
+        else if (overIdStr.startsWith('widget-')) overGroup = widgets.find(w => w.id === overIdStr.replace('widget-', ''))?.group_id ?? null
+        if (!overGroup || overGroup === gid) return prev
+        const toIndex = groups.findIndex(g => g.id === overGroup)
+        if (toIndex < 0) return prev
+        const nextGroups = moveBiGroup(groups, gid, toIndex)
+        return withBi(prev, ac, { groups: nextGroups, widgets: normalizeBiOrder(widgets, nextGroups) })
+      })
+      return
+    }
+
     const isWidget = activeIdStr.startsWith('widget-')
 
     if (isWidget) {
       const activeId = activeIdStr.replace('widget-', '')
-      const overId = overIdStr.replace('widget-', '')
       setConfig((prev: any) => {
-        const widgets = [...(prev.layout_config.analytics_config?.widgets || [])]
-        const oldIndex = widgets.findIndex(w => w.id === activeId)
-        const newIndex = widgets.findIndex(w => w.id === overId)
-        if (oldIndex === -1 || newIndex === -1) return prev
-        return {
-          ...prev,
-          layout_config: {
-            ...prev.layout_config,
-            analytics_config: {
-              ...prev.layout_config.analytics_config,
-              widgets: arrayMove(widgets, oldIndex, newIndex)
-            }
-          }
+        const { ac, groups, widgets } = biOf(prev)
+        let targetGroup: string | null
+        let toIndex: number | 'end'
+        if (overIdStr.startsWith('widget-')) {
+          const over = widgets.find(w => w.id === overIdStr.replace('widget-', ''))
+          if (!over) return prev
+          targetGroup = groups.some(g => g.id === over.group_id) ? over.group_id : null
+          const sec = sectionsOf(widgets, groups).find(s => (s.group?.id ?? null) === targetGroup)
+          toIndex = sec ? sec.widgets.findIndex(w => w.id === over.id) : 'end'
+        } else if (overIdStr.startsWith('bigroup-')) {
+          targetGroup = overIdStr.replace('bigroup-', '')
+          toIndex = 'end'
+        } else if (overIdStr === 'bicontainer-none') {
+          targetGroup = null
+          toIndex = 'end'
+        } else {
+          return prev
         }
+        return withBi(prev, ac, { widgets: moveBiWidget(widgets, groups, activeId, targetGroup, toIndex) })
       })
       return
     }
@@ -976,7 +1007,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             models={models}
             joins={config.layout_config.joins || []}
             t={t}
-            existingGroups={Array.from(new Set((config.layout_config.analytics_config?.widgets || []).map((w: any) => (w.group_title || '').trim()).filter(Boolean))) as string[]}
+            groups={config.layout_config.analytics_config?.groups || []}
           />
 
 

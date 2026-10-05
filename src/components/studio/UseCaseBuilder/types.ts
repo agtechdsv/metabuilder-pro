@@ -138,7 +138,7 @@ export interface BiWidget {
   period_field?: string
   period_mode?: 'panel' | 'fixed' | 'own'
   period_fixed?: string
-  group_title?: string
+  group_id?: string
   compare_previous?: boolean
   compare_invert?: boolean
 }
