@@ -43,6 +43,12 @@ const releaseSubFetchSlot = () => {
   else subFetchActive--
 }
 
+/** true se o elemento está de fato visível na janela (ex.: um drawer fechado fica deslocado para fora da tela) */
+function isOnScreen(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect()
+  return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight
+}
+
 export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   const {
     mode, fields, initialData, onSave, onCancel, logicType, masterModelId, masterModelName,
@@ -78,11 +84,11 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
   useEffect(() => {
     if (mode === 'view') return;
     const timer = setTimeout(() => {
-      if (formRef.current) {
+      if (formRef.current && isOnScreen(formRef.current)) {
         // Find the first visible and enabled input/textarea/select
         const firstInput = formRef.current.querySelector('input:not([type="hidden"]):not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly]), select:not([disabled]):not([readonly])') as HTMLElement
         if (firstInput) {
-          firstInput.focus()
+          firstInput.focus({ preventScroll: true })
         }
       }
     }, 150)
@@ -1040,8 +1046,11 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       
       // Foco automático no primeiro campo da tela para o novo registro
       setTimeout(() => {
-        const firstInput = document.querySelector('input:not([type="hidden"]), select, textarea') as HTMLElement
-        if (firstInput) firstInput.focus()
+        // Só dentro deste formulário e só se ele estiver visível: o drawer de "Novo Registro" fica montado fora da tela
+        // mesmo fechado, e buscar no documento inteiro focava o primeiro filtro da página (rolando a tela até ele).
+        if (!formRef.current || !isOnScreen(formRef.current)) return
+        const firstInput = formRef.current.querySelector('input:not([type="hidden"]), select, textarea') as HTMLElement
+        if (firstInput) firstInput.focus({ preventScroll: true })
       }, 300)
     }
     
