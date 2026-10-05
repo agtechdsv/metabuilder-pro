@@ -1017,6 +1017,33 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
                 </span>
                 <Plus className="w-3.5 h-3.5 text-indigo-500" />
               </div>
+            ) : activeId.startsWith('widget-') ? (
+              (() => {
+                const w = (config.layout_config.analytics_config?.widgets || []).find((x: any) => x.id === activeId.replace('widget-', ''))
+                if (!w) return null
+                return (
+                  <div className="p-4 bg-white dark:bg-neutral-900 border-2 border-indigo-500 rounded-[1.5rem] flex items-center gap-3 shadow-2xl opacity-90 scale-[1.03] w-80 cursor-grabbing">
+                    <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      {w.type === 'kpi' ? <Activity className="w-5 h-5" /> : w.type === 'gauge' ? <Gauge className="w-5 h-5" /> : <BarChart3 className="w-5 h-5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <h5 className="text-xs font-black uppercase tracking-tight text-neutral-900 dark:text-white truncate">{w.title || 'Sem título'}</h5>
+                      <p className="text-[9px] text-neutral-400 uppercase font-black tracking-widest">{w.type} • {w.calc}</p>
+                    </div>
+                  </div>
+                )
+              })()
+            ) : activeId.startsWith('bigroup-') ? (
+              (() => {
+                const g = (config.layout_config.analytics_config?.groups || []).find((x: any) => x.id === activeId.replace('bigroup-', ''))
+                if (!g) return null
+                return (
+                  <div className="px-4 py-3 bg-white dark:bg-neutral-900 border-2 border-indigo-500 rounded-2xl flex items-center gap-3 shadow-2xl opacity-90 w-80 cursor-grabbing">
+                    <Layers className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-black uppercase tracking-[0.15em] text-neutral-800 dark:text-neutral-100 truncate">{g.title || 'Grupo sem nome'}</span>
+                  </div>
+                )
+              })()
             ) : null
           ) : null}
         </DragOverlay>
