@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import FormulaBuilder from '@/components/studio/FormulaBuilder'
 import { Modal } from '@/components/ui/Modal'
 import { BI_FORMAT_OPTIONS, BI_PALETTES } from '@/lib/bi/format'
+import { biFieldKind } from '@/lib/bi/columnKind'
 
 interface BIWidgetEditorProps {
   editingWidget: any
@@ -45,10 +46,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
     const [tbl, col] = path.split('.')
     const m = models.find((x: any) => x.db_table_name === tbl)
     const f = (m?.fields || []).find((x: any) => String(x.db_column_name).toLowerCase() === String(col).toLowerCase())
-    const ty = String(f?.db_data_type || '').toLowerCase()
-    if (/date|time/.test(ty)) return 'date'
-    if (/int|numeric|decimal|float|double|real|number|serial|money/.test(ty)) return 'number'
-    return 'text'
+    return biFieldKind(f)
   }
 
   // lista de campos agrupada por tabela (principal primeiro); o valor é "coluna" na principal e "tabela.coluna" nas demais

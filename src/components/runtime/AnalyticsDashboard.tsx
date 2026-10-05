@@ -92,6 +92,7 @@ interface AnalyticsDashboardProps {
 
 import { compileFormula, parseFormulaAst } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
+import { biFieldKind } from '@/lib/bi/columnKind'
 import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
@@ -573,10 +574,7 @@ export default function AnalyticsDashboard({
       const m = (allModels as any[]).find(x => x.db_table_name === table)
       const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
       const f = (fs as any[]).find(x => String(x.db_column_name).toLowerCase() === column.toLowerCase())
-      const ty = String(f?.db_data_type || '').toLowerCase()
-      if (/date|time/.test(ty)) return 'date'
-      if (/int|numeric|decimal|float|double|real|number|serial|money/.test(ty)) return 'number'
-      return 'text'
+      return biFieldKind(f)
     }
     const conditions: BiCondition[] = []
     ;(widget.conditions || []).forEach(c => {
