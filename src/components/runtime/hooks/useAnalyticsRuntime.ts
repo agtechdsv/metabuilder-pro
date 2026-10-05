@@ -1,3 +1,4 @@
+import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 
 interface UseAnalyticsRuntimeProps {
@@ -20,6 +21,9 @@ export function useAnalyticsRuntime({
   setIsWidgetModalOpen,
 }: UseAnalyticsRuntimeProps) {
   const { toast } = useToast()
+  // em ?preview=draft a tela mostra o rascunho: leitura e gravação do layout vão para o draft_config
+  const isDraft = useSearchParams()?.get('preview') === 'draft'
+  const draftQuery = isDraft ? '&draft=1' : ''
 
   const handleAddWidgetRuntime = () => {
     setEditingWidget({
@@ -59,7 +63,7 @@ export function useAnalyticsRuntime({
 
     try {
       // Lê o layout_config atual via API route (server-side autenticado)
-      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}${draftQuery}`)
       if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
       const { layout_config } = await getRes.json()
 
@@ -81,7 +85,8 @@ export function useAnalyticsRuntime({
         body: JSON.stringify({
           viewId,
           layoutConfig: updatedLayoutConfig,
-          tablesConfig: allInvolved
+          tablesConfig: allInvolved,
+          draft: isDraft
         })
       })
 
@@ -103,7 +108,7 @@ export function useAnalyticsRuntime({
     setLocalAnalyticsConfig(newConfig)
 
     try {
-      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}${draftQuery}`)
       if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
       const { layout_config } = await getRes.json()
 
@@ -112,7 +117,7 @@ export function useAnalyticsRuntime({
       const patchRes = await fetch('/api/runtime/analytics-config', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ viewId, layoutConfig: updatedLayoutConfig })
+        body: JSON.stringify({ viewId, layoutConfig: updatedLayoutConfig, draft: isDraft })
       })
 
       if (!patchRes.ok) {
@@ -135,7 +140,7 @@ export function useAnalyticsRuntime({
     setLocalAnalyticsConfig(newConfig)
 
     try {
-      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}`)
+      const getRes = await fetch(`/api/runtime/analytics-config?viewId=${encodeURIComponent(viewId)}${draftQuery}`)
       if (!getRes.ok) throw new Error('Erro ao buscar configuração da view')
       const { layout_config } = await getRes.json()
 
@@ -155,7 +160,8 @@ export function useAnalyticsRuntime({
         body: JSON.stringify({
           viewId,
           layoutConfig: updatedLayoutConfig,
-          tablesConfig: allInvolved
+          tablesConfig: allInvolved,
+          draft: isDraft
         })
       })
 

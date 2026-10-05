@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const viewId = searchParams.get('viewId')
+    // ?draft=1: a tela está em ?preview=draft e mostra o rascunho (draft_config), não o publicado
+    const draft = searchParams.get('draft') === '1'
 
     if (!viewId) {
       return NextResponse.json({ error: 'viewId é obrigatório' }, { status: 400 })
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
     // RLS garante que o usuário só vê views dos seus projetos
     const { data: viewData, error } = await supabase
       .from('ui_views')
-      .select('layout_config')
+      .select('layout_config, draft_config')
       .eq('id', viewId)
       .single()
 
@@ -35,7 +37,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'View não encontrada' }, { status: 404 })
     }
 
-    return NextResponse.json({ layout_config: viewData.layout_config })
+    const layout = draft && viewData.draft_config ? (viewData.draft_config.layout_config || {}) : viewData.layout_config
+    return NextResponse.json({ layout_config: layout })
   } catch (error: any) {
     console.error('[analytics-config GET] Erro:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
@@ -48,12 +51,15 @@ export async function GET(request: NextRequest) {
  * Atualiza o layout_config (e opcionalmente tables_config) de uma ui_view.
  * Substitui as escritas diretas ao Supabase client no browser feitas por useAnalyticsRuntime.
  *
- * Body: { viewId: string, layoutConfig: any, tablesConfig?: string[] }
+ * Body: { viewId: string, layoutConfig: any, tablesConfig?: string[], draft?: boolean }
+ *
+ * draft: true grava dentro de draft_config (a tela está em ?preview=draft). Sem isso o rascunho ficava
+ * desatualizado e a publicação seguinte sobrescrevia a edição.
  */
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { viewId, layoutConfig, tablesConfig } = body
+    const { viewId, layoutConfig, tablesConfig, draft } = body
 
     if (!viewId || layoutConfig === undefined) {
       return NextResponse.json({ error: 'viewId e layoutConfig são obrigatórios' }, { status: 400 })
@@ -68,9 +74,26 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Monta o payload de update
-    const updatePayload: Record<string, any> = { layout_config: layoutConfig }
+    let updatePayload: Record<string, any> = { layout_config: layoutConfig }
     if (tablesConfig !== undefined) {
       updatePayload.tables_config = tablesConfig
+    }
+
+    if (draft === true) {
+      const { data: current, error: readError } = await supabase
+        .from('ui_views')
+        .select('draft_config')
+        .eq('id', viewId)
+        .single()
+      if (readError || !current) {
+        return NextResponse.json({ error: 'View não encontrada' }, { status: 404 })
+      }
+      // com rascunho pendente, a edição vai para ele; sem rascunho a tela mostra o publicado e grava no publicado
+      if (current.draft_config) {
+        const nextDraft: Record<string, any> = { ...current.draft_config, layout_config: layoutConfig }
+        if (tablesConfig !== undefined) nextDraft.tables_config = tablesConfig
+        updatePayload = { draft_config: nextDraft }
+      }
     }
 
     // RLS garante que o usuário só atualiza views dos seus projetos
