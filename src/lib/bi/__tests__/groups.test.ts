@@ -59,7 +59,7 @@ describe('grupos', () => {
   })
   it('addGroup e renameGroup', () => {
     expect(addGroup(groups, '  Metas ', 'C')[2]).toEqual({ id: 'C', title: 'Metas' })
-    expect(addGroup(groups, '   ', 'C')[2].title).toBe('Novo grupo')
+    expect(addGroup(groups, '   ', 'C')[2].title).toBe('')
     expect(renameGroup(groups, 'A', ' Resumo ')[0].title).toBe('Resumo')
     expect(renameGroup(groups, 'A', '   ')).toBe(groups)
   })

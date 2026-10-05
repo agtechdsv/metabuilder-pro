@@ -106,7 +106,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
             <option value="">(Sem grupo)</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.title}</option>)}
+            {groups.map(g => <option key={g.id} value={g.id}>{g.title || 'Grupo sem nome'}</option>)}
           </select>
         </div>
       )}

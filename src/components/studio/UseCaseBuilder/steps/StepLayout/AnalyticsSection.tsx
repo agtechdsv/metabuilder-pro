@@ -33,9 +33,14 @@ function SortableGroupBlock({ group, count, collapsed, onToggle, onRename, onRem
         <input
           key={group.title}
           defaultValue={group.title}
-          onBlur={e => onRename(e.target.value)}
+          placeholder="Nome do grupo"
+          autoFocus={!group.title}
+          onBlur={e => {
+            if (!e.target.value.trim() && group.title) { e.target.value = group.title; return }
+            onRename(e.target.value)
+          }}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-          className="flex-1 min-w-0 bg-transparent text-xs font-black uppercase tracking-[0.15em] text-neutral-800 dark:text-neutral-100 outline-none border-b border-transparent hover:border-neutral-300 focus:border-indigo-500 py-1"
+          className="flex-1 min-w-0 bg-transparent placeholder:normal-case placeholder:font-bold placeholder:tracking-normal placeholder:text-neutral-300 text-xs font-black uppercase tracking-[0.15em] text-neutral-800 dark:text-neutral-100 outline-none border-b border-transparent hover:border-neutral-300 focus:border-indigo-500 py-1"
           title="Clique para renomear o grupo"
         />
         <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
@@ -206,7 +211,7 @@ export function AnalyticsSection({
 
                   <button
                     type="button"
-                    onClick={() => setAnalytics({ groups: addGroup(groups, `Grupo ${groups.length + 1}`) })}
+                    onClick={() => setAnalytics({ groups: addGroup(groups, '') })}
                     className="w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                   >
                     <FolderPlus className="w-4 h-4" />

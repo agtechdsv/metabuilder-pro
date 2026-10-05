@@ -105,7 +105,7 @@ import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
 import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
 import { resolveFkLabel } from '@/lib/bi/fkLabel'
-import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, type BiGroup } from '@/lib/bi/groups'
+import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
@@ -1374,7 +1374,7 @@ export default function AnalyticsDashboard({
           <span className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover/gh:text-indigo-600 transition-all">
             <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", collapsed && "-rotate-90")} />
           </span>
-          <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{group.title}</span>
+          <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{groupLabel(group)}</span>
           <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
             {n} {n === 1 ? 'indicador' : 'indicadores'}
           </span>
@@ -1385,7 +1385,8 @@ export default function AnalyticsDashboard({
             <input
               key={group.title}
               defaultValue={group.title}
-              onBlur={e => renameGroup(group.id, e.target.value)}
+              placeholder="Nome do grupo"
+              onBlur={e => { if (!e.target.value.trim() && group.title) { e.target.value = group.title; return } renameGroup(group.id, e.target.value) }}
               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
               title="Renomear o agrupamento"
               className="w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white"

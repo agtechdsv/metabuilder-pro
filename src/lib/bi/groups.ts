@@ -56,10 +56,12 @@ export function moveGroup(groups: BiGroup[], groupId: string, toIndex: number): 
   return next
 }
 
+/** Cria um grupo; o título pode ficar vazio (a tela mostra uma dica até o usuário digitar). */
 export function addGroup(groups: BiGroup[], title: string, id: string = newGroupId()): BiGroup[] {
-  return [...groups, { id, title: title.trim() || 'Novo grupo' }]
+  return [...groups, { id, title: title.trim() }]
 }
 
+/** Renomeia; um nome em branco é ignorado (o grupo mantém o nome atual). */
 export function renameGroup(groups: BiGroup[], id: string, title: string): BiGroup[] {
   const t = title.trim()
   if (!t) return groups
@@ -76,4 +78,9 @@ export function removeGroup<T extends W>(groups: BiGroup[], widgets: T[], id: st
 /** Normaliza o array de widgets para a ordem da tela (útil depois de mexer em group_id). */
 export function normalizeOrder<T extends W>(widgets: T[], groups: BiGroup[]): T[] {
   return flatten(sectionsOf(widgets, groups))
+}
+
+/** Texto de exibição de um grupo (um grupo recém-criado ainda não tem título). */
+export function groupLabel(g: BiGroup): string {
+  return g.title || 'Grupo sem nome'
 }
