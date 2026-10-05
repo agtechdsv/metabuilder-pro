@@ -215,6 +215,48 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
     setActiveId(String(event.active.id))
   }
 
+  // Arrastar um widget de um grupo para outro: move já durante o arrasto, para a lista de destino abrir a lacuna
+  // (cada grupo é uma lista própria e só reage a itens que já fazem parte dela).
+  const handleDragOver = (event: any) => {
+    const { active, over } = event
+    if (!over) return
+    const activeIdStr = String(active.id)
+    const overIdStr = String(over.id)
+    if (!activeIdStr.startsWith('widget-')) return
+    const activeWid = activeIdStr.replace('widget-', '')
+    setConfig((prev: any) => {
+      const ac = prev.layout_config.analytics_config || {}
+      const groups = (ac.groups || []) as BiGroup[]
+      const widgets = (ac.widgets || []) as any[]
+      const moving = widgets.find(w => w.id === activeWid)
+      if (!moving) return prev
+      const known = (id?: string | null) => (id && groups.some(g => g.id === id) ? id : null)
+      const current = known(moving.group_id)
+      let target: string | null
+      let toIndex: number | 'end'
+      if (overIdStr.startsWith('widget-')) {
+        const over = widgets.find(w => w.id === overIdStr.replace('widget-', ''))
+        if (!over) return prev
+        target = known(over.group_id)
+        const sec = sectionsOf(widgets, groups).find(s => (s.group?.id ?? null) === target)
+        toIndex = sec ? sec.widgets.findIndex(w => w.id === over.id) : 'end'
+      } else if (overIdStr.startsWith('bigroup-')) {
+        target = known(overIdStr.replace('bigroup-', ''))
+        toIndex = 'end'
+      } else if (overIdStr === 'bicontainer-none') {
+        target = null
+        toIndex = 'end'
+      } else {
+        return prev
+      }
+      if (target === current) return prev // mesma lista: o próprio dnd-kit reordena
+      return {
+        ...prev,
+        layout_config: { ...prev.layout_config, analytics_config: { ...ac, widgets: moveBiWidget(widgets, groups, activeWid, target, toIndex) } },
+      }
+    })
+  }
+
   const handleDragEnd = (event: any) => {
     const { active, over } = event
     setActiveId(null)
@@ -441,6 +483,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
       const activeId = activeIdStr.replace('widget-', '')
       setConfig((prev: any) => {
         const { ac, groups, widgets } = biOf(prev)
+        const moving = widgets.find(w => w.id === activeId)
         let targetGroup: string | null
         let toIndex: number | 'end'
         if (overIdStr.startsWith('widget-')) {
@@ -457,6 +500,11 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
           toIndex = 'end'
         } else {
           return prev
+        }
+        // já está nesse grupo (o arrasto o trouxe até aqui): soltar na moldura do grupo não muda a posição
+        if (toIndex === 'end') {
+          const curGroup = groups.some(g => g.id === moving?.group_id) ? moving?.group_id : null
+          if ((curGroup ?? null) === targetGroup) return prev
         }
         return withBi(prev, ac, { widgets: moveBiWidget(widgets, groups, activeId, targetGroup, toIndex) })
       })
@@ -878,6 +926,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
         sensors={sensors}
         collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="flex flex-col xl:flex-row-reverse gap-10 relative">
