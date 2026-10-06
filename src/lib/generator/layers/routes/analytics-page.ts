@@ -875,7 +875,8 @@ ${filterFields.map(f => {
         icon="${route.icon || 'BarChart3'}"
         widgets={WIDGETS as any}
         aggregatedData={aggregatedData}
-${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n' : ''}      />
+        groups={${JSON.stringify(route.analyticsConfig?.groups || [])}}
+${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        filters={biFilters}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
 
       {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (
@@ -1060,9 +1061,55 @@ ${filterInputs}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
+  // Com o motor de BI ativo o cliente recalcula os widgets pelo servidor quando o período muda
+  const live = biEngineEnabled(ast)
+  const liveImport = live ? "import { getBiWidgetsData } from '@/app/actions/bi'\n" : ''
+  const liveEffect = live ? `
+  // Recalcula só os widgets cujo período efetivo mudou (os dados iniciais já vieram do servidor)
+  const fetchedSig = useRef<Record<string, string>>({})
+  const reqSeq = useRef<Record<string, number>>({})
+  useEffect(() => {
+    const ids: string[] = []
+    for (const w of widgets) {
+      const sig = JSON.stringify(widgetPeriod(w))
+      if (fetchedSig.current[w.id] === undefined) { fetchedSig.current[w.id] = sig; continue }
+      if (fetchedSig.current[w.id] !== sig) { fetchedSig.current[w.id] = sig; ids.push(w.id) }
+    }
+    if (ids.length === 0) return
+    const seq: Record<string, number> = {}
+    for (const id of ids) { reqSeq.current[id] = (reqSeq.current[id] || 0) + 1; seq[id] = reqSeq.current[id] }
+    setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) next[id] = true; return next })
+    getBiWidgetsData(ids, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods })
+      .then(res => {
+        const fresh = ids.filter(id => reqSeq.current[id] === seq[id])
+        setAggregatedData(prev => { const next = { ...prev }; for (const id of fresh) if (res[id]) next[id] = res[id].data; return next })
+        setSeriesData(prev => { const next = { ...prev }; for (const id of fresh) { if (res[id]?.series) next[id] = res[id].series as any; else delete next[id] } return next })
+        setPrevData(prev => {
+          const next = { ...prev }
+          for (const id of fresh) {
+            const r = res[id]
+            if (r && r.prev !== undefined && r.prevRange) next[id] = { value: r.prev, from: r.prevRange.from, to: r.prevRange.to }
+            else delete next[id]
+          }
+          return next
+        })
+        setErrors(prev => { const next = { ...prev }; for (const id of fresh) { if (res[id]?.error) next[id] = res[id].error as string; else delete next[id] } return next })
+      })
+      .catch(() => {
+        setErrors(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) next[id] = 'Não foi possível atualizar este widget'; return next })
+      })
+      .finally(() => {
+        setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) delete next[id]; return next })
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodRange, groupPeriods, ownPeriods])
+` : ''
+
   return `'use client'
 
-import React, { useState, useEffect } from 'react'
+${liveImport}import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode, type PeriodRange } from '@/lib/bi/period'
+import { sectionsOf, groupLabel, type BiGroup } from '@/lib/bi/groups'
 import {
   ResponsiveContainer,
   BarChart,
@@ -1094,6 +1141,8 @@ import {
   MousePointer2,
   LayoutGrid,
   ZoomIn,
+  ChevronDown,
+  Loader2,
 } from 'lucide-react'
 
 interface AnalyticsWidget {
@@ -1136,7 +1185,15 @@ interface AnalyticsClientProps {
   prevData?: Record<string, { value: number; from: string; to: string }>
   /** widgets que falharam: mensagem para o usuário */
   errors?: Record<string, string>
+  /** agrupamentos de widgets (a ordem é a da tela) */
+  groups?: BiGroup[]
+  /** filtros da tela (já aplicados nos dados iniciais; reenviados ao recalcular) */
+  filters?: Record<string, string>
+  /** período com que a página foi renderizada */
+  initialPeriod?: { preset: string; from: string; to: string }
 }
+
+type PeriodChoiceState = { preset: string; from: string; to: string }
 
 const PALETTE = [
   '#6366f1',
@@ -1157,19 +1214,47 @@ export function AnalyticsClient({
   title,
   icon = 'BarChart3',
   widgets,
-  aggregatedData,
-  seriesData,
-  prevData,
-  errors,
+  aggregatedData: initialAggregated,
+  seriesData: initialSeries,
+  prevData: initialPrev,
+  errors: initialErrors,
+  groups,
+  filters,
+  initialPeriod,
 }: AnalyticsClientProps) {
   const [mounted, setMounted] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
   const [scale, setScale] = useState(1.0)
 
+  // Resultados (iniciais do servidor; atualizados quando o período muda)
+  const [aggregatedData, setAggregatedData] = useState<Record<string, any>>(initialAggregated)
+  const [seriesData, setSeriesData] = useState<Record<string, { rows: any[]; keys: string[] }>>(initialSeries || {})
+  const [prevData, setPrevData] = useState<Record<string, { value: number; from: string; to: string }>>(initialPrev || {})
+  const [errors, setErrors] = useState<Record<string, string>>(initialErrors || {})
+  const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({})
+
+  // Período: barra do painel, barra de cada grupo e seletor próprio de cada widget
+  const groupList = groups || []
+  const groupIds = groupList.map(g => g.id)
+  const [period, setPeriod] = useState<PeriodChoiceState>(initialPeriod || { preset: 'all', from: '', to: '' })
+  const [groupPeriods, setGroupPeriods] = useState<Record<string, PeriodChoiceState>>({})
+  const [ownPeriods, setOwnPeriods] = useState<Record<string, PeriodChoiceState>>({})
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const periodRange = useMemo(() => resolvePeriod(period.preset, { from: period.from, to: period.to }), [period])
+  const specOf = (w: AnalyticsWidget) => w.spec || { id: w.id }
+  const widgetPeriod = (w: AnalyticsWidget): PeriodRange | null =>
+    resolveWidgetPeriod(specOf(w), { panel: periodRange, groupIds, groupPeriods, ownPeriods })
+  const modeOf = (w: AnalyticsWidget) => effectivePeriodMode(specOf(w), groupIds)
+  // sem o motor de BI (Supabase) não há como recalcular por período: as barras não aparecem
+  const hasPeriod = (w: AnalyticsWidget) => ${live ? 'true' : 'false'} && !!specOf(w).period_field
+  const followsPanel = (w: AnalyticsWidget) => hasPeriod(w) && modeOf(w) === 'panel'
+  const day = (d: string) => d.split('-').reverse().join('/')
+
   useEffect(() => {
     setMounted(true)
   }, [])
+${liveEffect}
 
   const scales = [
     { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: 'Pequeno' },
@@ -1370,6 +1455,9 @@ export function AnalyticsClient({
 
   // ── Renderizador de Gráficos (Bar, Line, Pie) ──
   const renderChartContent = (widget: AnalyticsWidget, isExpanded = false) => {
+    if (loadingIds[widget.id]) {
+      return <div className="flex-1 flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
+    }
     if (errors?.[widget.id]) {
       return <div className="flex-1 flex items-center justify-center text-center text-xs font-bold text-red-400 px-4">{errors[widget.id]}</div>
     }
@@ -1542,6 +1630,141 @@ export function AnalyticsClient({
     return 'col-span-12 sm:col-span-6 lg:col-span-4'
   }
 
+  const inputCls = 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white'
+  const chipCls = (active: boolean) => cn('px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all', active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600')
+  const presetOptions = [...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }]
+
+  // Barra de período (painel ou grupo)
+  const renderPeriodBar = (label: string, count: number, value: PeriodChoiceState, onChange: (patch: Partial<PeriodChoiceState>) => void) => (
+    <div className="flex flex-wrap items-center gap-2 px-2">
+      <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">{label}</span>
+      <span className="text-[9px] font-bold text-neutral-400 mr-2">
+        afeta {count} {count === 1 ? 'indicador' : 'indicadores'} (marcados com 📅)
+      </span>
+      {presetOptions.map(o => (
+        <button key={o.id} type="button" onClick={() => onChange({ preset: o.id })} className={chipCls(value.preset === o.id)}>
+          {o.label}
+        </button>
+      ))}
+      {value.preset === 'custom' && (
+        <>
+          <input type="date" value={value.from} onChange={e => onChange({ from: e.target.value })} className={inputCls} />
+          <span className="text-[10px] text-neutral-400">até</span>
+          <input type="date" value={value.to} onChange={e => onChange({ to: e.target.value })} className={inputCls} />
+        </>
+      )}
+    </div>
+  )
+
+  // Período efetivo do widget (e o seletor próprio, quando ele tem um)
+  const renderPeriodInfo = (w: AnalyticsWidget) => {
+    if (!hasPeriod(w)) return null
+    const wp = widgetPeriod(w)
+    const mode = modeOf(w)
+    const own = ownPeriods[w.id] || { preset: 'all', from: '', to: '' }
+    const setOwn = (patch: Partial<PeriodChoiceState>) => setOwnPeriods(prev => ({ ...prev, [w.id]: { ...own, ...patch } }))
+    const smallCls = 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-1 py-0.5 text-[9px] font-bold text-neutral-700 dark:text-neutral-200'
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
+          📅 {wp ? day(wp.from) + ' – ' + day(wp.to) : 'Todo o período'}{mode === 'fixed' ? ' · fixo' : mode === 'group' ? ' · grupo' : ''}
+        </p>
+        {mode === 'own' && (
+          <>
+            <select value={own.preset} onChange={e => setOwn({ preset: e.target.value })} className={smallCls}>
+              {presetOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+            {own.preset === 'custom' && (
+              <>
+                <input type="date" value={own.from} onChange={e => setOwn({ from: e.target.value })} className={smallCls} />
+                <input type="date" value={own.to} onChange={e => setOwn({ to: e.target.value })} className={smallCls} />
+              </>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
+
+  const renderCard = (w: AnalyticsWidget) => {
+          const colSpan = getColSpanClass(w.width)
+          const iconType =
+            w.type === 'kpi' ? <Activity className="w-4 h-4 text-indigo-500" /> :
+            w.type === 'gauge' ? <GaugeIcon className="w-4 h-4 text-cyan-500" /> :
+            w.type === 'line' ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
+            w.type === 'pie' ? <PieChartIcon className="w-4 h-4 text-pink-500" /> :
+            <BarChart3 className="w-4 h-4 text-indigo-500" />
+
+          return (
+            <div
+              key={w.id}
+              className={cn(
+                colSpan,
+                "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden min-h-[340px]"
+              )}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
+
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl">
+                    {iconType}
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
+                      {w.title}
+                    </h3>
+                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">
+                      {w.calc} ({fieldLabel(w)})
+                    </p>
+                    {renderPeriodInfo(w)}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setExpandedWidgetId(w.id)}
+                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all"
+                  title="Expandir"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center relative z-10">
+                {renderChartContent(w)}
+              </div>
+            </div>
+          )
+  }
+
+  // Seções: soltos no topo e, depois, os grupos na ordem definida (grupo sem widget não aparece)
+  const sections = sectionsOf(widgets.map(w => ({ ...w, group_id: w.spec?.group_id as string | undefined })), groupList)
+    .filter(sec => sec.widgets.length > 0)
+    .map(sec => ({ key: sec.group?.id ?? '__none__', group: sec.group, widgets: sec.widgets as AnalyticsWidget[] }))
+
+  const renderGroupHeader = (group: BiGroup, n: number) => {
+    const collapsed = !!collapsedGroups[group.id]
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))}
+        className="flex items-center gap-3 w-full min-w-0 text-left px-2 group/gh"
+        aria-expanded={!collapsed}
+      >
+        <span className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover/gh:text-indigo-600 transition-all">
+          <ChevronDown className={cn('w-4 h-4 transition-transform duration-300', collapsed && '-rotate-90')} />
+        </span>
+        <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{groupLabel(group)}</span>
+        <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
+          {n} {n === 1 ? 'indicador' : 'indicadores'}
+        </span>
+        <span className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
+      </button>
+    )
+  }
+
+  const panelFollowers = widgets.filter(followsPanel).length
+
   if (!mounted) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -1599,57 +1822,33 @@ export function AnalyticsClient({
         </div>
       </div>
 
-      {/* Grid de Widgets */}
-      <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
-        {widgets.map(w => {
-          const colSpan = getColSpanClass(w.width)
-          const iconType =
-            w.type === 'kpi' ? <Activity className="w-4 h-4 text-indigo-500" /> :
-            w.type === 'gauge' ? <GaugeIcon className="w-4 h-4 text-cyan-500" /> :
-            w.type === 'line' ? <TrendingUp className="w-4 h-4 text-amber-500" /> :
-            w.type === 'pie' ? <PieChartIcon className="w-4 h-4 text-pink-500" /> :
-            <BarChart3 className="w-4 h-4 text-indigo-500" />
+      {/* Barra de período do painel */}
+      {panelFollowers > 0 && renderPeriodBar('Período', panelFollowers, period, patch => setPeriod(p => ({ ...p, ...patch })))}
 
+      {/* Seções: soltos no topo e os grupos na ordem definida */}
+      <div className="space-y-8">
+        {sections.map(sec => {
+          const collapsed = !!(sec.group && collapsedGroups[sec.key])
+          const groupFollowers = sec.group ? sec.widgets.filter(w => hasPeriod(w) && modeOf(w) === 'group').length : 0
           return (
-            <div
-              key={w.id}
-              className={cn(
-                colSpan,
-                "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden min-h-[340px]"
+            <div key={sec.key} className="space-y-4">
+              {sec.group && renderGroupHeader(sec.group, sec.widgets.length)}
+              {sec.group && !collapsed && groupFollowers > 0 && renderPeriodBar(
+                'Período do grupo',
+                groupFollowers,
+                groupPeriods[sec.key] || { preset: 'all', from: '', to: '' },
+                patch => setGroupPeriods(prev => ({ ...prev, [sec.key]: { ...(prev[sec.key] || { preset: 'all', from: '', to: '' }), ...patch } })),
               )}
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
-
-              <div className="flex items-center justify-between mb-2 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-2xl">
-                    {iconType}
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
-                      {w.title}
-                    </h3>
-                    <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">
-                      {w.calc} ({fieldLabel(w)})
-                    </p>
-                  </div>
+              {!collapsed && (
+                <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
+                  {sec.widgets.map(w => renderCard(w))}
                 </div>
-
-                <button
-                  onClick={() => setExpandedWidgetId(w.id)}
-                  className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all"
-                  title="Expandir"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex-1 flex flex-col justify-center relative z-10">
-                {renderChartContent(w)}
-              </div>
+              )}
             </div>
           )
         })}
+
+      <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
 
         {/* Card Novo Indicador (Fiel à Web Produção) */}
         <div className="col-span-12 sm:col-span-6 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-all min-h-[340px] cursor-pointer group">
@@ -1665,6 +1864,7 @@ export function AnalyticsClient({
             </span>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Modal de Widget Expandido */}

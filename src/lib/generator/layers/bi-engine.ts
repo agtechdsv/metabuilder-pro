@@ -88,7 +88,7 @@ export const BI_WIDGETS: Record<string, { spec: any; joins: any[] }> = ${JSON.st
   files.set('app/actions/bi.ts', `'use server'
 import { planWidgetQuery } from '@/lib/bi/widgetPlan'
 import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
-import { resolveWidgetPeriod, previousRange, type PeriodRange } from '@/lib/bi/period'
+import { PERIOD_PRESETS, resolveWidgetPeriod, previousRange, type PeriodRange, type PeriodChoice } from '@/lib/bi/period'
 import { BI_DIALECT, BI_PROJECT_SLUG, BI_MODELS, BI_RELATIONS, BI_GROUP_IDS, BI_WIDGETS } from './bi-registry'
 ${run.imports}
 
@@ -116,6 +116,10 @@ export interface BiInput {
   period?: PeriodRange | null
   /** filtros da tela: coluna (ou tabela.coluna) → texto digitado */
   filters?: Record<string, string>
+  /** barra de período de cada grupo: { idDoGrupo: { preset, from, to } } */
+  groupPeriods?: Record<string, PeriodChoice>
+  /** seletor próprio dos widgets em modo "próprio": { idDoWidget: { preset, from, to } } */
+  ownPeriods?: Record<string, PeriodChoice>
 }
 
 async function runSql(sql: string): Promise<any[]> {
@@ -125,6 +129,22 @@ async function runSql(sql: string): Promise<any[]> {
 function cleanPeriod(p: BiInput['period']): PeriodRange | null {
   if (!p || typeof p.from !== 'string' || typeof p.to !== 'string') return null
   return DATE_RE.test(p.from) && DATE_RE.test(p.to) && p.from <= p.to ? { from: p.from, to: p.to } : null
+}
+
+const PRESET_IDS = new Set<string>([...PERIOD_PRESETS.map(p => p.id), 'custom'])
+
+function cleanChoices(c: Record<string, PeriodChoice> | undefined): Record<string, PeriodChoice> {
+  const out: Record<string, PeriodChoice> = {}
+  if (!c || typeof c !== 'object') return out
+  for (const [k, v] of Object.entries(c)) {
+    if (!v || typeof v.preset !== 'string' || !PRESET_IDS.has(v.preset)) continue
+    out[k] = {
+      preset: v.preset,
+      from: typeof v.from === 'string' && DATE_RE.test(v.from) ? v.from : undefined,
+      to: typeof v.to === 'string' && DATE_RE.test(v.to) ? v.to : undefined,
+    }
+  }
+  return out
 }
 
 function cleanFilters(f: BiInput['filters']): Record<string, string> {
@@ -137,13 +157,13 @@ function cleanFilters(f: BiInput['filters']): Record<string, string> {
   return out
 }
 
-async function computeWidget(id: string, input: BiInput): Promise<BiWidgetResult> {
+async function computeWidget(id: string, input: BiInput, groupPeriods: Record<string, PeriodChoice>, ownPeriods: Record<string, PeriodChoice>): Promise<BiWidgetResult> {
   const entry = BI_WIDGETS[id]
   const empty: BiWidgetResult = { data: 0, series: null, truncated: false }
   if (!entry) return { ...empty, error: 'Widget não encontrado' }
 
   const spec = entry.spec
-  const period = resolveWidgetPeriod(spec, { panel: cleanPeriod(input.period), groupIds: BI_GROUP_IDS })
+  const period = resolveWidgetPeriod(spec, { panel: cleanPeriod(input.period), groupIds: BI_GROUP_IDS, groupPeriods, ownPeriods })
   const plan = planWidgetQuery({
     widget: spec,
     models: BI_MODELS,
@@ -183,7 +203,9 @@ async function computeWidget(id: string, input: BiInput): Promise<BiWidgetResult
 export async function getBiWidgetsData(ids: string[], input?: BiInput): Promise<Record<string, BiWidgetResult>> {
   const list = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string').slice(0, MAX_WIDGETS_PER_CALL)
   const safe: BiInput = input && typeof input === 'object' ? input : {}
-  const entries = await Promise.all(list.map(async id => [id, await computeWidget(id, safe)] as const))
+  const groupPeriods = cleanChoices(safe.groupPeriods)
+  const ownPeriods = cleanChoices(safe.ownPeriods)
+  const entries = await Promise.all(list.map(async id => [id, await computeWidget(id, safe, groupPeriods, ownPeriods)] as const))
   return Object.fromEntries(entries)
 }
 `)

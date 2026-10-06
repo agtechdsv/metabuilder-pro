@@ -30,6 +30,8 @@ const raw = () => ({
         widgets: [
           { id: 'w-kpi', type: 'kpi', title: 'Faturamento', model_id: 'm-ped', field: 'pedidos.valor', calc: 'SUM', period_field: 'pedidos.data_pedido', compare_previous: true },
           { id: 'w-bar', type: 'bar', title: 'Por status', model_id: 'm-ped', field: '*', calc: 'COUNT', group_by: 'pedidos.status' },
+          { id: 'w-grp', type: 'kpi', title: 'Do grupo', model_id: 'm-ped', field: 'pedidos.valor', calc: 'SUM', group_id: 'g1', period_field: 'pedidos.data_pedido', period_mode: 'group' },
+          { id: 'w-own', type: 'kpi', title: 'Proprio', model_id: 'm-ped', field: 'pedidos.valor', calc: 'SUM', period_field: 'pedidos.data_pedido', period_mode: 'own' },
           { id: 'w-cli', type: 'bar', title: 'Por cliente', model_id: 'm-ped', field: 'pedidos.valor', calc: 'SUM', group_by: 'pedidos.cliente_id' },
         ],
       },
@@ -81,6 +83,29 @@ describe('motor de BI no app exportado', () => {
     const client = [...generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
     expect(client).toContain('fieldLabel(')
     expect(client).toContain('interval={0}')
+  })
+
+  it('cliente do dashboard: grupos, barras de período e recálculo pelo servidor', () => {
+    const client = [...generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
+    expect(client).toContain("import { getBiWidgetsData } from '@/app/actions/bi'")
+    expect(client).toContain("from '@/lib/bi/groups'")
+    expect(client).toContain('renderGroupHeader')
+    expect(client).toContain("'Período do grupo'")
+    expect(client).toContain('groupPeriods, ownPeriods')
+    const page = [...generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).entries()].find(([p]) => p.endsWith('/page.tsx') && p.includes('dashboard'))![1]
+    expect(page).toContain('filters={biFilters}')
+    expect(page).toContain('"id":"g1"')
+  })
+
+  it('Supabase: grupos aparecem, mas sem barras de período (não há recálculo)', () => {
+    const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'supabase'))
+    const client = [...files.entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
+    expect(client).not.toContain('getBiWidgetsData')
+    expect(client).toContain('const hasPeriod = (w: AnalyticsWidget) => false &&')
+    expect(client).toContain('renderGroupHeader')
+    // o cliente importa estas bibliotecas: precisam existir mesmo sem o motor
+    expect(files.has('lib/bi/period.ts')).toBe(true)
+    expect(files.has('lib/bi/groups.ts')).toBe(true)
   })
 
   it('Supabase (sem SQL direto) continua com a agregação em JavaScript', () => {

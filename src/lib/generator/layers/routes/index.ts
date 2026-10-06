@@ -13,6 +13,7 @@ import { generateMindMapPage, generateMindMapClient, generateMindMapSchema } fro
 import { generateAnalyticsPage, generateAnalyticsClient } from './analytics-page'
 import { generateWipPage } from './wip-page'
 import { generateAiPage } from './ai-page'
+import { BI_RUNTIME_FILES } from '../../biRuntimeFiles.generated'
 
 export * from './helpers'
 export * from './list-page'
@@ -144,6 +145,9 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       // Dashboard BI / Analytics (Server-Side Aggregation)
       files.set(`${routeDir}/page.tsx`, generateAnalyticsPage(route, ast))
       files.set(`${routeDir}/AnalyticsClient.tsx`, generateAnalyticsClient(route, ast))
+      // o cliente do dashboard usa estas duas bibliotecas puras (períodos e grupos), com ou sem o motor de SQL
+      files.set('lib/bi/period.ts', BI_RUNTIME_FILES['lib/bi/period.ts'])
+      files.set('lib/bi/groups.ts', BI_RUNTIME_FILES['lib/bi/groups.ts'])
       if (route.gridFields.length > 0) {
         files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route, ast.targetLanguage))
         files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route, ast.targetLanguage))
