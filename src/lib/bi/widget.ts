@@ -69,6 +69,17 @@ export interface BiWidget {
   group_id?: string
   /** caminho de relação escolhido por tabela (assinatura do caminho); sem escolha vale o mais curto */
   relation_paths?: Record<string, string>
+  // Fase 4 — interações
+  /** clicar numa barra/fatia deste gráfico filtra os widgets que respondem ao filtro cruzado */
+  cross_source?: boolean
+  /** este widget responde aos filtros cruzados dos outros gráficos */
+  cross_target?: boolean
+  /** clicar numa barra/fatia permite "detalhar": próximo nível de data ou a dimensão `drill_by` */
+  drill_detail?: boolean
+  /** dimensão do próximo nível (TABELA.COLUNA) quando o agrupamento não é uma data */
+  drill_by?: string
+  /** clicar numa barra/fatia permite ver os registros que compõem o número */
+  drill_records?: boolean
   /** KPI sem agrupamento: variação contra o período anterior */
   compare_previous?: boolean
   compare_invert?: boolean

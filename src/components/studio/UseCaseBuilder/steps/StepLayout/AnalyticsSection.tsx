@@ -6,6 +6,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { DroppableZone, SortableWidgetCard } from './dnd'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
+import { useI18n } from '@/i18n/I18nContext'
 import { sectionsOf, addGroup, renameGroup, removeGroup, type BiGroup } from '@/lib/bi/groups'
 
 /** Bloco de um grupo: arrastável pela alça (muda a ordem dos grupos) e área onde os widgets podem ser soltos. */
@@ -19,21 +20,22 @@ function SortableGroupBlock({ group, count, collapsed, onToggle, onRename, onRem
   onAddWidget: () => void
   children: React.ReactNode
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `bigroup-${group.id}` })
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 40 : 'auto', opacity: isDragging ? 0.6 : 1 }
   return (
     <div ref={setNodeRef} style={style} className="rounded-[1.75rem] border border-indigo-200/70 dark:border-indigo-800/60 bg-white/70 dark:bg-neutral-950/40 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Arraste para mudar a ordem dos grupos">
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1.5 text-neutral-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title={t('bi_editor.grp_drag')}>
           <GripVertical className="w-4 h-4" />
         </div>
-        <button type="button" onClick={onToggle} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all" title={collapsed ? 'Expandir' : 'Recolher'}>
+        <button type="button" onClick={onToggle} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all" title={collapsed ? t('bi_editor.expand') : t('bi_editor.collapse')}>
           <ChevronDown className={cn('w-4 h-4 transition-transform duration-300', collapsed && '-rotate-90')} />
         </button>
         <input
           key={group.title}
           defaultValue={group.title}
-          placeholder="Nome do grupo"
+          placeholder={t('bi_editor.grp_name')}
           autoFocus={!group.title}
           onBlur={e => {
             if (!e.target.value.trim() && group.title) { e.target.value = group.title; return }
@@ -41,13 +43,13 @@ function SortableGroupBlock({ group, count, collapsed, onToggle, onRename, onRem
           }}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
           className="flex-1 min-w-0 bg-transparent placeholder:normal-case placeholder:font-bold placeholder:tracking-normal placeholder:text-neutral-300 text-xs font-black uppercase tracking-[0.15em] text-neutral-800 dark:text-neutral-100 outline-none border-b border-transparent hover:border-neutral-300 focus:border-indigo-500 py-1"
-          title="Clique para renomear o grupo"
+          title={t('bi_editor.grp_click_rename')}
         />
         <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
-          {count} {count === 1 ? 'widget' : 'widgets'}
+          {count} {count === 1 ? t('bi_editor.widget_one') : t('bi_editor.widget_many')}
         </span>
-        <button type="button" onClick={onAddWidget} className="shrink-0 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">+ Widget</button>
-        <button type="button" onClick={onRemove} className="shrink-0 p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Remover o grupo (os widgets continuam no painel, sem grupo)">
+        <button type="button" onClick={onAddWidget} className="shrink-0 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">{t('bi_editor.add_widget_short')}</button>
+        <button type="button" onClick={onRemove} className="shrink-0 p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title={t('bi_editor.grp_remove')}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -117,8 +119,8 @@ export function AnalyticsSection({
                       <Layers className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">Painel de Indicadores (BI)</h4>
-                      <p className="text-[10px] text-neutral-400 font-medium mt-1">Configure os widgets e gráficos do seu dashboard.</p>
+                      <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('bi_editor.panel_title')}</h4>
+                      <p className="text-[10px] text-neutral-400 font-medium mt-1">{t('bi_editor.panel_sub')}</p>
                     </div>
                   </div>
 
@@ -136,7 +138,7 @@ export function AnalyticsSection({
                         config.layout_config.analytics_config.allow_runtime_edit ? "bg-indigo-600 text-white shadow-md" : "text-neutral-400 hover:text-neutral-600"
                       )}
                     >
-                      Edição no Runtime: {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
+                      {t('bi_editor.runtime_edit')} {config.layout_config.analytics_config.allow_runtime_edit ? 'ON' : 'OFF'}
                     </button>
                   </div>
                 </div>
@@ -145,7 +147,7 @@ export function AnalyticsSection({
                   {/* Widgets sem grupo */}
                   <LooseZone>
                     {groups.length > 0 && (
-                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">Sem grupo</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">{t('bi_editor.ungrouped')}</p>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <SortableContext items={sections[0].widgets.map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
@@ -164,7 +166,7 @@ export function AnalyticsSection({
                         className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
                       >
                         <Plus className="w-6 h-6 group-hover:scale-125 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Widget de BI</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{t('bi_editor.add_bi_widget')}</span>
                       </button>
                     </div>
                   </LooseZone>
@@ -199,7 +201,7 @@ export function AnalyticsSection({
                               ))}
                               {sec.widgets.length === 0 && (
                                 <div className="col-span-full py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-center text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                                  Arraste widgets para este grupo
+                                  {t('bi_editor.drop_here')}
                                 </div>
                               )}
                             </div>
@@ -215,7 +217,7 @@ export function AnalyticsSection({
                     className="w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                   >
                     <FolderPlus className="w-4 h-4" />
-                    Novo grupo
+                    {t('bi_editor.new_group')}
                   </button>
                 </div>
               </div>

@@ -180,3 +180,31 @@ describe('planWidgetQuery — caminho de relação escolhido e dialetos', () => 
     expect(raw.sql).toContain('OFFSET 0 ROWS FETCH NEXT 1000 ROWS ONLY')
   })
 })
+
+describe('planWidgetQuery — campo do agrupamento (filtro cruzado e drill)', () => {
+  it('texto simples: filtra pela própria coluna', () => {
+    const p = plan({ type: 'pie', group_by: 'pedidos.status' })
+    expect(p.group).toEqual({ field: 'pedidos.status', kind: 'text', granularity: undefined })
+  })
+  it('data com granularidade: devolve a coluna, o tipo e a granularidade', () => {
+    const p = plan({ group_by: 'pedidos.data_pedido', date_granularity: 'month' })
+    expect(p.group).toEqual({ field: 'pedidos.data_pedido', kind: 'date', granularity: 'month' })
+  })
+  it('chave estrangeira: filtra pelo nome do registro relacionado (o que o gráfico mostra)', () => {
+    const p = plan({ group_by: 'pedidos.cliente_id' })
+    expect(p.group).toEqual({ field: 'clientes.nome_empresa', kind: 'text', granularity: undefined })
+  })
+  it('sem agrupamento não há campo', () => {
+    expect(plan({ type: 'kpi' }).group).toBeUndefined()
+  })
+  it('condição extra de um clique entra no SQL e mantém os JOINs mínimos', () => {
+    const p = plan({ type: 'kpi', calc: 'SUM', use_formula: true, field: FORMULA, conditions: [{ field: 'pedidos.status', op: 'eq', value: 'Aprovado' }] })
+    expect(p.kind).toBe('agg')
+    expect(p.sql).toContain(`"pedidos"."status" = 'Aprovado'`)
+    expect(p.sql).not.toContain('clientes')
+  })
+  it('filtro numa tabela sem relação com o widget vira erro (o painel ignora o filtro cruzado nesse widget)', () => {
+    const p = plan({ type: 'kpi', conditions: [{ field: 'ilha.nome', op: 'eq', value: 'x' }] })
+    expect(p.kind).toBe('error')
+  })
+})

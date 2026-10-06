@@ -1,7 +1,26 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useI18n } from '@/i18n/I18nContext'
 import { AlertCircle } from 'lucide-react'
+
+function AiBoundaryFallback({ message }: { message?: string }) {
+  const { t } = useI18n()
+  return (
+    <div className="p-8 m-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
+      <h3 className="text-red-700 dark:text-red-400 font-bold text-sm mb-2 flex items-center gap-2">
+        <AlertCircle className="w-4 h-4" />
+        {t('ai_renderer.boundary_title')}
+      </h3>
+      <pre className="text-red-600 dark:text-red-400 text-xs whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-950/40 p-3 rounded-lg overflow-auto max-h-64">
+        {message || t('ai_renderer.unknown_error')}
+      </pre>
+      <p className="text-red-500 dark:text-red-500 text-xs mt-3">
+        {t('ai_renderer.boundary_hint')}
+      </p>
+    </div>
+  )
+}
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -19,20 +38,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="p-8 m-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
-          <h3 className="text-red-700 dark:text-red-400 font-bold text-sm mb-2 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            Erro de execução no componente
-          </h3>
-          <pre className="text-red-600 dark:text-red-400 text-xs whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-950/40 p-3 rounded-lg overflow-auto max-h-64">
-            {this.state.error?.message || 'Erro desconhecido.'}
-          </pre>
-          <p className="text-red-500 dark:text-red-500 text-xs mt-3">
-            O componente gerado pela IA tentou executar uma operação inválida (ex: acessar dados vazios devido à falta da tabela).
-          </p>
-        </div>
-      )
+      return <AiBoundaryFallback message={this.state.error?.message} />
     }
 
     return this.props.children
@@ -65,6 +71,10 @@ interface AIGeneratedViewRendererProps {
  * injetando as dependências necessárias (React, supabase, toast, lucide-react).
  */
 export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, projectSlug, projectToken, tunnelChannel }: AIGeneratedViewRendererProps) {
+  const { t } = useI18n()
+  const tRef = useRef(t)
+  tRef.current = t
+  const tr = (key: string, msg?: string) => tRef.current(key).replace('{msg}', msg ?? '')
   const [RenderedComponent, setRenderedComponent] = useState<React.ComponentType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -102,7 +112,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
     if (isConnectingTunnel) return
 
     if (!componentCode) {
-      setError('Nenhum código de componente encontrado.')
+      setError(tr('ai_renderer.no_code'))
       setIsLoading(false)
       return
     }
@@ -127,7 +137,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
           if (repaired === code) throw transpileErr
           code = compile(repaired)
         } catch {
-          throw new Error(`Erro na transpilação TypeScript/JSX: ${transpileErr.message}`)
+          throw new Error(tr('ai_renderer.transpile_error', transpileErr.message))
         }
       }
 
@@ -176,7 +186,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
         try {
           factory(customRequire, exportsObj, projectId, activeTunnel)
         } catch (execErr: any) {
-          setError(`Erro na execução do código gerado: ${execErr.message}`)
+          setError(tr('ai_renderer.exec_error', execErr.message))
           setIsLoading(false)
           return
         }
@@ -186,17 +196,17 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
         if (typeof Component === 'function') {
           setRenderedComponent(() => Component)
         } else {
-          setError('O componente gerado não retornou uma função válida.')
+          setError(tr('ai_renderer.invalid_fn'))
         }
         setIsLoading(false)
       }).catch((err) => {
-        setError(`Erro ao carregar ícones: ${err.message}`)
+        setError(tr('ai_renderer.icons_error', err.message))
         setIsLoading(false)
       })
 
     } catch (err: any) {
       console.error('Erro ao compilar componente AI:', err)
-      setError(`Erro ao compilar o componente: ${err.message}`)
+      setError(tr('ai_renderer.compile_error', err.message))
       setIsLoading(false)
     }
   }, [componentCode, isConnectingTunnel, internalTunnel, tunnelChannel, projectId])
@@ -206,7 +216,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
       <div className="flex items-center justify-center p-16 text-neutral-400">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm">Carregando componente...</p>
+          <p className="text-sm">{t('ai_renderer.loading')}</p>
         </div>
       </div>
     )
@@ -216,13 +226,13 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
     return (
       <div className="p-8 m-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
         <h3 className="text-red-700 dark:text-red-400 font-bold text-sm mb-2">
-          ⚠️ Erro ao renderizar componente gerado por IA
+          ⚠️ {t('ai_renderer.render_title')}
         </h3>
         <pre className="text-red-600 dark:text-red-400 text-xs whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-950/40 p-3 rounded-lg">
           {error}
         </pre>
         <p className="text-red-500 dark:text-red-500 text-xs mt-3">
-          Sugestão: Volte ao AI Builder, edite o componente e reaplique ao projeto.
+          {t('ai_renderer.suggestion')}
         </p>
       </div>
     )
@@ -231,7 +241,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
   if (!RenderedComponent) {
     return (
       <div className="p-8 text-center text-neutral-400">
-        <p>Componente não encontrado.</p>
+        <p>{t('ai_renderer.not_found')}</p>
       </div>
     )
   }

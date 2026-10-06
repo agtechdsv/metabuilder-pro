@@ -112,7 +112,7 @@ export function useProjectExport() {
       })
       if (!res.ok) {
         const err = await res.json()
-        throw new Error(err.error || 'Erro ao gerar código')
+        throw new Error(err.error || t('ide.project.export_gen_error'))
       }
 
       const contentLength = Number(res.headers.get('content-length') || 0)
@@ -148,7 +148,7 @@ export function useProjectExport() {
         }
 
         setDownloadModal(prev => prev ? { ...prev, phase: 'selecting', progress: 100 } : prev)
-        toast('Extraindo projeto...', 'info')
+        toast(t('ide.project.export_extracting'), 'info')
 
         const zip = await JSZip.loadAsync(merged)
 
@@ -167,7 +167,7 @@ export function useProjectExport() {
           await writeFile(fullPath, fileBytes)
         }
 
-        toast('Instalando dependências (npm install)...', 'info')
+        toast(t('ide.project.export_installing'), 'info')
         // No Windows o npm é "npm.cmd": o Tauri só o encontra através do cmd
         const isWindows = /windows/i.test(navigator.userAgent)
         let installOk = false
@@ -183,9 +183,9 @@ export function useProjectExport() {
         }
         if (!installOk) {
           // os arquivos já foram gravados: não é falha da exportação
-          toast('Projeto salvo, mas o npm install não rodou. Abra a pasta e execute "npm install".', 'error')
+          toast(t('ide.project.export_install_failed'), 'error')
         } else {
-          toast('Dependências instaladas com sucesso!', 'success')
+          toast(t('ide.project.export_install_ok'), 'success')
           try {
             const { sendNotification } = await import('@tauri-apps/plugin-notification')
             sendNotification({
@@ -204,7 +204,7 @@ export function useProjectExport() {
           savedDir: selectedDir
         })
 
-        if (confirm(installOk ? 'Projeto ejetado e dependências instaladas! Deseja abrir no VS Code?' : 'Projeto ejetado! Deseja abrir no VS Code?')) {
+        if (confirm(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
           try {
             const codeCmd = isWindows
               ? Command.create('cmd', ['/c', 'code', '.'], { cwd: selectedDir })
@@ -237,7 +237,7 @@ export function useProjectExport() {
       }
     } catch (error: any) {
       setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
-      toast('Falha na exportação: ' + (error?.message || String(error)), 'error')
+      toast(t('ide.project.export_failed') + ' ' + (error?.message || String(error)), 'error')
     }
   }
 

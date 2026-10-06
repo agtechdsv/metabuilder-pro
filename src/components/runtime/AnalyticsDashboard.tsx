@@ -8,7 +8,7 @@ import {
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
   AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, LayoutGrid, Gauge,
-  GripVertical, MousePointer2, Save, Search, BarChart3
+  GripVertical, MousePointer2, Save, Search, BarChart3, X, Filter, CornerUpLeft, Table2
 } from 'lucide-react'
 import { 
   DndContext, 
@@ -57,6 +57,8 @@ import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode
 import { planWidgetQuery } from '@/lib/bi/widgetPlan'
 import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
 import { SCALE_PRESETS, presetOf, spanFor, widthOfSpan, type ScaleKey } from '@/lib/bi/scaleLayout'
+import { crossConditionsFor, makeCrossFilter, toggleCrossFilter, drillInto, drillTarget, applyDrill, bucketConditions, type CrossFilter, type DrillLevel, type GroupInfo } from '@/lib/bi/interaction'
+import { planRecordsQuery } from '@/lib/bi/recordsPlan'
 import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 
@@ -190,6 +192,27 @@ export default function AnalyticsDashboard({
   const periodWidgetCount = localWidgets.filter(followsPanel).length
   const fmtDay = formatPeriodDay
 
+  // ── Fase 4: filtro cruzado e drill-down ──────────────────────────────────────
+  const [crossFilters, setCrossFilters] = useState<Record<string, CrossFilter>>({})
+  const [drillStacks, setDrillStacks] = useState<Record<string, DrillLevel[]>>({})
+  // como cada gráfico está agrupado agora (vem do planejador): o campo a filtrar quando alguém clica
+  const [groupInfo, setGroupInfo] = useState<Record<string, GroupInfo | undefined>>({})
+  // widgets que não têm relação com o filtro cruzado ativo (o filtro é ignorado neles)
+  const [crossIgnored, setCrossIgnored] = useState<Record<string, boolean>>({})
+  const [pointMenu, setPointMenu] = useState<{ x: number; y: number; name: string; actions: { key: string; label: string; run: () => void }[] } | null>(null)
+  const [recordsView, setRecordsView] = useState<{ title: string; label: string; rows: any[] | null; error: string | null } | null>(null)
+  const recordsQueryId = useRef<string | null>(null)
+  const crossList = Object.values(crossFilters)
+  // widget como deve ser consultado: caminho de drill aberto e, por cima, os filtros cruzados que ele responde
+  const drilled = (w: Widget): Widget => applyDrill(w, drillStacks[w.id] || []) as Widget
+  const withCross = (w: Widget): Widget => {
+    const extra = crossConditionsFor(w, crossList)
+    return extra.length ? { ...w, conditions: [...(w.conditions || []), ...extra] } : w
+  }
+  const hasCrossTargets = localWidgets.some(w => w.cross_target)
+  const canInteract = (w: Widget) =>
+    !!w.group_by && ((!!w.cross_source && hasCrossTargets) || !!w.drill_detail || !!w.drill_records)
+
   const biLocale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const fmt = (val: any, widget: Widget, axis = false) =>
     formatBiValue(val, { format: widget.format, decimals: widget.decimals, currency: widget.currency, locale: biLocale }, axis)
@@ -246,8 +269,8 @@ export default function AnalyticsDashboard({
   // Refs para evitar re-subscrições desnecessárias
   const widgetsRef = useRef<Widget[]>([])
   useEffect(() => {
-    widgetsRef.current = localWidgets
-  }, [localWidgets])
+    widgetsRef.current = localWidgets.map(w => withCross(drilled(w)))
+  }, [localWidgets, crossFilters, drillStacks])
 
   // Listener centralizado (SQL_RESULT) usando o canal do PAI
   useEffect(() => {
@@ -257,6 +280,17 @@ export default function AnalyticsDashboard({
     const handleSqlResult = (payload: any) => {
       const qId = payload.payload?.queryId
       if (!qId) return
+
+      // lista de registros do drill ("ver registros")
+      if (recordsQueryId.current && qId === recordsQueryId.current) {
+        recordsQueryId.current = null
+        setRecordsView(prev => prev
+          ? (payload.payload.success
+              ? { ...prev, rows: payload.payload.data || [], error: null }
+              : { ...prev, rows: null, error: payload.payload.error || t('runtime.bi_records_error') })
+          : prev)
+        return
+      }
 
       const prevWidgetId = Object.keys(prevQueryIds.current).find(id => prevQueryIds.current[id] === qId)
       if (prevWidgetId) {
@@ -298,7 +332,7 @@ export default function AnalyticsDashboard({
         
         processWidgetData(widget, records, isFormula, formula, tableName)
       } else {
-        setErrors(prev => ({ ...prev, [widget.id]: payload.payload.error || 'Erro ao buscar dados' }))
+        setErrors(prev => ({ ...prev, [widget.id]: payload.payload.error || t('runtime.bi_fetch_error') }))
       }
       setLoading(prev => ({ ...prev, [widget.id]: false }))
     }
@@ -327,19 +361,21 @@ export default function AnalyticsDashboard({
 
     const handler = setTimeout(() => {
       localWidgets.forEach(widget => {
-        // Só busca de novo o que mudou para este widget: configuração, filtros da tela e (se ele usa) o período.
-        // Antes, trocar o período recarregava todos os widgets do painel.
-        const sig = JSON.stringify({ w: widget, f: filters, p: widgetPeriod(widget) })
+        // Só busca de novo o que mudou para este widget: configuração, filtros da tela, período, caminho de drill
+        // e filtros cruzados que ele responde. Antes, trocar o período recarregava todos os widgets do painel.
+        const base = drilled(widget)
+        const full = withCross(base)
+        const sig = JSON.stringify({ w: full, f: filters, p: widgetPeriod(widget) })
         if (fetchedSig.current[widget.id] === sig) return
         fetchedSig.current[widget.id] = sig
-        fetchWidgetData(widget)
+        fetchWidgetData(full, full !== base ? { fallback: base } : {})
       })
     }, 400) // Debounce de 400ms para evitar chamadas excessivas durante a digitação
 
     return () => clearTimeout(handler)
-  }, [isTunnelReady, localWidgets, localGroups, filters, periodRange, ownPeriods, groupPeriods])
+  }, [isTunnelReady, localWidgets, localGroups, filters, periodRange, ownPeriods, groupPeriods, crossFilters, drillStacks])
 
-  const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string } = {}) => {
+  const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string; fallback?: Widget } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
       return
     }
@@ -357,8 +393,8 @@ export default function AnalyticsDashboard({
 
     // Toda a lógica de tabelas, JOINs mínimos, filtros e recursos do widget está no planejador (lib/bi/widgetPlan),
     // que também roda no app exportado. Aqui só se envia o que ele decidiu.
-    const plan = planWidgetQuery({
-      widget,
+    const buildPlan = (w: Widget) => planWidgetQuery({
+      widget: w,
       models: (project as any).models || [],
       relations: projectRelations,
       dialect,
@@ -371,6 +407,15 @@ export default function AnalyticsDashboard({
       rawRowLimit: BI_ROW_LIMIT,
       maxGroups: BI_MAX_GROUPS,
     })
+    let plan = buildPlan(widget)
+    // filtro cruzado de uma tabela sem relação com este widget: ignora o filtro e avisa no card
+    let ignoredCross = false
+    if (plan.kind === 'error' && opts.fallback) {
+      plan = buildPlan(opts.fallback)
+      ignoredCross = true
+    }
+    setCrossIgnored(prev => (!!prev[widget.id] === ignoredCross ? prev : { ...prev, [widget.id]: ignoredCross }))
+    setGroupInfo(prev => (JSON.stringify(prev[widget.id]) === JSON.stringify(plan.group) ? prev : { ...prev, [widget.id]: plan.group }))
     plan.warnings.forEach(w => console.warn(w))
 
     delete prevQueryIds.current[widget.id]
@@ -417,6 +462,93 @@ export default function AnalyticsDashboard({
   }
 
   fetchWidgetDataRef.current = fetchWidgetData
+
+  // Clique numa barra/fatia: oferece filtrar os outros gráficos, detalhar o próximo nível e/ou ver os registros
+  const onPoint = (widget: Widget, name: string, ev?: any) => {
+    const group = groupInfo[widget.id]
+    const stack = drillStacks[widget.id] || []
+    const actions: { key: string; label: string; run: () => void }[] = []
+
+    if (widget.cross_source && hasCrossTargets && group) {
+      const cf = makeCrossFilter(widget, group, name)
+      if (cf) {
+        const active = crossFilters[widget.id]?.name === name
+        actions.push({
+          key: 'cross',
+          label: active ? t('runtime.bi_cross_clear') : t('runtime.bi_cross_by').replace('{name}', name),
+          run: () => setCrossFilters(prev => toggleCrossFilter(prev, cf)),
+        })
+      }
+    }
+    if (widget.drill_detail) {
+      const level = drillInto(widget, stack, group, name)
+      if (level) {
+        actions.push({
+          key: 'drill',
+          label: t('runtime.bi_drill').replace('{name}', name),
+          run: () => setDrillStacks(prev => ({ ...prev, [widget.id]: [...(prev[widget.id] || []), level] })),
+        })
+      }
+    }
+    if (widget.drill_records && group) {
+      actions.push({ key: 'records', label: t('runtime.bi_records').replace('{name}', name), run: () => openRecords(widget, name) })
+    }
+
+    if (actions.length === 0) return
+    if (actions.length === 1) { actions[0].run(); return }
+    const x = Math.min(Number(ev?.clientX ?? window.innerWidth / 2), window.innerWidth - 280)
+    const y = Math.min(Number(ev?.clientY ?? window.innerHeight / 2), window.innerHeight - (actions.length * 44 + 24))
+    setPointMenu({ x: Math.max(8, x), y: Math.max(8, y), name, actions })
+  }
+
+  // Quem foi clicado, a partir do estado que o recharts entrega no onClick do gráfico
+  const chartClick = (widget: Widget, data: any[]) => (state: any, ev: any) => {
+    const i = Number(state?.activeTooltipIndex ?? state?.activeIndex)
+    const name = Number.isInteger(i) && data[i] ? String(data[i].name) : state?.activeLabel !== undefined ? String(state.activeLabel) : null
+    if (name !== null) onPoint(widget, name, ev)
+  }
+  const clickStyle = (widget: Widget) => (canInteract(widget) ? { cursor: 'pointer' } : undefined)
+  // esmaece as barras/fatias que não são o valor filtrado
+  const dimOf = (widget: Widget, name: any) => {
+    const sel = crossFilters[widget.id]
+    return sel && sel.name !== String(name) ? 0.3 : 1
+  }
+
+  const openRecords = (widget: Widget, name: string) => {
+    if (!tunnelChannel || !isTunnelReady) return
+    const group = groupInfo[widget.id]
+    const base = drilled(widget)
+    const ew: Widget = withCross({ ...base, conditions: [...(base.conditions || []), ...(group ? bucketConditions(group, name) : [])] })
+    const dbType = (project?.db_type || 'postgres').toLowerCase()
+    const dialect: 'postgres' | 'oracle' | null = dbType === 'oracle' ? 'oracle' : (dbType === 'postgres' || dbType === 'postgresql') ? 'postgres' : null
+    const plan = planRecordsQuery({
+      widget: ew,
+      models: (project as any).models || [],
+      relations: projectRelations,
+      dialect,
+      period: widgetPeriod(widget),
+      screenFilters: filters,
+      projectSlug: (project as any)?.slug,
+      limit: 200,
+    })
+    const title = widget.title || 'Registros'
+    if (plan.kind === 'error' || !plan.sql) {
+      setRecordsView({ title, label: name, rows: null, error: plan.message || 'Não foi possível montar a consulta' })
+      return
+    }
+    const qid = crypto.randomUUID()
+    recordsQueryId.current = qid
+    setRecordsView({ title, label: name, rows: null, error: null })
+    tunnelChannel.send({
+      type: 'broadcast',
+      event: 'sql_query',
+      payload: {
+        queryId: qid, action: 'select', query: plan.sql, sql: plan.sql,
+        schemaName: plan.schemaName, table: plan.tableName, limit: plan.limit,
+        token: project?.secret_token || '', projectId: project.id,
+      },
+    })
+  }
 
   // Resultado do SQL agregado: já vem pronto como { bi_name, bi_value }; a montagem dos dados é a mesma do app exportado (lib/bi/shapeResult)
   const processAggRows = (widget: Widget, rows: any[]) => {
@@ -656,9 +788,9 @@ export default function AnalyticsDashboard({
         })()}
         {(size === 'normal' || isExpanded) && (
           <div className="mt-8 flex gap-8 text-center">
-            <div className="flex flex-col"><span className="text-[10px] font-black text-red-500 uppercase">Min</span><span className="font-bold">{fmt(min, widget, true)}</span></div>
-            <div className="flex flex-col"><span className="text-[10px] font-black text-emerald-500 uppercase">Alvo</span><span className="font-bold">{fmt(target, widget, true)}</span></div>
-            <div className="flex flex-col"><span className="text-[10px] font-black text-indigo-500 uppercase">Escala</span><span className="font-bold">{fmt(scaleStart, widget, true)} – {fmt(scaleEnd, widget, true)}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-red-500 uppercase">{t('runtime.bi_gauge_min')}</span><span className="font-bold">{fmt(min, widget, true)}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-emerald-500 uppercase">{t('runtime.bi_gauge_target')}</span><span className="font-bold">{fmt(target, widget, true)}</span></div>
+            <div className="flex flex-col"><span className="text-[10px] font-black text-indigo-500 uppercase">{t('runtime.bi_gauge_scale')}</span><span className="font-bold">{fmt(scaleStart, widget, true)} – {fmt(scaleEnd, widget, true)}</span></div>
           </div>
         )}
       </div>
@@ -731,7 +863,7 @@ export default function AnalyticsDashboard({
     if (errors[widget.id]) return <div className="flex-1 flex flex-col items-center justify-center gap-2 text-red-400 p-4 text-center"><AlertCircle className="w-5 h-5" /><p className="text-[10px] font-bold uppercase tracking-widest">{errors[widget.id]}</p></div>
     
     const val = data[widget.id]
-    if (val === undefined || val === null) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">Sem dados</div>
+    if (val === undefined || val === null) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">{t('runtime.bi_no_data')}</div>
 
     if (widget.type === 'kpi') {
       if (Array.isArray(val)) {
@@ -777,7 +909,7 @@ export default function AnalyticsDashboard({
         <div className="w-full mt-4 relative" style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             {widget.type === 'bar' ? (
-              <BarChart data={sd.rows} layout={horizontalS ? 'vertical' : 'horizontal'} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+              <BarChart data={sd.rows} layout={horizontalS ? 'vertical' : 'horizontal'} margin={{ top: 6, right: 8, left: 0, bottom: 0 }} onClick={chartClick(widget, sd.rows)} style={clickStyle(widget)}>
                 <CartesianGrid strokeDasharray="3 3" vertical={horizontalS} horizontal={!horizontalS} stroke="#88888822" />
                 {horizontalS ? (
                   <>
@@ -795,7 +927,7 @@ export default function AnalyticsDashboard({
                 {sd.keys.map((k, i) => <Bar key={k} dataKey={k} stackId={stack} fill={COLORS[i % COLORS.length]} radius={stack ? undefined : (horizontalS ? [0, 4, 4, 0] : [4, 4, 0, 0])} />)}
               </BarChart>
             ) : widget.type === 'line' ? (
-              <LineChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}>
+              <LineChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }} onClick={chartClick(widget, sd.rows)} style={clickStyle(widget)}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickS} tickFormatter={shortS} />
                 <YAxis axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
@@ -804,7 +936,7 @@ export default function AnalyticsDashboard({
                 {sd.keys.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} strokeWidth={2.5} dot={{ r: 3 }} />)}
               </LineChart>
             ) : (
-              <AreaChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }}>
+              <AreaChart data={sd.rows} margin={{ top: 6, right: 12, left: 0, bottom: 0 }} onClick={chartClick(widget, sd.rows)} style={clickStyle(widget)}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tickS} tickFormatter={shortS} />
                 <YAxis axisLine={false} tickLine={false} tick={tickS} tickFormatter={axisFmt} />
@@ -818,7 +950,7 @@ export default function AnalyticsDashboard({
       )
     }
     const rows: any[] = Array.isArray(val) ? val : []
-    if (rows.length === 0) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">Sem dados</div>
+    if (rows.length === 0) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">{t('runtime.bi_no_data')}</div>
 
     const primary = biPrimaryColor(widget.color)
     const tick = { fontSize: 10, fontWeight: 700, fill: '#888888' }
@@ -835,13 +967,13 @@ export default function AnalyticsDashboard({
       <div className="w-full mt-4 relative" style={{ height }}>
         {widget.type === 'pie' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ paddingBottom: 36 }}>
-            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Total</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('runtime.bi_total')}</span>
             <span className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">{fmt(total, widget, true)}</span>
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
           {widget.type === 'bar' ? (
-            <BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.show_labels ? 18 : 6, right: horizontal && widget.show_labels ? 56 : 8, left: 0, bottom: 0 }}>
+            <BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.show_labels ? 18 : 6, right: horizontal && widget.show_labels ? 56 : 8, left: 0, bottom: 0 }} onClick={chartClick(widget, rows)} style={clickStyle(widget)}>
               <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="#88888822" />
               {horizontal ? (
                 <>
@@ -856,12 +988,12 @@ export default function AnalyticsDashboard({
               )}
               <Tooltip cursor={{ fill: '#88888811' }} contentStyle={tooltipStyle} formatter={tooltipFormatter} />
               <Bar dataKey="value" radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}>
-                {rows.map((r, i) => <Cell key={`bar-${i}`} fill={barFill(r.value)} />)}
+                {rows.map((r, i) => <Cell key={`bar-${i}`} fill={barFill(r.value)} fillOpacity={dimOf(widget, r.name)} />)}
                 {widget.show_labels && <LabelList dataKey="value" position={horizontal ? 'right' : 'top'} formatter={labelFormatter} style={{ fontSize: 10, fontWeight: 800, fill: isDark ? '#e5e5e5' : '#404040' }} />}
               </Bar>
             </BarChart>
           ) : widget.type === 'line' ? (
-            <LineChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }}>
+            <LineChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }} onClick={chartClick(widget, rows)} style={clickStyle(widget)}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
               <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={labelFormatter} />
@@ -871,7 +1003,7 @@ export default function AnalyticsDashboard({
               </Line>
             </LineChart>
           ) : widget.type === 'area' ? (
-            <AreaChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }}>
+            <AreaChart data={rows} margin={{ top: widget.show_labels ? 22 : 6, right: 12, left: 0, bottom: 0 }} onClick={chartClick(widget, rows)} style={clickStyle(widget)}>
               <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={primary} stopOpacity={0.45} />
@@ -896,8 +1028,10 @@ export default function AnalyticsDashboard({
                 dataKey="value"
                 label={widget.show_labels ? ((e: any) => (total > 0 ? `${Math.round((Number(e.value) / total) * 100)}%` : '')) : false}
                 labelLine={false}
+                onClick={(entry: any, _i: number, ev: any) => onPoint(widget, String(entry?.name ?? entry?.payload?.name), ev)}
+                style={clickStyle(widget)}
               >
-                {rows.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                {rows.map((r: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={dimOf(widget, r.name)} />)}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
               <Legend
@@ -953,7 +1087,7 @@ export default function AnalyticsDashboard({
           </span>
           <span className="text-xs font-black uppercase tracking-[0.2em] text-neutral-700 dark:text-neutral-200 truncate">{groupLabel(group)}</span>
           <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300">
-            {n} {n === 1 ? 'indicador' : 'indicadores'}
+            {n} {n === 1 ? t('runtime.bi_indicator_one') : t('runtime.bi_indicator_many')}
           </span>
           <span className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
         </button>
@@ -962,15 +1096,15 @@ export default function AnalyticsDashboard({
             <input
               key={group.title}
               defaultValue={group.title}
-              placeholder="Nome do grupo"
+              placeholder={t('runtime.bi_group_name')}
               onBlur={e => { if (!e.target.value.trim() && group.title) { e.target.value = group.title; return } renameGroup(group.id, e.target.value) }}
               onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-              title="Renomear o agrupamento"
+              title={t('runtime.bi_group_rename')}
               className="w-40 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white"
             />
-            <button type="button" disabled={index <= 0} onClick={() => moveGroup(group.id, -1)} title="Mover para cima" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4 rotate-180" /></button>
-            <button type="button" disabled={index < 0 || index === localGroups.length - 1} onClick={() => moveGroup(group.id, 1)} title="Mover para baixo" className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
-            <button type="button" onClick={() => ungroup(group.id)} title="Desfazer o agrupamento (os indicadores continuam no painel)" className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">Desagrupar</button>
+            <button type="button" disabled={index <= 0} onClick={() => moveGroup(group.id, -1)} title={t('runtime.bi_move_up')} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4 rotate-180" /></button>
+            <button type="button" disabled={index < 0 || index === localGroups.length - 1} onClick={() => moveGroup(group.id, 1)} title={t('runtime.bi_move_down')} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+            <button type="button" onClick={() => ungroup(group.id)} title={t('runtime.bi_ungroup_hint')} className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">{t('runtime.bi_ungroup')}</button>
           </div>
         )}
       </div>
@@ -987,11 +1121,11 @@ export default function AnalyticsDashboard({
     const inputCls = 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white'
     return (
       <div className="flex flex-wrap items-center gap-2 px-2">
-        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">Período do grupo</span>
+        <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">{t('runtime.bi_group_period')}</span>
         <span className="text-[9px] font-bold text-neutral-400 mr-2">
-          afeta {followers.length} {followers.length === 1 ? 'indicador' : 'indicadores'} (marcados com 📅)
+          {t('runtime.bi_affects').replace('{n}', String(followers.length)).replace('{unit}', followers.length === 1 ? t('runtime.bi_indicator_one') : t('runtime.bi_indicator_many'))}
         </span>
-        {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => (
+        {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => ({ ...o, label: t('bi_editor.period_' + o.id, o.label) })).map(o => (
           <button
             key={o.id}
             type="button"
@@ -1004,7 +1138,7 @@ export default function AnalyticsDashboard({
         {gp.preset === 'custom' && (
           <>
             <input type="date" value={gp.from} onChange={e => set({ from: e.target.value })} className={inputCls} />
-            <span className="text-[10px] text-neutral-400">até</span>
+            <span className="text-[10px] text-neutral-400">{t('runtime.bi_until')}</span>
             <input type="date" value={gp.to} onChange={e => set({ to: e.target.value })} className={inputCls} />
           </>
         )}
@@ -1042,7 +1176,7 @@ export default function AnalyticsDashboard({
                 return (
                   <div className="flex flex-wrap items-center gap-1">
                     <p className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">
-                      📅 {wp ? `${fmtDay(wp.from)} – ${fmtDay(wp.to)}` : 'Todo o período'}{mode === 'fixed' ? ' · fixo' : mode === 'group' ? ' · grupo' : ''}
+                      📅 {wp ? `${fmtDay(wp.from)} – ${fmtDay(wp.to)}` : t('runtime.bi_all_period')}{mode === 'fixed' ? ' · ' + t('runtime.bi_mode_fixed') : mode === 'group' ? ' · ' + t('runtime.bi_mode_group') : ''}
                     </p>
                     {mode === 'own' && (
                       <>
@@ -1051,8 +1185,8 @@ export default function AnalyticsDashboard({
                           onChange={e => setOwnPeriods(prev => ({ ...prev, [widget.id]: { ...own, preset: e.target.value } }))}
                           className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md px-1 py-0.5 text-[9px] font-bold text-neutral-700 dark:text-neutral-200"
                         >
-                          {PERIOD_PRESETS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-                          <option value="custom">Personalizado</option>
+                          {PERIOD_PRESETS.map(o => <option key={o.id} value={o.id}>{t('bi_editor.period_' + o.id, o.label)}</option>)}
+                          <option value="custom">{t('bi_editor.period_custom')}</option>
                         </select>
                         {own.preset === 'custom' && (
                           <>
@@ -1065,9 +1199,21 @@ export default function AnalyticsDashboard({
                   </div>
                 )
               })()}
+              {(drillStacks[widget.id] || []).length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 text-[9px] font-black uppercase tracking-tighter text-indigo-500">
+                  <button type="button" title={t('runtime.bi_back_level')} onClick={() => setDrillStacks(prev => ({ ...prev, [widget.id]: (prev[widget.id] || []).slice(0, -1) }))} className="p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40"><CornerUpLeft className="w-3 h-3" /></button>
+                  <button type="button" onClick={() => setDrillStacks(prev => ({ ...prev, [widget.id]: [] }))} className="hover:underline">{t('runtime.bi_all')}</button>
+                  {(drillStacks[widget.id] || []).map((l, i) => <span key={i}>› {l.label}</span>)}
+                </div>
+              )}
+              {crossIgnored[widget.id] && (
+                <p className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter" title={t('runtime.bi_cross_ignored_hint')}>
+                  ⛔ {t('runtime.bi_cross_ignored')}
+                </p>
+              )}
               {truncated[widget.id] && (
-                <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={`A consulta atingiu o limite de ${BI_ROW_LIMIT} linhas: os totais podem estar incompletos.`}>
-                  ⚠ Limitado a {BI_ROW_LIMIT} linhas
+                <p className="text-[8px] font-black text-amber-600 uppercase tracking-tighter" title={t('runtime.bi_limit_hint').replace('{n}', String(BI_ROW_LIMIT))}>
+                  ⚠ {t('runtime.bi_limited').replace('{n}', String(BI_ROW_LIMIT))}
                 </p>
               )}
             </div>
@@ -1098,7 +1244,7 @@ export default function AnalyticsDashboard({
   return (
     <div className="space-y-6 animate-in fade-in duration-700 relative">
       <div className="flex justify-between items-center px-2">
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-400">Indicadores de Desempenho</h2>
+        <h2 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-400">{t('runtime.bi_perf')}</h2>
         <button 
           onClick={() => {
             if (isEditMode && onSaveLayout) {
@@ -1109,7 +1255,7 @@ export default function AnalyticsDashboard({
           className={cn("flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all", isEditMode ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 scale-105" : "bg-white dark:bg-neutral-900 text-neutral-500 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50")}
         >
           {isEditMode ? <Save className="w-3.5 h-3.5" /> : <MousePointer2 className="w-3.5 h-3.5" />}
-          {isEditMode ? 'Salvar Layout' : 'Organizar Dashboard'}
+          {isEditMode ? t('runtime.bi_save_layout') : t('runtime.bi_organize')}
         </button>
         <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 ml-4 hidden md:flex">
           {scales.map(s => (
@@ -1132,11 +1278,11 @@ export default function AnalyticsDashboard({
 
       {hasPeriodWidgets && (
         <div className="flex flex-wrap items-center gap-2 px-2">
-          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">Período</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1">{t('runtime.bi_period')}</span>
           <span className="text-[9px] font-bold text-neutral-400 mr-2">
-            afeta {periodWidgetCount} {periodWidgetCount === 1 ? 'indicador' : 'indicadores'} (marcados com 📅)
+            {t('runtime.bi_affects').replace('{n}', String(periodWidgetCount)).replace('{unit}', periodWidgetCount === 1 ? t('runtime.bi_indicator_one') : t('runtime.bi_indicator_many'))}
           </span>
-          {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => (
+          {[...PERIOD_PRESETS, { id: 'custom', label: 'Personalizado' }].map(o => ({ ...o, label: t('bi_editor.period_' + o.id, o.label) })).map(o => (
             <button
               key={o.id}
               type="button"
@@ -1149,10 +1295,85 @@ export default function AnalyticsDashboard({
           {period.preset === 'custom' && (
             <>
               <input type="date" value={period.from} onChange={e => setPeriod(p => ({ ...p, from: e.target.value }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white" />
-              <span className="text-[10px] text-neutral-400">até</span>
+              <span className="text-[10px] text-neutral-400">{t('runtime.bi_until')}</span>
               <input type="date" value={period.to} onChange={e => setPeriod(p => ({ ...p, to: e.target.value }))} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white" />
             </>
           )}
+        </div>
+      )}
+
+      {crossList.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-2">
+          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1"><Filter className="w-3 h-3" /> {t('runtime.bi_cross_filters')}</span>
+          {crossList.map(f => (
+            <button
+              key={f.sourceId}
+              type="button"
+              title={t('runtime.bi_remove_filter')}
+              onClick={() => setCrossFilters(prev => { const next = { ...prev }; delete next[f.sourceId]; return next })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
+            >
+              {f.sourceTitle}: {f.name} <X className="w-3 h-3" />
+            </button>
+          ))}
+          {crossList.length > 1 && (
+            <button type="button" onClick={() => setCrossFilters({})} className="px-2 py-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">{t('runtime.bi_clear_all')}</button>
+          )}
+        </div>
+      )}
+
+      {pointMenu && (
+        <div className="fixed inset-0 z-[120]" onClick={() => setPointMenu(null)} onKeyDown={e => { if (e.key === 'Escape') setPointMenu(null) }}>
+          <div className="absolute w-64 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xl p-1.5" style={{ left: pointMenu.x, top: pointMenu.y }} onClick={e => e.stopPropagation()}>
+            <p className="px-3 pt-2 pb-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 truncate">{pointMenu.name}</p>
+            {pointMenu.actions.map(a => (
+              <button key={a.key} type="button" onClick={() => { setPointMenu(null); a.run() }} className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-all">
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {recordsView && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => { recordsQueryId.current = null; setRecordsView(null) }}>
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="min-w-0">
+                <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-neutral-900 dark:text-white truncate"><Table2 className="w-4 h-4 text-indigo-500 shrink-0" /> {recordsView.title}</h3>
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight truncate">{recordsView.label}{recordsView.rows ? ` · ${recordsView.rows.length}${recordsView.rows.length >= 200 ? '+ ' + t('runtime.bi_records_latest') : ' ' + t('runtime.bi_records_n')}` : ''}</p>
+              </div>
+              <button type="button" onClick={() => { recordsQueryId.current = null; setRecordsView(null) }} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-500 transition-all"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {recordsView.error ? (
+                <div className="p-10 text-center text-xs font-bold text-red-500">{recordsView.error}</div>
+              ) : !recordsView.rows ? (
+                <div className="p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+              ) : recordsView.rows.length === 0 ? (
+                <div className="p-10 text-center text-xs font-black uppercase text-neutral-300">{t('runtime.bi_no_records')}</div>
+              ) : (() => {
+                // o Oracle devolve as colunas em caixa alta (às vezes duplicadas): mostra cada coluna uma vez
+                const seen = new Set<string>()
+                const cols = Object.keys(recordsView.rows[0]).filter(k => { const l = k.toLowerCase(); if (seen.has(l)) return false; seen.add(l); return true }).slice(0, 14)
+                const cell = (v: any) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+                return (
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-900">
+                      <tr>{cols.map(k => <th key={k} className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-neutral-400 whitespace-nowrap">{k}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {recordsView.rows.map((r, i) => (
+                        <tr key={i} className="border-t border-neutral-100 dark:border-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          {cols.map(k => <td key={k} className="px-4 py-2.5 text-neutral-700 dark:text-neutral-300 whitespace-nowrap max-w-[240px] truncate" title={cell(r[k])}>{cell(r[k])}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              })()}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1215,7 +1436,7 @@ export default function AnalyticsDashboard({
             <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
               <button onClick={onAddWidget} className={cn(COL_CLASS[spanFor("third", scaleKey)], box.full, "border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group")}>
                 <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl shadow-neutral-500/5"><Plus className="w-10 h-10" /></div>
-                <div className="text-center"><span className="text-xs font-black uppercase tracking-widest block">Novo Indicador</span><span className="text-[10px] font-bold opacity-60">Expandir Dashbaord</span></div>
+                <div className="text-center"><span className="text-xs font-black uppercase tracking-widest block">{t('runtime.bi_new_indicator')}</span><span className="text-[10px] font-bold opacity-60">{t('runtime.bi_expand')}</span></div>
               </button>
             </div>
           )}

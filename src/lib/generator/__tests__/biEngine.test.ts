@@ -87,7 +87,7 @@ describe('motor de BI no app exportado', () => {
 
   it('cliente do dashboard: grupos, barras de período e recálculo pelo servidor', () => {
     const client = [...generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
-    expect(client).toContain("import { getBiWidgetsData } from '@/app/actions/bi'")
+    expect(client).toContain("import { getBiWidgetsData, getBiRecords } from '@/app/actions/bi'")
     expect(client).toContain("from '@/lib/bi/groups'")
     expect(client).toContain('renderGroupHeader')
     expect(client).toContain("'Período do grupo'")

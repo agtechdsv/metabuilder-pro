@@ -16,6 +16,7 @@ import { resolveFkLabel } from './fkLabel'
 import { biFieldKind } from './columnKind'
 import { previousRange, nextDay, type PeriodRange } from './period'
 import type { BiWidget } from './widget'
+import type { GroupInfo } from './interaction'
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/
 const FILTER_KEY = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/
@@ -56,6 +57,8 @@ export interface WidgetPlan {
   prev?: { sql: string; limit: number }
   /** o widget pede comparação com o período anterior */
   compare: boolean
+  /** como o gráfico está agrupado: o campo a filtrar quando alguém clica numa barra/fatia (Fase 4) */
+  group?: GroupInfo
   /** mensagem para o usuário (kind error) */
   message?: string
   warnings: string[]
@@ -367,6 +370,12 @@ export function planWidgetQuery(input: PlanInput): WidgetPlan {
       if (built.ok) {
         const limit = input.maxGroups + 100
         const plan: WidgetPlan = { kind: 'agg', tableName: mainTable, schemaName, sql: built.sql, limit, compare, warnings }
+        if (groupRef) {
+          // agrupado por chave estrangeira o gráfico mostra o nome do registro relacionado: é por ele que se filtra
+          const gcol = groupLabel ? groupLabel.label : groupRef
+          const kind = groupLabel ? 'text' : colKind(gcol.table, gcol.column)
+          plan.group = { field: `${gcol.table}.${gcol.column}`, kind, granularity: kind === 'date' ? widget.date_granularity || undefined : undefined }
+        }
         // KPI com comparação: segunda consulta, igual à primeira mas no período anterior
         if (compare && period) {
           const prevBuilt = buildAggregateQuery({

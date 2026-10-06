@@ -18,6 +18,8 @@ export const BI_RUNTIME_FILES = [
   'bi/widget.ts',
   'bi/groups.ts',
   'bi/scaleLayout.ts',
+  'bi/interaction.ts',
+  'bi/recordsPlan.ts',
   'bi/shapeResult.ts',
   'schemaResolver.ts',
   'relationPathFinder.ts',

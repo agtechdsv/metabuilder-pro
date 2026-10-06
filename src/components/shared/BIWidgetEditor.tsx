@@ -26,18 +26,18 @@ interface BIWidgetEditorProps {
 
 const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
   text: [
-    { value: 'eq', label: 'é igual a' }, { value: 'ne', label: 'é diferente de' }, { value: 'contains', label: 'contém' },
-    { value: 'starts', label: 'começa com' }, { value: 'ends', label: 'termina com' }, { value: 'in', label: 'está em (a, b, c)' },
-    { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+    { value: 'eq', label: 'op_eq_text' }, { value: 'ne', label: 'op_ne' }, { value: 'contains', label: 'op_contains' },
+    { value: 'starts', label: 'op_starts' }, { value: 'ends', label: 'op_ends' }, { value: 'in', label: 'op_in_text' },
+    { value: 'is_null', label: 'op_is_null' }, { value: 'not_null', label: 'op_not_null' },
   ],
   number: [
     { value: 'eq', label: '=' }, { value: 'ne', label: '≠' }, { value: 'gt', label: '>' }, { value: 'gte', label: '≥' },
-    { value: 'lt', label: '<' }, { value: 'lte', label: '≤' }, { value: 'between', label: 'entre' }, { value: 'in', label: 'está em (1, 2, 3)' },
-    { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+    { value: 'lt', label: '<' }, { value: 'lte', label: '≤' }, { value: 'between', label: 'op_between' }, { value: 'in', label: 'op_in_num' },
+    { value: 'is_null', label: 'op_is_null' }, { value: 'not_null', label: 'op_not_null' },
   ],
   date: [
-    { value: 'eq', label: 'é no dia' }, { value: 'gte', label: 'a partir de' }, { value: 'lte', label: 'até' }, { value: 'gt', label: 'depois de' },
-    { value: 'lt', label: 'antes de' }, { value: 'between', label: 'entre' }, { value: 'is_null', label: 'está vazio' }, { value: 'not_null', label: 'não está vazio' },
+    { value: 'eq', label: 'op_eq_date' }, { value: 'gte', label: 'op_gte_date' }, { value: 'lte', label: 'op_lte_date' }, { value: 'gt', label: 'op_gt_date' },
+    { value: 'lt', label: 'op_lt_date' }, { value: 'between', label: 'op_between' }, { value: 'is_null', label: 'op_is_null' }, { value: 'not_null', label: 'op_not_null' },
   ],
 }
 
@@ -47,6 +47,7 @@ const labelCls = 'text-[8px] font-black uppercase tracking-widest text-neutral-4
 export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, groups = [], relations = [] }: BIWidgetEditorProps) {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
   const currentModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
+  const trOr = (key: string, fallback: string) => { const v = t(key); return v === key ? fallback : v }
 
   // "coluna" (tabela principal) ou "tabela.coluna" → tipo da coluna (texto, número ou data)
   const kindOf = (path: string): 'text' | 'number' | 'date' => {
@@ -60,13 +61,13 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
   // lista de campos agrupada por tabela (principal primeiro); o valor é "coluna" na principal e "tabela.coluna" nas demais
   const fieldOptions = (
     <>
-      <optgroup label={`Tabela: ${currentModel?.display_name || currentModel?.db_table_name || 'Principal'}`}>
+      <optgroup label={`${t('bi_editor.table_prefix')} ${currentModel?.display_name || currentModel?.db_table_name || t('bi_editor.main_table')}`}>
         {currentModel?.fields?.map((f: any) => (
           <option key={f.id} value={`${currentModel.db_table_name}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
         ))}
       </optgroup>
       {models.filter((m: any) => m.id !== currentModel?.id).map((relModel: any, idx: number) => (
-        <optgroup key={`opt-${idx}`} label={`Tabela: ${relModel.display_name || relModel.db_table_name}`}>
+        <optgroup key={`opt-${idx}`} label={`${t('bi_editor.table_prefix')} ${relModel.display_name || relModel.db_table_name}`}>
           {relModel.fields?.map((f: any) => (
             <option key={f.id} value={`${relModel.db_table_name}.${f.db_column_name}`}>{f.display_name || f.db_column_name}</option>
           ))}
@@ -78,7 +79,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
   // valores válidos = "TABELA.COLUNA" de todas as tabelas; qualquer outro valor guardado (widget antigo) aparece como inválido
   const validFieldValues = new Set<string>(models.flatMap((m: any) => (m.fields || []).map((f: any) => `${m.db_table_name}.${f.db_column_name}`)))
   const staleOption = (v?: string) =>
-    v && !validFieldValues.has(v) ? <option value={v}>⚠ {v} (sem tabela, selecione novamente)</option> : null
+    v && !validFieldValues.has(v) ? <option value={v}>⚠ {v} {t('bi_editor.stale')}</option> : null
 
   // Caminho entre tabelas: só aparece quando alguma tabela do widget pode ser alcançada por mais de um caminho
   const mainTable: string | undefined = currentModel?.db_table_name
@@ -111,49 +112,49 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
           value={editingWidget?.title || ''} 
           onChange={e => setEditingWidget({...editingWidget, title: e.target.value})}
           className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
-          placeholder="Ex: Total de Vendas"
+          placeholder={t('bi_editor.title_placeholder')}
         />
       </div>
 
       {/* Agrupamento: os grupos são criados e organizados no Studio (Painel de Indicadores) */}
       {groups.length > 0 && (
         <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Grupo</label>
+          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.group')}</label>
           <select
             value={groups.some(g => g.id === editingWidget?.group_id) ? editingWidget?.group_id : ''}
             onChange={e => setEditingWidget({...editingWidget, group_id: e.target.value || undefined})}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
-            <option value="">(Sem grupo)</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.title || 'Grupo sem nome'}</option>)}
+            <option value="">{t('bi_editor.no_group')}</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.title || t('bi_editor.unnamed_group')}</option>)}
           </select>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Gráfico</label>
+          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.chart_type')}</label>
           <select 
             value={editingWidget?.type || ''} 
             onChange={e => setEditingWidget({...editingWidget, type: e.target.value})}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
-            <option value="kpi">Métrica (KPI)</option>
-            <option value="gauge">Medidor (Gauge)</option>
-            <option value="bar">Barras</option>
-            <option value="pie">Pizza</option>
-            <option value="line">Linhas</option>
-            <option value="area">Área</option>
+            <option value="kpi">{t('bi_editor.type_kpi')}</option>
+            <option value="gauge">{t('bi_editor.type_gauge')}</option>
+            <option value="bar">{t('bi_editor.type_bar')}</option>
+            <option value="pie">{t('bi_editor.type_pie')}</option>
+            <option value="line">{t('bi_editor.type_line')}</option>
+            <option value="area">{t('bi_editor.type_area')}</option>
           </select>
         </div>
         <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela Fonte</label>
+          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.source_table')}</label>
           <select 
             value={editingWidget?.model_id || ''} 
             onChange={e => setEditingWidget({...editingWidget, model_id: e.target.value, field: '', use_formula: false, formula_tokens: [], group_by: '', series_by: undefined, divide_by: undefined, conditions: [], period_field: undefined})}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
-            <option value="">Selecione...</option>
+            <option value="">{t('bi_editor.select')}</option>
             {models.map((m: any) => (
               <option key={m.id} value={m.id}>{m.display_name || m.db_table_name}</option>
             ))}
@@ -163,23 +164,23 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cálculo / Operação</label>
+          <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.calc')}</label>
           <select 
             value={editingWidget?.calc || 'COUNT'} 
             onChange={e => setEditingWidget({...editingWidget, calc: e.target.value})}
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
           >
-            <option value="COUNT">Contagem (COUNT)</option>
-            <option value="COUNT_DISTINCT">Contagem distinta</option>
-            <option value="SUM">Soma (SUM)</option>
-            <option value="AVG">Média (AVG)</option>
-            <option value="MIN">Mínimo (MIN)</option>
-            <option value="MAX">Máximo (MAX)</option>
+            <option value="COUNT">{t('bi_editor.calc_count')}</option>
+            <option value="COUNT_DISTINCT">{t('bi_editor.calc_distinct')}</option>
+            <option value="SUM">{t('bi_editor.calc_sum')}</option>
+            <option value="AVG">{t('bi_editor.calc_avg')}</option>
+            <option value="MIN">{t('bi_editor.calc_min')}</option>
+            <option value="MAX">{t('bi_editor.calc_max')}</option>
           </select>
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between ml-1">
-            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Campo do Valor</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('bi_editor.value_field')}</label>
             <button 
               onClick={() => setIsFormulaModalOpen(true)}
               className={cn(
@@ -189,13 +190,13 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                   : "bg-neutral-100 border-neutral-200 text-neutral-400 hover:bg-neutral-200"
               )}
             >
-              Fórmula
+              {t('bi_editor.formula')}
             </button>
           </div>
           
           {editingWidget?.use_formula ? (
             <div className="w-full bg-neutral-50 dark:bg-neutral-900 border-2 border-indigo-100 dark:border-indigo-800 rounded-xl px-4 py-2 text-xs font-bold text-indigo-600 truncate">
-              {editingWidget?.field || '(Fórmula vazia)'}
+              {editingWidget?.field || t('bi_editor.formula_empty')}
             </div>
           ) : (
             <select 
@@ -203,7 +204,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
               onChange={e => setEditingWidget({...editingWidget, field: e.target.value})}
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 focus:border-indigo-600 outline-none transition-all text-xs font-bold text-neutral-900 dark:text-white"
             >
-              <option value="">(Toda a Tabela)</option>
+              <option value="">{t('bi_editor.whole_table')}</option>
               {staleOption(editingWidget?.field)}
               {fieldOptions}
             </select>
@@ -219,7 +220,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            {/* Row 1: Physical Scale */}
            <div className="grid grid-cols-2 gap-3">
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-indigo-500 ml-1">Início da Escala</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-indigo-500 ml-1">{t('bi_editor.gauge_start')}</label>
                <input 
                  type="number" 
                  value={editingWidget?.gauge_start ?? 0} 
@@ -228,7 +229,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                />
              </div>
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-indigo-500 ml-1">Fim da Escala</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-indigo-500 ml-1">{t('bi_editor.gauge_end')}</label>
                <input 
                  type="number" 
                  value={editingWidget?.gauge_end ?? 100} 
@@ -241,7 +242,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
            {/* Row 2: Business Thresholds */}
            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-indigo-100/50 dark:border-indigo-900/30">
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Mínimo (Alerta)</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.gauge_min')}</label>
                <input 
                  type="number" 
                  value={editingWidget?.gauge_min ?? 0} 
@@ -250,7 +251,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                />
              </div>
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Meta (Verde)</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.gauge_target')}</label>
                <input 
                  type="number" 
                  value={editingWidget?.gauge_target ?? 70} 
@@ -264,13 +265,13 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
 
       {/* Group By - Now available for KPIs too */}
       <div className="space-y-2 animate-in fade-in slide-in-from-top-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Agrupar por (Dimensão)</label>
+         <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.group_by')}</label>
          <select 
            value={editingWidget?.group_by || ''} 
            onChange={e => setEditingWidget({...editingWidget, group_by: e.target.value})}
            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-2.5 focus:border-indigo-600 outline-none transition-all text-sm font-bold text-neutral-900 dark:text-white"
          >
-           <option value="">(Nenhum - Valor Único)</option>
+           <option value="">{t('bi_editor.group_none')}</option>
            {staleOption(editingWidget?.group_by)}
            {fieldOptions}
           </select>
@@ -278,41 +279,41 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
           {editingWidget?.group_by && (
             <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-indigo-100/30 dark:border-indigo-900/10">
                <div className="space-y-1.5">
-                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Granularidade (Data)</label>
+                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.granularity')}</label>
                  <select 
                    value={editingWidget?.date_granularity || ''} 
                    onChange={e => setEditingWidget({...editingWidget, date_granularity: e.target.value})}
                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
                  >
-                   <option value="">Exato (Padrão)</option>
-                   <option value="day">Dia (YYYY-MM-DD)</option>
-                   <option value="month">Mês (YYYY-MM)</option>
-                   <option value="year">Ano (YYYY)</option>
-                   <option value="week">Semana (YYYY-Sww)</option>
-                   <option value="quarter">Trimestre (YYYY-Tn)</option>
+                   <option value="">{t('bi_editor.gran_exact')}</option>
+                   <option value="day">{t('bi_editor.gran_day')}</option>
+                   <option value="month">{t('bi_editor.gran_month')}</option>
+                   <option value="year">{t('bi_editor.gran_year')}</option>
+                   <option value="week">{t('bi_editor.gran_week')}</option>
+                   <option value="quarter">{t('bi_editor.gran_quarter')}</option>
                  </select>
                </div>
                
                <div className="space-y-1.5">
-                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Ordenar Por</label>
+                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.sort_by')}</label>
                  <select 
                    value={editingWidget?.sort_by || 'value_desc'} 
                    onChange={e => setEditingWidget({...editingWidget, sort_by: e.target.value})}
                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
                  >
-                   <option value="value_desc">Maior Valor (Top)</option>
-                   <option value="value_asc">Menor Valor</option>
-                   <option value="label_asc">Rótulo / Data (A-Z)</option>
-                   <option value="label_desc">Rótulo / Data (Z-A)</option>
+                   <option value="value_desc">{t('bi_editor.sort_value_desc')}</option>
+                   <option value="value_asc">{t('bi_editor.sort_value_asc')}</option>
+                   <option value="label_asc">{t('bi_editor.sort_label_asc')}</option>
+                   <option value="label_desc">{t('bi_editor.sort_label_desc')}</option>
                  </select>
                </div>
   
                <div className="space-y-1.5">
-                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Limite (Top N)</label>
+                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.limit_top')}</label>
                  <input 
                    type="number"
                    min="1"
-                   placeholder="Todos"
+                   placeholder={t('bi_editor.all')}
                    value={editingWidget?.limit_top_n || ''} 
                    onChange={e => setEditingWidget({...editingWidget, limit_top_n: e.target.value ? Number(e.target.value) : undefined})}
                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
@@ -325,9 +326,9 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
          {/* Segunda dimensão (série) */}
          {canSeries && (
            <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Segmentar por (2ª dimensão)</label>
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.series_by')}</label>
              <select value={editingWidget?.series_by || ''} onChange={e => setEditingWidget({...editingWidget, series_by: e.target.value || undefined})} className={selectCls}>
-               <option value="">(Sem segmentação)</option>
+               <option value="">{t('bi_editor.series_none')}</option>
                {staleOption(editingWidget?.series_by)}
                {fieldOptions}
              </select>
@@ -337,7 +338,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  onClick={() => setEditingWidget({...editingWidget, stacked: !editingWidget?.stacked})}
                  className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.stacked ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
                >
-                 Empilhar séries
+                 {t('bi_editor.stack')}
                </button>
              )}
            </div>
@@ -346,40 +347,40 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
          {/* Métrica derivada */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
            <div className="flex items-center justify-between ml-1">
-             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Métrica derivada (dividir por)</label>
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('bi_editor.derived')}</label>
              <button
                type="button"
                onClick={() => setEditingWidget({...editingWidget, divide_by: editingWidget?.divide_by ? undefined : { calc: 'COUNT', field: '' }})}
                className={cn("text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border transition-all", editingWidget?.divide_by ? "bg-indigo-600 border-indigo-600 text-white" : "bg-neutral-100 border-neutral-200 text-neutral-400 hover:bg-neutral-200")}
              >
-               {editingWidget?.divide_by ? 'Ativa' : 'Desativada'}
+               {editingWidget?.divide_by ? t('bi_editor.active') : t('bi_editor.inactive')}
              </button>
            </div>
            {editingWidget?.divide_by ? (
              <>
                <div className="grid grid-cols-2 gap-3">
                  <div className="space-y-1.5">
-                   <label className={labelCls}>Operação do divisor</label>
+                   <label className={labelCls}>{t('bi_editor.div_op')}</label>
                    <select value={editingWidget.divide_by.calc} onChange={e => setEditingWidget({...editingWidget, divide_by: { ...editingWidget.divide_by, calc: e.target.value }})} className={selectCls}>
-                     <option value="COUNT">Contagem</option>
-                     <option value="COUNT_DISTINCT">Contagem distinta</option>
-                     <option value="SUM">Soma</option>
-                     <option value="AVG">Média</option>
-                     <option value="MIN">Mínimo</option>
-                     <option value="MAX">Máximo</option>
+                     <option value="COUNT">{t('bi_editor.div_count')}</option>
+                     <option value="COUNT_DISTINCT">{t('bi_editor.calc_distinct')}</option>
+                     <option value="SUM">{t('bi_editor.div_sum')}</option>
+                     <option value="AVG">{t('bi_editor.div_avg')}</option>
+                     <option value="MIN">{t('bi_editor.div_min')}</option>
+                     <option value="MAX">{t('bi_editor.div_max')}</option>
                    </select>
                  </div>
                  <div className="space-y-1.5">
-                   <label className={labelCls}>Campo do divisor</label>
+                   <label className={labelCls}>{t('bi_editor.div_field')}</label>
                    <select value={editingWidget.divide_by.field || ''} onChange={e => setEditingWidget({...editingWidget, divide_by: { ...editingWidget.divide_by, field: e.target.value }})} className={selectCls}>
-                     <option value="">(Registros da tabela)</option>
+                     <option value="">{t('bi_editor.div_table_rows')}</option>
                      {staleOption(editingWidget.divide_by.field)}
                      {fieldOptions}
                    </select>
                  </div>
                </div>
                <p className="text-[9px] font-bold text-neutral-400 ml-1">
-                 Ex.: Ticket médio = Soma de valor_total ÷ Contagem de registros. Use o formato Moeda na aparência.
+                 {t('bi_editor.derived_hint')}
                </p>
              </>
            ) : null}
@@ -388,9 +389,9 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
          {/* Caminho entre tabelas (só quando há mais de uma forma de ligar) */}
          {ambiguous.length > 0 && (
            <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Caminho entre tabelas</label>
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.path_title')}</label>
              <p className="text-[9px] font-bold text-neutral-400 ml-1">
-               Há mais de uma forma de ligar {tableLabel(mainTable as string)} às tabelas abaixo. Escolha a que representa o que você quer medir.
+               {t('bi_editor.path_hint').replace('{table}', tableLabel(mainTable as string))}
              </p>
              {ambiguous.map(({ table, paths }) => {
                const auto = automaticPath(resolvedRels, mainTable as string, table)
@@ -399,7 +400,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  <div key={table} className="space-y-1">
                    <label className={labelCls}>{tableLabel(table)}</label>
                    <select value={current} onChange={e => setRelationPath(table, e.target.value)} className={selectCls}>
-                     <option value="">Automático{auto ? ` — ${describePath(auto, tableLabel)}` : ''}</option>
+                     <option value="">{t('bi_editor.automatic')}{auto ? ` — ${describePath(auto, tableLabel)}` : ''}</option>
                      {paths.map(p => {
                        const sig = pathSignature(p)
                        return <option key={sig} value={sig}>{describePath(p, tableLabel)}</option>
@@ -414,16 +415,16 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
          {/* Filtros do widget */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
            <div className="flex items-center justify-between ml-1">
-             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Filtros do widget</label>
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('bi_editor.filters')}</label>
              <button
                type="button"
                onClick={() => setConditions([...conditions, { field: '', op: 'eq', value: '' }])}
                className="text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200 transition-all"
              >
-               + Filtro
+               {t('bi_editor.add_filter')}
              </button>
            </div>
-           {conditions.length === 0 && <p className="text-[9px] font-bold text-neutral-400 ml-1">Sem filtros: o widget considera todos os registros.</p>}
+           {conditions.length === 0 && <p className="text-[9px] font-bold text-neutral-400 ml-1">{t('bi_editor.no_filters')}</p>}
            {conditions.map((c, i) => {
              const kind = kindOf(c.field)
              const ops = OPS_BY_KIND[kind]
@@ -433,23 +434,23 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                <div key={i} className="space-y-2 p-2 bg-neutral-50/60 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 rounded-xl">
                  <div className="grid grid-cols-2 gap-2">
                    <div className="space-y-1 min-w-0">
-                     <label className={labelCls}>Campo</label>
+                     <label className={labelCls}>{t('bi_editor.field')}</label>
                      <select value={c.field} onChange={e => patchCondition(i, { field: e.target.value, op: 'eq', value: '', value2: '' })} className={selectCls}>
-                       <option value="">Selecione...</option>
+                       <option value="">{t('bi_editor.select')}</option>
                        {staleOption(c.field)}
                        {fieldOptions}
                      </select>
                    </div>
                    <div className="space-y-1 min-w-0">
-                     <label className={labelCls}>Operador</label>
+                     <label className={labelCls}>{t('bi_editor.operator')}</label>
                      <select value={c.op} onChange={e => patchCondition(i, { op: e.target.value })} className={selectCls}>
-                       {ops.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                       {ops.map(o => <option key={o.value} value={o.value}>{o.label.startsWith('op_') ? t('bi_editor.' + o.label) : o.label}</option>)}
                      </select>
                    </div>
                  </div>
                  <div className="flex items-end gap-2">
                    <div className="space-y-1 flex-1 min-w-0">
-                     <label className={labelCls}>{c.op === 'between' ? 'Valor inicial e final' : 'Valor'}</label>
+                     <label className={labelCls}>{c.op === 'between' ? t('bi_editor.value_range') : t('bi_editor.value')}</label>
                      {noValue ? (
                        <div className="px-2 py-2 text-[10px] font-bold text-neutral-300">—</div>
                      ) : (
@@ -459,7 +460,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                        </div>
                      )}
                    </div>
-                   <button type="button" onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))} className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-[12px] font-black text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all" title="Remover filtro">✕</button>
+                   <button type="button" onClick={() => setConditions(conditions.filter((_, idx) => idx !== i))} className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-[12px] font-black text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all" title={t('bi_editor.remove_filter')}>✕</button>
                  </div>
                </div>
              )
@@ -468,27 +469,27 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
 
          {/* Período */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Campo de data do período</label>
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.period_field')}</label>
            <select value={editingWidget?.period_field || ''} onChange={e => setEditingWidget({...editingWidget, period_field: e.target.value || undefined})} className={selectCls}>
-             <option value="">(Não usa o filtro de período)</option>
+             <option value="">{t('bi_editor.period_none')}</option>
              {staleOption(editingWidget?.period_field)}
              {fieldOptions}
            </select>
            {editingWidget?.period_field && (
              <>
-               <label className={labelCls}>De onde vem o período deste widget</label>
+               <label className={labelCls}>{t('bi_editor.period_source')}</label>
                <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                  {[
-                   { id: 'panel', label: 'Segue o painel' },
-                   { id: 'fixed', label: 'Período fixo' },
-                   { id: 'group', label: 'Segue o grupo' },
-                   { id: 'own', label: 'Seletor no card' },
+                   { id: 'panel', label: t('bi_editor.pm_panel') },
+                   { id: 'fixed', label: t('bi_editor.pm_fixed') },
+                   { id: 'group', label: t('bi_editor.pm_group') },
+                   { id: 'own', label: t('bi_editor.pm_own') },
                  ].map(opt => (
                    <button
                      key={opt.id}
                      type="button"
                      disabled={opt.id === 'group' && !groups.some(g => g.id === editingWidget?.group_id)}
-                     title={opt.id === 'group' && !groups.some(g => g.id === editingWidget?.group_id) ? 'Coloque o widget em um grupo para usar a barra de período do grupo' : undefined}
+                     title={opt.id === 'group' && !groups.some(g => g.id === editingWidget?.group_id) ? t('bi_editor.pm_group_disabled') : undefined}
                      onClick={() => setEditingWidget({...editingWidget, period_mode: opt.id, period_fixed: opt.id === 'fixed' ? (editingWidget?.period_fixed || 'month') : editingWidget?.period_fixed})}
                      className={cn("flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed", (editingWidget?.period_mode || 'panel') === opt.id ? 'bg-indigo-600 text-white shadow' : 'text-neutral-400 hover:text-neutral-600')}
                    >
@@ -498,7 +499,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                </div>
                {editingWidget?.period_mode === 'fixed' && (
                  <select value={editingWidget?.period_fixed || 'month'} onChange={e => setEditingWidget({...editingWidget, period_fixed: e.target.value})} className={selectCls}>
-                   {PERIOD_PRESETS.filter(o => o.id !== 'all').map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                   {PERIOD_PRESETS.filter(o => o.id !== 'all').map(o => <option key={o.id} value={o.id}>{trOr('bi_editor.period_' + o.id, o.label)}</option>)}
                  </select>
                )}
              </>
@@ -510,49 +511,89 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  onClick={() => setEditingWidget({...editingWidget, compare_previous: !editingWidget?.compare_previous})}
                  className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.compare_previous ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
                >
-                 Comparar com o período anterior
+                 {t('bi_editor.compare')}
                </button>
                {editingWidget?.compare_previous && (
                  <button
                    type="button"
                    onClick={() => setEditingWidget({...editingWidget, compare_invert: !editingWidget?.compare_invert})}
                    className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.compare_invert ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
-                   title="Marque quando cair é bom (ex.: devoluções, cancelamentos)"
+                   title={t('bi_editor.lower_better_hint')}
                  >
-                   Menor é melhor
+                   {t('bi_editor.lower_better')}
                  </button>
                )}
              </div>
            )}
            <p className="text-[9px] font-bold text-neutral-400 ml-1">
-             {(editingWidget?.period_mode || 'panel') === 'panel' && 'A barra de período do painel (7/30/90 dias, mês, ano, personalizado) filtra este campo.'}
-             {editingWidget?.period_mode === 'fixed' && 'O widget sempre mostra o período escolhido e ignora a barra do painel.'}
-             {editingWidget?.period_mode === 'group' && 'A barra de período aparece acima dos widgets do grupo e vale só para os widgets que escolherem "Segue o grupo".'}
-             {editingWidget?.period_mode === 'own' && 'O próprio card ganha um seletor de período, independente do painel.'}
+             {(editingWidget?.period_mode || 'panel') === 'panel' && t('bi_editor.pm_panel_hint')}
+             {editingWidget?.period_mode === 'fixed' && t('bi_editor.pm_fixed_hint')}
+             {editingWidget?.period_mode === 'group' && t('bi_editor.pm_group_hint')}
+             {editingWidget?.period_mode === 'own' && t('bi_editor.pm_own_hint')}
+           </p>
+         </div>
+
+         {/* Interações entre gráficos (Fase 4) */}
+         <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('runtime.bi_ed_title')}</label>
+           {([
+             { key: 'cross_source', label: t('runtime.bi_ed_cross_source'), needsGroup: true },
+             { key: 'cross_target', label: t('runtime.bi_ed_cross_target'), needsGroup: false },
+             { key: 'drill_detail', label: t('runtime.bi_ed_drill_detail'), needsGroup: true },
+             { key: 'drill_records', label: t('runtime.bi_ed_drill_records'), needsGroup: true },
+           ] as const).map(o => {
+             const disabled = o.needsGroup && !editingWidget?.group_by
+             return (
+               <label key={o.key} className={cn('flex items-center gap-2 px-1 text-[11px] font-bold', disabled ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed' : 'text-neutral-700 dark:text-neutral-200 cursor-pointer')}>
+                 <input
+                   type="checkbox"
+                   disabled={disabled}
+                   checked={!!editingWidget?.[o.key] && !disabled}
+                   onChange={e => setEditingWidget({ ...editingWidget, [o.key]: e.target.checked })}
+                   className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                 />
+                 {o.label}
+               </label>
+             )
+           })}
+           {editingWidget?.drill_detail && editingWidget?.group_by && (
+             <div className="space-y-1.5 pl-6">
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('runtime.bi_ed_drill_by')}</label>
+               <select value={editingWidget?.drill_by || ''} onChange={e => setEditingWidget({ ...editingWidget, drill_by: e.target.value || undefined })} className={selectCls}>
+                 <option value="">{t('runtime.bi_ed_none')}</option>
+                 {staleOption(editingWidget?.drill_by)}
+                 {fieldOptions}
+               </select>
+             </div>
+           )}
+           <p className="text-[9px] font-bold text-neutral-400 leading-relaxed px-1">
+             {!editingWidget?.group_by
+               ? t('runtime.bi_ed_hint_nogroup')
+               : t('runtime.bi_ed_hint_group')}
            </p>
          </div>
 
          {/* Aparência */}
          <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Aparência e formato</label>
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.appearance')}</label>
            <div className="grid grid-cols-3 gap-3">
              <div className="space-y-1.5 col-span-2">
-               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Formato do valor</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.format')}</label>
                <select
                  value={editingWidget?.format || 'number'}
                  onChange={e => setEditingWidget({...editingWidget, format: e.target.value})}
                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
                >
-                 {BI_FORMAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                 {BI_FORMAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{trOr('bi_editor.fmt_' + o.value, o.label)}</option>)}
                </select>
              </div>
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Casas decimais</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.decimals')}</label>
                <input
                  type="number"
                  min="0"
                  max="6"
-                 placeholder="Auto"
+                 placeholder={t('bi_editor.auto')}
                  value={editingWidget?.decimals ?? ''}
                  onChange={e => setEditingWidget({...editingWidget, decimals: e.target.value === '' ? undefined : Number(e.target.value)})}
                  className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-[10px] font-bold text-neutral-900 dark:text-white placeholder:text-neutral-400"
@@ -560,15 +601,15 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
              </div>
              {['currency', 'currency_compact'].includes(editingWidget?.format) && (
                <div className="space-y-1.5 col-span-3">
-                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Moeda</label>
+                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.currency')}</label>
                  <select
                    value={editingWidget?.currency || ''}
                    onChange={e => setEditingWidget({...editingWidget, currency: e.target.value || undefined})}
                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white"
                  >
-                   <option value="">Automática (pelo idioma da tela)</option>
-                   <option value="BRL">Real (R$)</option>
-                   <option value="USD">Dólar (US$)</option>
+                   <option value="">{t('bi_editor.cur_auto')}</option>
+                   <option value="BRL">{t('bi_editor.cur_brl')}</option>
+                   <option value="USD">{t('bi_editor.cur_usd')}</option>
                    <option value="EUR">Euro (€)</option>
                  </select>
                </div>
@@ -577,13 +618,13 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
 
            {['bar', 'line', 'area'].includes(editingWidget?.type) && (
              <div className="space-y-1.5">
-               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">Cor</label>
+               <label className="text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.color')}</label>
                <div className="flex flex-wrap gap-2">
                  {Object.entries(BI_PALETTES).map(([key, p]) => (
                    <button
                      key={key}
                      type="button"
-                     title={p.label}
+                     title={trOr('bi_editor.pal_' + key, p.label)}
                      onClick={() => setEditingWidget({...editingWidget, color: key})}
                      className={cn(
                        "w-7 h-7 rounded-full border-2 transition-all",
@@ -603,7 +644,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                  onClick={() => setEditingWidget({...editingWidget, show_labels: !editingWidget?.show_labels})}
                  className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.show_labels ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
                >
-                 Rótulos de valor
+                 {t('bi_editor.show_labels')}
                </button>
                {editingWidget?.type === 'bar' && (
                  <>
@@ -612,14 +653,14 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                      onClick={() => setEditingWidget({...editingWidget, highlight_max: !editingWidget?.highlight_max})}
                      className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.highlight_max ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
                    >
-                     Destacar maior valor
+                     {t('bi_editor.highlight_max')}
                    </button>
                    <button
                      type="button"
                      onClick={() => setEditingWidget({...editingWidget, orientation: editingWidget?.orientation === 'horizontal' ? 'vertical' : 'horizontal'})}
                      className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all", editingWidget?.orientation === 'horizontal' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-neutral-50 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800')}
                    >
-                     Barras horizontais
+                     {t('bi_editor.horizontal')}
                    </button>
                  </>
                )}
@@ -629,13 +670,13 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
 
          {/* Largura do Widget */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Largura do Widget (Dashboard)</label>
+           <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('bi_editor.width')}</label>
            <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
              {[
-               { id: 'quarter', label: '1/4 (Mini)' },
-               { id: 'third', label: '1/3 (Compacto)' },
-               { id: 'half', label: '1/2 (Médio)' },
-               { id: 'full', label: 'Total (Largo)' }
+               { id: 'quarter', label: t('bi_editor.w_quarter') },
+               { id: 'third', label: t('bi_editor.w_third') },
+               { id: 'half', label: t('bi_editor.w_half') },
+               { id: 'full', label: t('bi_editor.w_full') }
              ].map(opt => (
                <button
                  key={opt.id}
@@ -655,7 +696,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
           <Modal
             isOpen={isFormulaModalOpen}
             onClose={() => setIsFormulaModalOpen(false)}
-            title="Cálculos e Fórmulas"
+            title={t('bi_editor.formula_modal')}
             size="2xl"
           >
             <div className="p-4 space-y-6">
@@ -694,7 +735,7 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
                   onClick={() => setIsFormulaModalOpen(false)}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
                 >
-                  Concluir Fórmula
+                  {t('bi_editor.formula_done')}
                 </button>
               </div>
             </div>

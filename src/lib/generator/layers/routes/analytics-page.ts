@@ -363,6 +363,7 @@ ${filterFields.map(f => {
   const seriesData: Record<string, any> = {}
   const prevData: Record<string, { value: number; from: string; to: string }> = {}
   const widgetErrors: Record<string, string> = {}
+  const canDrill: Record<string, boolean> = {}
   for (const widget of WIDGETS) {
     const r = biResults[widget.id]
     if (!r) continue
@@ -370,6 +371,7 @@ ${filterFields.map(f => {
     if (r.series) seriesData[widget.id] = r.series
     if (r.prev !== undefined && r.prevRange) prevData[widget.id] = { value: r.prev, from: r.prevRange.from, to: r.prevRange.to }
     if (r.error) widgetErrors[widget.id] = r.error
+    if (r.canDrill) canDrill[widget.id] = true
   }
 `
 
@@ -876,7 +878,7 @@ ${filterFields.map(f => {
         widgets={WIDGETS as any}
         aggregatedData={aggregatedData}
         groups={${JSON.stringify(route.analyticsConfig?.groups || [])}}
-${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        filters={biFilters}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
+${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        canDrill={canDrill}\n        filters={biFilters}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
 
       {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (
@@ -1063,15 +1065,29 @@ ${filterInputs}
 export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
   // Com o motor de BI ativo o cliente recalcula os widgets pelo servidor quando o período muda
   const live = biEngineEnabled(ast)
-  const liveImport = live ? "import { getBiWidgetsData } from '@/app/actions/bi'\n" : ''
+  const liveImport = live ? "import { getBiWidgetsData, getBiRecords } from '@/app/actions/bi'\n" : ''
   const liveEffect = live ? `
-  // Recalcula só os widgets cujo período efetivo mudou (os dados iniciais já vieram do servidor)
+  // Interações enviadas ao servidor: só os NOMES clicados (o servidor monta as condições)
+  const interactInput = () => ({
+    cross: Object.entries(crossSel).map(([sourceId, name]) => ({ sourceId, name })),
+    drill: drillNames,
+  })
+
+  // "Ver registros": as linhas que compõem a barra/fatia clicada
+  const openRecords = (w: AnalyticsWidget, name: string) => {
+    setRecordsView({ title: w.title, label: name, rows: null, error: null })
+    getBiRecords(w.id, name, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods, interact: interactInput() })
+      .then(r => setRecordsView(prev => (prev ? { ...prev, rows: r.rows || null, error: r.error || null } : prev)))
+      .catch(() => setRecordsView(prev => (prev ? { ...prev, rows: null, error: 'Não foi possível carregar os registros' } : prev)))
+  }
+
+  // Recalcula só os widgets cujo período, caminho de drill ou filtro cruzado mudou (os dados iniciais já vieram do servidor)
   const fetchedSig = useRef<Record<string, string>>({})
   const reqSeq = useRef<Record<string, number>>({})
   useEffect(() => {
     const ids: string[] = []
     for (const w of widgets) {
-      const sig = JSON.stringify(widgetPeriod(w))
+      const sig = JSON.stringify([widgetPeriod(w), drillNames[w.id] || [], specOf(w).cross_target ? crossSel : null])
       if (fetchedSig.current[w.id] === undefined) { fetchedSig.current[w.id] = sig; continue }
       if (fetchedSig.current[w.id] !== sig) { fetchedSig.current[w.id] = sig; ids.push(w.id) }
     }
@@ -1079,7 +1095,7 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
     const seq: Record<string, number> = {}
     for (const id of ids) { reqSeq.current[id] = (reqSeq.current[id] || 0) + 1; seq[id] = reqSeq.current[id] }
     setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) next[id] = true; return next })
-    getBiWidgetsData(ids, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods })
+    getBiWidgetsData(ids, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods, interact: interactInput() })
       .then(res => {
         const fresh = ids.filter(id => reqSeq.current[id] === seq[id])
         setAggregatedData(prev => { const next = { ...prev }; for (const id of fresh) if (res[id]) next[id] = res[id].data; return next })
@@ -1093,6 +1109,8 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
           }
           return next
         })
+        setCanDrillMap(prev => { const next = { ...prev }; for (const id of fresh) next[id] = !!res[id]?.canDrill; return next })
+        setCrossIgnoredMap(prev => { const next = { ...prev }; for (const id of fresh) next[id] = !!res[id]?.crossIgnored; return next })
         setErrors(prev => { const next = { ...prev }; for (const id of fresh) { if (res[id]?.error) next[id] = res[id].error as string; else delete next[id] } return next })
       })
       .catch(() => {
@@ -1102,8 +1120,11 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
         setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) delete next[id]; return next })
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodRange, groupPeriods, ownPeriods])
-` : ''
+  }, [periodRange, groupPeriods, ownPeriods, crossSel, drillNames])
+` : `
+  // sem o motor de SQL (Supabase) não há como consultar os registros
+  const openRecords = (_w: AnalyticsWidget, _name: string) => {}
+`
 
   return `'use client'
 
@@ -1144,6 +1165,10 @@ import {
   ZoomIn,
   ChevronDown,
   Loader2,
+  X,
+  Filter,
+  CornerUpLeft,
+  Table2,
 } from 'lucide-react'
 
 interface AnalyticsWidget {
@@ -1186,6 +1211,8 @@ interface AnalyticsClientProps {
   prevData?: Record<string, { value: number; from: string; to: string }>
   /** widgets que falharam: mensagem para o usuário */
   errors?: Record<string, string>
+  /** widgets que ainda têm um próximo nível para detalhar */
+  canDrill?: Record<string, boolean>
   /** agrupamentos de widgets (a ordem é a da tela) */
   groups?: BiGroup[]
   /** filtros da tela (já aplicados nos dados iniciais; reenviados ao recalcular) */
@@ -1219,6 +1246,7 @@ export function AnalyticsClient({
   seriesData: initialSeries,
   prevData: initialPrev,
   errors: initialErrors,
+  canDrill: initialCanDrill,
   groups,
   filters,
   initialPeriod,
@@ -1249,6 +1277,50 @@ export function AnalyticsClient({
   const widgetPeriod = (w: AnalyticsWidget): PeriodRange | null =>
     resolveWidgetPeriod(specOf(w), { panel: periodRange, groupIds, groupPeriods, ownPeriods })
   const modeOf = (w: AnalyticsWidget) => effectivePeriodMode(specOf(w), groupIds)
+
+  // Interações: filtro cruzado e drill-down (só com o motor de BI, porque o servidor refaz a consulta)
+  const [crossSel, setCrossSel] = useState<Record<string, string>>({})
+  const [drillNames, setDrillNames] = useState<Record<string, string[]>>({})
+  const [canDrillMap, setCanDrillMap] = useState<Record<string, boolean>>(initialCanDrill || {})
+  const [crossIgnoredMap, setCrossIgnoredMap] = useState<Record<string, boolean>>({})
+  const [pointMenu, setPointMenu] = useState<{ x: number; y: number; name: string; actions: { key: string; label: string; run: () => void }[] } | null>(null)
+  const [recordsView, setRecordsView] = useState<{ title: string; label: string; rows: any[] | null; error: string | null } | null>(null)
+  const hasCrossTargets = widgets.some(w => !!specOf(w).cross_target)
+  const canClick = (w: AnalyticsWidget) => {
+    const sp = specOf(w)
+    return ${live ? 'true' : 'false'} && !!sp.group_by && ((!!sp.cross_source && hasCrossTargets) || (!!sp.drill_detail && !!canDrillMap[w.id]) || !!sp.drill_records)
+  }
+  const onPoint = (w: AnalyticsWidget, name: string, ev?: any) => {
+    if (!canClick(w)) return
+    const sp = specOf(w)
+    const actions: { key: string; label: string; run: () => void }[] = []
+    if (sp.cross_source && hasCrossTargets) {
+      const active = crossSel[w.id] === name
+      actions.push({
+        key: 'cross',
+        label: active ? 'Limpar o filtro dos outros gráficos' : 'Filtrar os outros gráficos por "' + name + '"',
+        run: () => setCrossSel(prev => { const next = { ...prev }; if (next[w.id] === name) delete next[w.id]; else next[w.id] = name; return next }),
+      })
+    }
+    if (sp.drill_detail && canDrillMap[w.id]) {
+      actions.push({ key: 'drill', label: 'Detalhar "' + name + '"', run: () => setDrillNames(prev => ({ ...prev, [w.id]: [...(prev[w.id] || []), name] })) })
+    }
+    if (sp.drill_records) actions.push({ key: 'records', label: 'Ver os registros de "' + name + '"', run: () => openRecords(w, name) })
+    if (actions.length === 0) return
+    if (actions.length === 1) { actions[0].run(); return }
+    const x = Math.min(Number(ev?.clientX ?? window.innerWidth / 2), window.innerWidth - 280)
+    const y = Math.min(Number(ev?.clientY ?? window.innerHeight / 2), window.innerHeight - (actions.length * 44 + 24))
+    setPointMenu({ x: Math.max(8, x), y: Math.max(8, y), name, actions })
+  }
+  // Quem foi clicado, a partir do estado que o recharts entrega no onClick do gráfico
+  const chartClick = (w: AnalyticsWidget, data: any[]) => (state: any, ev: any) => {
+    const i = Number(state?.activeTooltipIndex ?? state?.activeIndex)
+    const name = Number.isInteger(i) && data[i] ? String(data[i].name) : state?.activeLabel !== undefined ? String(state.activeLabel) : null
+    if (name !== null) onPoint(w, name, ev)
+  }
+  const clickStyle = (w: AnalyticsWidget) => (canClick(w) ? { cursor: 'pointer' } : undefined)
+  // esmaece as barras/fatias que não são o valor filtrado
+  const dimOf = (w: AnalyticsWidget, name: any) => (crossSel[w.id] !== undefined && crossSel[w.id] !== String(name) ? 0.3 : 1)
   // sem o motor de BI (Supabase) não há como recalcular por período: as barras não aparecem
   const hasPeriod = (w: AnalyticsWidget) => ${live ? 'true' : 'false'} && !!specOf(w).period_field
   const followsPanel = (w: AnalyticsWidget) => hasPeriod(w) && modeOf(w) === 'panel'
@@ -1510,21 +1582,21 @@ ${liveEffect}
         <div className="w-full mt-2 relative" style={{ height }}>
           <ResponsiveContainer width="100%" height="100%">
             {widget.type === 'bar' ? (
-              <BarChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} onClick={chartClick(widget, seg.rows)} style={clickStyle(widget)}>
                 {common}
                 {seg.keys.map((k, i) => (
                   <Bar key={k} dataKey={k} stackId={stackId} fill={PALETTE[i % PALETTE.length]} radius={stackId ? 0 : [6, 6, 0, 0]} />
                 ))}
               </BarChart>
             ) : widget.type === 'line' ? (
-              <LineChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <LineChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} onClick={chartClick(widget, seg.rows)} style={clickStyle(widget)}>
                 {common}
                 {seg.keys.map((k, i) => (
                   <Line key={k} type="monotone" dataKey={k} stroke={PALETTE[i % PALETTE.length]} strokeWidth={3} dot={{ r: 3 }} />
                 ))}
               </LineChart>
             ) : (
-              <AreaChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} onClick={chartClick(widget, seg.rows)} style={clickStyle(widget)}>
                 {common}
                 {seg.keys.map((k, i) => (
                   <Area key={k} type="monotone" dataKey={k} stackId={stackId} stroke={PALETTE[i % PALETTE.length]} fill={PALETTE[i % PALETTE.length] + '55'} strokeWidth={2} />
@@ -1546,7 +1618,7 @@ ${liveEffect}
         )}
         <ResponsiveContainer width="100%" height="100%">
           {widget.type === 'bar' ? (
-            <BarChart data={chartData} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.showLabels ? 18 : 10, right: horizontal && widget.showLabels ? 56 : 10, left: horizontal ? 0 : -10, bottom: 0 }}>
+            <BarChart data={chartData} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: widget.showLabels ? 18 : 10, right: horizontal && widget.showLabels ? 56 : 10, left: horizontal ? 0 : -10, bottom: 0 }} onClick={chartClick(widget, chartData)} style={clickStyle(widget)}>
               <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="#88888820" />
               {horizontal ? (
                 <>
@@ -1562,13 +1634,13 @@ ${liveEffect}
               <Tooltip cursor={{ fill: '#88888810' }} contentStyle={tooltipStyle} formatter={tooltipFormatter} />
               <Bar dataKey="value" radius={horizontal ? [0, 8, 8, 0] : [8, 8, 0, 0]}>
                 {chartData.map((r: any, i: number) => (
-                  <Cell key={'bar-' + i} fill={barFill(r.value)} />
+                  <Cell key={'bar-' + i} fill={barFill(r.value)} fillOpacity={dimOf(widget, r.name)} />
                 ))}
                 {widget.showLabels && <LabelList dataKey="value" position={horizontal ? 'right' : 'top'} formatter={axisFormatter} style={labelStyle} />}
               </Bar>
             </BarChart>
           ) : widget.type === 'line' ? (
-            <LineChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }} onClick={chartClick(widget, chartData)} style={clickStyle(widget)}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} interval={0} />
               <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
@@ -1578,7 +1650,7 @@ ${liveEffect}
               </Line>
             </LineChart>
           ) : widget.type === 'area' ? (
-            <AreaChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }} onClick={chartClick(widget, chartData)} style={clickStyle(widget)}>
               <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={primary} stopOpacity={0.45} />
@@ -1603,9 +1675,11 @@ ${liveEffect}
                 dataKey="value"
                 label={widget.showLabels ? ((e: any) => (total > 0 ? Math.round((Number(e.value) / total) * 100) + '%' : '')) : false}
                 labelLine={false}
+                onClick={(entry: any, _i: number, ev: any) => onPoint(widget, String(entry?.name ?? entry?.payload?.name), ev)}
+                style={clickStyle(widget)}
               >
-                {chartData.map((_: any, index: number) => (
-                  <Cell key={'cell-' + index} fill={PALETTE[index % PALETTE.length]} />
+                {chartData.map((r: any, index: number) => (
+                  <Cell key={'cell-' + index} fill={PALETTE[index % PALETTE.length]} fillOpacity={dimOf(widget, r.name)} />
                 ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
@@ -1734,6 +1808,18 @@ ${liveEffect}
                       {w.calc} ({fieldLabel(w)})
                     </p>
                     {renderPeriodInfo(w)}
+                    {(drillNames[w.id] || []).length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 text-[9px] font-black uppercase tracking-tighter text-indigo-500">
+                        <button type="button" title="Voltar um nível" onClick={() => setDrillNames(prev => ({ ...prev, [w.id]: (prev[w.id] || []).slice(0, -1) }))} className="p-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40"><CornerUpLeft className="w-3 h-3" /></button>
+                        <button type="button" onClick={() => setDrillNames(prev => ({ ...prev, [w.id]: [] }))} className="hover:underline">Todos</button>
+                        {(drillNames[w.id] || []).map((n, i) => <span key={i}>› {n}</span>)}
+                      </div>
+                    )}
+                    {crossIgnoredMap[w.id] && (
+                      <p className="text-[8px] font-black text-neutral-400 uppercase tracking-tighter" title="Este indicador não tem relação com a tabela do filtro cruzado ativo; o filtro foi ignorado aqui.">
+                        ⛔ filtro cruzado não se aplica
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1841,6 +1927,27 @@ ${liveEffect}
       {/* Barra de período do painel */}
       {panelFollowers > 0 && renderPeriodBar('Período', panelFollowers, period, patch => setPeriod(p => ({ ...p, ...patch })))}
 
+      {/* Filtros cruzados ativos */}
+      {Object.keys(crossSel).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-2">
+          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 mr-1"><Filter className="w-3 h-3" /> Filtros cruzados</span>
+          {Object.entries(crossSel).map(([sourceId, name]) => (
+            <button
+              key={sourceId}
+              type="button"
+              title="Remover este filtro"
+              onClick={() => setCrossSel(prev => { const next = { ...prev }; delete next[sourceId]; return next })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all"
+            >
+              {widgets.find(x => x.id === sourceId)?.title || 'Gráfico'}: {name} <X className="w-3 h-3" />
+            </button>
+          ))}
+          {Object.keys(crossSel).length > 1 && (
+            <button type="button" onClick={() => setCrossSel({})} className="px-2 py-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500">Limpar todos</button>
+          )}
+        </div>
+      )}
+
       {/* Seções: soltos no topo e os grupos na ordem definida */}
       <div className="space-y-8">
         {sections.map(sec => {
@@ -1882,6 +1989,61 @@ ${liveEffect}
         </div>
       </div>
       </div>
+
+      {pointMenu && (
+        <div className="fixed inset-0 z-[120]" onClick={() => setPointMenu(null)}>
+          <div className="absolute w-64 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xl p-1.5" style={{ left: pointMenu.x, top: pointMenu.y }} onClick={e => e.stopPropagation()}>
+            <p className="px-3 pt-2 pb-1 text-[9px] font-black uppercase tracking-widest text-neutral-400 truncate">{pointMenu.name}</p>
+            {pointMenu.actions.map(a => (
+              <button key={a.key} type="button" onClick={() => { setPointMenu(null); a.run() }} className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-all">
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {recordsView && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm" onClick={() => setRecordsView(null)}>
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-neutral-100 dark:border-neutral-800">
+              <div className="min-w-0">
+                <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-neutral-900 dark:text-white truncate"><Table2 className="w-4 h-4 text-indigo-500 shrink-0" /> {recordsView.title}</h3>
+                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight truncate">{recordsView.label}{recordsView.rows ? ' · ' + recordsView.rows.length + (recordsView.rows.length >= 200 ? '+ (mostrando os 200 mais recentes)' : ' registros') : ''}</p>
+              </div>
+              <button type="button" onClick={() => setRecordsView(null)} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-500 transition-all"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {recordsView.error ? (
+                <div className="p-10 text-center text-xs font-bold text-red-500">{recordsView.error}</div>
+              ) : !recordsView.rows ? (
+                <div className="p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+              ) : recordsView.rows.length === 0 ? (
+                <div className="p-10 text-center text-xs font-black uppercase text-neutral-300">Nenhum registro</div>
+              ) : (() => {
+                // o Oracle devolve as colunas em caixa alta (às vezes duplicadas): mostra cada coluna uma vez
+                const seen = new Set<string>()
+                const cols = Object.keys(recordsView.rows[0]).filter(k => { const l = k.toLowerCase(); if (seen.has(l)) return false; seen.add(l); return true }).slice(0, 14)
+                const cell = (v: any) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+                return (
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-900">
+                      <tr>{cols.map(k => <th key={k} className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-neutral-400 whitespace-nowrap">{k}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {recordsView.rows.map((r, i) => (
+                        <tr key={i} className="border-t border-neutral-100 dark:border-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                          {cols.map(k => <td key={k} className="px-4 py-2.5 text-neutral-700 dark:text-neutral-300 whitespace-nowrap max-w-[240px] truncate" title={cell(r[k])}>{cell(r[k])}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Widget Expandido */}
       {expandedWidget && (

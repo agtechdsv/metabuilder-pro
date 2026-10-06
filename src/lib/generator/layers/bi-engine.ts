@@ -89,6 +89,9 @@ export const BI_WIDGETS: Record<string, { spec: any; joins: any[] }> = ${JSON.st
 import { planWidgetQuery } from '@/lib/bi/widgetPlan'
 import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
 import { PERIOD_PRESETS, resolveWidgetPeriod, previousRange, type PeriodRange, type PeriodChoice } from '@/lib/bi/period'
+import { applyDrill, drillInto, drillTarget, makeCrossFilter, crossConditionsFor, bucketConditions, type DrillLevel, type CrossFilter } from '@/lib/bi/interaction'
+import { planRecordsQuery } from '@/lib/bi/recordsPlan'
+import type { BiWidget } from '@/lib/bi/widget'
 import { BI_DIALECT, BI_PROJECT_SLUG, BI_MODELS, BI_RELATIONS, BI_GROUP_IDS, BI_WIDGETS } from './bi-registry'
 ${run.imports}
 
@@ -97,6 +100,10 @@ const MAX_ROWS = 50000
 const MAX_GROUPS = 2000
 const MAX_FILTER_VALUE = 200
 const MAX_WIDGETS_PER_CALL = 100
+const MAX_NAME = 300
+const MAX_DEPTH = 5
+const MAX_CROSS = 10
+const RECORDS_LIMIT = 200
 
 export interface BiWidgetResult {
   /** KPI/gauge: número; demais: lista { name, value } */
@@ -108,7 +115,22 @@ export interface BiWidgetResult {
   /** KPI com comparação: valor do período anterior e o intervalo comparado */
   prev?: number
   prevRange?: PeriodRange
+  /** ainda há um próximo nível para detalhar */
+  canDrill?: boolean
+  /** o filtro cruzado ativo não tem relação com este indicador e foi ignorado */
+  crossIgnored?: boolean
   error?: string
+}
+
+/**
+ * Interações do painel. O navegador envia só os NOMES clicados (nunca condições): o servidor refaz o caminho com as
+ * mesmas funções do painel e monta as condições a partir do cadastro dos widgets.
+ */
+export interface BiInteractions {
+  /** filtros cruzados ativos: o gráfico de origem e o valor clicado nele */
+  cross?: Array<{ sourceId: string; name: string }>
+  /** caminho de drill aberto por widget: o nome clicado em cada nível */
+  drill?: Record<string, string[]>
 }
 
 export interface BiInput {
@@ -120,6 +142,7 @@ export interface BiInput {
   groupPeriods?: Record<string, PeriodChoice>
   /** seletor próprio dos widgets em modo "próprio": { idDoWidget: { preset, from, to } } */
   ownPeriods?: Record<string, PeriodChoice>
+  interact?: BiInteractions
 }
 
 async function runSql(sql: string): Promise<any[]> {
@@ -157,25 +180,92 @@ function cleanFilters(f: BiInput['filters']): Record<string, string> {
   return out
 }
 
-async function computeWidget(id: string, input: BiInput, groupPeriods: Record<string, PeriodChoice>, ownPeriods: Record<string, PeriodChoice>): Promise<BiWidgetResult> {
-  const entry = BI_WIDGETS[id]
-  const empty: BiWidgetResult = { data: 0, series: null, truncated: false }
-  if (!entry) return { ...empty, error: 'Widget não encontrado' }
+function cleanInteract(i: BiInteractions | undefined): { cross: Array<{ sourceId: string; name: string }>; drill: Record<string, string[]> } {
+  const cross: Array<{ sourceId: string; name: string }> = []
+  const drill: Record<string, string[]> = {}
+  if (i && typeof i === 'object') {
+    if (Array.isArray(i.cross)) {
+      for (const c of i.cross.slice(0, MAX_CROSS)) {
+        if (c && typeof c.sourceId === 'string' && typeof c.name === 'string') cross.push({ sourceId: c.sourceId, name: c.name.slice(0, MAX_NAME) })
+      }
+    }
+    if (i.drill && typeof i.drill === 'object') {
+      for (const [k, v] of Object.entries(i.drill)) {
+        if (Array.isArray(v)) drill[k] = v.filter(n => typeof n === 'string').map(n => n.slice(0, MAX_NAME)).slice(0, MAX_DEPTH)
+      }
+    }
+  }
+  return { cross, drill }
+}
 
-  const spec = entry.spec
-  const period = resolveWidgetPeriod(spec, { panel: cleanPeriod(input.period), groupIds: BI_GROUP_IDS, groupPeriods, ownPeriods })
-  const plan = planWidgetQuery({
-    widget: spec,
-    models: BI_MODELS,
-    relations: BI_RELATIONS,
-    dialect: BI_DIALECT,
-    layoutJoins: entry.joins,
-    screenFilters: cleanFilters(input.filters),
-    period,
-    projectSlug: BI_PROJECT_SLUG,
-    rawRowLimit: MAX_ROWS,
-    maxGroups: MAX_GROUPS,
-  })
+const planArgs = (widget: BiWidget, joins: any[], period: PeriodRange | null, filters: Record<string, string>) => ({
+  widget,
+  models: BI_MODELS,
+  relations: BI_RELATIONS,
+  dialect: BI_DIALECT,
+  layoutJoins: joins,
+  screenFilters: filters,
+  period,
+  projectSlug: BI_PROJECT_SLUG,
+  rawRowLimit: MAX_ROWS,
+  maxGroups: MAX_GROUPS,
+})
+
+/** Refaz o caminho de drill do widget a partir dos nomes clicados e diz como ele está agrupado agora. */
+function resolveDrill(id: string, names: string[]) {
+  const entry = BI_WIDGETS[id]
+  if (!entry) return null
+  const spec = entry.spec as BiWidget
+  const groupOf = (w: BiWidget) => planWidgetQuery(planArgs(w, entry.joins, null, {})).group
+  let stack: DrillLevel[] = []
+  for (const name of names) {
+    const level = drillInto(spec, stack, groupOf(applyDrill(spec, stack)), name)
+    if (!level) break
+    stack = [...stack, level]
+  }
+  const widget = applyDrill(spec, stack)
+  return { entry, spec, stack, widget, group: groupOf(widget) }
+}
+
+function buildCross(cross: Array<{ sourceId: string; name: string }>, drill: Record<string, string[]>): CrossFilter[] {
+  const out: CrossFilter[] = []
+  for (const c of cross) {
+    const r = resolveDrill(c.sourceId, drill[c.sourceId] || [])
+    if (!r || !r.spec.cross_source) continue
+    const cf = makeCrossFilter(r.spec, r.group, c.name)
+    if (cf && !out.some(o => o.sourceId === cf.sourceId)) out.push(cf)
+  }
+  return out
+}
+
+interface CallCtx {
+  input: BiInput
+  groupPeriods: Record<string, PeriodChoice>
+  ownPeriods: Record<string, PeriodChoice>
+  filters: Record<string, string>
+  drill: Record<string, string[]>
+  cross: CrossFilter[]
+}
+
+async function computeWidget(id: string, ctx: CallCtx): Promise<BiWidgetResult> {
+  const empty: BiWidgetResult = { data: 0, series: null, truncated: false }
+  const r = resolveDrill(id, ctx.drill[id] || [])
+  if (!r) return { ...empty, error: 'Widget não encontrado' }
+  const { entry, spec, stack, widget: drilledWidget } = r
+
+  const period = resolveWidgetPeriod(spec, { panel: cleanPeriod(ctx.input.period), groupIds: BI_GROUP_IDS, groupPeriods: ctx.groupPeriods, ownPeriods: ctx.ownPeriods })
+  const crossConds = crossConditionsFor(spec, ctx.cross)
+  const attempt = (w: BiWidget) => planWidgetQuery(planArgs(w, entry.joins, period, ctx.filters))
+
+  // filtro cruzado de uma tabela sem relação com este widget: ignora o filtro e avisa
+  let used: BiWidget = crossConds.length ? { ...drilledWidget, conditions: [...(drilledWidget.conditions || []), ...crossConds] } : drilledWidget
+  let plan = attempt(used)
+  let crossIgnored = false
+  if (plan.kind === 'error' && crossConds.length) {
+    used = drilledWidget
+    plan = attempt(used)
+    crossIgnored = true
+  }
   plan.warnings.forEach(w => console.warn('[BI]', w))
   if (plan.kind !== 'agg' || !plan.sql) {
     return { ...empty, error: plan.message || 'Não foi possível montar a consulta' }
@@ -186,12 +276,14 @@ async function computeWidget(id: string, input: BiInput, groupPeriods: Record<st
       runSql(plan.sql),
       plan.prev ? runSql(plan.prev.sql) : Promise.resolve(undefined),
     ])
-    const shaped = shapeAggRows(spec, rows, MAX_GROUPS)
+    const shaped = shapeAggRows(used, rows, MAX_GROUPS)
     const result: BiWidgetResult = { data: shaped.data, series: shaped.series, truncated: shaped.truncated }
     if (prevRows && period) {
       result.prev = prevValueFromRows(prevRows)
       result.prevRange = previousRange(period)
     }
+    if (drillTarget(spec, stack, plan.group)) result.canDrill = true
+    if (crossIgnored) result.crossIgnored = true
     return result
   } catch (err) {
     console.error('[BI] falha ao executar o widget', id, err)
@@ -199,14 +291,59 @@ async function computeWidget(id: string, input: BiInput, groupPeriods: Record<st
   }
 }
 
+function makeCtx(input: BiInput | undefined): CallCtx {
+  const safe: BiInput = input && typeof input === 'object' ? input : {}
+  const { cross, drill } = cleanInteract(safe.interact)
+  return {
+    input: safe,
+    groupPeriods: cleanChoices(safe.groupPeriods),
+    ownPeriods: cleanChoices(safe.ownPeriods),
+    filters: cleanFilters(safe.filters),
+    drill,
+    cross: buildCross(cross, drill),
+  }
+}
+
 /** Calcula vários widgets em paralelo; cada um falha de forma independente. */
 export async function getBiWidgetsData(ids: string[], input?: BiInput): Promise<Record<string, BiWidgetResult>> {
   const list = (Array.isArray(ids) ? ids : []).filter(i => typeof i === 'string').slice(0, MAX_WIDGETS_PER_CALL)
-  const safe: BiInput = input && typeof input === 'object' ? input : {}
-  const groupPeriods = cleanChoices(safe.groupPeriods)
-  const ownPeriods = cleanChoices(safe.ownPeriods)
-  const entries = await Promise.all(list.map(async id => [id, await computeWidget(id, safe, groupPeriods, ownPeriods)] as const))
+  const ctx = makeCtx(input)
+  const entries = await Promise.all(list.map(async id => [id, await computeWidget(id, ctx)] as const))
   return Object.fromEntries(entries)
+}
+
+/** "Ver registros": as linhas (até 200) que compõem a barra/fatia clicada. */
+export async function getBiRecords(widgetId: string, name: string, input?: BiInput): Promise<{ rows?: any[]; error?: string }> {
+  if (typeof widgetId !== 'string' || typeof name !== 'string') return { error: 'Pedido inválido' }
+  const ctx = makeCtx(input)
+  const r = resolveDrill(widgetId, ctx.drill[widgetId] || [])
+  if (!r || !r.spec.drill_records || !r.group) return { error: 'Este indicador não permite ver os registros' }
+
+  const clicked = bucketConditions(r.group, name.slice(0, MAX_NAME))
+  if (clicked.length === 0) return { error: 'Valor inválido' }
+  const period = resolveWidgetPeriod(r.spec, { panel: cleanPeriod(ctx.input.period), groupIds: BI_GROUP_IDS, groupPeriods: ctx.groupPeriods, ownPeriods: ctx.ownPeriods })
+  const crossConds = crossConditionsFor(r.spec, ctx.cross)
+  const attempt = (extra: typeof clicked) => planRecordsQuery({
+    widget: { ...r.widget, conditions: [...(r.widget.conditions || []), ...clicked, ...extra] },
+    models: BI_MODELS,
+    relations: BI_RELATIONS,
+    dialect: BI_DIALECT,
+    period,
+    screenFilters: ctx.filters,
+    projectSlug: BI_PROJECT_SLUG,
+    limit: RECORDS_LIMIT,
+  })
+  let plan = attempt(crossConds)
+  if (plan.kind === 'error' && crossConds.length) plan = attempt([])
+  if (plan.kind !== 'records' || !plan.sql) return { error: plan.message || 'Não foi possível montar a consulta' }
+
+  try {
+    const rows = await runSql(plan.sql)
+    return { rows: JSON.parse(JSON.stringify(rows, (_k, v) => (typeof v === 'bigint' ? String(v) : v))) }
+  } catch (err) {
+    console.error('[BI] falha ao listar os registros', widgetId, err)
+    return { error: 'Não foi possível carregar os registros' }
+  }
 }
 `)
 }
