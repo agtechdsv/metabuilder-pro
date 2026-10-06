@@ -167,7 +167,14 @@
     "remove_my_authenticator_desc": "Si perdió acceso a su Authenticator o desea configurarlo nuevamente en otro teléfono, haga clic aquí para desvincularlo de su cuenta.",
     "remove_now": "Eliminar Ahora",
     "owner_only_security": "Solo el Owner del Workspace puede cambiar la configuración de seguridad global.",
-    "save_security_policies": "Guardar Políticas de Seguridad"
+    "save_security_policies": "Guardar Políticas de Seguridad",
+    "mfa_auth": "Autenticación Multifactor (MFA)",
+    "mfa_personal_desc": "Proteja su cuenta configurando una aplicación Authenticator (Microsoft/Google o Authy).",
+    "my_authenticator": "Mi Authenticator",
+    "my_authenticator_setup_desc": "No hay ningún Authenticator configurado en su cuenta.",
+    "passkey_personal_desc": "Le permite iniciar sesión en el panel usando la biometría (FaceID / TouchID) de este dispositivo.",
+    "save_security_personal": "Guardar Configuración",
+    "success": "¡Operación realizada con éxito!"
   },
   "common": {
     "login": "Ingresar",
@@ -279,7 +286,20 @@
     "info": "Este campo ya está nesta zona",
     "admin_panel": "Panel de Admin",
     "control_panel": "Panel de Control",
-    "user": "Usuario"
+    "user": "Usuario",
+    "access": "Acceder",
+    "add_record": "Agregar",
+    "attention": "Atención",
+    "back": "Volver",
+    "back_previous": "Volver al anterior",
+    "collapse_all": "Contraer Todo",
+    "expand_all": "Expandir Todo",
+    "move_down": "Mover hacia abajo",
+    "move_up": "Mover hacia arriba",
+    "open_drawer": "Abrir Panel Lateral",
+    "open_modal": "Abrir Modal",
+    "select": "Seleccione...",
+    "yes": "Sí"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -808,8 +828,13 @@
             "control": "Control del Túnel",
             "config": "JSON Config (Datos)"
           }
-        }
+        },
+        "refresh_tooltip": "Actualizar"
       }
+    },
+    "toasts": {
+      "delete_error": "Error al eliminar el workspace.",
+      "workspace_deleted": "¡Workspace eliminado correctamente!"
     }
   },
   "app": {
@@ -1021,7 +1046,10 @@
     "card_size_s2": "Pequeño",
     "card_size_s3": "Normal",
     "card_size_s4": "Grande",
-    "card_size_s5": "Extra grande"
+    "card_size_s5": "Extra grande",
+    "empty_column": "Columna Vacía",
+    "group_by": "Agrupar por",
+    "save_parent_first": "Guarde el registro padre antes de agregar elementos mediante modal. Consejo: use el botón + para agregar el elemento en la propia pantalla y guardar todo junto."
   },
   "bi_editor": {
     "title_placeholder": "Ej.: Total de Ventas",
@@ -2158,7 +2186,9 @@
     "allowed_projects": "Proyectos Permitidos",
     "allowed_projects_desc": "Seleccione los proyectos que este miembro puede ver y actuar.",
     "no_projects": "No se encontraron proyectos en este espacio de trabajo.",
-    "done": "Concluido"
+    "done": "Concluido",
+    "cancel": "Cancelar",
+    "confirm_remove": "Confirmar eliminación"
   },
   "wizard": {
     "title": "Asistente de Casos de Uso",
@@ -2325,7 +2355,12 @@
         "title": "Configuración de Kanban",
         "group_field": "Campo de Agrupamiento",
         "group_placeholder": "Seleccione campo...",
-        "group_desc": "Seleccione la columna que se utilizará para organizar las columnas del Kanban (normalmente un enum o clave foránea)."
+        "group_desc": "Seleccione la columna que se utilizará para organizar las columnas del Kanban (normalmente un enum o clave foránea).",
+        "group_options": "Campos alternativos de agrupación (usuario final)",
+        "group_options_desc": "Los campos marcados aparecen en un selector en el Kanban para que el usuario cambie la agrupación en tiempo de ejecución. El campo de arriba sigue siendo el predeterminado.",
+        "group_options_empty": "Ningún campo seleccionado.",
+        "group_options_selected": "Seleccionados",
+        "group_options_table": "Seleccione una tabla..."
       },
       "master_detail": {
         "title": "Estructura Maestro-Detalle",
@@ -2464,7 +2499,38 @@
         },
         "viacep_title": "Búsqueda Automática de Dirección (ViaCEP)",
         "viacep_desc": "Mapee los campos del formulario que recibirán los datos de ViaCEP automáticamente:",
-        "formula_title": "Cálculos y Fórmulas"
+        "formula_title": "Cálculos y Fórmulas",
+        "depends_on": "Depende de (Filtro en Cascada)",
+        "filter_column": "Filtrar Columna Por",
+        "result_limit_hint": "Vacío = Sin Límite / 100%"
+      },
+      "add_relationship": "Agregar Relación",
+      "gantt": {
+        "end_date_field": "Fecha Final (Obligatorio)",
+        "progress_field": "Progreso % (Opcional)",
+        "start_date_field": "Fecha Inicial (Obligatorio)",
+        "title": "Configuración del Diagrama de Gantt",
+        "title_field": "Campo de Título (Obligatorio)"
+      },
+      "map": {
+        "desc_field": "Campo de Descripción (Opcional)",
+        "lat_field": "Latitud (Y) - Obligatorio",
+        "lng_field": "Longitud (X) - Obligatorio",
+        "title": "Configuración del Mapa (Leaflet)",
+        "title_field": "Campo de Título (Obligatorio)"
+      },
+      "select_field": "Seleccionar Campo...",
+      "select_table": "Seleccionar Tabla...",
+      "timeline": {
+        "animated": "Animación de Dibujo",
+        "date_field": "Campo de Fecha",
+        "desc_field": "Campo de Descripción (Opcional)",
+        "direction": "Dirección de la Línea",
+        "icon_field": "Campo de Ícono/Estado (Opcional)",
+        "mode": "Modo de Visualización",
+        "style": "Estilo Visual",
+        "title": "Configuración de la Línea de Tiempo",
+        "title_field": "Campo de Título"
       }
     },
     "personalizado": {
@@ -2486,7 +2552,35 @@
       "expand_config": "Desplegar Configuraciones",
       "remove_tab": "Eliminar Pestaña",
       "new_tab_title": "Nueva Pestaña",
-      "add_tab": "Agregar Pestaña"
+      "add_tab": "Agregar Pestaña",
+      "add_block_grid": "Agregar Bloque de Cuadros",
+      "new_block_grid": "Nuevo bloque de Cuadros",
+      "add_block_tabs": "Agregar Bloque de Subpestañas",
+      "new_block_tabs": "Nuevo bloque de Subpestañas",
+      "add_group": "Agregar Grupo (Subpestañas / Cuadros)",
+      "add_group_disabled": "Agregue primero la pestaña del Maestro.",
+      "add_panel": "Agregar Cuadro",
+      "add_subtab": "Agregar Subpestaña",
+      "block_n": "Bloque",
+      "drop_to_tab": "Suelte aquí para convertir en pestaña de primer nivel",
+      "group_empty": "Aún no hay ningún caso de uso en este bloque.",
+      "group_hint_blocks": "Un grupo se compone de bloques apilados de arriba hacia abajo. Cada bloque puede ser de Subpestañas (un caso de uso a la vez) o de Cuadros (varios visibles al mismo tiempo).",
+      "group_hint_grid": "Todos los casos de uso quedan visibles al mismo tiempo, en cuadros. Defina el ancho y el alto de cada uno.",
+      "group_hint_tabs": "Cada caso de uso se convierte en una subpestaña dentro de esta pestaña.",
+      "group_mode_grid": "Cuadros",
+      "group_mode_tabs": "Subpestañas",
+      "group_title_label": "Título de la Pestaña (Grupo)",
+      "group_title_placeholder": "Ej.: Logística",
+      "move_to": "Mover a…",
+      "move_to_block": "Mover a otro bloque",
+      "new_group_title": "Nuevo Grupo",
+      "new_panel_title": "Nuevo Cuadro",
+      "new_subtab_title": "Nueva Subpestaña",
+      "panel_height": "Alto",
+      "panel_n": "Cuadro",
+      "panel_width": "Ancho",
+      "remove_block": "Quitar bloque",
+      "subtab_n": "Subpestaña"
     },
     "actions": {
       "title": "Consulta y Acciones Finales",
@@ -2634,7 +2728,8 @@
         "modal_desc": "Los formularios se abrirán en una ventana emergente centralizada con fondo oscurecido.",
         "page_title": "Misma Pantalla (Página)",
         "page_desc": "El formulario se mostrará en la misma pantalla, reemplazando la lista actual."
-      }
+      },
+      "cascade": "En cascada"
     },
     "status": {
       "draft_pending": "Borrador Pendiente",
@@ -2661,7 +2756,8 @@
       "logic": "Lógica",
       "tables": "Tablas",
       "layout": "Campos y Diseño",
-      "actions": "Acciones y Consulta"
+      "actions": "Acciones y Consulta",
+      "master_uc": "Caso de Uso Maestro"
     }
   },
   "bpm_page": {
@@ -2711,7 +2807,8 @@
       "logic_ifelse": "Lógica (If/Else)",
       "actions": "Acciones (Actions)",
       "generic_action": "Acción Genérica",
-      "drag_to_panel": "Arrastre al panel"
+      "drag_to_panel": "Arrastre al panel",
+      "response_node": "Respuesta / Bloqueo"
     },
     "nodes": {
       "delete_node": "Eliminar Nodo",
@@ -2748,7 +2845,13 @@
       "before_insert": "Antes de Guardar (Nuevo)",
       "before_update": "Antes de Guardar (Edición)",
       "before_delete": "Antes de Eliminar",
-      "on_load": "Al Cargar el Formulario"
+      "on_load": "Al Cargar el Formulario",
+      "external_api": "Llamada a API Externa",
+      "response_allow": "Permitir y Continuar",
+      "response_block": "Bloquear Acción",
+      "silent": "Silencioso",
+      "webhook_inbound": "Webhook Entrante",
+      "with_message": "Con Mensaje"
     },
     "canvas": {
       "automations_title": "Automatizaciones",
@@ -2924,7 +3027,11 @@
         "flow_renamed": "¡Flujo renombrado!",
         "rename_error": "Error al renombrar.",
         "flow_deleted": "¡Flujo eliminado con éxito!",
-        "delete_flow_error": "Error al eliminar el flujo."
+        "delete_flow_error": "Error al eliminar el flujo.",
+        "button_linked": "¡Botón vinculado al flujo!",
+        "button_unlinked": "¡Botón desvinculado del flujo!",
+        "link_button_error": "Error al vincular el botón: ",
+        "save_flow_first": "Guarde el flujo primero antes de vincular botones."
       }
     }
   },
@@ -3004,7 +3111,9 @@
       "setup_desc": "La política de la empresa requiere la configuración de Autenticación de 2 Factores (Microsoft Authenticator, Google Authenticator o Authy).",
       "manual_code": "O introduzca el código manualmente:",
       "verify_complete_btn": "Verificar y Completar",
-      "preparing": "Preparando Autenticador..."
+      "preparing": "Preparando Autenticador...",
+      "error_init": "Error al iniciar la configuración de MFA",
+      "factor_not_found": "Factor de autenticación no encontrado."
     },
     "set_password": {
       "title": "Establece tu Contraseña",
@@ -3017,7 +3126,8 @@
       "cancel_btn": "Cancelar y Salir",
       "error_empty": "Por favor, introduce la contraseña.",
       "error_min": "La contraseña debe tener al menos 6 caracteres.",
-      "error_match": "Las contraseñas no coinciden."
+      "error_match": "Las contraseñas no coinciden.",
+      "error_general": "Error al definir la contraseña."
     }
   },
   "scheduling": {
@@ -3121,7 +3231,8 @@
     },
     "desktop_gen": {
       "notif_title": "Build Iniciado 🚀",
-      "notif_body": "La generación del instalador para {app} ha comenzado en la nube."
+      "notif_body": "La generación del instalador para {app} ha comenzado en la nube.",
+      "fill_fields": "Por favor, complete el nombre de la aplicación y asegúrese de que el contexto sea válido."
     },
     "project": {
       "eject_notif_title": "¡Proyecto Expulsado! 🎉",
@@ -3181,7 +3292,12 @@
       "sync_discarded": "Sincronización Descartada",
       "merge_clean": "¡Fusión limpia! No se encontraron conflictos.",
       "no_changes_to_merge": "No hay cambios para el merge.",
-      "no_local_changes": "No hay cambios locales pendientes."
+      "no_local_changes": "No hay cambios locales pendientes.",
+      "error": "Error:",
+      "merge_conflicts": "Atención: Se encontraron conflictos. Resuélvalos en el editor antes de confirmar.",
+      "revert_success": "¡Código revertido correctamente!",
+      "sync_confirmed": "Sincronización Completada",
+      "sync_error": "Error al sincronizar:"
     },
     "tooltip": {
       "stop_server": "Detener servidor",
@@ -3279,6 +3395,9 @@
       "security": "Seguridad",
       "subscription": "Suscripción",
       "cancel": "Cancelación"
+    },
+    "shared": {
+      "licenses_gauge_title": "Licencias"
     }
   },
   "studio": {
@@ -3621,7 +3740,9 @@
       "deleting": "Eliminando...",
       "confirm_delete": "Confirmar Eliminación",
       "delete_success": "¡Archivo eliminado con éxito!",
-      "delete_error": "Error al eliminar el archivo."
+      "delete_error": "Error al eliminar el archivo.",
+      "template_conn_name": "Nombre de la Conexión (ej.: erp, crm)",
+      "th_context": "Contexto"
     },
     "community": {
       "tag": "Comunidad MetaBuilders",
@@ -3756,7 +3877,16 @@
       "access_will_remain": "Su acceso permanecerá activo hasta el {date}. Después de esta fecha, el acceso será suspendido.",
       "back_btn": "Volver",
       "canceling": "Cancelando...",
-      "confirm_btn": "Confirmar Cancelación"
+      "confirm_btn": "Confirmar Cancelación",
+      "comment_placeholder": "Escriba su respuesta aquí (opcional)...",
+      "comment_title": "Cuéntenos un poco más sobre el motivo de su cancelación y cómo podemos mejorar nuestros servicios",
+      "continue_cancel_btn": "Continuar Cancelación",
+      "keep_sub_btn": "Mantener Suscripción",
+      "modal_access_kept_desc": "Su acceso permanecerá activo hasta el {date}. Después de esa fecha, el acceso será suspendido.",
+      "modal_back_btn": "Volver",
+      "modal_canceling": "Cancelando...",
+      "modal_confirm_btn": "Confirmar Cancelación",
+      "no_active_sub": "No hay ninguna suscripción activa para cancelar."
     },
     "whitelabel": {
       "invalid_domain_toast": "Por favor, introduzca un dominio válido.",
@@ -3866,7 +3996,8 @@
       "step2": "Compilando el motor Rust y los Webviews...",
       "step3": "Empaquetando el instalador nativo (.msi)...",
       "step4": "Finalizando y transfiriendo el archivo...",
-      "success_title": "¡Instalador listo!"
+      "success_title": "¡Instalador listo!",
+      "download_now": "Descargar Instalador Ahora"
     }
   },
   "release_notes": {
@@ -3880,7 +4011,9 @@
     "current_version": "Versión Actual",
     "new_version": "Nueva Versión",
     "release_notes_btn": "Notas de Versión",
-    "close_btn": "Cerrar"
+    "close_btn": "Cerrar",
+    "close": "Cerrar",
+    "notes_btn": "Notas de la Versión"
   },
   "team_drawer": {
     "title": "Gestión de Equipo de Studio",
@@ -3962,7 +4095,16 @@
     "reset_mfa_process_error": "Error al procesar el restablecimiento de MFA.",
     "permissions_saved_success": "¡Permisos guardados con éxito!",
     "permissions_saved_error": "Error al guardar permisos.",
-    "save_permissions_process_error": "Error al procesar el guardado."
+    "save_permissions_process_error": "Error al procesar el guardado.",
+    "allowed_projects_count": "Proyectos ({count}):",
+    "allowed_workspaces_count": "Workspaces ({count}):",
+    "guest_fallback_name": "Usuario Invitado",
+    "mfa_reset_error": "Error al restablecer MFA.",
+    "mfa_reset_process_error": "Error al procesar el restablecimiento de MFA.",
+    "mfa_reset_success": "¡MFA del usuario restablecido correctamente!",
+    "no_projects_granted": "Ningún proyecto habilitado",
+    "no_workspaces_granted": "Ningún workspace habilitado",
+    "permissions_save_process_error": "Error al guardar los permisos."
   },
   "workspace_components": {
     "manage_team": "Gestionar Equipo",
@@ -4183,7 +4325,8 @@
       "export_source": "Exportar Código Fuente (Next.js)",
       "ai_builder": "Configuración AI Builder",
       "edit_project": "Editar Proyecto",
-      "delete_project": "Eliminar Proyecto"
+      "delete_project": "Eliminar Proyecto",
+      "access_portal": "Acceder al Portal"
     },
     "ide_local": {
       "title": "IDE Local",
@@ -4255,7 +4398,10 @@
       "opening_swagger": "Abriendo Swagger UI en {url}",
       "workspace_label": "Espacio de trabajo",
       "project_label": "Proyecto",
-      "error_starting_spring_boot": "Error al iniciar Spring Boot:"
+      "error_starting_spring_boot": "Error al iniciar Spring Boot:",
+      "open_explorer": "Abrir en el Explorador",
+      "save": "Guardar (Ctrl+S)",
+      "save_all": "Guardar Todo"
     },
     "eject_modal": {
       "title": "Configuración de Eject y Sincronización",
@@ -4315,7 +4461,9 @@
         "swagger_desc": "OpenApiConfig.java con interfaz interactiva de Swagger UI habilitada",
         "gen_readme": "Generar README",
         "readme_desc": "backend/README.md con documentación completa de configuración, compilación y ejecución"
-      }
+      },
+      "notify_me": "Quiero que me avisen cuando esté disponible",
+      "notify_on": "✓ Interés registrado (haga clic para deshacer)"
     }
   },
   "formula_builder": {
@@ -4438,7 +4586,9 @@
     "revert_confirm_title": "Confirmar Reversión",
     "revert_confirm_desc": "¿Estás seguro de que deseas revertir los cambios en {filepath}? Se perderán todos los cambios locales no confirmados. Esta acción no se puede deshacer.",
     "revert_success": "Archivo revertido con éxito",
-    "revert_error": "Error al revertir el archivo"
+    "revert_error": "Error al revertir el archivo",
+    "commit_message": "Mensaje del Commit",
+    "commit_message_placeholder": "Ej.: Actualización de variables de entorno..."
   },
   "ide_git_settings": {
     "modal_title": "Configuración Git Enterprise",
@@ -4467,5 +4617,10 @@
     "starting_engine": "Iniciando MetaBuilder Engine...",
     "loading_ui": "Cargando interfaz...",
     "ready": "¡Listo!"
+  },
+  "actions": {
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "view": "Ver"
   }
 }

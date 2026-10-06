@@ -167,7 +167,14 @@
     "remove_my_authenticator_desc": "If you lost access to your Authenticator or want to set it up again on another phone, click here to unlink it from your account.",
     "remove_now": "Remove Now",
     "owner_only_security": "Only the Workspace Owner can change global security settings.",
-    "save_security_policies": "Save Security Policies"
+    "save_security_policies": "Save Security Policies",
+    "mfa_auth": "Multi-Factor Authentication (MFA)",
+    "mfa_personal_desc": "Protect your account by setting up an Authenticator app (Microsoft/Google or Authy).",
+    "my_authenticator": "My Authenticator",
+    "my_authenticator_setup_desc": "No Authenticator is set up on your account.",
+    "passkey_personal_desc": "Lets you sign in to the dashboard using the biometrics (FaceID / TouchID) of this device.",
+    "save_security_personal": "Save Settings",
+    "success": "Operation completed successfully!"
   },
   "common": {
     "login": "Login",
@@ -192,7 +199,21 @@
     "info": "This field is already in this zone",
     "admin_panel": "Admin Panel",
     "control_panel": "Control Panel",
-    "user": "User"
+    "user": "User",
+    "access": "Access",
+    "add_record": "Add",
+    "attention": "Attention",
+    "back": "Back",
+    "back_previous": "Back to previous",
+    "collapse_all": "Collapse All",
+    "expand_all": "Expand All",
+    "move_down": "Move down",
+    "move_up": "Move up",
+    "new_record": "New Record",
+    "open_drawer": "Open Drawer",
+    "open_modal": "Open Modal",
+    "select": "Select...",
+    "yes": "Yes"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",
@@ -720,8 +741,13 @@
             "control": "Tunnel Control",
             "config": "JSON Config (Data)"
           }
-        }
+        },
+        "refresh_tooltip": "Refresh"
       }
+    },
+    "toasts": {
+      "delete_error": "Error deleting the workspace.",
+      "workspace_deleted": "Workspace deleted successfully!"
     }
   },
   "app": {
@@ -933,7 +959,10 @@
     "bi_organize": "Arrange Dashboard",
     "bi_perf": "Performance Indicators",
     "bi_new_indicator": "New Indicator",
-    "bi_expand": "Expand Dashboard"
+    "bi_expand": "Expand Dashboard",
+    "empty_column": "Empty Column",
+    "group_by": "Group by",
+    "save_parent_first": "Save the parent record before adding items through a modal. Tip: use the + button to add the item on the screen itself and save everything together."
   },
   "bi_editor": {
     "title_placeholder": "E.g.: Total Sales",
@@ -2070,7 +2099,9 @@
     "allowed_projects": "Allowed Projects",
     "allowed_projects_desc": "Select the projects this member can view and act on.",
     "no_projects": "No projects found in this workspace.",
-    "done": "Done"
+    "done": "Done",
+    "cancel": "Cancel",
+    "confirm_remove": "Confirm removal"
   },
   "wizard": {
     "title": "Use Case Wizard",
@@ -2237,7 +2268,12 @@
         "title": "Kanban Configuration",
         "group_field": "Grouping Field",
         "group_placeholder": "Select field...",
-        "group_desc": "Select the column to be used to organize Kanban columns (usually an enum or foreign key)."
+        "group_desc": "Select the column to be used to organize Kanban columns (usually an enum or foreign key).",
+        "group_options": "Alternative grouping fields (end user)",
+        "group_options_desc": "The checked fields appear in a selector on the Kanban so the user can change the grouping at runtime. The field above remains the default.",
+        "group_options_empty": "No field selected.",
+        "group_options_selected": "Selected",
+        "group_options_table": "Select a table..."
       },
       "master_detail": {
         "title": "Master-Detail Structure",
@@ -2376,7 +2412,38 @@
         },
         "viacep_title": "Automatic Address Lookup (ViaCEP)",
         "viacep_desc": "Map the form fields that will receive the ViaCEP data automatically:",
-        "formula_title": "Calculations & Formulas"
+        "formula_title": "Calculations & Formulas",
+        "depends_on": "Depends on (Cascading Filter)",
+        "filter_column": "Filter Column By",
+        "result_limit_hint": "Empty = No Limit / 100%"
+      },
+      "add_relationship": "Add Relationship",
+      "gantt": {
+        "end_date_field": "End Date (Required)",
+        "progress_field": "Progress % (Optional)",
+        "start_date_field": "Start Date (Required)",
+        "title": "Gantt Chart Settings",
+        "title_field": "Title Field (Required)"
+      },
+      "map": {
+        "desc_field": "Description Field (Optional)",
+        "lat_field": "Latitude (Y) - Required",
+        "lng_field": "Longitude (X) - Required",
+        "title": "Map Settings (Leaflet)",
+        "title_field": "Title Field (Required)"
+      },
+      "select_field": "Select Field...",
+      "select_table": "Select Table...",
+      "timeline": {
+        "animated": "Drawing Animation",
+        "date_field": "Date Field",
+        "desc_field": "Description Field (Optional)",
+        "direction": "Line Direction",
+        "icon_field": "Icon/Status Field (Optional)",
+        "mode": "Display Mode",
+        "style": "Visual Style",
+        "title": "Timeline Settings",
+        "title_field": "Title Field"
       }
     },
     "personalizado": {
@@ -2398,7 +2465,35 @@
       "expand_config": "Expand Settings",
       "remove_tab": "Remove Tab",
       "new_tab_title": "New Tab",
-      "add_tab": "Add Tab"
+      "add_tab": "Add Tab",
+      "add_block_grid": "Add Panels Block",
+      "new_block_grid": "New Panels block",
+      "add_block_tabs": "Add Subtabs Block",
+      "new_block_tabs": "New Subtabs block",
+      "add_group": "Add Group (Subtabs / Panels)",
+      "add_group_disabled": "Add the Master tab first.",
+      "add_panel": "Add Panel",
+      "add_subtab": "Add Subtab",
+      "block_n": "Block",
+      "drop_to_tab": "Drop here to turn into a first-level tab",
+      "group_empty": "No use case in this block yet.",
+      "group_hint_blocks": "A group is made of blocks stacked from top to bottom. Each block can be Subtabs (one use case at a time) or Panels (several visible at once).",
+      "group_hint_grid": "All use cases are visible at the same time, in panels. Set the width and height of each one.",
+      "group_hint_tabs": "Each use case becomes a subtab inside this tab.",
+      "group_mode_grid": "Panels",
+      "group_mode_tabs": "Subtabs",
+      "group_title_label": "Tab Title (Group)",
+      "group_title_placeholder": "E.g.: Logistics",
+      "move_to": "Move to…",
+      "move_to_block": "Move to another block",
+      "new_group_title": "New Group",
+      "new_panel_title": "New Panel",
+      "new_subtab_title": "New Subtab",
+      "panel_height": "Height",
+      "panel_n": "Panel",
+      "panel_width": "Width",
+      "remove_block": "Remove block",
+      "subtab_n": "Subtab"
     },
     "actions": {
       "title": "Query & Final Actions",
@@ -2546,7 +2641,8 @@
         "modal_desc": "Forms will open in a centered modal window with a dimmed background.",
         "page_title": "Same Screen (Page)",
         "page_desc": "The form will be displayed on the same screen, replacing the current list."
-      }
+      },
+      "cascade": "Cascade"
     },
     "status": {
       "draft_pending": "Draft Pending",
@@ -2573,7 +2669,8 @@
       "logic": "Logic",
       "tables": "Tables",
       "layout": "Fields & Layout",
-      "actions": "Actions & Query"
+      "actions": "Actions & Query",
+      "master_uc": "Master Use Case"
     }
   },
   "bpm_page": {
@@ -2623,7 +2720,8 @@
       "logic_ifelse": "Logic (If/Else)",
       "actions": "Actions",
       "generic_action": "Generic Action",
-      "drag_to_panel": "Drag to panel"
+      "drag_to_panel": "Drag to panel",
+      "response_node": "Response / Block"
     },
     "nodes": {
       "delete_node": "Delete Node",
@@ -2660,7 +2758,13 @@
       "before_insert": "Before Save (New)",
       "before_update": "Before Save (Edit)",
       "before_delete": "Before Delete",
-      "on_load": "On Form Load"
+      "on_load": "On Form Load",
+      "external_api": "External API Call",
+      "response_allow": "Allow and Continue",
+      "response_block": "Block Action",
+      "silent": "Silent",
+      "webhook_inbound": "Webhook Inbound",
+      "with_message": "With Message"
     },
     "canvas": {
       "automations_title": "Automations",
@@ -2835,7 +2939,11 @@
         "flow_renamed": "Flow renamed!",
         "rename_error": "Error renaming flow.",
         "flow_deleted": "Flow deleted successfully!",
-        "delete_flow_error": "Error deleting flow."
+        "delete_flow_error": "Error deleting flow.",
+        "button_linked": "Button linked to the flow!",
+        "button_unlinked": "Button unlinked from the flow!",
+        "link_button_error": "Error linking button: ",
+        "save_flow_first": "Save the flow first before linking buttons."
       },
       "webhook_inbound": "Webhook Inbound"
     }
@@ -2916,7 +3024,9 @@
       "setup_desc": "Company policy requires Two-Factor Authentication configuration (Microsoft Authenticator, Google Authenticator or Authy).",
       "manual_code": "Or enter the code manually:",
       "verify_complete_btn": "Verify and Complete",
-      "preparing": "Preparing Authenticator..."
+      "preparing": "Preparing Authenticator...",
+      "error_init": "Error starting MFA setup",
+      "factor_not_found": "Authentication factor not found."
     },
     "set_password": {
       "title": "Set your Password",
@@ -2929,7 +3039,8 @@
       "cancel_btn": "Cancel and Exit",
       "error_empty": "Please enter the password.",
       "error_min": "Password must be at least 6 characters.",
-      "error_match": "Passwords do not match."
+      "error_match": "Passwords do not match.",
+      "error_general": "Error setting the password."
     }
   },
   "scheduling": {
@@ -3033,7 +3144,8 @@
     },
     "desktop_gen": {
       "notif_title": "Build Started 🚀",
-      "notif_body": "The installer generation for {app} has started in the cloud."
+      "notif_body": "The installer generation for {app} has started in the cloud.",
+      "fill_fields": "Please fill in the application name and make sure the context is valid."
     },
     "project": {
       "eject_notif_title": "Project Ejected! 🎉",
@@ -3093,7 +3205,12 @@
       "sync_discarded": "Sync Discarded",
       "merge_clean": "Clean merge! No conflicts found.",
       "no_changes_to_merge": "No changes to merge.",
-      "no_local_changes": "No pending local changes."
+      "no_local_changes": "No pending local changes.",
+      "error": "Error:",
+      "merge_conflicts": "Warning: Conflicts found. Resolve them in the editor before confirming.",
+      "revert_success": "Code reverted successfully!",
+      "sync_confirmed": "Sync Completed",
+      "sync_error": "Error syncing:"
     },
     "tooltip": {
       "stop_server": "Stop server",
@@ -3191,6 +3308,9 @@
       "security": "Security",
       "subscription": "Subscription",
       "cancel": "Cancellation"
+    },
+    "shared": {
+      "licenses_gauge_title": "Licenses"
     }
   },
   "studio": {
@@ -3329,7 +3449,8 @@
       "success_title": "Installer Ready!",
       "error_title": "Build Error",
       "cancel_build": "Cancel Build",
-      "access_downloads": "Access Download Center"
+      "access_downloads": "Access Download Center",
+      "download_now": "Download Installer Now"
     },
     "subscription": {
       "verifying_realtime": "Checking payments and billing in real-time...",
@@ -3543,7 +3664,9 @@
       "deleting": "Deleting...",
       "confirm_delete": "Confirm Deletion",
       "delete_success": "File deleted successfully!",
-      "delete_error": "Error deleting file."
+      "delete_error": "Error deleting file.",
+      "template_conn_name": "Connection Name (e.g. erp, crm)",
+      "th_context": "Context"
     },
     "community": {
       "tag": "MetaBuilders Community",
@@ -3678,7 +3801,16 @@
       "access_will_remain": "Your access will remain active until {date}. After this date, access will be suspended.",
       "back_btn": "Back",
       "canceling": "Cancelling...",
-      "confirm_btn": "Confirm Cancellation"
+      "confirm_btn": "Confirm Cancellation",
+      "comment_placeholder": "Write your answer here (optional)...",
+      "comment_title": "Tell us a bit more about why you are cancelling and how we can improve our services",
+      "continue_cancel_btn": "Continue Cancellation",
+      "keep_sub_btn": "Keep Subscription",
+      "modal_access_kept_desc": "Your access will remain active until {date}. After this date, access will be suspended.",
+      "modal_back_btn": "Back",
+      "modal_canceling": "Cancelling...",
+      "modal_confirm_btn": "Confirm Cancellation",
+      "no_active_sub": "No active subscription to cancel."
     },
     "whitelabel": {
       "invalid_domain_toast": "Please enter a valid domain.",
@@ -3791,7 +3923,9 @@
     "current_version": "Current Version",
     "new_version": "New Version",
     "release_notes_btn": "Release Notes",
-    "close_btn": "Close"
+    "close_btn": "Close",
+    "close": "Close",
+    "notes_btn": "Release Notes"
   },
   "team_drawer": {
     "title": "Studio Team Management",
@@ -3873,7 +4007,16 @@
     "reset_mfa_process_error": "Error processing MFA reset.",
     "permissions_saved_success": "Permissions saved successfully!",
     "permissions_saved_error": "Error saving permissions.",
-    "save_permissions_process_error": "Error saving permissions."
+    "save_permissions_process_error": "Error saving permissions.",
+    "allowed_projects_count": "Projects ({count}):",
+    "allowed_workspaces_count": "Workspaces ({count}):",
+    "guest_fallback_name": "Guest User",
+    "mfa_reset_error": "Error resetting MFA.",
+    "mfa_reset_process_error": "Error processing the MFA reset.",
+    "mfa_reset_success": "User's MFA reset successfully!",
+    "no_projects_granted": "No projects granted",
+    "no_workspaces_granted": "No workspaces granted",
+    "permissions_save_process_error": "Error saving permissions."
   },
   "workspace_components": {
     "manage_team": "Manage Team",
@@ -4094,7 +4237,8 @@
       "export_source": "Export Source Code (Next.js)",
       "ai_builder": "AI Builder Settings",
       "edit_project": "Edit Project",
-      "delete_project": "Delete Project"
+      "delete_project": "Delete Project",
+      "access_portal": "Access Portal"
     },
     "ide_local": {
       "title": "Local IDE",
@@ -4166,7 +4310,10 @@
       "opening_swagger": "Opening Swagger UI at {url}",
       "workspace_label": "Workspace",
       "project_label": "Project",
-      "error_starting_spring_boot": "Error starting Spring Boot:"
+      "error_starting_spring_boot": "Error starting Spring Boot:",
+      "open_explorer": "Open in Explorer",
+      "save": "Save (Ctrl+S)",
+      "save_all": "Save All"
     },
     "eject_modal": {
       "title": "Eject & Sync Configuration",
@@ -4226,7 +4373,9 @@
         "swagger_desc": "OpenApiConfig.java with interactive Swagger UI enabled",
         "gen_readme": "Generate README",
         "readme_desc": "backend/README.md with comprehensive setup, build, and execution docs"
-      }
+      },
+      "notify_me": "Notify me when it is available",
+      "notify_on": "✓ Interest registered (click to undo)"
     }
   },
   "formula_builder": {
@@ -4349,7 +4498,9 @@
     "revert_confirm_title": "Confirm Revert",
     "revert_confirm_desc": "Are you sure you want to revert changes in {filepath}? All uncommitted local changes will be lost. This action cannot be undone.",
     "revert_success": "File reverted successfully",
-    "revert_error": "Error reverting file"
+    "revert_error": "Error reverting file",
+    "commit_message": "Commit Message",
+    "commit_message_placeholder": "E.g. Update environment variables..."
   },
   "ide_git_settings": {
     "modal_title": "Enterprise Git Settings",
@@ -4378,5 +4529,10 @@
     "starting_engine": "Starting MetaBuilder Engine...",
     "loading_ui": "Loading interface...",
     "ready": "Ready!"
+  },
+  "actions": {
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View"
   }
 }

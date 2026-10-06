@@ -949,14 +949,14 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                         value=""
                         onChange={e => { if (e.target.value) moveChildToBlock(bIdx, cIdx, e.target.value) }}
                         className="ml-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-600 dark:text-neutral-300 outline-none focus:border-rose-500 normal-case"
-                        title={t('wizard.personalizado.move_to', 'Mover para outro bloco')}
+                        title={t('wizard.personalizado.move_to_block', 'Mover para outro bloco')}
                       >
                         <option value="">{t('wizard.personalizado.move_to', 'Mover para…')}</option>
                         {blocks.map((b, i) => i === bIdx ? null : (
                           <option key={b.id} value={b.id}>{t('wizard.personalizado.block_n', 'Bloco')} {i + 1} ({modeLabel(b.mode)})</option>
                         ))}
-                        <option value="new-tabs">{t('wizard.personalizado.add_block_tabs', 'Novo bloco de Subabas')}</option>
-                        <option value="new-grid">{t('wizard.personalizado.add_block_grid', 'Novo bloco de Quadros')}</option>
+                        <option value="new-tabs">{t('wizard.personalizado.new_block_tabs', 'Novo bloco de Subabas')}</option>
+                        <option value="new-grid">{t('wizard.personalizado.new_block_grid', 'Novo bloco de Quadros')}</option>
                       </select>
                       <div className="flex items-center gap-1">
                         <button type="button" disabled={cIdx === 0} onClick={() => moveChild(bIdx, cIdx, cIdx - 1)} className={ARROW_BTN} title={t('common.move_up', 'Mover para cima')}>

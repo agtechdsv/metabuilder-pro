@@ -34,7 +34,7 @@ export function RuntimeHeader({ viewName, subtitle, icon, actions }: RuntimeHead
           <button 
             onClick={() => router.push(decodeURIComponent(returnTo))}
             className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm text-neutral-600 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-600 dark:hover:border-indigo-500 transition-all hover:-translate-x-1"
-            title={t('common.back', 'Voltar para anterior')}
+            title={t('common.back_previous', 'Voltar para anterior')}
           >
             <ArrowLeft className="w-6 h-6" />
           </button>

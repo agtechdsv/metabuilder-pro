@@ -167,7 +167,14 @@
     "remove_my_authenticator_desc": "Se você perdeu acesso ao seu Authenticator ou quer cadastrá-lo novamente em outro celular, clique aqui para desvinculá-lo da sua conta.",
     "remove_now": "Remover Agora",
     "owner_only_security": "Apenas o Owner do Workspace pode alterar as configurações de segurança globais.",
-    "save_security_policies": "Salvar Políticas de Segurança"
+    "save_security_policies": "Salvar Políticas de Segurança",
+    "mfa_auth": "Autenticação Multi-Fator (MFA)",
+    "mfa_personal_desc": "Proteja sua conta configurando um aplicativo Authenticator (Microsoft/Google ou Authy).",
+    "my_authenticator": "Meu Authenticator",
+    "my_authenticator_setup_desc": "Nenhum Authenticator configurado na sua conta.",
+    "passkey_personal_desc": "Permite que você faça login no painel utilizando a biometria (FaceID / TouchID) deste aparelho.",
+    "save_security_personal": "Salvar Configurações",
+    "success": "Operação realizada com sucesso!"
   },
   "common": {
     "login": "Entrar",
@@ -192,7 +199,21 @@
     "info": "Este campo já está nesta zona",
     "admin_panel": "Painel Admin",
     "control_panel": "Painel de Controle",
-    "user": "Usuário"
+    "user": "Usuário",
+    "access": "Acessar",
+    "add_record": "Adicionar",
+    "attention": "Atenção",
+    "back": "Voltar",
+    "back_previous": "Voltar para anterior",
+    "collapse_all": "Recolher Tudo",
+    "expand_all": "Expandir Tudo",
+    "move_down": "Mover para baixo",
+    "move_up": "Mover para cima",
+    "new_record": "Novo Registro",
+    "open_drawer": "Abrir Gaveta",
+    "open_modal": "Abrir Modal",
+    "select": "Selecione...",
+    "yes": "Sim"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -720,8 +741,13 @@
             "control": "Controle do Túnel",
             "config": "JSON Config (Dados)"
           }
-        }
+        },
+        "refresh_tooltip": "Atualizar"
       }
+    },
+    "toasts": {
+      "delete_error": "Erro ao excluir o workspace.",
+      "workspace_deleted": "Workspace excluído com sucesso!"
     }
   },
   "app": {
@@ -933,7 +959,10 @@
     "bi_organize": "Organizar Dashboard",
     "bi_perf": "Indicadores de Desempenho",
     "bi_new_indicator": "Novo Indicador",
-    "bi_expand": "Expandir Dashboard"
+    "bi_expand": "Expandir Dashboard",
+    "empty_column": "Coluna Vazia",
+    "group_by": "Agrupar por",
+    "save_parent_first": "Salve o registro pai antes de adicionar itens por modal. Dica: use o botão + para adicionar o item na própria tela e salvar tudo junto."
   },
   "bi_editor": {
     "title_placeholder": "Ex: Total de Vendas",
@@ -2070,7 +2099,9 @@
     "allowed_projects": "Projetos Permitidos",
     "allowed_projects_desc": "Selecione os projetos que este membro pode visualizar e atuar.",
     "no_projects": "Nenhum projeto encontrado neste workspace.",
-    "done": "Concluído"
+    "done": "Concluído",
+    "cancel": "Cancelar",
+    "confirm_remove": "Confirmar remoção"
   },
   "wizard": {
     "title": "Wizard de Casos de Uso",
@@ -2237,7 +2268,12 @@
         "title": "Configuração Kanban",
         "group_field": "Campo de Agrupamento",
         "group_placeholder": "Selecione o campo...",
-        "group_desc": "Selecione a coluna que será utilizada para organizar as colunas do Kanban (normalmente um enum ou chave estrangeira)."
+        "group_desc": "Selecione a coluna que será utilizada para organizar as colunas do Kanban (normalmente um enum ou chave estrangeira).",
+        "group_options": "Campos alternativos de agrupamento (usuário final)",
+        "group_options_desc": "Os campos marcados aparecem num seletor no Kanban para o usuário trocar o agrupamento em tempo de execução. O campo acima continua sendo o padrão.",
+        "group_options_empty": "Nenhum campo selecionado.",
+        "group_options_selected": "Selecionados",
+        "group_options_table": "Selecione uma tabela..."
       },
       "master_detail": {
         "title": "Estilo dos Detalhes",
@@ -2376,7 +2412,38 @@
         },
         "viacep_title": "Busca Automática de Endereço (ViaCEP)",
         "viacep_desc": "Mapeie os campos do formulário que receberão os dados do ViaCEP automaticamente:",
-        "formula_title": "Cálculos e Fórmulas"
+        "formula_title": "Cálculos e Fórmulas",
+        "depends_on": "Depende de (Filtro Em Cascata)",
+        "filter_column": "Filtrar Coluna Por",
+        "result_limit_hint": "Vazio = Sem Limite / 100%"
+      },
+      "add_relationship": "Adicionar Relacionamento",
+      "gantt": {
+        "end_date_field": "Data Final (Obrigatório)",
+        "progress_field": "Progresso % (Opcional)",
+        "start_date_field": "Data Inicial (Obrigatório)",
+        "title": "Configuração do Gráfico de Gantt",
+        "title_field": "Campo de Título (Obrigatório)"
+      },
+      "map": {
+        "desc_field": "Campo de Descrição (Opcional)",
+        "lat_field": "Latitude (Y) - Obrigatório",
+        "lng_field": "Longitude (X) - Obrigatório",
+        "title": "Configuração do Mapa (Leaflet)",
+        "title_field": "Campo de Título (Obrigatório)"
+      },
+      "select_field": "Selecionar Campo...",
+      "select_table": "Selecionar Tabela...",
+      "timeline": {
+        "animated": "Animação de Desenho",
+        "date_field": "Campo de Data",
+        "desc_field": "Campo de Descrição (Opcional)",
+        "direction": "Direção da Linha",
+        "icon_field": "Campo de Ícone/Status (Opcional)",
+        "mode": "Modo de Exibição",
+        "style": "Estilo Visual",
+        "title": "Configuração da Linha do Tempo",
+        "title_field": "Campo de Título"
       }
     },
     "personalizado": {
@@ -2398,7 +2465,35 @@
       "expand_config": "Expandir Configurações",
       "remove_tab": "Remover Aba",
       "new_tab_title": "Nova Aba",
-      "add_tab": "Adicionar Aba"
+      "add_tab": "Adicionar Aba",
+      "add_block_grid": "Adicionar Bloco de Quadros",
+      "new_block_grid": "Novo bloco de Quadros",
+      "add_block_tabs": "Adicionar Bloco de Subabas",
+      "new_block_tabs": "Novo bloco de Subabas",
+      "add_group": "Adicionar Grupo (Subabas / Quadros)",
+      "add_group_disabled": "Adicione primeiro a aba do Mestre.",
+      "add_panel": "Adicionar Quadro",
+      "add_subtab": "Adicionar Subaba",
+      "block_n": "Bloco",
+      "drop_to_tab": "Solte aqui para transformar em aba de primeiro nível",
+      "group_empty": "Nenhum caso de uso neste bloco ainda.",
+      "group_hint_blocks": "Um grupo é feito de blocos, empilhados de cima para baixo. Cada bloco pode ser de Subabas (um caso de uso por vez) ou de Quadros (vários visíveis ao mesmo tempo).",
+      "group_hint_grid": "Todos os casos de uso ficam visíveis ao mesmo tempo, em quadros. Defina a largura e a altura de cada um.",
+      "group_hint_tabs": "Cada caso de uso vira uma subaba dentro desta aba.",
+      "group_mode_grid": "Quadros",
+      "group_mode_tabs": "Subabas",
+      "group_title_label": "Título da Aba (Grupo)",
+      "group_title_placeholder": "Ex: Logística",
+      "move_to": "Mover para…",
+      "move_to_block": "Mover para outro bloco",
+      "new_group_title": "Novo Grupo",
+      "new_panel_title": "Novo Quadro",
+      "new_subtab_title": "Nova Subaba",
+      "panel_height": "Altura",
+      "panel_n": "Quadro",
+      "panel_width": "Largura",
+      "remove_block": "Remover bloco",
+      "subtab_n": "Subaba"
     },
     "actions": {
       "title": "Query & Ações Finais",
@@ -2546,7 +2641,8 @@
         "modal_desc": "Os formulários abrirão em uma janela centralizada com fundo escurecido.",
         "page_title": "Mesma Tela (Página)",
         "page_desc": "O formulário será exibido na mesma tela, substituindo a lista atual."
-      }
+      },
+      "cascade": "Em cascata"
     },
     "status": {
       "draft_pending": "Rascunho Pendente",
@@ -2573,7 +2669,8 @@
       "logic": "Lógica",
       "tables": "Tabelas",
       "layout": "Campos & Layout",
-      "actions": "Ações & Query"
+      "actions": "Ações & Query",
+      "master_uc": "Caso de Uso Mestre"
     }
   },
   "bpm_page": {
@@ -2623,7 +2720,8 @@
       "logic_ifelse": "Lógica (If/Else)",
       "actions": "Ações (Actions)",
       "generic_action": "Ação Genérica",
-      "drag_to_panel": "Arraste para o painel"
+      "drag_to_panel": "Arraste para o painel",
+      "response_node": "Resposta / Bloqueio"
     },
     "nodes": {
       "delete_node": "Excluir Nó",
@@ -2660,7 +2758,13 @@
       "before_insert": "Antes de Salvar (Novo)",
       "before_update": "Antes de Salvar (Edição)",
       "before_delete": "Antes de Excluir",
-      "on_load": "Ao Carregar Formulário"
+      "on_load": "Ao Carregar Formulário",
+      "external_api": "Chamada API Externa",
+      "response_allow": "Permitir e Continuar",
+      "response_block": "Bloquear Ação",
+      "silent": "Silencioso",
+      "webhook_inbound": "Webhook Inbound",
+      "with_message": "Com Mensagem"
     },
     "canvas": {
       "automations_title": "Automações",
@@ -2836,7 +2940,11 @@
         "flow_renamed": "Fluxo renomeado!",
         "rename_error": "Erro ao renomear.",
         "flow_deleted": "Fluxo excluído com sucesso!",
-        "delete_flow_error": "Erro ao excluir o fluxo."
+        "delete_flow_error": "Erro ao excluir o fluxo.",
+        "button_linked": "Botão vinculado ao fluxo!",
+        "button_unlinked": "Botão desvinculado do fluxo!",
+        "link_button_error": "Erro ao vincular botão: ",
+        "save_flow_first": "Salve o fluxo primeiro antes de vincular botões."
       }
     }
   },
@@ -2916,7 +3024,9 @@
       "setup_desc": "A política da empresa exige a configuração do Autenticador em 2 Fatores (Microsoft Authenticator, Google Authenticator ou Authy).",
       "manual_code": "Ou digite o código manualmente:",
       "verify_complete_btn": "Verificar e Concluir",
-      "preparing": "Preparando Autenticador..."
+      "preparing": "Preparando Autenticador...",
+      "error_init": "Erro ao iniciar configuração do MFA",
+      "factor_not_found": "Fator de autenticação não encontrado."
     },
     "set_password": {
       "title": "Defina sua Senha",
@@ -2929,7 +3039,8 @@
       "cancel_btn": "Cancelar e Sair",
       "error_empty": "Por favor, informe a senha.",
       "error_min": "A senha deve ter pelo menos 6 caracteres.",
-      "error_match": "As senhas não coincidem."
+      "error_match": "As senhas não coincidem.",
+      "error_general": "Erro ao definir senha."
     }
   },
   "scheduling": {
@@ -3033,7 +3144,8 @@
     },
     "desktop_gen": {
       "notif_title": "Build Iniciado 🚀",
-      "notif_body": "A geração do instalador para {app} foi iniciada na nuvem."
+      "notif_body": "A geração do instalador para {app} foi iniciada na nuvem.",
+      "fill_fields": "Por favor, preencha o nome do aplicativo e certifique-se de que o contexto é válido."
     },
     "project": {
       "eject_notif_title": "Projeto Ejetado! 🎉",
@@ -3093,7 +3205,12 @@
       "sync_discarded": "Sincronização Descartada",
       "merge_clean": "Merge limpo! Nenhum conflito encontrado.",
       "no_changes_to_merge": "Nenhuma alteração para o merge.",
-      "no_local_changes": "Nenhuma alteração local pendente."
+      "no_local_changes": "Nenhuma alteração local pendente.",
+      "error": "Erro:",
+      "merge_conflicts": "Atenção: Conflitos encontrados. Resolva no editor antes de confirmar.",
+      "revert_success": "Código revertido com sucesso!",
+      "sync_confirmed": "Sincronização Efetivada",
+      "sync_error": "Erro ao sincronizar:"
     },
     "tooltip": {
       "stop_server": "Stop servidor",
@@ -3191,6 +3308,9 @@
       "security": "Segurança",
       "subscription": "Assinatura",
       "cancel": "Cancelamento"
+    },
+    "shared": {
+      "licenses_gauge_title": "Licenças"
     }
   },
   "studio": {
@@ -3329,7 +3449,8 @@
       "success_title": "Instalador Pronto!",
       "error_title": "Erro na Geração",
       "cancel_build": "Cancelar Geração",
-      "access_downloads": "Acessar Central de Downloads"
+      "access_downloads": "Acessar Central de Downloads",
+      "download_now": "Baixar Instalador Agora"
     },
     "subscription": {
       "verifying_realtime": "Verificando pagamentos e faturamento em tempo real...",
@@ -3543,7 +3664,9 @@
       "deleting": "Excluindo...",
       "confirm_delete": "Confirmar Exclusão",
       "delete_success": "Arquivo excluído com sucesso!",
-      "delete_error": "Erro ao excluir o arquivo."
+      "delete_error": "Erro ao excluir o arquivo.",
+      "template_conn_name": "Nome da Conexão (ex: erp, crm)",
+      "th_context": "Contexto"
     },
     "community": {
       "tag": "MetaBuilders Community",
@@ -3678,7 +3801,16 @@
       "access_will_remain": "Seu acesso permanecerá ativo até {date}. Após esta data, o acesso será suspenso.",
       "back_btn": "Voltar",
       "canceling": "Cancelando...",
-      "confirm_btn": "Confirmar Cancelamento"
+      "confirm_btn": "Confirmar Cancelamento",
+      "comment_placeholder": "Escreva sua resposta aqui (opcional)...",
+      "comment_title": "Nos conte um pouco mais sobre o motivo do seu cancelamento e como podemos melhorar nossos serviços",
+      "continue_cancel_btn": "Continuar Cancelamento",
+      "keep_sub_btn": "Manter Assinatura",
+      "modal_access_kept_desc": "Seu acesso permanecerá ativo até {date}. Após esta data, o acesso será suspenso.",
+      "modal_back_btn": "Voltar",
+      "modal_canceling": "Cancelando...",
+      "modal_confirm_btn": "Confirmar Cancelamento",
+      "no_active_sub": "Nenhuma assinatura ativa para cancelar."
     },
     "whitelabel": {
       "invalid_domain_toast": "Por favor, informe um domínio válido.",
@@ -3791,7 +3923,9 @@
     "current_version": "Versão Atual",
     "new_version": "Nova Versão",
     "release_notes_btn": "Release Notes",
-    "close_btn": "Fechar"
+    "close_btn": "Fechar",
+    "close": "Fechar",
+    "notes_btn": "Release Notes"
   },
   "team_drawer": {
     "title": "Gerenciamento de Equipe do Studio",
@@ -3873,7 +4007,16 @@
     "reset_mfa_process_error": "Erro ao processar reset de MFA.",
     "permissions_saved_success": "Permissões salvas com sucesso!",
     "permissions_saved_error": "Erro ao salvar permissões.",
-    "save_permissions_process_error": "Erro ao processar salvamento."
+    "save_permissions_process_error": "Erro ao processar salvamento.",
+    "allowed_projects_count": "Projetos ({count}):",
+    "allowed_workspaces_count": "Workspaces ({count}):",
+    "guest_fallback_name": "Usuário Convidado",
+    "mfa_reset_error": "Erro ao resetar MFA.",
+    "mfa_reset_process_error": "Erro ao processar reset de MFA.",
+    "mfa_reset_success": "MFA do usuário resetado com sucesso!",
+    "no_projects_granted": "Nenhum projeto liberado",
+    "no_workspaces_granted": "Nenhum workspace liberado",
+    "permissions_save_process_error": "Erro ao salvar permissões."
   },
   "workspace_components": {
     "manage_team": "Gerenciar Equipe",
@@ -4094,7 +4237,8 @@
       "export_source": "Exportar Código Fonte (Next.js)",
       "ai_builder": "Configurações AI Builder",
       "edit_project": "Editar Projeto",
-      "delete_project": "Excluir Projeto"
+      "delete_project": "Excluir Projeto",
+      "access_portal": "Acessar Portal"
     },
     "ide_local": {
       "title": "IDE Local",
@@ -4166,7 +4310,10 @@
       "opening_swagger": "Abrindo Swagger UI em {url}",
       "workspace_label": "Workspace",
       "project_label": "Projeto",
-      "error_starting_spring_boot": "Erro ao iniciar Spring Boot:"
+      "error_starting_spring_boot": "Erro ao iniciar Spring Boot:",
+      "open_explorer": "Abrir no Explorer",
+      "save": "Salvar (Ctrl+S)",
+      "save_all": "Salvar Todos"
     },
     "eject_modal": {
       "title": "Configuração de Eject & Sincronização",
@@ -4226,7 +4373,9 @@
         "swagger_desc": "OpenApiConfig.java com interface Swagger UI interativa habilitada",
         "gen_readme": "Gerar README",
         "readme_desc": "backend/README.md com documentação completa de setup, build e execução"
-      }
+      },
+      "notify_me": "Quero ser avisado quando sair",
+      "notify_on": "✓ Interesse registrado (clique para desfazer)"
     }
   },
   "formula_builder": {
@@ -4349,7 +4498,9 @@
     "revert_confirm_title": "Confirmar Reversão",
     "revert_confirm_desc": "Tem certeza que deseja reverter as modificações no arquivo {filepath}? Todas as alterações locais não commitadas serão perdidas. Esta ação não pode ser desfeita.",
     "revert_success": "Arquivo revertido com sucesso",
-    "revert_error": "Erro ao reverter arquivo"
+    "revert_error": "Erro ao reverter arquivo",
+    "commit_message": "Mensagem do Commit",
+    "commit_message_placeholder": "Ex. Atualização de variáveis de ambiente..."
   },
   "ide_git_settings": {
     "modal_title": "Configurações Git Enterprise",
@@ -4378,5 +4529,10 @@
     "starting_engine": "Iniciando MetaBuilder Engine...",
     "loading_ui": "Carregando interface...",
     "ready": "Pronto!"
+  },
+  "actions": {
+    "delete": "Excluir",
+    "edit": "Editar",
+    "view": "Visualizar"
   }
 }
