@@ -272,11 +272,16 @@ export function resolveAllJoins(
 /**
  * Converte um array de JoinStep em cláusula SQL de LEFT JOINs.
  */
-export function buildJoinSql(steps: JoinStep[], filterTables?: Set<string>): string {
+export function buildJoinSql(
+  steps: JoinStep[],
+  filterTables?: Set<string>,
+  /** delimitador de identificador do banco (padrão: aspas duplas; MySQL usa crase e SQL Server colchetes) */
+  quote: (id: string) => string = id => `"${id}"`
+): string {
   return steps
     .map(s => {
       const joinType = filterTables?.has(s.toTable.toLowerCase()) ? 'INNER JOIN' : 'LEFT JOIN'
-      return ` ${joinType} "${s.toTable}" ON "${s.fromTable}"."${s.fromField}" = "${s.toTable}"."${s.toField}"`
+      return ` ${joinType} ${quote(s.toTable)} ON ${quote(s.fromTable)}.${quote(s.fromField)} = ${quote(s.toTable)}.${quote(s.toField)}`
     })
     .join('')
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { getPkColumn, warnInferredReference } from '@/lib/schemaResolver'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area, LabelList
@@ -30,60 +29,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
-import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames, type JoinStep } from '@/lib/relationPathFinder'
-import { findAlternativePaths, pathSignature } from '@/lib/relationPaths'
 
-interface Widget {
-  id: string
-  title: string
-  type: 'kpi' | 'bar' | 'pie' | 'line' | 'gauge' | 'area'
-  model_id: string
-  model_name?: string
-  field: string
-  field_id?: string
-  calc: 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'MIN' | 'MAX'
-  group_by?: string
-  width: 'full' | 'half' | 'third' | 'quarter'
-  joins?: any[]
-  gauge_min?: number
-  gauge_max?: number
-  gauge_target?: number
-  gauge_start?: number
-  gauge_end?: number
-  use_formula?: boolean
-  date_granularity?: string
-  sort_by?: string
-  limit_top_n?: number
-  // aparência
-  format?: string
-  decimals?: number
-  currency?: string
-  color?: string
-  show_labels?: boolean
-  highlight_max?: boolean
-  orientation?: 'vertical' | 'horizontal'
-  stacked?: boolean
-  // Fase 2
-  /** filtros do widget, com operador (campo = "coluna" ou "tabela.coluna") */
-  conditions?: { field: string; op: string; value?: string; value2?: string }[]
-  /** segunda dimensão (série) para barras/linhas/área */
-  series_by?: string
-  /** métrica derivada: valor = (calc/field) ÷ (divide_by.calc/divide_by.field) */
-  divide_by?: { calc: string; field?: string }
-  /** campo de data que recebe o filtro de período do painel */
-  period_field?: string
-  /** de onde vem o período do widget: barra do painel (padrão), período fixo ou seletor próprio no card */
-  period_mode?: 'panel' | 'fixed' | 'own' | 'group'
-  period_fixed?: string
-  /** agrupamento (seção recolhível) a que o widget pertence: id em analytics_config.groups */
-  group_id?: string
-  /** caminho de relação escolhido por tabela (assinatura do caminho); sem escolha vale o mais curto */
-  relation_paths?: Record<string, string>
-  /** KPI sem agrupamento: mostra a variação contra o período anterior (exige o campo de data do período) */
-  compare_previous?: boolean
-  /** menor é melhor (ex.: devoluções): a seta fica verde quando o valor cai */
-  compare_invert?: boolean
-}
+// O esquema do widget é único e vive em lib/bi/widget.ts (painel, Studio e app exportado usam o mesmo)
+type Widget = RuntimeBiWidget
 
 interface AnalyticsDashboardProps {
   config: {
@@ -103,13 +51,12 @@ interface AnalyticsDashboardProps {
   projectRelations?: any[]
 }
 
-import { compileFormula, parseFormulaAst } from '@/lib/bi/safeFormula'
+import { compileFormula } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
-import { biFieldKind } from '@/lib/bi/columnKind'
 import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
-import { resolveFkLabel } from '@/lib/bi/fkLabel'
+import { planWidgetQuery } from '@/lib/bi/widgetPlan'
+import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
-import { buildAggregateQuery, filterConditionSql, type BiCondition, type BiColKind, type BiConditionOp } from '@/lib/bi/queryBuilder'
 
 const BI_ROW_LIMIT = 1000
 const BI_MAX_GROUPS = 2000
@@ -226,10 +173,6 @@ export default function AnalyticsDashboard({
       return o ? resolvePeriod(o.preset, { from: o.from, to: o.to }) : null
     }
     return periodRange
-  }
-  const nextDay = (d: string) => {
-    const [y, m, dd] = d.split('-').map(Number)
-    return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
   }
   // a barra do painel só vale para widgets em modo "segue o painel"
   const followsPanel = (w: Widget) => !!w.period_field && effectiveMode(w) === 'panel'
@@ -394,236 +337,42 @@ export default function AnalyticsDashboard({
     }
 
     const queryId = crypto.randomUUID()
-    const topicName = `tunnel:${project.id}`
-    
     // Registra este queryId como o último enviado por este widget
     lastQueryIds.current[widget.id] = queryId
 
     setLoading(prev => ({ ...prev, [widget.id]: true }))
     setErrors(prev => ({ ...prev, [widget.id]: '' }))
 
-    const model = (project as any).models?.find((m: any) => String(m.id) === String(widget.model_id))
-    const tableName = model?.db_table_name || (typeof widget.model_id === 'string' && widget.model_id !== 'undefined' && !widget.model_id.includes('-') ? widget.model_id : null)
-    // Resolve o schema real da tabela a partir dos models do projeto
-    const schemaName = model?.db_schema_name || (project as any)?.slug || 'public'
-
-    if (!tableName) {
-      setErrors(prev => ({ ...prev, [widget.id]: 'Tabela não encontrada' }))
-      setLoading(prev => ({ ...prev, [widget.id]: false }))
-      return
-    }
-
-    // Todo campo do widget é "TABELA.COLUNA": sem o nome da tabela, uma coluna repetida (STATUS, NOME...) poderia vir de qualquer tabela
-    {
-      const isF = (widget as any).use_formula
-      const unqualified: string[] = []
-      const check = (label: string, v?: string) => { if (v && !String(v).includes('.')) unqualified.push(`${label} ("${v}")`) }
-      check('Agrupar por', widget.group_by)
-      if (!isF && widget.field && widget.field !== '*') check('Campo do valor', widget.field)
-      check('Segmentar por', widget.series_by)
-      check('Divisor', widget.divide_by?.field)
-      check('Campo do período', widget.period_field)
-      ;(widget.conditions || []).forEach((c, i) => check(`Filtro ${i + 1}`, c.field))
-      if (isF && widget.field) {
-        const ast = parseFormulaAst(String(widget.field))
-        const walk = (n: any): boolean => !n ? false : n.t === 'field' ? !n.table : n.t === 'neg' ? walk(n.a) : n.t === 'bin' ? walk(n.a) || walk(n.b) : n.t === 'fn' ? n.args.some(walk) : false
-        if (walk(ast)) unqualified.push('Fórmula')
-      }
-      if (unqualified.length > 0) {
-        setErrors(prev => ({ ...prev, [widget.id]: `Reabra o widget e selecione novamente (sem a tabela do campo): ${unqualified.join(', ')}` }))
-        setLoading(prev => ({ ...prev, [widget.id]: false }))
-        return
-      }
-    }
-
-    const isFormula = (widget as any).use_formula || (widget.field?.includes('*') || widget.field?.includes('+') || widget.field?.includes('/') || widget.field?.includes('-'))
-
-    // Build SQL
-    let selectStr = '*'
-    if (!isFormula && widget.field !== '*') {
-      const fieldMeta = model?.fields?.find((f: any) => String(f.id) === String(widget.field))
-      selectStr = fieldMeta?.db_column_name || widget.field || '*'
-    } else if (isFormula && widget.field) {
-      const formulaStr = String(widget.field)
-      const matches = formulaStr.match(/[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?/g) || []
-      const keywords = ['SUM', 'AVG', 'MIN', 'MAX', 'COUNT', 'AND', 'OR', 'NOT', 'NULL', 'IS', 'TRUE', 'FALSE']
-      const cols = matches.filter(m => !keywords.includes(m.toUpperCase()) && isNaN(Number(m)))
-      if (cols.length > 0) {
-        selectStr = [...new Set(cols)].join(', ')
-      }
-    }
-
-    let groupCol = widget.group_by
-    if (widget.group_by && !selectStr.includes(widget.group_by)) {
-        const allModels = Array.isArray(project.models) ? project.models : Object.values(project.models || {})
-        const parts = widget.group_by.split('.')
-        const targetTableName = parts.length > 1 ? parts[0] : null
-        const targetFieldName = parts.length > 1 ? parts[1] : widget.group_by
-
-        for (const m of (allModels as any[])) {
-          if (targetTableName && m.db_table_name !== targetTableName) continue
-          const fields = Array.isArray(m.fields) ? m.fields : Object.values(m.fields || {})
-          const found = fields.find((f: any) => String(f.id) === String(targetFieldName) || f.db_column_name === targetFieldName || f.name === targetFieldName)
-          if (found) {
-            groupCol = `${m.db_table_name}.${found.db_column_name}`
-            break
-          }
-        }
-        if (typeof groupCol === 'string' && !selectStr.includes(groupCol)) {
-          if (selectStr === '*') selectStr = groupCol
-          else selectStr += `, ${groupCol}`
-        }
-    }
-
-    // Build JOINs using the Santo Graal BFS path-finder
-    // Collect all table names referenced by the widget (group_by, field, manual joins)
-    const allModels = Array.isArray(project.models) ? project.models : Object.values(project.models || {})
-    const resolvedRelations = resolveRelations(projectRelations, allModels as any[])
-
-    // Tables referenced in the query (group_by may reference a foreign table)
-    const referencedTables: string[] = []
-    
-    // Adicionamos as tabelas necessárias pelo Agrupamento resolvido
-    if (typeof groupCol === 'string' && groupCol.includes('.')) {
-      referencedTables.push(groupCol.split('.')[0])
-    }
-
-    if (widget.field && typeof widget.field === 'string') {
-      const matches = widget.field.match(/[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+/g)
-      if (matches) {
-        matches.forEach(m => referencedTables.push(m.split('.')[0]))
-      } else if (widget.field.includes('.')) {
-        referencedTables.push(widget.field.split('.')[0])
-      }
-    }
-    // Also respect manually configured widget joins (legacy support)
-    const legacyJoins = [...(widget.joins || []), ...(joins || [])]
-    legacyJoins.forEach((j: any) => {
-      const fromModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
-      const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
-      if (fromModel?.db_table_name) referencedTables.push(fromModel.db_table_name)
-      if (toModel?.db_table_name) referencedTables.push(toModel.db_table_name)
-    })
-
-    // Monta os JOINs para um conjunto de tabelas. Chamada duas vezes: com tudo (caminho de linhas cruas, como antes)
-    // e só com as tabelas que o widget usa (SQL agregado, para não multiplicar linhas).
-    // caminhos de relação que o desenvolvedor escolheu no editor (tabela → caminho); a escolha só vale se ainda existir
-    const preferredPaths: Record<string, JoinStep[]> = {}
-    for (const [tbl, sig] of Object.entries(widget.relation_paths || {})) {
-      const hit = findAlternativePaths(resolvedRelations, tableName, tbl).find(p => pathSignature(p) === sig)
-      if (hit) preferredPaths[tbl.toLowerCase()] = hit
-    }
-    const resolveJoinSql = (referenced: string[], legacy: any[]) => {
-    let joinSql = ''
-    const joinedTables = new Set<string>([tableName])
-
-    if (resolvedRelations.length > 0 && referenced.length > 0) {
-      // Use Santo Graal BFS
-      const uniqueReferenced = [...new Set(referenced.filter(t => t !== tableName))]
-      const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced, preferredPaths)
-      joinSql += buildJoinSql(steps)
-      steps.forEach(s => { joinedTables.add(s.fromTable); joinedTables.add(s.toTable) })
-    }
-    
-    // Always process legacy just in case
-    if (legacy.length > 0) {
-      const processJoins = () => {
-        let added = false
-        legacy.forEach((j: any) => {
-          const fromModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.from) || m.db_table_name === j.from)
-          const toModel = (allModels as any[]).find((m: any) => String(m.id) === String(j.to) || m.db_table_name === j.to)
-          const fromTable = fromModel?.db_table_name || j.from || j.table
-          const toTable = toModel?.db_table_name || j.to || j.toTable
-          const fromField = fromModel?.fields?.find((f: any) => String(f.id) === String(j.local_field || j.local || j.localKey))?.db_column_name || j.local_field || j.local || j.localKey || getPkColumn(allModels as any[], fromTable) || 'id'
-          const toField = toModel?.fields?.find((f: any) => String(f.id) === String(j.foreign_field || j.foreignKey))?.db_column_name || j.foreign_field || j.foreignKey || getPkColumn(allModels as any[], toTable) || 'id'
-          if (!fromTable || !toTable) return
-          if (joinedTables.has(fromTable) && joinedTables.has(toTable)) return
-          if (!joinedTables.has(fromTable) && !joinedTables.has(toTable)) return
-          const newTable = joinedTables.has(fromTable) ? toTable : fromTable
-          joinSql += ` LEFT JOIN "${newTable}" ON "${fromTable}"."${fromField}" = "${toTable}"."${toField}"`
-          joinedTables.add(newTable)
-          added = true
-        })
-        return added
-      }
-      let iterations = 0
-      while (processJoins() && iterations < 10) { iterations++ }
-    }
-
-    // Heuristic Auto-Join: If a referenced table is STILL missing, scan models for a foreign key
-    const missingTables = referenced.filter(t => !joinedTables.has(t) && t !== tableName)
-    missingTables.forEach(refTable => {
-       const joinedList = Array.from(joinedTables)
-       for (const jt of joinedList) {
-          const jtModel = (allModels as any[]).find(m => m.db_table_name === jt)
-          if (jtModel) {
-             const fields = Array.isArray(jtModel.fields) ? jtModel.fields : Object.values(jtModel.fields || {})
-             const isRel = (f: any) => (f.type === 'relation' && (f.relation?.table === refTable || f.relation_table === refTable)) || (!!f.foreign_key_table && String(f.foreign_key_table).toLowerCase() === String(refTable).toLowerCase())
-             const isRelByName = (f: any) => f.db_column_name === `${refTable}_id` || f.db_column_name === `${refTable.replace(/s$/, '')}_id`
-             const relField = fields.find(isRel) || (() => { const g = fields.find(isRelByName); if (g) warnInferredReference(g.db_column_name, refTable); return g })()
-             if (relField) {
-                const localCol = relField.db_column_name || 'id'
-                const foreignCol = relField.relation?.foreign_field || relField.relation_key || relField.foreign_key_column || getPkColumn(allModels as any[], refTable) || 'id'
-                joinSql += ` LEFT JOIN "${refTable}" ON "${jt}"."${localCol}" = "${refTable}"."${foreignCol}"`
-                joinedTables.add(refTable)
-                break;
-             }
-          }
-          const refModel = (allModels as any[]).find(m => m.db_table_name === refTable)
-          if (refModel) {
-             const fields = Array.isArray(refModel.fields) ? refModel.fields : Object.values(refModel.fields || {})
-             const isRelReverse = (f: any) => (f.type === 'relation' && (f.relation?.table === jt || f.relation_table === jt)) || (!!f.foreign_key_table && String(f.foreign_key_table).toLowerCase() === String(jt).toLowerCase())
-             const isRelReverseByName = (f: any) => f.db_column_name === `${jt}_id` || f.db_column_name === `${jt.replace(/s$/, '')}_id`
-             const relField = fields.find(isRelReverse) || (() => { const g = fields.find(isRelReverseByName); if (g) warnInferredReference(g.db_column_name, jt); return g })()
-             if (relField) {
-                const localCol = relField.db_column_name || 'id'
-                const foreignCol = relField.relation?.foreign_field || relField.relation_key || relField.foreign_key_column || getPkColumn(allModels as any[], jt) || 'id'
-                joinSql += ` LEFT JOIN "${refTable}" ON "${refTable}"."${localCol}" = "${jt}"."${foreignCol}"`
-                joinedTables.add(refTable)
-                break;
-             }
-          }
-       }
-    })
-
-    return { joinSql, joinedTables }
-    }
-    const { joinSql, joinedTables } = resolveJoinSql(referencedTables, legacyJoins)
-
-    // Final safety net: Remove any columns from selectStr that belong to unjoined tables to prevent crashes
-    if (selectStr !== '*') {
-      selectStr = selectStr.split(',').filter(s => {
-        const col = s.trim()
-        if (col === '*') return true
-        if (col.includes('.')) {
-          const t = col.split('.')[0]
-          return joinedTables.has(t) || t === tableName
-        }
-        return true
-      }).join(', ')
-    }
-
+    // O Agente CLI só executa PostgreSQL e Oracle; para outro banco o planejador cai nas linhas cruas
     const dbType = (project?.db_type || 'postgres').toLowerCase()
     const dialect: 'postgres' | 'oracle' | null = dbType === 'oracle' ? 'oracle' : (dbType === 'postgres' || dbType === 'postgresql') ? 'postgres' : null
 
-    // Filtros da tela: só entram os que apontam para uma coluna do próprio widget (tabela principal ou com JOIN).
-    // Antes todo filtro virava "tabela.coluna ILIKE" e quebrava o SQL quando a coluna não existia ali.
-    const columnExists = (table: string, column: string) => {
-      const m = (allModels as any[]).find(x => x.db_table_name === table)
-      const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
-      return (fs as any[]).some(f => String(f.db_column_name).toLowerCase() === column.toLowerCase())
-    }
-    const candidateFilters: { col: { table: string; column: string }; value: string }[] = []
-    Object.entries(filters).forEach(([key, val]) => {
-      if (!val) return
-      // o nome da coluna entra no SQL entre aspas: só identificadores simples (tabela.coluna) são aceitos
-      if (!/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/.test(key)) return
-      const filterTable = key.includes('.') ? key.split('.')[0] : tableName
-      const filterCol = key.includes('.') ? key.split('.')[1] : key
-      if (!columnExists(filterTable, filterCol)) return
-      candidateFilters.push({ col: { table: filterTable, column: filterCol }, value: String(val) })
+    // Toda a lógica de tabelas, JOINs mínimos, filtros e recursos do widget está no planejador (lib/bi/widgetPlan),
+    // que também roda no app exportado. Aqui só se envia o que ele decidiu.
+    const plan = planWidgetQuery({
+      widget,
+      models: (project as any).models || [],
+      relations: projectRelations,
+      dialect,
+      layoutJoins: joins,
+      screenFilters: filters,
+      period: widgetPeriod(widget),
+      legacy: opts.legacy,
+      failureReason: opts.reason,
+      projectSlug: (project as any)?.slug,
+      rawRowLimit: BI_ROW_LIMIT,
+      maxGroups: BI_MAX_GROUPS,
     })
-    const validFilters = candidateFilters.filter(f => joinedTables.has(f.col.table))
+    plan.warnings.forEach(w => console.warn(w))
+
+    delete prevQueryIds.current[widget.id]
+    if (!plan.compare) setPrevData(prev => { if (!(widget.id in prev)) return prev; const next = { ...prev }; delete next[widget.id]; return next })
+
+    if (plan.kind === 'error' || !plan.sql) {
+      setErrors(prev => ({ ...prev, [widget.id]: plan.message || 'Não foi possível montar a consulta' }))
+      setLoading(prev => ({ ...prev, [widget.id]: false }))
+      return
+    }
 
     const sendQuery = (sql: string, mode: 'agg' | 'raw' | 'prev', limit: number, qid: string = queryId) => {
       queryModes.current[qid] = mode
@@ -639,8 +388,8 @@ export default function AnalyticsDashboard({
             action: 'select',
             query: sql, // ← 'query' é o campo lido pelo CLI
             sql,        // ← mantido por compatibilidade
-            schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
-            table: tableName,
+            schemaName: plan.schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
+            table: plan.tableName,
             limit,      // ← o CLI só reconhece o limite se vier aqui ou como LIMIT/FETCH NEXT no SQL
             // 'filters' não é enviado: o WHERE já está no SQL e o CLI o acrescentaria de novo depois do LIMIT
             token: project?.secret_token || 'test-token',
@@ -650,160 +399,13 @@ export default function AnalyticsDashboard({
       }, 500)
     }
 
-    // Tabelas que o widget realmente usa (grupo, valor, fórmula e filtros) → JOINs mínimos
-    const resolveRef = (s: string) => s.includes('.') ? { table: s.split('.')[0], column: s.split('.')[1] } : { table: tableName, column: s }
-    const rawField = widget.field && widget.field !== '*' ? String(widget.field) : ''
-    const aggFormula = rawField && ((widget as any).use_formula || /[*+/()]/.test(rawField)) ? rawField : null
-    let fieldRef: { table: string; column: string } | null = null
-    if (rawField && !aggFormula) {
-      const fieldMeta = model?.fields?.find((f: any) => String(f.id) === rawField)
-      fieldRef = resolveRef(fieldMeta?.db_column_name || rawField)
+    sendQuery(plan.sql, plan.kind === 'agg' ? 'agg' : 'raw', plan.limit ?? BI_ROW_LIMIT)
+    // KPI com comparação: segunda consulta, igual à primeira mas no período anterior
+    if (plan.kind === 'agg' && plan.prev) {
+      const prevId = crypto.randomUUID()
+      prevQueryIds.current[widget.id] = prevId
+      sendQuery(plan.prev.sql, 'prev', plan.prev.limit, prevId)
     }
-    const groupRef = typeof groupCol === 'string' && groupCol ? resolveRef(groupCol) : null
-    const usedTables = new Set<string>([fieldRef?.table, groupRef?.table].filter(Boolean) as string[])
-    if (aggFormula) for (const m of aggFormula.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z_][A-Za-z0-9_]*/g)) usedTables.add(m[1])
-
-    // Fase 2: filtros do widget (com operador), período do painel, série, métrica derivada
-    const colKind = (table: string, column: string): BiColKind => {
-      const m = (allModels as any[]).find(x => x.db_table_name === table)
-      const fs = Array.isArray(m?.fields) ? m.fields : Object.values(m?.fields || {})
-      const f = (fs as any[]).find(x => String(x.db_column_name).toLowerCase() === column.toLowerCase())
-      return biFieldKind(f)
-    }
-    const conditions: BiCondition[] = []
-    ;(widget.conditions || []).forEach(c => {
-      if (!c?.field || !c.op) return
-      const noValue = c.op === 'is_null' || c.op === 'not_null'
-      if (!noValue && (c.value === undefined || c.value === '')) return
-      if (c.op === 'between' && (c.value2 === undefined || c.value2 === '')) return
-      const ref = resolveRef(String(c.field))
-      conditions.push({ col: ref, op: c.op as BiConditionOp, kind: colKind(ref.table, ref.column), value: c.value, value2: c.value2 })
-    })
-    const wPeriod = widgetPeriod(widget)
-    const baseConditions = [...conditions]
-    const periodConditions = (range: PeriodRange): BiCondition[] => {
-      const ref = resolveRef(widget.period_field as string)
-      return [
-        { col: ref, op: 'gte', kind: 'date', value: range.from },
-        { col: ref, op: 'lt', kind: 'date', value: nextDay(range.to) },
-      ]
-    }
-    if (widget.period_field && wPeriod) conditions.push(...periodConditions(wPeriod))
-    const compare = widget.type === 'kpi' && !widget.group_by && !!widget.compare_previous && !!widget.period_field && !!wPeriod
-    delete prevQueryIds.current[widget.id]
-    if (!compare) setPrevData(prev => { if (!(widget.id in prev)) return prev; const next = { ...prev }; delete next[widget.id]; return next })
-    const seriesRef = widget.series_by && widget.group_by && ['bar', 'line', 'area'].includes(widget.type) ? resolveRef(widget.series_by) : null
-    const divideBy = widget.divide_by?.calc
-      ? { calc: widget.divide_by.calc, field: widget.divide_by.field ? resolveRef(widget.divide_by.field) : null }
-      : null
-    // agrupar por chave estrangeira: mostra o nome do registro relacionado em vez do UUID
-    const groupLabel = groupRef ? resolveFkLabel(allModels as any[], resolvedRelations, groupRef) : null
-    const seriesLabel = seriesRef ? resolveFkLabel(allModels as any[], resolvedRelations, seriesRef) : null
-    if (groupLabel) usedTables.add(groupLabel.label.table)
-    if (seriesLabel) usedTables.add(seriesLabel.label.table)
-    conditions.forEach(c => usedTables.add(c.col.table))
-    if (seriesRef) usedTables.add(seriesRef.table)
-    if (divideBy?.field) usedTables.add(divideBy.field.table)
-    // recursos que só o SQL agregado entrega (o caminho de linhas cruas não os implementa)
-    const needsAgg = conditions.length > 0 || !!seriesRef || !!divideBy || widget.calc === 'COUNT_DISTINCT' ||
-      widget.date_granularity === 'week' || widget.date_granularity === 'quarter'
-    let buildReason = ''
-
-    // JOINs mínimos: só as tabelas que o widget usa (grupo, valor e filtros). Os JOINs do caso de uso inteiro
-    // (entregas, projetos, tarefas...) repetiam cada pedido e inflavam SUM/AVG.
-    const filterTables = candidateFilters.map(f => f.col.table)
-    const minimal = resolveJoinSql([...usedTables, ...filterTables].filter(t => t !== tableName), widget.joins || [])
-    const aggFilters = candidateFilters.filter(f => minimal.joinedTables.has(f.col.table))
-
-    const minimalOk = [...usedTables].every(t => minimal.joinedTables.has(t))
-
-    // 1) Caminho novo: o banco agrega (GROUP BY / SUM / COUNT) e devolve só as linhas do gráfico
-    if (dialect && !opts.legacy) {
-      if (minimalOk) {
-        const built = buildAggregateQuery({
-          dialect,
-          mainTable: tableName,
-          mainPk: getPkColumn(allModels as any[], tableName) || 'id',
-          joinSql: minimal.joinSql,
-          calc: widget.calc,
-          formula: aggFormula,
-          field: fieldRef,
-          groupBy: groupRef,
-          granularity: widget.date_granularity,
-          sortBy: widget.sort_by,
-          limitTopN: widget.limit_top_n,
-          filters: aggFilters,
-          conditions,
-          series: seriesRef,
-          divideBy,
-          groupLabel,
-          seriesLabel,
-          maxGroups: BI_MAX_GROUPS,
-        })
-        if (built.ok) {
-          sendQuery(built.sql, 'agg', BI_MAX_GROUPS + 100)
-          // KPI com comparação: segunda consulta, igual à primeira mas no período anterior
-          if (compare && wPeriod) {
-            const prevBuilt = buildAggregateQuery({
-              dialect,
-              mainTable: tableName,
-              mainPk: getPkColumn(allModels as any[], tableName) || 'id',
-              joinSql: minimal.joinSql,
-              calc: widget.calc,
-              formula: aggFormula,
-              field: fieldRef,
-              groupBy: null,
-              filters: aggFilters,
-              conditions: [...baseConditions, ...periodConditions(previousRange(wPeriod))],
-              divideBy,
-              maxGroups: BI_MAX_GROUPS,
-            })
-            if (prevBuilt.ok) {
-              const prevId = crypto.randomUUID()
-              prevQueryIds.current[widget.id] = prevId
-              sendQuery(prevBuilt.sql, 'prev', BI_MAX_GROUPS + 100, prevId)
-            }
-          }
-          return
-        }
-        buildReason = built.reason
-        console.warn('[BI] consulta agregada não aplicável, usando linhas cruas:', built.reason)
-      } else {
-        buildReason = 'tabela do indicador sem relação com as demais (verifique o caminho de relacionamento)'
-      }
-    }
-
-    if (needsAgg) {
-      const why = opts.reason ? `consulta falhou no banco: ${opts.reason}` : buildReason || 'este indicador exige banco PostgreSQL ou Oracle'
-      setErrors(prev => ({ ...prev, [widget.id]: `Não foi possível calcular: ${why}` }))
-      setLoading(prev => ({ ...prev, [widget.id]: false }))
-      return
-    }
-
-    // 2) Caminho de reserva: busca linhas cruas (limitadas) e agrega no navegador
-    // Mesmo no caminho de reserva, só junta o necessário quando possível (senão JOINs 1:N repetem as linhas)
-    const rawJoinSql = minimalOk ? minimal.joinSql : joinSql
-    const rawJoined = minimalOk ? minimal.joinedTables : joinedTables
-    const rawFilters = minimalOk ? aggFilters : validFilters
-    const whereClause = ['1=1', ...rawFilters.map(f => filterConditionSql(dialect ?? 'other', f))].join(' AND ')
-    let sqlSelect = '*'
-    if (selectStr !== '*') {
-      sqlSelect = selectStr.split(',').filter(s => {
-        const col = s.trim()
-        return !col.includes('.') || rawJoined.has(col.split('.')[0]) || col.split('.')[0] === tableName
-      }).map(s => {
-        const col = s.trim()
-        if (col === '*') return '*'
-        if (col.includes('.')) {
-          const p = col.split('.')
-          return `"${p[0]}"."${p[1]}"`
-        }
-        return `"${tableName}"."${col}"`
-      }).join(', ')
-    }
-
-    const limitSql = dbType === 'oracle' ? `OFFSET 0 ROWS FETCH NEXT ${BI_ROW_LIMIT} ROWS ONLY` : `LIMIT ${BI_ROW_LIMIT}`
-    sendQuery(`SELECT ${sqlSelect} FROM "${tableName}"${rawJoinSql} WHERE ${whereClause} ${limitSql}`, 'raw', BI_ROW_LIMIT)
   }
 
   fetchWidgetDataRef.current = fetchWidgetData

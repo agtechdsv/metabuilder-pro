@@ -97,3 +97,14 @@ describe('widgetReferencedTables', () => {
     expect(widgetReferencedTables({ group_by: 'pedidos.cliente_id' }, 'pedidos', models, fk)).toEqual(['clientes'])
   })
 })
+
+import { quoteFor } from '../bi/queryBuilder'
+
+describe('buildJoinSql com delimitador do banco', () => {
+  const steps = [{ fromTable: 'pedidos', fromField: 'cliente_id', toTable: 'clientes', toField: 'id' }]
+  it('padrão aspas duplas; MySQL crase; SQL Server colchetes', () => {
+    expect(buildJoinSql(steps)).toBe(' LEFT JOIN "clientes" ON "pedidos"."cliente_id" = "clientes"."id"')
+    expect(buildJoinSql(steps, undefined, quoteFor('mysql'))).toBe(' LEFT JOIN `clientes` ON `pedidos`.`cliente_id` = `clientes`.`id`')
+    expect(buildJoinSql(steps, undefined, quoteFor('sqlserver'))).toBe(' LEFT JOIN [clientes] ON [pedidos].[cliente_id] = [clientes].[id]')
+  })
+})

@@ -2504,7 +2504,10 @@ export function parseMetaBuilderJSON(
       }
 
       analyticsConfig = {
+        groups: Array.isArray(ac.groups) ? ac.groups : [],
         widgets: (ac.widgets || []).map((w: any) => ({
+          // esquema único: o widget original com os campos resolvidos para "tabela.coluna"
+          spec: { ...w, id: w.id, model_id: w.model_id || resolvedView.model_id || model.id, field: resolveWidgetColumn(w.field), group_by: resolveWidgetColumn(w.group_by) },
           id: w.id || `widget_${Math.random().toString(36).substr(2, 9)}`,
           title: w.title || 'Widget',
           type: w.type || 'bar',
@@ -2535,6 +2538,8 @@ export function parseMetaBuilderJSON(
         // Pushdown: campo de data para filtro no banco (ex: 'data_pedido', 'created_at')
         dateFilterField: ac.date_filter_field || undefined,
       }
+      // o widget original (spec) e o do gerador antigo precisam ter o mesmo id
+      analyticsConfig.widgets.forEach(wd => { if (wd.spec) wd.spec.id = wd.id })
     }
 
     // Auto-descobre todos os joins necessários usando o resolvedor BFS do Santo Graal

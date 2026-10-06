@@ -1,3 +1,5 @@
+import type { BiWidget } from '@/lib/bi/widget'
+import type { BiGroup } from '@/lib/bi/groups'
 // ─── Shared Types for UseCaseBuilderWizard ─────────────────────────────────
 
 export interface UseCaseBuilderWizardProps {
@@ -104,6 +106,8 @@ export interface BlueprintConfig {
 
 export interface AnalyticsConfig {
   widgets: BiWidget[]
+  /** agrupamentos de widgets (a ordem do array é a ordem na tela) */
+  groups?: BiGroup[]
   allow_runtime_edit: boolean
   /**
    * Campo de data para pushdown de filtro no banco.
@@ -112,37 +116,8 @@ export interface AnalyticsConfig {
   date_filter_field?: string
 }
 
-export interface BiWidget {
-  id: string
-  title?: string
-  type: string
-  model_id?: string
-  field?: string
-  calc?: string
-  group_by?: string
-  width?: string
-  joins?: JoinConfig[]
-  // aparência
-  format?: string
-  decimals?: number
-  currency?: string
-  color?: string
-  show_labels?: boolean
-  highlight_max?: boolean
-  orientation?: string
-  stacked?: boolean
-  // Fase 2 (só o runtime; o app exportado passa a usar na Fase 2b)
-  conditions?: { field: string; op: string; value?: string; value2?: string }[]
-  series_by?: string
-  divide_by?: { calc: string; field?: string }
-  period_field?: string
-  period_mode?: 'panel' | 'fixed' | 'own' | 'group'
-  period_fixed?: string
-  group_id?: string
-  relation_paths?: Record<string, string>
-  compare_previous?: boolean
-  compare_invert?: boolean
-}
+// Esquema único do widget de BI (compartilhado com o painel em execução e com o gerador do app exportado)
+export type { BiWidget, BiWidgetCondition } from '@/lib/bi/widget'
 
 export interface JoinConfig {
   id?: string

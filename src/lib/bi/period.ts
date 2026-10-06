@@ -78,3 +78,9 @@ export function previousRange(r: PeriodRange): PeriodRange {
   prevFrom.setDate(prevFrom.getDate() - (days - 1))
   return { from: iso(prevFrom), to: iso(prevTo) }
 }
+
+/** Dia seguinte (YYYY-MM-DD), em UTC para não depender do fuso. */
+export function nextDay(d: string): string {
+  const [y, m, dd] = d.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
+}

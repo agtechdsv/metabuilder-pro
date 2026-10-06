@@ -1,3 +1,5 @@
+import type { BiWidget } from '../bi/widget'
+import type { BiGroup } from '../bi/groups'
 /**
  * ast.ts
  *
@@ -292,6 +294,11 @@ export interface RouteNode {
 }
 
 export interface AnalyticsWidget {
+  /**
+   * Widget original (esquema único de lib/bi/widget.ts) com os campos já resolvidos para "tabela.coluna".
+   * É a fonte da verdade do motor novo; os campos em camelCase abaixo existem só para o gerador antigo e serão removidos.
+   */
+  spec?: BiWidget
   id: string
   title: string
   type: 'kpi' | 'bar' | 'pie' | 'line' | 'gauge' | string
@@ -321,6 +328,8 @@ export interface AnalyticsWidget {
 
 export interface AnalyticsConfig {
   widgets: AnalyticsWidget[]
+  /** agrupamentos de widgets (ordem = ordem na tela) */
+  groups?: BiGroup[]
   allowRuntimeEdit?: boolean
   /**
    * Campo de data usado pelo filtro global de período (ex: 'data_pedido', 'created_at').
