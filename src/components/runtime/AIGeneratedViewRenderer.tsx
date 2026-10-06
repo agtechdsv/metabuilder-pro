@@ -152,29 +152,28 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
       // Dynamic import lucide for icons
       import('lucide-react').then((lucide: any) => {
         const activeTunnel = tunnelChannel || internalTunnel
+        // Identidades ESTÁVEIS: o componente gerado costuma ter useEffect/useCallback que dependem de `supabase` e `toast`.
+        // Se cada renderização devolvesse objetos novos, o efeito rodaria de novo a cada render (laço infinito de recargas).
+        const sharedClient = createTunnelSupabaseClient(activeTunnel, supabase, projectToken || '', projectSlug)
+        const toastFn = (msg: any, type?: string) => {
+          if (typeof msg === 'object' && msg !== null) {
+            const message = msg.description || msg.title || JSON.stringify(msg)
+            // respeita o tipo informado pelo componente (error, warning, success, info); depois a variante
+            const declared = ['error', 'warning', 'success', 'info'].includes(msg.type) ? msg.type : null
+            const toastType = declared || (msg.variant === 'destructive' ? 'error' : msg.variant === 'default' ? 'info' : 'success')
+            toast(message, toastType)
+          } else {
+            toast(msg, (type as any) || 'success')
+          }
+        }
+        const stableToast = { toast: toastFn, addToast: toastFn }
+        const stableI18n = { t: (key: string) => key }
         const customRequire = (modName: string) => {
           if (modName === 'react') return React
           if (modName === 'lucide-react') return lucide
-          if (modName === '@/utils/supabase/client') return { createClient: () => createTunnelSupabaseClient(activeTunnel, supabase, projectToken || '', projectSlug) }
-          if (modName === '@/components/ui/Toast') return { 
-            useToast: () => {
-              const toastFn = (msg: any, type?: string) => {
-                if (typeof msg === 'object' && msg !== null) {
-                  const message = msg.description || msg.title || JSON.stringify(msg)
-                  const toastType = msg.variant === 'destructive' ? 'error' : (msg.variant === 'default' ? 'info' : 'success')
-                  toast(message, toastType)
-                } else {
-                  toast(msg, (type as any) || 'success')
-                }
-              }
-              return { 
-                toast: toastFn,
-                addToast: toastFn 
-              }
-            } 
-          }
-          if (modName === '@/components/ui/Modal') return { __esModule: true, default: Modal, Modal }
-          if (modName.includes('i18n')) return { useI18n: () => ({ t: (key: string) => key }) }
+          if (modName === '@/utils/supabase/client') return { createClient: () => sharedClient }
+          if (modName === '@/components/ui/Toast') return { useToast: () => stableToast }
+          if (modName.includes('i18n')) return { useI18n: () => stableI18n }
           return {}
         }
 
