@@ -139,8 +139,10 @@ NUNCA retorne texto fora do JSON quando for gerar. NUNCA use markdown fences (\`
     } catch { /* ignora */ }
   }
 
-  let aiResponse: Response
+  let aiResponse!: Response
 
+  // Sobrecarga temporária do provedor (503) ou limite de uso (429): tenta de novo até 3 vezes, com espera crescente
+  for (let attempt = 0; attempt < 3; attempt++) {
   try {
     if (provider === 'openai' || provider === 'custom') {
       const endpoint = base_url ? `${base_url}/chat/completions` : 'https://api.openai.com/v1/chat/completions'
@@ -193,9 +195,19 @@ NUNCA retorne texto fora do JSON quando for gerar. NUNCA use markdown fences (\`
   } catch (err: any) {
     return NextResponse.json({ error: `Falha ao conectar com a IA: ${err.message}` }, { status: 502 })
   }
+  if ((aiResponse.status === 503 || aiResponse.status === 429) && attempt < 2) {
+    await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)))
+    continue
+  }
+  break
+  }
 
   if (!aiResponse.ok) {
     const errorText = await aiResponse.text()
+    if (aiResponse.status === 503 || aiResponse.status === 429) {
+      console.warn('[ai-builder/chat] provedor indisponível/limitado:', aiResponse.status, errorText.slice(0, 300))
+      return NextResponse.json({ error: 'O provedor de IA está sobrecarregado ou atingiu o limite de uso agora. Tente novamente em instantes ou escolha outro modelo nas configurações.' }, { status: 503 })
+    }
     return NextResponse.json({ error: `Erro da IA (${aiResponse.status}): ${errorText}` }, { status: 502 })
   }
 
