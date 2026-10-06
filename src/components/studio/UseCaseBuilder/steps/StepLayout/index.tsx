@@ -1084,6 +1084,7 @@ export function StepLayout({ config, setConfig, models, enumerations = [], relat
             joins={config.layout_config.joins || []}
             t={t}
             groups={config.layout_config.analytics_config?.groups || []}
+            relations={relations}
           />
 
 

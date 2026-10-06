@@ -139,6 +139,7 @@ export interface BiWidget {
   period_mode?: 'panel' | 'fixed' | 'own' | 'group'
   period_fixed?: string
   group_id?: string
+  relation_paths?: Record<string, string>
   compare_previous?: boolean
   compare_invert?: boolean
 }

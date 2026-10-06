@@ -701,6 +701,7 @@ export default function ViewPageContent({
 
       <ViewActionModals
         analyticsGroups={((localAnalyticsConfig || initialAnalyticsConfig) as any)?.groups || []}
+        analyticsRelations={projectRelations}
         formHeaderSubtitleField={formHeaderSubtitleField}
         isDrawerOpen={isDrawerOpen}
         isModalOpen={isModalOpen}

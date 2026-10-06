@@ -8,6 +8,9 @@ import { Modal } from '@/components/ui/Modal'
 import { BI_FORMAT_OPTIONS, BI_PALETTES } from '@/lib/bi/format'
 import { biFieldKind } from '@/lib/bi/columnKind'
 import { PERIOD_PRESETS } from '@/lib/bi/period'
+import { resolveRelations } from '@/lib/relationPathFinder'
+import { ambiguousTables, automaticPath, describePath, pathSignature } from '@/lib/relationPaths'
+import { widgetReferencedTables } from '@/lib/bi/widgetTables'
 
 interface BIWidgetEditorProps {
   editingWidget: any
@@ -17,6 +20,8 @@ interface BIWidgetEditorProps {
   t: (key: string) => string
   /** grupos do painel (criados e organizados no Studio); o widget escolhe um deles */
   groups?: { id: string; title: string }[]
+  /** relações do projeto (como vêm do banco); permitem escolher o caminho entre tabelas */
+  relations?: any[]
 }
 
 const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
@@ -39,7 +44,7 @@ const OPS_BY_KIND: Record<string, { value: string; label: string }[]> = {
 const selectCls = 'w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-2 text-[10px] font-bold text-neutral-900 dark:text-white'
 const labelCls = 'text-[8px] font-black uppercase tracking-widest text-neutral-400 ml-1'
 
-export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, groups = [] }: BIWidgetEditorProps) {
+export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins, t, groups = [], relations = [] }: BIWidgetEditorProps) {
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
   const currentModel = models.find((m: any) => String(m.id) === String(editingWidget?.model_id))
 
@@ -74,6 +79,20 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
   const validFieldValues = new Set<string>(models.flatMap((m: any) => (m.fields || []).map((f: any) => `${m.db_table_name}.${f.db_column_name}`)))
   const staleOption = (v?: string) =>
     v && !validFieldValues.has(v) ? <option value={v}>⚠ {v} (sem tabela, selecione novamente)</option> : null
+
+  // Caminho entre tabelas: só aparece quando alguma tabela do widget pode ser alcançada por mais de um caminho
+  const mainTable: string | undefined = currentModel?.db_table_name
+  const resolvedRels = resolveRelations(relations, models)
+  const tableLabel = (tbl: string) => models.find((m: any) => m.db_table_name === tbl)?.display_name || tbl
+  const ambiguous = mainTable
+    ? ambiguousTables(resolvedRels, mainTable, widgetReferencedTables(editingWidget, mainTable, models, resolvedRels))
+    : []
+  const setRelationPath = (table: string, signature: string) => {
+    const next = { ...(editingWidget?.relation_paths || {}) }
+    if (signature) next[table] = signature
+    else delete next[table]
+    setEditingWidget({ ...editingWidget, relation_paths: Object.keys(next).length ? next : undefined })
+  }
 
   const conditions: any[] = editingWidget?.conditions || []
   const setConditions = (next: any[]) => setEditingWidget({ ...editingWidget, conditions: next })
@@ -365,6 +384,32 @@ export function BIWidgetEditor({ editingWidget, setEditingWidget, models, joins,
              </>
            ) : null}
          </div>
+
+         {/* Caminho entre tabelas (só quando há mais de uma forma de ligar) */}
+         {ambiguous.length > 0 && (
+           <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 ml-1">Caminho entre tabelas</label>
+             <p className="text-[9px] font-bold text-neutral-400 ml-1">
+               Há mais de uma forma de ligar {tableLabel(mainTable as string)} às tabelas abaixo. Escolha a que representa o que você quer medir.
+             </p>
+             {ambiguous.map(({ table, paths }) => {
+               const auto = automaticPath(resolvedRels, mainTable as string, table)
+               const current = editingWidget?.relation_paths?.[table] || ''
+               return (
+                 <div key={table} className="space-y-1">
+                   <label className={labelCls}>{tableLabel(table)}</label>
+                   <select value={current} onChange={e => setRelationPath(table, e.target.value)} className={selectCls}>
+                     <option value="">Automático{auto ? ` — ${describePath(auto, tableLabel)}` : ''}</option>
+                     {paths.map(p => {
+                       const sig = pathSignature(p)
+                       return <option key={sig} value={sig}>{describePath(p, tableLabel)}</option>
+                     })}
+                   </select>
+                 </div>
+               )
+             })}
+           </div>
+         )}
 
          {/* Filtros do widget */}
          <div className="space-y-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">

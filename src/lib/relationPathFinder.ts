@@ -132,7 +132,7 @@ export function findJoinPath(
 /**
  * Retorna os vizinhos de uma tabela no grafo de relações (bidirecional).
  */
-function getNeighbors(
+export function getNeighbors(
   relations: ResolvedRelation[],
   tableName: string
 ): Array<{ step: JoinStep; neighborTable: string }> {
@@ -188,7 +188,9 @@ function getNeighbors(
 export function resolveAllJoins(
   relations: ResolvedRelation[],
   rootTable: string,
-  additionalTables: string[]
+  additionalTables: string[],
+  /** caminho escolhido pelo desenvolvedor por tabela (chave em minúsculas); sem escolha vale o mais curto (BFS) */
+  preferred?: Record<string, JoinStep[]>
 ): JoinStep[] {
   const joinedTables = new Set<string>([rootTable.toLowerCase()])
   const allSteps: JoinStep[] = []
@@ -202,6 +204,22 @@ export function resolveAllJoins(
         .filter(t => t && t !== rootTable.toLowerCase())
     ),
   ]
+
+  // Caminhos escolhidos pelo desenvolvedor entram primeiro (e têm prioridade sobre o mais curto)
+  for (const target of uniqueTables) {
+    const chosen = preferred?.[target]
+    if (!chosen || chosen.length === 0) continue
+    for (const step of chosen) {
+      const key = `${step.fromTable}.${step.fromField}→${step.toTable}.${step.toField}`
+      const reverseKey = `${step.toTable}.${step.toField}→${step.fromTable}.${step.fromField}`
+      if (!seenJoinKeys.has(key) && !seenJoinKeys.has(reverseKey)) {
+        allSteps.push(step)
+        seenJoinKeys.add(key)
+      }
+      joinedTables.add(step.fromTable.toLowerCase())
+      joinedTables.add(step.toTable.toLowerCase())
+    }
+  }
 
   // Tenta adicionar cada tabela necessária usando BFS
   // Iteração em loop para suportar dependências transitivas

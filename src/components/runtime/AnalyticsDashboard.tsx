@@ -30,7 +30,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
-import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames } from '@/lib/relationPathFinder'
+import { resolveRelations, resolveAllJoins, buildJoinSql, extractTableNames, type JoinStep } from '@/lib/relationPathFinder'
+import { findAlternativePaths, pathSignature } from '@/lib/relationPaths'
 
 interface Widget {
   id: string
@@ -76,6 +77,8 @@ interface Widget {
   period_fixed?: string
   /** agrupamento (seção recolhível) a que o widget pertence: id em analytics_config.groups */
   group_id?: string
+  /** caminho de relação escolhido por tabela (assinatura do caminho); sem escolha vale o mais curto */
+  relation_paths?: Record<string, string>
   /** KPI sem agrupamento: mostra a variação contra o período anterior (exige o campo de data do período) */
   compare_previous?: boolean
   /** menor é melhor (ex.: devoluções): a seta fica verde quando o valor cai */
@@ -504,6 +507,12 @@ export default function AnalyticsDashboard({
 
     // Monta os JOINs para um conjunto de tabelas. Chamada duas vezes: com tudo (caminho de linhas cruas, como antes)
     // e só com as tabelas que o widget usa (SQL agregado, para não multiplicar linhas).
+    // caminhos de relação que o desenvolvedor escolheu no editor (tabela → caminho); a escolha só vale se ainda existir
+    const preferredPaths: Record<string, JoinStep[]> = {}
+    for (const [tbl, sig] of Object.entries(widget.relation_paths || {})) {
+      const hit = findAlternativePaths(resolvedRelations, tableName, tbl).find(p => pathSignature(p) === sig)
+      if (hit) preferredPaths[tbl.toLowerCase()] = hit
+    }
     const resolveJoinSql = (referenced: string[], legacy: any[]) => {
     let joinSql = ''
     const joinedTables = new Set<string>([tableName])
@@ -511,7 +520,7 @@ export default function AnalyticsDashboard({
     if (resolvedRelations.length > 0 && referenced.length > 0) {
       // Use Santo Graal BFS
       const uniqueReferenced = [...new Set(referenced.filter(t => t !== tableName))]
-      const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced)
+      const steps = resolveAllJoins(resolvedRelations, tableName, uniqueReferenced, preferredPaths)
       joinSql += buildJoinSql(steps)
       steps.forEach(s => { joinedTables.add(s.fromTable); joinedTables.add(s.toTable) })
     }
