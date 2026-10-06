@@ -1033,6 +1033,8 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
         dDetails.push({
           model_name: tableName,
           _isNew: true,
+          // criada sozinha pelo formulário: só é gravada se o usuário mexer nela (veja isUntouchedAutoDetail)
+          _auto: true,
           id: newId
         })
         newExpandedState[`detail-${tableName}-${newId}`] = true

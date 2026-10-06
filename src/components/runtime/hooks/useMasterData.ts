@@ -1,6 +1,6 @@
 import { useToast } from '@/components/ui/Toast'
 import { resolveFkColumn, warnFkResolution, missingRelationMessage } from '@/lib/schemaResolver'
-import { readKey } from '@/lib/detailRelations'
+import { readKey, isUntouchedAutoDetail } from '@/lib/detailRelations'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
@@ -369,6 +369,8 @@ export function useMasterData({
           if (!rowTable) continue
 
           const isNew = row._isNew
+          // linha em branco que o formulário criou sozinho e o usuário não tocou: não vira registro no banco
+          if (isUntouchedAutoDetail(row)) continue
 
           const modelDef = project?.models?.find((m: any) => m.db_table_name?.toLowerCase() === rowTable?.toLowerCase())
           let rowPkField = modelDef?.fields?.find((f: any) => f.is_primary_key)

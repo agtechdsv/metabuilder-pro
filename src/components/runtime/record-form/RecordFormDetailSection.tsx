@@ -421,7 +421,15 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             })();
 
             return (
-              <div key={uniqueKey} id={`detail-container-${uniqueKey}`} className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
+              <div
+                key={uniqueKey}
+                id={`detail-container-${uniqueKey}`}
+                // digitar ou escolher algo numa linha criada sozinha pelo formulário a torna "tocada": só então ela é gravada
+                onInputCapture={detail._auto && !detail._touched ? () => setFormData((prev: any) => ({
+                  ...prev,
+                  _details: (prev._details || []).map((d: any) => (d === detail || (d._auto && d.id === detail.id && d.model_name === detail.model_name)) ? { ...d, _touched: true } : d),
+                })) : undefined}
+                className={cn("flex flex-col gap-1 rounded-2xl transition-all duration-300", expandedDetails[uniqueKey] ? "bg-indigo-50/50 dark:bg-indigo-950/20 ring-1 ring-indigo-500/20 p-0.5" : "")}>
                 <div className={cn(
                   "py-2.5 px-3 border rounded-xl flex items-center justify-between group animate-in fade-in slide-in-from-top-2 duration-300 transition-all",
                   expandedDetails[uniqueKey]

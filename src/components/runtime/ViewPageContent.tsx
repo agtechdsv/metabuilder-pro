@@ -447,6 +447,8 @@ export default function ViewPageContent({
         initialData._details.push({
           model_name: tableName,
           _isNew: true,
+          // criada sozinha: só é gravada se o usuário mexer nela
+          _auto: true,
           id: crypto.randomUUID(),
         })
       })

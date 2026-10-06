@@ -71,3 +71,14 @@ export function isUnsavedRecord(record: any): boolean {
   const id = record.id ?? record.ID
   return typeof id === 'string' && id.startsWith('temp-')
 }
+
+/**
+ * Linha de detalhe que o formulário criou sozinho (em branco, só com valores padrão) e que o usuário não tocou.
+ * Gravá-la criava registros fantasmas (ex.: um pedido "Pendente" para todo cliente novo), que depois impediam
+ * excluir o cliente. Vale só para linhas com a marca `_auto`; se o usuário mexeu nela, ou adicionou itens dentro
+ * dela, ela é gravada normalmente.
+ */
+export function isUntouchedAutoDetail(row: any): boolean {
+  if (!row || !row._isNew || !row._auto || row._touched) return false
+  return !(Array.isArray(row._details) && row._details.length > 0)
+}
