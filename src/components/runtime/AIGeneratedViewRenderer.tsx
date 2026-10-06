@@ -42,6 +42,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { transform } from 'sucrase'
+import { repairJsxAttributeQuotes } from '@/lib/aiComponentCode'
 import { createTunnelSupabaseClient } from './TunnelSupabaseProxy'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 
@@ -111,13 +112,21 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
         .trim()
 
       // Use sucrase to transpile TypeScript and JSX to standard JavaScript
+      const compile = (src: string) => transform(src, {
+        transforms: ['typescript', 'jsx', 'imports'],
+        jsxRuntime: 'classic' // Uses React.createElement
+      }).code
       try {
-        code = transform(code, {
-          transforms: ['typescript', 'jsx', 'imports'],
-          jsxRuntime: 'classic' // Uses React.createElement
-        }).code
+        code = compile(code)
       } catch (transpileErr: any) {
-        throw new Error(`Erro na transpilação TypeScript/JSX: ${transpileErr.message}`)
+        // erro conhecido da IA (aspas escapadas em atributos JSX): tenta o reparo antes de desistir
+        const repaired = repairJsxAttributeQuotes(code)
+        try {
+          if (repaired === code) throw transpileErr
+          code = compile(repaired)
+        } catch {
+          throw new Error(`Erro na transpilação TypeScript/JSX: ${transpileErr.message}`)
+        }
       }
 
       // Build require-like shim for known imports

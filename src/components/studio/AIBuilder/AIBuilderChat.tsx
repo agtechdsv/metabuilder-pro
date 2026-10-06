@@ -8,6 +8,7 @@ import { AIBuilderReviewPanel } from './AIBuilderReviewPanel'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { prepareComponentCode } from '@/lib/aiComponentCode'
 
 interface Message {
   id: string
@@ -316,7 +317,14 @@ export function AIBuilderChat({
         console.error('Falha ao fazer parse do JSON da IA:', e)
       }
 
-      const isValidOutput = parseSuccess && parsedJson?.component_code
+      // O código precisa compilar: repara erros conhecidos (ex.: aspas escapadas em atributos JSX) e, se ainda falhar, avisa
+      let compileFailure: string | null = null
+      if (parseSuccess && parsedJson?.component_code) {
+        const prepared = prepareComponentCode(String(parsedJson.component_code))
+        if (prepared.ok) parsedJson.component_code = prepared.code
+        else compileFailure = prepared.error
+      }
+      const isValidOutput = parseSuccess && parsedJson?.component_code && !compileFailure
 
       setMessages((prev) =>
         prev.map((m) =>
@@ -341,8 +349,18 @@ export function AIBuilderChat({
           new_tables: newTables,
         }))
         setShowReview(true)
-      } else {
-        // Se falhou, adiciona uma mensagem do sistema informando o usuário
+      } else if (compileFailure) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: 'system',
+            content: '⚠️ **Aviso:** O código gerado não compila (' + compileFailure + '). Envie "Corrija o erro de compilação: ' + compileFailure + '" para a IA gerar de novo.',
+          }
+        ])
+      } else if (/"component_code"\s*:/.test(fullContent) || /^\s*(```(json)?\s*)?\{/.test(fullContent)) {
+        // Parece uma tentativa de gerar o caso de uso (JSON) que veio corrompido/incompleto: avisa o usuário.
+        // Resposta de conversa (texto normal) não é erro e não gera aviso.
         setMessages((prev) => [
           ...prev,
           {

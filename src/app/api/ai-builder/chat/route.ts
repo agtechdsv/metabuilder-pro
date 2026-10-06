@@ -91,6 +91,8 @@ STACK DO PROJETO:
 - Ícones: Lucide React
 - Componentes UI disponíveis: Modal de '@/components/ui/Modal', Toast de '@/components/ui/Toast'
 - O componente deve ser um 'use client' React funcional exportado como default
+- CSS: use uma tag <style>{\`...\`}</style> simples (NUNCA <style jsx>); o Tailwind não existe no código gerado em tempo de execução
+- SINTAXE JSX: em atributos entre aspas duplas NUNCA use \\" (no JSX a barra invertida não escapa). Para aspas dentro do texto use &quot; ou prefira aspas simples no atributo (ex.: placeholder='TV 50"')
 ${tablesContextStr}${newTablesStr}${currentCodeStr}
 
 REGRAS OBRIGATÓRIAS DE RESPOSTA:
