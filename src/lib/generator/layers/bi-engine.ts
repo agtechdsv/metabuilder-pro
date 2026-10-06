@@ -20,6 +20,8 @@ const SQL_DIALECTS: Partial<Record<DbType, 'postgres' | 'oracle' | 'mysql' | 'sq
 
 /** O app tem dashboards de BI e o banco aceita SQL direto? */
 export function biEngineEnabled(ast: AppAST): boolean {
+  // no backend Java o frontend fala com a API Spring (sem actions de banco): o motor só vale para o backend Node
+  if (ast.backendStack === 'java-spring') return false
   if (!SQL_DIALECTS[ast.dbStack] || !ast.biSchema) return false
   return ast.routes.some(r => (r.analyticsConfig?.widgets || []).some(w => !!w.spec))
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import ts from 'typescript'
 import { parseMetaBuilderJSON } from '../parser'
 import { generateNodeProject } from '../emitter/node-project'
+import { generateNativeProject } from '../emitter/single-project'
 import { planWidgetQuery } from '../../bi/widgetPlan'
 import { BI_RUNTIME_FILES } from '../biRuntimeFiles.generated'
 
@@ -60,6 +61,15 @@ describe('motor de BI no app exportado', () => {
     expect(run('mysql')).toContain('return (await query(sql)) as any[]')
     expect(run('sqlserver')).toContain('pool.request().query(sql)')
     expect(run('sqlserver')).toContain('result.recordset')
+  })
+
+  it('backend Java: o frontend não recebe o motor nem importa a ação de BI', () => {
+    const ast = parseMetaBuilderJSON(raw(), 'postgres', { backendStack: 'java-spring' } as any)
+    const files = generateNativeProject(ast)
+    expect([...files.keys()].some(p => p.endsWith('actions/bi.ts'))).toBe(false)
+    const pages = [...files.entries()].filter(([p]) => p.endsWith('/page.tsx') && p.includes('dashboard'))
+    expect(pages.length).toBeGreaterThan(0)
+    for (const [, src] of pages) expect(src).not.toContain('@/app/actions/bi')
   })
 
   it('Supabase (sem SQL direto) continua com a agregação em JavaScript', () => {
