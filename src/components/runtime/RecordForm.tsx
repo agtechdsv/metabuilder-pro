@@ -172,7 +172,11 @@ export default function RecordForm({
 
   const onAddDetail = (tableName: string, parentId?: any, parentTable?: string) => {
     const isTop = !parentTable || parentTable.toLowerCase() === (masterTableName || '').toLowerCase()
+    // Linhas que o formulário cria sozinho já nascem com um UUID (não "temp-"): o que as marca como não gravadas é `_isNew`
+    const isNewRowInForm = (rows: any[] | undefined): boolean => (rows || []).some((d: any) =>
+      (String(d.id ?? d.ID) === String(parentId) && !!d._isNew) || isNewRowInForm(d._details))
     const parentUnsaved = parentId === undefined || parentId === null || parentId === '' || String(parentId).startsWith('temp-')
+      || isNewRowInForm((formData as any)?._details)
     if (parentUnsaved && (!isTop || mode === 'create')) {
       setLocalChild({ tableName, parentTable, parentId, isTop })
       return
