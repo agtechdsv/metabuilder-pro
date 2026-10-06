@@ -148,6 +148,7 @@ export function generateRoutes(ast: AppAST, files: Map<string, string>) {
       // o cliente do dashboard usa estas duas bibliotecas puras (períodos e grupos), com ou sem o motor de SQL
       files.set('lib/bi/period.ts', BI_RUNTIME_FILES['lib/bi/period.ts'])
       files.set('lib/bi/groups.ts', BI_RUNTIME_FILES['lib/bi/groups.ts'])
+      files.set('lib/bi/scaleLayout.ts', BI_RUNTIME_FILES['lib/bi/scaleLayout.ts'])
       if (route.gridFields.length > 0) {
         files.set(`${routeDir}/[id]/page.tsx`, generateDetailPage(route, ast.targetLanguage))
         files.set(`${routeDir}/[id]/DetailTabsClient.tsx`, generateDetailTabsClient(route, ast.targetLanguage))

@@ -1110,6 +1110,7 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
 ${liveImport}import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode, type PeriodRange } from '@/lib/bi/period'
 import { sectionsOf, groupLabel, type BiGroup } from '@/lib/bi/groups'
+import { SCALE_PRESETS, presetOf, spanFor, type ScaleKey } from '@/lib/bi/scaleLayout'
 import {
   ResponsiveContainer,
   BarChart,
@@ -1225,7 +1226,9 @@ export function AnalyticsClient({
   const [mounted, setMounted] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [expandedWidgetId, setExpandedWidgetId] = useState<string | null>(null)
-  const [scale, setScale] = useState(1.0)
+  // Escala: muda a densidade do painel (cards por linha, altura, gráficos), não só o zoom
+  const [scaleKey, setScaleKey] = useState<ScaleKey>('normal')
+  const preset = presetOf(scaleKey)
 
   // Resultados (iniciais do servidor; atualizados quando o período muda)
   const [aggregatedData, setAggregatedData] = useState<Record<string, any>>(initialAggregated)
@@ -1256,12 +1259,13 @@ export function AnalyticsClient({
   }, [])
 ${liveEffect}
 
-  const scales = [
-    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: 'Pequeno' },
-    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Normal' },
-    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: 'Grande' },
-    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: 'Extra Grande' },
-  ]
+  const scaleIcons: Record<ScaleKey, React.ReactNode> = {
+    small: <Minimize2 className="w-3.5 h-3.5" />,
+    normal: <LayoutGrid className="w-3.5 h-3.5" />,
+    large: <Maximize2 className="w-3.5 h-3.5" />,
+    xl: <ZoomIn className="w-3.5 h-3.5" />,
+  }
+  const scales = SCALE_PRESETS.map(pr => ({ key: pr.key, icon: scaleIcons[pr.key], label: pr.label }))
 
   // Rótulo do campo do widget (igual ao do painel): fórmula, tabela toda ou a coluna
   const fieldLabel = (w: AnalyticsWidget): string => {
@@ -1470,7 +1474,7 @@ ${liveEffect}
     if (widget.type === 'gauge') return renderGauge(data, widget, isExpanded)
 
     const chartData = Array.isArray(data) ? data : []
-    const height = isExpanded ? 400 : 220
+    const height = isExpanded ? 400 : preset.chartHeight
 
     if (chartData.length === 0) {
       return <div className="flex-1 flex items-center justify-center text-xs font-bold text-neutral-400">Nenhum registro para o período</div>
@@ -1623,12 +1627,22 @@ ${liveEffect}
     )
   }
 
-  const getColSpanClass = (width?: string) => {
-    if (width === 'full') return 'col-span-12'
-    if (width === 'half') return 'col-span-12 lg:col-span-6'
-    if (width === 'quarter') return 'col-span-12 sm:col-span-6 lg:col-span-3'
-    return 'col-span-12 sm:col-span-6 lg:col-span-4'
+  // Classes por número de colunas (de 12), escritas por extenso para o Tailwind gerá-las
+  const COL_CLASS: Record<number, string> = {
+    2: 'col-span-12 sm:col-span-6 lg:col-span-2',
+    3: 'col-span-12 sm:col-span-6 lg:col-span-3',
+    4: 'col-span-12 sm:col-span-6 lg:col-span-4',
+    6: 'col-span-12 lg:col-span-6',
+    12: 'col-span-12',
   }
+  const BOX: Record<ScaleKey, { compact: string; full: string; pad: string; gap: string }> = {
+    small: { compact: 'min-h-[110px]', full: 'min-h-[210px]', pad: 'p-3', gap: 'gap-3' },
+    normal: { compact: 'min-h-[180px]', full: 'min-h-[340px]', pad: 'p-6', gap: 'gap-6' },
+    large: { compact: 'min-h-[220px]', full: 'min-h-[400px]', pad: 'p-6', gap: 'gap-6' },
+    xl: { compact: 'min-h-[260px]', full: 'min-h-[460px]', pad: 'p-8', gap: 'gap-6' },
+  }
+  const box = BOX[scaleKey]
+  const getColSpanClass = (width?: string) => COL_CLASS[spanFor(width, scaleKey)]
 
   const inputCls = 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[10px] font-bold text-neutral-900 dark:text-white'
   const chipCls = (active: boolean) => cn('px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all', active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:text-neutral-600')
@@ -1700,7 +1714,9 @@ ${liveEffect}
               key={w.id}
               className={cn(
                 colSpan,
-                "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden min-h-[340px]"
+                "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col justify-between shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all group relative overflow-hidden",
+                box.pad,
+                w.type === 'kpi' && !w.groupBy ? box.compact : box.full
               )}
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none group-hover:bg-indigo-500/10 transition-all" />
@@ -1805,12 +1821,12 @@ ${liveEffect}
           <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
             {scales.map(s => (
               <button
-                key={s.value}
-                onClick={() => setScale(s.value)}
+                key={s.key}
+                onClick={() => setScaleKey(s.key)}
                 title={s.label}
                 className={cn(
                   "p-1.5 rounded-lg transition-all",
-                  scale === s.value
+                  scaleKey === s.key
                     ? "bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
                     : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
                 )}
@@ -1840,7 +1856,7 @@ ${liveEffect}
                 patch => setGroupPeriods(prev => ({ ...prev, [sec.key]: { ...(prev[sec.key] || { preset: 'all', from: '', to: '' }), ...patch } })),
               )}
               {!collapsed && (
-                <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
+                <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
                   {sec.widgets.map(w => renderCard(w))}
                 </div>
               )}
@@ -1848,10 +1864,10 @@ ${liveEffect}
           )
         })}
 
-      <div className="grid grid-cols-12 gap-6" style={{ zoom: scale }}>
+      <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
 
         {/* Card Novo Indicador (Fiel à Web Produção) */}
-        <div className="col-span-12 sm:col-span-6 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-all min-h-[340px] cursor-pointer group">
+        <div className={cn(COL_CLASS[spanFor("third", scaleKey)], box.full, "border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-all cursor-pointer group")}>
           <div className="w-14 h-14 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-md shadow-neutral-500/5">
             <Plus className="w-6 h-6" />
           </div>

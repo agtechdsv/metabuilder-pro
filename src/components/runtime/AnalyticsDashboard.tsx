@@ -56,6 +56,7 @@ import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
 import { planWidgetQuery } from '@/lib/bi/widgetPlan'
 import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
+import { SCALE_PRESETS, presetOf, spanFor, widthOfSpan, type ScaleKey } from '@/lib/bi/scaleLayout'
 import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 
@@ -68,7 +69,23 @@ const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'
  * outro ganha identidade nova a cada render, e o React desmontava e remontava todos os cards a cada mudança de estado
  * (todos os widgets recarregavam e a página voltava ao topo ao trocar um período).
  */
-function SortableCard({ id, widthClass, compact, renderHeader, children }: {
+// Classes por número de colunas (de 12) e por tamanho da escala. Ficam escritas por extenso para o Tailwind gerá-las.
+const COL_CLASS: Record<number, string> = {
+  2: 'col-span-12 sm:col-span-6 lg:col-span-2',
+  3: 'col-span-12 sm:col-span-6 lg:col-span-3',
+  4: 'col-span-12 md:col-span-4',
+  6: 'col-span-12 md:col-span-6',
+  12: 'col-span-12',
+}
+const CARD_BOX: Record<ScaleKey, { compact: string; full: string; pad: string; gap: string }> = {
+  small: { compact: 'min-h-[110px]', full: 'min-h-[210px]', pad: 'p-3', gap: 'gap-3' },
+  normal: { compact: 'min-h-[180px]', full: 'min-h-[350px]', pad: 'p-6', gap: 'gap-8' },
+  large: { compact: 'min-h-[220px]', full: 'min-h-[400px]', pad: 'p-6', gap: 'gap-8' },
+  xl: { compact: 'min-h-[260px]', full: 'min-h-[460px]', pad: 'p-8', gap: 'gap-8' },
+}
+
+function SortableCard({ id, widthClass, compact, box, renderHeader, children }: {
+  box: { compact: string; full: string; pad: string }
   id: string
   widthClass: string
   /** KPI de valor único: não precisa dos 350 px de altura mínima */
@@ -79,7 +96,7 @@ function SortableCard({ id, widthClass, compact, renderHeader, children }: {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.5 : 1 }
   return (
-    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] p-6 flex flex-col transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", compact ? "min-h-[180px]" : "min-h-[350px]", widthClass)}>
+    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", box.pad, compact ? box.compact : box.full, widthClass)}>
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all" />
       {renderHeader({ attributes, listeners })}
       <div className="flex-1 flex flex-col relative z-10">{children}</div>
@@ -131,13 +148,21 @@ export default function AnalyticsDashboard({
   
   const { t, language } = useI18n()
 
-  const [scale, setScale] = useState(1.0)
-  const scales = [
-    { value: 0.8, icon: <Minimize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_small', 'Pequeno') },
-    { value: 1.0, icon: <LayoutGrid className="w-3.5 h-3.5" />, label: t('runtime.scale_normal', 'Normal') },
-    { value: 1.2, icon: <Maximize2 className="w-3.5 h-3.5" />, label: t('runtime.scale_large', 'Grande') },
-    { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: t('runtime.scale_xl', 'Extra Grande') }
-  ]
+  // Escala do painel: não é só zoom, muda a densidade (cards por linha, altura, gráficos); veja lib/bi/scaleLayout
+  const [scaleKey, setScaleKey] = useState<ScaleKey>('normal')
+  const preset = presetOf(scaleKey)
+  const box = CARD_BOX[scaleKey]
+  const scaleIcons: Record<ScaleKey, React.ReactNode> = {
+    small: <Minimize2 className="w-3.5 h-3.5" />,
+    normal: <LayoutGrid className="w-3.5 h-3.5" />,
+    large: <Maximize2 className="w-3.5 h-3.5" />,
+    xl: <ZoomIn className="w-3.5 h-3.5" />,
+  }
+  const scales = SCALE_PRESETS.map(pr => ({
+    key: pr.key,
+    icon: scaleIcons[pr.key],
+    label: t('runtime.scale_' + pr.key, pr.label),
+  }))
 
   // Tooltips do recharts usam estilo inline: acompanham o tema escuro por estado
   const [isDark, setIsDark] = useState(false)
@@ -620,7 +645,7 @@ export default function AnalyticsDashboard({
         {(() => {
           const text = fmt(rawVal, widget)
           const scale = ['text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl', 'text-5xl', 'text-6xl', 'text-7xl']
-          const base = isExpanded ? 'text-7xl' : size === 'mini' ? 'text-lg' : widget.width === 'quarter' ? 'text-2xl' : widget.width === 'third' ? 'text-4xl' : widget.width === 'half' ? 'text-5xl' : 'text-6xl'
+          const base = isExpanded ? 'text-7xl' : size === 'mini' ? 'text-lg' : effWidth(widget) === 'quarter' ? 'text-2xl' : effWidth(widget) === 'third' ? 'text-4xl' : effWidth(widget) === 'half' ? 'text-5xl' : 'text-6xl'
           const step = text.length > 15 ? 3 : text.length > 11 ? 2 : text.length > 8 ? 1 : 0
           const cls = size === 'mini' ? base : scale[Math.max(0, scale.indexOf(base) - step)]
           return (
@@ -640,8 +665,11 @@ export default function AnalyticsDashboard({
     )
   }
 
+  // largura que o widget realmente tem na escala atual (a fonte do KPI acompanha)
+  const effWidth = (w: Widget) => widthOfSpan(spanFor(w.width, scaleKey))
+
   const renderKPI = (val: number, widget: Widget, size: 'normal' | 'mini' = 'normal', title?: string, isExpanded?: boolean) => {
-    const width = widget.width || 'third'
+    const width = effWidth(widget)
     
     const baseFontSize = isExpanded ? 'text-8xl' :
                    size === 'mini' ? 'text-2xl' :
@@ -737,7 +765,7 @@ export default function AnalyticsDashboard({
       return renderGauge(val, widget, 'normal')
     }
 
-    const height = forceSize === 'large' ? 450 : 250
+    const height = forceSize === 'large' ? 450 : preset.chartHeight
     const sd = seriesData[widget.id]
     if (sd && sd.rows.length > 0 && ['bar', 'line', 'area'].includes(widget.type)) {
       const tickS = { fontSize: 10, fontWeight: 700, fill: '#888888' }
@@ -985,18 +1013,14 @@ export default function AnalyticsDashboard({
   }
 
   const renderWidgetCard = (widget: Widget) => {
-    const widthClass =
-      widget.width === 'full' ? 'col-span-12' :
-      widget.width === 'half' ? 'col-span-12 md:col-span-6' :
-      widget.width === 'third' ? 'col-span-12 md:col-span-4' :
-      widget.width === 'quarter' ? 'col-span-12 md:col-span-3' :
-      'col-span-12 md:col-span-4'
+    const widthClass = COL_CLASS[spanFor(widget.width, scaleKey)]
 
     return (
       <SortableCard
         key={widget.id}
         id={widget.id}
         widthClass={widthClass}
+        box={box}
         compact={widget.type === 'kpi' && !widget.group_by}
         renderHeader={({ attributes, listeners }) => (
         <div className="flex items-center justify-between mb-4 relative z-10">
@@ -1090,12 +1114,12 @@ export default function AnalyticsDashboard({
         <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 ml-4 hidden md:flex">
           {scales.map(s => (
             <button
-              key={s.value}
-              onClick={() => setScale(s.value)}
+              key={s.key}
+              onClick={() => setScaleKey(s.key)}
               title={s.label}
               className={cn(
                 "p-1.5 rounded-lg transition-all",
-                scale === s.value 
+                scaleKey === s.key
                   ? "bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 shadow-sm" 
                   : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
               )}
@@ -1180,7 +1204,7 @@ export default function AnalyticsDashboard({
               {sec.group && !collapsedGroups[sec.key] && renderGroupPeriodBar(sec)}
               {!(sec.group && collapsedGroups[sec.key]) && (
                 <SortableContext items={sec.widgets.map(w => w.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
+                  <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
                     {sec.widgets.map((widget) => renderWidgetCard(widget))}
                   </div>
                 </SortableContext>
@@ -1188,8 +1212,8 @@ export default function AnalyticsDashboard({
             </div>
           ))}
           {config.allow_runtime_edit && onAddWidget && !isEditMode && (
-            <div className="grid grid-cols-12 gap-8" style={{ zoom: scale }}>
-              <button onClick={onAddWidget} className="col-span-12 lg:col-span-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group min-h-[350px]">
+            <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
+              <button onClick={onAddWidget} className={cn(COL_CLASS[spanFor("third", scaleKey)], box.full, "border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group")}>
                 <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl shadow-neutral-500/5"><Plus className="w-10 h-10" /></div>
                 <div className="text-center"><span className="text-xs font-black uppercase tracking-widest block">Novo Indicador</span><span className="text-[10px] font-bold opacity-60">Expandir Dashbaord</span></div>
               </button>

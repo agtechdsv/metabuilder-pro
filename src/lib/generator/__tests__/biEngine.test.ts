@@ -106,6 +106,10 @@ describe('motor de BI no app exportado', () => {
     // o cliente importa estas bibliotecas: precisam existir mesmo sem o motor
     expect(files.has('lib/bi/period.ts')).toBe(true)
     expect(files.has('lib/bi/groups.ts')).toBe(true)
+    expect(files.has('lib/bi/scaleLayout.ts')).toBe(true)
+    const client2 = [...files.entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
+    expect(client2).toContain("from '@/lib/bi/scaleLayout'")
+    expect(client2).toContain('setScaleKey')
   })
 
   it('Supabase (sem SQL direto) continua com a agregação em JavaScript', () => {
