@@ -179,16 +179,29 @@ export function realtimeTransport(): TunnelTransport {
     },
     async subscribe(topic, onEvent) {
       const client = serviceClient()
-      const channel = client.channel(topic)
-      channel.on('broadcast', { event: '*' }, (msg: any) => onEvent(msg.event, msg.payload))
-      await new Promise<void>((resolve, reject) => {
-        const t = setTimeout(() => reject(new Error('Não foi possível ouvir o túnel.')), 8000)
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') { clearTimeout(t); resolve() }
-          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { clearTimeout(t); reject(new Error('Não foi possível ouvir o túnel.')) }
-        })
-      })
-      return () => { void client.removeChannel(channel) }
+      // uma nova tentativa cobre o caso de o socket ainda estar fechando a inscrição anterior
+      let lastError = 'sem resposta'
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const channel = client.channel(topic)
+        channel.on('broadcast', { event: '*' }, (msg: any) => onEvent(msg.event, msg.payload))
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const t = setTimeout(() => reject(new Error('timeout')), 8000)
+            channel.subscribe((status: string, err?: Error) => {
+              if (status === 'SUBSCRIBED') { clearTimeout(t); resolve() }
+              else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                clearTimeout(t); reject(new Error(`${status}${err?.message ? ': ' + err.message : ''}`))
+              }
+            })
+          })
+          return () => { void client.removeChannel(channel) }
+        } catch (e) {
+          lastError = e instanceof Error ? e.message : String(e)
+          try { await client.removeChannel(channel) } catch { /* já encerrado */ }
+          await new Promise(r => setTimeout(r, 400))
+        }
+      }
+      throw new Error(`Não foi possível ouvir o túnel (${lastError}).`)
     },
   }
   return _transport
