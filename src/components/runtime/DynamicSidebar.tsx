@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import DynamicIcon from './DynamicIcon'
 import { useI18n } from '@/i18n/I18nContext'
+import { logoutEndUser } from '@/lib/tunnel/logoutClient'
 
 interface MenuItem {
   id: string
@@ -64,9 +65,8 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
     }
   }, [project.id])
 
-  const handleLogout = () => {
-    const sessionCookieName = `client_session_${project.id}`
-    document.cookie = `${sessionCookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+  const handleLogout = async () => {
+    await logoutEndUser(project.id)
     window.location.href = `${finalBaseNavUrl}`
   }
 

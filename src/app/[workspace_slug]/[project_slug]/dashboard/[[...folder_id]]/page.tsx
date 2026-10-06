@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
+import { clientSessionCookie } from '@/lib/tunnel/runtimeServer'
 
 interface WorkspacePageProps {
   params: Promise<{
@@ -108,7 +109,7 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
   const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+  const sessionCookie = clientSessionCookie(cookieStore, project.id)
 
   if (!sessionCookie && !isNoAuth) {
     redirect(`/${workspace_slug}/${project_slug}/login${appendParams}`)

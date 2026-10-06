@@ -1058,7 +1058,8 @@
     "bi_denied_missing": "Su registro no tiene el dato \"{detail}\" que exige la regla de acceso de este indicador.",
     "bi_access_unfilterable": "Este indicador no puede filtrarse con la regla de acceso: {reason}",
     "bi_auto_refresh": "Actualización automática: cada {every}",
-    "bi_rls_dev_preview": "Vista previa del desarrollador: las reglas de acceso por fila solo se aplican con un usuario final conectado al portal."
+    "bi_rls_dev_preview": "Vista previa del desarrollador: las reglas de acceso por fila solo se aplican con un usuario final conectado al portal.",
+    "login_too_many": "Demasiados intentos. Espere un minuto e inténtelo de nuevo."
   },
   "bi_editor": {
     "title_placeholder": "Ej.: Total de Ventas",
@@ -4669,5 +4670,20 @@
     "rls_remove": "Quitar regla",
     "rls_note_export": "En la app exportada la regla se aplica en el servidor, con la sesión firmada del usuario.",
     "rls_note_panel": "En el panel de MetaBuilder se aplica en el navegador: sirve para probar, pero solo la app exportada garantiza la seguridad."
+  },
+  "tunnel_relay": {
+    "title": "Acceso a la base de datos por el servidor (relay)",
+    "desc": "Con el relay activado, el navegador nunca recibe el token del proyecto: el servidor comprueba quién lo pide y envía el comando al Agente CLI. Use la prueba de abajo para validar el camino antes de activarlo.",
+    "test": "Probar conexión por el servidor",
+    "testing": "Probando...",
+    "ok": "El Agente respondió en {ms} ms.",
+    "state_on": "Relay activado: las pantallas no reciben el token del proyecto.",
+    "state_off": "Relay desactivado (modo antiguo). Para activarlo, defina TUNNEL_RELAY=on en las variables de entorno de Vercel y vuelva a desplegar.",
+    "fail_offline": "El Agente CLI no respondió. ¿Está encendido y conectado a este proyecto?",
+    "fail_agent_error": "El Agente respondió con un error.",
+    "fail_no_token": "El proyecto no tiene token de túnel.",
+    "fail_no_project": "Proyecto no encontrado.",
+    "fail_transport": "Fallo al comunicarse con el servicio en tiempo real de Supabase.",
+    "fail_unauthorized": "Debe iniciar sesión como miembro del proyecto."
   }
 }

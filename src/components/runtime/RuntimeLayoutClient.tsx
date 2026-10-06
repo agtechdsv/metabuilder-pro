@@ -17,6 +17,9 @@ interface RuntimeLayoutClientProps {
   unpublishedViewSlugs?: string[]
   isNoAuth?: boolean
   baseNavUrl?: string
+  /** relay ligado: a sessão que vale é a assinada, confirmada pelo servidor (o cookie de exibição pode estar velho ou forjado) */
+  relay?: boolean
+  serverSession?: boolean
 }
 
 export function RuntimeLayoutClient({ 
@@ -28,7 +31,9 @@ export function RuntimeLayoutClient({
   unpublishedViewIds = [],
   unpublishedViewSlugs = [],
   isNoAuth = false,
-  baseNavUrl
+  baseNavUrl,
+  relay = false,
+  serverSession = false
 }: RuntimeLayoutClientProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -105,7 +110,7 @@ export function RuntimeLayoutClient({
 
   useEffect(() => {
     const sessionCookieName = `client_session_${project.id}`
-    const hasSession = document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
+    const hasSession = relay ? serverSession : document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
 
     const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
 

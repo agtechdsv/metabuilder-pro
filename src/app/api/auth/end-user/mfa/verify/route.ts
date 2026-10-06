@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verify } from 'otplib'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export async function POST(req: NextRequest) {
   try {
-    const { projectId, externalUserId, code, isSetup } = await req.json()
+    const { projectId, externalUserId, code, isSetup, pendingToken } = await req.json()
 
     if (!projectId || !externalUserId || !code) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios' }, { status: 400 })
     }
+    const denied = guardEndUser(req, { projectId, externalUserId, pendingToken })
+    if (denied) return denied
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
         .eq('id', userSec.id)
     }
 
-    return NextResponse.json({ success: true })
+    // com o relay ligado, devolve a prova que o login usa para emitir a sessão
+    return NextResponse.json({ success: true, proof: proofFor(projectId, externalUserId) })
 
   } catch (error: any) {
     console.error('Erro na verificação de MFA (end-user):', error)

@@ -13,6 +13,7 @@ import { RuntimeHeader } from '@/components/runtime/RuntimeHeader'
 import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
 import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
+import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
 
 interface PageProps {
   params: Promise<{
@@ -251,7 +252,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
 
     const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+    const sessionCookie = clientSessionCookie(cookieStore, project.id)
 
     if (!sessionCookie && !isNoAuth) {
       // Preserva o destino (inclusive ?preview=draft) para voltar a esta tela depois do login
@@ -363,7 +364,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       isAutomationsEnabled = true
     } else {
       const cookieStore = await cookies()
-      const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+      const sessionCookie = clientSessionCookie(cookieStore, project.id)
       if (sessionCookie) {
         try {
           const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
@@ -426,7 +427,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
                 viewName={view.name || view_slug}
                 projectId={project.id}
                 projectSlug={project.slug}
-                projectToken={project.secret_token}
+                projectToken={browserToken(project)}
               />
             ) : (
               <div className="p-8 text-center rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 mt-4">
@@ -1078,7 +1079,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         )}
         <ViewPageContent 
           workspace={workspace}
-          project={{ ...project, theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels }}
+          project={{ ...publicProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels }}
           canExport={canExport}
           viewName={viewName}
           modelName={modelName}

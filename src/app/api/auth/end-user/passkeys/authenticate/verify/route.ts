@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { verifyAuthenticationResponse } from '@simplewebauthn/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { loginResponse, performPasskeyLogin, realLoginDeps } from '@/lib/tunnel/loginRoute'
+import { relayEnabled } from '@/lib/tunnel/server'
 
 export async function POST(request: Request) {
   try {
@@ -92,6 +94,12 @@ export async function POST(request: Request) {
 
     // Clear challenge
     cookieStore.delete('enduser_webauthn_auth_challenge')
+
+    // Relay ligado: o servidor mesmo busca o usuário pelo túnel e emite a sessão (o navegador não tem mais o token)
+    if (relayEnabled()) {
+      const result = await performPasskeyLogin(realLoginDeps, { projectId, externalUserId: String(matchedUser.external_user_id) })
+      return loginResponse(result, projectId)
+    }
 
     return NextResponse.json({ 
       success: true, 

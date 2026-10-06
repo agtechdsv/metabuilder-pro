@@ -2,15 +2,18 @@ import { NextResponse } from 'next/server'
 import { verifyRegistrationResponse } from '@simplewebauthn/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { projectId, externalUserId } = body
+    const { projectId, externalUserId, pendingToken } = body
 
     if (!projectId || !externalUserId) {
       return NextResponse.json({ error: 'Parâmetros obrigatórios ausentes' }, { status: 400 })
     }
+    const denied = guardEndUser(request, { projectId, externalUserId, pendingToken })
+    if (denied) return denied
 
     const cookieStore = await cookies()
     const expectedChallenge = cookieStore.get('enduser_webauthn_register_challenge')?.value
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
 
     cookieStore.delete('enduser_webauthn_register_challenge')
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, proof: proofFor(projectId, externalUserId) })
   } catch (error: any) {
     console.error('Registration verification error (end-user):', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

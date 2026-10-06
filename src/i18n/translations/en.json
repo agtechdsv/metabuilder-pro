@@ -971,7 +971,8 @@
     "bi_denied_missing": "Your profile has no \"{detail}\" value, which the access rule of this indicator requires.",
     "bi_access_unfilterable": "This indicator cannot be filtered by the access rule: {reason}",
     "bi_auto_refresh": "Automatic refresh: every {every}",
-    "bi_rls_dev_preview": "Developer preview: row-level access rules only apply with an end user signed in to the portal."
+    "bi_rls_dev_preview": "Developer preview: row-level access rules only apply with an end user signed in to the portal.",
+    "login_too_many": "Too many attempts. Wait a minute and try again."
   },
   "bi_editor": {
     "title_placeholder": "E.g.: Total Sales",
@@ -4581,5 +4582,20 @@
     "rls_remove": "Remove rule",
     "rls_note_export": "In the exported app the rule is applied on the server, using the user's signed session.",
     "rls_note_panel": "In the MetaBuilder panel it is applied in the browser: fine for testing, but only the exported app guarantees security."
+  },
+  "tunnel_relay": {
+    "title": "Database access through the server (relay)",
+    "desc": "With the relay on, the browser never receives the project token: the server checks who is asking and sends the command to the CLI Agent. Use the test below to validate the path before turning it on.",
+    "test": "Test connection through the server",
+    "testing": "Testing...",
+    "ok": "The Agent replied in {ms} ms.",
+    "state_on": "Relay on: pages do not receive the project token.",
+    "state_off": "Relay off (legacy mode). To turn it on, set TUNNEL_RELAY=on in the Vercel environment variables and redeploy.",
+    "fail_offline": "The CLI Agent did not respond. Is it running and connected to this project?",
+    "fail_agent_error": "The Agent replied with an error.",
+    "fail_no_token": "The project has no tunnel token.",
+    "fail_no_project": "Project not found.",
+    "fail_transport": "Failed to reach the Supabase realtime service.",
+    "fail_unauthorized": "You must be signed in as a project member."
   }
 }

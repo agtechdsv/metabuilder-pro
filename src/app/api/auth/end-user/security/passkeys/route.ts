@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -11,6 +12,8 @@ export async function DELETE(req: NextRequest) {
     if (!projectId || !externalUserId || !credentialID) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios' }, { status: 400 })
     }
+    const denied = guardEndUser(req, { projectId, externalUserId })
+    if (denied) return denied
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateSecret, generateURI } from 'otplib'
 import QRCode from 'qrcode'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export async function POST(req: NextRequest) {
   try {
-    const { projectId, externalUserId, userEmail } = await req.json()
+    const { projectId, externalUserId, userEmail, pendingToken } = await req.json()
 
     if (!projectId || !externalUserId) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios' }, { status: 400 })
     }
+    // só o próprio usuário (login em andamento ou sessão) pode ver o segredo do autenticador dele
+    const denied = guardEndUser(req, { projectId, externalUserId, pendingToken })
+    if (denied) return denied
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

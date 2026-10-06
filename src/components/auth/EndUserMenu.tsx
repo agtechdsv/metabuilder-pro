@@ -5,6 +5,7 @@ import { LogOut, ChevronDown, ShieldCheck, User } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EndUserSecurityDrawer } from '@/components/auth/EndUserSecurityDrawer'
 import { useI18n } from '@/i18n/I18nContext'
+import { logoutEndUser } from '@/lib/tunnel/logoutClient'
 
 interface EndUserMenuProps {
   user: any
@@ -35,11 +36,10 @@ export function EndUserMenu({ user, projectId }: EndUserMenuProps) {
   const fullName = getDisplayName()
   const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
-  const handleSignOut = () => {
-    // Apagar o cookie de sessão local
-    const cookieName = `client_session_${projectId}`
-    document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`
-    
+  const handleSignOut = async () => {
+    // Apaga a sessão assinada (no servidor) e o cookie de exibição
+    await logoutEndUser(projectId)
+
     // Atualiza a página para o middleware ou cliente redirecionar para login
     window.location.reload()
   }

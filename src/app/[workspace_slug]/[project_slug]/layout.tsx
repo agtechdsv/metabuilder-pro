@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import { RuntimeLayoutClient } from '@/components/runtime/RuntimeLayoutClient'
 import { I18nProvider } from '@/i18n/I18nContext'
 import { Metadata } from 'next'
+import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
+import { relayEnabled } from '@/lib/tunnel/server'
 
 export async function generateMetadata({ params }: { params: Promise<{ project_slug: string; workspace_slug: string }> }): Promise<Metadata> {
   const { project_slug, workspace_slug } = await params
@@ -211,7 +213,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   const cookieStore = await cookies()
   const locale = cookieStore.get('app-language')?.value || 'pt'
-  const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+  const sessionCookie = clientSessionCookie(cookieStore, project.id)
 
   let allowedViewIds: string[] | null = null
 
@@ -302,7 +304,9 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   return (
     <I18nProvider initialLocale={locale as any}>
       <RuntimeLayoutClient
-        project={project}
+        project={publicProject(project)}
+        relay={relayEnabled()}
+        serverSession={!!sessionCookie}
         workspaceSlug={workspace_slug}
         projectSlug={project_slug}
         navigation={navigation}

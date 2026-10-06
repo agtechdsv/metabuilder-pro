@@ -6,6 +6,7 @@ import { AlertCircle } from 'lucide-react'
 import { DownloadsManagerClient } from '@/components/runtime/DownloadsManagerClient'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
+import { clientSessionCookie } from '@/lib/tunnel/runtimeServer'
 
 interface PageProps {
   params: Promise<{
@@ -47,7 +48,7 @@ export default async function DownloadsPage({ params }: PageProps) {
 
   // 3. Resolve a sessão do usuário
   const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get(`client_session_${project.id}`)?.value
+  const sessionCookie = clientSessionCookie(cookieStore, project.id)
 
   let clientUser = null
   if (sessionCookie) {

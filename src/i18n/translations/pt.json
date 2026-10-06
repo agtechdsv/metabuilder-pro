@@ -971,7 +971,8 @@
     "bi_denied_missing": "Seu cadastro não tem o dado \"{detail}\" que a regra de acesso deste indicador exige.",
     "bi_access_unfilterable": "Este indicador não pode ser filtrado pela regra de acesso: {reason}",
     "bi_auto_refresh": "Atualização automática: a cada {every}",
-    "bi_rls_dev_preview": "Prévia do desenvolvedor: as regras de acesso por linha só se aplicam com um usuário final logado no portal."
+    "bi_rls_dev_preview": "Prévia do desenvolvedor: as regras de acesso por linha só se aplicam com um usuário final logado no portal.",
+    "login_too_many": "Muitas tentativas. Aguarde um minuto e tente de novo."
   },
   "bi_editor": {
     "title_placeholder": "Ex: Total de Vendas",
@@ -4581,5 +4582,20 @@
     "rls_remove": "Remover regra",
     "rls_note_export": "No app exportado a regra é aplicada no servidor, com a sessão assinada do usuário.",
     "rls_note_panel": "No painel do MetaBuilder ela é aplicada no navegador: serve para testar, mas só o app exportado garante a segurança."
+  },
+  "tunnel_relay": {
+    "title": "Acesso ao banco pelo servidor (relay)",
+    "desc": "Com o relay ligado, o navegador nunca recebe o token do projeto: o servidor confere quem está pedindo e envia o comando ao Agente CLI. Use o teste abaixo para validar o caminho antes de ligar.",
+    "test": "Testar conexão pelo servidor",
+    "testing": "Testando...",
+    "ok": "O Agente respondeu em {ms} ms.",
+    "state_on": "Relay ligado: as telas não recebem o token do projeto.",
+    "state_off": "Relay desligado (modo antigo). Para ligar, defina TUNNEL_RELAY=on nas variáveis de ambiente da Vercel e faça um novo deploy.",
+    "fail_offline": "O Agente CLI não respondeu. Ele está ligado e conectado a este projeto?",
+    "fail_agent_error": "O Agente respondeu com erro.",
+    "fail_no_token": "O projeto não tem token de túnel.",
+    "fail_no_project": "Projeto não encontrado.",
+    "fail_transport": "Falha ao falar com o serviço de tempo real do Supabase.",
+    "fail_unauthorized": "Você precisa estar logado como membro do projeto."
   }
 }

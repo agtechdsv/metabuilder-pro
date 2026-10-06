@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
+import { publicProject } from '@/lib/tunnel/runtimeServer'
 
 export const metadata: Metadata = {
   title: 'Automations & BPM | MetaBuilder PRO',
@@ -158,7 +159,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
       <BpmCanvas 
         title={canvasTitle} 
         defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
-        project={project}
+        project={publicProject(project)}
         useCaseId={useCaseId || ''}
         initialWorkflows={initialWorkflows}
         initialModels={initialModels}

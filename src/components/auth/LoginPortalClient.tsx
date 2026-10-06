@@ -23,6 +23,8 @@ interface LoginPortalClientProps {
   isCustomDomain?: boolean
   customDomainType?: string
   initialIsStandalone?: boolean
+  /** relay do túnel ligado: o login é validado pelo servidor (o navegador não tem o token do projeto) */
+  relay?: boolean
 }
 
 export function LoginPortalClient({
@@ -35,7 +37,8 @@ export function LoginPortalClient({
   schemaName,
   isCustomDomain,
   customDomainType,
-  initialIsStandalone
+  initialIsStandalone,
+  relay = false
 }: LoginPortalClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -50,6 +53,8 @@ export function LoginPortalClient({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [showMfaModal, setShowMfaModal] = useState(false)
   const [pendingMfaUser, setPendingMfaUser] = useState<any>(null)
+  // relay: token do passo pendente (a sessão só sai depois da prova do MFA)
+  const [pendingToken, setPendingToken] = useState<string | null>(null)
   const [isStandalone, setIsStandalone] = useState(initialIsStandalone || false)
 
   useEffect(() => {
@@ -111,12 +116,82 @@ export function LoginPortalClient({
   const loginBannerUrl = project.theme_config?.login_banner_url || workspaceTheme?.portal_banner_url || ''
   const hasBanner = !!loginBannerUrl
 
+  // ── Relay ligado: quem valida a senha é o servidor ─────────────────────────────
+  const serverError = (data: any) => {
+    switch (data?.code) {
+      case 'tunnel_offline':
+      case 'tunnel_error':
+        return t('runtime.tunnel_offline', 'O túnel seguro com o banco local está offline. Por favor, inicie o CLI do MetaBuilder PRO.')
+      case 'too_many':
+        return t('runtime.login_too_many', 'Muitas tentativas. Aguarde um minuto e tente de novo.')
+      case 'invalid_credentials':
+        return data?.message || t('runtime.invalid_credentials', 'Credenciais inválidas.')
+      default:
+        return t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.')
+    }
+  }
+
+  const postJson = async (url: string, body: any) => {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const data = await res.json().catch(() => ({}))
+    return { ok: res.ok, data }
+  }
+
+  const submitViaServer = async () => {
+    try {
+      const { ok, data } = await postJson('/api/runtime/login', { projectId: project.id, email, password })
+      if (ok && data.status === 'ok' && data.offerPasskey) {
+        // sessão já emitida; o convite para cadastrar biometria usa essa sessão (e pode ser pulado)
+        setPendingMfaUser(data.user)
+        setPendingToken(null)
+        setShowMfaModal(true)
+        setIsLoading(false)
+      } else if (ok && data.status === 'ok') {
+        finalizeLogin(data.user, true)
+      } else if (ok && data.status === 'mfa') {
+        setPendingMfaUser(data.user)
+        setPendingToken(data.pendingToken)
+        setShowMfaModal(true)
+        setIsLoading(false)
+      } else {
+        setErrorMsg(serverError(data))
+        setIsLoading(false)
+      }
+    } catch {
+      setErrorMsg(t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))
+      setIsLoading(false)
+    }
+  }
+
+  // Último passo do login com MFA/biometria: troca o token pendente + a prova pela sessão
+  const completeViaServer = async (proof?: string) => {
+    try {
+      const { ok, data } = await postJson('/api/runtime/login/complete', { projectId: project.id, pendingToken, proof })
+      if (ok && data.status === 'ok') {
+        finalizeLogin(data.user, true)
+      } else {
+        setShowMfaModal(false)
+        setErrorMsg(serverError(data))
+        setIsLoading(false)
+      }
+    } catch {
+      setShowMfaModal(false)
+      setErrorMsg(t('runtime.auth_unexpected_error', 'Erro inesperado ao realizar autenticação.'))
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
 
     setIsLoading(true)
     setErrorMsg(null)
+
+    if (relay) {
+      await submitViaServer()
+      return
+    }
 
     const queryId = crypto.randomUUID()
     const channelName = `tunnel:${project.id}`
@@ -230,7 +305,18 @@ export function LoginPortalClient({
 
       const verification = await verifyRes.json()
       if (verification.error) throw new Error(verification.error)
-      
+
+      // Relay ligado: o servidor já validou a biometria, buscou o usuário e emitiu a sessão
+      if (relay) {
+        if (verification.status === 'ok') {
+          finalizeLogin(verification.user, true)
+        } else {
+          setErrorMsg(verification.status === 'error' ? serverError(verification) : t('runtime.biometric_user_not_found', 'Usuário não encontrado após biometria.'))
+          setIsLoadingBio(false)
+        }
+        return
+      }
+
       const queryId = crypto.randomUUID()
       const channelName = `tunnel:${project.id}`
       const channel = supabase.channel(channelName)
@@ -275,15 +361,18 @@ export function LoginPortalClient({
     }
   }
 
-  const finalizeLogin = (user: any) => {
+  const finalizeLogin = (user: any, serverIssued = false) => {
     // Injeta a coluna de exibição configurada
     if (authConfig.db_display_name_column && user[authConfig.db_display_name_column]) {
       user.__display_name = user[authConfig.db_display_name_column]
     }
 
-    // Salva o cookie de sessão para o projeto (sem max-age para expirar ao fechar o app/navegador)
-    const cookieName = `client_session_${project.id}`
-    document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Lax`
+    // Salva o cookie de sessão para o projeto (sem max-age para expirar ao fechar o app/navegador).
+    // Com o relay ligado o servidor já gravou a sessão assinada e este cookie de exibição.
+    if (!serverIssued) {
+      const cookieName = `client_session_${project.id}`
+      document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Lax`
+    }
     
     // Volta para a tela que o usuário tentou abrir antes do login (ex.: ...?preview=draft), se houver
     const nextDest = getSafeNext(window.location.search)
@@ -531,7 +620,8 @@ export function LoginPortalClient({
           projectId={project.id}
           mfaRequired={project.theme_config?.security?.mfa_enabled}
           passkeyEnabled={project.theme_config?.security?.passkey_enabled}
-          onSuccess={() => finalizeLogin(pendingMfaUser)}
+          pendingToken={pendingToken || undefined}
+          onSuccess={(proof) => (relay ? (pendingToken ? completeViaServer(proof) : finalizeLogin(pendingMfaUser, true)) : finalizeLogin(pendingMfaUser))}
           onCancel={() => setShowMfaModal(false)}
         />
       </LoginPortalThemeWrapper>

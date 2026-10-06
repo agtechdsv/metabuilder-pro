@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server'
 import { generateRegistrationOptions } from '@simplewebauthn/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export async function POST(request: Request) {
   try {
-    const { projectId, externalUserId, userEmail } = await request.json()
+    const { projectId, externalUserId, userEmail, pendingToken } = await request.json()
 
     if (!projectId || !externalUserId) {
       return NextResponse.json({ error: 'Parâmetros obrigatórios ausentes' }, { status: 400 })
     }
+    const denied = guardEndUser(request, { projectId, externalUserId, pendingToken })
+    if (denied) return denied
 
     const host = request.headers.get('host') || 'localhost'
     const rpID = host.split(':')[0]

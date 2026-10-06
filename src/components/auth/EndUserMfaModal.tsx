@@ -12,11 +12,14 @@ interface EndUserMfaModalProps {
   projectId: string
   mfaRequired?: boolean
   passkeyEnabled?: boolean
-  onSuccess: () => void
+  /** relay ligado: token do login em andamento, que prova ao servidor quem está pedindo */
+  pendingToken?: string
+  /** `proof` só existe com o relay ligado (o servidor a emite ao verificar o código ou a biometria) */
+  onSuccess: (proof?: string) => void
   onCancel: () => void
 }
 
-export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyEnabled, onSuccess, onCancel }: EndUserMfaModalProps) {
+export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyEnabled, pendingToken, onSuccess, onCancel }: EndUserMfaModalProps) {
   const [step, setStep] = useState<'loading' | 'setup' | 'verify' | 'passkey_setup'>('loading')
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [secret, setSecret] = useState<string | null>(null)
@@ -24,6 +27,8 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [userHasPasskeys, setUserHasPasskeys] = useState(false)
+  // última prova recebida do servidor (o código do autenticador e a biometria podem vir em sequência)
+  const [proof, setProof] = useState<string | undefined>(undefined)
 
   const userEmail = user?.email || user?.Email || user?.mail || ''
   const externalUserId = user?.id || user?.ID || user?.Id || userEmail // Fallback to email if no ID
@@ -57,7 +62,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
       const res = await fetch('/api/auth/end-user/mfa/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, externalUserId, userEmail })
+        body: JSON.stringify({ projectId, externalUserId, userEmail, pendingToken })
       })
 
       const data = await res.json()
@@ -93,7 +98,8 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
           projectId, 
           externalUserId, 
           code, 
-          isSetup: step === 'setup' 
+          isSetup: step === 'setup',
+          pendingToken
         })
       })
 
@@ -101,10 +107,11 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
       if (!res.ok) throw new Error(data.error)
 
       // Sucesso no MFA! Verifica se precisa de Passkey
+      setProof(data.proof)
       if (passkeyEnabled && !userHasPasskeys) {
         setStep('passkey_setup')
       } else {
-        onSuccess()
+        onSuccess(data.proof)
       }
     } catch (err: any) {
       setError(err.message || 'Código inválido.')
@@ -121,7 +128,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
       const optionsRes = await fetch('/api/auth/end-user/passkeys/register/generate-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, externalUserId, userEmail })
+        body: JSON.stringify({ projectId, externalUserId, userEmail, pendingToken })
       })
 
       const options = await optionsRes.json()
@@ -144,14 +151,15 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
         body: JSON.stringify({
           ...attResp,
           projectId,
-          externalUserId
+          externalUserId,
+          pendingToken
         })
       })
 
       const verification = await verifyRes.json()
       if (verification.error) throw new Error(verification.error)
 
-      onSuccess()
+      onSuccess(verification.proof || proof)
     } catch (err: any) {
       setError(err.message || t('security.error_register_biometrics', 'Erro ao registrar biometria.'))
       setIsLoading(false)
@@ -319,7 +327,7 @@ export function EndUserMfaModal({ isOpen, user, projectId, mfaRequired, passkeyE
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Fingerprint className="w-5 h-5" /> {t('security.register_biometrics', 'Registrar Biometria (Recomendado)')}</>}
                   </button>
                   <button 
-                    onClick={onSuccess} 
+                    onClick={() => onSuccess(proof)} 
                     disabled={isLoading}
                     className="w-full h-12 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                   >

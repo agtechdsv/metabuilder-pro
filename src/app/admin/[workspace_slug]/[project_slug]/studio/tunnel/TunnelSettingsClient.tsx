@@ -7,6 +7,7 @@ import {
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import Link from 'next/link'
+import { RelayDiagnostics } from './RelayDiagnostics'
 
 interface DBConnection {
   name: string
@@ -316,6 +317,10 @@ export default function TunnelSettingsClient({
             </div>
           </div>
         </div>
+
+        <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
+
+        <RelayDiagnostics projectId={projectInfo?.id && projectInfo.id.length > 20 ? projectInfo.id : undefined} />
 
         <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
 

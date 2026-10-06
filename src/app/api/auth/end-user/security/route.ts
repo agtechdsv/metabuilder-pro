@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { guardEndUser, proofFor } from '@/lib/tunnel/securityGuard'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,9 @@ export async function GET(req: NextRequest) {
     if (!projectId || !externalUserId) {
       return NextResponse.json({ error: 'Faltam parâmetros obrigatórios' }, { status: 400 })
     }
+    // esta resposta traz o segredo do autenticador: só o próprio usuário logado pode lê-la
+    const denied = guardEndUser(req, { projectId, externalUserId })
+    if (denied) return denied
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

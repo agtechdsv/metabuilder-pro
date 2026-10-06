@@ -1,3 +1,5 @@
+import { needsRelay, relayThroughChannel } from '@/lib/tunnel/relayClient'
+
 export const CHUNK_SIZE = 100 * 1024; // 100KB per chunk
 
 export function wrapChannelWithChunking(channel: any) {
@@ -44,6 +46,9 @@ export function wrapChannelWithChunking(channel: any) {
       return channel.channelAdapter;
     },
     send: (msg: any) => {
+      // Comando sem token (relay ligado): vai INTEIRO ao servidor, que coloca o token e divide em pedaços se precisar.
+      // Tem de ser antes de dividir, porque o token fica dentro do conteúdo que o CLI remonta.
+      if (needsRelay(msg)) return relayThroughChannel(channel, msg);
       const payloadStr = JSON.stringify(msg.payload);
       if (payloadStr.length <= CHUNK_SIZE) {
         return channel.send(msg); // Send normally

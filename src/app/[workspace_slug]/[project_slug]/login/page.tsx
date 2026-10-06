@@ -5,6 +5,8 @@ import { getTranslations } from '@/i18n/get-translations'
 import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { publicProject } from '@/lib/tunnel/runtimeServer'
+import { relayEnabled } from '@/lib/tunnel/server'
 
 export default async function LoginPage({ params, searchParams }: any) {
   const { workspace_slug, project_slug } = await params
@@ -110,7 +112,8 @@ export default async function LoginPage({ params, searchParams }: any) {
 
   return (
     <LoginPortalClient
-      project={project}
+      project={publicProject(project)}
+      relay={relayEnabled()}
       authConfig={auth}
       visualConfig={visual}
       locale={locale}
