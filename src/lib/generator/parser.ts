@@ -1485,6 +1485,49 @@ export interface ParseOptions {
 // Main Parser
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Esquema enxuto (tabelas, colunas e relações) que o planejador de BI do app exportado precisa.
+ * Mantém o formato do projeto para que o mesmo código rode no painel e no app gerado.
+ */
+function buildBiSchema(rawModels: any[], rawFields: any[], rawRelations: any[]): { models: any[]; relations: any[] } {
+  const models = rawModels.map((m: any) => {
+    const fields = (Array.isArray(m.fields) && m.fields.length > 0 ? m.fields : rawFields.filter((f: any) => f.model_id === m.id))
+    return {
+      id: m.id,
+      db_table_name: m.db_table_name,
+      db_schema_name: m.db_schema_name,
+      fields: fields.map((f: any) => ({
+        id: f.id,
+        db_column_name: f.db_column_name,
+        data_type: f.data_type,
+        db_data_type: f.db_data_type,
+        is_primary_key: f.is_primary_key,
+      })),
+    }
+  })
+  const relations = rawRelations.map((r: any) => ({
+    id: r.id,
+    from_model_id: r.from_model_id,
+    to_model_id: r.to_model_id,
+    from_field_id: r.from_field_id,
+    to_field_id: r.to_field_id,
+    master_model_id: r.master_model_id,
+    detail_model_id: r.detail_model_id,
+    relation_type: r.relation_type,
+    source: r.source,
+    relation_table: r.relation_table,
+    from_table: r.from_table,
+    to_table: r.to_table,
+    from_field: r.from_field,
+    to_field: r.to_field,
+    foreign_key_table: r.foreign_key_table,
+    foreign_key_column: r.foreign_key_column,
+    foreign_column_id: r.foreign_column_id,
+    referenced_column_id: r.referenced_column_id,
+  }))
+  return { models, relations }
+}
+
 export function parseMetaBuilderJSON(
   rawJson: any,
   dbStack: DbType,
@@ -2792,6 +2835,7 @@ export function parseMetaBuilderJSON(
     supabaseUrl: options?.supabaseUrl,
     supabaseAnonKey: options?.supabaseAnonKey,
     authConfig,
+    biSchema: buildBiSchema(rawModels, rawFields, rawRelations),
     navigation,
     models,
     routes,

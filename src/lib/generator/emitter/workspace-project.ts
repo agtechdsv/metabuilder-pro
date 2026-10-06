@@ -1,6 +1,7 @@
 import { WorkspaceAST } from '../ast'
 import { generateRoutes } from '../layers/routes'
 import { generateActions } from '../layers/actions'
+import { generateBiEngine } from '../layers/bi-engine'
 import { generateComponents } from '../layers/components'
 import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss, generateProjectLayout } from '../layers/portal'
 import { generateLoginPage } from './auth-flow'
@@ -167,6 +168,7 @@ export default config;
     const projectFiles = new Map<string, string>()
     generateRoutes(pApp, projectFiles)
     generateActions(pApp, projectFiles)
+    generateBiEngine(pApp, projectFiles)
     generateComponents(pApp, projectFiles)
 
     // Reprefixa todos os arquivos para ficarem dentro de app/[slug]/

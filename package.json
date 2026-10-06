@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/gen-bi-runtime.mjs",
     "build": "next build",
     "start": "next start",
+    "gen:bi": "node scripts/gen-bi-runtime.mjs",
     "test": "vitest run",
     "lint": "eslint",
     "tauri": "tauri",

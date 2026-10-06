@@ -188,6 +188,15 @@ const PROFILES: Record<SqlDialect, Profile> = {
 }
 
 /** Função que coloca um identificador entre aspas no dialeto (usada também para montar os JOINs). */
+/**
+ * Oracle guarda os nomes em MAIÚSCULAS e, entre aspas, diferencia a caixa. O Agente CLI converte os identificadores
+ * entre aspas antes de executar; o app exportado (sem CLI) faz o mesmo com esta função. Não mexe em texto dentro de
+ * literais ('...'), onde "palavra" é só um valor.
+ */
+export function oracleUpperIdentifiers(sql: string): string {
+  return sql.replace(/('(?:[^']|'')*')|"([A-Za-z0-9_]+)"/g, (m, literal, ident) => (literal ? literal : `"${String(ident).toUpperCase()}"`))
+}
+
 export function quoteFor(dialect: SqlDialect): (id: string) => string {
   return PROFILES[dialect].quote
 }

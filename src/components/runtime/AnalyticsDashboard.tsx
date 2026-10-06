@@ -53,8 +53,9 @@ interface AnalyticsDashboardProps {
 
 import { compileFormula } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
-import { PERIOD_PRESETS, resolvePeriod, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
+import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
 import { planWidgetQuery } from '@/lib/bi/widgetPlan'
+import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
 import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 
@@ -154,26 +155,10 @@ export default function AnalyticsDashboard({
   // período efetivo de um widget: da barra do painel, fixo ou do seletor do próprio card
   // barra de período de cada grupo: { groupId: { preset, from, to } }
   const [groupPeriods, setGroupPeriods] = useState<Record<string, { preset: string; from: string; to: string }>>({})
-  // "segue o grupo" só vale se o widget realmente está num grupo; senão ele segue o painel
-  const effectiveMode = (w: Widget): 'panel' | 'fixed' | 'own' | 'group' => {
-    const mode = w.period_mode || 'panel'
-    if (mode === 'group' && !(w.group_id && localGroups.some(g => g.id === w.group_id))) return 'panel'
-    return mode
-  }
-  const widgetPeriod = (w: Widget): PeriodRange | null => {
-    if (!w.period_field) return null
-    const mode = effectiveMode(w)
-    if (mode === 'fixed') return resolvePeriod(w.period_fixed || 'month')
-    if (mode === 'group') {
-      const gp = groupPeriods[w.group_id as string]
-      return gp ? resolvePeriod(gp.preset, { from: gp.from, to: gp.to }) : null
-    }
-    if (mode === 'own') {
-      const o = ownPeriods[w.id]
-      return o ? resolvePeriod(o.preset, { from: o.from, to: o.to }) : null
-    }
-    return periodRange
-  }
+  const groupIds = localGroups.map(g => g.id)
+  const effectiveMode = (w: Widget) => effectivePeriodMode(w, groupIds)
+  const widgetPeriod = (w: Widget): PeriodRange | null =>
+    resolveWidgetPeriod(w, { panel: periodRange, groupIds, groupPeriods, ownPeriods })
   // a barra do painel só vale para widgets em modo "segue o painel"
   const followsPanel = (w: Widget) => !!w.period_field && effectiveMode(w) === 'panel'
   const hasPeriodWidgets = localWidgets.some(followsPanel)
@@ -252,9 +237,7 @@ export default function AnalyticsDashboard({
       if (prevWidgetId) {
         delete queryModes.current[qId]
         if (payload.payload.success) {
-          const row = payload.payload.data?.[0]
-          const v = Number(row?.bi_value ?? row?.BI_VALUE)
-          setPrevData(prev => ({ ...prev, [prevWidgetId]: Number.isFinite(v) ? v : 0 }))
+          setPrevData(prev => ({ ...prev, [prevWidgetId]: prevValueFromRows(payload.payload.data) }))
         }
         return
       }
@@ -410,73 +393,16 @@ export default function AnalyticsDashboard({
 
   fetchWidgetDataRef.current = fetchWidgetData
 
-  // Resultado do SQL agregado: já vem pronto como { bi_name, bi_value }
+  // Resultado do SQL agregado: já vem pronto como { bi_name, bi_value }; a montagem dos dados é a mesma do app exportado (lib/bi/shapeResult)
   const processAggRows = (widget: Widget, rows: any[]) => {
-    const read = (r: any, k: string) => r?.[k] ?? r?.[k.toUpperCase()] ?? r?.[k.toLowerCase()]
-    const toNumber = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-
-    if (!widget.group_by) {
-      const value = toNumber(read(rows?.[0], 'bi_value'))
-      const single = widget.type === 'kpi' || widget.type === 'gauge' ? value : [{ name: 'Total', value }]
-      setData(prev => ({ ...prev, [widget.id]: single }))
-      setTruncated(prev => ({ ...prev, [widget.id]: false }))
-      return
+    const shaped = shapeAggRows(widget, rows, BI_MAX_GROUPS)
+    if (shaped.series) {
+      setSeriesData(prev => ({ ...prev, [widget.id]: shaped.series! }))
+    } else {
+      setSeriesData(prev => { if (!prev[widget.id]) return prev; const next = { ...prev }; delete next[widget.id]; return next })
     }
-
-    const hasSeries = !!widget.series_by && ['bar', 'line', 'area'].includes(widget.type) && (rows || []).some((r: any) => read(r, 'bi_series') !== undefined)
-    if (hasSeries) {
-      const label = (v: any) => (v === null || v === undefined || v === '' ? 'N/A' : String(v))
-      const byName = new Map<string, Record<string, number>>()
-      const seriesTotals = new Map<string, number>()
-      for (const r of rows || []) {
-        const n = label(read(r, 'bi_name'))
-        const sName = label(read(r, 'bi_series'))
-        const v = toNumber(read(r, 'bi_value'))
-        const cur = byName.get(n) || {}
-        cur[sName] = (cur[sName] || 0) + v
-        byName.set(n, cur)
-        seriesTotals.set(sName, (seriesTotals.get(sName) || 0) + v)
-      }
-      // até 11 séries; o restante vira "Outros"
-      const ordered = [...seriesTotals.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0])
-      const keep = ordered.slice(0, 11)
-      const others = ordered.slice(11)
-      const keys = others.length ? [...keep, 'Outros'] : keep
-      let table = [...byName.entries()].map(([name, vals]) => {
-        const row: any = { name, value: 0 }
-        for (const k of keep) { row[k] = vals[k] || 0 }
-        if (others.length) row['Outros'] = others.reduce((a, k) => a + (vals[k] || 0), 0)
-        row.value = keys.reduce((a, k) => a + (row[k] || 0), 0)
-        return row
-      })
-      const mode = widget.sort_by || 'value_desc'
-      if (mode === 'value_asc') table.sort((a, b) => a.value - b.value)
-      else if (mode === 'label_asc') table.sort((a, b) => a.name.localeCompare(b.name))
-      else if (mode === 'label_desc') table.sort((a, b) => b.name.localeCompare(a.name))
-      else table.sort((a, b) => b.value - a.value)
-      if (widget.limit_top_n && widget.limit_top_n > 0) table = table.slice(0, widget.limit_top_n)
-      setSeriesData(prev => ({ ...prev, [widget.id]: { rows: table, keys } }))
-      setData(prev => ({ ...prev, [widget.id]: table.map(r => ({ name: r.name, value: r.value })) }))
-      setTruncated(prev => ({ ...prev, [widget.id]: (rows || []).length >= BI_MAX_GROUPS * 5 }))
-      return
-    }
-    setSeriesData(prev => { if (!prev[widget.id]) return prev; const next = { ...prev }; delete next[widget.id]; return next })
-
-    let finalData = (rows || []).map((r: any) => {
-      const name = read(r, 'bi_name')
-      return { name: name === null || name === undefined || name === '' ? 'N/A' : String(name), value: toNumber(read(r, 'bi_value')) }
-    })
-
-    const sortMode = widget.sort_by || 'value_desc'
-    if (sortMode === 'value_asc') finalData.sort((a, b) => a.value - b.value)
-    else if (sortMode === 'label_asc') finalData.sort((a, b) => a.name.localeCompare(b.name))
-    else if (sortMode === 'label_desc') finalData.sort((a, b) => b.name.localeCompare(a.name))
-    else finalData.sort((a, b) => b.value - a.value)
-    if (widget.limit_top_n && widget.limit_top_n > 0) finalData = finalData.slice(0, widget.limit_top_n)
-
-    setData(prev => ({ ...prev, [widget.id]: finalData }))
-    // mais grupos do que o teto: o gráfico mostra só os maiores
-    setTruncated(prev => ({ ...prev, [widget.id]: !widget.limit_top_n && (rows || []).length >= BI_MAX_GROUPS }))
+    setData(prev => ({ ...prev, [widget.id]: shaped.data }))
+    setTruncated(prev => ({ ...prev, [widget.id]: shaped.truncated }))
   }
 
   const processWidgetData = (widget: Widget, records: any[], isFormula: boolean, formula: string, tableName: string) => {

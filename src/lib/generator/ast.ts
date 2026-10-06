@@ -475,6 +475,8 @@ export interface AppAST {
   supabaseUrl?: string
   supabaseAnonKey?: string
   authConfig?: AuthConfig
+  /** Tabelas e relações no formato do projeto (entrada do planejador de BI embutido no app exportado) */
+  biSchema?: { models: any[]; relations: any[] }
   navigation: NavigationItem[] // estrutura de menu (espelho do project.navigation)
   models: ModelNode[]
   routes: RouteNode[]

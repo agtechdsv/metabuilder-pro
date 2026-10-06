@@ -1,11 +1,14 @@
 import { RouteNode, AppAST, AnalyticsWidget } from '../../ast'
 import { renderGridCellValue, toPascalCase } from './helpers'
+import { biEngineEnabled } from '../bi-engine'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics / Dashboard BI Page Generator (Server-Side Aggregation)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
+  // Com SQL direto no banco, os widgets são agregados no banco pelo motor de BI (app/actions/bi.ts)
+  const useBiEngine = biEngineEnabled(ast)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const widgets = route.analyticsConfig?.widgets || []
@@ -346,6 +349,63 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
     ? `  // Filtro de data aplicado no banco via pushdown\n  const filteredRows = denormalizedRows`
     : `  // Filtro de data via query parameters\n  const filteredRows = denormalizedRows.filter(row => {\n    if (!startDate && !endDate) return true\n    const dateKey = Object.keys(row).find(k => {\n      const kl = k.toLowerCase()\n      return (kl.includes('data') || kl.includes('date') || kl.includes('created')) &&\n        !isNaN(new Date(row[k]).getTime())\n    }) ?? null\n    if (!dateKey) return true\n    const rowDate = new Date(row[dateKey]).getTime()\n    if (isNaN(rowDate)) return true\n    if (startDate && rowDate < new Date(startDate).getTime()) return false\n    if (endDate && rowDate > new Date(endDate + 'T23:59:59').getTime()) return false\n    return true\n  })`
 
+  // Agregação no banco (o mesmo planejador do painel em execução); o navegador não envia SQL
+  const engineAggregationCode = `  const biPeriod = startDate || endDate
+    ? { from: startDate || '1900-01-01', to: endDate || '2999-12-31' }
+    : null
+  const biFilters: Record<string, string> = {}
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  return `  { const v = params?.['${col}_filter']; if (v) biFilters['${f.dbColumn}'] = v }`
+}).join('\n')}
+  const biResults = await getBiWidgetsData(WIDGETS.map(w => w.id), { period: biPeriod, filters: biFilters })
+  const aggregatedData: Record<string, any> = {}
+  const seriesData: Record<string, any> = {}
+  const prevData: Record<string, { value: number; from: string; to: string }> = {}
+  const widgetErrors: Record<string, string> = {}
+  for (const widget of WIDGETS) {
+    const r = biResults[widget.id]
+    if (!r) continue
+    aggregatedData[widget.id] = r.data
+    if (r.series) seriesData[widget.id] = r.series
+    if (r.prev !== undefined && r.prevRange) prevData[widget.id] = { value: r.prev, from: r.prevRange.from, to: r.prevRange.to }
+    if (r.error) widgetErrors[widget.id] = r.error
+  }
+`
+
+  // Caminho antigo (Supabase, sem SQL direto): agrega em JavaScript no servidor
+  const legacyAggregationCode = `  // Junta dados das tabelas em memória (Server-Side Join)
+  const denormalizedRows = buildDenormalizedRows(
+    '${route.modelTable.toLowerCase()}',
+    masterRawData || [],
+    JOINS,
+    tablesData
+  )
+
+${filteredRowsCode}
+
+  // Filtros aplicados também nos widgets do dashboard
+  const dashboardRows = filteredRows.filter(row => {
+${filterFields.map(f => {
+  const col = f.dbColumn.replace('.', '_')
+  const rawCol = f.dbColumn
+  return `    const val_${col} = params?.['${col}_filter']
+    if (val_${col}) {
+      const rowVal = String(getRowField(row, '${rawCol}') ?? getRowField(row, '${col}') ?? '').toLowerCase()
+      if (!rowVal.includes(String(val_${col}).toLowerCase())) return false
+    }`
+}).join('\n')}
+    return true
+  })
+
+  // Agregação de cada widget no Servidor
+  const aggregatedData: Record<string, any> = {}
+  for (const widget of WIDGETS) {
+    aggregatedData[widget.id] = calculateWidgetData(widget, dashboardRows, tablesData)
+  }
+
+`
+
   const widgetsJson = JSON.stringify(widgets, null, 2)
   const joinsJson = JSON.stringify(normalizedJoins, null, 2)
   const defaultItemsPerPage = route.rawLayoutConfig?.items_per_page || 50
@@ -354,7 +414,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { get${mn}List, delete${mn} } from '@/app/actions/${mnLower}'
-${relatedImports ? `${relatedImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, RotateCcw, Loader2 } from 'lucide-react'
+${useBiEngine ? "import { getBiWidgetsData } from '@/app/actions/bi'\n" : ''}${relatedImports ? `${relatedImports}\n` : ''}import { Plus, Pencil, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Filter, RotateCcw, Loader2 } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { CustomActionButton } from '@/components/ui/custom-action-button'
@@ -759,36 +819,7 @@ ${tablesDataEntries}
 ${buildOptionsCode.join('\n')}
   }
 
-  // Junta dados das tabelas em memória (Server-Side Join)
-  const denormalizedRows = buildDenormalizedRows(
-    '${route.modelTable.toLowerCase()}',
-    masterRawData || [],
-    JOINS,
-    tablesData
-  )
-
-${filteredRowsCode}
-
-  // Filtros aplicados também nos widgets do dashboard
-  const dashboardRows = filteredRows.filter(row => {
-${filterFields.map(f => {
-  const col = f.dbColumn.replace('.', '_')
-  const rawCol = f.dbColumn
-  return `    const val_${col} = params?.['${col}_filter']
-    if (val_${col}) {
-      const rowVal = String(getRowField(row, '${rawCol}') ?? getRowField(row, '${col}') ?? '').toLowerCase()
-      if (!rowVal.includes(String(val_${col}).toLowerCase())) return false
-    }`
-}).join('\n')}
-    return true
-  })
-
-  // Agregação de cada widget no Servidor
-  const aggregatedData: Record<string, any> = {}
-  for (const widget of WIDGETS) {
-    aggregatedData[widget.id] = calculateWidgetData(widget, dashboardRows, tablesData)
-  }
-
+${useBiEngine ? engineAggregationCode : legacyAggregationCode}
   // Filtros da Grid de Registros
   const filteredGridData = (masterRawData || []).filter((item: any) => {
 ${filterFields.map(f => {
@@ -844,7 +875,7 @@ ${filterFields.map(f => {
         icon="${route.icon || 'BarChart3'}"
         widgets={WIDGETS as any}
         aggregatedData={aggregatedData}
-      />
+${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n' : ''}      />
 
       {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (
@@ -1083,6 +1114,8 @@ interface AnalyticsWidget {
   gaugeStart?: number
   gaugeEnd?: number
   useFormula?: boolean
+  /** widget original do projeto (série, comparação...) */
+  spec?: any
   color?: string
   format?: string
   decimals?: number
@@ -1097,6 +1130,12 @@ interface AnalyticsClientProps {
   icon?: string
   widgets: AnalyticsWidget[]
   aggregatedData: Record<string, any>
+  /** gráficos segmentados: tabela com uma coluna por série */
+  seriesData?: Record<string, { rows: any[]; keys: string[] }>
+  /** KPIs com comparação: valor e intervalo do período anterior */
+  prevData?: Record<string, { value: number; from: string; to: string }>
+  /** widgets que falharam: mensagem para o usuário */
+  errors?: Record<string, string>
 }
 
 const PALETTE = [
@@ -1119,6 +1158,9 @@ export function AnalyticsClient({
   icon = 'BarChart3',
   widgets,
   aggregatedData,
+  seriesData,
+  prevData,
+  errors,
 }: AnalyticsClientProps) {
   const [mounted, setMounted] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -1288,12 +1330,42 @@ export function AnalyticsClient({
           <Activity className="w-3 h-3" />
           {widget.calc} {widget.field ? \`/ \${widget.field.split('.').pop()}\` : ''}
         </div>
+        {widget.spec?.compare_previous && prevData?.[widget.id] && (() => {
+          const prev = prevData[widget.id]
+          const cur = Number.isFinite(num) ? num : 0
+          const up = cur >= prev.value
+          const good = widget.spec?.compare_invert ? !up : up
+          const pct = prev.value === 0 ? null : ((cur - prev.value) / Math.abs(prev.value)) * 100
+          // 99,96% não pode aparecer como "100%": só mostramos 100% quando for exatamente isso
+          const absPct = pct === null ? 0 : Math.abs(pct)
+          const shownPct = absPct < 100 && Math.round(absPct * 10) / 10 >= 100 ? 99.9 : absPct
+          const day = (d: string) => d.split('-').reverse().join('/')
+          return (
+            <div className="mt-3 flex flex-col items-center gap-0.5">
+              {pct === null ? (
+                <span className="text-[10px] font-bold text-neutral-400 text-center">sem dados no período anterior ({day(prev.from)} – {day(prev.to)})</span>
+              ) : (
+                <>
+                  <span className={cn('text-sm font-black tracking-tight', good ? 'text-emerald-500' : 'text-red-500')}>
+                    {up ? '▲' : '▼'} {new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(shownPct)}%
+                  </span>
+                  <span className="text-[10px] font-bold text-neutral-400 text-center">
+                    vs {day(prev.from)} – {day(prev.to)}: {fmt(prev.value, widget)}
+                  </span>
+                </>
+              )}
+            </div>
+          )
+        })()}
       </div>
     )
   }
 
   // ── Renderizador de Gráficos (Bar, Line, Pie) ──
   const renderChartContent = (widget: AnalyticsWidget, isExpanded = false) => {
+    if (errors?.[widget.id]) {
+      return <div className="flex-1 flex items-center justify-center text-center text-xs font-bold text-red-400 px-4">{errors[widget.id]}</div>
+    }
     const data = aggregatedData[widget.id]
     if (data === undefined || data === null) {
       return <div className="flex-1 flex items-center justify-center text-xs font-bold text-neutral-400">Sem dados disponíveis</div>
@@ -1321,6 +1393,49 @@ export function AnalyticsClient({
     const shortName = (v: any) => { const t = String(v); return t.length > 16 ? t.slice(0, 15) + '…' : t }
     const total = chartData.reduce((acc: number, r: any) => acc + (Number(r.value) || 0), 0)
     const gradId = 'bi-grad-' + widget.id
+
+    // Gráfico segmentado (segunda dimensão): uma série por cor, empilhada quando configurado
+    const seg = seriesData?.[widget.id]
+    if (seg && seg.rows.length > 0 && (widget.type === 'bar' || widget.type === 'line' || widget.type === 'area')) {
+      const stackId = widget.spec?.stacked ? 'stack' : undefined
+      const common = (
+        <>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
+          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+          <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
+          <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [fmt(value, widget), name]} />
+          <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800 }} />
+        </>
+      )
+      return (
+        <div className="w-full mt-2 relative" style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {widget.type === 'bar' ? (
+              <BarChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                {common}
+                {seg.keys.map((k, i) => (
+                  <Bar key={k} dataKey={k} stackId={stackId} fill={PALETTE[i % PALETTE.length]} radius={stackId ? 0 : [6, 6, 0, 0]} />
+                ))}
+              </BarChart>
+            ) : widget.type === 'line' ? (
+              <LineChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                {common}
+                {seg.keys.map((k, i) => (
+                  <Line key={k} type="monotone" dataKey={k} stroke={PALETTE[i % PALETTE.length]} strokeWidth={3} dot={{ r: 3 }} />
+                ))}
+              </LineChart>
+            ) : (
+              <AreaChart data={seg.rows} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                {common}
+                {seg.keys.map((k, i) => (
+                  <Area key={k} type="monotone" dataKey={k} stackId={stackId} stroke={PALETTE[i % PALETTE.length]} fill={PALETTE[i % PALETTE.length] + '55'} strokeWidth={2} />
+                ))}
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )
+    }
 
     return (
       <div className="w-full mt-2 relative" style={{ height }}>

@@ -84,3 +84,37 @@ export function nextDay(d: string): string {
   const [y, m, dd] = d.split('-').map(Number)
   return new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10)
 }
+
+export interface PeriodChoice { preset: string; from?: string; to?: string }
+
+/** Modo efetivo: "segue o grupo" só vale se o widget realmente está num grupo existente; senão ele segue o painel. */
+export function effectivePeriodMode(
+  w: { period_mode?: string; group_id?: string },
+  groupIds: string[],
+): 'panel' | 'fixed' | 'own' | 'group' {
+  const mode = (w.period_mode || 'panel') as 'panel' | 'fixed' | 'own' | 'group'
+  if (mode === 'group' && !(w.group_id && groupIds.includes(w.group_id))) return 'panel'
+  return mode
+}
+
+/**
+ * Período que vale para um widget: da barra do painel, fixo, do seletor do próprio card ou da barra do grupo.
+ * Sem `period_field` o widget não recebe filtro de período.
+ */
+export function resolveWidgetPeriod(
+  w: { id: string; period_field?: string; period_mode?: string; period_fixed?: string; group_id?: string },
+  ctx: { panel: PeriodRange | null; groupIds: string[]; groupPeriods?: Record<string, PeriodChoice>; ownPeriods?: Record<string, PeriodChoice>; today?: Date },
+): PeriodRange | null {
+  if (!w.period_field) return null
+  const mode = effectivePeriodMode(w, ctx.groupIds)
+  if (mode === 'fixed') return resolvePeriod(w.period_fixed || 'month', undefined, ctx.today)
+  if (mode === 'group') {
+    const gp = ctx.groupPeriods?.[w.group_id as string]
+    return gp ? resolvePeriod(gp.preset, { from: gp.from, to: gp.to }, ctx.today) : null
+  }
+  if (mode === 'own') {
+    const o = ctx.ownPeriods?.[w.id]
+    return o ? resolvePeriod(o.preset, { from: o.from, to: o.to }, ctx.today) : null
+  }
+  return ctx.panel
+}

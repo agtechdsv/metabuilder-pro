@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolvePeriod, formatPeriodDay } from '../period'
+import { resolvePeriod, formatPeriodDay, resolveWidgetPeriod, effectivePeriodMode } from '../period'
 
 const today = new Date(2026, 9, 5) // 05/10/2026
 
@@ -52,5 +52,31 @@ describe('previousRange', () => {
   it('outros → mesmo número de dias imediatamente antes', () => {
     expect(previousRange({ from: '2026-09-29', to: '2026-10-05' })).toEqual({ from: '2026-09-22', to: '2026-09-28' })
     expect(previousRange({ from: '2026-03-15', to: '2026-04-14' })).toEqual({ from: '2026-02-12', to: '2026-03-14' })
+  })
+})
+
+describe('resolveWidgetPeriod', () => {
+  const panel = { from: '2026-10-01', to: '2026-10-05' }
+  const ctx = { panel, groupIds: ['g1'], today }
+  it('sem period_field não filtra', () => {
+    expect(resolveWidgetPeriod({ id: 'a' }, ctx)).toBeNull()
+  })
+  it('padrão segue o painel', () => {
+    expect(resolveWidgetPeriod({ id: 'a', period_field: 'T.D' }, ctx)).toEqual(panel)
+  })
+  it('fixo ignora o painel', () => {
+    expect(resolveWidgetPeriod({ id: 'a', period_field: 'T.D', period_mode: 'fixed', period_fixed: 'prev_month' }, ctx)).toEqual({ from: '2026-09-01', to: '2026-09-30' })
+  })
+  it('próprio e grupo usam suas escolhas; sem escolha não filtram', () => {
+    const w = { id: 'a', period_field: 'T.D', period_mode: 'own', group_id: 'g1' }
+    expect(resolveWidgetPeriod(w, ctx)).toBeNull()
+    expect(resolveWidgetPeriod(w, { ...ctx, ownPeriods: { a: { preset: '7d' } } })).toEqual({ from: '2026-09-29', to: '2026-10-05' })
+    const g = { ...w, period_mode: 'group' }
+    expect(resolveWidgetPeriod(g, { ...ctx, groupPeriods: { g1: { preset: 'custom', from: '2026-01-01', to: '2026-01-31' } } })).toEqual({ from: '2026-01-01', to: '2026-01-31' })
+  })
+  it('"segue o grupo" sem grupo existente volta a seguir o painel', () => {
+    expect(effectivePeriodMode({ period_mode: 'group', group_id: 'nao-existe' }, ['g1'])).toBe('panel')
+    expect(effectivePeriodMode({ period_mode: 'group' }, ['g1'])).toBe('panel')
+    expect(effectivePeriodMode({ period_mode: 'group', group_id: 'g1' }, ['g1'])).toBe('group')
   })
 })

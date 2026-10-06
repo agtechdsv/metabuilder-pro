@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildAggregateQuery, conditionSql, filterConditionSql, quoteFor, SQL_DIALECTS, type BuildAggInput, type BiCondition } from '../queryBuilder'
+import { buildAggregateQuery, conditionSql, filterConditionSql, quoteFor, oracleUpperIdentifiers, SQL_DIALECTS, type BuildAggInput, type BiCondition } from '../queryBuilder'
 
 const base = (dialect: BuildAggInput['dialect'], extra: Partial<BuildAggInput> = {}): BuildAggInput => ({
   dialect, mainTable: 'pedidos', mainPk: 'id', joinSql: '', calc: 'SUM',
@@ -104,5 +104,19 @@ describe('todos os dialetos', () => {
   })
   it('quoteFor entrega o delimitador de cada banco', () => {
     expect(SQL_DIALECTS.map(d => quoteFor(d)('t'))).toEqual(['"t"', '"t"', '`t`', '[t]'])
+  })
+})
+
+describe('oracleUpperIdentifiers', () => {
+  it('coloca em maiúsculas só os identificadores entre aspas', () => {
+    expect(oracleUpperIdentifiers('SELECT SUM("pedidos"."valor") AS "bi_value" FROM "pedidos"'))
+      .toBe('SELECT SUM("PEDIDOS"."VALOR") AS "BI_VALUE" FROM "PEDIDOS"')
+  })
+  it('não mexe em valores dentro de literais (inclusive com aspas simples escapadas)', () => {
+    expect(oracleUpperIdentifiers(`WHERE "t"."c" = 'diz "oi" e d''"x"'`)).toBe(`WHERE "T"."C" = 'diz "oi" e d''"x"'`)
+  })
+  it('é idempotente', () => {
+    const once = oracleUpperIdentifiers('SELECT "a"."b" FROM "a"')
+    expect(oracleUpperIdentifiers(once)).toBe(once)
   })
 })
