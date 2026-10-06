@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/utils/supabase/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { createAdminClient } from '@/utils/supabase/server'
+import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const idOrName = searchParams.get('id') || searchParams.get('name')
   const projectId = searchParams.get('project_id')
@@ -11,20 +12,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Requer sessão autenticada
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-
     // Usa admin apenas para lookup, mas filtra por project_id quando fornecido
     const supabaseAdmin = createAdminClient()
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrName)
 
     let query = supabaseAdmin
       .from('project_enumerations')
-      .select('id, name, values')
+      .select('id, name, values, project_id')
 
     // Sempre filtra por project_id quando fornecido (impede cross-project access)
     if (projectId) {
@@ -47,7 +41,7 @@ export async function GET(request: Request) {
     if (!data) {
       let ilikeQuery = supabaseAdmin
         .from('project_enumerations')
-        .select('id, name, values')
+        .select('id, name, values, project_id')
         .ilike('name', idOrName)
         .limit(1)
       if (projectId) {
@@ -63,9 +57,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: { values: [] } })
     }
 
-    return NextResponse.json({ data })
+    // Quem pede precisa ter acesso AO PROJETO DONO da enumeração: membro (regra de acesso do banco) ou usuário final
+    // com a sessão assinada do projeto (as listas de opções dos formulários do app publicado).
+    const actor = await authorizeProjectActor(request, (data as any).project_id)
+    if (!actor) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const { project_id: _omit, ...enumeration } = data as any
+    return NextResponse.json({ data: enumeration })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
-

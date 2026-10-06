@@ -372,7 +372,7 @@ export function AutocompleteInput({
           placeholder={placeholder}
           style={style}
           className={cn(
-            'w-full pl-10 pr-9 py-2.5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium outline-none transition-all',
+            'w-full pl-10 pr-9 py-2.5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 outline-none transition-all',
             'focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:focus:border-emerald-400',
             disabled && 'opacity-50 cursor-not-allowed bg-neutral-100 dark:bg-neutral-900',
             className
