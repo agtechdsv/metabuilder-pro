@@ -224,6 +224,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
 
   const ws = require('ws');
   const { wrapChannelWithChunking } = require('./chunkedChannel');
+  const { authorizeCommand, NonceCache, DEFAULT_TOLERANCE_SECONDS } = require('./security');
+  const { ReplyRouter } = require('./replies');
 const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     auth: { persistSession: false },
     realtime: {
@@ -294,20 +296,44 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   const channelName = `tunnel:${projectId}`;
   const channel = wrapChannelWithChunking(supabase.channel(channelName));
 
+  // Segurança dos comandos: o servidor ASSINA cada comando (o token não trafega no canal público). O formato antigo
+  // (token dentro do comando) segue aceito até você ligar "requireSignedCommands": true no metabuilder.config.json
+  // (ou MB_REQUIRE_SIGNED=1), o que se recomenda depois que as telas e o servidor estiverem atualizados.
+  const requireSigned = configData?.requireSignedCommands === true || process.env.MB_REQUIRE_SIGNED === '1';
+  const toleranceSeconds = Number(configData?.signatureToleranceSeconds) > 0 ? Number(configData.signatureToleranceSeconds) : DEFAULT_TOLERANCE_SECONDS;
+  const nonces = new NonceCache(toleranceSeconds * 2000);
+  const security = { projectId, secretToken, requireSigned, toleranceSeconds, nonces };
+  // Respostas: no tópico privado que o comando indicar (`replyTo`); sem ele, no canal de sempre
+  const router = new ReplyRouter({
+    projectId,
+    supabaseUrl: finalSupabaseUrl,
+    apiKey: finalSupabaseKey,
+    baseChannel: channel,
+    log: (m) => console.error(chalk.yellow(`[ RESPOSTA ] ${m}`)),
+  });
+  let warnedLegacy = false;
+
   console.log(chalk.cyan('\n' + t('tunnel_agent_listening', { channel: channelName })));
   console.log(chalk.gray(t('tunnel_press_ctrl_c')));
 
   channel
     .on('broadcast', { event: 'sql_query' }, async (payload) => {
       // Recebeu um comando do painel MetaBuilderPRO
-      const { queryId, table, action, token, schemaName } = payload.payload;
+      const { queryId, table, action, schemaName } = payload.payload;
 
-      // Segurança: Verifica se o comando veio com o token correto do projeto
-      if (token !== secretToken) {
-        console.log(chalk.red(`[ BLOQUEADO ] Comando recebido com token inválido para o projeto ${projectId}.`));
-        console.log(chalk.gray(`  Recebido: "${token ? token.substring(0, 6) + '...' : 'null'}" | Configurado: "${secretToken ? secretToken.substring(0, 6) + '...' : 'null'}"`));
+      // Segurança: o comando precisa vir assinado (ou, no formato antigo, com o token correto do projeto)
+      const auth = authorizeCommand('sql_query', payload.payload, security);
+      if (!auth.ok) {
+        console.log(chalk.red(`[ BLOQUEADO ] Comando recusado (${auth.reason}) para o projeto ${projectId}.`));
         return;
       }
+      if (auth.mode === 'legacy' && !warnedLegacy) {
+        warnedLegacy = true;
+        console.log(chalk.yellow('[ AVISO ] Recebendo comandos no formato antigo (token dentro do comando). Atualize o servidor e ligue "requireSignedCommands" para recusá-lo.'));
+      }
+      // resposta só no tópico privado de quem perguntou (ou no canal de sempre, se o comando não trouxe um)
+      const replyTo = router.accept(payload.payload.replyTo);
+      const reply = (event, body) => router.reply(replyTo, event, body);
       
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
       // Ações META não são queries de dados e ignoram o filtro de schema
@@ -1182,11 +1208,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               } catch (e) {
                 console.error('[BPM] Falha ao re-buscar dados inseridos:', e.message);
               }
-              channel.send({
-                type: 'broadcast',
-                event: 'bpm_workflow_completed',
-                payload: { table: safeTable, action: 'INSERT', data: finalData }
-              });
+              router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'INSERT', data: finalData }, !requireSigned);
             }).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar INSERT:`), err);
             });
@@ -1275,11 +1297,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                     console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
                   }
 
-                  channel.send({
-                    type: 'broadcast',
-                    event: 'bpm_workflow_completed',
-                    payload: { table: safeTable, action: 'UPDATE', data: finalData }
-                  });
+                  router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'UPDATE', data: finalData }, !requireSigned);
                 }).catch(err => {
                   console.error(chalk.red(`[BPM] Erro ao processar UPDATE:`), err);
                 });
@@ -1407,11 +1425,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
              console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
           }
           
-          channel.send({
-             type: 'broadcast',
-             event: 'bpm_workflow_completed',
-             payload: { table: safeTable, action: 'CUSTOM', data: finalData }
-          });
+          router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'CUSTOM', data: finalData }, !requireSigned);
           
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
@@ -1538,22 +1552,14 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
 
         // Evento Genérico (para o Dashboard BI)
         try {
-          await channel.send({
-            type: 'broadcast',
-            event: 'sql_result',
-            payload: responsePayload
-          });
+          await reply('sql_result', responsePayload);
         } catch (sendErr) {
           console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast 'sql_result': ${sendErr.message}`));
         }
 
         // Evento Específico (para compatibilidade com a Grade/Grid)
         try {
-          await channel.send({
-            type: 'broadcast',
-            event: `query_result_${queryId}`,
-            payload: responsePayload
-          });
+          await reply(`query_result_${queryId}`, responsePayload);
         } catch (sendErr) {
           console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast 'query_result_${queryId}': ${sendErr.message}`));
         }
@@ -1574,32 +1580,25 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         };
 
         try {
-          await channel.send({
-            type: 'broadcast',
-            event: 'sql_result',
-            payload: errorPayload
-          });
+          await reply('sql_result', errorPayload);
         } catch (sendErr) {
           console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast de erro 'sql_result': ${sendErr.message}`));
         }
 
         try {
-          await channel.send({
-            type: 'broadcast',
-            event: `query_result_${queryId}`,
-            payload: errorPayload
-          });
+          await reply(`query_result_${queryId}`, errorPayload);
         } catch (sendErr) {
           console.error(chalk.yellow(`[ AVISO ] Falha ao enviar broadcast de erro 'query_result_${queryId}': ${sendErr.message}`));
         }
       }
     });
 
-    require('./export_handler').registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase);
+    require('./export_handler').registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase, { security, router });
 
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(chalk.green.bold(t('tunnel_ready')));
+        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: ativos | formato antigo (token no comando): ${requireSigned ? 'RECUSADO' : 'aceito'} | respostas em tópico privado: ativas`));
       }
     });
 }

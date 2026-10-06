@@ -125,3 +125,76 @@ describe('patchChannelForRelay', () => {
     expect(await relayThroughChannel({ topic: 'outro' }, msg())).toBe('error')
   })
 })
+
+import { isPrivateTunnel, replyToFromTopic, setPrivateTunnel, tabSecret, tunnelTopicFor } from '../relayClient'
+
+describe('tópico privado por aba', () => {
+  const SECRET = 'sAbCdEfGhIjKlMnOpQrStU'
+  afterEach(() => setPrivateTunnel(false))
+
+  it('desligado, o nome do canal não muda (Studio e telas de sempre)', () => {
+    expect(isPrivateTunnel()).toBe(false)
+    expect(tunnelTopicFor(`tunnel:${PID}`)).toBe(`tunnel:${PID}`)
+  })
+
+  it('ligado, tunnel:<id> vira tunnel:<id>:<segredo da aba>, sempre o mesmo na aba; outros canais não mudam', () => {
+    setPrivateTunnel(true)
+    const t = tunnelTopicFor(`tunnel:${PID}`)
+    expect(t).toBe(`tunnel:${PID}:${tabSecret()}`)
+    expect(tunnelTopicFor(`tunnel:${PID}`)).toBe(t)
+    expect(tabSecret()).toMatch(/^[A-Za-z0-9_-]{16,64}$/)
+    expect(tunnelTopicFor('release-completion-notifier')).toBe('release-completion-notifier')
+    expect(tunnelTopicFor(`tunnel:${PID}:ja-tem-segredo-abcdefghij`)).toBe(`tunnel:${PID}:ja-tem-segredo-abcdefghij`)
+  })
+
+  it('lê id do projeto e tópico de resposta dos formatos do Realtime', () => {
+    expect(projectIdFromTopic(`realtime:tunnel:${PID}:${SECRET}`)).toBe(PID)
+    expect(replyToFromTopic(`realtime:tunnel:${PID}:${SECRET}`)).toBe(`tunnel:${PID}:${SECRET}`)
+    expect(replyToFromTopic(`realtime:tunnel:${PID}`)).toBeNull()
+    expect(replyToFromTopic('outro-canal')).toBeNull()
+  })
+
+  it('o envio pelo servidor leva o tópico de resposta da aba', async () => {
+    const { ch } = fakeChannel(`realtime:tunnel:${PID}:${SECRET}`)
+    const f = vi.fn(async () => res(202))
+    vi.stubGlobal('fetch', f)
+    patchChannelForRelay(ch)
+    await ch.send(msg())
+    const body = JSON.parse((f.mock.calls[0] as any)[1].body)
+    expect(body.projectId).toBe(PID)
+    expect(body.payload.replyTo).toBe(`tunnel:${PID}:${SECRET}`)
+  })
+
+  it('sem tópico privado, o envio não leva replyTo', async () => {
+    const { ch } = fakeChannel()
+    const f = vi.fn(async () => res(202))
+    vi.stubGlobal('fetch', f)
+    patchChannelForRelay(ch)
+    await ch.send(msg())
+    expect(JSON.parse((f.mock.calls[0] as any)[1].body).payload.replyTo).toBeUndefined()
+  })
+})
+
+import { setRelayMode } from '../relayClient'
+
+describe('relay ligado na tela (Studio com token no comando)', () => {
+  afterEach(() => setRelayMode(false))
+
+  it('com o relay ligado até o comando que traz token vai pelo servidor, e o token NÃO segue', async () => {
+    setRelayMode(true)
+    const { ch, direct } = fakeChannel()
+    const f = vi.fn(async () => res(202))
+    vi.stubGlobal('fetch', f)
+    patchChannelForRelay(ch)
+    expect(needsRelay(msg({ token: 'tok-do-studio' }))).toBe(true)
+    await ch.send(msg({ token: 'tok-do-studio' }))
+    expect(direct).toHaveLength(0)
+    const body = JSON.parse((f.mock.calls[0] as any)[1].body)
+    expect(body.payload.token).toBeUndefined()
+    expect(JSON.stringify(body)).not.toContain('tok-do-studio')
+  })
+
+  it('com o relay desligado, o comando com token segue direto como sempre', () => {
+    expect(needsRelay(msg({ token: 'tok' }))).toBe(false)
+  })
+})

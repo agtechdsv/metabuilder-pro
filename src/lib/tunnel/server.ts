@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CHUNK_SIZE } from '@/lib/chunkedChannel'
+import { newReplyTopic, signCommand, signingEnabled } from './commandSigning'
 
 /**
  * Túnel visto pelo SERVIDOR.
@@ -77,16 +78,20 @@ export class TunnelTimeoutError extends Error {
 /**
  * Envia um comando e espera a resposta com o mesmo `queryId` (usada no login do usuário final, onde o servidor
  * precisa ver o resultado com os próprios olhos em vez de confiar no que o navegador diz).
+ *
+ * Com `secret` (o token do projeto) o comando vai ASSINADO, sem o token, e a resposta volta por um tópico privado
+ * imprevisível: ninguém no canal público vê o token nem o resultado. Sem `secret`, o comportamento antigo.
  */
 export async function tunnelCall(
   projectId: string,
   event: string,
   payload: { queryId: string; [k: string]: any },
-  opts: { timeoutMs?: number; transport?: TunnelTransport } = {},
+  opts: { timeoutMs?: number; transport?: TunnelTransport; secret?: string } = {},
 ): Promise<any> {
   const transport = opts.transport ?? realtimeTransport()
   const timeoutMs = opts.timeoutMs ?? 15000
-  const topic = tunnelTopic(projectId)
+  const topic = opts.secret ? newReplyTopic(projectId, 's') : tunnelTopic(projectId)
+  const command = opts.secret ? signCommand(opts.secret, event, projectId, payload, { replyTo: topic }) : payload
   const assembler = new ChunkAssembler()
   let unsubscribe: (() => void) | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -106,7 +111,7 @@ export async function tunnelCall(
       transport.subscribe(topic, handle).then(
         async off => {
           unsubscribe = off
-          try { await tunnelSend(projectId, event, payload, transport) } catch (e) { reject(e) }
+          try { await tunnelSend(projectId, event, command, transport) } catch (e) { reject(e) }
         },
         reject,
       )
@@ -187,4 +192,19 @@ export function realtimeTransport(): TunnelTransport {
     },
   }
   return _transport
+}
+
+/**
+ * `tunnelCall` que usa o modo certo sozinho: com a assinatura ligada (TUNNEL_SIGN=on) tira o token do comando, assina
+ * com ele e responde em tópico privado; desligada, segue o formato antigo.
+ */
+export async function tunnelCallAuto(
+  projectId: string,
+  payload: { queryId: string; token?: string; [k: string]: any },
+  opts: { timeoutMs?: number; transport?: TunnelTransport; sign?: boolean } = {},
+): Promise<any> {
+  const { token, ...rest } = payload
+  const sign = opts.sign ?? signingEnabled()
+  if (sign && token) return tunnelCall(projectId, 'sql_query', rest as any, { ...opts, secret: token })
+  return tunnelCall(projectId, 'sql_query', payload, opts)
 }

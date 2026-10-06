@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 import { diagnoseTunnel } from '@/lib/tunnel/diagnose'
 import { relayEnabled } from '@/lib/tunnel/server'
+import { signingEnabled } from '@/lib/tunnel/commandSigning'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -17,5 +18,5 @@ export async function POST(request: NextRequest) {
   if (!actor || actor.kind !== 'member') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const result = await diagnoseTunnel(projectId)
-  return NextResponse.json({ ...result, relay: relayEnabled() })
+  return NextResponse.json({ ...result, relay: relayEnabled(), sign: signingEnabled() })
 }

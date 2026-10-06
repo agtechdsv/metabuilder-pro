@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { diagnoseTunnel } from '../diagnose'
+import { diagnoseTunnel, type ProbeMode } from '../diagnose'
 import { TunnelTimeoutError } from '../server'
 
 const client = (project: any, models: any[] = [{ db_schema_name: 'vendas' }]) => ({
@@ -8,27 +8,45 @@ const client = (project: any, models: any[] = [{ db_schema_name: 'vendas' }]) =>
     : { select: () => ({ eq: () => ({ limit: async () => ({ data: models }) }) }) },
 }) as any
 
+const pg = client({ id: 'p', db_type: 'postgres' })
+const deps = (call: any, extra: any = {}) => ({ client: pg, token: async () => 'tok', call, ...extra })
+
 describe('diagnoseTunnel', () => {
-  it('manda SELECT 1 no schema do projeto e mede o tempo', async () => {
-    const call = vi.fn(async (_p: string, _payload: any) => ({ success: true }))
+  it('Agente atualizado: responde ao comando assinado (um único envio) e informa o tempo', async () => {
+    const call = vi.fn(async (_p: string, _payload: any, _m: ProbeMode, _s: string) => ({ success: true }))
     let t = 1000
-    const r = await diagnoseTunnel('p', { client: client({ id: 'p', db_type: 'postgres' }), token: async () => 'tok', call, now: () => (t += 40) })
-    expect(r).toEqual({ ok: true, ms: 40 })
-    expect(call.mock.calls[0][1]).toMatchObject({ token: 'tok', action: 'select', schemaName: 'vendas', query: 'SELECT 1 AS ok' })
+    const r = await diagnoseTunnel('p', deps(call, { now: () => (t += 40) }))
+    expect(r).toEqual({ ok: true, ms: 40, signed: true })
+    expect(call).toHaveBeenCalledTimes(1)
+    expect(call.mock.calls[0][2]).toBe('signed')
+    expect(call.mock.calls[0][1]).toMatchObject({ action: 'select', schemaName: 'vendas', query: 'SELECT 1 AS ok' })
+  })
+
+  it('Agente antigo: não entende a assinatura, mas responde ao formato antigo → avisa para atualizar', async () => {
+    const call = vi.fn(async (_p: string, _payload: any, mode: ProbeMode) => {
+      if (mode === 'signed') throw new TunnelTimeoutError(1)
+      return { success: true }
+    })
+    const r = await diagnoseTunnel('p', deps(call))
+    expect(r).toMatchObject({ ok: true, signed: false })
+    expect(call.mock.calls.map(c => c[2])).toEqual(['signed', 'legacy'])
+  })
+
+  it('Agente desligado: nenhum dos dois formatos recebe resposta', async () => {
+    const call = async () => { throw new TunnelTimeoutError(1) }
+    expect(await diagnoseTunnel('p', deps(call))).toEqual({ ok: false, reason: 'offline' })
   })
 
   it('no Oracle usa DUAL', async () => {
-    const call = vi.fn(async (_p: string, _payload: any) => ({ success: true }))
-    await diagnoseTunnel('p', { client: client({ id: 'p', db_type: 'oracle' }), token: async () => 'tok', call })
+    const call = vi.fn(async (..._a: any[]) => ({ success: true }))
+    await diagnoseTunnel('p', { ...deps(call), client: client({ id: 'p', db_type: 'oracle' }) })
     expect(call.mock.calls[0][1].query).toContain('FROM DUAL')
   })
 
-  it('explica cada falha', async () => {
-    const ok = client({ id: 'p', db_type: 'postgres' })
+  it('explica as demais falhas', async () => {
     expect(await diagnoseTunnel('p', { client: client(null) })).toEqual({ ok: false, reason: 'no_project' })
-    expect(await diagnoseTunnel('p', { client: ok, token: async () => null })).toEqual({ ok: false, reason: 'no_token' })
-    expect(await diagnoseTunnel('p', { client: ok, token: async () => 't', call: async () => { throw new TunnelTimeoutError(1) } })).toEqual({ ok: false, reason: 'offline' })
-    expect(await diagnoseTunnel('p', { client: ok, token: async () => 't', call: async () => ({ success: false, error: 'banco fora' }) })).toEqual({ ok: false, reason: 'agent_error', detail: 'banco fora' })
-    expect(await diagnoseTunnel('p', { client: ok, token: async () => 't', call: async () => { throw new Error('HTTP 500') } })).toEqual({ ok: false, reason: 'transport', detail: 'HTTP 500' })
+    expect(await diagnoseTunnel('p', { client: pg, token: async () => null })).toEqual({ ok: false, reason: 'no_token' })
+    expect(await diagnoseTunnel('p', deps(async () => ({ success: false, error: 'banco fora' })))).toEqual({ ok: false, reason: 'agent_error', detail: 'banco fora' })
+    expect(await diagnoseTunnel('p', deps(async () => { throw new Error('HTTP 500') }))).toEqual({ ok: false, reason: 'transport', detail: 'HTTP 500' })
   })
 })

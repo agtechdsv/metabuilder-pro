@@ -1,5 +1,7 @@
 import { createClient as createSupabaseServerClient } from '@/utils/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { authenticateCommand } from '@/lib/tunnel/commandSigning'
+import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { NextResponse } from 'next/server'
 import { executeExportBackground } from '@/utils/export/worker'
 import ws from 'ws'
@@ -18,21 +20,12 @@ function getSupabase(): any {
 }
 async function broadcastDelete(projectId: string, localPaths: string[]) {
   if (!localPaths || localPaths.length === 0) return
-  const supabase = getSupabase()
-  const channel = supabase.channel(`tunnel:${projectId}`)
-  await new Promise<void>((resolve) => {
-    let isDone = false
-    const timeout = setTimeout(() => { if (!isDone) { isDone = true; supabase.removeChannel(channel); resolve() } }, 3000)
-    channel.subscribe((status: string) => {
-      if (status === 'SUBSCRIBED' && !isDone) {
-        Promise.all(localPaths.filter(Boolean).map((localPath: any) => 
-          channel.send({ type: 'broadcast', event: 'delete_export_file', payload: { localPath } })
-        )).then(() => {
-          if (!isDone) { isDone = true; clearTimeout(timeout); supabase.removeChannel(channel); resolve() }
-        })
-      }
-    })
-  })
+  // O Agente só apaga arquivo a pedido autenticado (assinado ou com o token do projeto) e só dentro da pasta de exportações
+  const token = await getProjectSecretToken(projectId)
+  if (!token) return
+  await Promise.all(localPaths.filter(Boolean).map((localPath: any) =>
+    tunnelSend(projectId, 'delete_export_file', authenticateCommand(token, 'delete_export_file', projectId, { localPath })).catch(() => {})
+  ))
 }
 
 export async function POST(request: Request) {

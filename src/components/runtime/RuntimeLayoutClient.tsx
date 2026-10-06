@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { DynamicSidebar } from './DynamicSidebar'
 import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
 import DynamicIcon from './DynamicIcon'
+import { setPrivateTunnel, setRelayMode } from '@/lib/tunnel/relayClient'
 
 interface RuntimeLayoutClientProps {
   children: React.ReactNode
@@ -20,6 +21,8 @@ interface RuntimeLayoutClientProps {
   /** relay ligado: a sessão que vale é a assinada, confirmada pelo servidor (o cookie de exibição pode estar velho ou forjado) */
   relay?: boolean
   serverSession?: boolean
+  /** assinatura de comandos ligada: cada aba ouve um tópico privado do túnel (precisa de Agente CLI atualizado) */
+  privateTunnel?: boolean
 }
 
 export function RuntimeLayoutClient({ 
@@ -33,8 +36,12 @@ export function RuntimeLayoutClient({
   isNoAuth = false,
   baseNavUrl,
   relay = false,
-  serverSession = false
+  serverSession = false,
+  privateTunnel = false
 }: RuntimeLayoutClientProps) {
+  // vale para todos os canais abertos daqui para baixo (definido já na renderização, antes de qualquer filho abrir canal)
+  setRelayMode(relay)
+  setPrivateTunnel(privateTunnel)
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)

@@ -5,8 +5,8 @@ import { Loader2, Radio, CheckCircle2, XCircle } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 
 type Outcome =
-  | { ok: true; ms: number; relay: boolean }
-  | { ok: false; reason: string; detail?: string; relay?: boolean }
+  | { ok: true; ms: number; signed: boolean; relay: boolean; sign: boolean }
+  | { ok: false; reason: string; detail?: string; relay?: boolean; sign?: boolean }
 
 /** Teste do caminho servidor → túnel → Agente CLI → banco, e situação do relay (token fora do navegador). */
 export function RelayDiagnostics({ projectId }: { projectId?: string }) {
@@ -26,7 +26,9 @@ export function RelayDiagnostics({ projectId }: { projectId?: string }) {
       })
       const data = await res.json().catch(() => ({}))
       if (res.status === 401) setOutcome({ ok: false, reason: 'unauthorized' })
-      else setOutcome(data?.ok ? { ok: true, ms: data.ms, relay: !!data.relay } : { ok: false, reason: data?.reason || 'transport', detail: data?.detail, relay: !!data?.relay })
+      else setOutcome(data?.ok
+        ? { ok: true, ms: data.ms, signed: !!data.signed, relay: !!data.relay, sign: !!data.sign }
+        : { ok: false, reason: data?.reason || 'transport', detail: data?.detail, relay: !!data?.relay, sign: !!data?.sign })
     } catch {
       setOutcome({ ok: false, reason: 'transport' })
     } finally {
@@ -35,6 +37,7 @@ export function RelayDiagnostics({ projectId }: { projectId?: string }) {
   }
 
   const relay = outcome && 'relay' in outcome ? outcome.relay : undefined
+  const sign = outcome && 'sign' in outcome ? outcome.sign : undefined
   const failure = outcome && !outcome.ok
     ? t('tunnel_relay.fail_' + outcome.reason) + (outcome.detail ? ` (${outcome.detail})` : '')
     : ''
@@ -56,8 +59,11 @@ export function RelayDiagnostics({ projectId }: { projectId?: string }) {
 
         {outcome?.ok && (
           <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="w-4 h-4" /> {t('tunnel_relay.ok').replace('{ms}', String(outcome.ms))}
+            <CheckCircle2 className="w-4 h-4" /> {t(outcome.signed ? 'tunnel_relay.ok_signed' : 'tunnel_relay.ok').replace('{ms}', String(outcome.ms))}
           </span>
+        )}
+        {outcome?.ok && !outcome.signed && (
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{t('tunnel_relay.agent_old')}</span>
         )}
         {outcome && !outcome.ok && (
           <span className="flex items-center gap-1.5 text-sm font-bold text-red-600 dark:text-red-400">
@@ -66,6 +72,11 @@ export function RelayDiagnostics({ projectId }: { projectId?: string }) {
         )}
       </div>
 
+      {sign !== undefined && (
+        <p className={`mt-3 text-xs font-bold ${sign ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+          {sign ? t('tunnel_relay.sign_on') : t('tunnel_relay.sign_off')}
+        </p>
+      )}
       {relay !== undefined && (
         <p className={`mt-3 text-xs font-bold ${relay ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
           {relay ? t('tunnel_relay.state_on') : t('tunnel_relay.state_off')}

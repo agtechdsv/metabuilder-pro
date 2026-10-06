@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { authenticateCommand } from '@/lib/tunnel/commandSigning'
 import { Pool } from 'pg'
 import ws from 'ws'
 
@@ -175,9 +176,9 @@ export async function executeExportBackground(params: {
           channel.send({
             type: 'broadcast',
             event: 'export_job_start',
-            payload: {
+            // assinado (sem o token no canal público) quando TUNNEL_SIGN=on; senão, o formato antigo
+            payload: authenticateCommand(projectData.secret_token, 'export_job_start', projectId, {
               jobId,
-              token: projectData.secret_token,
               sql: rawSql,
               params: sqlParams,
               fileType,
@@ -190,7 +191,7 @@ export async function executeExportBackground(params: {
               modelName,
               dictionary,
               recordId
-            }
+            })
           }).then(() => {
             if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
           }).catch((err: any) => {

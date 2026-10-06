@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
 import { getProjectSecretToken, relayEnabled, tunnelSend } from '@/lib/tunnel/server'
+import { signingEnabled } from '@/lib/tunnel/commandSigning'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
   try {
-    await tunnelSend(req.projectId, req.event, buildCommand(req, token))
+    await tunnelSend(req.projectId, req.event, buildCommand(req, token, { sign: signingEnabled() }))
     return NextResponse.json({ ok: true }, { status: 202 })
   } catch (error: any) {
     console.error('[tunnel/send] falha ao enviar:', error?.message)

@@ -3,8 +3,12 @@ const path = require('path');
 const xlsx = require('xlsx');
 const { jsPDF } = require('jspdf');
 const chalk = require('chalk');
+const { authorizeCommand, NonceCache, isPathInside } = require('./security');
 
-function registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase) {
+function registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase, extra = {}) {
+  // mesma verificação dos comandos de dados (assinatura ou token); sem ela os eventos abaixo ficariam abertos a qualquer um no canal
+  const security = extra.security || { projectId, secretToken, requireSigned: false, nonces: new NonceCache() };
+  const router = extra.router || null;
   // Configured local download path
   const baseDownloadPath = configData.downloadPath || path.join(require('os').homedir(), 'Downloads', 'MetaBuilderExports');
   
@@ -13,10 +17,11 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
   }
 
   channel.on('broadcast', { event: 'export_job_start' }, async (payload) => {
-    const { jobId, token, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, modelName, dictionary, recordId } = payload.payload;
+    const { jobId, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, modelName, dictionary, recordId } = payload.payload;
 
-    if (token !== secretToken) {
-      console.log(chalk.red(`[ BLOQUEADO ] Export job negado por token inválido. (Job ${jobId})`));
+    const auth = authorizeCommand('export_job_start', payload.payload, security);
+    if (!auth.ok) {
+      console.log(chalk.red(`[ BLOQUEADO ] Export job recusado (${auth.reason}). (Job ${jobId})`));
       return;
     }
 
@@ -399,9 +404,26 @@ NEWFILEUID:NONE
     const { jobId, localPath } = payloadEvent.payload;
     const eventName = `download_chunk_${jobId}`;
 
+    // Antes este evento não pedia autenticação nem limitava o caminho: qualquer pessoa no canal público podia pedir
+    // QUALQUER arquivo da máquina. Agora exige comando autenticado e só entrega arquivos da pasta de exportações.
+    const auth = authorizeCommand('request_download_stream', payloadEvent.payload, security);
+    if (!auth.ok) {
+      console.log(chalk.red(`[ BLOQUEADO ] Pedido de download recusado (${auth.reason}).`));
+      return;
+    }
+    // os pedaços do arquivo vão só ao tópico privado de quem pediu (o servidor que entrega o download)
+    const replyTo = router ? router.accept(payloadEvent.payload.replyTo) : null;
+    const send = (body) => (router ? router.reply(replyTo, eventName, body) : channel.send({ type: 'broadcast', event: eventName, payload: body }));
+
+    if (!isPathInside(baseDownloadPath, localPath)) {
+       console.log(chalk.red(`[ BLOQUEADO ] Download fora da pasta de exportações recusado: ${String(localPath).slice(0, 120)}`));
+       await send({ error: 'Arquivo não disponível.' });
+       return;
+    }
+
     if (!fs.existsSync(localPath)) {
        console.log(chalk.red(`[ STREAM ] Arquivo não encontrado: ${localPath}`));
-       await channel.send({ type: 'broadcast', event: eventName, payload: { error: 'Arquivo deletado ou não encontrado no servidor corporativo.' }});
+       await send({ error: 'Arquivo deletado ou não encontrado no servidor corporativo.' });
        return;
     }
 
@@ -417,11 +439,7 @@ NEWFILEUID:NONE
        try {
          const chunkBase64 = chunk.toString('base64');
          console.log(chalk.cyan(`[ STREAM ] Enviando chunk de ${chunkBase64.length} caracteres para ${eventName}...`));
-         await channel.send({
-           type: 'broadcast',
-           event: eventName,
-           payload: { chunk: chunkBase64, isLast: false }
-         });
+         await send({ chunk: chunkBase64, isLast: false });
          console.log(chalk.cyan(`[ STREAM ] Chunk enviado com sucesso para ${eventName}.`));
          readStream.resume();
        } catch (err) {
@@ -433,11 +451,7 @@ NEWFILEUID:NONE
     readStream.on('end', async () => {
        console.log(chalk.cyan(`[ STREAM ] Fim do arquivo. Aguardando 200ms para enviar isLast:true...`));
        setTimeout(async () => {
-         await channel.send({
-           type: 'broadcast',
-           event: eventName,
-           payload: { chunk: null, isLast: true }
-         });
+         await send({ chunk: null, isLast: true });
          console.log(chalk.cyan(`[ STREAM ] isLast: true enviado.`));
        }, 200);
 
@@ -448,12 +462,22 @@ NEWFILEUID:NONE
 
     readStream.on('error', async (err) => {
        console.error(chalk.red(`[ STREAM ] Erro de leitura no HD:`), err.message);
-       await channel.send({ type: 'broadcast', event: eventName, payload: { error: 'Erro ao ler arquivo do HD corporativo.' }});
+       await send({ error: 'Erro ao ler arquivo do HD corporativo.' });
     });
   });
   // 3. Ouvinte para exclusão local
   channel.on('broadcast', { event: 'delete_export_file' }, async (payloadEvent) => {
     const { localPath } = payloadEvent.payload;
+    // sem isto qualquer pessoa no canal público apagava qualquer arquivo da máquina
+    const auth = authorizeCommand('delete_export_file', payloadEvent.payload, security);
+    if (!auth.ok) {
+      console.log(chalk.red(`[ BLOQUEADO ] Exclusão de arquivo recusada (${auth.reason}).`));
+      return;
+    }
+    if (!isPathInside(baseDownloadPath, localPath)) {
+      console.log(chalk.red(`[ BLOQUEADO ] Exclusão fora da pasta de exportações recusada: ${String(localPath).slice(0, 120)}`));
+      return;
+    }
     if (localPath && fs.existsSync(localPath)) {
       try {
         fs.unlinkSync(localPath);

@@ -150,3 +150,58 @@ describe('isProjectPublic', () => {
     expect(await isProjectPublic('a', { client: cfg(null, { message: 'x' }) })).toBe(false)
   })
 })
+
+import { isValidReplyTopic } from '../commandSigning'
+import { tunnelCallAuto } from '../server'
+
+describe('tunnelCall assinado (tópico privado)', () => {
+  const PID = '123e4567-e89b-42d3-a456-426614174000'
+
+  it('assina o comando, tira o token e escuta só o tópico privado que ele indicou', async () => {
+    const topics: string[] = []
+    let command: any
+    const f = fakeTransport((_t, _e, p, emit) => { command = p; emit('sql_result', { queryId: p.queryId, success: true, data: [1] }) })
+    const orig = f.transport.subscribe
+    f.transport.subscribe = async (t, cb) => { topics.push(t); return orig(t, cb) }
+
+    const r = await tunnelCall(PID, 'sql_query', { queryId: 'q', action: 'select' }, { transport: f.transport, secret: 'segredo-do-projeto-123456' })
+    expect(r.data).toEqual([1])
+    expect(topics).toHaveLength(1)
+    expect(isValidReplyTopic(PID, topics[0])).toBe(true)
+    expect(topics[0]).not.toBe(`tunnel:${PID}`)
+    expect(command.token).toBeUndefined()
+    expect(typeof command.sig).toBe('string')
+    expect(command.replyTo).toBe(topics[0])
+    // o comando vai ao canal de sempre (é lá que o Agente escuta)
+    expect(f.sent[0].topic).toBe(`tunnel:${PID}`)
+  })
+
+  it('resposta no canal PÚBLICO não é aceita no modo privado', async () => {
+    vi.useFakeTimers()
+    const f = fakeTransport()
+    const p = tunnelCall(PID, 'sql_query', { queryId: 'q' }, { transport: f.transport, secret: 'segredo-do-projeto-123456', timeoutMs: 500 })
+    const assertion = expect(p).rejects.toBeInstanceOf(TunnelTimeoutError)
+    // simula uma "resposta" forjada que só poderia chegar em outro tópico: o falso transporte entrega tudo ao mesmo ouvinte,
+    // então aqui provamos apenas que, sem resposta no tópico certo, estoura o tempo
+    await vi.advanceTimersByTimeAsync(501)
+    await assertion
+    vi.useRealTimers()
+  })
+
+  it('tunnelCallAuto: assinatura ligada → assinado; desligada → formato antigo com token', async () => {
+    const mk = () => {
+      let command: any
+      const f = fakeTransport((_t, _e, p, emit) => { command = p; emit('sql_result', { queryId: p.queryId, success: true, data: [] }) })
+      return { f, get command() { return command } }
+    }
+    const on = mk()
+    await tunnelCallAuto(PID, { queryId: 'a', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: on.f.transport, sign: true })
+    expect(on.command.token).toBeUndefined()
+    expect(on.command.sig).toBeTruthy()
+
+    const off = mk()
+    await tunnelCallAuto(PID, { queryId: 'b', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: off.f.transport, sign: false })
+    expect(off.command.token).toBe('segredo-do-projeto-123456')
+    expect(off.command.sig).toBeUndefined()
+  })
+})

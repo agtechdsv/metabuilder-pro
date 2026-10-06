@@ -5,6 +5,7 @@ import { I18nProvider } from '@/i18n/I18nContext'
 import { Metadata } from 'next'
 import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
 import { relayEnabled } from '@/lib/tunnel/server'
+import { signingEnabled } from '@/lib/tunnel/commandSigning'
 
 export async function generateMetadata({ params }: { params: Promise<{ project_slug: string; workspace_slug: string }> }): Promise<Metadata> {
   const { project_slug, workspace_slug } = await params
@@ -306,6 +307,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
       <RuntimeLayoutClient
         project={publicProject(project)}
         relay={relayEnabled()}
+        privateTunnel={relayEnabled() && signingEnabled()}
         serverSession={!!sessionCookie}
         workspaceSlug={workspace_slug}
         projectSlug={project_slug}

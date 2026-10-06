@@ -4596,6 +4596,10 @@
     "fail_no_token": "The project has no tunnel token.",
     "fail_no_project": "Project not found.",
     "fail_transport": "Failed to reach the Supabase realtime service.",
-    "fail_unauthorized": "You must be signed in as a project member."
+    "fail_unauthorized": "You must be signed in as a project member.",
+    "ok_signed": "The Agent replied in {ms} ms to a signed command (the token does not travel through the channel).",
+    "agent_old": "The Agent is an old version: it only understands the format with the token inside the command. Update the CLI to be able to turn signing on.",
+    "sign_on": "Command signing on (TUNNEL_SIGN=on): the token does not travel and replies come back through private topics.",
+    "sign_off": "Command signing off: the relay still sends the token inside the command, on the public channel. After updating the CLI, set TUNNEL_SIGN=on in Vercel."
   }
 }

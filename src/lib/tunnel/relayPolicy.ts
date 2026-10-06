@@ -1,3 +1,5 @@
+import { authenticateCommand } from './commandSigning'
+
 /**
  * Regras do relay do túnel (puras, para testar sem rede): o que cada tipo de usuário pode pedir ao Agente CLI.
  */
@@ -43,9 +45,17 @@ export function actionAllowed(kind: RelayActorKind, action: unknown): { ok: true
   return { ok: true }
 }
 
-/** Monta o comando que vai ao CLI: o token do projeto é sempre o do servidor, nunca o que veio do navegador. */
-export function buildCommand(req: RelayRequest, secretToken: string): Record<string, any> {
-  return { ...req.payload, token: secretToken, projectId: req.projectId }
+/**
+ * Monta o comando que vai ao CLI. O token do projeto é sempre o do servidor, nunca o que veio do navegador.
+ * Com a assinatura ligada o comando vai assinado e SEM token; `replyTo` (tópico privado da aba) é mantido só se for
+ * um tópico válido deste projeto.
+ */
+export function buildCommand(req: RelayRequest, secretToken: string, opts: { sign?: boolean } = {}): Record<string, any> {
+  const { token: _fromBrowser, replyTo, ...rest } = req.payload
+  return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId }, {
+    sign: opts.sign,
+    replyTo: typeof replyTo === 'string' ? replyTo : undefined,
+  })
 }
 
 /**

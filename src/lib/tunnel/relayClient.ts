@@ -11,16 +11,65 @@
 
 export interface BroadcastMessage { type?: string; event?: string; payload?: any }
 
-/** Este envio deve passar pelo servidor? (só no navegador, só comando de dados e só sem token) */
+// Relay ligado nesta tela: TODO comando de dados passa pelo servidor, mesmo os das telas do Studio que ainda montam o
+// comando com o token do projeto (o servidor ignora o token do navegador e usa o dele).
+let relayMode = false
+export function setRelayMode(on: boolean) { relayMode = on }
+
+/** Este envio deve passar pelo servidor? (só no navegador, só comando de dados; sem token ou com o relay ligado na tela) */
 export function needsRelay(msg: BroadcastMessage | null | undefined): boolean {
   if (typeof window === 'undefined') return false
-  return !!msg && msg.type === 'broadcast' && msg.event === 'sql_query' && !!msg.payload && typeof msg.payload === 'object' && !msg.payload.token
+  return !!msg && msg.type === 'broadcast' && msg.event === 'sql_query' && !!msg.payload && typeof msg.payload === 'object' && (relayMode || !msg.payload.token)
 }
 
-/** `realtime:tunnel:<id>` ou `tunnel:<id>` → id do projeto. */
+const TOPIC_RE = /(?:^|:)tunnel:([^:]+)(?::([A-Za-z0-9_-]{16,64}))?$/
+
+/** `realtime:tunnel:<id>`, `tunnel:<id>` ou `tunnel:<id>:<segredo>` → id do projeto. */
 export function projectIdFromTopic(topic: string | undefined | null): string | null {
-  const m = /(?:^|:)tunnel:([^:]+)$/.exec(topic || '')
+  const m = TOPIC_RE.exec(topic || '')
   return m ? m[1] : null
+}
+
+/** Tópico privado desta aba (`tunnel:<id>:<segredo>`), se o canal for um; senão null. */
+export function replyToFromTopic(topic: string | undefined | null): string | null {
+  const m = TOPIC_RE.exec(topic || '')
+  return m && m[2] ? `tunnel:${m[1]}:${m[2]}` : null
+}
+
+// ── Tópico privado por aba ─────────────────────────────────────────────────────
+// O canal `tunnel:<projeto>` é público. Com a assinatura ligada, cada aba passa a OUVIR um tópico com nome imprevisível
+// (`tunnel:<projeto>:<segredo da aba>`) e o Agente responde só ali. O segredo nunca sai do navegador, exceto para o
+// servidor (que o repassa ao Agente como destino da resposta).
+let privateTunnel = false
+let memorySecret: string | null = null
+
+export function setPrivateTunnel(on: boolean) { privateTunnel = on }
+export function isPrivateTunnel() { return privateTunnel }
+
+function randomSecret(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  let bin = ''
+  bytes.forEach(b => { bin += String.fromCharCode(b) })
+  return 's' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+/** Segredo desta aba (guardado na sessão da aba, para sobreviver a um recarregar). */
+export function tabSecret(): string {
+  if (memorySecret) return memorySecret
+  try {
+    const saved = sessionStorage.getItem('mb_tunnel_tab')
+    if (saved && /^[A-Za-z0-9_-]{16,64}$/.test(saved)) return (memorySecret = saved)
+  } catch { /* sem sessionStorage */ }
+  memorySecret = randomSecret()
+  try { sessionStorage.setItem('mb_tunnel_tab', memorySecret) } catch { /* só em memória */ }
+  return memorySecret
+}
+
+/** Nome do canal a abrir: `tunnel:<id>` vira o tópico privado da aba quando a assinatura está ligada. */
+export function tunnelTopicFor(name: string): string {
+  if (!privateTunnel || typeof window === 'undefined') return name
+  return /^tunnel:[^:]+$/.test(name) ? `${name}:${tabSecret()}` : name
 }
 
 const MESSAGES: Record<number, string> = {
@@ -75,7 +124,12 @@ export function deliverLocalError(channel: any, queryId: string | undefined, err
 export async function relayThroughChannel(channel: any, msg: BroadcastMessage, fetchImpl?: typeof fetch): Promise<'ok' | 'error'> {
   const projectId = projectIdFromTopic(channel?.topic)
   if (!projectId) return 'error'
-  const result = await relaySend(projectId, msg, fetchImpl)
+  // tópico privado desta aba: o servidor o repassa ao Agente como destino da resposta
+  const replyTo = replyToFromTopic(channel?.topic)
+  // o token do projeto não precisa (nem deve) seguir nem para o servidor: ele usa o dele
+  const { token: _drop, ...payload } = msg.payload || {}
+  const outgoing = { ...msg, payload: replyTo ? { ...payload, replyTo } : payload }
+  const result = await relaySend(projectId, outgoing, fetchImpl)
   if (result.ok) return 'ok'
   deliverLocalError(channel, msg.payload?.queryId, result.error || 'Falha ao enviar o comando.')
   return 'error'

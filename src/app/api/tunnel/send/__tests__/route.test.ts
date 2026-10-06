@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const authorize = vi.fn()
 const tunnelSend = vi.fn()
@@ -81,5 +81,28 @@ describe('POST /api/tunnel/send', () => {
   it('corpo declarado maior que o limite: 413', async () => {
     authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
     expect((await call(cmd(), { 'content-length': String(5 * 1024 * 1024) })).status).toBe(413)
+  })
+
+  describe('com a assinatura ligada (TUNNEL_SIGN=on)', () => {
+    const TOPIC = `tunnel:${PID}:abcdefghijklmnopqrstuv`
+    beforeEach(() => { process.env.TUNNEL_SIGN = 'on' })
+    afterEach(() => { delete process.env.TUNNEL_SIGN })
+
+    it('o comando vai assinado e SEM token; o tópico de resposta da aba é mantido', async () => {
+      authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+      expect((await call(cmd({ replyTo: TOPIC }))).status).toBe(202)
+      const sent = tunnelSend.mock.calls[0][2]
+      expect(sent.token).toBeUndefined()
+      expect(typeof sent.sig).toBe('string')
+      expect(sent.replyTo).toBe(TOPIC)
+    })
+
+    it('tópico de resposta de outro projeto ou fora do padrão é descartado', async () => {
+      authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+      await call(cmd({ replyTo: 'tunnel:outro-projeto:abcdefghijklmnopqrstuv' }))
+      expect(tunnelSend.mock.calls[0][2].replyTo).toBeUndefined()
+      await call(cmd({ replyTo: 'sala-publica' }))
+      expect(tunnelSend.mock.calls[1][2].replyTo).toBeUndefined()
+    })
   })
 })

@@ -4,6 +4,9 @@ import { ShieldAlert, ArrowLeft, Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
+import { TunnelMode } from '@/components/runtime/TunnelMode'
+import { relayEnabled } from '@/lib/tunnel/server'
+import { signingEnabled } from '@/lib/tunnel/commandSigning'
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode
@@ -123,5 +126,6 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     }
   }
 
-  return <>{children}</>
+  // com o relay ligado o Studio também fala com o túnel pelo servidor (e, com a assinatura, por tópico privado)
+  return <><TunnelMode relay={relayEnabled()} privateTunnel={relayEnabled() && signingEnabled()} />{children}</>
 }

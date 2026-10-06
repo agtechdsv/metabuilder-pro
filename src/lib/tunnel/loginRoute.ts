@@ -3,7 +3,7 @@ import { loadLoginSetup } from './loginSetup'
 import { completeLogin, performLogin, performPasskeyLogin, type LoginResult } from './loginFlow'
 import { clearEndUserCookies, setEndUserCookies } from './endUserAuth'
 import { RateLimiter } from './relayPolicy'
-import { relayEnabled, tunnelCall } from './server'
+import { relayEnabled, tunnelCallAuto } from './server'
 
 /** Peças compartilhadas pelas rotas de login/logout do usuário final (a lógica em si está em loginFlow.ts). */
 
@@ -17,7 +17,7 @@ export const isProduction = () => process.env.NODE_ENV === 'production'
 
 export const realLoginDeps = {
   loadSetup: (projectId: string) => loadLoginSetup(projectId),
-  call: (projectId: string, payload: Record<string, any>) => tunnelCall(projectId, 'sql_query', payload as any, { timeoutMs: 12_000 }),
+  call: (projectId: string, payload: Record<string, any>) => tunnelCallAuto(projectId, payload as any, { timeoutMs: 12_000 }),
 }
 
 export function relayOffResponse() {

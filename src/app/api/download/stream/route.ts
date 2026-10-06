@@ -3,6 +3,8 @@ import { createClient as createServerClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import ws from 'ws'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { authenticateCommand, newReplyTopic, signingEnabled } from '@/lib/tunnel/commandSigning'
+import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 
 export async function GET(request: Request) {
   try {
@@ -47,6 +49,13 @@ export async function GET(request: Request) {
 
     const fileName = job.file_name || `export_${jobId}.csv`
 
+    // O Agente só entrega o arquivo a quem pedir com o token do projeto (ou com assinatura) — antes ele entregava a qualquer um.
+    const projectToken = await getProjectSecretToken(projectId)
+    if (!projectToken) return new NextResponse('Projeto sem token de túnel', { status: 404 })
+    // Com a assinatura ligada o arquivo volta por um tópico privado só deste download (e não pelo canal público)
+    const sign = signingEnabled()
+    const replyTopic = sign ? newReplyTopic(projectId, 'd') : undefined
+
     // 2. Prepare HTTP headers for file download
     const headers = new Headers()
     headers.set('Content-Disposition', `attachment; filename="${fileName}"`)
@@ -56,7 +65,7 @@ export async function GET(request: Request) {
     // 3. Create a ReadableStream
     const stream = new ReadableStream({
       start(controller) {
-        const channelName = `tunnel:${projectId}`
+        const channelName = replyTopic ?? `tunnel:${projectId}`
         // O agente envia pedaços grandes divididos em "chunked_message"; o wrapper os remonta (sem ele o arquivo chegava com 0 bytes)
         const rawChannel = supabase.channel(channelName)
         const channel = wrapChannelWithChunking(rawChannel)
@@ -122,14 +131,12 @@ export async function GET(request: Request) {
         channel.subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
             // Ask CLI to start sending chunks
-            channel.send({
-              type: 'broadcast',
-              event: 'request_download_stream',
-              payload: {
-                jobId,
-                localPath: job.local_path
-              }
-            }).catch((err: any) => {
+            const command = authenticateCommand(projectToken, 'request_download_stream', projectId, { jobId, localPath: job.local_path }, { sign, replyTo: replyTopic })
+            // assinado: o pedido vai ao canal em que o Agente escuta, e a resposta volta pelo tópico privado que esta rota ouve
+            const sent = sign
+              ? tunnelSend(projectId, 'request_download_stream', command)
+              : channel.send({ type: 'broadcast', event: 'request_download_stream', payload: command })
+            Promise.resolve(sent).catch((err: any) => {
               if (!isDone) {
                 isDone = true
                 clearTimeout(timeout)

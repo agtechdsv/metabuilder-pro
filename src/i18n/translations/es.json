@@ -4684,6 +4684,10 @@
     "fail_no_token": "El proyecto no tiene token de túnel.",
     "fail_no_project": "Proyecto no encontrado.",
     "fail_transport": "Fallo al comunicarse con el servicio en tiempo real de Supabase.",
-    "fail_unauthorized": "Debe iniciar sesión como miembro del proyecto."
+    "fail_unauthorized": "Debe iniciar sesión como miembro del proyecto.",
+    "ok_signed": "El Agente respondió en {ms} ms a un comando firmado (el token no pasa por el canal).",
+    "agent_old": "El Agente es una versión antigua: solo entiende el formato con el token dentro del comando. Actualice el CLI para poder activar la firma.",
+    "sign_on": "Firma de comandos activada (TUNNEL_SIGN=on): el token no viaja y las respuestas vuelven por tópicos privados.",
+    "sign_off": "Firma de comandos desactivada: el relay aún envía el token dentro del comando, en el canal público. Tras actualizar el CLI, defina TUNNEL_SIGN=on en Vercel."
   }
 }
