@@ -168,11 +168,22 @@ export function useProjectExport() {
         }
 
         toast('Instalando dependências (npm install)...', 'info')
-        const cmd = Command.create('npm', ['install'], { cwd: selectedDir })
-        const output = await cmd.execute()
-        if (output.code !== 0) {
-          console.error('NPM Install failed:', output.stderr)
-          toast('As dependências foram instaladas com erros, verifique o terminal.', 'error')
+        // No Windows o npm é "npm.cmd": o Tauri só o encontra através do cmd
+        const isWindows = /windows/i.test(navigator.userAgent)
+        let installOk = false
+        try {
+          const cmd = isWindows
+            ? Command.create('cmd', ['/c', 'npm', 'install'], { cwd: selectedDir })
+            : Command.create('npm', ['install'], { cwd: selectedDir })
+          const output = await cmd.execute()
+          installOk = output.code === 0
+          if (!installOk) console.error('NPM Install failed:', output.stderr)
+        } catch (installErr) {
+          console.error('NPM Install failed to start:', installErr)
+        }
+        if (!installOk) {
+          // os arquivos já foram gravados: não é falha da exportação
+          toast('Projeto salvo, mas o npm install não rodou. Abra a pasta e execute "npm install".', 'error')
         } else {
           toast('Dependências instaladas com sucesso!', 'success')
           try {
@@ -193,9 +204,15 @@ export function useProjectExport() {
           savedDir: selectedDir
         })
 
-        if (confirm('Projeto ejetado e dependências instaladas! Deseja abrir no VS Code?')) {
-          const codeCmd = Command.create('code', ['.'], { cwd: selectedDir })
-          await codeCmd.execute()
+        if (confirm(installOk ? 'Projeto ejetado e dependências instaladas! Deseja abrir no VS Code?' : 'Projeto ejetado! Deseja abrir no VS Code?')) {
+          try {
+            const codeCmd = isWindows
+              ? Command.create('cmd', ['/c', 'code', '.'], { cwd: selectedDir })
+              : Command.create('code', ['.'], { cwd: selectedDir })
+            await codeCmd.execute()
+          } catch (codeErr) {
+            console.error('Não foi possível abrir o VS Code:', codeErr)
+          }
         }
 
       } else {
@@ -220,7 +237,7 @@ export function useProjectExport() {
       }
     } catch (error: any) {
       setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
-      toast('Falha na exportação: ' + error.message, 'error')
+      toast('Falha na exportação: ' + (error?.message || String(error)), 'error')
     }
   }
 
