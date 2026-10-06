@@ -8,13 +8,28 @@ import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 const getCachedData = (key: string) => {
   if (typeof window === 'undefined') return null
-  const cached = sessionStorage.getItem(`metabuilder_cache_${key}`)
-  return cached ? JSON.parse(cached) : null
+  // O cache é só uma aceleração: sem armazenamento (janela anônima, cota cheia, bloqueado) a tela segue sem ele
+  try {
+    const cached = sessionStorage.getItem(`metabuilder_cache_${key}`)
+    return cached ? JSON.parse(cached) : null
+  } catch {
+    return null
+  }
 }
 
 const setCachedData = (key: string, data: any[]) => {
   if (typeof window === 'undefined') return
-  sessionStorage.setItem(`metabuilder_cache_${key}`, JSON.stringify(data))
+  try {
+    sessionStorage.setItem(`metabuilder_cache_${key}`, JSON.stringify(data))
+  } catch {
+    // cota excedida: apaga o cache antigo (que só ocupa espaço) e não derruba a resposta que acabou de chegar
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const k = sessionStorage.key(i)
+        if (k && k.startsWith('metabuilder_cache_')) sessionStorage.removeItem(k)
+      }
+    } catch { /* sem armazenamento */ }
+  }
 }
 
 export function useViewDataFetch({

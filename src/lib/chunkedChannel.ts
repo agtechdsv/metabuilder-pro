@@ -26,14 +26,18 @@ export function wrapChannelWithChunking(channel: any) {
     if (complete) {
       const fullStr = buffers[chunkId].join('');
       delete buffers[chunkId];
+      let fullPayload: any;
       try {
-        const fullPayload = JSON.parse(fullStr);
-        // Dispatch to registered listeners
-        const cbs = listeners[event] || [];
-        cbs.forEach((cb) => cb({ payload: fullPayload }));
+        fullPayload = JSON.parse(fullStr);
       } catch (e) {
         console.error('Error parsing assembled chunked payload', e);
+        return;
       }
+      // Dispatch to registered listeners: um ouvinte com defeito não pode impedir os outros de receber a resposta
+      const cbs = listeners[event] || [];
+      cbs.forEach((cb) => {
+        try { cb({ payload: fullPayload }); } catch (e) { console.error('Error in chunked payload listener', e); }
+      });
     }
   });
 
