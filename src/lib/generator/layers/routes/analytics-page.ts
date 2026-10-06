@@ -1178,6 +1178,13 @@ export function AnalyticsClient({
     { value: 1.5, icon: <ZoomIn className="w-3.5 h-3.5" />, label: 'Extra Grande' },
   ]
 
+  // Rótulo do campo do widget (igual ao do painel): fórmula, tabela toda ou a coluna
+  const fieldLabel = (w: AnalyticsWidget): string => {
+    if (w.spec?.use_formula || w.useFormula) return 'fórmula'
+    if (!w.field || w.field === '*') return 'toda tabela'
+    return w.field.split('.').pop() as string
+  }
+
   const formatNumber = (val: any) => {
     const num = Number(val)
     if (isNaN(num)) return String(val ?? '-')
@@ -1328,7 +1335,7 @@ export function AnalyticsClient({
         </span>
         <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-black tracking-wider uppercase">
           <Activity className="w-3 h-3" />
-          {widget.calc} {widget.field ? \`/ \${widget.field.split('.').pop()}\` : ''}
+          {widget.calc} / {fieldLabel(widget)}
         </div>
         {widget.spec?.compare_previous && prevData?.[widget.id] && (() => {
           const prev = prevData[widget.id]
@@ -1401,7 +1408,7 @@ export function AnalyticsClient({
       const common = (
         <>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
-          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} interval={0} />
           <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
           <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [fmt(value, widget), name]} />
           <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 800 }} />
@@ -1456,7 +1463,7 @@ export function AnalyticsClient({
                 </>
               ) : (
                 <>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} interval={0} />
                   <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
                 </>
               )}
@@ -1471,7 +1478,7 @@ export function AnalyticsClient({
           ) : widget.type === 'line' ? (
             <LineChart data={chartData} margin={{ top: widget.showLabels ? 22 : 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} interval={0} />
               <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
               <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
               <Line type="monotone" dataKey="value" stroke={primary} strokeWidth={3} dot={{ r: 4, fill: primary }} activeDot={{ r: 6 }}>
@@ -1487,7 +1494,7 @@ export function AnalyticsClient({
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} tickFormatter={shortName} interval={0} />
               <YAxis axisLine={false} tickLine={false} tick={tick} tickFormatter={axisFormatter} />
               <Tooltip contentStyle={tooltipStyle} formatter={tooltipFormatter} />
               <Area type="monotone" dataKey="value" stroke={primary} strokeWidth={3} fill={'url(#' + gradId + ')'}>
@@ -1623,7 +1630,7 @@ export function AnalyticsClient({
                       {w.title}
                     </h3>
                     <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-tight">
-                      {w.calc} {w.field ? \`(\${w.field.split('.').pop()})\` : ''}
+                      {w.calc} ({fieldLabel(w)})
                     </p>
                   </div>
                 </div>
@@ -1676,7 +1683,7 @@ export function AnalyticsClient({
                 {expandedWidget.title}
               </h2>
               <p className="text-xs font-bold text-neutral-400 uppercase">
-                {expandedWidget.calc} — {expandedWidget.field || 'Tabela Geral'}
+                {expandedWidget.calc} — {fieldLabel(expandedWidget)}
               </p>
             </div>
 

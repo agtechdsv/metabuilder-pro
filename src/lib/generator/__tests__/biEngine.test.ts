@@ -72,6 +72,17 @@ describe('motor de BI no app exportado', () => {
     for (const [, src] of pages) expect(src).not.toContain('@/app/actions/bi')
   })
 
+  it('Postgres: o schema das tabelas entra no search_path da conexão', () => {
+    const db = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).get('app/actions/db.ts')!
+    expect(db).toContain("options: '-c search_path=vendas,public'")
+  })
+
+  it('subtítulo e eixo: fórmula/tabela toda e todos os rótulos do eixo', () => {
+    const client = [...generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres')).entries()].find(([p]) => p.endsWith('AnalyticsClient.tsx'))![1]
+    expect(client).toContain('fieldLabel(')
+    expect(client).toContain('interval={0}')
+  })
+
   it('Supabase (sem SQL direto) continua com a agregação em JavaScript', () => {
     const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'supabase'))
     expect(files.has('app/actions/bi.ts')).toBe(false)

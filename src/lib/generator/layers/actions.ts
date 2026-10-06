@@ -11,7 +11,7 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
         ? generateMysqlClient()
         : ast.dbStack === 'sqlserver'
           ? generateSqlServerClient()
-          : generatePgClient()
+          : generatePgClient(ast)
 
   files.set('app/actions/db.ts', dbConfigContent)
 
@@ -186,11 +186,17 @@ export async function createClient() {
 `
 }
 
-function generatePgClient() {
+function generatePgClient(ast: AppAST) {
+  // As tabelas ficam em schemas próprios (ex.: "crm"). As consultas usam nomes sem prefixo, então o schema entra no
+  // search_path da conexão; assim funciona com qualquer usuário do banco, não só com o que tem o mesmo nome do schema.
+  const schemas = Array.from(new Set(ast.models.map(m => (m.dbSchema || '').replace(/[^A-Za-z0-9_]/g, '')).filter(Boolean)))
+  if (!schemas.includes('public')) schemas.push('public')
+  const searchPath = schemas.length > 1 ? `
+  options: '-c search_path=${schemas.join(',')}',` : ''
   return `import { Pool } from 'pg'
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,${searchPath}
 })
 
 export async function query(text: string, params?: any[]) {
