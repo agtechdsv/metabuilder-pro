@@ -268,7 +268,7 @@ export function useViewFilters({
                     action: 'select',
                     query: rawQuery,
                     sql: rawQuery,
-                    token: project?.secret_token || 'test-token',
+                    token: project?.secret_token || '',
                     joins: [],
                     limit: 1000,
                     offset: 0

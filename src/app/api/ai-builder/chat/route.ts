@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { decryptSecret, encryptSecret, isEncryptedSecret } from '@/lib/secretBox'
 
 // POST — Envia mensagem para a IA e responde em streaming (SSE)
 export async function POST(req: NextRequest) {
@@ -123,7 +124,20 @@ NUNCA retorne texto fora do JSON quando for gerar. NUNCA use markdown fences (\`
   ]
 
   // Chama a IA do usuário
-  const { provider, api_key_enc, model, base_url } = aiConfig
+  const { provider, model, base_url } = aiConfig
+  let api_key_enc: string
+  try {
+    api_key_enc = decryptSecret(aiConfig.api_key_enc)
+  } catch (e: any) {
+    console.error('[ai-builder/chat] falha ao ler a chave de IA:', e?.message)
+    return NextResponse.json({ error: 'Não foi possível ler a chave de IA deste workspace. Cadastre-a novamente nas configurações.' }, { status: 500 })
+  }
+  // chave antiga em texto puro: recriptografa agora (melhor esforço; se faltar a chave-mestra, segue como estava)
+  if (!isEncryptedSecret(aiConfig.api_key_enc)) {
+    try {
+      await admin.from('ai_builder_configs').update({ api_key_enc: encryptSecret(api_key_enc) }).eq('id', aiConfig.id)
+    } catch { /* ignora */ }
+  }
 
   let aiResponse: Response
 

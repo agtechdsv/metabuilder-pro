@@ -280,7 +280,7 @@ export function useDetailData({
                 queryId,
                 table: join.to,
                 action: 'select',
-                token: project?.secret_token || 'test-token',
+                token: project?.secret_token || '',
                 schemaName: getModelSchemaName(project, join.to),
                 slug: project?.slug,
                 filters: { [join.foreignKey]: String(localValue) },
@@ -574,7 +574,7 @@ export function useDetailData({
                 action: 'delete',
                 query: rawQuery,
                 sql: rawQuery,
-                token: project?.secret_token || 'test-token',
+                token: project?.secret_token || '',
                 schemaName: getModelSchemaName(project, tableName),
                 slug: project?.slug,
                 idColumn: actualPkKey,
@@ -908,7 +908,7 @@ export function useDetailData({
                   sql: currentQuery,
                   idColumn: payloadIdCol,
                   idValue: dPkValue,
-                  token: project?.secret_token || 'test-token',
+                  token: project?.secret_token || '',
                   schemaName: getModelSchemaName(project, tableName),
                   slug: project?.slug
                 }
@@ -1090,7 +1090,7 @@ export function useDetailData({
                   data: sanitized, record: sanitized,
                   query: sql, sql,
                   idColumn: rowPkName, idValue: rowPkVal,
-                  token: project?.secret_token || 'test-token',
+                  token: project?.secret_token || '',
                   schemaName: getModelSchemaName(project, rowTable),
                   slug: project?.slug
                 }

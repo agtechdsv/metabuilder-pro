@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
+import { encryptSecret } from '@/lib/secretBox'
 
 // GET — Busca a config de IA do workspace (sem retornar a chave)
 export async function GET(req: NextRequest) {
@@ -66,15 +67,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Este recurso é exclusivo do plano PRO.' }, { status: 403 })
   }
 
-  // Upsert da configuração (chave armazenada como texto — criptografia via Supabase Vault é extensão paga;
-  // aqui usamos a proteção via RLS + service role. A chave nunca é exposta no GET.)
+  // A chave é gravada criptografada (AES-256-GCM, chave-mestra só no servidor) e nunca é devolvida ao navegador
+  let apiKeyEnc: string
+  try {
+    apiKeyEnc = encryptSecret(String(api_key))
+  } catch (e: any) {
+    console.error('[ai-builder/config] falha ao criptografar a chave:', e?.message)
+    return NextResponse.json({ error: 'O servidor não está configurado para guardar chaves com segurança. Fale com o suporte.' }, { status: 500 })
+  }
+
   const { data, error } = await supabase
     .from('ai_builder_configs')
     .upsert(
       {
         workspace_id,
         provider,
-        api_key_enc: api_key,
+        api_key_enc: apiKeyEnc,
         model: model || null,
         base_url: base_url || null,
         updated_at: new Date().toISOString(),

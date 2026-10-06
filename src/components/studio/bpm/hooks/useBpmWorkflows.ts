@@ -146,7 +146,7 @@ export function useBpmWorkflows({
               event: 'sql_query',
               payload: {
                 action: 'sync_bpm',
-                token: project?.secret_token || 'test-token',
+                token: project?.secret_token || '',
                 schemaName: project?.slug || 'public',
                 queryId: crypto.randomUUID()
               }

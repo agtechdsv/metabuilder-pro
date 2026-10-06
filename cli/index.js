@@ -1965,8 +1965,8 @@ async function run() {
       {
         type: 'password',
         name: 'secretToken',
-        message: 'Insira o Token Secreto do Projeto (Ou qualquer valor para testes):',
-        default: 'test-token'
+        message: 'Insira o Token Secreto do Projeto (o mesmo exibido no painel do projeto):',
+        validate: input => (input && input.trim() ? true : 'O Token Secreto é obrigatório.')
       },
       {
         type: 'list',

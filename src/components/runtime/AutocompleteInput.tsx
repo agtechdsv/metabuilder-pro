@@ -213,7 +213,7 @@ export function AutocompleteInput({
               tableName: table,
               schemaName: schemaToUse,
               action: 'select',
-              token: secretToken || project?.secret_token || 'test-token',
+              token: secretToken || project?.secret_token || '',
               joins: [],
               filters: { [labelCol]: searchTerm },
               limit: limitNum > 0 ? limitNum : 100,

@@ -375,7 +375,7 @@ export default function AnalyticsDashboard({
             table: plan.tableName,
             limit,      // ← o CLI só reconhece o limite se vier aqui ou como LIMIT/FETCH NEXT no SQL
             // 'filters' não é enviado: o WHERE já está no SQL e o CLI o acrescentaria de novo depois do LIMIT
-            token: project?.secret_token || 'test-token',
+            token: project?.secret_token || '',
             projectId: project.id
           }
         })

@@ -99,7 +99,7 @@ export default function RecordForm({
   detailsInterfaceTypes = {},
   footerBgClass = "bg-white dark:bg-neutral-950",
   projectId,
-  secretToken = 'test-token',
+  secretToken = '',
   tunnelChannel,
   isTunnelReady,
   project,

@@ -612,7 +612,7 @@ export function useViewDataFetch({
         action: 'select',
         query: rawQuery,
         sql: rawQuery,
-        token: project?.secret_token || 'test-token',
+        token: project?.secret_token || '',
         joins: joins,
         limit: itemsPerPage,
         offset: currentOffset
@@ -680,7 +680,7 @@ export function useViewDataFetch({
         action: 'count_records',
         query: `SELECT COUNT(DISTINCT "${modelName}"."${primaryKeyName}") as total FROM "${modelName}" ${joinsSql} __WHERE_PLACEHOLDER__`,
         sql: '',
-        token: project?.secret_token || 'test-token',
+        token: project?.secret_token || '',
         joins: joins
       }
 
@@ -780,7 +780,7 @@ export function useViewDataFetch({
       sql: rawQuery,
       idColumn: cleanPrimaryKeyName,
       idValue: actualPrimaryKey,
-      token: project?.secret_token || 'test-token'
+      token: project?.secret_token || ''
     }
 
     const handleResult = (res: any) => {

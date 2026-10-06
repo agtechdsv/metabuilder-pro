@@ -319,7 +319,7 @@ export function useMindMapData({
         action: 'select',
         query: rawQuery,
         sql: rawQuery,
-        token: project?.secret_token || 'test-token',
+        token: project?.secret_token || '',
         limit: 1000,
         offset: 0,
         joins: []

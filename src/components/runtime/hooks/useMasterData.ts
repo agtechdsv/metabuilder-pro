@@ -263,7 +263,7 @@ export function useMasterData({
                 sql: currentQuery, 
                 idColumn: payloadIdCol,
                 idValue: pkValue,
-                token: project?.secret_token || 'test-token',
+                token: project?.secret_token || '',
                 schemaName: getModelSchemaName(project, modelName),
                 slug: project?.slug
               }
@@ -571,7 +571,7 @@ export function useMasterData({
                   data: payloadData, record: payloadData,
                   query: sql, sql,
                   idColumn: payloadIdCol, idValue: rowPkVal,
-                  token: project?.secret_token || 'test-token',
+                  token: project?.secret_token || '',
                   schemaName: getModelSchemaName(project, rowTable),
                   slug: project?.slug
                 }
@@ -790,7 +790,7 @@ export function useMasterData({
               action: cascade ? 'execute_custom' : 'delete',
               query: rawQuery,
               sql: rawQuery,
-              token: project?.secret_token || 'test-token',
+              token: project?.secret_token || '',
               schemaName: getModelSchemaName(project, actualModelName),
               slug: project?.slug,
               idColumn: actualPkKey,

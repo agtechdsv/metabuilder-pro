@@ -876,7 +876,7 @@ export default function CustomUseCaseRenderer({
             sql: rawQuery,
             idColumn: pkName,
             idValue: pkValue,
-            token: project?.secret_token || 'test-token',
+            token: project?.secret_token || '',
             schemaName,
             slug: project?.slug
           }
@@ -949,7 +949,7 @@ export default function CustomUseCaseRenderer({
             sql: rawQuery,
             idColumn: pkName,
             idValue: pkValue,
-            token: project?.secret_token || 'test-token',
+            token: project?.secret_token || '',
             schemaName,
             slug: project?.slug
           }

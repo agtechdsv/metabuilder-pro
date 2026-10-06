@@ -65,7 +65,7 @@ export function useViewCustomActions({
           action: 'trigger_bpm',
           workflows: action.linked_bpm_workflows,
           rowData: rowData || {},
-          token: project?.secret_token || 'test-token',
+          token: project?.secret_token || '',
           tableName: modelName,
           schemaName: project?.slug || 'public'
         }
@@ -94,7 +94,7 @@ export function useViewCustomActions({
         sql: customQuery,
         params: [],
         action: 'execute_custom',
-        token: project?.secret_token || 'test-token',
+        token: project?.secret_token || '',
         schemaName: actualSchemaName,
         table: modelName
       }
