@@ -364,6 +364,7 @@ ${filterFields.map(f => {
   const prevData: Record<string, { value: number; from: string; to: string }> = {}
   const widgetErrors: Record<string, string> = {}
   const canDrill: Record<string, boolean> = {}
+  let biUpdatedAt = 0
   for (const widget of WIDGETS) {
     const r = biResults[widget.id]
     if (!r) continue
@@ -372,6 +373,7 @@ ${filterFields.map(f => {
     if (r.prev !== undefined && r.prevRange) prevData[widget.id] = { value: r.prev, from: r.prevRange.from, to: r.prevRange.to }
     if (r.error) widgetErrors[widget.id] = r.error
     if (r.canDrill) canDrill[widget.id] = true
+    if (r.updatedAt && r.updatedAt > biUpdatedAt) biUpdatedAt = r.updatedAt
   }
 `
 
@@ -878,7 +880,7 @@ ${filterFields.map(f => {
         widgets={WIDGETS as any}
         aggregatedData={aggregatedData}
         groups={${JSON.stringify(route.analyticsConfig?.groups || [])}}
-${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        canDrill={canDrill}\n        filters={biFilters}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
+${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        canDrill={canDrill}\n        filters={biFilters}\n        refreshSeconds={${route.analyticsConfig?.refreshSeconds || 0}}\n        timeoutSeconds={${route.analyticsConfig?.timeoutSeconds || 30}}\n        updatedAt={biUpdatedAt || undefined}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
 
       {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (
@@ -1065,7 +1067,7 @@ ${filterInputs}
 export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
   // Com o motor de BI ativo o cliente recalcula os widgets pelo servidor quando o período muda
   const live = biEngineEnabled(ast)
-  const liveImport = live ? "import { getBiWidgetsData, getBiRecords } from '@/app/actions/bi'\n" : ''
+  const liveImport = live ? "import { getBiWidgetsData, getBiRecords } from '@/app/actions/bi'\nimport { withTimeout, BiTimeoutError } from '@/lib/bi/perf'\n" : ''
   const liveEffect = live ? `
   // Interações enviadas ao servidor: só os NOMES clicados (o servidor monta as condições)
   const interactInput = () => ({
@@ -1081,21 +1083,15 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
       .catch(() => setRecordsView(prev => (prev ? { ...prev, rows: null, error: 'Não foi possível carregar os registros' } : prev)))
   }
 
-  // Recalcula só os widgets cujo período, caminho de drill ou filtro cruzado mudou (os dados iniciais já vieram do servidor)
+  // Busca os widgets no servidor. "fresh" ignora o cache do servidor; o tempo limite cobre também a rede
   const fetchedSig = useRef<Record<string, string>>({})
   const reqSeq = useRef<Record<string, number>>({})
-  useEffect(() => {
-    const ids: string[] = []
-    for (const w of widgets) {
-      const sig = JSON.stringify([widgetPeriod(w), drillNames[w.id] || [], specOf(w).cross_target ? crossSel : null])
-      if (fetchedSig.current[w.id] === undefined) { fetchedSig.current[w.id] = sig; continue }
-      if (fetchedSig.current[w.id] !== sig) { fetchedSig.current[w.id] = sig; ids.push(w.id) }
-    }
+  const fetchWidgets = (ids: string[], fresh = false) => {
     if (ids.length === 0) return
     const seq: Record<string, number> = {}
     for (const id of ids) { reqSeq.current[id] = (reqSeq.current[id] || 0) + 1; seq[id] = reqSeq.current[id] }
     setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) next[id] = true; return next })
-    getBiWidgetsData(ids, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods, interact: interactInput() })
+    withTimeout(getBiWidgetsData(ids, { period: periodRange, filters: filters || {}, groupPeriods, ownPeriods, interact: interactInput(), fresh }), (timeoutSeconds + 5) * 1000)
       .then(res => {
         const fresh = ids.filter(id => reqSeq.current[id] === seq[id])
         setAggregatedData(prev => { const next = { ...prev }; for (const id of fresh) if (res[id]) next[id] = res[id].data; return next })
@@ -1112,18 +1108,46 @@ export function generateAnalyticsClient(route: RouteNode, ast: AppAST): string {
         setCanDrillMap(prev => { const next = { ...prev }; for (const id of fresh) next[id] = !!res[id]?.canDrill; return next })
         setCrossIgnoredMap(prev => { const next = { ...prev }; for (const id of fresh) next[id] = !!res[id]?.crossIgnored; return next })
         setErrors(prev => { const next = { ...prev }; for (const id of fresh) { if (res[id]?.error) next[id] = res[id].error as string; else delete next[id] } return next })
+        const stamps = fresh.map(id => res[id]?.updatedAt || 0)
+        const newest = Math.max(0, ...stamps)
+        if (newest) setUpdatedAt(newest)
       })
-      .catch(() => {
-        setErrors(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) next[id] = 'Não foi possível atualizar este widget'; return next })
+      .catch(err => {
+        const msg = err instanceof BiTimeoutError ? 'Tempo esgotado: o servidor demorou para responder.' : 'Não foi possível atualizar este widget'
+        setErrors(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) next[id] = msg; return next })
       })
       .finally(() => {
         setLoadingIds(prev => { const next = { ...prev }; for (const id of ids) if (reqSeq.current[id] === seq[id]) delete next[id]; return next })
       })
+  }
+
+  // Recalcula só os widgets cujo período, caminho de drill ou filtro cruzado mudou (os dados iniciais já vieram do servidor)
+  useEffect(() => {
+    const ids: string[] = []
+    for (const w of widgets) {
+      const sig = JSON.stringify([widgetPeriod(w), drillNames[w.id] || [], specOf(w).cross_target ? crossSel : null])
+      if (fetchedSig.current[w.id] === undefined) { fetchedSig.current[w.id] = sig; continue }
+      if (fetchedSig.current[w.id] !== sig) { fetchedSig.current[w.id] = sig; ids.push(w.id) }
+    }
+    fetchWidgets(ids)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodRange, groupPeriods, ownPeriods, crossSel, drillNames])
+
+  // Atualizar agora, tentar de novo e atualização automática (só com a aba visível)
+  const refreshAll = () => fetchWidgets(widgets.map(w => w.id), true)
+  const retryWidget = (id: string) => fetchWidgets([id], true)
+  const refreshRef = useRef(refreshAll)
+  refreshRef.current = refreshAll
+  useEffect(() => {
+    if (!refreshSeconds) return
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') refreshRef.current() }, refreshSeconds * 1000)
+    return () => clearInterval(timer)
+  }, [refreshSeconds])
 ` : `
   // sem o motor de SQL (Supabase) não há como consultar os registros
   const openRecords = (_w: AnalyticsWidget, _name: string) => {}
+  const refreshAll = () => {}
+  const retryWidget = (_id: string) => {}
 `
 
   return `'use client'
@@ -1169,6 +1193,7 @@ import {
   Filter,
   CornerUpLeft,
   Table2,
+  RefreshCw,
 } from 'lucide-react'
 
 interface AnalyticsWidget {
@@ -1219,6 +1244,12 @@ interface AnalyticsClientProps {
   filters?: Record<string, string>
   /** período com que a página foi renderizada */
   initialPeriod?: { preset: string; from: string; to: string }
+  /** atualização automática, em segundos (0 = desligada) */
+  refreshSeconds?: number
+  /** tempo máximo de espera de cada indicador, em segundos */
+  timeoutSeconds?: number
+  /** quando os dados iniciais foram lidos do banco (epoch ms) */
+  updatedAt?: number
 }
 
 type PeriodChoiceState = { preset: string; from: string; to: string }
@@ -1250,6 +1281,9 @@ export function AnalyticsClient({
   groups,
   filters,
   initialPeriod,
+  refreshSeconds = 0,
+  timeoutSeconds = 30,
+  updatedAt: initialUpdatedAt,
 }: AnalyticsClientProps) {
   const [mounted, setMounted] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -1264,6 +1298,7 @@ export function AnalyticsClient({
   const [prevData, setPrevData] = useState<Record<string, { value: number; from: string; to: string }>>(initialPrev || {})
   const [errors, setErrors] = useState<Record<string, string>>(initialErrors || {})
   const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({})
+  const [updatedAt, setUpdatedAt] = useState<number | null>(initialUpdatedAt || null)
 
   // Período: barra do painel, barra de cada grupo e seletor próprio de cada widget
   const groupList = groups || []
@@ -1535,7 +1570,16 @@ ${liveEffect}
       return <div className="flex-1 flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
     }
     if (errors?.[widget.id]) {
-      return <div className="flex-1 flex items-center justify-center text-center text-xs font-bold text-red-400 px-4">{errors[widget.id]}</div>
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-xs font-bold text-red-400 px-4">
+          <span>{errors[widget.id]}</span>
+          {${live ? 'true' : 'false'} && (
+            <button type="button" onClick={() => retryWidget(widget.id)} className="flex items-center gap-1 px-3 py-1 rounded-lg border border-red-200 dark:border-red-900/50 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
+              <RefreshCw className="w-3 h-3" /> Tentar de novo
+            </button>
+          )}
+        </div>
+      )
     }
     const data = aggregatedData[widget.id]
     if (data === undefined || data === null) {
@@ -1891,6 +1935,15 @@ ${liveEffect}
         </h2>
 
         <div className="flex items-center gap-3">
+          {${live ? 'true' : 'false'} && (
+            <div className="flex items-center gap-2 text-[9px] font-bold text-neutral-400">
+              {updatedAt && <span className="hidden sm:inline">Atualizado às {new Date(updatedAt).toLocaleTimeString('pt-BR')}</span>}
+              {refreshSeconds > 0 && <span className="hidden md:inline" title={'Atualização automática a cada ' + (refreshSeconds >= 3600 ? refreshSeconds / 3600 + ' h' : refreshSeconds >= 60 ? Math.round(refreshSeconds / 60) + ' min' : refreshSeconds + ' s')}>⟳</span>}
+              <button type="button" onClick={refreshAll} title="Atualizar agora" className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-indigo-600 transition-all">
+                <RefreshCw className={cn('w-3.5 h-3.5', Object.keys(loadingIds).length > 0 && 'animate-spin')} />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setIsEditMode(!isEditMode)}
             className={cn(

@@ -43,7 +43,9 @@ describe('ação de servidor gerada: filtro cruzado, drill e registros', () => {
   beforeAll(async () => {
     const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres'))
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'bi.ts'), files.get('app/actions/bi.ts')!)
+    // a sessão assinada (lib/session-server) é trocada por um usuário falso: este teste não usa regras de acesso
+    writeFileSync(join(dir, 'bi.ts'), files.get('app/actions/bi.ts')!.replace("'@/lib/session-server'", "'./session'"))
+    writeFileSync(join(dir, 'session.ts'), 'export async function getSessionUser() { return null }\n')
     writeFileSync(join(dir, 'bi-registry.ts'), files.get('app/actions/bi-registry.ts')!)
     writeFileSync(
       join(dir, 'db.ts'),

@@ -1,6 +1,7 @@
 import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
 import { getGeneratorDictionary } from '../i18n'
+import { rlsAttrColumns } from '../../bi/access'
 
 function toCamel(str: string): string {
   return str
@@ -8,8 +9,120 @@ function toCamel(str: string): string {
     .replace(/^[A-Z]/, (m) => m.toLowerCase())
 }
 
-export function generateLoginPage(ast: AppAST, files: Map<string, string>) {
+/** Código de lib/session.ts do app exportado: sessão assinada com HMAC-SHA256 (Web Crypto, serve o proxy e o servidor). */
+export const SESSION_LIB_SOURCE = `// ARQUIVO GERADO pelo MetaBuilder — sessão assinada (HMAC-SHA256).
+// O cookie "mb_session" guarda os dados do usuário e uma assinatura feita com MB_SESSION_SECRET: sem o segredo não dá
+// para forjar nem alterar a sessão (antes o cookie era só o e-mail em base64, que qualquer pessoa podia montar).
+
+export const SESSION_COOKIE = 'mb_session'
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
+
+export interface SessionUser {
+  email: string
+  name?: string
+  /** colunas do cadastro do usuário que as regras de acesso do BI consultam */
+  attrs?: Record<string, string>
+  /** expira em (segundos desde 1970) */
+  exp: number
+}
+
+const enc = new TextEncoder()
+
+function toB64Url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  let bin = ''
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '')
+}
+
+function fromB64Url(str: string): ArrayBuffer {
+  const pad = str.length % 4 ? '='.repeat(4 - (str.length % 4)) : ''
+  const bin = atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out.buffer as ArrayBuffer
+}
+
+async function hmacKey(usage: 'sign' | 'verify'): Promise<CryptoKey> {
+  const secret = process.env.MB_SESSION_SECRET
+  if (!secret || secret.length < 16) {
+    throw new Error('MB_SESSION_SECRET não configurado (mínimo 16 caracteres). Defina a variável de ambiente do app.')
+  }
+  return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [usage])
+}
+
+export async function signSession(user: Omit<SessionUser, 'exp'>, ttlSeconds = SESSION_TTL_SECONDS): Promise<string> {
+  const payload: SessionUser = { ...user, exp: Math.floor(Date.now() / 1000) + ttlSeconds }
+  const body = toB64Url(enc.encode(JSON.stringify(payload)))
+  const sig = await crypto.subtle.sign('HMAC', await hmacKey('sign'), enc.encode(body))
+  return body + '.' + toB64Url(sig)
+}
+
+/** Devolve o usuário se a assinatura confere e a sessão não expirou; senão null. */
+export async function verifySession(token: string | undefined | null): Promise<SessionUser | null> {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null
+  try {
+    // crypto.subtle.verify compara a assinatura em tempo constante
+    const ok = await crypto.subtle.verify('HMAC', await hmacKey('verify'), fromB64Url(parts[1]), enc.encode(parts[0]))
+    if (!ok) return null
+    const payload = JSON.parse(new TextDecoder().decode(fromB64Url(parts[0]))) as SessionUser
+    if (!payload || typeof payload.email !== 'string' || typeof payload.exp !== 'number') return null
+    if (payload.exp < Date.now() / 1000) return null
+    return payload
+  } catch {
+    return null
+  }
+}
+`
+
+/** Código de lib/session-server.ts: lê a sessão verificada do cookie da requisição (ações de servidor e rotas). */
+export const SESSION_SERVER_SOURCE = `// ARQUIVO GERADO pelo MetaBuilder — usuário da sessão assinada, para uso em ações de servidor e rotas.
+import { cookies } from 'next/headers'
+import { SESSION_COOKIE, verifySession, type SessionUser } from './session'
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const store = await cookies()
+  return verifySession(store.get(SESSION_COOKIE)?.value)
+}
+`
+
+export function generateLoginPage(ast: AppAST, files: Map<string, string>, opts: { extraAttrColumns?: string[] } = {}) {
   const d = getGeneratorDictionary(ast.targetLanguage)
+  // colunas do cadastro do usuário que as regras de acesso do BI pedem: o login as grava na sessão assinada
+  const attrColumns = [...new Set([
+    ...ast.routes.flatMap(r => rlsAttrColumns(r.analyticsConfig?.rls)),
+    ...(opts.extraAttrColumns || []),
+  ])]
+  files.set('lib/session.ts', SESSION_LIB_SOURCE)
+  files.set('lib/session-server.ts', SESSION_SERVER_SOURCE)
+
+  // trecho do login que assina a sessão; sem o segredo configurado, o login responde "config" em vez de quebrar
+  const signBlock = (nameExpr: string, attrsExpr: string) => `    let sessionToken: string
+    try {
+      sessionToken = await signSession({ email, name: ${nameExpr}, attrs: ${attrsExpr} })
+    } catch (e) {
+      console.error('Sessão: ', e)
+      return NextResponse.redirect(new URL('/login?error=config', request.url))
+    }
+`
+  const ATTRS_DB_BLOCK = `    // colunas do cadastro que as regras de acesso do BI consultam (sem diferenciar maiúsculas no nome da coluna)
+    const attrs: Record<string, string> = {}
+    for (const col of ${JSON.stringify(attrColumns)} as string[]) {
+      const key = Object.keys(user).find(k => k.toLowerCase() === col.toLowerCase())
+      const val = key ? (user as any)[key] : undefined
+      if (val !== undefined && val !== null && String(val) !== '') attrs[col] = String(val)
+    }
+` + signBlock('userName', 'attrs')
+  const ATTRS_MANAGED_BLOCK = `    const meta: Record<string, any> = (data?.user?.user_metadata as Record<string, any>) || {}
+    const attrs: Record<string, string> = {}
+    for (const col of ${JSON.stringify(attrColumns)} as string[]) {
+      const key = Object.keys(meta).find(k => k.toLowerCase() === col.toLowerCase())
+      const val = key ? meta[key] : undefined
+      if (val !== undefined && val !== null && String(val) !== '') attrs[col] = String(val)
+    }
+` + signBlock('undefined', 'attrs')
   const iconFallback = ast.projectName.charAt(0).toUpperCase()
   const projectIconSvg = ast.projectIcon && ast.projectIcon.startsWith('<svg') 
     ? ast.projectIcon 
@@ -113,7 +226,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
 
 
   // app/api/login/route.ts — define o cookie de sessão
-  let loginApiContent = `import { NextResponse } from 'next/server'\n`
+  let loginApiContent = `import { NextResponse } from 'next/server'\nimport { signSession } from '@/lib/session'\n`
   
   if (ast.authConfig?.authType === 'database') {
     const table = ast.authConfig.tableName || 'usuarios'
@@ -230,8 +343,9 @@ export async function POST(request: Request) {
       ''
     )
 
-    const response = NextResponse.redirect(new URL(redirect, request.url))
-    response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+
+${ATTRS_DB_BLOCK}    const response = NextResponse.redirect(new URL(redirect, request.url))
+    response.cookies.set('mb_session', sessionToken, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
@@ -273,13 +387,14 @@ export async function POST(request: Request) {
 
   try {
     const supabase = await createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       return NextResponse.redirect(new URL('/login?error=invalid', request.url))
     }
 
-    const response = NextResponse.redirect(new URL(redirect, request.url))
-    response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+
+${ATTRS_MANAGED_BLOCK}    const response = NextResponse.redirect(new URL(redirect, request.url))
+    response.cookies.set('mb_session', sessionToken, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
@@ -306,8 +421,15 @@ export async function POST(request: Request) {
   const redirect = new URL(request.url).searchParams.get('redirect') || '/'
 
   // Autenticação desativada ou mock
+  let sessionToken: string
+  try {
+    sessionToken = await signSession({ email, name: email.split('@')[0] })
+  } catch (e) {
+    console.error('Sessão: ', e)
+    return NextResponse.redirect(new URL('/login?error=config', request.url))
+  }
   const response = NextResponse.redirect(new URL(redirect, request.url))
-  response.cookies.set('mb_session', Buffer.from(email).toString('base64'), {
+  response.cookies.set('mb_session', sessionToken, {
     httpOnly: true,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
@@ -340,10 +462,11 @@ export async function GET(request: Request) {
   // proxy.ts (antigo middleware.ts) — intercepta toda requisição e redireciona para /login se não autenticado
   files.set('proxy.ts', `import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { verifySession } from '@/lib/session'
 
 const PUBLIC_PATHS = ['/login', '/api/login']
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (
@@ -354,11 +477,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const session = request.cookies.get('mb_session')?.value
-  if (!session) {
+  // só passa quem tem uma sessão assinada válida (um cookie montado à mão é recusado)
+  const user = await verifySession(request.cookies.get('mb_session')?.value)
+  if (!user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
+    const res = NextResponse.redirect(loginUrl)
+    if (request.cookies.get('mb_session')) res.cookies.delete('mb_session')
+    return res
   }
 
   return NextResponse.next()

@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { DroppableZone, SortableWidgetCard } from './dnd'
 import { MultiLevelPathBuilder } from '../StepPersonalizado'
 import { useI18n } from '@/i18n/I18nContext'
+import { AnalyticsAccessPanel } from './AnalyticsAccessPanel'
 import { sectionsOf, addGroup, renameGroup, removeGroup, type BiGroup } from '@/lib/bi/groups'
 
 /** Bloco de um grupo: arrastável pela alça (muda a ordem dos grupos) e área onde os widgets podem ser soltos. */
@@ -142,6 +143,8 @@ export function AnalyticsSection({
                     </button>
                   </div>
                 </div>
+
+                <AnalyticsAccessPanel analytics={analytics} setAnalytics={setAnalytics} models={models || []} />
 
                 <div className="space-y-4">
                   {/* Widgets sem grupo */}

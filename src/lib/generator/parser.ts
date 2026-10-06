@@ -33,6 +33,8 @@ import {
 import { getActionContexts } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
 import { flattenGroupChildren } from '@/lib/slotGroups'
+import { cleanRlsRules } from '@/lib/bi/access'
+import { perfSettings } from '@/lib/bi/perf'
 
 /**
  * parser.ts
@@ -2578,6 +2580,9 @@ export function parseMetaBuilderJSON(
           orientation: w.orientation || undefined,
         })),
         allowRuntimeEdit: ac.allow_runtime_edit !== false,
+        // Fase 5: acesso por linha, cache, atualização automática e tempo limite
+        rls: cleanRlsRules(ac.rls),
+        ...(() => { const p = perfSettings(ac); return { cacheSeconds: p.cacheSeconds, refreshSeconds: p.refreshSeconds, timeoutSeconds: p.timeoutSeconds } })(),
         // Pushdown: campo de data para filtro no banco (ex: 'data_pedido', 'created_at')
         dateFilterField: ac.date_filter_field || undefined,
       }

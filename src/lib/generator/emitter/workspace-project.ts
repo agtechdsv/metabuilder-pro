@@ -5,6 +5,7 @@ import { generateBiEngine } from '../layers/bi-engine'
 import { generateComponents } from '../layers/components'
 import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss, generateProjectLayout } from '../layers/portal'
 import { generateLoginPage } from './auth-flow'
+import { rlsAttrColumns } from '../../bi/access'
 
 export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string> {
   const files = new Map<string, string>()
@@ -181,7 +182,9 @@ export default config;
   // 5. Página de login unificada para o workspace
   const primaryProject = ast.projects[0]?.app
   if (primaryProject) {
-    generateLoginPage(primaryProject, files)
+    // o login único grava na sessão as colunas que as regras de acesso de TODOS os projetos pedem
+    const extraAttrColumns = ast.projects.flatMap(p => p.app.routes.flatMap(r => rlsAttrColumns(r.analyticsConfig?.rls)))
+    generateLoginPage(primaryProject, files, { extraAttrColumns })
   }
 
   // 6. BYOC Stubs (Custom Components)

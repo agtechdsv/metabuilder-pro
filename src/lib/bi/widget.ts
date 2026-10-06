@@ -6,6 +6,7 @@
  * original em `spec` e cada recurso novo é escrito uma vez só, aqui.
  */
 import type { BiGroup } from './groups'
+import type { RlsRule } from './access'
 
 export type BiWidgetType = 'kpi' | 'bar' | 'pie' | 'line' | 'area' | 'gauge'
 export type BiWidgetCalc = 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'MIN' | 'MAX'
@@ -100,4 +101,13 @@ export interface BiAnalyticsConfig {
   allow_runtime_edit?: boolean
   /** campo de data do filtro global de período do app exportado (ex.: 'data_pedido') */
   date_filter_field?: string
+  // Fase 5
+  /** acesso por linha: cada regra limita as linhas de acordo com o usuário logado */
+  rls?: RlsRule[]
+  /** guarda o resultado de cada consulta por este tempo (0 = sem cache) */
+  cache_seconds?: number
+  /** atualiza o painel sozinho a cada tanto tempo (0 = desligado) */
+  refresh_seconds?: number
+  /** tempo máximo de espera de cada indicador */
+  timeout_seconds?: number
 }

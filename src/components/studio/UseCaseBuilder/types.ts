@@ -1,5 +1,6 @@
 import type { BiWidget } from '@/lib/bi/widget'
 import type { BiGroup } from '@/lib/bi/groups'
+import type { RlsRule } from '@/lib/bi/access'
 // ─── Shared Types for UseCaseBuilderWizard ─────────────────────────────────
 
 export interface UseCaseBuilderWizardProps {
@@ -109,6 +110,11 @@ export interface AnalyticsConfig {
   /** agrupamentos de widgets (a ordem do array é a ordem na tela) */
   groups?: BiGroup[]
   allow_runtime_edit: boolean
+  /** Fase 5: acesso por linha (regras de RLS), cache, atualização automática e tempo limite do painel */
+  rls?: RlsRule[]
+  cache_seconds?: number
+  refresh_seconds?: number
+  timeout_seconds?: number
   /**
    * Campo de data para pushdown de filtro no banco.
    * Ex: 'data_pedido', 'created_at'. Sem declaração, a heurística JS é usada.

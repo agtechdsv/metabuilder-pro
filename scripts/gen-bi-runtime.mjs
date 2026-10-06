@@ -21,6 +21,8 @@ export const BI_RUNTIME_FILES = [
   'bi/interaction.ts',
   'bi/recordsPlan.ts',
   'bi/shapeResult.ts',
+  'bi/access.ts',
+  'bi/perf.ts',
   'schemaResolver.ts',
   'relationPathFinder.ts',
   'relationPaths.ts',

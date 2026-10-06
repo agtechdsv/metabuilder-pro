@@ -113,6 +113,13 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
     envLines.push(`NEXT_PUBLIC_PROJECT_ID="${ast.projectId}"`)
   }
 
+  // Segredo que assina a sessão de login do app (cookie mb_session). Cada exportação gera o seu; em produção defina
+  // MB_SESSION_SECRET no ambiente de hospedagem (com outro valor, se quiser) e nunca o publique.
+  const sessionSecretBytes = new Uint8Array(32)
+  globalThis.crypto.getRandomValues(sessionSecretBytes)
+  envLines.push('# Assina a sessão de login do app. Em produção defina esta variável no ambiente de hospedagem (nunca a publique).')
+  envLines.push(`MB_SESSION_SECRET="${Array.from(sessionSecretBytes, b => b.toString(16).padStart(2, '0')).join('')}"`)
+
   files.set('.env.local', envLines.join('\n'))
 
   // .gitignore

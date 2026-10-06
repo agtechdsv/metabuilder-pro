@@ -8,7 +8,7 @@ import {
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
   AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, LayoutGrid, Gauge,
-  GripVertical, MousePointer2, Save, Search, BarChart3, X, Filter, CornerUpLeft, Table2
+  GripVertical, MousePointer2, Save, Search, BarChart3, X, Filter, CornerUpLeft, Table2, RefreshCw
 } from 'lucide-react'
 import { 
   DndContext, 
@@ -38,6 +38,11 @@ interface AnalyticsDashboardProps {
     widgets: Widget[]
     groups?: BiGroup[]
     allow_runtime_edit?: boolean
+    // Fase 5
+    rls?: RlsRule[]
+    cache_seconds?: number
+    refresh_seconds?: number
+    timeout_seconds?: number
   }
   project: any
   joins?: any[]
@@ -59,10 +64,31 @@ import { shapeAggRows, prevValueFromRows } from '@/lib/bi/shapeResult'
 import { SCALE_PRESETS, presetOf, spanFor, widthOfSpan, type ScaleKey } from '@/lib/bi/scaleLayout'
 import { crossConditionsFor, makeCrossFilter, toggleCrossFilter, drillInto, drillTarget, applyDrill, bucketConditions, type CrossFilter, type DrillLevel, type GroupInfo } from '@/lib/bi/interaction'
 import { planRecordsQuery } from '@/lib/bi/recordsPlan'
+import { cleanRlsRules, rlsAccess, withAccess, type AccessResult, type BiViewer, type RlsRule } from '@/lib/bi/access'
+import { perfSettings, QueryCache } from '@/lib/bi/perf'
 import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 
 const BI_ROW_LIMIT = 1000
+// cache dos resultados no navegador (a chave é o SQL, que já traz período, filtros e a regra de acesso)
+const panelCache = new QueryCache<{ data: any[]; at: number }>(200)
+const NO_ACCESS: AccessResult = { conditions: [] }
+
+/** Linha do usuário final logado, guardada no cookie client_session_<projeto> pelo login do portal. */
+function readViewer(projectId: string | undefined): BiViewer | null {
+  if (!projectId || typeof document === 'undefined') return null
+  try {
+    const name = `client_session_${projectId}`
+    const row = document.cookie.split('; ').find(r => r.trim().startsWith(`${name}=`))
+    if (!row) return null
+    const user = JSON.parse(decodeURIComponent(row.trim().substring(name.length + 1)))
+    if (!user || typeof user !== 'object') return null
+    const pick = (...keys: string[]) => { for (const k of keys) if (user[k] !== undefined && user[k] !== null && String(user[k]).trim() !== '') return String(user[k]); return null }
+    return { email: pick('email', 'EMAIL', 'e_mail', 'E_MAIL'), name: pick('__display_name', 'nome', 'NOME', 'name', 'NAME'), attrs: user }
+  } catch {
+    return null
+  }
+}
 const BI_MAX_GROUPS = 2000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
 
@@ -150,6 +176,20 @@ export default function AnalyticsDashboard({
   
   const { t, language } = useI18n()
 
+  // ── Fase 5: acesso por linha, cache, atualização automática e tempo limite ───
+  const perf = useMemo(() => perfSettings(config), [config.cache_seconds, config.refresh_seconds, config.timeout_seconds])
+  const rlsRules = useMemo(() => cleanRlsRules(config.rls), [config.rls])
+  // o usuário final vem do cookie do portal; só depois de lido (ready) as consultas saem, para nunca irem sem a regra
+  const [viewerState, setViewerState] = useState<{ ready: boolean; viewer: BiViewer | null }>({ ready: false, viewer: null })
+  useEffect(() => { setViewerState({ ready: true, viewer: readViewer(project?.id) }) }, [project?.id])
+  const access = useMemo<AccessResult>(
+    () => (rlsRules.length > 0 && viewerState.viewer ? rlsAccess(rlsRules, viewerState.viewer) : NO_ACCESS),
+    [rlsRules, viewerState.viewer],
+  )
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
+  const deniedMessage = (d: NonNullable<AccessResult['denied']>) =>
+    d.code === 'no_viewer' ? t('runtime.bi_denied_no_viewer') : t('runtime.bi_denied_missing').replace('{detail}', d.detail)
+
   // Escala do painel: não é só zoom, muda a densidade (cards por linha, altura, gráficos); veja lib/bi/scaleLayout
   const [scaleKey, setScaleKey] = useState<ScaleKey>('normal')
   const preset = presetOf(scaleKey)
@@ -204,7 +244,7 @@ export default function AnalyticsDashboard({
   const recordsQueryId = useRef<string | null>(null)
   const crossList = Object.values(crossFilters)
   // widget como deve ser consultado: caminho de drill aberto e, por cima, os filtros cruzados que ele responde
-  const drilled = (w: Widget): Widget => applyDrill(w, drillStacks[w.id] || []) as Widget
+  const drilled = (w: Widget): Widget => withAccess(applyDrill(w, drillStacks[w.id] || []) as Widget, access)
   const withCross = (w: Widget): Widget => {
     const extra = crossConditionsFor(w, crossList)
     return extra.length ? { ...w, conditions: [...(w.conditions || []), ...extra] } : w
@@ -240,6 +280,14 @@ export default function AnalyticsDashboard({
   const fetchedSig = useRef<Record<string, string>>({})
   // 'agg' = SQL já agregado no banco; 'raw' = linhas cruas agregadas aqui (caminho antigo, usado como reserva)
   const queryModes = useRef<Record<string, 'agg' | 'raw' | 'prev'>>({})
+  // consultas esperando resposta, relógio do tempo limite de cada uma e chave de cache a gravar quando chegar o resultado
+  const pendingQueries = useRef<Set<string>>(new Set())
+  const queryTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const cacheKeys = useRef<Record<string, { key: string; ttl: number }>>({})
+  // "atualizar" ignora o cache nesta rodada de consultas
+  const forceFresh = useRef(false)
+  const handleSqlResultRef = useRef<((payload: any) => void) | null>(null)
+  useEffect(() => () => { Object.values(queryTimers.current).forEach(clearTimeout) }, [])
   // sempre aponta para a versão mais recente de fetchWidgetData (o listener do canal guarda uma versão antiga)
   const fetchWidgetDataRef = useRef<((widget: Widget, opts?: { legacy?: boolean; reason?: string }) => Promise<void>) | null>(null)
 
@@ -270,7 +318,7 @@ export default function AnalyticsDashboard({
   const widgetsRef = useRef<Widget[]>([])
   useEffect(() => {
     widgetsRef.current = localWidgets.map(w => withCross(drilled(w)))
-  }, [localWidgets, crossFilters, drillStacks])
+  }, [localWidgets, crossFilters, drillStacks, access])
 
   // Listener centralizado (SQL_RESULT) usando o canal do PAI
   useEffect(() => {
@@ -280,6 +328,17 @@ export default function AnalyticsDashboard({
     const handleSqlResult = (payload: any) => {
       const qId = payload.payload?.queryId
       if (!qId) return
+
+      // chegou a resposta: encerra o relógio do tempo limite e guarda o resultado em cache
+      pendingQueries.current.delete(qId)
+      clearTimeout(queryTimers.current[qId])
+      delete queryTimers.current[qId]
+      const ck = cacheKeys.current[qId]
+      if (ck) {
+        delete cacheKeys.current[qId]
+        if (payload.payload.success && !payload.payload.__cached) panelCache.set(ck.key, { data: payload.payload.data, at: Date.now() }, ck.ttl)
+      }
+      if (payload.payload.success && queryModes.current[qId] !== undefined) setLastUpdated(payload.payload.__at || Date.now())
 
       // lista de registros do drill ("ver registros")
       if (recordsQueryId.current && qId === recordsQueryId.current) {
@@ -309,6 +368,8 @@ export default function AnalyticsDashboard({
 
       const queryMode = queryModes.current[qId]
       delete queryModes.current[qId]
+      // resposta que chegou depois do "tempo esgotado" ainda vale: troca o erro pelos dados
+      if (payload.payload.success) setErrors(prev => (prev[widget.id] ? { ...prev, [widget.id]: '' } : prev))
       if (queryMode === 'agg') {
         if (payload.payload.success) {
           processAggRows(widget, payload.payload.data)
@@ -338,6 +399,7 @@ export default function AnalyticsDashboard({
     }
 
     tunnelChannel.on('broadcast', { event: 'sql_result' }, handleSqlResult)
+    handleSqlResultRef.current = handleSqlResult
 
     return () => {
       const bindings = tunnelChannel.bindings?.broadcast
@@ -357,7 +419,17 @@ export default function AnalyticsDashboard({
 
   useEffect(() => {
     if (!isTunnelReady) { fetchedSig.current = {}; return }
+    // espera ler o usuário logado: a consulta nunca sai sem a regra de acesso dele
+    if (!viewerState.ready) return
     if (localWidgets.length === 0) return
+
+    // sem usuário ou sem o dado que a regra exige: nada é consultado
+    if (access.denied) {
+      const msg = deniedMessage(access.denied)
+      setErrors(Object.fromEntries(localWidgets.map(w => [w.id, msg])))
+      setLoading({})
+      return
+    }
 
     const handler = setTimeout(() => {
       localWidgets.forEach(widget => {
@@ -373,13 +445,15 @@ export default function AnalyticsDashboard({
     }, 400) // Debounce de 400ms para evitar chamadas excessivas durante a digitação
 
     return () => clearTimeout(handler)
-  }, [isTunnelReady, localWidgets, localGroups, filters, periodRange, ownPeriods, groupPeriods, crossFilters, drillStacks])
+  }, [isTunnelReady, viewerState.ready, access, localWidgets, localGroups, filters, periodRange, ownPeriods, groupPeriods, crossFilters, drillStacks])
 
   const fetchWidgetData = async (widget: Widget, opts: { legacy?: boolean; reason?: string; fallback?: Widget } = {}) => {
     if (!tunnelChannel || !isTunnelReady) {
       return
     }
 
+    // "atualizar" pede dados novos: ignora o cache só nesta rodada
+    const fresh = forceFresh.current
     const queryId = crypto.randomUUID()
     // Registra este queryId como o último enviado por este widget
     lastQueryIds.current[widget.id] = queryId
@@ -422,13 +496,36 @@ export default function AnalyticsDashboard({
     if (!plan.compare) setPrevData(prev => { if (!(widget.id in prev)) return prev; const next = { ...prev }; delete next[widget.id]; return next })
 
     if (plan.kind === 'error' || !plan.sql) {
-      setErrors(prev => ({ ...prev, [widget.id]: plan.message || 'Não foi possível montar a consulta' }))
+      // a regra de acesso não coube neste indicador (ex.: tabela sem relação): nunca mostra sem o filtro
+      const reason = plan.message || 'Não foi possível montar a consulta'
+      setErrors(prev => ({ ...prev, [widget.id]: access.conditions.length > 0 && plan.kind === 'error' ? t('runtime.bi_access_unfilterable').replace('{reason}', reason) : reason }))
       setLoading(prev => ({ ...prev, [widget.id]: false }))
       return
     }
 
     const sendQuery = (sql: string, mode: 'agg' | 'raw' | 'prev', limit: number, qid: string = queryId) => {
       queryModes.current[qid] = mode
+      const ttl = perf.cacheSeconds * 1000
+      const cacheKey = `${project.id}|${sql}`
+      // cache: a mesma consulta feita há pouco reaproveita o resultado (o botão de atualizar ignora)
+      if (!fresh && ttl > 0) {
+        const hit = panelCache.get(cacheKey)
+        if (hit) {
+          setTimeout(() => handleSqlResultRef.current?.({ payload: { queryId: qid, success: true, data: hit.data, __cached: true, __at: hit.at } }), 0)
+          return
+        }
+      }
+      if (ttl > 0) cacheKeys.current[qid] = { key: cacheKey, ttl }
+      // tempo limite: se o banco não responder, o indicador avisa e oferece tentar de novo
+      pendingQueries.current.add(qid)
+      if (mode !== 'prev') {
+        queryTimers.current[qid] = setTimeout(() => {
+          if (!pendingQueries.current.has(qid)) return
+          pendingQueries.current.delete(qid)
+          setErrors(prev => ({ ...prev, [widget.id]: t('runtime.bi_timeout') }))
+          setLoading(prev => ({ ...prev, [widget.id]: false }))
+        }, perf.timeoutSeconds * 1000)
+      }
       // Pequeno delay para garantir que o canal esteja pronto
       setTimeout(() => {
         if (!tunnelChannel || !isTunnelReady) return
@@ -462,6 +559,28 @@ export default function AnalyticsDashboard({
   }
 
   fetchWidgetDataRef.current = fetchWidgetData
+
+  // Busca um widget agora (com o drill e os filtros cruzados atuais)
+  const runFetch = (widget: Widget) => {
+    const base = drilled(widget)
+    const full = withCross(base)
+    fetchedSig.current[widget.id] = JSON.stringify({ w: full, f: filters, p: widgetPeriod(widget) })
+    fetchWidgetData(full, full !== base ? { fallback: base } : {})
+  }
+  // Atualizar: refaz todos os indicadores ignorando o cache
+  const refreshAll = () => {
+    if (!isTunnelReady || !viewerState.ready || access.denied) return
+    forceFresh.current = true
+    try { localWidgets.forEach(runFetch) } finally { forceFresh.current = false }
+  }
+  const refreshAllRef = useRef(refreshAll)
+  refreshAllRef.current = refreshAll
+  // atualização automática: só enquanto a aba está visível
+  useEffect(() => {
+    if (!perf.refreshSeconds || !isTunnelReady) return
+    const id = setInterval(() => { if (document.visibilityState === 'visible') refreshAllRef.current() }, perf.refreshSeconds * 1000)
+    return () => clearInterval(id)
+  }, [perf.refreshSeconds, isTunnelReady])
 
   // Clique numa barra/fatia: oferece filtrar os outros gráficos, detalhar o próximo nível e/ou ver os registros
   const onPoint = (widget: Widget, name: string, ev?: any) => {
@@ -860,7 +979,7 @@ export default function AnalyticsDashboard({
 
   const renderWidgetContent = (widget: Widget, forceSize?: 'normal' | 'large') => {
     if (loading[widget.id]) return <div className="flex-1 flex items-center justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>
-    if (errors[widget.id]) return <div className="flex-1 flex flex-col items-center justify-center gap-2 text-red-400 p-4 text-center"><AlertCircle className="w-5 h-5" /><p className="text-[10px] font-bold uppercase tracking-widest">{errors[widget.id]}</p></div>
+    if (errors[widget.id]) return <div className="flex-1 flex flex-col items-center justify-center gap-2 text-red-400 p-4 text-center"><AlertCircle className="w-5 h-5" /><p className="text-[10px] font-bold uppercase tracking-widest">{errors[widget.id]}</p>{!access.denied && <button type="button" onClick={() => { forceFresh.current = true; try { runFetch(widget) } finally { forceFresh.current = false } }} className="mt-1 flex items-center gap-1 px-3 py-1 rounded-lg border border-red-200 dark:border-red-900/50 text-[9px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><RefreshCw className="w-3 h-3" />{t('runtime.bi_retry')}</button>}</div>
     
     const val = data[widget.id]
     if (val === undefined || val === null) return <div className="flex-1 flex items-center justify-center text-neutral-300 text-xs font-black uppercase">{t('runtime.bi_no_data')}</div>
@@ -1257,6 +1376,13 @@ export default function AnalyticsDashboard({
           {isEditMode ? <Save className="w-3.5 h-3.5" /> : <MousePointer2 className="w-3.5 h-3.5" />}
           {isEditMode ? t('runtime.bi_save_layout') : t('runtime.bi_organize')}
         </button>
+        <div className="flex items-center gap-2 ml-auto text-[9px] font-bold text-neutral-400">
+          {lastUpdated && <span className="hidden sm:inline">{t('runtime.bi_updated_at').replace('{time}', new Date(lastUpdated).toLocaleTimeString(biLocale))}</span>}
+          {perf.refreshSeconds > 0 && <span className="hidden md:inline" title={t('runtime.bi_auto_refresh').replace('{every}', perf.refreshSeconds >= 3600 ? `${perf.refreshSeconds / 3600} h` : perf.refreshSeconds >= 60 ? `${Math.round(perf.refreshSeconds / 60)} min` : `${perf.refreshSeconds} s`)}>⟳</span>}
+          <button type="button" onClick={refreshAll} title={t('runtime.bi_refresh')} className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-indigo-600 transition-all">
+            <RefreshCw className={cn('w-3.5 h-3.5', Object.values(loading).some(Boolean) && 'animate-spin')} />
+          </button>
+        </div>
         <div className="flex items-center bg-white dark:bg-neutral-900 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 ml-4 hidden md:flex">
           {scales.map(s => (
             <button
@@ -1275,6 +1401,12 @@ export default function AnalyticsDashboard({
           ))}
         </div>
       </div>
+
+      {rlsRules.length > 0 && viewerState.ready && !viewerState.viewer && (
+        <p className="mx-2 px-4 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+          {t('runtime.bi_rls_dev_preview')}
+        </p>
+      )}
 
       {hasPeriodWidgets && (
         <div className="flex flex-wrap items-center gap-2 px-2">

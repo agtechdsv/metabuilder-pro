@@ -1,5 +1,6 @@
 import type { BiWidget } from '../bi/widget'
 import type { BiGroup } from '../bi/groups'
+import type { RlsRule } from '../bi/access'
 /**
  * ast.ts
  *
@@ -337,6 +338,11 @@ export interface AnalyticsConfig {
    * Declare explicitamente para comportamento determinístico.
    */
   dateFilterField?: string
+  /** Fase 5: acesso por linha (regras de RLS), cache, atualização automática e tempo limite do painel */
+  rls?: RlsRule[]
+  cacheSeconds?: number
+  refreshSeconds?: number
+  timeoutSeconds?: number
 }
 
 export interface TimelineConfig {
