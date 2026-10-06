@@ -43,6 +43,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { transform } from 'sucrase'
 import { Modal } from '@/components/ui/Modal'
+import { createSandboxRequire } from '@/lib/aiSandboxModules'
 import { repairJsxAttributeQuotes } from '@/lib/aiComponentCode'
 import { createTunnelSupabaseClient } from './TunnelSupabaseProxy'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
@@ -168,14 +169,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
         }
         const stableToast = { toast: toastFn, addToast: toastFn }
         const stableI18n = { t: (key: string) => key }
-        const customRequire = (modName: string) => {
-          if (modName === 'react') return React
-          if (modName === 'lucide-react') return lucide
-          if (modName === '@/utils/supabase/client') return { createClient: () => sharedClient }
-          if (modName === '@/components/ui/Toast') return { useToast: () => stableToast }
-          if (modName.includes('i18n')) return { useI18n: () => stableI18n }
-          return {}
-        }
+        const customRequire = createSandboxRequire({ React, lucide, Modal, client: sharedClient, toast: stableToast, i18n: stableI18n })
 
         const exportsObj: any = {}
         
