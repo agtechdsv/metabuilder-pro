@@ -1,3 +1,28 @@
+/** Relações embutidas pedidas no select: "id, nome, categorias(nome)" → [{ rel: 'categorias', cols: 'nome' }] */
+export function parseEmbeds(select: string): { rel: string; cols: string }[] {
+  const out: { rel: string; cols: string }[] = []
+  const re = /([A-Za-z_][\w]*)\s*(?:![\w]+)?\(([^()]*)\)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(select)) !== null) out.push({ rel: m[1], cols: m[2].trim() || '*' })
+  return out
+}
+
+/**
+ * Liga cada linha à linha da tabela relacionada (row[rel] = { ... }). A chave estrangeira é a coluna "<algo>_id" da
+ * linha cujo prefixo começa o nome da tabela relacionada (categoria_id → categorias_produtos).
+ */
+export function attachEmbed(rows: any[], rel: string, relRows: any[]): any[] {
+  const relLower = rel.toLowerCase()
+  const byId = new Map<string, any>()
+  for (const r of relRows || []) byId.set(String(r.id ?? r.ID), r)
+  const sample = rows.find(r => r && typeof r === 'object') || {}
+  const fk = Object.keys(sample).find(k => {
+    const kl = k.toLowerCase()
+    return kl.endsWith('_id') && kl !== 'id' && relLower.startsWith(kl.slice(0, -3))
+  })
+  return rows.map(r => ({ ...r, [rel]: fk && r[fk] != null ? byId.get(String(r[fk])) ?? null : null }))
+}
+
 export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase: any, projectToken: string, projectSlug?: string) {
   if (!tunnelChannel) return originalSupabase;
 
@@ -31,6 +56,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
         action: '', 
         selectCols: '*', 
         filters: [] as { col: string, op: string, val: any }[], 
+        limitN: null as number | null,
         orders: [] as { col: string, asc: boolean }[],
         isSingle: false,
         mutationPayload: null as any
@@ -46,7 +72,14 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
             const validFilters = currentQuery.filters.filter(f => f.col !== 'project_id');
             if (validFilters.length === 0) return '';
             return ' WHERE ' + validFilters.map(f => {
+              if (f.op === 'IS') return `"${f.col}" IS ${f.val === null ? 'NULL' : f.val ? 'TRUE' : 'FALSE'}`;
               if (f.val === null) return `"${f.col}" IS NULL`;
+              if (f.op === 'IN') {
+                const list = (Array.isArray(f.val) ? f.val : [f.val]).map((v: any) => `'${escapeStr(v)}'`).join(', ');
+                return list ? `"${f.col}" IN (${list})` : '1=0';
+              }
+              // ILIKE não existe em todos os bancos: UPPER(...) LIKE UPPER(...) funciona em todos
+              if (f.op === 'ILIKE') return `UPPER("${f.col}") LIKE UPPER('${escapeStr(f.val)}')`;
               return `"${f.col}" ${f.op} '${escapeStr(f.val)}'`;
             }).join(' AND ');
           };
@@ -142,7 +175,7 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
               sql: sql,
               token: projectToken || 'ai-generated',
               joins: [],
-              limit: 1000,
+              limit: currentQuery.limitN ?? 1000,
               offset: 0,
               ...extPayload
             }
@@ -157,7 +190,11 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
       };
 
       const chain: any = {
-        select: (cols = '*') => { currentQuery.action = 'select'; currentQuery.selectCols = cols; return chain; },
+        // select() depois de insert/update/delete só pede o retorno das linhas: não troca a operação
+        select: (cols = '*') => {
+          if (!['insert', 'update', 'delete'].includes(currentQuery.action)) { currentQuery.action = 'select'; currentQuery.selectCols = cols; }
+          return chain;
+        },
         insert: (data: any) => { currentQuery.action = 'insert'; currentQuery.mutationPayload = data; return chain; },
         update: (data: any) => { currentQuery.action = 'update'; currentQuery.mutationPayload = data; return chain; },
         delete: () => { currentQuery.action = 'delete'; return chain; },
@@ -167,9 +204,27 @@ export function createTunnelSupabaseClient(tunnelChannel: any, originalSupabase:
         gte: (col: string, val: any) => { currentQuery.filters.push({ col, op: '>=', val }); return chain; },
         lt: (col: string, val: any) => { currentQuery.filters.push({ col, op: '<', val }); return chain; },
         lte: (col: string, val: any) => { currentQuery.filters.push({ col, op: '<=', val }); return chain; },
+        like: (col: string, val: any) => { currentQuery.filters.push({ col, op: 'LIKE', val }); return chain; },
+        ilike: (col: string, val: any) => { currentQuery.filters.push({ col, op: 'ILIKE', val }); return chain; },
+        in: (col: string, val: any[]) => { currentQuery.filters.push({ col, op: 'IN', val }); return chain; },
+        is: (col: string, val: any) => { currentQuery.filters.push({ col, op: 'IS', val }); return chain; },
+        limit: (n: number) => { currentQuery.limitN = Math.max(1, Math.min(Number(n) || 1000, 1000)); return chain; },
+        maybeSingle: () => { currentQuery.isSingle = true; return chain; },
         order: (col: string, opts?: { ascending?: boolean }) => { currentQuery.orders.push({ col, asc: opts?.ascending !== false }); return chain; },
         single: () => { currentQuery.isSingle = true; return chain; },
-        then: (onfulfilled: any, onrejected: any) => execute().then(onfulfilled, onrejected)
+        then: (onfulfilled: any, onrejected: any) => execute().then(async (res: any) => {
+          // select com relação embutida: busca a tabela relacionada e liga pela chave estrangeira
+          const embeds = currentQuery.action === 'select' ? parseEmbeds(currentQuery.selectCols) : []
+          if (embeds.length === 0 || !res || res.error || !res.data) return res
+          let data = res.data
+          const wasSingle = !Array.isArray(data)
+          let list: any[] = wasSingle ? [data] : data
+          for (const e of embeds) {
+            const relRes: any = await (createTunnelSupabaseClient(tunnelChannel, originalSupabase, projectToken, projectSlug).from(e.rel) as any).select('*')
+            if (!relRes?.error) list = attachEmbed(list, e.rel, relRes?.data || [])
+          }
+          return { ...res, data: wasSingle ? list[0] : list }
+        }).then(onfulfilled, onrejected)
       };
 
       return chain;

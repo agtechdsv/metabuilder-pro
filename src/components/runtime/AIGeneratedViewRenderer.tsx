@@ -42,6 +42,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { transform } from 'sucrase'
+import { Modal } from '@/components/ui/Modal'
 import { repairJsxAttributeQuotes } from '@/lib/aiComponentCode'
 import { createTunnelSupabaseClient } from './TunnelSupabaseProxy'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
@@ -172,6 +173,7 @@ export function AIGeneratedViewRenderer({ componentCode, viewName, projectId, pr
               }
             } 
           }
+          if (modName === '@/components/ui/Modal') return { __esModule: true, default: Modal, Modal }
           if (modName.includes('i18n')) return { useI18n: () => ({ t: (key: string) => key }) }
           return {}
         }

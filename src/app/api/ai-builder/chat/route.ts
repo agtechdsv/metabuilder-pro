@@ -92,6 +92,7 @@ STACK DO PROJETO:
 - Componentes UI disponíveis: Modal de '@/components/ui/Modal', Toast de '@/components/ui/Toast'
 - O componente deve ser um 'use client' React funcional exportado como default
 - CSS: use uma tag <style>{\`...\`}</style> simples (NUNCA <style jsx>); o Tailwind não existe no código gerado em tempo de execução
+- DADOS: o cliente Supabase do sandbox NÃO suporta relações embutidas no select (ex.: select('*, categorias(nome)')). Carregue a tabela relacionada em outra consulta e junte no cliente (Map por id). Métodos suportados: select, insert, update, delete, eq, neq, gt, gte, lt, lte, like, ilike, in, is, order, limit, single, maybeSingle
 - SINTAXE JSX: em atributos entre aspas duplas NUNCA use \\" (no JSX a barra invertida não escapa). Para aspas dentro do texto use &quot; ou prefira aspas simples no atributo (ex.: placeholder='TV 50"')
 ${tablesContextStr}${newTablesStr}${currentCodeStr}
 
