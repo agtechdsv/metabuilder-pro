@@ -1064,6 +1064,17 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
 
     const isUnpublished = view && Object.keys(view.layout_config || {}).length === 0;
 
+    // Organizar/editar/excluir indicadores do BI é só de membro do projeto (a política de leitura de "projects" só devolve o projeto a quem tem acesso)
+    let canEditLayout = false
+    try {
+      const sessionClient = await createServerClient()
+      const { data: { user: sessionUser } } = await sessionClient.auth.getUser()
+      if (sessionUser) {
+        const { data: visible } = await sessionClient.from('projects').select('id').eq('id', project.id).maybeSingle()
+        canEditLayout = !!visible
+      }
+    } catch { /* sem sessão de membro: só consulta */ }
+
     return (
       <TranslationProvider locale={locale}>
         {isPreview && view.draft_config ? (
@@ -1091,6 +1102,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           buttonsConfig={buttonsConfig}
           locale={locale}
           canAdd={canAdd}
+          canEditLayout={canEditLayout}
           viewId={view.id}
           primaryKeyName={primaryKeyName}
           logicType={view.logic_type}

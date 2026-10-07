@@ -54,8 +54,15 @@ interface AnalyticsDashboardProps {
   tunnelChannel?: any
   isTunnelReady?: boolean
   projectRelations?: any[]
+  /** tela (ui_view) do painel: o servidor busca nela o indicador salvo e a regra de acesso */
+  viewId?: string
+  /** só membro do projeto organiza/edita/exclui indicadores; o usuário final só consulta (padrão: pode) */
+  canEditLayout?: boolean
 }
 
+import { useSearchParams } from 'next/navigation'
+import { fetchBiQuery, type BiQueryResult } from '@/lib/bi/queryClient'
+import { BI_ROW_LIMIT, BI_MAX_GROUPS, BI_RECORDS_LIMIT } from '@/lib/bi/serverQuery'
 import { compileFormula } from '@/lib/bi/safeFormula'
 import { formatBiValue, biPrimaryColor } from '@/lib/bi/format'
 import { PERIOD_PRESETS, resolvePeriod, resolveWidgetPeriod, effectivePeriodMode, formatPeriodDay, previousRange, type PeriodRange } from '@/lib/bi/period'
@@ -69,7 +76,6 @@ import { perfSettings, QueryCache } from '@/lib/bi/perf'
 import type { RuntimeBiWidget } from '@/lib/bi/widget'
 import { sectionsOf, moveWidget, moveGroup as moveGroupInList, renameGroup as renameGroupInList, removeGroup as removeGroupFromList, groupLabel, type BiGroup } from '@/lib/bi/groups'
 
-const BI_ROW_LIMIT = 1000
 // cache dos resultados no navegador (a chave é o SQL, que já traz período, filtros e a regra de acesso)
 const panelCache = new QueryCache<{ data: any[]; at: number }>(200)
 const NO_ACCESS: AccessResult = { conditions: [] }
@@ -89,7 +95,6 @@ function readViewer(projectId: string | undefined): BiViewer | null {
     return null
   }
 }
-const BI_MAX_GROUPS = 2000
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4']
 
 /**
@@ -144,8 +149,12 @@ export default function AnalyticsDashboard({
   onSaveLayout,
   tunnelChannel,
   isTunnelReady,
-  projectRelations = []
+  projectRelations = [],
+  viewId = '',
+  canEditLayout = true,
 }: AnalyticsDashboardProps) {
+  // a tela está em ?preview=draft (o servidor só honra isso para membro do projeto)
+  const isDraft = useSearchParams()?.get('preview') === 'draft'
   const [data, setData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -190,6 +199,30 @@ export default function AnalyticsDashboard({
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
   const deniedMessage = (d: NonNullable<AccessResult['denied']>) =>
     d.code === 'no_viewer' ? t('runtime.bi_denied_no_viewer') : t('runtime.bi_denied_missing').replace('{detail}', d.detail)
+
+  /**
+   * Resposta do servidor de consultas. Falha DO SERVIDOR (sem sessão, regra de acesso, conferência de tabelas, tempo) vira
+   * a mensagem do indicador e NÃO aciona o caminho alternativo; resposta do banco (com ou sem erro de SQL) segue o fluxo normal.
+   * `widgetId` null = consulta auxiliar (comparação): a falha é silenciosa.
+   */
+  const deliverServerResult = (qid: string, res: BiQueryResult, widgetId: string | null) => {
+    if (!res.serverError) {
+      handleSqlResultRef.current?.({ payload: { ...res, queryId: qid } })
+      return
+    }
+    pendingQueries.current.delete(qid)
+    clearTimeout(queryTimers.current[qid])
+    delete queryTimers.current[qid]
+    delete cacheKeys.current[qid]
+    delete queryModes.current[qid]
+    if (!widgetId) return
+    const msg = res.denied ? deniedMessage(res.denied)
+      : res.code === 'timeout' ? t('runtime.bi_timeout')
+      : res.code === 'plan_error' && access.conditions.length > 0 ? t('runtime.bi_access_unfilterable').replace('{reason}', res.error || '')
+      : (res.error || t('runtime.bi_fetch_error'))
+    setErrors(prev => ({ ...prev, [widgetId]: msg }))
+    setLoading(prev => ({ ...prev, [widgetId]: false }))
+  }
 
   // Escala do painel: não é só zoom, muda a densidade (cards por linha, altura, gráficos); veja lib/bi/scaleLayout
   const [scaleKey, setScaleKey] = useState<ScaleKey>('normal')
@@ -528,27 +561,22 @@ export default function AnalyticsDashboard({
           setLoading(prev => ({ ...prev, [widget.id]: false }))
         }, perf.timeoutSeconds * 1000)
       }
-      // Pequeno delay para garantir que o canal esteja pronto
-      setTimeout(() => {
-        if (!tunnelChannel || !isTunnelReady) return
-
-        tunnelChannel.send({
-          type: 'broadcast',
-          event: 'sql_query',
-          payload: {
-            queryId: qid,
-            action: 'select',
-            query: sql, // ← 'query' é o campo lido pelo CLI
-            sql,        // ← mantido por compatibilidade
-            schemaName: plan.schemaName, // ← campo obrigatório: identifica o schema para o CLI não ignorar
-            table: plan.tableName,
-            limit,      // ← o CLI só reconhece o limite se vier aqui ou como LIMIT/FETCH NEXT no SQL
-            // 'filters' não é enviado: o WHERE já está no SQL e o CLI o acrescentaria de novo depois do LIMIT
-            token: project?.secret_token || '',
-            projectId: project.id
-          }
-        })
-      }, 500)
+      // O servidor monta o SQL (indicador salvo + regra de acesso da sessão assinada) e executa: o navegador só pede
+      const rawWidget = localWidgets.find(w => w.id === widget.id)
+      void fetchBiQuery({
+        projectId: project.id,
+        viewId,
+        draft: isDraft,
+        widgetId: widget.id,
+        part: mode === 'prev' ? 'prev' : 'main',
+        widget: rawWidget,
+        drill: drillStacks[widget.id] || [],
+        cross: ignoredCross ? [] : crossList,
+        filters,
+        period: widgetPeriod(widget),
+        legacy: opts.legacy,
+        reason: opts.reason,
+      }).then(res => deliverServerResult(qid, res, mode === 'prev' ? null : widget.id))
     }
 
     sendQuery(plan.sql, plan.kind === 'agg' ? 'agg' : 'raw', plan.limit ?? BI_ROW_LIMIT)
@@ -650,7 +678,7 @@ export default function AnalyticsDashboard({
       period: widgetPeriod(widget),
       screenFilters: filters,
       projectSlug: (project as any)?.slug,
-      limit: 200,
+      limit: BI_RECORDS_LIMIT,
     })
     const title = widget.title || 'Registros'
     if (plan.kind === 'error' || !plan.sql) {
@@ -660,14 +688,27 @@ export default function AnalyticsDashboard({
     const qid = crypto.randomUUID()
     recordsQueryId.current = qid
     setRecordsView({ title, label: name, rows: null, error: null })
-    tunnelChannel.send({
-      type: 'broadcast',
-      event: 'sql_query',
-      payload: {
-        queryId: qid, action: 'select', query: plan.sql, sql: plan.sql,
-        schemaName: plan.schemaName, table: plan.tableName, limit: plan.limit,
-        token: project?.secret_token || '', projectId: project.id,
-      },
+    // o servidor monta o SQL do grupo clicado (com a regra de acesso da sessão) e devolve as linhas
+    void fetchBiQuery({
+      projectId: project.id,
+      viewId,
+      draft: isDraft,
+      widgetId: widget.id,
+      part: 'records',
+      widget: localWidgets.find(w => w.id === widget.id),
+      drill: drillStacks[widget.id] || [],
+      cross: crossList,
+      filters,
+      period: widgetPeriod(widget),
+      bucket: name,
+    }).then(res => {
+      if (recordsQueryId.current !== qid) return // abriram outro enquanto este respondia
+      recordsQueryId.current = null
+      setRecordsView(prev => prev
+        ? (res.success
+            ? { ...prev, rows: res.data || [], error: null }
+            : { ...prev, rows: null, error: res.denied ? deniedMessage(res.denied) : (res.error || t('runtime.bi_records_error')) })
+        : prev)
     })
   }
 
@@ -1366,6 +1407,7 @@ export default function AnalyticsDashboard({
     <div className="space-y-6 animate-in fade-in duration-700 relative">
       <div className="flex justify-between items-center px-2">
         <h2 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-400">{t('runtime.bi_perf')}</h2>
+        {canEditLayout ? (
         <button 
           onClick={() => {
             if (isEditMode && onSaveLayout) {
@@ -1378,6 +1420,7 @@ export default function AnalyticsDashboard({
           {isEditMode ? <Save className="w-3.5 h-3.5" /> : <MousePointer2 className="w-3.5 h-3.5" />}
           {isEditMode ? t('runtime.bi_save_layout') : t('runtime.bi_organize')}
         </button>
+        ) : <span />}
         <div className="flex items-center gap-2 ml-auto text-[9px] font-bold text-neutral-400">
           {lastUpdated && <span className="hidden sm:inline">{t('runtime.bi_updated_at').replace('{time}', new Date(lastUpdated).toLocaleTimeString(biLocale))}</span>}
           {perf.refreshSeconds > 0 && <span className="hidden md:inline" title={t('runtime.bi_auto_refresh').replace('{every}', perf.refreshSeconds >= 3600 ? `${perf.refreshSeconds / 3600} h` : perf.refreshSeconds >= 60 ? `${Math.round(perf.refreshSeconds / 60)} min` : `${perf.refreshSeconds} s`)}>⟳</span>}
@@ -1566,7 +1609,7 @@ export default function AnalyticsDashboard({
               )}
             </div>
           ))}
-          {config.allow_runtime_edit && onAddWidget && !isEditMode && (
+          {canEditLayout && config.allow_runtime_edit && onAddWidget && !isEditMode && (
             <div className={cn("grid grid-cols-12", box.gap)} style={{ zoom: preset.zoom }}>
               <button onClick={onAddWidget} className={cn(COL_CLASS[spanFor("third", scaleKey)], box.full, "border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-5 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all group")}>
                 <div className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl shadow-neutral-500/5"><Plus className="w-10 h-10" /></div>

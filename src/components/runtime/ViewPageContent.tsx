@@ -37,6 +37,8 @@ interface ViewPageContentProps {
   buttonsConfig: any[]
   locale: string
   canAdd: boolean
+  /** quem organiza o painel de BI: só membro do projeto (o usuário final apenas consulta) */
+  canEditLayout?: boolean
   viewId: string
   primaryKeyName: string
   logicType?: string
@@ -99,6 +101,7 @@ export default function ViewPageContent({
   buttonsConfig,
   locale,
   canAdd,
+  canEditLayout = false,
   canExport = true,
   viewId,
   primaryKeyName,
@@ -662,6 +665,8 @@ export default function ViewPageContent({
                 tunnelChannel={tunnelChannel}
                 isTunnelReady={isTunnelReady}
                 projectRelations={projectRelations}
+                viewId={viewId}
+                canEditLayout={canEditLayout}
               />
             )}
 
