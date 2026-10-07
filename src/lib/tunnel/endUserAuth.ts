@@ -1,4 +1,4 @@
-import { endUserCookieName, END_USER_SESSION_TTL, signEndUserSession, verifyEndUserSession, type EndUserSession } from './sessionToken'
+import { endUserCookieName, signEndUserSession, verifyEndUserSession, type EndUserSession } from './sessionToken'
 
 /**
  * Login do usuário final, lado do servidor.
@@ -71,8 +71,11 @@ export interface CookieSetter {
 
 /** Grava os dois cookies do usuário final numa resposta: a sessão assinada e o cookie de exibição. */
 export function setEndUserCookies(res: { cookies: CookieSetter }, projectId: string, user: UserRow, session: EndUserSession, secure: boolean) {
+  // Sem maxAge: é cookie de SESSÃO, some ao fechar o navegador/app, junto com o de exibição abaixo (antes a sessão
+  // assinada durava 7 dias e o de exibição não: o navegador reaberto continuava autorizado no servidor, mas a tela
+  // mostrava "Entrar" e sem usuário). O prazo máximo de 7 dias fica dentro do próprio token assinado.
   res.cookies.set(endUserCookieName(projectId), signEndUserSession(session), {
-    httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: END_USER_SESSION_TTL,
+    httpOnly: true, sameSite: 'lax', secure, path: '/',
   })
   // o mesmo formato que o navegador gravava: o valor é codificado uma única vez (pelo próprio Next); cookie de sessão do navegador
   res.cookies.set(`client_session_${projectId}`, JSON.stringify(user), { httpOnly: false, sameSite: 'lax', secure, path: '/' })
