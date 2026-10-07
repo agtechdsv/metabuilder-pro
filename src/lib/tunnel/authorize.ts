@@ -43,24 +43,33 @@ const MEMBER_TTL_MS = 30_000
  * Qualquer outro caso é recusado.
  */
 export async function authorizeProjectActor(req: NextRequest, projectId: string): Promise<RelayActor | null> {
+  // Membro primeiro: quem é do projeto e também entrou no app publicado como usuário final (a IDE guarda os dois logins
+  // no mesmo navegador) continua sendo tratado como desenvolvedor no Studio, em vez de cair nas limitações do usuário final.
+  const memberId = await memberIdOf(projectId)
+  if (memberId) return { kind: 'member', userId: memberId }
+
   const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
   if (session) return { kind: 'end_user', session }
+  return await anonymousIfPublic(req, projectId).catch(() => null)
+}
 
+/** Id do usuário do MetaBuilder se ele enxerga o projeto (regra de acesso do banco); senão, null. */
+async function memberIdOf(projectId: string): Promise<string | null> {
   try {
     const supabase = await createSessionClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return (await anonymousIfPublic(req, projectId))
+    if (!user) return null
     const key = `${user.id}:${projectId}`
     const until = memberCache.get(key)
-    if (until && until > Date.now()) return { kind: 'member', userId: user.id }
+    if (until && until > Date.now()) return user.id
     // a política de leitura de "projects" só devolve o projeto a quem tem acesso a ele
     const { data } = await supabase.from('projects').select('id').eq('id', projectId).maybeSingle()
-    if (!data) return (await anonymousIfPublic(req, projectId))
+    if (!data) return null
     memberCache.set(key, Date.now() + MEMBER_TTL_MS)
     if (memberCache.size > 2000) for (const [k, v] of memberCache) if (v < Date.now()) memberCache.delete(k)
-    return { kind: 'member', userId: user.id }
+    return user.id
   } catch {
-    return await anonymousIfPublic(req, projectId).catch(() => null)
+    return null
   }
 }
 
