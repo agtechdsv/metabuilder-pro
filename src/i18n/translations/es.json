@@ -974,6 +974,7 @@
     "update_success": "¡Registro actualizado con éxito!",
     "delete_success": "¡Registro eliminado con éxito!",
     "delete_fk_error": "No se puede eliminar este registro porque tiene relaciones activas (restricción de clave extranjera).",
+    "delete_not_found": "No se eliminó ningún registro: no fue encontrado.",
     "delete_fk_error_with_table": "No se puede eliminar este registro porque tiene relaciones activas con la tabla {table}.",
     "type_here": "Escriba aquí...",
     "more": "Más",

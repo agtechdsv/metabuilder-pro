@@ -70,6 +70,18 @@ export default function DynamicMindMap(props: DynamicMindMapProps) {
     })
   }, [currentPath, zoom, controls])
 
+  // Nome da tabela do registro de um nó. No mapa relacional cada nível é de um modelo diferente do da tela (a tela
+  // pode ser de "Funcionários" e o nível 3 de "Clientes"): sem isto, excluir/editar agia na tabela da tela.
+  const rowModelName = (node: any): string | undefined => {
+    if (node.field?.model_name) return node.field.model_name
+    if (isRelational) {
+      const modelId = mindmapLevels?.[node.level]?.model_id
+      const model = (props.models || []).find((m: any) => m.id === modelId)
+      if (model?.db_table_name) return model.db_table_name
+    }
+    return node.rawData?.__model_name
+  }
+
   const handleReset = () => {
     setZoom(1)
     handleResetToRoot()
@@ -247,21 +259,21 @@ export default function DynamicMindMap(props: DynamicMindMapProps) {
                     <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover/node:opacity-100 transition-opacity bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-lg border border-neutral-200 dark:border-white/10 shadow-sm z-50">
                       {onView && (
                         <Tooltip text={t('actions.view', 'Visualizar')}>
-                          <button onClick={(e) => { e.stopPropagation(); onView({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onView({ ...child.rawData, __model_name: rowModelName(child) }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Eye className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       )}
                       {(onEditLevel && mindmapLevels && (child.level === 0 || mindmapLevels[child.level]?.edit_usecase_slug)) ? (
                         <Tooltip text={t('actions.edit', 'Editar')}>
-                          <button onClick={(e) => { e.stopPropagation(); onEditLevel(child.level, { ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onEditLevel(child.level, { ...child.rawData, __model_name: rowModelName(child) }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       ) : onEdit ? (
                         <Tooltip text={t('actions.edit', 'Editar')}>
-                          <button onClick={(e) => { e.stopPropagation(); onEdit({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onEdit({ ...child.rawData, __model_name: rowModelName(child) }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Edit className="w-3 h-3 text-neutral-500 hover:text-indigo-500" /></button>
                         </Tooltip>
                       ) : null}
                       {onDelete && (
                         <Tooltip text={t('actions.delete', 'Excluir')}>
-                          <button onClick={(e) => { e.stopPropagation(); onDelete({ ...child.rawData, __model_name: child.field?.model_name || child.rawData?.__model_name }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onDelete({ ...child.rawData, __model_name: rowModelName(child) }) }} className="p-1 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-md transition-colors"><Trash2 className="w-3 h-3 text-neutral-500 hover:text-red-500" /></button>
                         </Tooltip>
                       )}
                       {customActions?.filter((action: any) => {

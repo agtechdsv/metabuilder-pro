@@ -752,7 +752,7 @@ export function useMasterData({
       
       const rawQuery = queries.join('; ')
 
-      const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const result = await new Promise<{ success: boolean; error?: string; rowsAffected?: number }>((resolve) => {
         const isTemp = !tunnelChannel || !isTunnelReady
         const channelName = `tunnel:${project.id}`
         const channel = isTemp ? wrapChannelWithChunking(supabase.channel(channelName)) : tunnelChannel
@@ -762,7 +762,7 @@ export function useMasterData({
           if (payload.payload?.queryId === queryId) {
             settled = true
             cleanup()
-            resolve({ success: payload.payload.success, error: payload.payload.error })
+            resolve({ success: payload.payload.success, error: payload.payload.error, rowsAffected: payload.payload.rowsAffected })
           }
         }
 
@@ -819,7 +819,10 @@ export function useMasterData({
       setIsDeleteModalOpen(false)
       setIsProcessing(false)
 
-      if (result.success) {
+      // Excluir nenhuma linha não é sucesso (era assim que um nome de tabela errado passava despercebido)
+      if (result.success && !cascade && result.rowsAffected === 0) {
+        toast(t('runtime.delete_not_found', 'Nenhum registro foi excluído: ele não foi encontrado.'), 'error')
+      } else if (result.success) {
         invalidateRelOptions(project.id, modelName)
         setRefreshKey(prev => prev + 1)
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')

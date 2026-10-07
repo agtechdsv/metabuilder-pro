@@ -1,7 +1,7 @@
 "use client"
 
 import { getMapTileConfig, getMapTilerExtraLayers, hasCustomTileProvider, isMapTilerProvider, OSM_URL, OSM_ATTRIBUTION } from '@/lib/mapTiles'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Eye, Pencil, Trash2, MapPin, Zap } from 'lucide-react'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn, getActionColorClasses } from '@/lib/utils'
@@ -44,6 +44,8 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
   const [RL, setRL] = useState<any>(null)
   // Se o provedor configurado falhar repetidas vezes (cota estourada, domínio bloqueado...), cai para o OpenStreetMap
   const [tileErrors, setTileErrors] = useState(0)
+  // Conjunto de registros para o qual o mapa já ajustou o enquadramento (veja BoundsFitter)
+  const fittedKey = useRef('')
 
   useEffect(() => {
     setIsMounted(true)
@@ -112,13 +114,17 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
     center = [bounds.getCenter().lat, bounds.getCenter().lng]
   }
 
-  // Component to automatically fit bounds when data changes
+  // Enquadra todos os pinos quando o CONJUNTO de registros muda (primeira carga, pesquisa, novo/excluído). Esta função
+  // é recriada a cada renderização da tela (ex.: ao clicar em Editar), o que remonta o componente: sem a chave abaixo ele
+  // enquadrava de novo e o usuário perdia o zoom que tinha feito. Editar um registro não muda o conjunto.
   const BoundsFitter = () => {
     const map = RL.useMap()
     useEffect(() => {
-      if (bounds && validPoints.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
-      }
+      if (!bounds || validPoints.length === 0) return
+      const key = validPoints.map((p, i) => String(p.record.id ?? p.record.ID ?? i)).join('|')
+      if (fittedKey.current === key) return
+      fittedKey.current = key
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
     }, [map])
     return null
   }

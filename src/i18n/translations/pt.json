@@ -895,6 +895,7 @@
     "update_success": "Registro atualizado com sucesso!",
     "delete_success": "Registro excluído com sucesso!",
     "delete_fk_error": "Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).",
+    "delete_not_found": "Nenhum registro foi excluído: ele não foi encontrado.",
     "delete_fk_error_with_table": "Não é possível excluir este registro pois ele possui relacionamentos ativos com a tabela {table}.",
     "type_here": "Digite aqui...",
     "more": "Mais",

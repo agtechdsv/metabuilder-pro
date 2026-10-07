@@ -895,6 +895,7 @@
     "update_success": "Record updated successfully!",
     "delete_success": "Record deleted successfully!",
     "delete_fk_error": "Cannot delete this record because it has active relationships (foreign key constraint).",
+    "delete_not_found": "No record was deleted: it was not found.",
     "delete_fk_error_with_table": "Cannot delete this record because it has active relationships with table {table}.",
     "type_here": "Type here...",
     "more": "More",
