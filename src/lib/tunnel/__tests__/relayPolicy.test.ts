@@ -30,11 +30,12 @@ describe('actionAllowed', () => {
 })
 
 describe('buildCommand', () => {
-  it('o token do servidor sempre vence o que veio do navegador', () => {
+  it('o comando sai assinado com o token do servidor, sem token, e o do navegador é descartado', () => {
     const r = parseRelayRequest(ok({ payload: { queryId: 'q', token: 'FALSO', projectId: 'outro', action: 'select' } }))
     if (!r.ok) throw new Error('inválido')
     const cmd = buildCommand(r.req, 'token-real')
-    expect(cmd.token).toBe('token-real')
+    expect(cmd.token).toBeUndefined()
+    expect(typeof cmd.sig).toBe('string')
     expect(cmd.projectId).toBe(PID)
     expect(cmd.queryId).toBe('q')
   })

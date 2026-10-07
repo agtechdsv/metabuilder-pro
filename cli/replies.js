@@ -2,8 +2,8 @@
  * Para onde o Agente responde.
  *
  * Antes toda resposta ia ao canal público `tunnel:<projeto>`: quem estivesse ouvindo lia os dados de todo mundo.
- * Agora o comando pode trazer `replyTo` = um tópico com nome imprevisível (`tunnel:<projeto>:<segredo da aba>`), e o
- * Agente responde SÓ ali. Sem `replyTo` (clientes antigos, telas do Studio) a resposta segue pelo canal de sempre.
+ * Agora o comando traz `replyTo` = um tópico com nome imprevisível (`tunnel:<projeto>:<segredo da aba>`), e o Agente
+ * responde SÓ ali. Sem `replyTo` válido a resposta não é enviada (nunca mais vai ao canal público).
  *
  * O Agente não precisa assinar esses tópicos: usa a API HTTP do Realtime para publicar, sem abrir uma conexão por aba.
  */
@@ -78,17 +78,20 @@ class ReplyRouter {
     }
   }
 
-  /** Responde a um comando: no tópico privado, se o comando trouxe um válido; senão no canal público de sempre. */
+  /**
+   * Responde a um comando SOMENTE no tópico privado que ele trouxe. Sem tópico válido a resposta não é enviada: o canal
+   * público é legível por qualquer um, e dados de consulta nunca vão para lá.
+   */
   async reply(replyTo, event, payload) {
     if (replyTo) return this.publish(replyTo, event, payload);
-    return this.baseChannel.send({ type: 'broadcast', event, payload });
+    this.log(`Comando sem tópico de resposta válido: a resposta '${event}' não foi enviada.`);
   }
 
   /**
    * Aviso que não responde a um comando (ex.: fluxo BPM concluído): vai a todas as abas ativas. O canal público só
-   * recebe se `includeBase` (enquanto houver telas antigas ouvindo nele).
+   * recebe se `includeBase` (padrão: não).
    */
-  async broadcast(event, payload, includeBase = true) {
+  async broadcast(event, payload, includeBase = false) {
     const jobs = this.activeTopics().map(t => this.publish(t, event, payload).catch(e => this.log(e.message)));
     if (includeBase) jobs.push(Promise.resolve(this.baseChannel.send({ type: 'broadcast', event, payload })).catch(e => this.log(e.message)));
     await Promise.all(jobs);

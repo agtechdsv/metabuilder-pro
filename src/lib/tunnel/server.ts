@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CHUNK_SIZE } from '@/lib/chunkedChannel'
-import { newReplyTopic, signCommand, signingEnabled } from './commandSigning'
+import { newReplyTopic, signCommand } from './commandSigning'
 
 /**
  * Túnel visto pelo SERVIDOR.
@@ -13,9 +13,12 @@ import { newReplyTopic, signCommand, signingEnabled } from './commandSigning'
  * nas rotas que o usam.
  */
 
-/** O relay está ligado? (chave de segurança: sem TUNNEL_RELAY=on tudo funciona como antes, com o token no navegador) */
-export function relayEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.TUNNEL_RELAY === 'on'
+/**
+ * O relay é SEMPRE o caminho: o navegador nunca recebe o token do projeto; o servidor confere quem pede e envia o
+ * comando assinado ao Agente. Não há mais chave para desligar.
+ */
+export function relayEnabled(_env?: Record<string, string | undefined>): boolean {
+  return true
 }
 
 export interface TunnelTransport {
@@ -208,16 +211,15 @@ export function realtimeTransport(): TunnelTransport {
 }
 
 /**
- * `tunnelCall` que usa o modo certo sozinho: com a assinatura ligada (TUNNEL_SIGN=on) tira o token do comando, assina
- * com ele e responde em tópico privado; desligada, segue o formato antigo.
+ * `tunnelCall` a partir de um payload que ainda traz o token: tira o token do comando, assina com ele e a resposta volta
+ * em tópico privado.
  */
 export async function tunnelCallAuto(
   projectId: string,
   payload: { queryId: string; token?: string; [k: string]: any },
-  opts: { timeoutMs?: number; transport?: TunnelTransport; sign?: boolean } = {},
+  opts: { timeoutMs?: number; transport?: TunnelTransport } = {},
 ): Promise<any> {
   const { token, ...rest } = payload
-  const sign = opts.sign ?? signingEnabled()
-  if (sign && token) return tunnelCall(projectId, 'sql_query', rest as any, { ...opts, secret: token })
+  if (token) return tunnelCall(projectId, 'sql_query', rest as any, { ...opts, secret: token })
   return tunnelCall(projectId, 'sql_query', payload, opts)
 }

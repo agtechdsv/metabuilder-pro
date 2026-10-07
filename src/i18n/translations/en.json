@@ -906,6 +906,7 @@
     "record_created_success": "Record created successfully!",
     "record_updated_success": "Record updated successfully!",
     "scale_small": "Small",
+    "scale_medium": "Medium",
     "scale_normal": "Normal",
     "scale_large": "Large",
     "scale_xl": "Extra Large",
@@ -4586,21 +4587,16 @@
   },
   "tunnel_relay": {
     "title": "Database access through the server (relay)",
-    "desc": "With the relay on, the browser never receives the project token: the server checks who is asking and sends the command to the CLI Agent. Use the test below to validate the path before turning it on.",
+    "desc": "The browser never receives the project token: the server checks who is asking and sends a signed command to the CLI Agent. Use the test below to validate the path.",
     "test": "Test connection through the server",
     "testing": "Testing...",
     "ok": "The Agent replied in {ms} ms.",
-    "state_on": "Relay on: pages do not receive the project token.",
-    "state_off": "Relay off (legacy mode). To turn it on, set TUNNEL_RELAY=on in the Vercel environment variables and redeploy.",
-    "fail_offline": "The CLI Agent did not respond. Is it running and connected to this project?",
+    "fail_offline": "The CLI Agent did not respond. Is it running, version 1.2 or later, and connected to this project?",
     "fail_agent_error": "The Agent replied with an error.",
     "fail_no_token": "The project has no tunnel token.",
     "fail_no_project": "Project not found.",
     "fail_transport": "Failed to reach the Supabase realtime service.",
     "fail_unauthorized": "You must be signed in as a project member.",
-    "ok_signed": "The Agent replied in {ms} ms to a signed command (the token does not travel through the channel).",
-    "agent_old": "The Agent is an old version: it only understands the format with the token inside the command. Update the CLI to be able to turn signing on.",
-    "sign_on": "Command signing on (TUNNEL_SIGN=on): the token does not travel and replies come back through private topics.",
-    "sign_off": "Command signing off: the relay still sends the token inside the command, on the public channel. After updating the CLI, set TUNNEL_SIGN=on in Vercel."
+    "ok_signed": "The Agent replied in {ms} ms to a signed command (the token does not travel through the channel)."
   }
 }

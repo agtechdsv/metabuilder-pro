@@ -1183,6 +1183,7 @@ import {
   Search,
   Plus,
   Minimize2,
+  Grid3x3,
   Maximize2,
   MousePointer2,
   LayoutGrid,
@@ -1368,6 +1369,7 @@ ${liveEffect}
 
   const scaleIcons: Record<ScaleKey, React.ReactNode> = {
     small: <Minimize2 className="w-3.5 h-3.5" />,
+    medium: <Grid3x3 className="w-3.5 h-3.5" />,
     normal: <LayoutGrid className="w-3.5 h-3.5" />,
     large: <Maximize2 className="w-3.5 h-3.5" />,
     xl: <ZoomIn className="w-3.5 h-3.5" />,
@@ -1755,6 +1757,7 @@ ${liveEffect}
   }
   const BOX: Record<ScaleKey, { compact: string; full: string; pad: string; gap: string }> = {
     small: { compact: 'min-h-[110px]', full: 'min-h-[210px]', pad: 'p-3', gap: 'gap-3' },
+    medium: { compact: 'min-h-[145px]', full: 'min-h-[275px]', pad: 'p-4', gap: 'gap-5' },
     normal: { compact: 'min-h-[180px]', full: 'min-h-[340px]', pad: 'p-6', gap: 'gap-6' },
     large: { compact: 'min-h-[220px]', full: 'min-h-[400px]', pad: 'p-6', gap: 'gap-6' },
     xl: { compact: 'min-h-[260px]', full: 'min-h-[460px]', pad: 'p-8', gap: 'gap-6' },

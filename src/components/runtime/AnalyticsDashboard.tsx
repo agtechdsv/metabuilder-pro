@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { 
   TrendingUp, Users, DollarSign, Activity, Loader2, 
-  AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, LayoutGrid, Gauge,
+  AlertCircle, ChevronDown, Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, LayoutGrid, Grid3x3, Gauge,
   GripVertical, MousePointer2, Save, Search, BarChart3, X, Filter, CornerUpLeft, Table2, RefreshCw
 } from 'lucide-react'
 import { 
@@ -107,6 +107,7 @@ const COL_CLASS: Record<number, string> = {
 }
 const CARD_BOX: Record<ScaleKey, { compact: string; full: string; pad: string; gap: string }> = {
   small: { compact: 'min-h-[110px]', full: 'min-h-[210px]', pad: 'p-3', gap: 'gap-3' },
+  medium: { compact: 'min-h-[145px]', full: 'min-h-[280px]', pad: 'p-4', gap: 'gap-5' },
   normal: { compact: 'min-h-[180px]', full: 'min-h-[350px]', pad: 'p-6', gap: 'gap-8' },
   large: { compact: 'min-h-[220px]', full: 'min-h-[400px]', pad: 'p-6', gap: 'gap-8' },
   xl: { compact: 'min-h-[260px]', full: 'min-h-[460px]', pad: 'p-8', gap: 'gap-8' },
@@ -196,6 +197,7 @@ export default function AnalyticsDashboard({
   const box = CARD_BOX[scaleKey]
   const scaleIcons: Record<ScaleKey, React.ReactNode> = {
     small: <Minimize2 className="w-3.5 h-3.5" />,
+    medium: <Grid3x3 className="w-3.5 h-3.5" />,
     normal: <LayoutGrid className="w-3.5 h-3.5" />,
     large: <Maximize2 className="w-3.5 h-3.5" />,
     xl: <ZoomIn className="w-3.5 h-3.5" />,

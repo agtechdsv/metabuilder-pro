@@ -70,28 +70,25 @@ describe('assinatura', () => {
     expect(nonces.seen.size).toBe(0)
   })
 
-  it('formato antigo (token dentro): aceito, a menos que o Agente exija assinatura', () => {
+  it('formato antigo (token dentro do comando): sempre recusado, com o token certo ou errado', () => {
     const ctx = { projectId: PID, secretToken: SECRET, nonces: new cli.NonceCache() }
-    expect(cli.authorizeCommand('sql_query', { token: SECRET }, ctx)).toEqual({ ok: true, mode: 'legacy' })
-    expect(cli.authorizeCommand('sql_query', { token: SECRET }, { ...ctx, requireSigned: true })).toMatchObject({ ok: false, reason: 'formato_antigo_nao_permitido' })
-    expect(cli.authorizeCommand('sql_query', { token: 'errado' }, ctx)).toMatchObject({ ok: false, reason: 'token_invalido' })
+    expect(cli.authorizeCommand('sql_query', { token: SECRET }, ctx)).toMatchObject({ ok: false, reason: 'formato_antigo_nao_permitido' })
+    expect(cli.authorizeCommand('sql_query', { token: 'errado' }, ctx)).toMatchObject({ ok: false, reason: 'formato_antigo_nao_permitido' })
     expect(cli.authorizeCommand('sql_query', {}, ctx)).toMatchObject({ ok: false, reason: 'sem_autenticacao' })
     expect(cli.authorizeCommand('sql_query', null as any, ctx)).toMatchObject({ ok: false })
   })
 })
 
 describe('authenticateCommand', () => {
-  it('com a assinatura ligada: sem token e com sig; desligada: formato antigo', () => {
-    const on = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { sign: true })
-    expect(on.token).toBeUndefined()
-    expect(typeof on.sig).toBe('string')
-    const off = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { sign: false })
-    expect(off).toEqual({ queryId: 'q', token: SECRET })
+  it('sempre assinado: sem token no comando e com assinatura', () => {
+    const cmd = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' })
+    expect(cmd.token).toBeUndefined()
+    expect(typeof cmd.sig).toBe('string')
   })
   it('replyTo inválido é descartado (nunca se responde em tópico de outro projeto)', () => {
-    const evil = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { sign: true, replyTo: 'tunnel:outro-projeto:abcdefghijklmnopqrstuv' })
+    const evil = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { replyTo: 'tunnel:outro-projeto:abcdefghijklmnopqrstuv' })
     expect(evil.replyTo).toBeUndefined()
-    const good = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { sign: true, replyTo: `tunnel:${PID}:abcdefghijklmnopqrstuv` })
+    const good = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q' }, { replyTo: `tunnel:${PID}:abcdefghijklmnopqrstuv` })
     expect(good.replyTo).toBe(`tunnel:${PID}:abcdefghijklmnopqrstuv`)
   })
 })
@@ -108,8 +105,8 @@ describe('tópicos de resposta e chave', () => {
     expect(isValidReplyTopic(PID, a)).toBe(true)
     expect(newReplyTopic(PID)).not.toBe(a)
   })
-  it('a chave TUNNEL_SIGN só liga com "on"', () => {
-    expect(signingEnabled({ TUNNEL_SIGN: 'on' })).toBe(true)
-    for (const v of [undefined, '', 'off', '1', 'ON']) expect(signingEnabled({ TUNNEL_SIGN: v })).toBe(false)
+  it('a assinatura não tem chave: está sempre ligada', () => {
+    expect(signingEnabled()).toBe(true)
+    expect(signingEnabled({ TUNNEL_SIGN: 'off' })).toBe(true)
   })
 })

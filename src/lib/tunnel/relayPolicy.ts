@@ -49,13 +49,12 @@ export function actionAllowed(kind: RelayActorKind, action: unknown): { ok: true
 
 /**
  * Monta o comando que vai ao CLI. O token do projeto é sempre o do servidor, nunca o que veio do navegador.
- * Com a assinatura ligada o comando vai assinado e SEM token; `replyTo` (tópico privado da aba) é mantido só se for
+ * O comando vai sempre assinado e SEM token; `replyTo` (tópico privado da aba) é mantido só se for
  * um tópico válido deste projeto.
  */
-export function buildCommand(req: RelayRequest, secretToken: string, opts: { sign?: boolean } = {}): Record<string, any> {
+export function buildCommand(req: RelayRequest, secretToken: string): Record<string, any> {
   const { token: _fromBrowser, replyTo, ...rest } = req.payload
   return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId }, {
-    sign: opts.sign,
     replyTo: typeof replyTo === 'string' ? replyTo : undefined,
   })
 }

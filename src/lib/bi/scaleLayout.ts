@@ -1,5 +1,5 @@
 /**
- * Escala do painel de BI (botões Pequeno / Normal / Grande / Extra Grande).
+ * Escala do painel de BI (botões Pequeno / Médio / Normal / Grande / Extra Grande).
  *
  * Antes a escala era só um zoom do CSS: o painel continuava com 3 cards por linha, apenas menores. Agora cada tamanho
  * muda a DENSIDADE: quantos cards cabem por linha (colunas de uma grade de 12), a altura mínima, a altura dos gráficos
@@ -7,7 +7,7 @@
  * tela e abrir o card na lupa quando precisar).
  */
 
-export type ScaleKey = 'small' | 'normal' | 'large' | 'xl'
+export type ScaleKey = 'small' | 'medium' | 'normal' | 'large' | 'xl'
 export type WidthKey = 'full' | 'half' | 'third' | 'quarter'
 
 export interface ScalePreset {
@@ -23,13 +23,14 @@ export interface ScalePreset {
 
 export const SCALE_PRESETS: ScalePreset[] = [
   { key: 'small', label: 'Pequeno', zoom: 0.9, spans: { full: 6, half: 3, third: 2, quarter: 2 }, chartHeight: 170 },
+  { key: 'medium', label: 'Médio', zoom: 0.95, spans: { full: 12, half: 4, third: 3, quarter: 3 }, chartHeight: 210 },
   { key: 'normal', label: 'Normal', zoom: 1, spans: { full: 12, half: 6, third: 4, quarter: 3 }, chartHeight: 250 },
   { key: 'large', label: 'Grande', zoom: 1.05, spans: { full: 12, half: 12, third: 6, quarter: 4 }, chartHeight: 300 },
   { key: 'xl', label: 'Extra Grande', zoom: 1.2, spans: { full: 12, half: 12, third: 12, quarter: 6 }, chartHeight: 380 },
 ]
 
 export function presetOf(key: ScaleKey | string | undefined): ScalePreset {
-  return SCALE_PRESETS.find(p => p.key === key) || SCALE_PRESETS[1]
+  return SCALE_PRESETS.find(p => p.key === key) || SCALE_PRESETS.find(p => p.key === 'normal')!
 }
 
 export function widthKey(width: string | undefined): WidthKey {

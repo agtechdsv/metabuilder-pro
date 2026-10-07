@@ -3,11 +3,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const authorize = vi.fn()
 const tunnelSend = vi.fn()
 const getToken = vi.fn()
-let relayOn = true
 
 vi.mock('@/lib/tunnel/authorize', () => ({ authorizeProjectActor: (...a: any[]) => authorize(...a) }))
 vi.mock('@/lib/tunnel/server', () => ({
-  relayEnabled: () => relayOn,
   tunnelSend: (...a: any[]) => tunnelSend(...a),
   getProjectSecretToken: (...a: any[]) => getToken(...a),
 }))
@@ -26,18 +24,12 @@ const call = (body: any, headers: Record<string, string> = {}) =>
 const cmd = (over: any = {}) => ({ projectId: PID, event: 'sql_query', payload: { queryId: 'q1', action: 'select', query: 'SELECT 1', token: 'FALSO', ...over } })
 
 beforeEach(() => {
-  authorize.mockReset(); tunnelSend.mockReset(); getToken.mockReset(); relayOn = true
+  authorize.mockReset(); tunnelSend.mockReset(); getToken.mockReset()
   getToken.mockResolvedValue('token-real')
   tunnelSend.mockResolvedValue(undefined)
 })
 
 describe('POST /api/tunnel/send', () => {
-  it('desligado: 503 e nada é enviado', async () => {
-    relayOn = false
-    expect((await call(cmd())).status).toBe(503)
-    expect(tunnelSend).not.toHaveBeenCalled()
-  })
-
   it('pedido malformado: 400', async () => {
     expect((await call('{quebrado')).status).toBe(400)
     expect((await call({ projectId: 'x', event: 'sql_query', payload: {} })).status).toBe(400)
@@ -51,7 +43,7 @@ describe('POST /api/tunnel/send', () => {
     expect(tunnelSend).not.toHaveBeenCalled()
   })
 
-  it('membro: envia com o token DO SERVIDOR (o do navegador é descartado)', async () => {
+  it('membro: o comando vai assinado com o token DO SERVIDOR, sem token (o do navegador é descartado)', async () => {
     authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
     const res = await call(cmd())
     expect(res.status).toBe(202)
@@ -59,7 +51,8 @@ describe('POST /api/tunnel/send', () => {
     const [pid, event, payload] = tunnelSend.mock.calls[0]
     expect(pid).toBe(PID)
     expect(event).toBe('sql_query')
-    expect(payload.token).toBe('token-real')
+    expect(payload.token).toBeUndefined()
+    expect(typeof payload.sig).toBe('string')
     expect(payload.queryId).toBe('q1')
   })
 
@@ -129,10 +122,8 @@ describe('POST /api/tunnel/send', () => {
     })
   })
 
-  describe('com a assinatura ligada (TUNNEL_SIGN=on)', () => {
+  describe('tópico de resposta da aba', () => {
     const TOPIC = `tunnel:${PID}:abcdefghijklmnopqrstuv`
-    beforeEach(() => { process.env.TUNNEL_SIGN = 'on' })
-    afterEach(() => { delete process.env.TUNNEL_SIGN })
 
     it('o comando vai assinado e SEM token; o tópico de resposta da aba é mantido', async () => {
       authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })

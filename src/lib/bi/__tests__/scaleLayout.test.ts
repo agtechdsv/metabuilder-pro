@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { SCALE_PRESETS, presetOf, spanFor, widthKey, widthOfSpan } from '../scaleLayout'
 
 describe('scaleLayout', () => {
-  it('quatro tamanhos, na ordem Pequeno → Extra Grande', () => {
-    expect(SCALE_PRESETS.map(p => p.key)).toEqual(['small', 'normal', 'large', 'xl'])
+  it('cinco tamanhos, na ordem Pequeno → Extra Grande', () => {
+    expect(SCALE_PRESETS.map(p => p.key)).toEqual(['small', 'medium', 'normal', 'large', 'xl'])
   })
 
   it('Normal mantém a grade de sempre (3 por linha para "third")', () => {
@@ -11,6 +11,10 @@ describe('scaleLayout', () => {
     expect(spanFor('half', 'normal')).toBe(6)
     expect(spanFor('quarter', 'normal')).toBe(3)
     expect(spanFor('full', 'normal')).toBe(12)
+  })
+
+  it('Médio fica entre Pequeno e Normal: 4 cards por linha', () => {
+    expect(12 / spanFor('third', 'medium')).toBe(4)
   })
 
   it('Pequeno cabe mais cards por linha e Extra Grande, menos', () => {

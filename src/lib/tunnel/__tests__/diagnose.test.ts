@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { diagnoseTunnel, type ProbeMode } from '../diagnose'
+import { diagnoseTunnel } from '../diagnose'
 import { TunnelTimeoutError } from '../server'
 
 const client = (project: any, models: any[] = [{ db_schema_name: 'vendas' }]) => ({
@@ -12,27 +12,17 @@ const pg = client({ id: 'p', db_type: 'postgres' })
 const deps = (call: any, extra: any = {}) => ({ client: pg, token: async () => 'tok', call, ...extra })
 
 describe('diagnoseTunnel', () => {
-  it('Agente atualizado: responde ao comando assinado (um único envio) e informa o tempo', async () => {
-    const call = vi.fn(async (_p: string, _payload: any, _m: ProbeMode, _s: string) => ({ success: true }))
+  it('Agente responde ao comando assinado (um único envio): informa o tempo', async () => {
+    const call = vi.fn(async (_p: string, _payload: any, _s: string) => ({ success: true }))
     let t = 1000
     const r = await diagnoseTunnel('p', deps(call, { now: () => (t += 40) }))
-    expect(r).toEqual({ ok: true, ms: 40, signed: true })
+    expect(r).toEqual({ ok: true, ms: 40 })
     expect(call).toHaveBeenCalledTimes(1)
-    expect(call.mock.calls[0][2]).toBe('signed')
     expect(call.mock.calls[0][1]).toMatchObject({ action: 'select', schemaName: 'vendas', query: 'SELECT 1 AS ok' })
+    expect(call.mock.calls[0][2]).toBe('tok')
   })
 
-  it('Agente antigo: não entende a assinatura, mas responde ao formato antigo → avisa para atualizar', async () => {
-    const call = vi.fn(async (_p: string, _payload: any, mode: ProbeMode) => {
-      if (mode === 'signed') throw new TunnelTimeoutError(1)
-      return { success: true }
-    })
-    const r = await diagnoseTunnel('p', deps(call))
-    expect(r).toMatchObject({ ok: true, signed: false })
-    expect(call.mock.calls.map(c => c[2])).toEqual(['signed', 'legacy'])
-  })
-
-  it('Agente desligado: nenhum dos dois formatos recebe resposta', async () => {
+  it('sem resposta: Agente desligado, de outro projeto ou anterior à v1.2 (não entende a assinatura)', async () => {
     const call = async () => { throw new TunnelTimeoutError(1) }
     expect(await diagnoseTunnel('p', deps(call))).toEqual({ ok: false, reason: 'offline' })
   })

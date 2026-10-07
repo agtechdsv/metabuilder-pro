@@ -56,11 +56,11 @@ describe('ReplyRouter.reply', () => {
     expect(posted[0].body.messages[0]).toEqual({ topic: TOPIC, event: 'sql_result', payload: { queryId: 'q', success: true }, private: false })
   })
 
-  it('sem tópico (cliente antigo): responde no canal de sempre', async () => {
+  it('sem tópico válido a resposta NÃO é enviada (nunca vai ao canal público)', async () => {
     const { router, posted, base } = make()
     await router.reply(null, 'sql_result', { queryId: 'q' })
     expect(posted).toHaveLength(0)
-    expect(base.send).toHaveBeenCalledWith({ type: 'broadcast', event: 'sql_result', payload: { queryId: 'q' } })
+    expect(base.send).not.toHaveBeenCalled()
   })
 
   it('resposta grande vai em pedaços no formato que as telas já remontam', async () => {

@@ -20,9 +20,9 @@ function fakeTransport(onSend?: (topic: string, event: string, payload: any, emi
 }
 
 describe('relayEnabled', () => {
-  it('só liga com TUNNEL_RELAY=on', () => {
-    expect(relayEnabled({ TUNNEL_RELAY: 'on' })).toBe(true)
-    for (const v of [undefined, '', 'off', '1', 'true', 'ON']) expect(relayEnabled({ TUNNEL_RELAY: v })).toBe(false)
+  it('o relay não tem chave: é sempre o caminho', () => {
+    expect(relayEnabled()).toBe(true)
+    expect(relayEnabled({ TUNNEL_RELAY: 'off' })).toBe(true)
   })
 })
 
@@ -188,20 +188,15 @@ describe('tunnelCall assinado (tópico privado)', () => {
     vi.useRealTimers()
   })
 
-  it('tunnelCallAuto: assinatura ligada → assinado; desligada → formato antigo com token', async () => {
+  it('tunnelCallAuto: tira o token do comando e o envia assinado', async () => {
     const mk = () => {
       let command: any
       const f = fakeTransport((_t, _e, p, emit) => { command = p; emit('sql_result', { queryId: p.queryId, success: true, data: [] }) })
       return { f, get command() { return command } }
     }
     const on = mk()
-    await tunnelCallAuto(PID, { queryId: 'a', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: on.f.transport, sign: true })
+    await tunnelCallAuto(PID, { queryId: 'a', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: on.f.transport })
     expect(on.command.token).toBeUndefined()
     expect(on.command.sig).toBeTruthy()
-
-    const off = mk()
-    await tunnelCallAuto(PID, { queryId: 'b', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: off.f.transport, sign: false })
-    expect(off.command.token).toBe('segredo-do-projeto-123456')
-    expect(off.command.sig).toBeUndefined()
   })
 })

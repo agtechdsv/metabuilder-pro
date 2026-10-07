@@ -7,7 +7,7 @@ const { authorizeCommand, NonceCache, isPathInside } = require('./security');
 
 function registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase, extra = {}) {
   // mesma verificação dos comandos de dados (assinatura ou token); sem ela os eventos abaixo ficariam abertos a qualquer um no canal
-  const security = extra.security || { projectId, secretToken, requireSigned: false, nonces: new NonceCache() };
+  const security = extra.security || { projectId, secretToken, nonces: new NonceCache() };
   const router = extra.router || null;
   // Configured local download path
   const baseDownloadPath = configData.downloadPath || path.join(require('os').homedir(), 'Downloads', 'MetaBuilderExports');

@@ -176,7 +176,7 @@ export async function executeExportBackground(params: {
           channel.send({
             type: 'broadcast',
             event: 'export_job_start',
-            // assinado (sem o token no canal público) quando TUNNEL_SIGN=on; senão, o formato antigo
+            // assinado: o token nunca vai no canal público
             payload: authenticateCommand(projectData.secret_token, 'export_job_start', projectId, {
               jobId,
               sql: rawSql,

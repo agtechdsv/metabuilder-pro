@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
-import { getProjectSecretToken, relayEnabled, tunnelSend } from '@/lib/tunnel/server'
-import { signingEnabled } from '@/lib/tunnel/commandSigning'
+import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunnel/tableAccess'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +18,6 @@ const limiter = new RateLimiter(600, 60_000)
  * A resposta do CLI continua chegando pelo canal em tempo real.
  */
 export async function POST(request: NextRequest) {
-  if (!relayEnabled()) return NextResponse.json({ error: 'Relay do túnel desligado.' }, { status: 503 })
-
   const declared = Number(request.headers.get('content-length') || 0)
   if (declared > MAX_RELAY_BYTES) return NextResponse.json({ error: 'Comando grande demais.' }, { status: 413 })
 
@@ -60,7 +57,7 @@ export async function POST(request: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
   try {
-    await tunnelSend(req.projectId, req.event, buildCommand(req, token, { sign: signingEnabled() }))
+    await tunnelSend(req.projectId, req.event, buildCommand(req, token))
     return NextResponse.json({ ok: true }, { status: 202 })
   } catch (error: any) {
     console.error('[tunnel/send] falha ao enviar:', error?.message)

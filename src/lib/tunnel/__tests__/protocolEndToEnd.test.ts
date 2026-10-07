@@ -32,7 +32,7 @@ function makeBus() {
 }
 
 /** Agente: escuta o canal público, confere a autenticação e responde como o index.js faz. */
-function startAgent(bus: ReturnType<typeof makeBus>, opts: { requireSigned?: boolean; answer?: (p: any) => any } = {}) {
+function startAgent(bus: ReturnType<typeof makeBus>, opts: { answer?: (p: any) => any } = {}) {
   const baseChannel = { send: vi.fn(async ({ event, payload }: any) => bus.deliver(BASE, event, payload)) }
   const router = new ReplyRouter({
     projectId: PID, supabaseUrl: 'https://x.supabase.co', apiKey: 'k', baseChannel, sleep: async () => {},
@@ -41,7 +41,7 @@ function startAgent(bus: ReturnType<typeof makeBus>, opts: { requireSigned?: boo
       return { ok: true, status: 202 }
     },
   })
-  const security = { projectId: PID, secretToken: SECRET, requireSigned: !!opts.requireSigned, nonces: new NonceCache() }
+  const security = { projectId: PID, secretToken: SECRET, nonces: new NonceCache() }
   const executed: any[] = []
   bus.on(BASE, async (event, payload) => {
     if (event !== 'sql_query') return
@@ -86,12 +86,12 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
 
   it('o fluxo do relay: comando montado pelo servidor para uma aba, com o tópico privado dela', async () => {
     const bus = makeBus()
-    const agent = startAgent(bus, { requireSigned: true })
+    const agent = startAgent(bus)
     const tab = `tunnel:${PID}:abcdefghijklmnopqrstuv`
     const tabGot: any[] = []
     bus.on(tab, (e, p) => tabGot.push({ e, p }))
 
-    const command = buildCommand({ projectId: PID, event: 'sql_query', payload: { queryId: 'q3', action: 'select', replyTo: tab, token: 'FALSO' } }, SECRET, { sign: true })
+    const command = buildCommand({ projectId: PID, event: 'sql_query', payload: { queryId: 'q3', action: 'select', replyTo: tab, token: 'FALSO' } }, SECRET)
     expect(command.token).toBeUndefined()
     bus.deliver(BASE, 'sql_query', command)
     await new Promise(r => setTimeout(r, 20))
@@ -104,7 +104,7 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
 
   it('comando forjado (sem assinatura, com token errado ou adulterado) não é executado', async () => {
     const bus = makeBus()
-    const agent = startAgent(bus, { requireSigned: true })
+    const agent = startAgent(bus)
     const send = (p: any) => bus.deliver(BASE, 'sql_query', p)
     send({ queryId: 'a', action: 'select', query: 'SELECT 1' })
     send({ queryId: 'b', token: 'errado', action: 'select' })
@@ -117,22 +117,19 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
   it('a cópia de um comando válido, reenviada por quem ouviu o canal, é recusada', async () => {
     const bus = makeBus()
     const agent = startAgent(bus)
-    const cmd = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q4', action: 'select' }, { sign: true })
+    const cmd = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q4', action: 'select' })
     bus.deliver(BASE, 'sql_query', cmd)
     bus.deliver(BASE, 'sql_query', cmd) // o "ouvinte" reenvia
     await new Promise(r => setTimeout(r, 20))
     expect(agent.executed).toHaveLength(1)
   })
 
-  it('formato antigo: aceito pelo Agente enquanto não exigir assinatura; com a exigência, recusado', async () => {
-    for (const requireSigned of [false, true]) {
-      const bus = makeBus()
-      const agent = startAgent(bus, { requireSigned })
-      bus.deliver(BASE, 'sql_query', { queryId: 'old', action: 'select', token: SECRET })
-      await new Promise(r => setTimeout(r, 20))
-      expect(agent.executed).toHaveLength(requireSigned ? 0 : 1)
-      if (!requireSigned) expect(agent.executed[0].mode).toBe('legacy')
-    }
+  it('formato antigo (token dentro do comando): o Agente sempre recusa', async () => {
+    const bus = makeBus()
+    const agent = startAgent(bus)
+    bus.deliver(BASE, 'sql_query', { queryId: 'old', action: 'select', token: SECRET })
+    await new Promise(r => setTimeout(r, 20))
+    expect(agent.executed).toHaveLength(0)
   })
 
   it('um estranho que ouve o canal público não recebe os resultados do servidor', async () => {

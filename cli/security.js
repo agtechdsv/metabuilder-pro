@@ -86,12 +86,12 @@ function safeEqual(a, b) {
 
 /**
  * Decide se um comando recebido pode ser executado.
- * @returns {{ ok: true, mode: 'signed' | 'legacy' } | { ok: false, reason: string }}
+ * @returns {{ ok: true, mode: 'signed' } | { ok: false, reason: string }}
  *  - assinado: confere assinatura, hora e número de uso único;
- *  - token no corpo (formato antigo): aceito só enquanto `requireSigned` for falso.
+ *  - token no corpo (formato antigo): RECUSADO sempre (o token nunca trafega no canal).
  */
 function authorizeCommand(event, payload, ctx) {
-  const { projectId, secretToken, requireSigned = false, toleranceSeconds = DEFAULT_TOLERANCE_SECONDS, nonces, now = Date.now } = ctx;
+  const { projectId, secretToken, toleranceSeconds = DEFAULT_TOLERANCE_SECONDS, nonces, now = Date.now } = ctx;
   if (!payload || typeof payload !== 'object' || !secretToken) return { ok: false, reason: 'sem_autenticacao' };
 
   if (typeof payload.sig === 'string') {
@@ -107,10 +107,8 @@ function authorizeCommand(event, payload, ctx) {
     return { ok: true, mode: 'signed' };
   }
 
-  if (typeof payload.token === 'string' && payload.token !== '') {
-    if (!safeEqual(payload.token, secretToken)) return { ok: false, reason: 'token_invalido' };
-    return requireSigned ? { ok: false, reason: 'formato_antigo_nao_permitido' } : { ok: true, mode: 'legacy' };
-  }
+  // formato antigo (token dentro do comando): quem tem o token certo ou errado, o comando é recusado do mesmo jeito
+  if (typeof payload.token === 'string' && payload.token !== '') return { ok: false, reason: 'formato_antigo_nao_permitido' };
   return { ok: false, reason: 'sem_autenticacao' };
 }
 

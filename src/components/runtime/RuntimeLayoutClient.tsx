@@ -158,8 +158,10 @@ export function RuntimeLayoutClient({
   const isEmbedded = searchParams?.get('embedded') === 'true'
 
   if (isEmbedded) {
+    // Fundo explícito: com "transparente" o navegador pinta a moldura (iframe) de BRANCO quando o tema dela difere do da
+    // tela que a contém, e no tema escuro a modal ficava com o corpo branco.
     return (
-      <div className="flex-1 min-h-screen bg-transparent">
+      <div className="flex-1 min-h-screen bg-white dark:bg-neutral-950">
         {children}
       </div>
     )

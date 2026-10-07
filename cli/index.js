@@ -296,13 +296,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   const channelName = `tunnel:${projectId}`;
   const channel = wrapChannelWithChunking(supabase.channel(channelName));
 
-  // Segurança dos comandos: o servidor ASSINA cada comando (o token não trafega no canal público). O formato antigo
-  // (token dentro do comando) segue aceito até você ligar "requireSignedCommands": true no metabuilder.config.json
-  // (ou MB_REQUIRE_SIGNED=1), o que se recomenda depois que as telas e o servidor estiverem atualizados.
-  const requireSigned = configData?.requireSignedCommands === true || process.env.MB_REQUIRE_SIGNED === '1';
+  // Segurança dos comandos: o servidor ASSINA cada comando (o token não trafega no canal público) e o Agente só
+  // executa comandos com assinatura válida. O formato antigo (token dentro do comando) é sempre recusado.
   const toleranceSeconds = Number(configData?.signatureToleranceSeconds) > 0 ? Number(configData.signatureToleranceSeconds) : DEFAULT_TOLERANCE_SECONDS;
   const nonces = new NonceCache(toleranceSeconds * 2000);
-  const security = { projectId, secretToken, requireSigned, toleranceSeconds, nonces };
+  const security = { projectId, secretToken, toleranceSeconds, nonces };
   // Respostas: no tópico privado que o comando indicar (`replyTo`); sem ele, no canal de sempre
   const router = new ReplyRouter({
     projectId,
@@ -311,7 +309,6 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     baseChannel: channel,
     log: (m) => console.error(chalk.yellow(`[ RESPOSTA ] ${m}`)),
   });
-  let warnedLegacy = false;
 
   console.log(chalk.cyan('\n' + t('tunnel_agent_listening', { channel: channelName })));
   console.log(chalk.gray(t('tunnel_press_ctrl_c')));
@@ -326,10 +323,6 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       if (!auth.ok) {
         console.log(chalk.red(`[ BLOQUEADO ] Comando recusado (${auth.reason}) para o projeto ${projectId}.`));
         return;
-      }
-      if (auth.mode === 'legacy' && !warnedLegacy) {
-        warnedLegacy = true;
-        console.log(chalk.yellow('[ AVISO ] Recebendo comandos no formato antigo (token dentro do comando). Atualize o servidor e ligue "requireSignedCommands" para recusá-lo.'));
       }
       // resposta só no tópico privado de quem perguntou (ou no canal de sempre, se o comando não trouxe um)
       const replyTo = router.accept(payload.payload.replyTo);
@@ -1208,7 +1201,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               } catch (e) {
                 console.error('[BPM] Falha ao re-buscar dados inseridos:', e.message);
               }
-              router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'INSERT', data: finalData }, !requireSigned);
+              router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'INSERT', data: finalData });
             }).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar INSERT:`), err);
             });
@@ -1297,7 +1290,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                     console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
                   }
 
-                  router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'UPDATE', data: finalData }, !requireSigned);
+                  router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'UPDATE', data: finalData });
                 }).catch(err => {
                   console.error(chalk.red(`[BPM] Erro ao processar UPDATE:`), err);
                 });
@@ -1425,7 +1418,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
              console.error('[BPM] Falha ao re-buscar dados atualizados:', e.message);
           }
           
-          router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'CUSTOM', data: finalData }, !requireSigned);
+          router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'CUSTOM', data: finalData });
           
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
@@ -1598,7 +1591,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(chalk.green.bold(t('tunnel_ready')));
-        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: ativos | formato antigo (token no comando): ${requireSigned ? 'RECUSADO' : 'aceito'} | respostas em tópico privado: ativas`));
+        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: obrigatórios | formato antigo (token no comando): RECUSADO | respostas em tópico privado: ativas`));
       }
     });
 }

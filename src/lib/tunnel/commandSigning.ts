@@ -13,9 +13,12 @@ const VERSION = 'v1'
 /** Campos de segurança: ficam fora do corpo assinado. */
 const SECURITY_FIELDS = ['sig', 'ts', 'nonce', 'token', 'replyTo']
 
-/** Assinar comandos está ligado? (TUNNEL_SIGN=on — só depois de o Agente CLI estar na versão que verifica assinaturas) */
-export function signingEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.TUNNEL_SIGN === 'on'
+/**
+ * Os comandos ao Agente CLI são SEMPRE assinados (o token não trafega no canal) e o Agente (v1.2+) recusa os que não
+ * forem. Não há mais chave para desligar: a função existe para os pontos de decisão do código continuarem legíveis.
+ */
+export function signingEnabled(_env?: Record<string, string | undefined>): boolean {
+  return true
 }
 
 /** JSON com chaves ordenadas: a mesma entrada gera o mesmo texto aqui e no Agente. */
@@ -54,17 +57,15 @@ export function signCommand(secret: string, event: string, projectId: string, pa
 }
 
 /**
- * Autentica um comando para o Agente: assinado quando a assinatura está ligada; senão, o formato antigo (token dentro).
- * Usado por tudo que o SERVIDOR envia ao Agente (comandos de dados, exportações, downloads).
+ * Autentica um comando para o Agente: SEMPRE assinado (o token nunca vai dentro do comando). Usado por tudo que o
+ * SERVIDOR envia ao Agente (comandos de dados, exportações, downloads).
  */
 export function authenticateCommand(
   secret: string, event: string, projectId: string, payload: Record<string, any>,
-  opts: { sign?: boolean; replyTo?: string } = {},
+  opts: { replyTo?: string } = {},
 ): Record<string, any> {
-  const sign = opts.sign ?? signingEnabled()
   const replyTo = opts.replyTo && isValidReplyTopic(projectId, opts.replyTo) ? opts.replyTo : undefined
-  if (sign) return signCommand(secret, event, projectId, payload, { replyTo })
-  return { ...payload, token: secret, ...(replyTo ? { replyTo } : {}) }
+  return signCommand(secret, event, projectId, payload, { replyTo })
 }
 
 // ── Tópicos de resposta ──────────────────────────────────────────────────────
