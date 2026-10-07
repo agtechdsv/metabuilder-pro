@@ -1,8 +1,8 @@
-import { createClient as createSupabaseServerClient } from '@/utils/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateCommand } from '@/lib/tunnel/commandSigning'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { resolveDownloadOwner } from '@/lib/tunnel/authorize'
 import { executeExportBackground } from '@/utils/export/worker'
 import ws from 'ws'
 
@@ -28,19 +28,25 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
   ))
 }
 
-export async function POST(request: Request) {
+
+/** Dono dos arquivos, sempre da sessão (usuário final do app ou membro do projeto), nunca do corpo do pedido. */
+async function ownerOrError(request: NextRequest, projectId: unknown): Promise<{ userId: string } | { res: NextResponse }> {
+  if (typeof projectId !== 'string' || !projectId) return { res: NextResponse.json({ error: 'Missing parameters' }, { status: 400 }) }
+  const owner = await resolveDownloadOwner(request, projectId)
+  if (!owner) return { res: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) }
+  if ('error' in owner) return { res: NextResponse.json({ error: owner.error }, { status: 400 }) }
+  return { userId: owner.id }
+}
+
+export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabase()
 
-    // Extrai userId da sessão — nunca confia no body
-    const sessionClient = await createSupabaseServerClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-    const userId = user.id
-
     const body = await request.json()
+    // O dono vem da sessão — nunca do body
+    const who = await ownerOrError(request, body?.projectId)
+    if ('res' in who) return who.res
+    const userId = who.userId
     const {
       projectId,
       workspaceSlug,
@@ -137,20 +143,23 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
     const supabase = getSupabase()
 
-    // Extrai userId da sessão — nunca confia no body
-    const sessionClient = await createSupabaseServerClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-    const userId = user.id
-
     const body = await request.json()
     const { jobId, clearAll, projectId, cleanup } = body
+
+    // O dono vem da sessão — nunca do body. Para apagar um arquivo só pelo id, o projeto é o do próprio arquivo.
+    let scopeProjectId: unknown = projectId
+    if (!scopeProjectId && jobId) {
+      const { data: found } = await supabase.from('download_jobs').select('project_id').eq('id', jobId).maybeSingle()
+      scopeProjectId = (found as any)?.project_id
+      if (!scopeProjectId) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    }
+    const who = await ownerOrError(request, scopeProjectId)
+    if ('res' in who) return who.res
+    const userId = who.userId
 
     // --- CASE 1: Expired jobs cleanup ---
     if (cleanup) {
@@ -217,7 +226,7 @@ export async function DELETE(request: Request) {
         .eq('id', jobId)
         .single()
 
-      if (fetchError || !job) {
+      if (fetchError || !job || String(job.project_id) !== String(scopeProjectId)) {
         return NextResponse.json(
           { error: 'Job not found' },
           { status: 404 }
@@ -293,7 +302,7 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabase()
     const { searchParams } = new URL(request.url)
@@ -303,13 +312,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
     }
 
-    // Extrai userId da sessão — nunca do query param
-    const sessionClient = await createSupabaseServerClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
-    const userId = user.id
+    // O dono vem da sessão — nunca do query param
+    const who = await ownerOrError(request, projectId)
+    if ('res' in who) return who.res
+    const userId = who.userId
 
     const { data, error } = await supabase
       .from('download_jobs')

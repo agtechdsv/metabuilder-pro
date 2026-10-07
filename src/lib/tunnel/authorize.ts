@@ -53,6 +53,30 @@ export async function authorizeProjectActor(req: NextRequest, projectId: string)
   return await anonymousIfPublic(req, projectId).catch(() => null)
 }
 
+export interface DownloadOwner { id: string; kind: 'end_user' | 'member' | 'anonymous' }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const ANONYMOUS_OWNER = '00000000-0000-0000-0000-000000000000'
+
+/**
+ * Dono dos arquivos exportados (`download_jobs.user_id`, uma coluna UUID). Vem SEMPRE da sessão, nunca do que o navegador
+ * diz. Mesma ordem que a tela de downloads usa para saber quem está vendo: usuário final do app (cookie assinado) →
+ * membro do projeto (login do MetaBuilder) → visitante de um projeto sem login.
+ * Devolve null se não for ninguém, e `{ error }` se o usuário final não tem um identificador UUID (a coluna não aceitaria).
+ */
+export async function resolveDownloadOwner(req: NextRequest, projectId: string): Promise<DownloadOwner | { error: string } | null> {
+  const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
+  if (session) {
+    return UUID_RE.test(session.sub)
+      ? { id: session.sub.toLowerCase(), kind: 'end_user' }
+      : { error: 'A exportação de arquivos exige que a tabela de usuários do projeto tenha uma chave primária do tipo UUID.' }
+  }
+  const memberId = await memberIdOf(projectId)
+  if (memberId) return { id: memberId, kind: 'member' }
+  if (await isProjectPublic(projectId).catch(() => false)) return { id: ANONYMOUS_OWNER, kind: 'anonymous' }
+  return null
+}
+
 /** Id do usuário do MetaBuilder se ele enxerga o projeto (regra de acesso do banco); senão, null. */
 async function memberIdOf(projectId: string): Promise<string | null> {
   try {

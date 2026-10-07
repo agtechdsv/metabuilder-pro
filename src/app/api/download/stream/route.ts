@@ -1,20 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
-import { createClient as createServerClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { resolveDownloadOwner } from '@/lib/tunnel/authorize'
 import ws from 'ws'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { authenticateCommand, newReplyTopic, signingEnabled } from '@/lib/tunnel/commandSigning'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    // Requer sessão autenticada — download de arquivos não pode ser público
-    const sessionClient = await createServerClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) {
-      return new NextResponse('Não autorizado', { status: 401 })
-    }
-
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
@@ -31,19 +24,24 @@ export async function GET(request: Request) {
       return new NextResponse('Missing jobId or projectId', { status: 400 })
     }
 
+    // Requer sessão — download de arquivos não pode ser público. Quem pede é o usuário final do app ou um membro do projeto.
+    const owner = await resolveDownloadOwner(request, projectId)
+    if (!owner) return new NextResponse('Não autorizado', { status: 401 })
+    if ('error' in owner) return new NextResponse(owner.error, { status: 400 })
+
     // 1. Validate Job, fetch filename e verifica ownership
     const { data: job, error: jobError } = await supabase
       .from('download_jobs')
-      .select('file_name, local_path, user_id')
+      .select('file_name, local_path, user_id, project_id')
       .eq('id', jobId)
       .single()
 
-    if (jobError || !job) {
+    if (jobError || !job || String(job.project_id) !== projectId) {
       return new NextResponse('Job not found', { status: 404 })
     }
 
-    // Garante que o job pertence ao usuário autenticado (IDOR fix)
-    if (job.user_id !== user.id) {
+    // Garante que o job pertence a quem pede (IDOR fix) e ao projeto informado
+    if (job.user_id !== owner.id) {
       return new NextResponse('Não autorizado', { status: 403 })
     }
 
