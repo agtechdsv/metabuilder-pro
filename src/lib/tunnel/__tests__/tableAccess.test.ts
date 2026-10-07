@@ -69,16 +69,40 @@ describe('evaluateEndUserAccess', () => {
     expect(evaluateEndUserAccess({ action: 'insert', table: 'itens_pedido' }, ctx)).toEqual([])
   })
 
-  it('tabela fora do projeto e tabela de usuários são apontadas', () => {
-    expect(evaluateEndUserAccess({ action: 'select', table: 'pg_shadow' }, ctx)).toEqual([{ rule: 'table_not_in_project', detail: 'pg_shadow' }])
-    expect(evaluateEndUserAccess({ action: 'select', table: 'usuarios' }, ctx)).toEqual([{ rule: 'auth_table', detail: 'usuarios' }])
-    const joined = evaluateEndUserAccess({ action: 'select', table: 'clientes', query: 'SELECT * FROM clientes JOIN usuarios ON 1=1' }, ctx)
-    expect(joined.map(v => v.rule)).toEqual(['auth_table'])
+  it('insert/update/delete: o CLI ignora o texto `query`, então só a tabela conta (o app manda o SQL de exemplo junto)', () => {
+    expect(evaluateEndUserAccess({ action: 'delete', table: 'pedidos', query: `DELETE FROM pedidos WHERE id = '1'` }, ctx)).toEqual([])
+    expect(evaluateEndUserAccess({ action: 'update', table: 'clientes', query: `UPDATE clientes SET nome = 'x' WHERE id = '1'` }, ctx)).toEqual([])
+    expect(evaluateEndUserAccess({ action: 'delete', table: 'pg_shadow' }, ctx).map(v => v.rule)).toEqual(['table_not_in_project'])
   })
 
-  it('SQL próprio de escrita é apontado mesmo em tabela permitida', () => {
+  it('tabela fora do projeto é apontada; ler a tabela de usuários direto também', () => {
+    expect(evaluateEndUserAccess({ action: 'select', table: 'pg_shadow' }, ctx)).toEqual([{ rule: 'table_not_in_project', detail: 'pg_shadow' }])
+    expect(evaluateEndUserAccess({ action: 'select', table: 'usuarios' }, ctx)).toEqual([{ rule: 'auth_table', detail: 'usuarios' }])
+  })
+
+  it('a tabela de usuários numa junção passa, mas não suas colunas de senha nem "usuarios.*"', () => {
+    const base = { action: 'select', table: 'pedidos' }
+    expect(evaluateEndUserAccess({ ...base, query: 'SELECT "pedidos"."id" FROM "pedidos" LEFT JOIN "usuarios" ON "pedidos"."criado_por" = "usuarios"."id"' }, ctx)).toEqual([])
+    expect(evaluateEndUserAccess({ ...base, query: 'SELECT "usuarios".* FROM "pedidos" JOIN "usuarios" ON 1=1' }, ctx).map(v => v.rule)).toEqual(['auth_table'])
+    expect(evaluateEndUserAccess({ ...base, query: 'SELECT "usuarios"."senha_hash" FROM "pedidos" JOIN "usuarios" ON 1=1' }, ctx).map(v => v.rule)).toEqual(['auth_table'])
+  })
+
+  it('SQL próprio de escrita num SELECT é apontado mesmo em tabela permitida', () => {
     const v = evaluateEndUserAccess({ action: 'select', table: 'clientes', query: 'UPDATE clientes SET nome = 1' }, ctx)
     expect(v.map(x => x.rule)).toContain('sql_not_select')
+  })
+
+  it('execute_custom: comandos de dados (inclusive a exclusão em cascata) passam; DDL e catálogo não', () => {
+    const cascade = `DELETE FROM itens_pedido WHERE pedido_id IN (SELECT id FROM pedidos WHERE cliente_id = '1'); DELETE FROM pedidos WHERE cliente_id = '1'; DELETE FROM clientes WHERE id = '1'`
+    expect(evaluateEndUserAccess({ action: 'execute_custom', table: 'clientes', query: cascade }, ctx)).toEqual([])
+    expect(evaluateEndUserAccess({ action: 'execute_custom', table: 'clientes', query: 'DROP TABLE clientes' }, ctx).map(v => v.rule)).toContain('sql_not_select')
+    expect(evaluateEndUserAccess({ action: 'execute_custom', table: 'clientes', query: 'SELECT usename FROM pg_user' }, ctx).map(v => v.rule)).toEqual(expect.arrayContaining(['table_not_in_project', 'sql_forbidden']))
+  })
+
+  it('ações de desenvolvedor ou desconhecidas não são de usuário final', () => {
+    expect(evaluateEndUserAccess({ action: 'raw_sql', query: 'SELECT 1' }, ctx).map(v => v.rule)).toContain('action_not_allowed')
+    expect(evaluateEndUserAccess({ action: 'get_users', table: 'clientes' }, ctx).map(v => v.rule)).toContain('action_not_allowed')
+    expect(evaluateEndUserAccess({ table: 'clientes' }, ctx).map(v => v.detail)).toContain('(sem ação)')
   })
 })
 

@@ -20,7 +20,7 @@ export function guardMode(env: Record<string, string | undefined> = process.env)
   return v === 'off' || v === 'enforce' ? v : 'observe'
 }
 
-export interface Violation { rule: 'table_not_in_project' | 'auth_table' | 'sql_not_select' | 'sql_forbidden'; detail: string }
+export interface Violation { rule: 'table_not_in_project' | 'auth_table' | 'sql_not_select' | 'sql_forbidden' | 'action_not_allowed'; detail: string }
 
 /** Remove comentários e textos entre aspas simples (conteúdo de dados), mantendo os identificadores entre aspas duplas. */
 function stripNoise(sql: string): string {
@@ -96,18 +96,59 @@ export function sqlProblems(text: unknown): Violation[] {
 export interface AccessContext {
   /** tabelas cadastradas no projeto (models), em minúsculas */
   allowedTables: Set<string>
-  /** tabela de usuários do login (guarda as senhas): o usuário final nunca a consulta pelo relay */
+  /** tabela de usuários do login (guarda as senhas): ela pode aparecer numa junção, mas as telas não leem suas colunas sensíveis */
   authTable?: string
+}
+
+/** Ações que as telas do app publicado usam. Qualquer outra (ferramentas de desenvolvedor, SQL livre) não é de usuário final. */
+const END_USER_ACTIONS = new Set(['select', 'count_records', 'insert', 'update', 'delete', 'execute_custom', 'trigger_bpm', 'trigger_bpm_sync'])
+/** O CLI lê o texto `query` como SELECT nestas ações. Em insert/update/delete ele ignora o texto e monta o SQL com tabela, coluna e valor. */
+const READ_ACTIONS = new Set(['select', 'count_records'])
+
+const SENSITIVE_COLUMN = /(senha|password|passwd|pwd|hash|secret|totp|mfa|token)/i
+
+/**
+ * `execute_custom` roda o texto que vier. Aceita só comandos de DADOS (SELECT/INSERT/UPDATE/DELETE/WITH), um ou vários
+ * separados por ";" (a exclusão em cascata monta assim), sem DDL nem catálogo/função de sistema.
+ */
+export function customSqlProblems(text: unknown): Violation[] {
+  if (typeof text !== 'string' || !text.trim()) return []
+  const sql = stripNoise(text).replace(/"[^"]*"/g, '"x"')
+  const out: Violation[] = []
+  for (const stmt of sql.split(';').map(x => x.trim()).filter(Boolean)) {
+    if (!/^[(]*\s*(select|insert|update|delete|with)\b/i.test(stmt)) out.push({ rule: 'sql_not_select', detail: 'comando que não é de dados' })
+  }
+  const ddl = sql.match(/\b(drop|alter|create|truncate|grant|revoke|copy|call|execute|vacuum|merge|lock|do)\b/i)
+  if (ddl) out.push({ rule: 'sql_forbidden', detail: `palavra reservada: ${ddl[1].toLowerCase()}` })
+  const thing = sql.match(FORBIDDEN_THINGS)
+  if (thing) out.push({ rule: 'sql_forbidden', detail: `acesso a catálogo/função de sistema: ${thing[1].toLowerCase()}` })
+  return out
 }
 
 /** Confere um comando de usuário final. Lista vazia = permitido. */
 export function evaluateEndUserAccess(payload: Record<string, any>, ctx: AccessContext): Violation[] {
   const out: Violation[] = []
-  for (const t of referencedTables(payload)) {
-    if (ctx.authTable && t === ctx.authTable.toLowerCase()) out.push({ rule: 'auth_table', detail: t })
-    else if (!ctx.allowedTables.has(t)) out.push({ rule: 'table_not_in_project', detail: t })
+  const action = String(payload.action || '')
+  const auth = ctx.authTable ? ctx.authTable.toLowerCase() : undefined
+
+  if (!END_USER_ACTIONS.has(action)) out.push({ rule: 'action_not_allowed', detail: action || '(sem ação)' })
+
+  const tables = referencedTables(payload)
+  for (const t of tables) {
+    if (t === auth) continue // a tabela de login é do projeto; o acesso a ela é conferido abaixo
+    if (!ctx.allowedTables.has(t)) out.push({ rule: 'table_not_in_project', detail: t })
   }
-  out.push(...sqlProblems(payload.query), ...sqlProblems(payload.sql))
+
+  // Tabela de usuários: pode entrar numa junção, mas ninguém lê as senhas por ela
+  if (auth && tables.includes(auth)) {
+    const text = [payload.query, payload.sql].filter(x => typeof x === 'string').join(' ')
+    const readsItDirectly = READ_ACTIONS.has(action) && String(payload.table || '').toLowerCase() === auth
+    const star = new RegExp(String.raw`"?${auth.replace(/\W/g, '')}"?\s*\.\s*\*`, 'i').test(text)
+    if (readsItDirectly || star || SENSITIVE_COLUMN.test(stripNoise(text))) out.push({ rule: 'auth_table', detail: auth })
+  }
+
+  if (READ_ACTIONS.has(action)) out.push(...sqlProblems(payload.query), ...sqlProblems(payload.sql))
+  else if (action === 'execute_custom') out.push(...customSqlProblems(payload.query ?? payload.sql))
   return out
 }
 

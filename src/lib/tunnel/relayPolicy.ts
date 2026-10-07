@@ -10,6 +10,8 @@ export const RELAY_EVENTS = ['sql_query'] as const
 /** Ações do CLI que não são consultas de dados do app: ficam só para quem tem acesso de desenvolvedor ao projeto. */
 const DEVELOPER_ONLY_ACTIONS = new Set([
   'raw_sql', 'sync_bpm', 'sync_log_config', 'read_logs', 'clear_logs', 'get_log_stats',
+  // lê QUALQUER tabela indicada pela configuração que o navegador manda (usado só nas telas do Studio)
+  'get_users',
 ])
 
 /** O login do usuário final passa pelo servidor (que vê a resposta); nunca por este relay. */
