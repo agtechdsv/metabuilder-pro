@@ -1,0 +1,139 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { serviceClient } from './server'
+
+/**
+ * Que tabelas e que tipo de SQL um USUÁRIO FINAL pode pedir pelo relay.
+ *
+ * Hoje o navegador manda ao Agente CLI a tabela, os filtros e até o texto do SELECT (`query`). Sem esta conferência, um
+ * usuário final com a sessão válida poderia pedir qualquer tabela do banco (inclusive a de usuários, com as senhas) ou
+ * um SQL próprio. As regras daqui são puras (testáveis); `TUNNEL_GUARD` escolhe o que acontece com uma violação:
+ *   - `observe` (padrão): só registra no log do servidor, para ver o que as telas reais pedem antes de bloquear;
+ *   - `enforce`: recusa o comando (403);
+ *   - `off`: não confere.
+ * Membros do projeto (desenvolvedores) não passam por aqui.
+ */
+
+export type GuardMode = 'off' | 'observe' | 'enforce'
+
+export function guardMode(env: Record<string, string | undefined> = process.env): GuardMode {
+  const v = String(env.TUNNEL_GUARD || '').trim().toLowerCase()
+  return v === 'off' || v === 'enforce' ? v : 'observe'
+}
+
+export interface Violation { rule: 'table_not_in_project' | 'auth_table' | 'sql_not_select' | 'sql_forbidden'; detail: string }
+
+/** Remove comentários e textos entre aspas simples (conteúdo de dados), mantendo os identificadores entre aspas duplas. */
+function stripNoise(sql: string): string {
+  return sql
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/'(?:[^']|'')*'/g, "''")
+}
+
+const IDENT = String.raw`(?:"[^"]+"|[A-Za-z_][\w$]*)`
+const TABLE_REF = new RegExp(String.raw`\b(?:from|join)\s+(${IDENT}(?:\s*\.\s*${IDENT})?)`, 'gi')
+// "FROM a, b": tabelas depois de vírgula, até a próxima palavra de cláusula
+const FROM_LIST = /\bfrom\s+([^()]*?)(?=\bwhere\b|\bgroup\b|\border\b|\blimit\b|\bjoin\b|\bunion\b|\bhaving\b|\boffset\b|\)|$)/gi
+
+const unquote = (s: string) => s.trim().replace(/^"|"$/g, '')
+
+/** Nome da tabela sem o schema, em minúsculas. */
+function tableName(ref: string): string {
+  const parts = ref.split('.').map(unquote)
+  return parts[parts.length - 1].toLowerCase()
+}
+
+/** Todas as tabelas que o comando toca: campo `table`, junções, filtros "tabela.coluna" e o texto do SELECT. */
+export function referencedTables(payload: Record<string, any>): string[] {
+  const found = new Set<string>()
+  const add = (v: unknown) => {
+    if (typeof v !== 'string') return
+    const name = tableName(v.replace(/[^\w$."]/g, ''))
+    if (name) found.add(name)
+  }
+  add(payload.table)
+  for (const j of Array.isArray(payload.joins) ? payload.joins : []) {
+    if (j && typeof j === 'object') for (const k of ['table', 'toTable', 'to', 'from', 'fromTable']) add((j as any)[k])
+  }
+  const keyed = (k: string) => { if (k.includes('.')) add(k.split('.')[0]) }
+  if (payload.filters && typeof payload.filters === 'object') Object.keys(payload.filters).forEach(keyed)
+  for (const f of Array.isArray(payload.advancedFilters) ? payload.advancedFilters : []) if (typeof f?.field === 'string') keyed(f.field)
+
+  for (const text of [payload.query, payload.sql]) {
+    if (typeof text !== 'string' || !text.trim()) continue
+    const sql = stripNoise(text)
+    for (const m of sql.matchAll(TABLE_REF)) add(m[1])
+    for (const m of sql.matchAll(FROM_LIST)) {
+      const items = m[1].split(',').slice(1) // o primeiro já foi pego acima
+      for (const item of items) {
+        const first = item.trim().split(/\s+/)[0]
+        if (first && new RegExp(`^${IDENT}(?:\\s*\\.\\s*${IDENT})?$`).test(first)) add(first)
+      }
+    }
+  }
+  // "diagnostico" é a tabela de mentira do teste de conexão (SELECT 1): não é dado de ninguém
+  return [...found].filter(t => t !== 'diagnostico' && t !== 'dual')
+}
+
+const FORBIDDEN_WORDS = /\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|copy|call|execute|vacuum|merge|lock)\b/i
+const FORBIDDEN_THINGS = /\b(pg_[a-z_]+|information_schema|current_setting|set_config|dblink|lo_import|lo_export|pg_read_file)\b/i
+
+/** O texto de SELECT enviado pelo navegador é só uma consulta de leitura, de um único comando? */
+export function sqlProblems(text: unknown): Violation[] {
+  if (typeof text !== 'string' || !text.trim()) return []
+  // identificadores entre aspas duplas ("update" como nome de coluna) não contam como comando
+  const sql = stripNoise(text).replace(/"[^"]*"/g, '"x"')
+  const out: Violation[] = []
+  if (!/^\s*[(]*\s*(select|with)\b/i.test(sql)) out.push({ rule: 'sql_not_select', detail: 'o texto não começa com SELECT/WITH' })
+  if (/;\s*\S/.test(sql)) out.push({ rule: 'sql_forbidden', detail: 'mais de um comando' })
+  const word = sql.match(FORBIDDEN_WORDS)
+  if (word) out.push({ rule: 'sql_forbidden', detail: `palavra reservada: ${word[1].toLowerCase()}` })
+  const thing = sql.match(FORBIDDEN_THINGS)
+  if (thing) out.push({ rule: 'sql_forbidden', detail: `acesso a catálogo/função de sistema: ${thing[1].toLowerCase()}` })
+  return out
+}
+
+export interface AccessContext {
+  /** tabelas cadastradas no projeto (models), em minúsculas */
+  allowedTables: Set<string>
+  /** tabela de usuários do login (guarda as senhas): o usuário final nunca a consulta pelo relay */
+  authTable?: string
+}
+
+/** Confere um comando de usuário final. Lista vazia = permitido. */
+export function evaluateEndUserAccess(payload: Record<string, any>, ctx: AccessContext): Violation[] {
+  const out: Violation[] = []
+  for (const t of referencedTables(payload)) {
+    if (ctx.authTable && t === ctx.authTable.toLowerCase()) out.push({ rule: 'auth_table', detail: t })
+    else if (!ctx.allowedTables.has(t)) out.push({ rule: 'table_not_in_project', detail: t })
+  }
+  out.push(...sqlProblems(payload.query), ...sqlProblems(payload.sql))
+  return out
+}
+
+// ── Contexto do projeto (lido no servidor, com a chave de serviço) ───────────────
+
+const ctxCache = new Map<string, { ctx: AccessContext; until: number }>()
+const CTX_TTL_MS = 60_000
+
+export async function loadAccessContext(
+  projectId: string,
+  deps: { client?: Pick<SupabaseClient, 'from'>; now?: () => number } = {},
+): Promise<AccessContext> {
+  const now = (deps.now ?? Date.now)()
+  const hit = ctxCache.get(projectId)
+  if (hit && hit.until > now) return hit.ctx
+  const client = deps.client ?? serviceClient()
+  const [{ data: models }, { data: auth }] = await Promise.all([
+    client.from('models').select('db_table_name').eq('project_id', projectId),
+    client.from('project_auth_config').select('db_table_name').eq('project_id', projectId).maybeSingle(),
+  ])
+  const ctx: AccessContext = {
+    allowedTables: new Set(((models as any[]) || []).map(m => String(m.db_table_name || '').toLowerCase()).filter(Boolean)),
+    authTable: ((auth as any)?.db_table_name || undefined) as string | undefined,
+  }
+  ctxCache.set(projectId, { ctx, until: now + CTX_TTL_MS })
+  return ctx
+}
+
+export function clearAccessContextCache() { ctxCache.clear() }

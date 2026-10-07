@@ -3,6 +3,7 @@ import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
 import { getProjectSecretToken, relayEnabled, tunnelSend } from '@/lib/tunnel/server'
 import { signingEnabled } from '@/lib/tunnel/commandSigning'
+import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunnel/tableAccess'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -38,6 +39,22 @@ export async function POST(request: NextRequest) {
 
   const who = actor.kind === 'member' ? `m:${actor.userId}` : `e:${actor.session.pid}:${actor.session.sub}`
   if (!limiter.allow(who)) return NextResponse.json({ error: 'Muitos comandos em pouco tempo.' }, { status: 429 })
+
+  // Usuário final: só as tabelas do projeto e só SQL de leitura. Em `observe` apenas registra (veja tableAccess.ts).
+  const mode = guardMode()
+  if (actor.kind === 'end_user' && mode !== 'off') {
+    try {
+      const violations = evaluateEndUserAccess(req.payload, await loadAccessContext(req.projectId))
+      if (violations.length) {
+        console.warn(`[tunnel/guard] ${mode} projeto=${req.projectId} acao=${String(req.payload.action)} tabela=${String(req.payload.table)} violacoes=${JSON.stringify(violations)}`)
+        if (mode === 'enforce') return NextResponse.json({ error: 'Acesso a estes dados não permitido.' }, { status: 403 })
+      }
+    } catch (e: any) {
+      // sem conseguir conferir: em `enforce` recusa (falha fechada); em `observe` segue
+      console.error('[tunnel/guard] não foi possível conferir:', e?.message)
+      if (mode === 'enforce') return NextResponse.json({ error: 'Não foi possível validar o acesso.' }, { status: 503 })
+    }
+  }
 
   const token = await getProjectSecretToken(req.projectId)
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })

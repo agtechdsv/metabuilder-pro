@@ -12,6 +12,12 @@ vi.mock('@/lib/tunnel/server', () => ({
   getProjectSecretToken: (...a: any[]) => getToken(...a),
 }))
 
+const accessCtx = vi.fn()
+vi.mock('@/lib/tunnel/tableAccess', async () => {
+  const real = await vi.importActual<typeof import('@/lib/tunnel/tableAccess')>('@/lib/tunnel/tableAccess')
+  return { ...real, loadAccessContext: (...a: any[]) => accessCtx(...a) }
+})
+
 import { POST } from '../route'
 
 const PID = '123e4567-e89b-42d3-a456-426614174000'
@@ -81,6 +87,46 @@ describe('POST /api/tunnel/send', () => {
   it('corpo declarado maior que o limite: 413', async () => {
     authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
     expect((await call(cmd(), { 'content-length': String(5 * 1024 * 1024) })).status).toBe(413)
+  })
+
+  describe('conferência de tabelas do usuário final (TUNNEL_GUARD)', () => {
+    const ctx = { allowedTables: new Set(['clientes']), authTable: 'usuarios' }
+    beforeEach(() => {
+      accessCtx.mockReset(); accessCtx.mockResolvedValue(ctx)
+      authorize.mockResolvedValue({ kind: 'end_user', session: { pid: PID, sub: '5' } })
+    })
+    afterEach(() => { delete process.env.TUNNEL_GUARD; vi.restoreAllMocks() })
+
+    it('observar (padrão): registra a violação mas deixa passar', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      expect((await call(cmd({ table: 'usuarios', query: 'SELECT * FROM usuarios' }))).status).toBe(202)
+      expect(tunnelSend).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0][0]).toContain('auth_table')
+    })
+
+    it('exigir: recusa tabela fora do projeto e SQL de escrita; consulta normal passa', async () => {
+      process.env.TUNNEL_GUARD = 'enforce'
+      expect((await call(cmd({ table: 'usuarios', query: 'SELECT * FROM usuarios' }))).status).toBe(403)
+      expect((await call(cmd({ table: 'clientes', query: 'DELETE FROM clientes' }))).status).toBe(403)
+      expect(tunnelSend).not.toHaveBeenCalled()
+      expect((await call(cmd({ table: 'clientes', query: 'SELECT * FROM clientes' }))).status).toBe(202)
+    })
+
+    it('exigir: se não consegue conferir, recusa (falha fechada)', async () => {
+      process.env.TUNNEL_GUARD = 'enforce'
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      accessCtx.mockRejectedValue(new Error('banco fora'))
+      expect((await call(cmd({ table: 'clientes' }))).status).toBe(503)
+    })
+
+    it('desligado, e membros do projeto, não são conferidos', async () => {
+      process.env.TUNNEL_GUARD = 'off'
+      expect((await call(cmd({ table: 'usuarios' }))).status).toBe(202)
+      process.env.TUNNEL_GUARD = 'enforce'
+      authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+      expect((await call(cmd({ table: 'usuarios', query: 'SELECT * FROM usuarios' }))).status).toBe(202)
+      expect(accessCtx).not.toHaveBeenCalled()
+    })
   })
 
   describe('com a assinatura ligada (TUNNEL_SIGN=on)', () => {
