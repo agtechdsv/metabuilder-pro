@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { EmbeddedFrame } from '@/components/runtime/EmbeddedFrame'
 import { useRouter } from 'next/navigation'
 import { LayoutGrid, List, Search, Filter, Plus, Pencil, Trash2, RefreshCcw, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Zap, Link, Database, Globe, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -755,7 +756,7 @@ export default function ViewContainer({
           className="w-full bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800"
           style={{ height: iframeModalSize === 'custom' && iframeModalHeight ? (isNaN(Number(iframeModalHeight)) ? iframeModalHeight : `${iframeModalHeight}px`) : '85vh' }}
         >
-          {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+          {isIframeModalOpen && <EmbeddedFrame src={iframeUrl} />}
         </div>
       </Modal>
 
@@ -770,7 +771,7 @@ export default function ViewContainer({
         hideHeader={true}
       >
         <div className="w-full h-full bg-white dark:bg-neutral-950">
-          {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+          {isIframeDrawerOpen && <EmbeddedFrame src={iframeUrl} />}
         </div>
       </Drawer>
     </div>

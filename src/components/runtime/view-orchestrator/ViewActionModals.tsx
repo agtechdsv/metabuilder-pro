@@ -1,4 +1,5 @@
 import React from 'react'
+import { EmbeddedFrame } from '@/components/runtime/EmbeddedFrame'
 import { resolveRecordLabel, findModelByTable } from '@/lib/schemaResolver'
 import RecordDrawer from '../RecordDrawer'
 import RecordModal from '../RecordModal'
@@ -196,7 +197,7 @@ export function ViewActionModals({
         className="!p-0 bg-transparent shadow-none border-none dark:bg-transparent"
       >
         <div className="w-full h-[85vh] bg-white dark:bg-neutral-950 rounded-[2.5rem] overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
-          {isIframeModalOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+          {isIframeModalOpen && <EmbeddedFrame src={iframeUrl} />}
         </div>
       </Modal>
 
@@ -208,7 +209,7 @@ export function ViewActionModals({
         zIndex={9999}
       >
         <div className="w-full h-full bg-white dark:bg-neutral-950">
-          {isIframeDrawerOpen && <iframe src={iframeUrl} className="w-full h-full border-none" />}
+          {isIframeDrawerOpen && <EmbeddedFrame src={iframeUrl} />}
         </div>
       </Drawer>
 

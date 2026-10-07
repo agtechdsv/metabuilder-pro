@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { EMBEDDED_READY_MESSAGE } from '@/components/runtime/EmbeddedFrame'
 import dynamic from 'next/dynamic'
 import { useI18n } from '@/i18n/I18nContext'
 import { useToast } from '@/components/ui/Toast'
@@ -429,6 +430,18 @@ export default function ViewPageContent({
     setIsDeleteModalOpen,
     buttonsConfig,
   })
+
+  // Tela aberta dentro de uma modal/gaveta de outra tela: avisa o pai quando o registro já está no formulário, para ele
+  // tirar o indicador de carregamento (veja EmbeddedFrame). Sem registro a editar, avisa assim que monta.
+  const sentEmbeddedReady = useRef(false)
+  useEffect(() => {
+    if (sentEmbeddedReady.current || typeof window === 'undefined' || window.parent === window) return
+    if (new URLSearchParams(window.location.search).get('embedded') !== 'true') return
+    const hasRecord = !!selectedRow && Object.keys(selectedRow).length > 0
+    if (initialEditId && !hasRecord) return
+    sentEmbeddedReady.current = true
+    window.parent.postMessage({ type: EMBEDDED_READY_MESSAGE }, window.location.origin)
+  }, [initialEditId, selectedRow])
 
   const handleOpenAdd = (inData: any = {}) => {
     let initialData = { ...inData }

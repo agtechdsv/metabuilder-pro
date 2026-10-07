@@ -251,6 +251,11 @@ function DynamicBlueprintContent({
 }: DynamicBlueprintProps) {
   const { toast } = useToast()
   const { fitView, setCenter } = useReactFlow()
+  // As funções da tela (editar, excluir...) mudam de identidade a cada renderização do pai (ex.: ao clicar em Editar).
+  // Lidas por uma ref, não entram nas dependências do layout: sem isto o diagrama era refeito e o zoom do usuário se perdia.
+  const handlers = React.useRef({ onView, onEdit, onDelete, onMove, onCustomAction })
+  handlers.current = { onView, onEdit, onDelete, onMove, onCustomAction }
+  const lastFitKey = React.useRef('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const { 
@@ -368,11 +373,11 @@ function DynamicBlueprintContent({
           description: desc_field ? formatFieldValue(getRowVal(row, desc_field, descFieldDef), descFieldDef, relationalOptions) : '',
           status: status_field ? getRowVal(row, status_field, statusFieldDef) : '',
           rawData: row,
-          onView,
-          onEdit,
-          onDelete,
+          onView: onView ? (r: any) => handlers.current.onView?.(r) : undefined,
+          onEdit: onEdit ? (r: any) => handlers.current.onEdit?.(r) : undefined,
+          onDelete: onDelete ? (r: any) => handlers.current.onDelete?.(r) : undefined,
           customActions,
-          onCustomAction,
+          onCustomAction: onCustomAction ? (...args: any[]) => (handlers.current.onCustomAction as any)?.(...args) : undefined,
           scale,
           direction,
           animated: animatedEdges,
@@ -395,7 +400,7 @@ function DynamicBlueprintContent({
               animated: animatedEdges,
               onDeleteEdge: () => {
                 if (predCol) {
-                  onMove?.(id, { [predCol.split('.').pop() || predCol]: null })
+                  handlers.current.onMove?.(id, { [predCol.split('.').pop() || predCol]: null })
                 }
               }
             }
@@ -406,7 +411,7 @@ function DynamicBlueprintContent({
 
     const layouted = getLayoutedElements(nodes, edges, direction)
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges }
-  }, [data, title_field, desc_field, status_field, predecessor_field, predCol, pkCol, onView, onEdit, onDelete, scale, direction, animatedEdges])
+  }, [data, title_field, desc_field, status_field, predecessor_field, predCol, pkCol, !!onView, !!onEdit, !!onDelete, !!onCustomAction, scale, direction, animatedEdges])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -414,12 +419,17 @@ function DynamicBlueprintContent({
   React.useEffect(() => {
     setNodes(initialNodes)
     setEdges(initialEdges)
+    // Enquadra tudo só quando a ESTRUTURA muda (primeira carga, registros novos/excluídos, direção, escala): editar um
+    // registro atualiza os dados mas mantém o zoom e a posição que o usuário já tinha.
+    const key = `${direction}|${scale}|${initialNodes.map(n => n.id).join(',')}`
+    if (lastFitKey.current === key) return
     // Delay fitView para garantir que a modal (se houver) já terminou de abrir e tem largura > 0
     const t = setTimeout(() => {
+      lastFitKey.current = key
       fitView({ padding: 0.2, duration: 800 })
     }, 400)
     return () => clearTimeout(t)
-  }, [initialNodes, initialEdges, setNodes, setEdges, fitView])
+  }, [initialNodes, initialEdges, setNodes, setEdges, fitView, direction, scale])
 
   const filteredItems = useMemo(() => {
     if (!data) return []
