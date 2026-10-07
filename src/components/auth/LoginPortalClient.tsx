@@ -11,6 +11,7 @@ import { TranslationProvider } from '@/i18n/TranslationProvider'
 import { useI18n } from '@/i18n/I18nContext'
 import { EndUserMfaModal } from '@/components/auth/EndUserMfaModal'
 import { startAuthentication } from '@simplewebauthn/browser'
+import { clearViewCaches } from '@/lib/tunnel/logoutClient'
 
 interface LoginPortalClientProps {
   project: any
@@ -374,6 +375,9 @@ export function LoginPortalClient({
       document.cookie = `${cookieName}=${encodeURIComponent(JSON.stringify(user))}; path=/; SameSite=Lax`
     }
     
+    // Quem entra agora não pode ver as listas que a aba guardou para o usuário anterior
+    clearViewCaches()
+
     // Volta para a tela que o usuário tentou abrir antes do login (ex.: ...?preview=draft), se houver
     const nextDest = getSafeNext(window.location.search)
     if (nextDest) {
