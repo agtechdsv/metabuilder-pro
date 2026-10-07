@@ -879,3 +879,60 @@ export async function resendStudioGuestInvite(email: string) {
   }
 }
 
+
+/**
+ * Cria um workspace SEMPRE na conta do dono da equipe.
+ *
+ * Quem cria pode ser o próprio dono ou um convidado com acesso global dele: o workspace nasce com `owner_id` do dono
+ * (é dele para efeito de cobrança, licenças e permissões) e o convidado global já o enxerga por ser global. Se o dono
+ * depois passar o convidado para acesso granular, o workspace some para ele até ser liberado de novo.
+ * Convidado granular não cria workspaces (peça ao dono).
+ */
+export async function createTeamWorkspace(name: string, slug: string) {
+  try {
+    const { createClient: createServerClient } = await import('@/utils/supabase/server')
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Não autenticado.' }
+
+    const cleanName = String(name || '').trim()
+    const cleanSlug = String(slug || '').trim().toLowerCase()
+    if (!cleanName || !cleanSlug) return { success: false, error: 'Informe o nome e o endereço do workspace.' }
+
+    // de quem este usuário é convidado (se for)
+    const { data: guestRecord } = await supabaseAdmin
+      .from('owner_guests')
+      .select('owner_id, access_level')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    let ownerId = user.id
+    if (guestRecord) {
+      if (guestRecord.access_level !== 'global') {
+        return { success: false, error: 'Seu acesso é granular: peça ao dono da conta para criar o workspace ou liberar seu acesso global.' }
+      }
+      ownerId = guestRecord.owner_id
+    }
+
+    // limite do plano da conta do dono (a política de banco só conhece quem está logado)
+    const { data: ownerProfile } = await supabaseAdmin.from('profiles').select('subscription_tier').eq('id', ownerId).maybeSingle()
+    if (ownerProfile?.subscription_tier !== 'pro') {
+      const { count } = await supabaseAdmin.from('workspaces').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId)
+      if ((count || 0) > 0) return { success: false, code: 'limit', error: 'Limite do plano atingido.' }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('workspaces')
+      .insert({ name: cleanName, slug: cleanSlug, owner_id: ownerId })
+      .select('id')
+      .single()
+    if (error) {
+      if (error.code === '23505') return { success: false, error: 'Já existe um workspace com este endereço.' }
+      throw error
+    }
+    return { success: true, id: data.id as string }
+  } catch (err: any) {
+    console.error('Error in createTeamWorkspace:', err)
+    return { success: false, error: err.message || 'Erro ao criar o workspace.' }
+  }
+}

@@ -37,6 +37,7 @@ import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelCo
 import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
 import { WorkspaceExportModal } from '@/components/workspace/WorkspaceExportModal'
 import { createClient } from '@/utils/supabase/client'
+import { createTeamWorkspace } from '@/app/actions/workspace'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
@@ -205,16 +206,12 @@ export function WorkspaceManager({
 
         if (error) throw error
       } else {
-        // Create
-        const { error } = await supabase
-          .from('workspaces')
-          .insert({
-            name: formData.name,
-            slug: formData.slug.toLowerCase(),
-            owner_id: user.id
-          })
-
-        if (error) throw error
+        // Create: no servidor, para o workspace nascer na conta do dono da equipe (e não na do convidado que o criou)
+        const created = await createTeamWorkspace(formData.name, formData.slug)
+        if (!created.success) {
+          if (created.code === 'limit') throw Object.assign(new Error(created.error), { code: '42501' })
+          throw new Error(created.error)
+        }
       }
 
       // Refresh data
