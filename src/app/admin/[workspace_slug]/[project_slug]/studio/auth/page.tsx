@@ -777,50 +777,28 @@ export default function AuthSettingsPage() {
         }
       }
 
-      const queryId = crypto.randomUUID()
-      const channelName = `tunnel:${project.id}`
-      const channel = supabase.channel(channelName)
-      
-      channel.subscribe(async (status: string) => {
-        if (status === 'SUBSCRIBED') {
-          if (editingUserId) {
-            delete dataToSave[pkField]
-            await channel.send({
-              type: 'broadcast',
-              event: 'sql_query',
-              payload: {
-                queryId,
-                token: project.secret_token,
-                action: 'update',
-                table: authConfig.db_table_name,
-                schemaName: selectedModel?.db_schema_name || 'public',
-                idColumn: pkField,
-                idValue: editingUserId,
-                data: dataToSave
-              }
-            })
-          } else {
-            await channel.send({
-              type: 'broadcast',
-              event: 'sql_query',
-              payload: {
-                queryId,
-                token: project.secret_token,
-                action: 'insert',
-                table: authConfig.db_table_name,
-                schemaName: selectedModel?.db_schema_name || 'public',
-                data: dataToSave
-              }
-            })
-          }
-          toast('Operação enviada ao CLI com sucesso!', 'success')
-          setIsUserModalOpen(false)
-          setTimeout(() => {
-            supabase.removeChannel(channel)
-            loadLegacyUsers()
-          }, 1000)
-        }
-      })
+      // espera a resposta do banco: o aviso de sucesso só aparece se o comando realmente funcionou
+      if (editingUserId) {
+        delete dataToSave[pkField]
+        await executeTunnelQuery({
+          action: 'update',
+          table: authConfig.db_table_name,
+          schemaName: selectedModel?.db_schema_name || 'public',
+          idColumn: pkField,
+          idValue: editingUserId,
+          data: dataToSave,
+        })
+      } else {
+        await executeTunnelQuery({
+          action: 'insert',
+          table: authConfig.db_table_name,
+          schemaName: selectedModel?.db_schema_name || 'public',
+          data: dataToSave,
+        })
+      }
+      toast('Usuário salvo com sucesso!', 'success')
+      setIsUserModalOpen(false)
+      loadLegacyUsers()
     } catch (err: any) {
       toast('Erro ao salvar usuário: ' + err.message, 'error')
     } finally {
@@ -834,35 +812,37 @@ export default function AuthSettingsPage() {
     const pkField = selectedModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
     
     try {
-      const queryId = crypto.randomUUID()
-      const channelName = `tunnel:${project.id}`
-      const channel = supabase.channel(channelName)
+      const schemaName = selectedModel?.db_schema_name || 'public'
+      const userId = userToDelete[pkField]
 
-      channel.subscribe(async (status: string) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.send({
-            type: 'broadcast',
-            event: 'sql_query',
-            payload: {
-              queryId,
-              token: project.secret_token,
-              action: 'delete',
-              table: authConfig.db_table_name,
-              schemaName: selectedModel?.db_schema_name || 'public',
-              idColumn: pkField,
-              idValue: userToDelete[pkField]
-            }
-          })
-          toast('Exclusão enviada ao CLI com sucesso!', 'success')
-          setUserToDelete(null)
-          setTimeout(() => {
-            supabase.removeChannel(channel)
-            loadLegacyUsers()
-          }, 1000)
-        }
+      // perfis atribuídos ao usuário (tabela de ligação): saem junto, senão a chave estrangeira impede a exclusão
+      if (authConfig.db_user_groups_type === 'n_to_n' && authConfig.db_user_roles_table && authConfig.db_user_roles_user_id_column) {
+        const urModel = models.find(m => m.db_table_name === authConfig.db_user_roles_table)
+        await executeTunnelQuery({
+          action: 'delete',
+          table: authConfig.db_user_roles_table,
+          schemaName: urModel?.db_schema_name || schemaName,
+          idColumn: authConfig.db_user_roles_user_id_column,
+          idValue: userId,
+        })
+      }
+
+      // espera a resposta do banco: o aviso de sucesso só aparece se o usuário foi mesmo excluído
+      await executeTunnelQuery({
+        action: 'delete',
+        table: authConfig.db_table_name,
+        schemaName,
+        idColumn: pkField,
+        idValue: userId,
       })
+      toast('Usuário excluído com sucesso!', 'success')
+      setUserToDelete(null)
+      loadLegacyUsers()
     } catch (err: any) {
-      toast('Erro ao excluir usuário: ' + err.message, 'error')
+      const fk = /chave estrangeira|foreign key|ORA-02292|23503/i.test(String(err?.message))
+      toast(fk
+        ? 'Não foi possível excluir: este usuário é referenciado por outros registros (' + String(err.message).replace(/^.*?restrição de chave estrangeira /i, '').slice(0, 160) + '). Remova ou reatribua esses registros antes.'
+        : 'Erro ao excluir usuário: ' + err.message, 'error')
     }
   }
 
