@@ -10,6 +10,8 @@ interface DeleteConfirmModalProps {
   onConfirm: () => Promise<void>
   isLoading?: boolean
   recordName?: string
+  /** exclusão em cascata: o que será apagado junto (items null = não foi possível contar; undefined = sem cascata) */
+  cascade?: { loading: boolean; items: Array<{ name: string; count: number }> | null }
   /** Camada da modal: deve ficar ACIMA de qualquer modal aberta que a originou (padrão da Modal: 200) */
   zIndex?: number
 }
@@ -20,6 +22,7 @@ export default function DeleteConfirmModal({
   onConfirm, 
   isLoading = false,
   recordName,
+  cascade,
   zIndex
 }: DeleteConfirmModalProps) {
   const { t } = useI18n()
@@ -41,6 +44,23 @@ export default function DeleteConfirmModal({
             <p className="text-xs opacity-80">{t('runtime.delete_confirm.delete_record_desc').replace('{name}', recordName ? `"${recordName}"` : t('runtime.delete_confirm.title'))}</p>
           </div>
         </div>
+
+        {cascade?.loading && (
+          <p className="flex items-center gap-2 text-xs text-neutral-500"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.delete_confirm.cascade_loading')}</p>
+        )}
+        {cascade && !cascade.loading && cascade.items === null && (
+          <p className="text-xs font-bold text-amber-600 dark:text-amber-400">{t('runtime.delete_confirm.cascade_unknown')}</p>
+        )}
+        {cascade && !cascade.loading && cascade.items && cascade.items.length > 0 && (
+          <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-2">
+            <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{t('runtime.delete_confirm.cascade_title')}</p>
+            <ul className="text-xs text-neutral-700 dark:text-neutral-300 space-y-1">
+              {cascade.items.map(i => (
+                <li key={i.name} className="flex justify-between gap-4"><span>{i.name}</span><span className="font-black">{i.count}</span></li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="flex items-center justify-end gap-3 pt-2">
           <button 

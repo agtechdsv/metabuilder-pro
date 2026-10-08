@@ -29,6 +29,8 @@ export interface ViewActionModalsProps {
   editingWidget: any
   handleSave: (payload: any) => Promise<void>
   handleDelete: (row: any) => Promise<void>
+  /** exclusão em cascata: o que será apagado junto (items null = não foi possível contar) */
+  cascadeSummary?: { loading: boolean; items: Array<{ name: string; count: number }> | null }
   handleSaveWidgetRuntime: (widget: any) => Promise<void>
   /** grupos do dashboard (o editor do widget escolhe um) */
   analyticsGroups?: { id: string; title: string }[]
@@ -87,6 +89,7 @@ export function ViewActionModals({
   editingWidget,
   handleSave,
   handleDelete,
+  cascadeSummary,
   handleSaveWidgetRuntime,
   analyticsGroups,
   analyticsRelations,
@@ -184,6 +187,7 @@ export function ViewActionModals({
           setIsDeleteModalOpen(false)
         }}
         isLoading={isProcessing}
+        cascade={cascadeSummary}
         recordName={resolveRecordLabel(selectedRow, findModelByTable(project?.models, modelName), formHeaderSubtitleField)}
       />
 

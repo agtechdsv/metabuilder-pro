@@ -4,6 +4,8 @@ import { readKey, isUntouchedAutoDetail } from '@/lib/detailRelations'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
+import { findBlockingTable, isForeignKeyError } from '@/lib/fkError'
+import { planCascade, cascadeDeleteSql, cascadeCountSql, parseCascadeCounts } from '@/lib/cascadePlan'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 
 interface UseMasterDataProps {
@@ -660,34 +662,85 @@ export function useMasterData({
   }
 
   const getFkErrorMessage = (errorMsg: string, fallbackMsg: string) => {
-    const matches = [...errorMsg.matchAll(/table "([^"]+)"/g)]
-    if (matches.length > 0) {
-      const referencedTable = matches[matches.length - 1][1]
-      let friendlyName = referencedTable
-      if (project.models) {
-        const tModel = project.models.find((m: any) => m.db_table_name?.toLowerCase() === referencedTable?.toLowerCase())
-        if (tModel?.name) friendlyName = tModel.name
-      }
+    const models: any[] = project.models || []
+    const referencedTable = findBlockingTable(errorMsg, models.map((m: any) => m.db_table_name), modelName)
+    if (referencedTable) {
+      const tModel = models.find((m: any) => m.db_table_name?.toLowerCase() === referencedTable.toLowerCase())
+      const friendlyName = tModel?.name || referencedTable
       return t('runtime.delete_fk_error_with_table', 'Não é possível excluir. Este registro está sendo usado em: {table}').replace('{table}', friendlyName)
     }
     return fallbackMsg
+  }
+
+  const resolvePkKey = (row: any): string => {
+    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
+    if (row[primaryKeyName]) return primaryKeyName
+    if (row[cleanPk]) return cleanPk
+    if (row[primaryKeyName?.toUpperCase()]) return primaryKeyName.toUpperCase()
+    if (row[primaryKeyName?.toLowerCase()]) return primaryKeyName.toLowerCase()
+    if (row.ID) return 'ID'
+    if (row.id) return 'id'
+    return cleanPk
+  }
+
+  const isCascadeDelete = () => !!buttonsConfig?.find((b: any) => b.id === 'delete')?.cascade_delete
+
+  /**
+   * Com a exclusão em cascata ligada: o que será apagado junto com o registro (tabela e quantidade de cada filha).
+   * [] = não há registros filhos; null = não foi possível contar (a confirmação avisa só que é em cascata).
+   */
+  const getCascadeSummary = async (row: any): Promise<Array<{ table: string; name: string; count: number }> | null> => {
+    if (!row || !isCascadeDelete() || !projectRelations || projectRelations.length === 0) return []
+    const pkKey = resolvePkKey(row)
+    const rootTable = row.__model_name || modelName
+    const models: any[] = project?.models || []
+    const sql = cascadeCountSql(planCascade({ models, relations: projectRelations, rootTable, pkKey, pkValue: row[pkKey] }))
+    if (!sql) return []
+
+    const queryId = crypto.randomUUID()
+    const rows = await new Promise<any[] | null>((resolve) => {
+      const isTemp = !tunnelChannel || !isTunnelReady
+      const channel = isTemp ? wrapChannelWithChunking(supabase.channel(`tunnel:${project.id}`)) : tunnelChannel
+      let settled = false
+      const finish = (value: any[] | null) => {
+        if (settled) return
+        settled = true
+        try {
+          const bindings = channel.bindings?.broadcast
+          if (Array.isArray(bindings)) channel.bindings.broadcast = bindings.filter((b: any) => b.callback !== onResult)
+          if (isTemp) { channel.unsubscribe(); supabase.removeChannel(channel) }
+        } catch (_) {}
+        resolve(value)
+      }
+      const onResult = (payload: any) => {
+        if (payload.payload?.queryId !== queryId) return
+        finish(payload.payload.success ? (payload.payload.data || []) : null)
+      }
+      channel.on('broadcast', { event: `query_result_${queryId}` }, onResult)
+      const send = () => channel.send({
+        type: 'broadcast',
+        event: 'sql_query',
+        payload: {
+          queryId, table: rootTable, action: 'execute_custom', query: sql, sql, params: [],
+          token: project?.secret_token || '', schemaName: getModelSchemaName(project, rootTable), slug: project?.slug,
+        },
+      })
+      if (isTemp) channel.subscribe((status: string) => { if (status === 'SUBSCRIBED') send() })
+      else send()
+      setTimeout(() => finish(null), 6000)
+    })
+    if (!rows) return null
+    return parseCascadeCounts(rows).map(c => {
+      const m = models.find((x: any) => x.db_table_name?.toLowerCase() === c.table.toLowerCase())
+      return { ...c, name: m?.name || c.table }
+    })
   }
 
   const handleDelete = async () => {
     if (!selectedRow) return
     setIsProcessing(true)
 
-    const cleanPk = (primaryKeyName || 'id').split('.').pop() || 'id'
-    
-    let actualPkKey = primaryKeyName || cleanPk
-    if (selectedRow[primaryKeyName]) actualPkKey = primaryKeyName
-    else if (selectedRow[cleanPk]) actualPkKey = cleanPk
-    else if (selectedRow[primaryKeyName?.toUpperCase()]) actualPkKey = primaryKeyName.toUpperCase()
-    else if (selectedRow[primaryKeyName?.toLowerCase()]) actualPkKey = primaryKeyName.toLowerCase()
-    else if (selectedRow.ID) actualPkKey = 'ID'
-    else if (selectedRow.id) actualPkKey = 'id'
-    else actualPkKey = cleanPk
-
+    const actualPkKey = resolvePkKey(selectedRow)
     const pkValue = selectedRow[actualPkKey]
 
     try {
@@ -697,59 +750,13 @@ export function useMasterData({
       const btnDelete = buttonsConfig?.find((b: any) => b.id === 'delete')
       const cascade = btnDelete?.cascade_delete
 
-      let queries: string[] = []
-      
+      const rootPk = `${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`
+      const queries: string[] = []
       if (cascade && projectRelations && projectRelations.length > 0) {
-        // Opção 2 (Santo Graal) - Gera os deletes bottom-up usando subqueries.
-        // Mapeia todos os relacionamentos para encontrar a hierarquia (níveis).
-        const childRelations = new Map<string, { table: string, fk: string, pk: string }[]>()
-        
-        projectRelations.forEach((r: any) => {
-           const parentModelDef = project?.models?.find((m: any) => m.id === r.master_model_id || m.id === r.to_model_id)
-           const childModelDef = project?.models?.find((m: any) => m.id === r.detail_model_id || m.id === r.from_model_id)
-           if (parentModelDef && childModelDef) {
-              const pTable = (parentModelDef.db_table_name || parentModelDef.name).toLowerCase()
-              const cTable = (childModelDef.db_table_name || childModelDef.name).toLowerCase()
-              
-              const parentPkField = parentModelDef.fields?.find((f: any) => f.id === (r.referenced_column_id || r.to_field_id))
-              const childFkField = childModelDef.fields?.find((f: any) => f.id === (r.foreign_column_id || r.from_field_id))
-              
-              if (parentPkField && childFkField) {
-                 if (!childRelations.has(pTable)) childRelations.set(pTable, [])
-                 childRelations.get(pTable)!.push({
-                    table: childModelDef.db_table_name || childModelDef.name,
-                    fk: childFkField.db_column_name || childFkField.name,
-                    pk: parentPkField.db_column_name || parentPkField.name
-                 })
-              }
-           }
-        })
-
-        // Build a dependency tree starting from actualModelName
-        const order: string[] = []
-        const buildQueries = (parentTbl: string, parentCondition: string, path: string[]) => {
-           const safeParentTbl = (parentTbl || '').toLowerCase()
-           if (!safeParentTbl || path.includes(safeParentTbl)) return // Cycle detection
-           
-           const currentPath = [...path, safeParentTbl]
-           const children = childRelations.get(safeParentTbl) || []
-           
-           for (const child of children) {
-              if (!child.table) continue
-              const childCondition = `${child.fk} IN (SELECT ${child.pk} FROM ${parentTbl} WHERE ${parentCondition})`
-              buildQueries(child.table, childCondition, currentPath)
-              queries.push(`DELETE FROM ${child.table} WHERE ${childCondition}`)
-           }
-        }
-        
-        buildQueries(actualModelName, `${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`, [])
-        
-        // Filter unique queries (we only need to delete from a path once if it's the same condition)
-        queries = Array.from(new Set(queries))
+        queries.push(...cascadeDeleteSql(planCascade({ models: project?.models || [], relations: projectRelations, rootTable: actualModelName, pkKey: actualPkKey, pkValue })))
       }
+      queries.push(`DELETE FROM ${actualModelName} WHERE ${rootPk}`)
 
-      queries.push(`DELETE FROM ${actualModelName} WHERE ${actualPkKey} = '${String(pkValue).replace(/'/g, "''")}'`)
-      
       const rawQuery = queries.join('; ')
 
       const result = await new Promise<{ success: boolean; error?: string; rowsAffected?: number }>((resolve) => {
@@ -828,7 +835,7 @@ export function useMasterData({
         toast(t('runtime.delete_success', 'Registro excluído com sucesso!'), 'success')
       } else {
         let errorMsg = result.error || 'Erro ao excluir o registro.'
-        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira') || errorMsg.includes('ORA-02292')) {
+        if (isForeignKeyError(errorMsg)) {
           const defaultFkError = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
           errorMsg = getFkErrorMessage(errorMsg, defaultFkError)
         }
@@ -841,5 +848,5 @@ export function useMasterData({
     }
   }
 
-  return { handleSave, handleDelete, getFkErrorMessage }
+  return { handleSave, handleDelete, getFkErrorMessage, getCascadeSummary }
 }

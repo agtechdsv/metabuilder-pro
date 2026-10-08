@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
 import { invalidateRelOptions } from '@/lib/relationalOptionsCache'
+import { isForeignKeyError } from '@/lib/fkError'
 import { findParentJoin, getParentKeyValue, getPrimaryKeyColumn, readKey, type ParentJoin } from '@/lib/detailRelations'
 import { isNumericDbType, parseNumericLoose } from '@/lib/valueCoercion'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
@@ -639,7 +640,7 @@ export function useDetailData({
 
       } else {
         let errorMsg = result.error || 'Erro ao excluir o registro.'
-        if (errorMsg.includes('foreign key constraint') || errorMsg.includes('violates foreign key') || errorMsg.includes('chave estrangeira') || errorMsg.includes('ORA-02292')) {
+        if (isForeignKeyError(errorMsg)) {
           const defaultFkError = t('runtime.delete_fk_error', 'Não é possível excluir este registro pois ele possui relacionamentos ativos (chave estrangeira).')
           errorMsg = getFkErrorMessage(errorMsg, defaultFkError)
         }

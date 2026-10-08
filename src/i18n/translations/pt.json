@@ -929,7 +929,10 @@
       "are_you_sure": "Você tem certeza?",
       "confirm_delete": "Confirmar Exclusão",
       "deleting": "Excluindo...",
-      "delete_record_desc": "Você está prestes a excluir {name}."
+      "delete_record_desc": "Você está prestes a excluir {name}.",
+      "cascade_loading": "Verificando registros vinculados...",
+      "cascade_title": "Os registros vinculados abaixo também serão excluídos:",
+      "cascade_unknown": "A exclusão em cascata está ativa: os registros vinculados a este também serão excluídos."
     },
     "record_drawer": {
       "new_item": "Novo Item",

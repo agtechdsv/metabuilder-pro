@@ -929,7 +929,10 @@
       "are_you_sure": "Are you sure?",
       "confirm_delete": "Confirm Delete",
       "deleting": "Deleting...",
-      "delete_record_desc": "You are about to delete {name}."
+      "delete_record_desc": "You are about to delete {name}.",
+      "cascade_loading": "Checking linked records...",
+      "cascade_title": "The linked records below will also be deleted:",
+      "cascade_unknown": "Cascade delete is on: records linked to this one will also be deleted."
     },
     "record_drawer": {
       "new_item": "New Item",

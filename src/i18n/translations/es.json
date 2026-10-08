@@ -1008,7 +1008,10 @@
       "are_you_sure": "¿Estás seguro?",
       "confirm_delete": "Confirmar Eliminación",
       "deleting": "Eliminando...",
-      "delete_record_desc": "Estás a punto de eliminar {name}."
+      "delete_record_desc": "Estás a punto de eliminar {name}.",
+      "cascade_loading": "Verificando registros vinculados...",
+      "cascade_title": "Los registros vinculados a continuación también se eliminarán:",
+      "cascade_unknown": "La eliminación en cascada está activa: los registros vinculados a este también se eliminarán."
     },
     "record_drawer": {
       "new_item": "Nuevo Ítem",

@@ -194,6 +194,7 @@ export default function ViewPageContent({
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit' | 'view'>('create')
   const [selectedRow, setSelectedRow] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [cascadeSummary, setCascadeSummary] = useState<{ loading: boolean; items: Array<{ name: string; count: number }> | null }>({ loading: false, items: [] })
   const [isProcessing, setIsProcessing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [relationalRefreshKey, setRelationalRefreshKey] = useState(0)
@@ -408,7 +409,7 @@ export default function ViewPageContent({
     }
   }
 
-  const { handleSave, handleDelete, getFkErrorMessage } = useMasterData({
+  const { handleSave, handleDelete, getFkErrorMessage, getCascadeSummary } = useMasterData({
     project,
     modelName,
     primaryKeyName,
@@ -572,7 +573,12 @@ export default function ViewPageContent({
 
   const handleOpenDelete = (row: any) => {
     setSelectedRow(row)
+    setCascadeSummary({ loading: true, items: null })
     setIsDeleteModalOpen(true)
+    // exclusão em cascata: conta o que será apagado junto, para o usuário ver antes de confirmar
+    getCascadeSummary(row)
+      .then(items => setCascadeSummary({ loading: false, items }))
+      .catch(() => setCascadeSummary({ loading: false, items: null }))
   }
 
   return (
@@ -742,6 +748,7 @@ export default function ViewPageContent({
         editingWidget={editingWidget}
         handleSave={handleSave}
         handleDelete={handleDelete}
+        cascadeSummary={cascadeSummary}
         handleSaveWidgetRuntime={handleSaveWidgetRuntime}
         cleanFormFields={cleanFormFields}
         modelName={modelName}
