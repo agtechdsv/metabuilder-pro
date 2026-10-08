@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { buildViewProps } from '@/lib/build-view-props'
+import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 
 /**
  * GET /api/runtime/slot-props
@@ -25,6 +26,11 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Só quem pode usar o projeto (membro, usuário final com sessão assinada ou visitante de projeto aberto) recebe a estrutura da tela:
+    // antes qualquer pessoa, sem login, lia tabelas, colunas e configuração de qualquer projeto conhecendo o id.
+    const actor = await authorizeProjectActor(request, projectId)
+    if (!actor) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
     // Usamos service role server-side — nunca exposta ao browser
     const supabase = createClient(

@@ -1,6 +1,7 @@
 import { AppAST } from '../ast'
 import { generateJavaFrontend } from './java-spring-frontend'
 import { generateSpringBootBackend, generateRootReadme } from './java-spring-backend'
+import { assertPolicySupported } from '../layers/access'
 
 /**
  * java-spring-project.ts — Orquestrador do modo java-spring (Módulo 4)
@@ -11,6 +12,9 @@ import { generateSpringBootBackend, generateRootReadme } from './java-spring-bac
  *   README.md  → Documentação master raiz do projeto full-stack
  */
 export function generateJavaSpringProject(ast: AppAST): Map<string, string> {
+  // acesso por linha configurado no projeto não é aplicado pelo backend Java: recusa em vez de exportar sem a proteção
+  assertPolicySupported(ast)
+
   const files = new Map<string, string>()
 
   // BLOCO 1 — Frontend Next.js (modo REST client)

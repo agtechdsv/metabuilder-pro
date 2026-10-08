@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from '@/lib/tunnel/server'
 import { viewerFromSession } from '@/lib/bi/serverQuery'
 import { cleanRowPolicy, resolveAccess, type AccessPayload, type TableAccessConfig } from './policy'
+import { cleanAuditConfig, effectiveAudit } from './audit'
 
 /**
  * Acesso a dados do usuário final, lado do servidor: lê a configuração de cada tabela do projeto (permissões e política
@@ -22,11 +23,20 @@ export async function loadTableAccess(
   if (hit && hit.until > now) return hit.configs
 
   const client = deps.client ?? serviceClient()
-  let data: any[] | null
-  let error: { code?: string; message: string } | null
-  ;({ data, error } = (await client.from('models').select('db_table_name, can_create, can_update, can_delete, row_policy').eq('project_id', projectId)) as any)
-  // coluna da política ainda não criada no banco (migração pendente): vale só as permissões da tabela
-  if (error && error.code === '42703') ({ data, error } = (await client.from('models').select('db_table_name, can_create, can_update, can_delete').eq('project_id', projectId)) as any)
+  // As colunas row_policy e audit_config podem ainda não existir no banco (migração pendente): tenta com tudo e vai tirando o que falta
+  const BASE = 'db_table_name, can_create, can_update, can_delete'
+  const variants = [
+    `${BASE}, row_policy, audit_config, fields(db_column_name)`,
+    `${BASE}, row_policy, fields(db_column_name)`,
+    `${BASE}, audit_config, fields(db_column_name)`,
+    `${BASE}, fields(db_column_name)`,
+  ]
+  let data: any[] | null = null
+  let error: { code?: string; message: string } | null = null
+  for (const cols of variants) {
+    ;({ data, error } = (await client.from('models').select(cols).eq('project_id', projectId)) as any)
+    if (!error || error.code !== '42703') break
+  }
   if (error) throw new Error(`Não foi possível ler as permissões das tabelas: ${error.message}`)
 
   const configs: TableAccessConfig[] = ((data as any[]) || [])
@@ -37,6 +47,7 @@ export async function loadTableAccess(
       canUpdate: m.can_update !== false,
       canDelete: m.can_delete !== false,
       policy: cleanRowPolicy(m.row_policy),
+      audit: effectiveAudit(cleanAuditConfig(m.audit_config), ((m.fields as any[]) || []).map(f => String(f.db_column_name || '')).filter(Boolean)),
     }))
   cache.set(projectId, { configs, until: now + TTL_MS })
   if (cache.size > 200) for (const [k, c] of cache) if (c.until < now) cache.delete(k)

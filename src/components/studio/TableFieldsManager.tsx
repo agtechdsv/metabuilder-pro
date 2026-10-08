@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RowPolicyEditor } from './RowPolicyEditor'
+import { AuditEditor } from './AuditEditor'
+import { cleanAuditConfig, effectiveAudit, type AuditConfig } from '@/lib/rowPolicy/audit'
 import { cleanRowPolicy, type RowPolicyRule } from '@/lib/rowPolicy/policy'
 
 interface TableFieldsManagerProps {
@@ -59,6 +61,9 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
   // acesso por linha do usuário final (models.row_policy); `rowPolicyDirty` evita gravar a coluna quando ninguém mexeu nela
   const [rowRules, setRowRules] = useState<RowPolicyRule[]>([])
   const [rowPolicyDirty, setRowPolicyDirty] = useState(false)
+  // auditoria (models.audit_config); null = vale o reconhecimento pelo nome das colunas
+  const [auditCfg, setAuditCfg] = useState<AuditConfig | null>(null)
+  const [auditDirty, setAuditDirty] = useState(false)
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdit>>({})
 
   // Modal de Migração de Schema
@@ -122,6 +127,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       setModelCanDelete(currentModel.can_delete !== false)
       setRowRules(cleanRowPolicy(currentModel.row_policy)?.rules || [])
       setRowPolicyDirty(false)
+      setAuditCfg(cleanAuditConfig(currentModel.audit_config))
+      setAuditDirty(false)
     }
 
     fetchFields()
@@ -142,15 +149,18 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           can_update: modelCanUpdate,
           can_delete: modelCanDelete,
           ...(rowPolicyDirty ? { row_policy: cleanRowPolicy({ rules: rowRules }) } : {}),
+          ...(auditDirty ? { audit_config: cleanAuditConfig(auditCfg) } : {}),
         })
         .eq('id', selectedModelId)
 
       if (modelErr) {
         // coluna da política ainda não criada no banco: explica o que fazer em vez de uma mensagem técnica
         if (rowPolicyDirty && (modelErr as any).code === '42703') throw new Error(t('dashboard.projects.studio.metadata.row_policy_migration'))
+        if (auditDirty && (modelErr as any).code === '42703') throw new Error(t('dashboard.projects.studio.metadata.audit_migration'))
         throw modelErr
       }
       setRowPolicyDirty(false)
+      setAuditDirty(false)
 
       // 2. Update modified fields
       const promises = fields.map(f => {
@@ -441,6 +451,16 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                   </div>
                 </div>
 
+                {/* Auditoria: quem e quando criou/alterou cada registro (preenchida pelo servidor) */}
+                <AuditEditor
+                  project={project}
+                  models={models}
+                  tableName={String(models.find(m => m.id === selectedModelId)?.db_table_name || '')}
+                  columns={fields.map(f => String(f.db_column_name)).filter(Boolean)}
+                  value={auditCfg}
+                  onChange={cfg => { setAuditCfg(cfg); setAuditDirty(true) }}
+                />
+
                 {/* Acesso por linha do usuário final */}
                 <RowPolicyEditor
                   project={project}
@@ -448,6 +468,10 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                   columns={fields.map(f => String(f.db_column_name)).filter(Boolean)}
                   rules={rowRules}
                   onChange={rules => { setRowRules(rules); setRowPolicyDirty(true) }}
+                  createdBy={(() => {
+                    const eff = effectiveAudit(auditCfg, fields.map(f => String(f.db_column_name)).filter(Boolean))
+                    return eff?.columns.createdBy ? { column: eff.columns.createdBy, by: eff.by } : undefined
+                  })()}
                 />
               </div>
 

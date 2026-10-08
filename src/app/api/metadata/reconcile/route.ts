@@ -19,6 +19,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createSessionClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -40,6 +41,14 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Só quem tem acesso ao projeto no MetaBuilder (a política de leitura de "projects" só o devolve a quem tem) altera os campos dele:
+    // antes qualquer pessoa, sem login, podia mudar o tipo de qualquer campo conhecendo o id.
+    const sessionClient = await createSessionClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+    const { data: visible } = await sessionClient.from('projects').select('id').eq('id', projectId).maybeSingle()
+    if (!visible) return NextResponse.json({ error: 'Não autorizado.' }, { status: 403 })
 
     // Verifica se o projeto existe (guard básico)
     const { data: project, error: projectError } = await supabase

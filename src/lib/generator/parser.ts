@@ -1,3 +1,5 @@
+import { cleanRowPolicy } from '../rowPolicy/policy'
+import { cleanAuditConfig, effectiveAudit } from '../rowPolicy/audit'
 import {
   AppAST,
   BackendStack,
@@ -1624,6 +1626,11 @@ export function parseMetaBuilderJSON(
       dbTable: rm.db_table_name,
       dbSchema: rm.db_schema_name || 'public',
       fields,
+      canCreate: rm.can_create !== false,
+      canUpdate: rm.can_update !== false,
+      canDelete: rm.can_delete !== false,
+      rowPolicy: cleanRowPolicy(rm.row_policy),
+      audit: effectiveAudit(cleanAuditConfig(rm.audit_config), fields.map(f => f.dbColumn)),
     }
   })
 

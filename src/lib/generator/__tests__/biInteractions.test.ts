@@ -1,3 +1,4 @@
+import { writeGeneratedAccess } from './generatedAccess'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -47,6 +48,7 @@ describe('ação de servidor gerada: filtro cruzado, drill e registros', () => {
     writeFileSync(join(dir, 'bi.ts'), files.get('app/actions/bi.ts')!.replace("'@/lib/session-server'", "'./session'"))
     writeFileSync(join(dir, 'session.ts'), 'export async function getSessionUser() { return null }\n')
     writeFileSync(join(dir, 'bi-registry.ts'), files.get('app/actions/bi-registry.ts')!)
+    writeGeneratedAccess(dir, files)
     writeFileSync(
       join(dir, 'db.ts'),
       "export async function query(sql: string) { (globalThis as any).__sqls.push(sql); return { rows: (globalThis as any).__rows ?? [{ bi_name: 'x', bi_value: 1 }] } }\n",

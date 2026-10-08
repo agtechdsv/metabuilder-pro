@@ -5,6 +5,8 @@ import { Lock, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useI18n } from '@/i18n/I18nContext'
 import type { RowPolicyRule, PolicyOp } from '@/lib/rowPolicy/policy'
+import type { RlsSource } from '@/lib/bi/access'
+import { useAuthTable } from './useAuthTable'
 
 /**
  * Acesso por linha de UMA tabela (Dados & Schemas). As regras valem para o usuário final em todas as telas, no BI e nas
@@ -17,6 +19,8 @@ interface Props {
   columns: string[]
   rules: RowPolicyRule[]
   onChange: (rules: RowPolicyRule[]) => void
+  /** coluna de "criado por" da auditoria desta tabela (se houver): habilita o atalho "só os registros que eu criei" */
+  createdBy?: { column: string; by: { source: RlsSource; attr?: string } }
 }
 
 const t0 = 'dashboard.projects.studio.metadata.row_policy_'
@@ -30,13 +34,12 @@ function Select({ value, onChangeValue, children }: { value: string; onChangeVal
 let seq = 0
 const newId = () => `rp_${Date.now().toString(36)}_${seq++}`
 
-export function RowPolicyEditor({ project, models, columns, rules, onChange }: Props) {
+export function RowPolicyEditor({ project, models, columns, rules, onChange, createdBy }: Props) {
   const { t } = useI18n()
   const supabase = useMemo(() => createClient(), [])
 
   // tabela de usuários do login: de onde vêm os dados do usuário que a regra compara
-  const [authTable, setAuthTable] = useState<string | null | undefined>(undefined)
-  const [authColumns, setAuthColumns] = useState<string[]>([])
+  const { table: authTable, columns: authColumns } = useAuthTable(project, models)
   const [relatedCols, setRelatedCols] = useState<Record<string, string[]>>({})
 
   const colsOfTable = async (table: string): Promise<string[]> => {
@@ -45,22 +48,6 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange }: P
     const { data } = await supabase.from('fields').select('db_column_name').eq('model_id', model.id)
     return ((data as any[]) || []).map(f => String(f.db_column_name)).filter(Boolean).sort()
   }
-
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      const { data } = await supabase.from('project_auth_config').select('db_table_name').eq('project_id', project.id).maybeSingle()
-      const table = (data as any)?.db_table_name || null
-      if (!alive) return
-      setAuthTable(table)
-      if (table) {
-        const cols = await colsOfTable(table)
-        if (alive) setAuthColumns(cols)
-      }
-    })()
-    return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id])
 
   // colunas das tabelas relacionadas escolhidas (carregadas sob demanda)
   const wanted = Array.from(new Set(rules.map(r => r.related?.table).filter(Boolean) as string[]))
@@ -87,13 +74,25 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange }: P
           </span>
           <p className="text-[11px] text-neutral-500 leading-relaxed max-w-3xl">{t(t0 + 'desc')}</p>
         </div>
-        <button
-          type="button"
-          onClick={add}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all"
-        >
-          <Plus className="w-3.5 h-3.5" /> {t(t0 + 'add')}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          {createdBy && !rules.some(r => r.column.toLowerCase() === createdBy.column.toLowerCase() && r.op === 'eq') && (
+            <button
+              type="button"
+              title={t('dashboard.projects.studio.metadata.audit_mine_hint')}
+              onClick={() => onChange([...rules, { id: newId(), column: createdBy.column, op: 'eq', source: createdBy.by.source, ...(createdBy.by.attr ? { attr: createdBy.by.attr } : {}) }])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-all"
+            >
+              {t('dashboard.projects.studio.metadata.audit_mine_rule')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={add}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> {t(t0 + 'add')}
+          </button>
+        </div>
       </div>
 
       {rules.length === 0 && <p className="text-[11px] text-neutral-400">{t(t0 + 'none')}</p>}

@@ -1,6 +1,33 @@
 import { AppAST, ModelNode, FieldNode } from '../ast'
 import { toPascalCase } from './routes/helpers'
 
+
+/**
+ * Permissões da tabela (Dados & Schemas) nos bancos em que as actions não consultam a configuração em tempo de execução
+ * (MySQL, SQL Server e Supabase): como são fixas, a action de uma operação desligada já nasce recusando.
+ * No PostgreSQL e no Oracle a conferência é feita por app/actions/access (junto com as regras por linha).
+ */
+function applyStaticTableFlags(content: string, model: ModelNode): string {
+  const messages: Record<string, string> = {
+    create: 'Esta tabela não permite criar registros.',
+    update: 'Esta tabela não permite editar registros.',
+    delete: 'Esta tabela não permite excluir registros.',
+  }
+  const off: Array<'create' | 'update' | 'delete'> = []
+  if (model.canCreate === false) off.push('create')
+  if (model.canUpdate === false) off.push('update')
+  if (model.canDelete === false) off.push('delete')
+  let out = content
+  for (const kind of off) {
+    const start = out.indexOf(`export async function ${kind}${model.name}(`)
+    if (start < 0) continue
+    const open = out.indexOf('{\n', start)
+    if (open < 0) continue
+    out = out.slice(0, open + 2) + `  throw new Error(${JSON.stringify(messages[kind])})\n` + out.slice(open + 2)
+  }
+  return out
+}
+
 export function generateActions(ast: AppAST, files: Map<string, string>) {
   // Configuração global de banco baseada na stack escolhida
   const dbConfigContent = ast.dbStack === 'supabase' 
@@ -26,6 +53,8 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
           : ast.dbStack === 'sqlserver'
             ? generateSqlServerActions(model, ast.models)
             : generatePgActions(model, ast.models)
+
+    if (ast.dbStack !== 'postgres' && ast.dbStack !== 'oracle') actionContent = applyStaticTableFlags(actionContent, model)
 
     // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido, CLIENTES vs Clientes)
     const aliases = new Set<string>()
@@ -606,6 +635,20 @@ function generateParsePayloadCode(model: ModelNode, dbStack: string = 'postgres'
   return `const allowedColumns = new Set(${allowedColsCode})
 const columnTypes: Record<string, string> = ${colTypesCode}
 
+/** Nome de coluna vindo do navegador: só vale se for uma coluna desta tabela (nunca vai direto para o SQL). */
+function safeColumn(name: unknown): string {
+  const wanted = String(name ?? '')
+  const found = Array.from(allowedColumns).find(c => c === wanted || c.toLowerCase() === wanted.toLowerCase())
+  if (!found) throw new Error('Coluna inválida: ' + wanted.replace(/[^A-Za-z0-9_]/g, ''))
+  return found
+}
+
+/** Limite de linhas vindo do navegador: inteiro positivo (nunca vai direto para o SQL). */
+function safeLimit(n: unknown): number | null {
+  const v = Number(n)
+  return Number.isInteger(v) && v > 0 ? Math.min(v, 100000) : null
+}
+
 function parsePayload(formData: FormData | Record<string, any>): Record<string, any> {
   const rawData: Record<string, any> = (formData && typeof (formData as any).entries === 'function')
     ? Object.fromEntries((formData as FormData).entries())
@@ -756,6 +799,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
     ? model.dbTable.split('.').map((p: string) => `"${p}"`).join('.')
     : `"${model.dbTable}"`
   const modelTableLower = (model.dbTable || model.name).toLowerCase()
+  const accessTable = (model.dbTable || model.name).split('.').pop() as string
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
 
   const childRefs = getReferencingFields(model, allModels)
@@ -771,6 +815,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+import { secureSelect, secureWrite } from './access'
 
 ${generateParsePayloadCode(model)}
 
@@ -813,11 +858,11 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   const params: any[] = []
   if (opts?.dateField && opts.startDate) {
     params.push(opts.startDate)
-    conditions.push(\`"\${opts.dateField}" >= $\${params.length}\`)
+    conditions.push(\`"\${safeColumn(opts.dateField)}" >= $\${params.length}\`)
   }
   if (opts?.dateField && opts.endDate) {
     params.push(opts.endDate + 'T23:59:59')
-    conditions.push(\`"\${opts.dateField}" <= $\${params.length}\`)
+    conditions.push(\`"\${safeColumn(opts.dateField)}" <= $\${params.length}\`)
   }
   if (opts?.filters && typeof opts.filters === 'object') {
     const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search', 'mode', 'preview', 'return_to', 'parent_id', 'id'])
@@ -828,8 +873,10 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
 
       if (key.includes('.')) {
         const [targetTable, targetCol] = key.split('.')
-        const tTable = targetTable.toLowerCase()
-        const tCol = targetCol.toLowerCase()
+        const tTable = String(targetTable || '').toLowerCase()
+        const tCol = String(targetCol || '').toLowerCase()
+        // nomes que vão para o SQL: só letras, números e _
+        if (!/^[a-z0-9_]+$/.test(tTable) || !/^[a-z0-9_]+$/.test(tCol)) continue
         if (tTable === '${modelTableLower}' || tTable.replace(/s$/, '') === '${modelTableLower}'.replace(/s$/, '')) {
           params.push(rawVal)
           conditions.push(\`"\${tCol}"::text = $\${params.length}::text\`)
@@ -847,6 +894,7 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
         }
       } else if (key.endsWith('_filter')) {
         const col = key.slice(0, -7)
+        if (!allowedColumns.has(col)) continue
         params.push('%' + rawVal + '%')
         conditions.push(\`"\${col}"::text ILIKE $\${params.length}\`)
       } else if (allowedColumns.has(key)) {
@@ -856,23 +904,25 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
     }
   }
   const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
-  const limitClause = opts?.limit ? \` LIMIT \${opts.limit}\` : ''
-  const res = await query(\`SELECT * FROM ${tableRef}\${where} ORDER BY \"${pk}\" DESC\${limitClause}\`, params)
+  const lim = safeLimit(opts?.limit)
+  const limitClause = lim ? \` LIMIT \${lim}\` : ''
+  const res = await query(await secureSelect(\`SELECT * FROM ${tableRef}\${where} ORDER BY \"${pk}\" DESC\${limitClause}\`), params)
   return res.rows
 }
 
 export async function get${model.name}ById(id: string) {
-  const res = await query('SELECT * FROM ${tableRef} WHERE "${pk}" = $1', [id])
+  const res = await query(await secureSelect('SELECT * FROM ${tableRef} WHERE "${pk}" = $1'), [id])
   return res.rows[0] || null
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const res = await query(\`SELECT * FROM ${tableRef} WHERE "\${field}" = $1 ORDER BY "${pk}" DESC\`, [value])
+  const res = await query(await secureSelect(\`SELECT * FROM ${tableRef} WHERE \"\${safeColumn(field)}\" = $1 ORDER BY \"${pk}\" DESC\`), [value])
   return res.rows
 }
 
 export async function create${model.name}(formData: FormData | Record<string, any>) {
-  const clean = parsePayload(formData)
+  // permissão da tabela e valores gravados dentro da regra de acesso (ver app/actions/access)
+  const clean = (await secureWrite({ action: 'insert', table: ${JSON.stringify(accessTable)}, data: parsePayload(formData), query: async (q) => (await query(q)).rows })) || {}
   const keys = Object.keys(clean)
   if (keys.length === 0) return null
   const values = Object.values(clean)
@@ -885,12 +935,14 @@ export async function create${model.name}(formData: FormData | Record<string, an
 }
 
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
-  const clean = parsePayload(formData)
-  const keys = Object.keys(clean)
-  if (keys.length === 0) {
+  const parsed = parsePayload(formData)
+  if (Object.keys(parsed).length === 0) {
     revalidatePath('/${model.name.toLowerCase()}')
     return
   }
+  // permissão da tabela, valores gravados e linha atingida dentro da regra de acesso (ver app/actions/access)
+  const clean = (await secureWrite({ action: 'update', table: ${JSON.stringify(accessTable)}, data: parsed, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => (await query(q)).rows })) || {}
+  const keys = Object.keys(clean)
   const values = Object.values(clean)
   const setString = keys.map((k, i) => \`"\${k}" = $\${i + 1}\`).join(', ')
   
@@ -900,6 +952,8 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 
 export async function delete${model.name}(id: string) {
   try {
+    // permissão da tabela e linha dentro da regra de acesso, ANTES de limpar as dependências (ver app/actions/access)
+    await secureWrite({ action: 'delete', table: ${JSON.stringify(accessTable)}, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => (await query(q)).rows })
 ${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM ${tableRef} WHERE "${pk}" = $1', [id])
     revalidatePath('/${model.name.toLowerCase()}')
     return { success: true }
@@ -916,6 +970,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
   const pk = model.fields.find(f => f.isPrimary)?.dbColumn || 'id'
   const allColumns = model.fields.map(f => f.dbColumn).join(', ')
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
+  const accessTable = (model.dbTable || model.name).split('.').pop() as string
   const childRefs = getReferencingFields(model, allModels)
   const childCleanups = childRefs.map(ref => {
     return `    await query('DELETE FROM "${ref.table}" WHERE "${ref.column}" = :id', { id }).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
@@ -924,6 +979,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
+import { secureSelect, secureWrite } from './access'
 
 ${generateParsePayloadCode(model, 'oracle')}
 
@@ -932,11 +988,11 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   const params: Record<string, any> = {}
   if (opts?.dateField && opts.startDate) {
     params['p_startDate'] = opts.startDate
-    conditions.push(\`"\${opts.dateField}" >= :p_startDate\`)
+    conditions.push(\`"\${safeColumn(opts.dateField)}" >= :p_startDate\`)
   }
   if (opts?.dateField && opts.endDate) {
     params['p_endDate'] = opts.endDate + 'T23:59:59'
-    conditions.push(\`"\${opts.dateField}" <= :p_endDate\`)
+    conditions.push(\`"\${safeColumn(opts.dateField)}" <= :p_endDate\`)
   }
   if (opts?.filters && typeof opts.filters === 'object') {
     const ignoredKeys = new Set(['sort_by', 'sort_order', 'page', 'limit', 'embedded', 'view_mode', 'tab', 'layout', 'search', 'mode', 'preview', 'return_to', 'parent_id', 'id'])
@@ -958,23 +1014,25 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
     }
   }
   const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
-  const fetchFirst = opts?.limit ? \` FETCH FIRST \${opts.limit} ROWS ONLY\` : ''
-  const rows = await query(\`SELECT ${allColumns} FROM \"${model.dbTable}\"\${where} ORDER BY \"${pk}\" DESC\${fetchFirst}\`, params)
+  const lim = safeLimit(opts?.limit)
+  const fetchFirst = lim ? \` FETCH FIRST \${lim} ROWS ONLY\` : ''
+  const rows = await query(await secureSelect(\`SELECT ${allColumns} FROM \"${model.dbTable}\"\${where} ORDER BY \"${pk}\" DESC\${fetchFirst}\`), params)
   return rows
 }
 
 export async function get${model.name}ById(id: string) {
-  const rows = await query('SELECT ${allColumns} FROM "${model.dbTable}" WHERE "${pk}" = :id', { id })
+  const rows = await query(await secureSelect('SELECT ${allColumns} FROM "${model.dbTable}" WHERE "${pk}" = :id'), { id })
   return rows[0] || null
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const rows = await query(\`SELECT ${allColumns} FROM "${model.dbTable}" WHERE "\${field}" = :val ORDER BY "${pk}" DESC\`, { val: value })
+  const rows = await query(await secureSelect(\`SELECT ${allColumns} FROM \"${model.dbTable}\" WHERE \"\${safeColumn(field)}\" = :val ORDER BY \"${pk}\" DESC\`), { val: value })
   return rows
 }
 
 export async function create${model.name}(formData: FormData | Record<string, any>) {
-  const clean = parsePayload(formData)
+  // permissão da tabela e valores gravados dentro da regra de acesso (ver app/actions/access)
+  const clean = (await secureWrite({ action: 'insert', table: ${JSON.stringify(accessTable)}, data: parsePayload(formData), query: async (q) => query(q) })) || {}
   const keys = Object.keys(clean)
   if (keys.length === 0) return
   const placeholders = keys.map(k => \`:\${k}\`).join(', ')
@@ -994,6 +1052,8 @@ export async function update${model.name}(id: string, formData: FormData | Recor
     revalidatePath('/${model.name.toLowerCase()}')
     return
   }
+  // permissão da tabela, valores gravados e linha atingida dentro da regra de acesso (ver app/actions/access)
+  await secureWrite({ action: 'update', table: ${JSON.stringify(accessTable)}, data: clean, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => query(q) })
   const setString = keys.map(k => \`"\${k}" = :\${k}\`).join(', ')
   
   await query(\`UPDATE "${model.dbTable}" SET \${setString} WHERE "${pk}" = :id\`, { ...clean, id })
@@ -1002,6 +1062,8 @@ export async function update${model.name}(id: string, formData: FormData | Recor
 
 export async function delete${model.name}(id: string) {
   try {
+    // permissão da tabela e linha dentro da regra de acesso, ANTES de limpar as dependências (ver app/actions/access)
+    await secureWrite({ action: 'delete', table: ${JSON.stringify(accessTable)}, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => query(q) })
 ${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM "${model.dbTable}" WHERE "${pk}" = :id', { id })
     revalidatePath('/${model.name.toLowerCase()}')
     return { success: true }
@@ -1032,15 +1094,16 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   const conditions: string[] = []
   const params: any[] = []
   if (opts?.dateField && opts.startDate) {
-    conditions.push('\`' + opts.dateField + '\` >= ?')
+    conditions.push('\`' + safeColumn(opts.dateField) + '\` >= ?')
     params.push(opts.startDate)
   }
   if (opts?.dateField && opts.endDate) {
-    conditions.push('\`' + opts.dateField + '\` <= ?')
+    conditions.push('\`' + safeColumn(opts.dateField) + '\` <= ?')
     params.push(opts.endDate + 'T23:59:59')
   }
   const where = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : ''
-  const limitClause = opts?.limit ? ' LIMIT ' + opts.limit : ''
+  const lim = safeLimit(opts?.limit)
+  const limitClause = lim ? ' LIMIT ' + lim : ''
   const rows = await query('SELECT ${allColumns} FROM \`${model.dbTable}\`' + where + ' ORDER BY \`${pk}\` DESC' + limitClause, params)
   return rows
 }
@@ -1051,7 +1114,7 @@ export async function get${model.name}ById(id: string) {
 }
 
 export async function get${model.name}ByField(field: string, value: any) {
-  const rows = await query(\`SELECT ${allColumns} FROM \\\`${model.dbTable}\\\` WHERE \\\`\${field}\\\` = ? ORDER BY \\\`${pk}\\\` DESC\`, [value])
+  const rows = await query(\`SELECT ${allColumns} FROM \\\`${model.dbTable}\\\` WHERE \\\`\${safeColumn(field)}\\\` = ? ORDER BY \\\`${pk}\\\` DESC\`, [value])
   return rows
 }
 
@@ -1115,14 +1178,15 @@ export async function get${model.name}List(opts?: { dateField?: string; startDat
   const conditions: string[] = []
   if (opts?.dateField && opts.startDate) {
     request.input('startDate', opts.startDate)
-    conditions.push(\`[\${opts.dateField}] >= @startDate\`)
+    conditions.push(\`[\${safeColumn(opts.dateField)}] >= @startDate\`)
   }
   if (opts?.dateField && opts.endDate) {
     request.input('endDate', opts.endDate + 'T23:59:59')
-    conditions.push(\`[\${opts.dateField}] <= @endDate\`)
+    conditions.push(\`[\${safeColumn(opts.dateField)}] <= @endDate\`)
   }
   const where = conditions.length > 0 ? \` WHERE \${conditions.join(' AND ')}\` : ''
-  const topClause = opts?.limit ? \`TOP (\${opts.limit}) \` : ''
+  const lim = safeLimit(opts?.limit)
+  const topClause = lim ? \`TOP (\${lim}) \` : ''
   const result = await request.query(\`SELECT \${topClause}${allColumns} FROM [${model.dbTable}]\${where} ORDER BY [${pk}] DESC\`)
   return result.recordset
 }
@@ -1135,7 +1199,7 @@ export async function get${model.name}ById(id: string) {
 
 export async function get${model.name}ByField(field: string, value: any) {
   const pool = await getPool()
-  const result = await pool.request().input('val', value).query(\`SELECT ${allColumns} FROM [${model.dbTable}] WHERE [\${field}] = @val ORDER BY [${pk}] DESC\`)
+  const result = await pool.request().input('val', value).query(\`SELECT ${allColumns} FROM [${model.dbTable}] WHERE [\${safeColumn(field)}] = @val ORDER BY [${pk}] DESC\`)
   return result.recordset
 }
 

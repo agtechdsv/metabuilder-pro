@@ -219,6 +219,14 @@ export interface ModelNode {
   dbTable: string              // nome real da tabela (ex: 'clientes')
   dbSchema: string             // schema (ex: 'public')
   fields: FieldNode[]
+  /** permissões da tabela (Dados & Schemas): valem no app exportado também (undefined = permitido) */
+  canCreate?: boolean
+  canUpdate?: boolean
+  canDelete?: boolean
+  /** acesso por linha do usuário final nesta tabela (models.row_policy); null/ausente = todos veem todas as linhas */
+  rowPolicy?: import('../rowPolicy/policy').RowPolicy | null
+  /** auditoria (quem/quando) da tabela, já resolvida: configurada em Dados & Schemas ou reconhecida pelo nome das colunas */
+  audit?: import('../rowPolicy/audit').EffectiveAudit | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

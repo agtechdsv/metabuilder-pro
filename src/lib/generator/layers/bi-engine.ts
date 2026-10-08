@@ -97,6 +97,7 @@ import { QueryCache, withTimeout, BiTimeoutError } from '@/lib/bi/perf'
 import { getSessionUser } from '@/lib/session-server'
 import type { BiWidget } from '@/lib/bi/widget'
 import { BI_DIALECT, BI_PROJECT_SLUG, BI_MODELS, BI_RELATIONS, BI_GROUP_IDS, BI_WIDGETS } from './bi-registry'
+import { secureSelect } from './access'
 ${run.imports}
 
 const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/
@@ -164,7 +165,9 @@ const queryCache = new QueryCache<{ rows: any[]; at: number }>(300)
 
 interface BiPerf { cacheSeconds: number; timeoutSeconds: number }
 
-async function runQuery(sql: string, perf: BiPerf, fresh: boolean): Promise<{ rows: any[]; at: number }> {
+async function runQuery(rawSql: string, perf: BiPerf, fresh: boolean): Promise<{ rows: any[]; at: number }> {
+  // regras de acesso das TABELAS (além das do painel): o SQL sai já filtrado para este usuário, e é ele a chave do cache
+  const sql = await secureSelect(rawSql)
   const { value } = await queryCache.run(
     sql,
     perf.cacheSeconds * 1000,

@@ -409,20 +409,46 @@ function guardCustom(sql, access, opts = {}) {
 const keyIn = (data, column) => Object.keys(data).find(k => k.toLowerCase() === String(column).toLowerCase());
 
 /**
+ * Auditoria (quem/quando): descarta o que a tela mandou nas colunas de auditoria e põe os valores do servidor. No insert
+ * preenche criado_* e atualizado_*; no update só atualizado_* (criado_* nunca muda). `*_por` fica vazio se o usuário não tem
+ * o dado configurado (access.audit[tabela].actor).
+ */
+function applyAudit(access, table, action, data) {
+  const a = access && access.audit && access.audit[table];
+  if (!a) return data;
+  const out = data ? { ...data } : {};
+  const cols = [a.createdAt, a.createdBy, a.updatedAt, a.updatedBy].filter(Boolean).map(c => String(c).toLowerCase());
+  for (const k of Object.keys(out)) if (cols.includes(k.toLowerCase())) delete out[k];
+  const now = new Date().toISOString();
+  const actor = a.actor === undefined || a.actor === null || a.actor === '' ? null : String(a.actor);
+  if (action === 'insert') {
+    if (a.createdAt) out[a.createdAt] = now;
+    if (a.createdBy && actor !== null) out[a.createdBy] = actor;
+  }
+  if (a.updatedAt) out[a.updatedAt] = now;
+  if (a.updatedBy && actor !== null) out[a.updatedBy] = actor;
+  return out;
+}
+
+/**
  * Confere uma gravação estruturada e devolve os dados a gravar (no insert, completa com o valor da regra o que faltou).
  * `query(sql)` executa um SELECT e devolve as linhas (usado para a regra por tabela relacionada e para conferir as linhas atingidas).
+ * `checkRows: false` pula a conferência das linhas atingidas (quem chama garante isso por outro meio, ex.: guardCustom no WHERE).
  */
-async function enforceWrite({ access, action, table, data, idColumn, idValue, dbType, query }) {
+async function enforceWrite({ access, action, table, data, idColumn, idValue, dbType, query, checkRows = true }) {
   const t = String(table || '').toLowerCase();
   const kind = FLAG_OF[action];
   if (!kind) return data;
   if (!flagAllowed(access, t, kind)) throw new PolicyError(FLAG_MESSAGE[kind]);
 
+  // auditoria primeiro: as colunas de quem/quando já entram com os valores do servidor, e a regra por linha confere o resultado final
+  const working = action === 'insert' || action === 'update' ? applyAudit(access, t, action, data) : data;
+
   const policy = policyMap(access).get(t);
-  if (!policy) return data;
+  if (!policy) return working;
   if (policy.deny) throw new PolicyError('Você não tem acesso aos registros desta tabela.');
   const db = dbType === 'oracle' ? 'oracle' : 'postgres';
-  const out = data ? { ...data } : (action === 'insert' ? {} : data);
+  const out = working ? { ...working } : (action === 'insert' ? {} : working);
 
   // os valores gravados precisam obedecer à regra (senão o usuário criaria/passaria para outro dono uma linha que não enxerga)
   if (action === 'insert' || action === 'update') {
@@ -431,8 +457,7 @@ async function enforceWrite({ access, action, table, data, idColumn, idValue, db
       if (key === undefined) {
         // coluna ausente no insert: a regra "igual" (ou lista de um valor só) preenche; as demais ficam como o banco definir
         if (action === 'insert' && c.op !== 'related' && (c.values || []).length === 1) {
-          const colKey = dbType === 'oracle' ? c.column.toUpperCase() : c.column;
-          out[colKey] = c.values[0];
+          out[c.column] = c.values[0];
         }
         continue;
       }
@@ -451,14 +476,14 @@ async function enforceWrite({ access, action, table, data, idColumn, idValue, db
   }
 
   // update/delete: TODAS as linhas que o comando alcança precisam estar dentro da regra
-  if (action === 'update' || action === 'delete') {
+  if ((action === 'update' || action === 'delete') && checkRows) {
     const idc = quoteIdent(String(idColumn || 'id'));
-    const all = await query(`SELECT COUNT(*) AS c FROM ${quoteIdent(t)} WHERE ${idc} = ${literal(idValue, db)}`);
-    const mine = await query(`SELECT COUNT(*) AS c FROM ${quoteIdent(t)} WHERE ${idc} = ${literal(idValue, db)} AND ${policySql(policy, null, db)}`);
+    const all = await query(`SELECT COUNT(*) AS c FROM ${quoteIdent(String(table))} WHERE ${idc} = ${literal(idValue, db)}`);
+    const mine = await query(`SELECT COUNT(*) AS c FROM ${quoteIdent(String(table))} WHERE ${idc} = ${literal(idValue, db)} AND ${policySql(policy, null, db)}`);
     const n = rows => Number((rows && rows[0] && (rows[0].c ?? rows[0].C)) || 0);
     if (n(all) !== n(mine) || n(mine) === 0) throw new PolicyError('Registro não encontrado ou fora do seu acesso.');
   }
   return out;
 }
 
-module.exports = { PolicyError, tokenize, applyToSelect, guardCustom, enforceWrite, policySql, condSql, literal, flagAllowed };
+module.exports = { applyAudit, PolicyError, tokenize, applyToSelect, guardCustom, enforceWrite, policySql, condSql, literal, flagAllowed };

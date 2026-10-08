@@ -1,6 +1,7 @@
 import { AppAST } from '../ast'
 import { generateRoutes } from '../layers/routes'
 import { generateActions } from '../layers/actions'
+import { generateAccessLayer } from '../layers/access'
 import { generateBiEngine } from '../layers/bi-engine'
 import { generateComponents } from '../layers/components'
 import { generateBaseFiles } from './base-files'
@@ -21,6 +22,7 @@ export function generateNodeProject(ast: AppAST): Map<string, string> {
 
   // 2. Geração das Camadas
   generateRoutes(ast, files)
+  generateAccessLayer(ast, files)
   generateActions(ast, files)
   generateBiEngine(ast, files)
   generateComponents(ast, files)

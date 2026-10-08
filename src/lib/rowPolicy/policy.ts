@@ -7,7 +7,8 @@
  *
  * Sem regra numa tabela, todos veem todas as linhas dela (como antes): a política é opcional e por tabela.
  */
-import { viewerValue, type BiViewer, type RlsBypass, type RlsSource } from '@/lib/bi/access'
+import { viewerValue, type BiViewer, type RlsBypass, type RlsSource } from '../bi/access'
+import type { AuditColumns, EffectiveAudit } from './audit'
 
 export type PolicyOp = 'eq' | 'in' | 'related'
 
@@ -31,7 +32,9 @@ export interface RowPolicy { rules: RowPolicyRule[] }
 export interface AccessCond { column: string; op: PolicyOp; values: string[]; related?: { table: string; key: string; column: string } }
 export interface AccessPolicy { table: string; deny?: true; conds: AccessCond[] }
 export interface AccessFlags { create?: boolean; update?: boolean; delete?: boolean }
-export interface AccessPayload { policies: AccessPolicy[]; flags: Record<string, AccessFlags> }
+/** Auditoria de uma tabela: as colunas e o valor do usuário que vai nas colunas `*_por` (null = sem o dado: ficam vazias). */
+export type AccessAudit = AuditColumns & { actor?: string | null }
+export interface AccessPayload { policies: AccessPolicy[]; flags: Record<string, AccessFlags>; audit?: Record<string, AccessAudit> }
 
 /** O que a configuração salva de cada tabela do projeto contém. */
 export interface TableAccessConfig {
@@ -40,6 +43,8 @@ export interface TableAccessConfig {
   canUpdate: boolean
   canDelete: boolean
   policy: RowPolicy | null
+  /** auditoria da tabela (já resolvida: configurada ou reconhecida pelo nome); null = sem auditoria */
+  audit?: EffectiveAudit | null
 }
 
 const SOURCES: RlsSource[] = ['user.email', 'user.name', 'user.attr']
@@ -96,9 +101,14 @@ const bypassed = (rule: RowPolicyRule, viewer: BiViewer | null): boolean => {
 export function resolveAccess(configs: TableAccessConfig[], viewer: BiViewer | null): AccessPayload {
   const policies: AccessPolicy[] = []
   const flags: Record<string, AccessFlags> = {}
+  const audit: Record<string, AccessAudit> = {}
 
   for (const c of configs) {
     const table = c.table.toLowerCase()
+    if (c.audit) {
+      const actor = viewerValue(viewer, c.audit.by.source, c.audit.by.attr)
+      audit[table] = { ...c.audit.columns, actor }
+    }
     if (!c.canCreate || !c.canUpdate || !c.canDelete) {
       flags[table] = {
         ...(c.canCreate ? {} : { create: false }),
@@ -124,5 +134,5 @@ export function resolveAccess(configs: TableAccessConfig[], viewer: BiViewer | n
     if (denied) policies.push({ table, deny: true, conds: [] })
     else if (conds.length > 0) policies.push({ table, conds })
   }
-  return { policies, flags }
+  return { policies, flags, ...(Object.keys(audit).length ? { audit } : {}) }
 }

@@ -1,3 +1,4 @@
+import { writeGeneratedAccess } from './generatedAccess'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -47,6 +48,7 @@ async function load(dir: string, analytics: Record<string, any>, tweakRegistry?:
   writeFileSync(join(dir, 'bi.ts'), bi)
   const registry = files.get('app/actions/bi-registry.ts')!
   writeFileSync(join(dir, 'bi-registry.ts'), tweakRegistry ? tweakRegistry(registry) : registry)
+  writeGeneratedAccess(dir, files)
   writeFileSync(join(dir, 'session.ts'), 'export async function getSessionUser() { return (globalThis as any).__user ?? null }\n')
   writeFileSync(
     join(dir, 'db.ts'),

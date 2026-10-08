@@ -2,6 +2,7 @@ import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
 import { getGeneratorDictionary } from '../i18n'
 import { rlsAttrColumns } from '../../bi/access'
+import { modelPolicyAttrColumns } from '../layers/access'
 
 function toCamel(str: string): string {
   return str
@@ -93,6 +94,8 @@ export function generateLoginPage(ast: AppAST, files: Map<string, string>, opts:
   // colunas do cadastro do usuário que as regras de acesso do BI pedem: o login as grava na sessão assinada
   const attrColumns = [...new Set([
     ...ast.routes.flatMap(r => rlsAttrColumns(r.analyticsConfig?.rls)),
+    // e as colunas que as regras de acesso por linha das TABELAS pedem
+    ...modelPolicyAttrColumns(ast),
     ...(opts.extraAttrColumns || []),
   ])]
   files.set('lib/session.ts', SESSION_LIB_SOURCE)

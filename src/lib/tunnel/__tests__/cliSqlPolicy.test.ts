@@ -214,9 +214,15 @@ describe('gravação estruturada (insert / update / delete)', () => {
     expect(out).toEqual({ funcionario_id: '7' })
   })
 
-  it('Oracle: a coluna preenchida pela regra vai em maiúsculas', async () => {
+  it('Oracle: a coluna preenchida pela regra mantém o nome configurado (o Agente põe em maiúsculas; o app exportado usa o nome do cadastro)', async () => {
     const out = await enforceWrite({ access: a, action: 'insert', table: 'pedidos', data: {}, dbType: 'oracle', query: async () => [] })
-    expect(out).toEqual({ FUNCIONARIO_ID: '7' })
+    expect(out).toEqual({ funcionario_id: '7' })
+  })
+
+  it('checkRows: false não conta as linhas (o WHERE do comando garante isso)', async () => {
+    let calls = 0
+    await enforceWrite({ access: a, action: 'update', table: 'pedidos', data: { status: 'x' }, idColumn: 'id', idValue: '1', dbType: 'postgres', checkRows: false, query: async () => { calls++; return [] } })
+    expect(calls).toBe(0)
   })
 
   it('update: não pode passar a linha para outro dono; só atinge linhas dentro da regra', async () => {

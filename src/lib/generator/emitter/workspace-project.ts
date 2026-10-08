@@ -5,6 +5,7 @@ import { generateBiEngine } from '../layers/bi-engine'
 import { generateComponents } from '../layers/components'
 import { generatePortalPage, generateWorkspaceLayout, generateWorkspaceGlobalCss, generateProjectLayout } from '../layers/portal'
 import { generateLoginPage } from './auth-flow'
+import { generateAccessLayer, modelPolicyAttrColumns } from '../layers/access'
 import { rlsAttrColumns } from '../../bi/access'
 
 export function generateWorkspaceProject(ast: WorkspaceAST): Map<string, string> {
@@ -168,6 +169,7 @@ export default config;
     // Rotas, Actions e Components — com prefix do projeto
     const projectFiles = new Map<string, string>()
     generateRoutes(pApp, projectFiles)
+    generateAccessLayer(pApp, projectFiles)
     generateActions(pApp, projectFiles)
     generateBiEngine(pApp, projectFiles)
     generateComponents(pApp, projectFiles)
@@ -183,7 +185,7 @@ export default config;
   const primaryProject = ast.projects[0]?.app
   if (primaryProject) {
     // o login único grava na sessão as colunas que as regras de acesso de TODOS os projetos pedem
-    const extraAttrColumns = ast.projects.flatMap(p => p.app.routes.flatMap(r => rlsAttrColumns(r.analyticsConfig?.rls)))
+    const extraAttrColumns = ast.projects.flatMap(p => [...p.app.routes.flatMap(r => rlsAttrColumns(r.analyticsConfig?.rls)), ...modelPolicyAttrColumns(p.app)])
     generateLoginPage(primaryProject, files, { extraAttrColumns })
   }
 
