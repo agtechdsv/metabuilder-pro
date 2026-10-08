@@ -1,4 +1,25 @@
 {
+  "v1.0.3": {
+    "date": "2026-10-08",
+    "pt": [
+      "Rastreabilidade Total com Auditoria Automática: Agora as tabelas contam com rastreamento nativo de data e autoria de criação e atualização, configuráveis diretamente em Dados & Schemas.",
+      "Segurança Reforçada no Servidor: Informações de auditoria são preenchidas com integridade diretamente pelo backend, garantindo que os dados de autoria nunca sejam alterados indevidamente pela interface.",
+      "Novo Atalho de Segurança por Linha: Configure permissões com apenas um clique usando o novo filtro 'Apenas os registros que eu criei' para proteger o acesso aos dados.",
+      "Gerador Inteligente de SQL: Facilidade para gerar e aplicar scripts SQL com suporte completo às novas colunas de auditoria."
+    ],
+    "en": [
+      "Full Traceability with Automated Auditing: Tables now feature native tracking of creation and update timestamps and authors, configurable directly under Data & Schemas.",
+      "Enhanced Server-Side Security: Audit data is populated securely by the server, ensuring tamper-proof record history across CLI Agent and exported apps.",
+      "New Row-Level Security Shortcut: Easily restrict access with the 'Only records created by me' rule shortcut, streamlining data privacy and user scoping.",
+      "Smart SQL Generator: Automated SQL script generation for effortless setup of audit columns across your database."
+    ],
+    "es": [
+      "Trazabilidad Total con Auditoría Automática: Las tablas ahora cuentan con seguimiento nativo de autoría y fecha de creación y actualización, configurables en Datos y Esquemas.",
+      "Seguridad Reforzada en el Servidor: Los metadatos de auditoría se completan automáticamente desde el servidor, garantizando la integridad de los registros sin alteraciones externas.",
+      "Nuevo Atajo de Seguridad por Fila: Proteja el acceso a los datos con un solo clic gracias a la nueva regla 'Solo los registros que creé'.",
+      "Generador Inteligente de SQL: Facilidad para generar y aplicar scripts SQL con compatibilidad total para las nuevas columnas de auditoría."
+    ]
+  },
   "v1.0.2": {
     "date": "2026-10-08",
     "pt": [
