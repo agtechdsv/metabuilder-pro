@@ -39,7 +39,8 @@ export async function diagnoseTunnel(projectId: string, deps: DiagnoseDeps = {})
   const schemaName = (models as any)?.[0]?.db_schema_name || 'public'
   const oracle = String((project as any).db_type || '').toLowerCase() === 'oracle'
   const sql = oracle ? 'SELECT 1 AS "ok" FROM DUAL' : 'SELECT 1 AS ok'
-  const probe = { queryId: randomUUID(), projectId, action: 'select', table: 'diagnostico', schemaName, query: sql, sql, limit: 1 }
+  // `access` vazio faz o teste ir assinado como comando de usuário final (v2): só o Agente 1.3+ o responde, então o teste também confere a versão
+  const probe = { queryId: randomUUID(), projectId, action: 'select', table: 'diagnostico', schemaName, query: sql, sql, limit: 1, access: { policies: [], flags: {} } }
 
   const started = now()
   try {
@@ -47,7 +48,7 @@ export async function diagnoseTunnel(projectId: string, deps: DiagnoseDeps = {})
     if (res?.success) return { ok: true, ms: now() - started }
     return { ok: false, reason: 'agent_error', detail: typeof res?.error === 'string' ? res.error.slice(0, 200) : undefined }
   } catch (e) {
-    // sem resposta: o Agente está desligado, não é deste projeto ou é anterior à v1.2 (que não entende o formato assinado)
+    // sem resposta: o Agente está desligado, não é deste projeto ou é anterior à v1.3 (que não entende o formato de acesso por tabela)
     if (e instanceof TunnelTimeoutError) return { ok: false, reason: 'offline' }
     return { ok: false, reason: 'transport', detail: e instanceof Error ? e.message.slice(0, 200) : undefined }
   }

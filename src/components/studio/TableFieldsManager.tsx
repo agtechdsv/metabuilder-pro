@@ -20,6 +20,8 @@ import {
   ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { RowPolicyEditor } from './RowPolicyEditor'
+import { cleanRowPolicy, type RowPolicyRule } from '@/lib/rowPolicy/policy'
 
 interface TableFieldsManagerProps {
   project: any
@@ -54,6 +56,9 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
   const [modelCanCreate, setModelCanCreate] = useState(true)
   const [modelCanUpdate, setModelCanUpdate] = useState(true)
   const [modelCanDelete, setModelCanDelete] = useState(true)
+  // acesso por linha do usuário final (models.row_policy); `rowPolicyDirty` evita gravar a coluna quando ninguém mexeu nela
+  const [rowRules, setRowRules] = useState<RowPolicyRule[]>([])
+  const [rowPolicyDirty, setRowPolicyDirty] = useState(false)
   const [fieldEdits, setFieldEdits] = useState<Record<string, FieldEdit>>({})
 
   // Modal de Migração de Schema
@@ -115,6 +120,8 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
       setModelCanCreate(currentModel.can_create !== false)
       setModelCanUpdate(currentModel.can_update !== false)
       setModelCanDelete(currentModel.can_delete !== false)
+      setRowRules(cleanRowPolicy(currentModel.row_policy)?.rules || [])
+      setRowPolicyDirty(false)
     }
 
     fetchFields()
@@ -133,11 +140,17 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           description: modelDescription,
           can_create: modelCanCreate,
           can_update: modelCanUpdate,
-          can_delete: modelCanDelete
+          can_delete: modelCanDelete,
+          ...(rowPolicyDirty ? { row_policy: cleanRowPolicy({ rules: rowRules }) } : {}),
         })
         .eq('id', selectedModelId)
 
-      if (modelErr) throw modelErr
+      if (modelErr) {
+        // coluna da política ainda não criada no banco: explica o que fazer em vez de uma mensagem técnica
+        if (rowPolicyDirty && (modelErr as any).code === '42703') throw new Error(t('dashboard.projects.studio.metadata.row_policy_migration'))
+        throw modelErr
+      }
+      setRowPolicyDirty(false)
 
       // 2. Update modified fields
       const promises = fields.map(f => {
@@ -427,6 +440,15 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     </label>
                   </div>
                 </div>
+
+                {/* Acesso por linha do usuário final */}
+                <RowPolicyEditor
+                  project={project}
+                  models={models}
+                  columns={fields.map(f => String(f.db_column_name)).filter(Boolean)}
+                  rules={rowRules}
+                  onChange={rules => { setRowRules(rules); setRowPolicyDirty(true) }}
+                />
               </div>
 
               {/* Fields List Section */}

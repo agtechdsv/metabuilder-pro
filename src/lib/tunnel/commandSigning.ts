@@ -9,6 +9,12 @@ import { createHash, createHmac, randomBytes } from 'node:crypto'
  */
 
 const VERSION = 'v1'
+/**
+ * Comandos de USUÁRIO FINAL levam `access` (permissões e regras por linha resolvidas aqui, no servidor) e são assinados
+ * com a versão v2: um Agente anterior, que só conhece v1, recusa o comando em vez de executá-lo ignorando `access`.
+ */
+const VERSION_ACCESS = 'v2'
+const versionOf = (body: Record<string, any>) => (body && body.access !== undefined ? VERSION_ACCESS : VERSION)
 
 /** Campos de segurança: ficam fora do corpo assinado. */
 const SECURITY_FIELDS = ['sig', 'ts', 'nonce', 'token', 'replyTo']
@@ -41,7 +47,7 @@ export function computeSignature(
   secret: string, event: string, projectId: string, ts: number, nonce: string, replyTo: string | undefined, payload: Record<string, any>,
 ): string {
   const bodyHash = createHash('sha256').update(stableStringify(bodyOf(payload))).digest('hex')
-  const input = [VERSION, event, projectId, String(ts), nonce, replyTo || '', bodyHash].join('\n')
+  const input = [versionOf(payload), event, projectId, String(ts), nonce, replyTo || '', bodyHash].join('\n')
   return createHmac('sha256', secret).update(input).digest('base64url')
 }
 

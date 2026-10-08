@@ -14,6 +14,13 @@ const path = require('path');
 const fs = require('fs');
 
 const VERSION = 'v1';
+/**
+ * Comandos de USUÁRIO FINAL levam `access` (permissões e regras de acesso por linha resolvidas pelo servidor) e são
+ * assinados com a versão v2. Um Agente anterior (que só conhece v1) recusa o comando por assinatura inválida em vez de
+ * executá-lo ignorando `access`: sem a versão nova ninguém lê dado de usuário final.
+ */
+const VERSION_ACCESS = 'v2';
+const versionOf = (body) => (body && body.access !== undefined ? VERSION_ACCESS : VERSION);
 /** Quanto o relógio do servidor e o da máquina do Agente podem diferir (segundos). */
 const DEFAULT_TOLERANCE_SECONDS = 300;
 
@@ -37,7 +44,7 @@ function bodyOf(payload) {
 
 function signingInput(event, projectId, ts, nonce, replyTo, payload) {
   const bodyHash = crypto.createHash('sha256').update(stableStringify(bodyOf(payload))).digest('hex');
-  return [VERSION, event, projectId, String(ts), nonce, replyTo || '', bodyHash].join('\n');
+  return [versionOf(payload), event, projectId, String(ts), nonce, replyTo || '', bodyHash].join('\n');
 }
 
 function computeSignature(secretToken, event, projectId, ts, nonce, replyTo, payload) {
@@ -128,4 +135,4 @@ function isPathInside(baseDir, target) {
   }
 }
 
-module.exports = { VERSION, DEFAULT_TOLERANCE_SECONDS, stableStringify, signCommand, computeSignature, authorizeCommand, NonceCache, isPathInside };
+module.exports = { VERSION, VERSION_ACCESS, DEFAULT_TOLERANCE_SECONDS, stableStringify, signCommand, computeSignature, authorizeCommand, NonceCache, isPathInside };

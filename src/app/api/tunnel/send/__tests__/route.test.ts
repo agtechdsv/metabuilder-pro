@@ -10,6 +10,9 @@ vi.mock('@/lib/tunnel/server', () => ({
   getProjectSecretToken: (...a: any[]) => getToken(...a),
 }))
 
+const accessFor = vi.fn()
+vi.mock('@/lib/rowPolicy/server', () => ({ accessForSession: (...a: any[]) => accessFor(...a) }))
+
 const accessCtx = vi.fn()
 vi.mock('@/lib/tunnel/tableAccess', async () => {
   const real = await vi.importActual<typeof import('@/lib/tunnel/tableAccess')>('@/lib/tunnel/tableAccess')
@@ -27,6 +30,8 @@ beforeEach(() => {
   authorize.mockReset(); tunnelSend.mockReset(); getToken.mockReset()
   getToken.mockResolvedValue('token-real')
   tunnelSend.mockResolvedValue(undefined)
+  accessFor.mockReset()
+  accessFor.mockResolvedValue({ policies: [], flags: {} })
 })
 
 describe('POST /api/tunnel/send', () => {
@@ -62,6 +67,40 @@ describe('POST /api/tunnel/send', () => {
     expect((await call(cmd({ action: 'raw_sql' }))).status).toBe(403)
     expect((await call(cmd({ action: 'sync_bpm' }))).status).toBe(403)
     expect(tunnelSend).toHaveBeenCalledTimes(1)
+  })
+
+  describe('acesso por tabela do usuário final (permissões e regras por linha)', () => {
+    const session = { pid: PID, sub: '5', email: 'maria@x.com' }
+
+    it('o comando do usuário final vai com `access` resolvido pelo servidor (assinado em v2); o do membro vai sem', async () => {
+      const access = { policies: [{ table: 'pedidos', conds: [{ column: 'funcionario_id', op: 'eq', values: ['7'] }] }], flags: { clientes: { delete: false } } }
+      accessFor.mockResolvedValue(access)
+      authorize.mockResolvedValue({ kind: 'end_user', session })
+      expect((await call(cmd())).status).toBe(202)
+      expect(accessFor).toHaveBeenCalledWith(PID, session)
+      expect(tunnelSend.mock.calls[0][2].access).toEqual(access)
+
+      authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+      expect((await call(cmd())).status).toBe(202)
+      expect(tunnelSend.mock.calls[1][2].access).toBeUndefined()
+    })
+
+    it('um `access` enviado pelo navegador é descartado (o servidor é quem define)', async () => {
+      authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+      await call(cmd({ access: { policies: [], flags: {} } }))
+      expect(tunnelSend.mock.calls[0][2].access).toBeUndefined()
+      authorize.mockResolvedValue({ kind: 'end_user', session })
+      await call(cmd({ access: { policies: [], flags: { pedidos: { delete: true } } } }))
+      expect(tunnelSend.mock.calls[1][2].access).toEqual({ policies: [], flags: {} })
+    })
+
+    it('sem conseguir ler as regras de acesso, o usuário final é recusado (falha fechada)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      accessFor.mockRejectedValue(new Error('banco fora'))
+      authorize.mockResolvedValue({ kind: 'end_user', session })
+      expect((await call(cmd())).status).toBe(503)
+      expect(tunnelSend).not.toHaveBeenCalled()
+    })
   })
 
   it('login nunca passa pelo relay, nem para o desenvolvedor', async () => {

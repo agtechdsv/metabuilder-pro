@@ -226,6 +226,7 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   const { wrapChannelWithChunking } = require('./chunkedChannel');
   const { authorizeCommand, NonceCache, DEFAULT_TOLERANCE_SECONDS } = require('./security');
   const { ReplyRouter } = require('./replies');
+  const { applyToSelect, guardCustom, enforceWrite } = require('./sqlPolicy');
 const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     auth: { persistSession: false },
     realtime: {
@@ -327,6 +328,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       // resposta só no tópico privado de quem perguntou (ou no canal de sempre, se o comando não trouxe um)
       const replyTo = router.accept(payload.payload.replyTo);
       const reply = (event, body) => router.reply(replyTo, event, body);
+      // Comando de USUÁRIO FINAL: o servidor o assinou (v2) com as permissões das tabelas e as regras de acesso por linha
+      // (`access`), que valem para qualquer SQL abaixo. Comando sem `access` é de membro do projeto (desenvolvedor).
+      const access = payload.payload.access;
+      const endUser = access !== undefined;
       
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
       // Ações META não são queries de dados e ignoram o filtro de schema
@@ -372,6 +377,26 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         }
         const safeTable = table ? table.replace(/[^a-zA-Z0-9_]/g, '') : '';
         let result;
+
+        if (endUser) {
+          if (!access || typeof access !== 'object' || !Array.isArray(access.policies)) throw new Error('Comando de usuário final sem regras de acesso válidas.');
+          if (action === 'insert' || action === 'update' || action === 'delete') {
+            // permissão da tabela, valores gravados e linhas atingidas dentro da regra (ver sqlPolicy.js)
+            const runReadQuery = async (q) => {
+              if (dbType === 'oracle') {
+                const text = q.replace(/"([a-zA-Z0-9_]+)"/g, (m, p1) => `"${p1.toUpperCase()}"`);
+                const r = await oracleConnection.execute(text, [], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                return r.rows || [];
+              }
+              return (await pgClient.query(q)).rows;
+            };
+            const checked = await enforceWrite({
+              access, action, table: safeTable, data: payload.payload.data,
+              idColumn: payload.payload.idColumn, idValue: payload.payload.idValue, dbType, query: runReadQuery,
+            });
+            if (action !== 'delete') payload.payload.data = checked;
+          }
+        }
 
         if (action === 'select') {
           const filters = payload.payload.filters;
@@ -589,6 +614,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
           }
           
+          // usuário final: cada tabela com regra vira uma subconsulta filtrada (antes das traduções para Oracle abaixo)
+          if (endUser) sql = applyToSelect(sql, access, { dbType });
+
           if (dbType === 'oracle') {
             // Traduz a paginação do Postgres para Oracle 12c+
             sql = sql.replace(/LIMIT\s+(\d+)\s+OFFSET\s+(\d+)/gi, "OFFSET $2 ROWS FETCH NEXT $1 ROWS ONLY");
@@ -765,6 +793,8 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             sql = `SELECT COUNT(*) as total FROM "${safeTable}"`;
             if (whereClause) sql += whereClause;
           }
+
+          if (endUser) sql = applyToSelect(sql, access, { dbType });
 
           if (dbType === 'oracle') {
             sql = sql.replace(/\$(\d+)/g, ':$1');
@@ -1381,6 +1411,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             throw new Error('Query SQL não fornecida para a ação customizada.');
           }
 
+          // usuário final: cada comando é conferido (permissões das tabelas) e recebe a regra de acesso por linha
+          if (endUser) sql = guardCustom(sql, access, { dbType });
+
           if (dbType === 'oracle') {
             sql = sql.replace(/\$(\d+)/g, ':$1');
           }
@@ -1591,7 +1624,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(chalk.green.bold(t('tunnel_ready')));
-        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: obrigatórios | formato antigo (token no comando): RECUSADO | respostas em tópico privado: ativas`));
+        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: obrigatórios | formato antigo (token no comando): RECUSADO | respostas em tópico privado: ativas | acesso por tabela do usuário final: ativo`));
       }
     });
 }

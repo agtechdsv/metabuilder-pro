@@ -3,6 +3,8 @@ import { authorizeProjectActor } from '@/lib/tunnel/authorize'
 import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunnel/tableAccess'
+import { accessForSession } from '@/lib/rowPolicy/server'
+import type { AccessPayload } from '@/lib/rowPolicy/policy'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -53,11 +55,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Usuário final: as permissões das tabelas e as regras de acesso por linha vão DENTRO do comando assinado, e o Agente as aplica
+  // em qualquer SQL (o navegador não consegue tirar nem alterar). Sem conseguir ler a configuração, recusa (falha fechada).
+  let access: AccessPayload | undefined
+  if (actor.kind === 'end_user') {
+    try {
+      access = await accessForSession(req.projectId, actor.session)
+    } catch (e: any) {
+      console.error('[tunnel/send] não foi possível ler as regras de acesso:', e?.message)
+      return NextResponse.json({ error: 'Não foi possível validar o acesso.' }, { status: 503 })
+    }
+  }
+
   const token = await getProjectSecretToken(req.projectId)
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
   try {
-    await tunnelSend(req.projectId, req.event, buildCommand(req, token))
+    await tunnelSend(req.projectId, req.event, buildCommand(req, token, access))
     return NextResponse.json({ ok: true }, { status: 202 })
   } catch (error: any) {
     console.error('[tunnel/send] falha ao enviar:', error?.message)

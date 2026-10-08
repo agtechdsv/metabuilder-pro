@@ -7,6 +7,7 @@ import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunne
 import { perfSettings } from '@/lib/bi/perf'
 import { composeBiQuery, parseBiRequest, viewerFromSession } from '@/lib/bi/serverQuery'
 import { loadBiContext } from '@/lib/bi/serverContext'
+import { accessForSession } from '@/lib/rowPolicy/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -76,11 +77,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // permissões e regras por linha das TABELAS (valem também no BI): o Agente as aplica no SQL
+    const access = !isMember ? await accessForSession(req.projectId, session ?? (actor.kind === 'end_user' ? actor.session : null)) : undefined
+
     const token = await getProjectSecretToken(req.projectId)
     if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
     const timeoutMs = Math.min(55, perfSettings(config).timeoutSeconds) * 1000
-    const result = await tunnelCall(req.projectId, 'sql_query', { queryId: crypto.randomUUID(), ...payload }, { secret: token, timeoutMs })
+    const result = await tunnelCall(req.projectId, 'sql_query', { queryId: crypto.randomUUID(), ...payload, ...(access ? { access } : {}) }, { secret: token, timeoutMs })
     return NextResponse.json(result)
   } catch (error: any) {
     if (error instanceof TunnelTimeoutError) return NextResponse.json({ error: 'timeout', code: 'timeout' }, { status: 504 })

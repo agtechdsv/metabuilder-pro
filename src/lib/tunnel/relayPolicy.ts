@@ -52,9 +52,10 @@ export function actionAllowed(kind: RelayActorKind, action: unknown): { ok: true
  * O comando vai sempre assinado e SEM token; `replyTo` (tópico privado da aba) é mantido só se for
  * um tópico válido deste projeto.
  */
-export function buildCommand(req: RelayRequest, secretToken: string): Record<string, any> {
-  const { token: _fromBrowser, replyTo, ...rest } = req.payload
-  return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId }, {
+export function buildCommand(req: RelayRequest, secretToken: string, access?: Record<string, any>): Record<string, any> {
+  // `access` (permissões e regras por linha do usuário final) só o servidor define: o que o navegador mandar com esse nome é descartado
+  const { token: _fromBrowser, replyTo, access: _forged, ...rest } = req.payload
+  return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId, ...(access ? { access } : {}) }, {
     replyTo: typeof replyTo === 'string' ? replyTo : undefined,
   })
 }

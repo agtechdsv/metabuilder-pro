@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 const { jsPDF } = require('jspdf');
 const chalk = require('chalk');
 const { authorizeCommand, NonceCache, isPathInside } = require('./security');
+const { applyToSelect } = require('./sqlPolicy');
 
 function registerExportHandlers(channel, pgClient, oracleConnection, dbType, secretToken, projectId, configData, supabase, extra = {}) {
   // mesma verificação dos comandos de dados (assinatura ou token); sem ela os eventos abaixo ficariam abertos a qualquer um no canal
@@ -19,6 +20,9 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
   channel.on('broadcast', { event: 'export_job_start' }, async (payload) => {
     const { jobId, sql, params, fileType, viewName, workspaceSlug, projectSlug, exportGraph, projectRelations, masterModelId, modelName, dictionary, recordId } = payload.payload;
 
+    // exportação de USUÁRIO FINAL: o servidor mandou `access` (permissões e regras por linha); vale para esta consulta e para o grafo
+    const access = payload.payload.access;
+    const endUser = access !== undefined;
     const auth = authorizeCommand('export_job_start', payload.payload, security);
     if (!auth.ok) {
       console.log(chalk.red(`[ BLOQUEADO ] Export job recusado (${auth.reason}). (Job ${jobId})`));
@@ -42,11 +46,16 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
     try {
       // Step 1: Execute query locally
       let rows = [];
+      let finalSql = sql;
+      if (endUser) {
+        if (!access || typeof access !== 'object' || !Array.isArray(access.policies)) throw new Error('Exportação de usuário final sem regras de acesso válidas.');
+        finalSql = applyToSelect(sql, access, { dbType });
+      }
       if (dbType === 'oracle') {
-        const oraRes = await oracleConnection.execute(sql, params || [], { outFormat: require('oracledb').OUT_FORMAT_OBJECT });
+        const oraRes = await oracleConnection.execute(finalSql, params || [], { outFormat: require('oracledb').OUT_FORMAT_OBJECT });
         rows = oraRes.rows || [];
       } else {
-        const result = await pgClient.query(sql, params || []);
+        const result = await pgClient.query(finalSql, params || []);
         rows = result.rows || [];
       }
 
@@ -66,11 +75,13 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
             
             let detailRows = [];
             if (dbType === 'oracle') {
-              const query = `SELECT * FROM "${detailTableName}" WHERE "${fk}" = :1`;
+              let query = `SELECT * FROM "${detailTableName}" WHERE "${fk}" = :1`;
+              if (endUser) query = applyToSelect(query, access, { dbType });
               const res = await oracleConnection.execute(query, [parentPk], { outFormat: require('oracledb').OUT_FORMAT_OBJECT });
               detailRows = res.rows || [];
             } else {
-              const query = `SELECT * FROM "${detailTableName}" WHERE "${fk}" = $1`;
+              let query = `SELECT * FROM "${detailTableName}" WHERE "${fk}" = $1`;
+              if (endUser) query = applyToSelect(query, access, { dbType });
               const res = await pgClient.query(query, [parentPk]);
               detailRows = res.rows || [];
             }

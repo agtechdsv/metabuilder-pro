@@ -3,6 +3,10 @@ import { authenticateCommand } from '@/lib/tunnel/commandSigning'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { NextResponse, type NextRequest } from 'next/server'
 import { resolveDownloadOwner } from '@/lib/tunnel/authorize'
+import { endUserCookieName, verifyEndUserSession } from '@/lib/tunnel/sessionToken'
+import { loadAccessContext } from '@/lib/tunnel/tableAccess'
+import { accessForSession } from '@/lib/rowPolicy/server'
+import { exportProblem } from '@/lib/rowPolicy/exportGuard'
 import { executeExportBackground } from '@/utils/export/worker'
 import ws from 'ws'
 
@@ -30,12 +34,12 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
 
 
 /** Dono dos arquivos, sempre da sessão (usuário final do app ou membro do projeto), nunca do corpo do pedido. */
-async function ownerOrError(request: NextRequest, projectId: unknown): Promise<{ userId: string } | { res: NextResponse }> {
+async function ownerOrError(request: NextRequest, projectId: unknown): Promise<{ userId: string; kind: 'end_user' | 'member' | 'anonymous' } | { res: NextResponse }> {
   if (typeof projectId !== 'string' || !projectId) return { res: NextResponse.json({ error: 'Missing parameters' }, { status: 400 }) }
   const owner = await resolveDownloadOwner(request, projectId)
   if (!owner) return { res: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) }
   if ('error' in owner) return { res: NextResponse.json({ error: owner.error }, { status: 400 }) }
-  return { userId: owner.id }
+  return { userId: owner.id, kind: owner.kind }
 }
 
 export async function POST(request: NextRequest) {
@@ -47,6 +51,24 @@ export async function POST(request: NextRequest) {
     const who = await ownerOrError(request, body?.projectId)
     if ('res' in who) return who.res
     const userId = who.userId
+
+    // Usuário final (ou visitante): o servidor monta o SQL com nomes que vieram do navegador, então confere tudo antes e envia
+    // as permissões/regras de acesso por linha dentro do comando assinado (o Agente as aplica a esta consulta e ao grafo).
+    let access: Record<string, any> | undefined
+    if (who.kind !== 'member') {
+      try {
+        const problem = exportProblem(body, await loadAccessContext(body.projectId))
+        if (problem) {
+          console.warn(`[export/guard] projeto=${body.projectId} ${problem}`)
+          return NextResponse.json({ error: 'Exportação não permitida para estes dados.' }, { status: 403 })
+        }
+        const session = verifyEndUserSession(request.cookies.get(endUserCookieName(body.projectId))?.value, body.projectId)
+        access = await accessForSession(body.projectId, session)
+      } catch (e: any) {
+        console.error('[export] não foi possível validar o acesso:', e?.message)
+        return NextResponse.json({ error: 'Não foi possível validar o acesso.' }, { status: 503 })
+      }
+    }
     const {
       projectId,
       workspaceSlug,
@@ -121,7 +143,8 @@ export async function POST(request: NextRequest) {
       projectRelations,
       masterModelId,
       dictionary,
-      recordId
+      recordId,
+      access,
     })
 
     // 3. Return 202 Accepted response with jobId

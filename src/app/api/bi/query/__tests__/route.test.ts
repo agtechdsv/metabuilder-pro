@@ -5,6 +5,8 @@ const loadCtx = vi.fn()
 const tunnelCall = vi.fn()
 const getToken = vi.fn()
 const accessCtx = vi.fn()
+const accessFor = vi.fn()
+vi.mock('@/lib/rowPolicy/server', () => ({ accessForSession: (...a: any[]) => accessFor(...a) }))
 
 vi.mock('@/lib/tunnel/authorize', () => ({ authorizeProjectActor: (...a: any[]) => authorize(...a) }))
 vi.mock('@/lib/bi/serverContext', () => ({ loadBiContext: (...a: any[]) => loadCtx(...a) }))
@@ -50,6 +52,8 @@ beforeEach(() => {
   getToken.mockResolvedValue('token-real')
   accessCtx.mockResolvedValue({ allowedTables: new Set(['pedidos', 'funcionarios']), authTable: 'usuarios' })
   tunnelCall.mockResolvedValue({ success: true, data: [{ bi_value: 3 }] })
+  accessFor.mockReset()
+  accessFor.mockResolvedValue({ policies: [], flags: {} })
 })
 afterEach(() => { delete process.env.TUNNEL_GUARD; vi.restoreAllMocks() })
 
@@ -73,6 +77,17 @@ describe('POST /api/bi/query', () => {
     expect(payload.action).toBe('select')
     expect(opts.secret).toBe('token-real')
     expect(payload.token).toBeUndefined()
+  })
+
+  it('as regras de acesso das TABELAS (não só as do painel) vão no comando do usuário final; o membro vai sem', async () => {
+    const access = { policies: [{ table: 'pedidos', conds: [{ column: 'funcionario_id', op: 'eq', values: ['7'] }] }], flags: {} }
+    accessFor.mockResolvedValue(access)
+    authorize.mockResolvedValue({ kind: 'end_user', session: { pid: PID, sub: '5' } })
+    await call(ask(), sessionCookie({ pid: PID, sub: '5', email: 'maria@x.com' }))
+    expect(tunnelCall.mock.calls[0][2].access).toEqual(access)
+    authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+    await call(ask())
+    expect(tunnelCall.mock.calls[1][2].access).toBeUndefined()
   })
 
   it('usuário final sem sessão com regra cadastrada: 403 com o motivo, sem consultar o banco', async () => {

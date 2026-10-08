@@ -60,8 +60,10 @@ export async function executeExportBackground(params: {
   masterModelId?: string
   dictionary?: any
   recordId?: any
+  /** permissões e regras por linha do usuário final (o Agente as aplica ao SQL e às consultas do grafo); ausente = membro do projeto */
+  access?: Record<string, any>
 }) {
-  const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters, exportGraph, projectRelations, masterModelId, dictionary, recordId } = params
+  const { jobId, projectId, workspaceSlug, viewName, modelName, fileType, columnsList, joins, filters, exportGraph, projectRelations, masterModelId, dictionary, recordId, access } = params
   const client = await getDbPool().connect()
   
   try {
@@ -190,7 +192,8 @@ export async function executeExportBackground(params: {
               masterModelId,
               modelName,
               dictionary,
-              recordId
+              recordId,
+              ...(access ? { access } : {}),
             })
           }).then(() => {
             if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
