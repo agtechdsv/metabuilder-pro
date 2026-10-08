@@ -796,11 +796,11 @@ export default function AuthSettingsPage() {
           data: dataToSave,
         })
       }
-      toast('Usuário salvo com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.toasts.user_save_success'), 'success')
       setIsUserModalOpen(false)
       loadLegacyUsers()
     } catch (err: any) {
-      toast('Erro ao salvar usuário: ' + err.message, 'error')
+      toast(t('dashboard.projects.studio.toasts.user_save_error') + err.message, 'error')
     } finally {
       setIsSavingUser(false)
     }
@@ -835,14 +835,14 @@ export default function AuthSettingsPage() {
         idColumn: pkField,
         idValue: userId,
       })
-      toast('Usuário excluído com sucesso!', 'success')
+      toast(t('dashboard.projects.studio.toasts.user_delete_success'), 'success')
       setUserToDelete(null)
       loadLegacyUsers()
     } catch (err: any) {
       const fk = /chave estrangeira|foreign key|ORA-02292|23503/i.test(String(err?.message))
       toast(fk
-        ? 'Não foi possível excluir: este usuário é referenciado por outros registros (' + String(err.message).replace(/^.*?restrição de chave estrangeira /i, '').slice(0, 160) + '). Remova ou reatribua esses registros antes.'
-        : 'Erro ao excluir usuário: ' + err.message, 'error')
+        ? t('dashboard.projects.studio.toasts.user_delete_fk').replace('{detail}', String(err.message).replace(/^.*?restrição de chave estrangeira /i, '').slice(0, 160))
+        : t('dashboard.projects.studio.toasts.user_delete_error') + err.message, 'error')
     }
   }
 
