@@ -4664,6 +4664,17 @@
     "fail_no_project": "Project not found.",
     "fail_transport": "Failed to reach the Supabase realtime service.",
     "fail_unauthorized": "You must be signed in as a project member.",
-    "ok_signed": "The Agent replied in {ms} ms to a signed command (the token does not travel through the channel)."
+    "ok_signed": "The Agent replied in {ms} ms to a signed command (the token does not travel through the channel).",
+    "role_title": "Least-privilege database user (recommended)",
+    "role_desc": "The Agent runs the SQL that the security filter lets through. With a limited database user, the database itself refuses whatever slips by: the Agent only reads and writes data, cannot create or drop tables, cannot read files and is not an administrator. Copy the script and ask your database administrator to apply it; then change the user and password above.",
+    "role_conn": "Connection",
+    "role_user": "New user name",
+    "role_schema": "Tables schema",
+    "role_owner": "Table owner user",
+    "role_copy": "Copy script",
+    "role_copied": "Copied",
+    "role_note_pg": "Change the password in the script before applying. If you use Project Logs, the mb_logs table is already created by the script.",
+    "role_note_oracle": "Validate in a test environment: the Agent uses unprefixed table names (hence the synonyms) and its metadata sync reads the connected user's own tables; run the sync with the owner user.",
+    "role_other": "The automatic script exists for PostgreSQL and Oracle. For MySQL and SQL Server, create a user with only SELECT, INSERT, UPDATE and DELETE on the application tables."
   }
 }

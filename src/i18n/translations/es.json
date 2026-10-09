@@ -4752,6 +4752,17 @@
     "fail_no_project": "Proyecto no encontrado.",
     "fail_transport": "Fallo al comunicarse con el servicio en tiempo real de Supabase.",
     "fail_unauthorized": "Debe iniciar sesión como miembro del proyecto.",
-    "ok_signed": "El Agente respondió en {ms} ms a un comando firmado (el token no pasa por el canal)."
+    "ok_signed": "El Agente respondió en {ms} ms a un comando firmado (el token no pasa por el canal).",
+    "role_title": "Usuario de base de datos con privilegio mínimo (recomendado)",
+    "role_desc": "El Agente ejecuta el SQL que el filtro de seguridad deja pasar. Con un usuario de base de datos limitado, la propia base rechaza lo que se escape: el Agente solo lee y escribe datos, no crea ni elimina tablas, no lee archivos y no es administrador. Copie el script y pida al administrador de la base que lo aplique; luego cambie el usuario y la contraseña de arriba.",
+    "role_conn": "Conexión",
+    "role_user": "Nombre del usuario nuevo",
+    "role_schema": "Esquema de las tablas",
+    "role_owner": "Usuario dueño de las tablas",
+    "role_copy": "Copiar script",
+    "role_copied": "Copiado",
+    "role_note_pg": "Cambie la contraseña del script antes de aplicarlo. Si usa los Logs del proyecto, la tabla mb_logs ya se crea en el script.",
+    "role_note_oracle": "Valide en un entorno de prueba: el Agente usa nombres de tabla sin prefijo (por eso los sinónimos) y su sincronización de metadatos lee las tablas del usuario conectado; ejecute la sincronización con el usuario dueño.",
+    "role_other": "El script automático existe para PostgreSQL y Oracle. En MySQL y SQL Server, cree un usuario solo con SELECT, INSERT, UPDATE y DELETE sobre las tablas de la aplicación."
   }
 }

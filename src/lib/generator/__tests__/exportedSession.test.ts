@@ -103,7 +103,8 @@ describe('app exportado: sessão assinada', () => {
     const evil = Buffer.from(JSON.stringify({ email: 'chefe@x.com', attrs: { vendedor_id: '1' }, exp: 9999999999 })).toString('base64url')
     expect(await lib.verifySession(`${evil}.${sig}`)).toBeNull()
     // assinatura alterada
-    expect(await lib.verifySession(`${body}.${sig.slice(0, -2)}AA`)).toBeNull()
+    // troca os 2 últimos caracteres por outros DIFERENTES (senão, 1 vez em ~4000, a assinatura já terminava assim e nada mudava)
+    expect(await lib.verifySession(`${body}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`)).toBeNull()
     // partes a mais, vazio e lixo
     expect(await lib.verifySession(`${body}.${sig}.x`)).toBeNull()
     expect(await lib.verifySession('')).toBeNull()

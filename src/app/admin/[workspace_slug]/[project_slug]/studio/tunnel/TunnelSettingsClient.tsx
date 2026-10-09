@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import Link from 'next/link'
 import { RelayDiagnostics } from './RelayDiagnostics'
+import { DbRoleCard } from './DbRoleCard'
 
 interface DBConnection {
   name: string
@@ -440,6 +441,10 @@ export default function TunnelSettingsClient({
             ))}
           </div>
         </div>
+
+        <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
+
+        <DbRoleCard connections={dbConnections} />
 
         <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
 
