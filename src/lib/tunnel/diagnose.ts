@@ -7,8 +7,11 @@ import { getProjectSecretToken, serviceClient, TunnelTimeoutError, tunnelCall } 
  * que o Agente aceita), e mede o tempo. Valida o caminho servidor → túnel → agente → banco.
  */
 
+/** Quanto poder tem o usuário do banco que o Agente usa (ver cli/dbPrivileges.js). Ausente: Agente anterior à 1.3.2 ou não deu para conferir. */
+export interface DbPrivileges { level: 'ok' | 'warn' | 'danger' | 'unknown'; findings: string[] }
+
 export type DiagnoseResult =
-  | { ok: true; ms: number }
+  | { ok: true; ms: number; privileges?: DbPrivileges }
   | { ok: false; reason: 'no_project' | 'no_token' | 'offline' | 'agent_error' | 'transport'; detail?: string }
 
 export interface DiagnoseDeps {
@@ -23,6 +26,18 @@ const PROBE_TIMEOUT_MS = 8_000
 
 async function defaultCall(projectId: string, payload: Record<string, any>, secret: string) {
   return tunnelCall(projectId, 'sql_query', payload as any, { timeoutMs: PROBE_TIMEOUT_MS, secret })
+}
+
+/** Pergunta ao Agente o poder do usuário do banco. Melhor esforço: um Agente antigo não conhece a ação e a resposta vem vazia. */
+async function readPrivileges(call: NonNullable<DiagnoseDeps['call']>, projectId: string, token: string, schemaName: string, newId: () => string): Promise<DbPrivileges | undefined> {
+  try {
+    const res = await call(projectId, { queryId: newId(), projectId, action: 'db_privileges', schemaName }, token)
+    const row = res?.success && Array.isArray(res.data) ? res.data[0] : null
+    if (row && ['ok', 'warn', 'danger', 'unknown'].includes(row.level) && Array.isArray(row.findings)) {
+      return { level: row.level, findings: row.findings.filter((f: unknown) => typeof f === 'string').slice(0, 20) }
+    }
+  } catch { /* sem resposta: segue sem a informação */ }
+  return undefined
 }
 
 export async function diagnoseTunnel(projectId: string, deps: DiagnoseDeps = {}): Promise<DiagnoseResult> {
@@ -45,7 +60,11 @@ export async function diagnoseTunnel(projectId: string, deps: DiagnoseDeps = {})
   const started = now()
   try {
     const res = await call(projectId, probe, token)
-    if (res?.success) return { ok: true, ms: now() - started }
+    if (res?.success) {
+      const ms = now() - started
+      const privileges = await readPrivileges(call, projectId, token, schemaName, randomUUID)
+      return privileges ? { ok: true, ms, privileges } : { ok: true, ms }
+    }
     return { ok: false, reason: 'agent_error', detail: typeof res?.error === 'string' ? res.error.slice(0, 200) : undefined }
   } catch (e) {
     // sem resposta: o Agente está desligado, não é deste projeto ou é anterior à v1.3 (que não entende o formato de acesso por tabela)

@@ -3,6 +3,7 @@ import type { LoginSetup } from './loginSetup'
 import { buildSession, type UserRow } from './endUserAuth'
 import { MFA_PENDING_TTL, MFA_PROOF_TTL, signToken, verifyToken, type EndUserSession } from './sessionToken'
 import { getProjectSecretToken, TunnelTimeoutError } from './server'
+import { isRowActive } from './sessionLiveness'
 
 /**
  * Passos do login do usuário final no servidor (sem Next, para poder testar).
@@ -63,6 +64,8 @@ export async function performLogin(deps: LoginDeps, input: { projectId: string; 
   if (!user || typeof user !== 'object') {
     return { kind: 'error', status: 401, code: 'invalid_credentials', message: typeof res?.error === 'string' ? res.error.slice(0, 200) : undefined }
   }
+  // usuário marcado como inativo no banco (coluna ativo/active...) não entra, mesmo com a senha certa
+  if (!isRowActive(user)) return { kind: 'error', status: 401, code: 'invalid_credentials' }
   if (setup.auth.db_display_name_column && user[setup.auth.db_display_name_column]) user.__display_name = user[setup.auth.db_display_name_column]
 
   const session = buildSession(projectId, user, setup.auth.db_display_name_column)
@@ -144,6 +147,7 @@ export async function performPasskeyLogin(deps: LoginDeps, input: { projectId: s
   if (!found || typeof found !== 'object') return { kind: 'error', status: 401, code: 'invalid_credentials' }
 
   // a consulta crua traz todas as colunas: a senha nunca pode seguir para a sessão nem para o navegador
+  if (!isRowActive(found)) return { kind: 'error', status: 401, code: 'invalid_credentials' }
   const user: UserRow = { ...found }
   const pw = setup.auth.db_password_column
   if (pw) for (const k of Object.keys(user)) if (k.toLowerCase() === String(pw).toLowerCase()) delete user[k]

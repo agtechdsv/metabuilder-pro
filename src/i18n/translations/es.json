@@ -4763,6 +4763,18 @@
     "role_copied": "Copiado",
     "role_note_pg": "Cambie la contraseña del script antes de aplicarlo. Si usa los Logs del proyecto, la tabla mb_logs ya se crea en el script.",
     "role_note_oracle": "Valide en un entorno de prueba: el Agente usa nombres de tabla sin prefijo (por eso los sinónimos) y su sincronización de metadatos lee las tablas del usuario conectado; ejecute la sincronización con el usuario dueño.",
-    "role_other": "El script automático existe para PostgreSQL y Oracle. En MySQL y SQL Server, cree un usuario solo con SELECT, INSERT, UPDATE y DELETE sobre las tablas de la aplicación."
+    "role_other": "El script automático existe para PostgreSQL y Oracle. En MySQL y SQL Server, cree un usuario solo con SELECT, INSERT, UPDATE y DELETE sobre las tablas de la aplicación.",
+    "priv_ok": "El usuario de base de datos que usa el Agente tiene privilegio mínimo.",
+    "priv_warn": "El usuario de base de datos que usa el Agente tiene más poder del necesario:",
+    "priv_danger": "ATENCIÓN: el usuario de base de datos que usa el Agente tiene demasiado poder:",
+    "priv_fix": "Use el script de \"Usuario de base de datos con privilegio mínimo\", más abajo en esta pantalla.",
+    "priv_superuser": "es superusuario de PostgreSQL (puede leer archivos del servidor)",
+    "priv_dba": "tiene el rol DBA de Oracle",
+    "priv_powerful_privileges": "tiene privilegios de sistema poderosos (ANY TABLE, ALTER SYSTEM...)",
+    "priv_createrole": "puede crear otros usuarios y roles",
+    "priv_bypassrls": "ignora las políticas de seguridad por fila de la base",
+    "priv_createdb": "puede crear bases de datos",
+    "priv_can_create": "puede crear tablas en el esquema",
+    "priv_owns_tables": "es dueño de las tablas (puede alterarlas y eliminarlas)"
   }
 }

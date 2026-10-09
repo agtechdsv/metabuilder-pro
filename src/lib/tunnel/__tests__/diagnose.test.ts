@@ -16,8 +16,10 @@ describe('diagnoseTunnel', () => {
     const call = vi.fn(async (_p: string, _payload: any, _s: string) => ({ success: true }))
     let t = 1000
     const r = await diagnoseTunnel('p', deps(call, { now: () => (t += 40) }))
-    expect(r).toEqual({ ok: true, ms: 40 })
-    expect(call).toHaveBeenCalledTimes(1)
+    expect(r).toMatchObject({ ok: true, ms: 40 })
+    // um envio para o teste e outro (melhor esforço) para o poder do usuário do banco
+    expect(call).toHaveBeenCalledTimes(2)
+    expect(call.mock.calls[1][1]).toMatchObject({ action: 'db_privileges' })
     expect(call.mock.calls[0][1]).toMatchObject({ action: 'select', schemaName: 'vendas', query: 'SELECT 1 AS ok' })
     expect(call.mock.calls[0][2]).toBe('tok')
   })
@@ -25,6 +27,15 @@ describe('diagnoseTunnel', () => {
   it('sem resposta: Agente desligado, de outro projeto ou anterior à v1.2 (não entende a assinatura)', async () => {
     const call = async () => { throw new TunnelTimeoutError(1) }
     expect(await diagnoseTunnel('p', deps(call))).toEqual({ ok: false, reason: 'offline' })
+  })
+
+  it('informa o poder do usuário do banco quando o Agente responde (e ignora respostas estranhas)', async () => {
+    const ok = async (_p: string, payload: any) => payload.action === 'db_privileges' ? { success: true, data: [{ level: 'danger', findings: ['superuser', 5] }] } : { success: true }
+    expect(await diagnoseTunnel('p', deps(ok))).toMatchObject({ ok: true, privileges: { level: 'danger', findings: ['superuser'] } })
+    const lixo = async (_p: string, payload: any) => payload.action === 'db_privileges' ? { success: true, data: [{ level: 'x' }] } : { success: true }
+    expect(await diagnoseTunnel('p', deps(lixo))).not.toHaveProperty('privileges')
+    const antigo = async (_p: string, payload: any) => { if (payload.action === 'db_privileges') throw new Error('x'); return { success: true } }
+    expect(await diagnoseTunnel('p', deps(antigo))).toMatchObject({ ok: true })
   })
 
   it('no Oracle usa DUAL', async () => {

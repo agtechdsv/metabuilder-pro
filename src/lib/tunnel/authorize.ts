@@ -1,7 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { createClient as createSessionClient } from '@/utils/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { serviceClient } from './server'
+import { serviceClient, getProjectSecretToken, tunnelCallAuto } from './server'
+import { loadLoginSetup } from './loginSetup'
+import { createLivenessChecker } from './sessionLiveness'
 import { endUserCookieName, verifyEndUserSession, type EndUserSession } from './sessionToken'
 
 export type RelayActor =
@@ -42,20 +44,31 @@ const MEMBER_TTL_MS = 30_000
  *  - membro: usuário do MetaBuilder que enxerga o projeto (a regra de acesso do banco, has_project_access, decide).
  * Qualquer outro caso é recusado.
  */
+// Reconferência da sessão contra o banco do cliente (usuário apagado/desativado deixa de valer em até 2 minutos)
+const liveness = createLivenessChecker({
+  loadSetup: (pid) => loadLoginSetup(pid),
+  secretToken: (pid) => getProjectSecretToken(pid),
+  call: (pid, payload) => tunnelCallAuto(pid, payload as any, { timeoutMs: 4_000 }),
+})
+export const clearLivenessCache = () => liveness.clear()
+
 export async function authorizeProjectActor(req: NextRequest, projectId: string): Promise<RelayActor | null> {
   const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
+  // A sessão só é conferida contra o banco do cliente quando ELA vai ser usada (um desenvolvedor com um login antigo de
+  // usuário final no navegador continua sendo desenvolvedor no Studio). Quem foi apagado ou desativado não vira "visitante".
+  const sessionRevoked = async () => !!session && (await liveness.check(projectId, session)) === 'revoked'
 
   // Quem é do projeto E também entrou no app publicado como usuário final (a IDE guarda os dois logins no mesmo navegador):
   //  - nas telas do desenvolvedor (Studio, IDE) continua sendo tratado como desenvolvedor;
   //  - nas páginas do app publicado vale o usuário final, para o desenvolvedor testar o app exatamente como aquele usuário o vê
   //    (regras por linha, auditoria "por"). Só ESTREITA o acesso: o cabeçalho de origem não dá poder a ninguém, porque ser
   //    membro depende do login do MetaBuilder, não dele.
-  if (session && isPublishedAppPage(req)) return { kind: 'end_user', session }
+  if (session && isPublishedAppPage(req)) return (await sessionRevoked()) ? null : { kind: 'end_user', session }
 
   const memberId = await memberIdOf(projectId)
   if (memberId) return { kind: 'member', userId: memberId }
 
-  if (session) return { kind: 'end_user', session }
+  if (session) return (await sessionRevoked()) ? null : { kind: 'end_user', session }
   return await anonymousIfPublic(req, projectId).catch(() => null)
 }
 
@@ -87,6 +100,8 @@ const ANONYMOUS_OWNER = '00000000-0000-0000-0000-000000000000'
  */
 export async function resolveDownloadOwner(req: NextRequest, projectId: string): Promise<DownloadOwner | { error: string } | null> {
   const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
+  // quem foi apagado ou desativado no banco do cliente não baixa nem lista mais nada
+  if (session && (await liveness.check(projectId, session)) === 'revoked') return null
   if (session) {
     return UUID_RE.test(session.sub)
       ? { id: session.sub.toLowerCase(), kind: 'end_user' }

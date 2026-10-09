@@ -226,6 +226,7 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
   const { wrapChannelWithChunking } = require('./chunkedChannel');
   const { authorizeCommand, NonceCache, DEFAULT_TOLERANCE_SECONDS, commandTopic } = require('./security');
   const { fanIn } = require('./commandChannel');
+  const { checkDbPrivileges, describePrivileges } = require('./dbPrivileges');
   const { ReplyRouter } = require('./replies');
   const { applyToSelect, guardCustom, enforceWrite } = require('./sqlPolicy');
 const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
@@ -264,6 +265,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     }
     
     console.log(chalk.green(t('tunnel_conn_established', { name: connectionName || 'public' })));
+
+    // quanto poder o usuário do banco tem? (só avisa; o ideal é um usuário com privilégio mínimo)
+    const readQuery = async (q) => dbType === 'oracle'
+      ? ((await oracleConnection.execute(q, [], { outFormat: oracledb.OUT_FORMAT_OBJECT })).rows || [])
+      : (await pgClient.query(q)).rows;
+    const privWarning = describePrivileges(await checkDbPrivileges({ dbType, query: readQuery }));
+    if (privWarning) console.log(chalk.yellow(privWarning));
   } catch (connErr) {
     console.error(chalk.red.bold(t('tunnel_conn_failed', { name: connectionName || 'public', dbType })), connErr.message);
     console.log(chalk.yellow(t('tunnel_conn_warning')));
@@ -1478,6 +1486,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
           }
           console.log(chalk.green(`[ OK ] BPM SYNC ACTION processada para evento ${eventType} em ${safeTable}.`));
+        } else if (action === 'db_privileges') {
+          // diagnóstico do poder do usuário do banco: só para membros do projeto (comando sem `access`)
+          if (endUser) throw new Error('Ação não permitida para usuário final.');
+          const readQuery = async (q) => dbType === 'oracle'
+            ? ((await oracleConnection.execute(q, [], { outFormat: oracledb.OUT_FORMAT_OBJECT })).rows || [])
+            : (await pgClient.query(q)).rows;
+          result = { rows: [await checkDbPrivileges({ dbType, query: readQuery })] };
         } else if (action === 'sync_bpm') {
           if (bpmEngine) {
              console.log(chalk.yellow(`[BPM] Sincronização forçada dos fluxos recebida.`));

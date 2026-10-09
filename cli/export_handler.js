@@ -39,7 +39,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
             .update({ status: 'processing', progress: pct, updated_at: new Date().toISOString() })
             .eq('id', jobId);
         }
-        await channel.send({ type: 'broadcast', event: 'download_progress', payload: { jobId, status: 'processing', progress: pct, viewName } });
+        // (o painel de downloads acompanha pelo registro em download_jobs; nada vai ao canal público)
       } catch (_) { /* progresso é informativo: nunca derruba a exportação */ }
     };
 
@@ -372,18 +372,7 @@ NEWFILEUID:NONE
         if (error) {
           console.error(chalk.red('[ EXPORT ] Erro ao atualizar status no banco:'), error.message);
         } else {
-          // Broadcast progress completion to instantly update the UI widget
-          await channel.send({
-            type: 'broadcast',
-            event: 'download_progress',
-            payload: {
-              jobId,
-              status: 'completed',
-              progress: 100,
-              fileName,
-              recordCount: rows.length
-            }
-          });
+          // o painel de downloads vê a conclusão pelo registro em download_jobs (nada vai ao canal público)
         }
       }
 
@@ -396,16 +385,7 @@ NEWFILEUID:NONE
            updated_at: new Date().toISOString()
         }).eq('id', jobId);
         
-        // Broadcast failure to instantly update the UI widget
-        await channel.send({
-          type: 'broadcast',
-          event: 'download_progress',
-          payload: {
-            jobId,
-            status: 'failed',
-            error: err.message
-          }
-        });
+        // a falha aparece no painel pelo registro em download_jobs (a mensagem de erro não vai ao canal público)
       }
     }
   });

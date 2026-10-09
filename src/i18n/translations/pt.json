@@ -4675,6 +4675,18 @@
     "role_copied": "Copiado",
     "role_note_pg": "Troque a senha do script antes de aplicar. Se você usa os Logs do projeto, a tabela mb_logs já vai criada no script.",
     "role_note_oracle": "Valide em ambiente de teste: o Agente usa nomes de tabela sem prefixo (por isso os sinônimos) e sua sincronização de metadados lê as tabelas do usuário conectado; rode a sincronização com o usuário dono.",
-    "role_other": "O script automático existe para PostgreSQL e Oracle. Em MySQL e SQL Server, crie um usuário só com SELECT, INSERT, UPDATE e DELETE nas tabelas do aplicativo."
+    "role_other": "O script automático existe para PostgreSQL e Oracle. Em MySQL e SQL Server, crie um usuário só com SELECT, INSERT, UPDATE e DELETE nas tabelas do aplicativo.",
+    "priv_ok": "O usuário do banco usado pelo Agente tem privilégio mínimo.",
+    "priv_warn": "O usuário do banco usado pelo Agente tem mais poder que o necessário:",
+    "priv_danger": "ATENÇÃO: o usuário do banco usado pelo Agente tem poder demais:",
+    "priv_fix": "Use o script de \"Usuário do banco com privilégio mínimo\", mais abaixo nesta tela.",
+    "priv_superuser": "é superusuário do PostgreSQL (pode ler arquivos do servidor)",
+    "priv_dba": "tem o papel DBA do Oracle",
+    "priv_powerful_privileges": "tem privilégios de sistema poderosos (ANY TABLE, ALTER SYSTEM...)",
+    "priv_createrole": "pode criar outros usuários e papéis",
+    "priv_bypassrls": "ignora as políticas de segurança por linha do banco",
+    "priv_createdb": "pode criar bancos",
+    "priv_can_create": "pode criar tabelas no schema",
+    "priv_owns_tables": "é dono das tabelas (pode alterá-las e apagá-las)"
   }
 }

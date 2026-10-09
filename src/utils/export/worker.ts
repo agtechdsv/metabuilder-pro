@@ -30,25 +30,11 @@ function getDbPool(): any {
 async function broadcastProgress(projectId: string, payload: {
   jobId: string, progress: number, status: string, error?: string, viewName?: string
 }) {
-  try {
-    const channelName = `tunnel:${projectId}`
-    const channel = getSupabase().channel(channelName)
-    await new Promise<void>((resolve) => {
-      let isDone = false
-      const timeout = setTimeout(() => {
-        if (!isDone) { isDone = true; getSupabase().removeChannel(channel); resolve(); }
-      }, 5000)
-      channel.subscribe((status: string) => {
-        if (status === 'SUBSCRIBED' && !isDone) {
-          channel.send({ type: 'broadcast', event: 'download_progress', payload }).then(() => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
-          }).catch(() => {
-            if (!isDone) { isDone = true; clearTimeout(timeout); getSupabase().removeChannel(channel); resolve() }
-          })
-        }
-      })
-    })
-  } catch (err) {}
+  // O painel de downloads acompanha o andamento pelo registro em `download_jobs` (postgres_changes). Antes o progresso, o
+  // nome da tela e as mensagens de erro também iam ao canal público `tunnel:<projeto>`, que qualquer um pode ouvir; ninguém
+  // as consumia. Fica só o registro.
+  void projectId
+  void payload
 }
 
 export async function executeExportBackground(params: {

@@ -7,15 +7,21 @@ vi.mock('@/utils/supabase/server', () => ({
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'p' } }) }) }) }),
   }),
 }))
+let userRows: any[] = [{ id: 'user-maria', ativo: true }]
 vi.mock('../server', () => ({
   serviceClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { auth_type: 'database' } }) }) }) }) }),
+  getProjectSecretToken: async () => 'segredo-do-projeto-0123456789',
+  tunnelCallAuto: async () => ({ success: true, data: userRows }),
+}))
+vi.mock('../loginSetup', () => ({
+  loadLoginSetup: async () => ({ project: { id: 'p' }, schemaName: 'public', auth: { auth_type: 'database', db_table_name: 'usuarios', db_email_column: 'email' }, security: {} }),
 }))
 
-import { authorizeProjectActor, isPublishedAppPage } from '../authorize'
+import { authorizeProjectActor, isPublishedAppPage, clearLivenessCache } from '../authorize'
 import { endUserCookieName, signEndUserSession } from '../sessionToken'
 
 const PID = '123e4567-e89b-42d3-a456-426614174001'
-const cookie = () => signEndUserSession({ pid: PID, sub: 'user-maria' })
+const cookie = () => signEndUserSession({ pid: PID, sub: 'user-maria', row: { id: 'user-maria' } })
 const req = (opts: { cookie?: string; referer?: string }) => ({
   cookies: { get: (n: string) => (opts.cookie && n === endUserCookieName(PID) ? { value: opts.cookie } : undefined) },
   headers: new Headers(opts.referer ? { referer: opts.referer } : {}),
@@ -24,6 +30,8 @@ const req = (opts: { cookie?: string; referer?: string }) => ({
 beforeEach(() => {
   process.env.RUNTIME_SESSION_SECRET = 'segredo-de-teste-0123456789abcdef'
   supabaseUser = null
+  userRows = [{ id: 'user-maria', ativo: true }]
+  clearLivenessCache()
 })
 
 describe('desenvolvedor que também entrou no app como usuário final', () => {
@@ -58,5 +66,28 @@ describe('isPublishedAppPage', () => {
     expect(isPublishedAppPage(req({ referer: 'https://x.com/a/b' }))).toBe(false)
     expect(isPublishedAppPage(req({ referer: 'https://x.com/admin/a/b/c' }))).toBe(false)
     expect(isPublishedAppPage(req({ referer: 'lixo' }))).toBe(false)
+  })
+})
+
+describe('usuário apagado ou desativado no banco do cliente', () => {
+  const app = 'https://www.metabuilderpro.com/kika-projetos/vendas-pg/clientes'
+
+  it('perde o acesso (nas páginas do app e no caminho comum) e NÃO vira visitante anônimo', async () => {
+    userRows = []
+    expect(await authorizeProjectActor(req({ cookie: cookie(), referer: app }), PID)).toBeNull()
+    clearLivenessCache()
+    userRows = [{ id: 'user-maria', ativo: false }]
+    expect(await authorizeProjectActor(req({ cookie: cookie() }), PID)).toBeNull()
+  })
+
+  it('o desenvolvedor com um login antigo de usuário final segue sendo desenvolvedor nas telas do Studio', async () => {
+    supabaseUser = { id: 'dev-1' }
+    userRows = []
+    const actor = await authorizeProjectActor(req({ cookie: cookie(), referer: 'https://x.com/admin/kika/vendas/studio/auth' }), PID)
+    expect(actor?.kind).toBe('member')
+  })
+
+  it('usuário ativo continua entrando', async () => {
+    expect((await authorizeProjectActor(req({ cookie: cookie(), referer: app }), PID))?.kind).toBe('end_user')
   })
 })

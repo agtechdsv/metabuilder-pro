@@ -4675,6 +4675,18 @@
     "role_copied": "Copied",
     "role_note_pg": "Change the password in the script before applying. If you use Project Logs, the mb_logs table is already created by the script.",
     "role_note_oracle": "Validate in a test environment: the Agent uses unprefixed table names (hence the synonyms) and its metadata sync reads the connected user's own tables; run the sync with the owner user.",
-    "role_other": "The automatic script exists for PostgreSQL and Oracle. For MySQL and SQL Server, create a user with only SELECT, INSERT, UPDATE and DELETE on the application tables."
+    "role_other": "The automatic script exists for PostgreSQL and Oracle. For MySQL and SQL Server, create a user with only SELECT, INSERT, UPDATE and DELETE on the application tables.",
+    "priv_ok": "The database user the Agent uses has minimal privileges.",
+    "priv_warn": "The database user the Agent uses has more power than needed:",
+    "priv_danger": "WARNING: the database user the Agent uses has too much power:",
+    "priv_fix": "Use the \"Least-privilege database user\" script further down this page.",
+    "priv_superuser": "is a PostgreSQL superuser (can read server files)",
+    "priv_dba": "has the Oracle DBA role",
+    "priv_powerful_privileges": "has powerful system privileges (ANY TABLE, ALTER SYSTEM...)",
+    "priv_createrole": "can create other users and roles",
+    "priv_bypassrls": "ignores the database row-level security policies",
+    "priv_createdb": "can create databases",
+    "priv_can_create": "can create tables in the schema",
+    "priv_owns_tables": "owns the tables (can alter and drop them)"
   }
 }
