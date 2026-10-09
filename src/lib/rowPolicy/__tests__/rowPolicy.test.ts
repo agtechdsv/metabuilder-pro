@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createRequire } from 'node:module'
-import { cleanRowPolicy, resolveAccess, type TableAccessConfig } from '../policy'
+import { cleanRowPolicy, cleanTableAccessMode, isTableClosed, resolveAccess, type TableAccessConfig } from '../policy'
 import { accessForSession, clearTableAccessCache, loadTableAccess } from '../server'
 import { exportProblem } from '../exportGuard'
 import { buildCommand } from '@/lib/tunnel/relayPolicy'
@@ -94,8 +94,10 @@ describe('resolveAccess', () => {
 describe('carregador da configuração das tabelas', () => {
   beforeEach(() => clearTableAccessCache())
 
-  const client = (handler: (cols: string) => { data: any; error: any }) => ({
-    from: () => ({ select: (cols: string) => ({ eq: async () => handler(cols) }) }),
+  const client = (handler: (cols: string) => { data: any; error: any }, uiConfig: any = null) => ({
+    from: (table: string) => table === 'project_auth_config'
+      ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: uiConfig ? { ui_config: uiConfig } : null, error: null }) }) }) }
+      : { select: (cols: string) => ({ eq: async () => handler(cols) }) },
   }) as any
 
   it('lê permissões e política; tabela sem permissão marcada vale como permitida', async () => {
@@ -146,6 +148,53 @@ describe('carregador da configuração das tabelas', () => {
     clearTableAccessCache()
     const anon = await accessForSession(PID, { sub: 'anon:1.1.1.1' }, { client: c })
     expect(anon.policies[0].deny).toBe(true)
+  })
+})
+
+describe('bloquear por padrão', () => {
+  beforeEach(() => clearTableAccessCache())
+  const client = (handler: (cols: string) => { data: any; error: any }, uiConfig: any = null) => ({
+    from: (table: string) => table === 'project_auth_config'
+      ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: uiConfig ? { ui_config: uiConfig } : null, error: null }) }) }) }
+      : { select: (cols: string) => ({ eq: async () => handler(cols) }) },
+  }) as any
+  const rows = () => ({ data: [
+    { db_table_name: 'clientes', can_create: true, can_update: true, can_delete: true },
+    { db_table_name: 'pedidos', can_create: true, can_update: true, can_delete: true },
+    { db_table_name: 'produtos', can_create: true, can_update: true, can_delete: true },
+  ], error: null })
+
+  it('sem o modo ligado nada muda: as tabelas seguem abertas', async () => {
+    const a = await accessForSession(PID, { sub: '1', email: 'a@x.com' }, { client: client(rows) })
+    expect(a.policies).toEqual([])
+  })
+
+  it('ligado: só as tabelas liberadas ficam abertas; as demais são negadas por inteiro', async () => {
+    const c = client(rows, { table_access: { closed: true, open: ['Clientes', 'produtos'] } })
+    const a = await accessForSession(PID, { sub: '1', email: 'a@x.com' }, { client: c })
+    expect(a.policies).toEqual([{ table: 'pedidos', deny: true, conds: [] }])
+    // de ponta a ponta no Agente: leitura e escrita da tabela negada
+    expect(sqlPolicy.applyToSelect('SELECT * FROM "pedidos"', a)).toContain('1 = 0')
+    // SQL próprio que apaga: não atinge nenhuma linha; gravação estruturada: recusada
+    expect(sqlPolicy.guardCustom('DELETE FROM "pedidos" WHERE "id" = 1', a)).toContain('1 = 0')
+    await expect(sqlPolicy.enforceWrite({ access: a, action: 'insert', table: 'pedidos', data: { x: 1 }, dbType: 'postgres', query: async () => [] })).rejects.toThrow(/não tem acesso/)
+    // a liberada segue intacta
+    expect(sqlPolicy.applyToSelect('SELECT * FROM "clientes"', a)).not.toContain('1 = 0')
+  })
+
+  it('limpa o que vem do banco: nomes inválidos somem; sem nada salvo, aberto', () => {
+    expect(cleanTableAccessMode(null)).toEqual({ closed: false, open: [] })
+    expect(cleanTableAccessMode({ closed: true, open: ['ok_1', 'x"; DROP', 5, 'OK_1'] })).toEqual({ closed: true, open: ['ok_1'] })
+    expect(isTableClosed({ closed: true, open: ['a'] }, 'public.A')).toBe(false)
+    expect(isTableClosed({ closed: true, open: ['a'] }, 'b')).toBe(true)
+    expect(isTableClosed({ closed: false, open: [] }, 'b')).toBe(false)
+  })
+
+  it('se não der para ler o modo do projeto, recusa (nunca assume aberto)', async () => {
+    const c = { from: (t: string) => t === 'project_auth_config'
+      ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: 'caiu' } }) }) }) }
+      : { select: () => ({ eq: async () => rows() }) } } as any
+    await expect(loadTableAccess(PID, { client: c })).rejects.toThrow(/modo de acesso/)
   })
 })
 

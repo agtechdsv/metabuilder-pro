@@ -1,8 +1,10 @@
 /**
  * Segurança dos comandos que chegam ao Agente pelo canal em tempo real.
  *
- * O canal `tunnel:<projeto>` é público: qualquer pessoa que conheça o id do projeto pode ouvir e publicar nele.
- * Por isso o Agente não aceita mais "o token do projeto dentro do comando" (quem ouvisse o canal o copiaria):
+ * O canal `tunnel:<projeto>` é público: qualquer pessoa que conheça o id do projeto pode ouvir e publicar nele. Os comandos
+ * agora vão por um tópico PRIVADO (`commandTopic`, derivado do token) e o público fica só para servidores ainda não
+ * atualizados; a assinatura abaixo vale nos dois, e protege contra quem publicar no que for.
+ * O Agente não aceita mais "o token do projeto dentro do comando" (quem ouvisse o canal o copiaria):
  * o servidor ASSINA cada comando com o token (HMAC-SHA256) e o Agente confere a assinatura com o token que ele já
  * tem. O token nunca trafega. Cada comando leva hora e número de uso único, então uma cópia do comando é inútil.
  *
@@ -31,6 +33,16 @@ function stableStringify(value) {
   if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
   const keys = Object.keys(value).filter(k => value[k] !== undefined && typeof value[k] !== 'function').sort();
   return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(value[k])).join(',') + '}';
+}
+
+/**
+ * Tópico PRIVADO de comandos do projeto: o nome é derivado do token (HMAC), então só quem tem o token (o servidor e o
+ * Agente) sabe qual é. O canal público `tunnel:<projeto>` deixa de carregar comandos. Mesma conta em
+ * src/lib/tunnel/commandSigning.ts (um teste confere).
+ */
+function commandTopic(projectId, secretToken) {
+  const tag = crypto.createHmac('sha256', secretToken).update('mb-cmd-topic\n' + projectId).digest('base64url').slice(0, 32);
+  return `tunnel-cmd:${projectId}:${tag}`;
 }
 
 /** Campos de segurança: ficam fora do corpo assinado. */
@@ -135,4 +147,4 @@ function isPathInside(baseDir, target) {
   }
 }
 
-module.exports = { VERSION, VERSION_ACCESS, DEFAULT_TOLERANCE_SECONDS, stableStringify, signCommand, computeSignature, authorizeCommand, NonceCache, isPathInside };
+module.exports = { VERSION, VERSION_ACCESS, DEFAULT_TOLERANCE_SECONDS, commandTopic, stableStringify, signCommand, computeSignature, authorizeCommand, NonceCache, isPathInside };

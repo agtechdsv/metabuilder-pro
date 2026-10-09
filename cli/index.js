@@ -224,7 +224,8 @@ async function startTunnel(projectId, secretToken, connectionName, connectionStr
 
   const ws = require('ws');
   const { wrapChannelWithChunking } = require('./chunkedChannel');
-  const { authorizeCommand, NonceCache, DEFAULT_TOLERANCE_SECONDS } = require('./security');
+  const { authorizeCommand, NonceCache, DEFAULT_TOLERANCE_SECONDS, commandTopic } = require('./security');
+  const { fanIn } = require('./commandChannel');
   const { ReplyRouter } = require('./replies');
   const { applyToSelect, guardCustom, enforceWrite } = require('./sqlPolicy');
 const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
@@ -295,7 +296,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   }
 
   const channelName = `tunnel:${projectId}`;
-  const channel = wrapChannelWithChunking(supabase.channel(channelName));
+  const publicChannel = wrapChannelWithChunking(supabase.channel(channelName));
+  // Comandos chegam ao tópico PRIVADO (nome derivado do token: só o servidor e este Agente o conhecem). O canal público
+  // segue ouvido apenas para um servidor ainda não atualizado; um servidor atualizado não publica mais nele.
+  const commandChannel = wrapChannelWithChunking(supabase.channel(commandTopic(projectId, secretToken)));
+  const channel = fanIn([commandChannel, publicChannel], publicChannel);
 
   // Segurança dos comandos: o servidor ASSINA cada comando (o token não trafega no canal público) e o Agente só
   // executa comandos com assinatura válida. O formato antigo (token dentro do comando) é sempre recusado.
@@ -1624,7 +1629,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(chalk.green.bold(t('tunnel_ready')));
-        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: obrigatórios | formato antigo (token no comando): RECUSADO | respostas em tópico privado: ativas | acesso por tabela do usuário final: ativo`));
+        console.log(chalk.gray(`[ SEGURANÇA ] Comandos assinados: obrigatórios | formato antigo (token no comando): RECUSADO | respostas em tópico privado: ativas | comandos em tópico privado: ativos | acesso por tabela do usuário final: ativo`));
       }
     });
 }

@@ -1,5 +1,14 @@
 import { AppAST, ModelNode, FieldNode, RouteNode, DbType } from '../ast'
 
+/** Segredo aleatório de 256 bits, único por exportação: o app exportado nunca sai com uma chave igual à de outro projeto. */
+function randomJwtSecret(): string {
+  const bytes = new Uint8Array(32)
+  globalThis.crypto.getRandomValues(bytes)
+  let bin = ''
+  bytes.forEach(b => { bin += String.fromCharCode(b) })
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
 /**
  * java-spring-backend.ts — Gerador do backend Spring Boot 3.x (Módulos 5 + 8)
  *
@@ -482,7 +491,8 @@ function generateApplicationProperties(ast: AppAST): string {
     lines.push(
       ``,
       `# ── JWT Security ──`,
-      `jwt.secret=\${JWT_SECRET:minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}`,
+      `# Chave gerada para ESTE projeto na exportação. Em produção defina a variável de ambiente JWT_SECRET (e não publique este arquivo).`,
+      `jwt.secret=\${JWT_SECRET:${randomJwtSecret()}}`,
       `jwt.expiration-ms=\${JWT_EXPIRATION_MS:86400000}`
     )
   }
@@ -1256,6 +1266,8 @@ function generateBackendReadme(ast: AppAST): string {
 
 A API utiliza autenticação **Stateless** com tokens JWT (algoritmo HMAC-SHA256).
 
+> **Antes de publicar:** a chave \`JWT_SECRET\` foi gerada para este projeto na exportação. Em produção defina a sua própria pela variável de ambiente e não publique o \`application.properties\`/\`.env\`. Este backend **não aplica** as permissões por tabela nem as regras de acesso por linha do MetaBuilder: qualquer usuário autenticado acessa todas as tabelas expostas.
+
 ### 1. Obter Token de Acesso
 \`\`\`bash
 curl -X POST http://localhost:${port}/api/auth/login \\
@@ -1789,7 +1801,7 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("\${jwt.secret:minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}")
+    @Value("\${jwt.secret}")
     private String secret;
 
     @Value("\${jwt.expiration-ms:86400000}")
@@ -1797,10 +1809,9 @@ public class JwtUtil {
 
     private Key getSigningKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        // chave curta enfraquece a assinatura: recusa subir em vez de completar com zeros
         if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
-            keyBytes = padded;
+            throw new IllegalStateException("jwt.secret precisa ter ao menos 32 caracteres (defina JWT_SECRET).");
         }
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -2256,7 +2267,7 @@ function generateDockerCompose(ast: AppAST): string {
   }
 
   const jwtEnv = ast.jwtEnabled
-    ? `\n      - JWT_SECRET=\${JWT_SECRET:-minha-chave-secreta-256-bits-super-segura-e-longa-32bytes}`
+    ? `\n      - JWT_SECRET=\${JWT_SECRET:?defina JWT_SECRET (veja .env.example)}`
     : ''
 
   return `# =========================================================================
@@ -2349,7 +2360,7 @@ function generateEnvExample(ast: AppAST): string {
 # ── Segurança JWT ──
 # Chave de assinatura HMAC-SHA256 (mínimo de 256 bits / 32 caracteres)
 # Recomendado gerar com: openssl rand -hex 32
-JWT_SECRET=minha-chave-secreta-256-bits-super-segura-e-longa-32bytes
+JWT_SECRET=${randomJwtSecret()}
 
 # Tempo de vida do token em milissegundos (86400000 ms = 24 horas)
 JWT_EXPIRATION_MS=86400000

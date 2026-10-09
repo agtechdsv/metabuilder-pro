@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
             // Ask CLI to start sending chunks
             const command = authenticateCommand(projectToken, 'request_download_stream', projectId, { jobId, localPath: job.local_path }, { replyTo: replyTopic })
             // o pedido (assinado) vai ao canal em que o Agente escuta, e a resposta volta pelo tópico privado que esta rota ouve
-            Promise.resolve(tunnelSend(projectId, 'request_download_stream', command)).catch((err: any) => {
+            Promise.resolve(tunnelSend(projectId, 'request_download_stream', command, undefined, projectToken)).catch((err: any) => {
               if (!isDone) {
                 isDone = true
                 clearTimeout(timeout)

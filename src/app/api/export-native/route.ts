@@ -100,7 +100,8 @@ export async function POST(request: Request) {
         table_name: authConfig.db_table_name,
         email_column: authConfig.db_email_column,
         password_column: authConfig.db_password_column,
-        hash_format: authConfig.db_password_hash_type
+        hash_format: authConfig.db_password_hash_type,
+        table_access: authConfig.ui_config?.table_access
       } : undefined
     }
 

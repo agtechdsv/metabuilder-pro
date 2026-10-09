@@ -1,4 +1,4 @@
-import { cleanRowPolicy } from '../rowPolicy/policy'
+import { cleanRowPolicy, cleanTableAccessMode } from '../rowPolicy/policy'
 import { cleanAuditConfig, effectiveAudit } from '../rowPolicy/audit'
 import {
   AppAST,
@@ -2820,6 +2820,7 @@ export function parseMetaBuilderJSON(
       emailColumn: ac.email_column || ac.db_email_column || 'email',
       passwordColumn: ac.password_column || ac.db_password_column || 'hash_senha',
       hashFormat: ac.hash_format || ac.db_password_hash_type || 'bcrypt',
+      tableAccess: cleanTableAccessMode(ac.table_access),
     }
   }
 

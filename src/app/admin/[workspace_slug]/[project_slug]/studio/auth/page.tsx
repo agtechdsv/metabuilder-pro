@@ -37,6 +37,8 @@ import { effectiveAudit } from '@/lib/rowPolicy/audit'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
+import { TableAccessMode } from '@/components/studio/TableAccessMode'
+import { cleanTableAccessMode } from '@/lib/rowPolicy/policy'
 
 export default function AuthSettingsPage() {
   const { t } = useI18n()
@@ -999,6 +1001,11 @@ export default function AuthSettingsPage() {
                 canEdit={true}
               />
             )}
+            <TableAccessMode
+              tables={models.map(m => m.db_table_name).filter(Boolean)}
+              value={cleanTableAccessMode((visualConfig as any).table_access)}
+              onChange={v => setVisualConfig((prev: any) => ({ ...prev, table_access: v }))}
+            />
           </div>
         ) : activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

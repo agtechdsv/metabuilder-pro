@@ -45,7 +45,23 @@ export interface TableAccessConfig {
   policy: RowPolicy | null
   /** auditoria da tabela (já resolvida: configurada ou reconhecida pelo nome); null = sem auditoria */
   audit?: EffectiveAudit | null
+  /** projeto em modo "bloquear por padrão" e esta tabela NÃO foi liberada: o usuário final não acessa nada dela */
+  closed?: boolean
 }
+
+/** Modo do projeto para tabelas sem liberação explícita (guardado em project_auth_config.ui_config.table_access). */
+export interface TableAccessMode { closed: boolean; open: string[] }
+
+/** Limpa o que veio do banco/da tela. Sem nada salvo, o projeto segue como sempre foi: tabelas abertas. */
+export function cleanTableAccessMode(raw: unknown): TableAccessMode {
+  const r = raw && typeof raw === 'object' ? (raw as any) : {}
+  const open = Array.isArray(r.open) ? r.open.map((t: unknown) => text(t, 100).toLowerCase()).filter((t: string) => IDENT.test(t)).slice(0, 500) : []
+  return { closed: r.closed === true, open: [...new Set<string>(open)] }
+}
+
+/** A tabela está fechada para o usuário final neste modo? */
+export const isTableClosed = (mode: TableAccessMode | null | undefined, table: string): boolean =>
+  !!mode?.closed && !mode.open.includes(String(table).split('.').pop()!.toLowerCase())
 
 const SOURCES: RlsSource[] = ['user.email', 'user.name', 'user.attr']
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -109,6 +125,8 @@ export function resolveAccess(configs: TableAccessConfig[], viewer: BiViewer | n
       const actor = viewerValue(viewer, c.audit.by.source, c.audit.by.attr)
       audit[table] = { ...c.audit.columns, actor }
     }
+    // "bloquear por padrão": tabela não liberada fica negada por inteiro (nenhuma linha, nenhuma gravação), seja qual for a regra
+    if (c.closed) { policies.push({ table, deny: true, conds: [] }); continue }
     if (!c.canCreate || !c.canUpdate || !c.canDelete) {
       flags[table] = {
         ...(c.canCreate ? {} : { create: false }),

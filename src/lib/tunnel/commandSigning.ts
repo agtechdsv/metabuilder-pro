@@ -54,6 +54,25 @@ export function computeSignature(
 export interface SignOptions { ts?: number; nonce?: string; replyTo?: string }
 
 /** Devolve o comando assinado: sem `token`, com `ts`, `nonce`, `sig` (e `replyTo`, se houver). */
+/**
+ * Tópico PRIVADO de comandos do projeto, derivado do token (HMAC): só o servidor e o Agente o conhecem. O canal público
+ * `tunnel:<projeto>` não carrega mais comandos. Mesma conta em cli/security.js (um teste confere).
+ */
+export function commandTopic(projectId: string, secret: string): string {
+  const tag = createHmac('sha256', secret).update(`mb-cmd-topic\n${projectId}`).digest('base64url').slice(0, 32)
+  return `tunnel-cmd:${projectId}:${tag}`
+}
+
+/**
+ * Onde os comandos assinados são publicados: o tópico PRIVADO do projeto. `TUNNEL_COMMAND_TOPIC=public` volta ao canal
+ * público de sempre, só para o intervalo em que o Agente ainda não foi atualizado. Sem token (comando antigo, sem
+ * assinatura) só existe o canal público.
+ */
+export function commandTopicFor(projectId: string, secret?: string, env: Record<string, string | undefined> = process.env): string {
+  if (!secret || String(env.TUNNEL_COMMAND_TOPIC || '').trim().toLowerCase() === 'public') return `tunnel:${projectId}`
+  return commandTopic(projectId, secret)
+}
+
 export function signCommand(secret: string, event: string, projectId: string, payload: Record<string, any>, opts: SignOptions = {}): Record<string, any> {
   const ts = opts.ts ?? Date.now()
   const nonce = opts.nonce ?? randomBytes(16).toString('base64url')

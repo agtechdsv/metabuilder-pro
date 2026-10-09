@@ -277,11 +277,27 @@ function rewriteTokens(toks, policies, dbType, from = 0) {
   return out.join('');
 }
 
+/**
+ * Funções que EXECUTAM SQL escrito dentro de um texto (query_to_xml('select * from pedidos'), DBMS_XMLGEN.getXML(...)),
+ * leem arquivos/catálogo ou chamam outro servidor. O leitor de SQL só enxerga tokens: o que vai dentro de um texto passa
+ * despercebido, então essas funções são recusadas para o usuário final em qualquer comando (com ou sem política na tabela).
+ */
+const DENIED_NAME = /^(?:query_to_xml(?:_and_xmlschema|schema)?|table_to_xml(?:_and_xmlschema|schema)?|cursor_to_xml(?:schema)?|schema_to_xml\w*|database_to_xml\w*|ts_stat|dblink\w*|lo_\w+|set_config|pg_\w+|dbms_(?!lob$)\w+|utl_\w+|owa_\w+|sdo_\w+|ctxsys|execute)$/;
+
+function assertNoDynamicSql(toks) {
+  for (const t of toks) {
+    if (t.k !== 'word' && t.k !== 'ident') continue;
+    const name = String(t.v).toLowerCase();
+    if (DENIED_NAME.test(name)) throw new PolicyError('Função não permitida para o usuário final: ' + name + '.');
+  }
+}
+
 /** SELECT final montado pelo Agente (ou enviado pela tela): devolve o SQL com as políticas aplicadas. */
 function applyToSelect(sql, access, opts = {}) {
   const policies = policyMap(access);
-  if (policies.size === 0) return sql;
   const toks = tokenize(String(sql));
+  assertNoDynamicSql(toks);
+  if (policies.size === 0) return sql;
   const stmts = splitStatements(toks);
   if (stmts.length > 1) throw new PolicyError('Mais de um comando SQL não é permitido.');
   return rewriteTokens(stmts[0] || [], policies, opts.dbType === 'oracle' ? 'oracle' : 'postgres');
@@ -399,6 +415,7 @@ function guardCustom(sql, access, opts = {}) {
   const dbType = opts.dbType === 'oracle' ? 'oracle' : 'postgres';
   const policies = policyMap(access);
   const toks = tokenize(String(sql));
+  assertNoDynamicSql(toks);
   const stmts = splitStatements(toks);
   if (stmts.length === 0) throw new PolicyError('SQL vazio.');
   return stmts.map(s => guardStatement(s, access, policies, dbType).trim()).join('; ');

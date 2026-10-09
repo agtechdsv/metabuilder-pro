@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { authenticateCommand } from '@/lib/tunnel/commandSigning'
+import { authenticateCommand, commandTopicFor } from '@/lib/tunnel/commandSigning'
 import { Pool } from 'pg'
 import ws from 'ws'
 
@@ -164,7 +164,8 @@ export async function executeExportBackground(params: {
     const rawSql = `SELECT ${joinMayMultiply ? 'DISTINCT ' : ''}${selectCols} FROM "${safeTable}"${joinClause}${whereClause}`
 
     // 4. Send request to CLI Tunnel
-    const channelName = `tunnel:${projectId}`
+    // tópico privado de comandos (derivado do token): o SQL e as regras de acesso não passam pelo canal público
+    const channelName = commandTopicFor(projectId, projectData.secret_token)
     const channel = getSupabase().channel(channelName)
 
     await new Promise<void>((resolve, reject) => {

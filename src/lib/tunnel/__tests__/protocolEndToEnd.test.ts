@@ -5,14 +5,16 @@ import { authenticateCommand, signCommand } from '../commandSigning'
 import { buildCommand } from '../relayPolicy'
 
 // Simulação do caminho inteiro com um "Realtime" em memória e um Agente de verdade (security.js + replies.js):
-// servidor → canal público → Agente (confere assinatura) → resposta no tópico privado → servidor.
+// servidor → tópico PRIVADO de comandos → Agente (confere assinatura) → resposta no tópico privado → servidor.
+// O canal público `tunnel:<projeto>` não carrega mais nada.
 const req = createRequire(import.meta.url)
-const { authorizeCommand, NonceCache } = req('../../../../cli/security.js') as any
+const { authorizeCommand, NonceCache, commandTopic } = req('../../../../cli/security.js') as any
 const { ReplyRouter } = req('../../../../cli/replies.js') as any
 
 const PID = '123e4567-e89b-42d3-a456-426614174000'
 const SECRET = 'segredo-do-projeto-0123456789abcdef'
 const BASE = `tunnel:${PID}`
+const CMD = commandTopic(PID, SECRET)
 
 /** Realtime em memória: entrega cada mensagem a quem ouve aquele tópico e guarda tudo o que passou pelo canal público. */
 function makeBus() {
@@ -31,7 +33,7 @@ function makeBus() {
   return { deliver, on, publicLog, listeners }
 }
 
-/** Agente: escuta o canal público, confere a autenticação e responde como o index.js faz. */
+/** Agente: escuta o tópico privado de comandos, confere a autenticação e responde como o index.js faz. */
 function startAgent(bus: ReturnType<typeof makeBus>, opts: { answer?: (p: any) => any } = {}) {
   const baseChannel = { send: vi.fn(async ({ event, payload }: any) => bus.deliver(BASE, event, payload)) }
   const router = new ReplyRouter({
@@ -43,7 +45,7 @@ function startAgent(bus: ReturnType<typeof makeBus>, opts: { answer?: (p: any) =
   })
   const security = { projectId: PID, secretToken: SECRET, nonces: new NonceCache() }
   const executed: any[] = []
-  bus.on(BASE, async (event, payload) => {
+  bus.on(CMD, async (event, payload) => {
     if (event !== 'sql_query') return
     const auth = authorizeCommand('sql_query', payload, security)
     if (!auth.ok) return // recusado: o Agente não responde
@@ -71,10 +73,8 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
     expect(r).toMatchObject({ queryId: 'q1', success: true })
     expect(agent.executed[0].mode).toBe('signed')
 
-    // o canal público só viu o comando assinado: sem token, sem nenhuma resposta
-    expect(bus.publicLog.map(m => m.event)).toEqual(['sql_query'])
-    expect(JSON.stringify(bus.publicLog)).not.toContain(SECRET)
-    expect(bus.publicLog.some(m => m.event.startsWith('sql_result') || m.event.startsWith('query_result'))).toBe(false)
+    // o canal público não viu NADA: nem o comando, nem o token, nem as respostas
+    expect(bus.publicLog).toEqual([])
   })
 
   it('resposta grande atravessa em pedaços e é remontada pelo servidor', async () => {
@@ -93,19 +93,19 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
 
     const command = buildCommand({ projectId: PID, event: 'sql_query', payload: { queryId: 'q3', action: 'select', replyTo: tab, token: 'FALSO' } }, SECRET)
     expect(command.token).toBeUndefined()
-    bus.deliver(BASE, 'sql_query', command)
+    bus.deliver(CMD, 'sql_query', command)
     await new Promise(r => setTimeout(r, 20))
 
     expect(agent.executed).toHaveLength(1)
     expect(tabGot.map(m => m.e).sort()).toEqual(['query_result_q3', 'sql_result'])
-    // nada de resposta no canal público
-    expect(bus.publicLog.filter(m => m.event !== 'sql_query')).toEqual([])
+    // nada no canal público
+    expect(bus.publicLog).toEqual([])
   })
 
   it('comando forjado (sem assinatura, com token errado ou adulterado) não é executado', async () => {
     const bus = makeBus()
     const agent = startAgent(bus)
-    const send = (p: any) => bus.deliver(BASE, 'sql_query', p)
+    const send = (p: any) => bus.deliver(CMD, 'sql_query', p)
     send({ queryId: 'a', action: 'select', query: 'SELECT 1' })
     send({ queryId: 'b', token: 'errado', action: 'select' })
     const ok = signCommand(SECRET, 'sql_query', PID, { queryId: 'c', action: 'select', query: 'SELECT 1' })
@@ -118,8 +118,8 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
     const bus = makeBus()
     const agent = startAgent(bus)
     const cmd = authenticateCommand(SECRET, 'sql_query', PID, { queryId: 'q4', action: 'select' })
-    bus.deliver(BASE, 'sql_query', cmd)
-    bus.deliver(BASE, 'sql_query', cmd) // o "ouvinte" reenvia
+    bus.deliver(CMD, 'sql_query', cmd)
+    bus.deliver(CMD, 'sql_query', cmd) // o "ouvinte" reenvia
     await new Promise(r => setTimeout(r, 20))
     expect(agent.executed).toHaveLength(1)
   })
@@ -127,18 +127,18 @@ describe('protocolo de ponta a ponta (assinado + tópico privado)', () => {
   it('formato antigo (token dentro do comando): o Agente sempre recusa', async () => {
     const bus = makeBus()
     const agent = startAgent(bus)
-    bus.deliver(BASE, 'sql_query', { queryId: 'old', action: 'select', token: SECRET })
+    bus.deliver(CMD, 'sql_query', { queryId: 'old', action: 'select', token: SECRET })
     await new Promise(r => setTimeout(r, 20))
     expect(agent.executed).toHaveLength(0)
   })
 
-  it('um estranho que ouve o canal público não recebe os resultados do servidor', async () => {
+  it('um estranho que ouve o canal público não recebe nem os comandos nem os resultados do servidor', async () => {
     const bus = makeBus()
     startAgent(bus)
     const snooped: string[] = []
     bus.on(BASE, (e) => snooped.push(e))
     await tunnelCall(PID, 'sql_query', { queryId: 'q5' }, { transport: transportOn(bus), secret: SECRET })
-    expect(snooped).toEqual(['sql_query'])
+    expect(snooped).toEqual([])
   })
 
   it('Agente antigo (não entende assinatura) não responde: o servidor estoura o tempo em vez de pendurar', async () => {

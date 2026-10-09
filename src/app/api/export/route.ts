@@ -28,7 +28,7 @@ async function broadcastDelete(projectId: string, localPaths: string[]) {
   const token = await getProjectSecretToken(projectId)
   if (!token) return
   await Promise.all(localPaths.filter(Boolean).map((localPath: any) =>
-    tunnelSend(projectId, 'delete_export_file', authenticateCommand(token, 'delete_export_file', projectId, { localPath })).catch(() => {})
+    tunnelSend(projectId, 'delete_export_file', authenticateCommand(token, 'delete_export_file', projectId, { localPath }), undefined, token).catch(() => {})
   ))
 }
 

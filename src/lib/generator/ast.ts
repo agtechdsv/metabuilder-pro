@@ -458,6 +458,8 @@ export interface AuthConfig {
   emailColumn?: string
   passwordColumn?: string
   hashFormat?: string          // 'bcrypt' | 'md5' | 'sha256' | 'plain'
+  /** "bloquear por padrão": tabelas não liberadas ficam negadas ao usuário final (project_auth_config.ui_config.table_access) */
+  tableAccess?: { closed: boolean; open: string[] }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

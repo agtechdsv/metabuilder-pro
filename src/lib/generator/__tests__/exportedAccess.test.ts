@@ -33,6 +33,25 @@ const raw = (over: { pedidos?: Record<string, any>; clientes?: Record<string, an
   views: [{ id: 'v1', slug: 'pedidos', name: 'Pedidos', logic_type: 'list', model_id: 'm-ped', layout_config: {} }],
 })
 
+describe('bloquear por padrão no app exportado', () => {
+  const comModo = (mode: any) => ({ ...raw(), auth_config: { ...raw().auth_config, table_access: mode } })
+
+  it('as tabelas não liberadas saem fechadas na configuração do app; as liberadas e as do modo desligado, não', () => {
+    const closed = generateNodeProject(parseMetaBuilderJSON(comModo({ closed: true, open: ['clientes'] }), 'postgres')).get('app/actions/access-registry.ts')!
+    // pedidos e usuarios (não liberadas) fechadas; clientes (liberada) aberta
+    expect(closed.match(/"closed": true/g)).toHaveLength(2)
+    expect(closed.match(/"closed": false/g)).toHaveLength(1)
+    const open = generateNodeProject(parseMetaBuilderJSON(comModo(undefined), 'postgres')).get('app/actions/access-registry.ts')!
+    expect(open).not.toContain('"closed": true')
+  })
+
+  it('só exporta onde o bloqueio é aplicado (Postgres/Oracle, backend Node); e fechar a tabela de login não impede o login', () => {
+    const semRegra = (mode: any) => ({ ...comModo(mode), models: raw().models.map((m: any) => ({ ...m, row_policy: null })) })
+    expect(() => generateNodeProject(parseMetaBuilderJSON(semRegra({ closed: true, open: [] }), 'mysql'))).toThrow(/bloqueio por padrão/)
+    expect(() => generateNodeProject(parseMetaBuilderJSON(semRegra({ closed: true, open: [] }), 'postgres'))).not.toThrow()
+  })
+})
+
 describe('geração: o que sai no app exportado', () => {
   it('Postgres: copia os módulos de acesso (o mesmo sqlPolicy.js do Agente) e a configuração das tabelas', () => {
     const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres'))

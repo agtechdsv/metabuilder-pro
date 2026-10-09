@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
   try {
-    await tunnelSend(req.projectId, req.event, buildCommand(req, token, access))
+    await tunnelSend(req.projectId, req.event, buildCommand(req, token, access), undefined, token)
     return NextResponse.json({ ok: true }, { status: 202 })
   } catch (error: any) {
     console.error('[tunnel/send] falha ao enviar:', error?.message)

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { CHUNK_SIZE } from '@/lib/chunkedChannel'
-import { newReplyTopic, signCommand } from './commandSigning'
+import { commandTopicFor, newReplyTopic, signCommand } from './commandSigning'
 
 /**
  * Túnel visto pelo SERVIDOR.
@@ -62,11 +62,12 @@ export class ChunkAssembler {
   }
 }
 
-/** Envia um comando ao Agente CLI. Comandos grandes vão em pedaços. */
-export async function tunnelSend(projectId: string, event: string, payload: any, transport: TunnelTransport = realtimeTransport()): Promise<void> {
+/** Envia um comando ao Agente CLI (no tópico privado, quando se conhece o token). Comandos grandes vão em pedaços. */
+export async function tunnelSend(projectId: string, event: string, payload: any, transport: TunnelTransport = realtimeTransport(), secret?: string): Promise<void> {
   const messages = chunkMessages(event, payload)
+  const topic = commandTopicFor(projectId, secret)
   for (let i = 0; i < messages.length; i++) {
-    await transport.broadcast(tunnelTopic(projectId), messages[i].event, messages[i].payload)
+    await transport.broadcast(topic, messages[i].event, messages[i].payload)
     if (messages.length > 1 && i < messages.length - 1) await new Promise(r => setTimeout(r, 100))
   }
 }
@@ -114,7 +115,7 @@ export async function tunnelCall(
       transport.subscribe(topic, handle).then(
         async off => {
           unsubscribe = off
-          try { await tunnelSend(projectId, event, command, transport) } catch (e) { reject(e) }
+          try { await tunnelSend(projectId, event, command, transport, opts.secret) } catch (e) { reject(e) }
         },
         reject,
       )

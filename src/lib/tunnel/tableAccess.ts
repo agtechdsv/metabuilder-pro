@@ -76,7 +76,8 @@ export function referencedTables(payload: Record<string, any>): string[] {
 }
 
 const FORBIDDEN_WORDS = /\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|copy|call|execute|vacuum|merge|lock)\b/i
-const FORBIDDEN_THINGS = /\b(pg_[a-z_]+|information_schema|current_setting|set_config|dblink|lo_import|lo_export|pg_read_file)\b/i
+// inclui as funções que executam SQL escrito dentro de um texto (query_to_xml('select ...'), DBMS_XMLGEN.getXML(...)) e as de Oracle
+const FORBIDDEN_THINGS = /\b(pg_[a-z_]+|information_schema|current_setting|set_config|dblink\w*|lo_\w+|query_to_xml\w*|table_to_xml\w*|cursor_to_xml\w*|schema_to_xml\w*|database_to_xml\w*|ts_stat|dbms_(?!lob\b)\w+|utl_\w+|owa_\w+|sdo_\w+|ctxsys)\b/i
 
 /** O texto de SELECT enviado pelo navegador é só uma consulta de leitura, de um único comando? */
 export function sqlProblems(text: unknown): Violation[] {

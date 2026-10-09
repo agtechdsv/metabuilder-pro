@@ -1,6 +1,6 @@
 import type { AppAST, DbType } from '../ast'
 import { ACCESS_RUNTIME_FILES } from '../biRuntimeFiles.generated'
-import type { RowPolicy, TableAccessConfig } from '../../rowPolicy/policy'
+import { isTableClosed, type RowPolicy, type TableAccessConfig } from '../../rowPolicy/policy'
 import { auditAttrColumn } from '../../rowPolicy/audit'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,7 +22,8 @@ export function hasSqlActions(ast: AppAST): boolean {
   return ast.backendStack !== 'java-spring' && ast.dbStack !== 'supabase'
 }
 
-const policyTables = (ast: AppAST) => ast.models.filter(m => m.rowPolicy && m.rowPolicy.rules.length > 0).map(m => m.dbTable)
+// tabelas que o app precisa proteger no SQL: com regra por linha, ou fechadas pelo modo "bloquear por padrão"
+const policyTables = (ast: AppAST) => ast.models.filter(m => (m.rowPolicy && m.rowPolicy.rules.length > 0) || isTableClosed(ast.authConfig?.tableAccess, m.dbTable)).map(m => m.dbTable)
 
 /**
  * Recusa exportar um app cujas tabelas têm regra por linha num banco/backend em que ela não seria aplicada (o app sairia
@@ -32,15 +33,17 @@ export function assertPolicySupported(ast: AppAST): void {
   const tables = policyTables(ast)
   if (tables.length === 0) return
   // o login do app exportado lê a tabela de usuários ANTES de existir sessão: com regra por linha nela, ninguém entraria
+  // (fechá-la pelo modo "bloquear por padrão" não impede o login: ele não passa por essas funções)
   const authTable = (ast.authConfig?.tableName || '').split('.').pop()?.toLowerCase()
-  if (authTable && tables.some(t => t.split('.').pop()?.toLowerCase() === authTable)) {
+  const ruleTables = ast.models.filter(m => m.rowPolicy && m.rowPolicy.rules.length > 0).map(m => m.dbTable)
+  if (authTable && ruleTables.some(t => t.split('.').pop()?.toLowerCase() === authTable)) {
     throw new Error(`A tabela de login (${authTable}) tem regra de acesso por linha, o que impediria o login no app exportado (ele lê essa tabela antes de existir sessão). Remova a regra dessa tabela para exportar.`)
   }
   if (ast.backendStack === 'java-spring') {
-    throw new Error(`Acesso por linha (tabelas: ${tables.join(', ')}) ainda não é aplicado no backend Java Spring. Remova a regra dessas tabelas ou exporte o app Node.js (PostgreSQL ou Oracle).`)
+    throw new Error(`Acesso por linha ou bloqueio por padrão (tabelas: ${tables.join(', ')}) ainda não é aplicado no backend Java Spring. Remova a regra/o bloqueio ou exporte o app Node.js (PostgreSQL ou Oracle).`)
   }
   if (!ROW_POLICY_STACKS.includes(ast.dbStack)) {
-    throw new Error(`Acesso por linha (tabelas: ${tables.join(', ')}) só é aplicado no app exportado com PostgreSQL ou Oracle; o banco escolhido é ${ast.dbStack}. Remova a regra dessas tabelas ou exporte com PostgreSQL/Oracle.`)
+    throw new Error(`Acesso por linha ou bloqueio por padrão (tabelas: ${tables.join(', ')}) só é aplicado no app exportado com PostgreSQL ou Oracle; o banco escolhido é ${ast.dbStack}. Remova a regra/o bloqueio ou exporte com PostgreSQL/Oracle.`)
   }
 }
 
@@ -68,6 +71,7 @@ export function tableAccessConfigs(ast: AppAST): TableAccessConfig[] {
     canDelete: m.canDelete !== false,
     policy: m.rowPolicy && m.rowPolicy.rules.length > 0 ? m.rowPolicy : null,
     audit: m.audit ?? null,
+    closed: isTableClosed(ast.authConfig?.tableAccess, m.dbTable),
   }))
 }
 

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { serviceClient } from '@/lib/tunnel/server'
 import { viewerFromSession } from '@/lib/bi/serverQuery'
-import { cleanRowPolicy, resolveAccess, type AccessPayload, type TableAccessConfig } from './policy'
+import { cleanRowPolicy, cleanTableAccessMode, isTableClosed, resolveAccess, type AccessPayload, type TableAccessConfig } from './policy'
 import { cleanAuditConfig, effectiveAudit } from './audit'
 
 /**
@@ -39,6 +39,11 @@ export async function loadTableAccess(
   }
   if (error) throw new Error(`Não foi possível ler as permissões das tabelas: ${error.message}`)
 
+  // modo do projeto ("bloquear por padrão" + tabelas liberadas). Falha fechada: se não der para ler, a rota recusa (não assume "aberto")
+  const { data: authRow, error: modeError } = await client.from('project_auth_config').select('ui_config').eq('project_id', projectId).maybeSingle()
+  if (modeError) throw new Error(`Não foi possível ler o modo de acesso às tabelas: ${modeError.message}`)
+  const mode = cleanTableAccessMode((authRow as any)?.ui_config?.table_access)
+
   const configs: TableAccessConfig[] = ((data as any[]) || [])
     .filter(m => m.db_table_name)
     .map(m => ({
@@ -47,6 +52,7 @@ export async function loadTableAccess(
       canUpdate: m.can_update !== false,
       canDelete: m.can_delete !== false,
       policy: cleanRowPolicy(m.row_policy),
+      closed: isTableClosed(mode, String(m.db_table_name)),
       audit: effectiveAudit(cleanAuditConfig(m.audit_config), ((m.fields as any[]) || []).map(f => String(f.db_column_name || '')).filter(Boolean)),
     }))
   cache.set(projectId, { configs, until: now + TTL_MS })

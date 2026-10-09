@@ -151,7 +151,7 @@ describe('isProjectPublic', () => {
   })
 })
 
-import { isValidReplyTopic } from '../commandSigning'
+import { isValidReplyTopic, commandTopic, commandTopicFor } from '../commandSigning'
 import { tunnelCallAuto } from '../server'
 
 describe('tunnelCall assinado (tópico privado)', () => {
@@ -172,8 +172,9 @@ describe('tunnelCall assinado (tópico privado)', () => {
     expect(command.token).toBeUndefined()
     expect(typeof command.sig).toBe('string')
     expect(command.replyTo).toBe(topics[0])
-    // o comando vai ao canal de sempre (é lá que o Agente escuta)
-    expect(f.sent[0].topic).toBe(`tunnel:${PID}`)
+    // o comando vai ao tópico PRIVADO de comandos (derivado do token), não ao canal público
+    expect(f.sent[0].topic).toBe(commandTopic(PID, 'segredo-do-projeto-123456'))
+    expect(f.sent[0].topic).not.toBe(`tunnel:${PID}`)
   })
 
   it('resposta no canal PÚBLICO não é aceita no modo privado', async () => {
@@ -198,5 +199,28 @@ describe('tunnelCall assinado (tópico privado)', () => {
     await tunnelCallAuto(PID, { queryId: 'a', token: 'segredo-do-projeto-123456', action: 'select' }, { transport: on.f.transport })
     expect(on.command.token).toBeUndefined()
     expect(on.command.sig).toBeTruthy()
+  })
+})
+
+describe('tópico privado de comandos', () => {
+  const PID2 = '123e4567-e89b-42d3-a456-426614174000'
+  it('é derivado do token: mesmo token e projeto dão o mesmo tópico; outro token ou projeto, outro', () => {
+    const a = commandTopic(PID2, 'token-a-0123456789')
+    expect(a).toBe(commandTopic(PID2, 'token-a-0123456789'))
+    expect(a).not.toBe(commandTopic(PID2, 'token-b-0123456789'))
+    expect(a).not.toBe(commandTopic('outro-projeto', 'token-a-0123456789'))
+    expect(a.startsWith('tunnel-cmd:' + PID2 + ':')).toBe(true)
+    expect(a).not.toContain('token-a')
+  })
+
+  it('só o servidor e o Agente calculam o mesmo valor (a conta é idêntica no CLI)', () => {
+    const { commandTopic: cli } = require('../../../../cli/security.js')
+    expect(cli(PID2, 'token-a-0123456789')).toBe(commandTopic(PID2, 'token-a-0123456789'))
+  })
+
+  it('sem token só existe o canal público; TUNNEL_COMMAND_TOPIC=public volta a ele (período de transição)', () => {
+    expect(commandTopicFor(PID2, undefined, {})).toBe('tunnel:' + PID2)
+    expect(commandTopicFor(PID2, 'token-a-0123456789', {})).toBe(commandTopic(PID2, 'token-a-0123456789'))
+    expect(commandTopicFor(PID2, 'token-a-0123456789', { TUNNEL_COMMAND_TOPIC: 'public' })).toBe('tunnel:' + PID2)
   })
 })
