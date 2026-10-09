@@ -33,6 +33,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Footer } from '@/components/layout/Footer'
 import { useI18n } from '@/i18n/I18nContext'
+import { effectiveAudit } from '@/lib/rowPolicy/audit'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { ProjectSecuritySettings } from '@/components/studio/ProjectSecuritySettings'
@@ -742,6 +743,13 @@ export default function AuthSettingsPage() {
     }
   }
 
+  // colunas de auditoria (criado/atualizado em/por) são preenchidas pelo servidor/banco: não aparecem nem seguem no formulário
+  const authAuditColumns = (): Set<string> => {
+    const m = models.find(x => x.db_table_name === authConfig.db_table_name)
+    const eff = effectiveAudit((m as any)?.audit_config, (m?.fields || []).map((f: any) => f.db_column_name))
+    return new Set(Object.values(eff?.columns || {}).map(c => String(c).toLowerCase()))
+  }
+
   const openCreateUserModal = () => {
     setEditingUserId(null)
     setUserFormData({})
@@ -763,7 +771,8 @@ export default function AuthSettingsPage() {
 
     try {
       const dataToSave = { ...userFormData }
-      
+      for (const col of Object.keys(dataToSave)) if (authAuditColumns().has(col.toLowerCase())) delete dataToSave[col]
+
       const passwordField = authConfig.db_password_column
       if (passwordField && dataToSave[passwordField] && (!editingUserId || dataToSave[passwordField] !== legacyUsers.find(u => u[pkField] === editingUserId)?.[passwordField])) {
         const hashRes = await fetch('/api/crypto/hash', {
@@ -1984,8 +1993,8 @@ export default function AuthSettingsPage() {
           <div className="space-y-4">
             {models.find(m => m.db_table_name === authConfig.db_table_name)?.fields?.map((field: any) => {
               const isReadOnly = field.is_primary_key || !!field.default_value
-              if (isReadOnly) return null
-              
+              if (isReadOnly || authAuditColumns().has(String(field.db_column_name).toLowerCase())) return null
+
               return (
                 <div key={field.id} className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">

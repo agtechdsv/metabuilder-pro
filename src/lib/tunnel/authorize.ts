@@ -43,14 +43,35 @@ const MEMBER_TTL_MS = 30_000
  * Qualquer outro caso é recusado.
  */
 export async function authorizeProjectActor(req: NextRequest, projectId: string): Promise<RelayActor | null> {
-  // Membro primeiro: quem é do projeto e também entrou no app publicado como usuário final (a IDE guarda os dois logins
-  // no mesmo navegador) continua sendo tratado como desenvolvedor no Studio, em vez de cair nas limitações do usuário final.
+  const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
+
+  // Quem é do projeto E também entrou no app publicado como usuário final (a IDE guarda os dois logins no mesmo navegador):
+  //  - nas telas do desenvolvedor (Studio, IDE) continua sendo tratado como desenvolvedor;
+  //  - nas páginas do app publicado vale o usuário final, para o desenvolvedor testar o app exatamente como aquele usuário o vê
+  //    (regras por linha, auditoria "por"). Só ESTREITA o acesso: o cabeçalho de origem não dá poder a ninguém, porque ser
+  //    membro depende do login do MetaBuilder, não dele.
+  if (session && isPublishedAppPage(req)) return { kind: 'end_user', session }
+
   const memberId = await memberIdOf(projectId)
   if (memberId) return { kind: 'member', userId: memberId }
 
-  const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
   if (session) return { kind: 'end_user', session }
   return await anonymousIfPublic(req, projectId).catch(() => null)
+}
+
+// Rotas do próprio MetaBuilder; qualquer outro primeiro segmento é o workspace de um app publicado (/{workspace}/{projeto}/{tela})
+const PLATFORM_ROUTES = new Set(['admin', 'workspace', 'ide-local', 'tunnel-logs', 'bpm', 'app-preview', 'client', 'api', 'auth', 'login', 'downloads', 'agendamento', 'beta', 'checkout', 'features', 'privacy', 'splash', 'terms', 'app', 'actions'])
+
+/** O comando saiu de uma página do app publicado (e não de uma tela do desenvolvedor)? Sem origem informada, não. */
+export function isPublishedAppPage(req: NextRequest): boolean {
+  const ref = req.headers.get('referer')
+  if (!ref) return false
+  try {
+    const parts = new URL(ref).pathname.split('/').filter(Boolean)
+    return parts.length >= 3 && !PLATFORM_ROUTES.has(parts[0].toLowerCase())
+  } catch {
+    return false
+  }
 }
 
 export interface DownloadOwner { id: string; kind: 'end_user' | 'member' | 'anonymous' }
