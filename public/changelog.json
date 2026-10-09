@@ -1,25 +1,4 @@
 {
-  "v1.0.4": {
-    "date": "2026-10-09",
-    "pt": [
-      "Exclusão Inteligente com Pré-visualização de Impacto: Tenha total segurança ao apagar registros com o novo diálogo de confirmação em cascata, que exibe previamente a quantidade de itens e tabelas filhas afetadas, além de mensagens claras indicando impedimentos em bancos PostgreSQL e Oracle.",
-      "Gestão de Usuários Aprimorada e Mais Confiável: Fluxo de criação e exclusão de contas com sincronização em tempo real com o banco, limpeza automática de perfis associados e avisos multilíngues (PT, EN, ES) com feedback transparente.",
-      "Simulação Fiel de Permissões no Ambiente Publicado: Teste suas aplicações exatamente como o usuário final vivencia, isolando perfis de desenvolvedor mesmo na mesma sessão de navegador.",
-      "Privacidade e Interface Limpa em Formulários: Campos técnicos de auditoria agora ficam ocultos de forma transparente no gerenciamento de usuários, proporcionando uma experiência de preenchimento mais objetiva e segura."
-    ],
-    "en": [
-      "Smart Deletion with Impact Preview: Delete records with confidence using the new cascade confirmation dialog, showing affected tables and item counts beforehand, along with clear dependency diagnostics for PostgreSQL and Oracle databases.",
-      "Enhanced and Reliable User Management: User creation and removal now feature true end-to-end database synchronization, automatic unlinking of user roles, and localized notifications in PT, EN, and ES with clear operational feedback.",
-      "True-to-Life Permission Testing in Published Apps: Test your apps exactly as end users experience them, properly isolating final user credentials from active developer sessions in the same browser.",
-      "Streamlined Forms and Audit Privacy: Technical audit fields are now automatically kept hidden in user management forms, delivering a cleaner interface and stronger data privacy."
-    ],
-    "es": [
-      "Eliminación Inteligente con Vista Previa de Impacto: Elimine registros con total seguridad mediante el nuevo diálogo de confirmación en cascada, que detalla de antemano las tablas y registros vinculados afectados, con diagnósticos claros de dependencias para PostgreSQL y Oracle.",
-      "Gestión de Usuarios Más Segura y Confiable: Flujo optimizado para guardar y eliminar cuentas con sincronización exacta con la base de datos, desvinculación automática de roles y notificaciones multilingües (PT, EN, ES) claras y transparentes.",
-      "Simulación Fiel de Permisos en la App Publicada: Pruebe sus aplicaciones exactamente como las experimenta el usuario final, aislando las sesiones de usuario frente a accesos de desarrollador en el mismo navegador.",
-      "Formularios Más Claros y Privacidad de Auditoría: Los campos técnicos de auditoría ahora permanecen ocultos en la gestión de usuarios, ofreciendo una interfaz más limpia, ágil y protegida."
-    ]
-  },
   "v1.0.3": {
     "date": "2026-10-08",
     "pt": [
