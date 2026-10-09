@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
 /**
  * Assinatura dos comandos enviados ao Agente CLI (lado do servidor). O formato é o mesmo de cli/security.js, e um teste
@@ -54,6 +54,35 @@ export function computeSignature(
 export interface SignOptions { ts?: number; nonce?: string; replyTo?: string }
 
 /** Devolve o comando assinado: sem `token`, com `ts`, `nonce`, `sig` (e `replyTo`, se houver). */
+/**
+ * Confere um comando assinado que CHEGA ao servidor (o sentido contrário: o Agente CLI pede algo ao servidor, ex.: avisar que
+ * uma exportação terminou). Mesma assinatura dos comandos do servidor ao Agente. Recusa assinatura errada, hora fora da
+ * janela (padrão 5 min) e repetição do mesmo `nonce`.
+ */
+export function verifyCommandSignature(
+  secret: string, event: string, projectId: string, command: Record<string, any>,
+  opts: { now?: number; toleranceMs?: number; seen?: Map<string, number> } = {},
+): { ok: true } | { ok: false; reason: 'malformed' | 'bad_signature' | 'expired' | 'replay' } {
+  const { sig, ts, nonce } = command || {}
+  if (typeof sig !== 'string' || typeof nonce !== 'string' || typeof ts !== 'number' || !Number.isFinite(ts) || nonce.length < 8 || nonce.length > 128) {
+    return { ok: false, reason: 'malformed' }
+  }
+  const expected = computeSignature(secret, event, projectId, ts, nonce, undefined, command)
+  const a = Buffer.from(sig), b = Buffer.from(expected)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return { ok: false, reason: 'bad_signature' }
+  const now = opts.now ?? Date.now()
+  const tolerance = opts.toleranceMs ?? 5 * 60_000
+  if (Math.abs(now - ts) > tolerance) return { ok: false, reason: 'expired' }
+  if (opts.seen) {
+    // esquece o que já saiu da janela e recusa o nonce repetido
+    for (const [k, t] of opts.seen) if (now - t > tolerance * 2) opts.seen.delete(k)
+    const key = `${projectId}:${nonce}`
+    if (opts.seen.has(key)) return { ok: false, reason: 'replay' }
+    opts.seen.set(key, now)
+  }
+  return { ok: true }
+}
+
 /**
  * Tópico PRIVADO de comandos do projeto, derivado do token (HMAC): só o servidor e o Agente o conhecem. O canal público
  * `tunnel:<projeto>` não carrega mais comandos. Mesma conta em cli/security.js (um teste confere).

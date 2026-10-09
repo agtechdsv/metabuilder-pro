@@ -2,7 +2,7 @@
  * MetaBuilderPRO - CLI Database Logger
  * 
  * Grava logs de operações SQL no banco LOCAL do cliente em uma tabela
- * dedicada (__mb_logs), criada automaticamente na primeira execução.
+ * dedicada (mb_logs), criada automaticamente na primeira execução.
  * 
  * Nenhum dado sai do servidor do cliente.
  * Todas as operações são fire-and-forget (sem await) para não impactar performance.
@@ -39,9 +39,9 @@ function getCreateTableSql() {
       metadata    JSONB,
       created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON __mb_logs (type, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON __mb_logs (created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON __mb_logs (table_name, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_type    ON mb_logs (type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_date    ON mb_logs (created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mb_logs_table   ON mb_logs (table_name, created_at DESC);
   `;
 }
 
@@ -98,7 +98,7 @@ class CliDbLogger {
       // Limpa logs antigos baseado na retenção configurada
       const retentionDays = this._logConfig.retention_days || 7;
       await pgClient.query(
-        `DELETE FROM __mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
+        `DELETE FROM mb_logs WHERE created_at < NOW() - INTERVAL '${parseInt(retentionDays, 10)} days'`
       );
 
       this._ready = true;
@@ -138,11 +138,11 @@ class CliDbLogger {
     return this._ready && this._logConfig.enabled && this._logConfig.types.includes(type);
   }
 
-  /** Insere um registro na tabela __mb_logs (fire-and-forget) */
+  /** Insere um registro na tabela mb_logs (fire-and-forget) */
   _insert(type, action, tableName, sqlText, message, durationMs, rowCount, schemaName, metadata) {
     if (this._pgClient) {
       const q = `
-          INSERT INTO __mb_logs 
+          INSERT INTO mb_logs 
             (session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at)
           VALUES 
             ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -290,11 +290,11 @@ class CliDbLogger {
       const [dataRes, countRes] = await Promise.all([
         this._pgClient.query(
           `SELECT id, session_id, type, action, table_name, schema_name, message, sql_text, duration_ms, row_count, metadata, created_at
-           FROM __mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
+           FROM mb_logs ${where} ORDER BY created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
           [...params, limit, offset]
         ),
         this._pgClient.query(
-          `SELECT COUNT(*) as total FROM __mb_logs ${where}`,
+          `SELECT COUNT(*) as total FROM mb_logs ${where}`,
           params
         ),
       ]);
@@ -315,7 +315,7 @@ class CliDbLogger {
   async clearLogs() {
     if (!this._ready || !this._pgClient) return;
     try {
-      await this._pgClient.query(`DELETE FROM __mb_logs`);
+      await this._pgClient.query(`DELETE FROM mb_logs`);
     } catch (err) {
       console.error('[MBLog] Erro ao limpar logs:', err.message);
     }
@@ -328,7 +328,7 @@ class CliDbLogger {
     if (!this._ready || !this._pgClient) return {};
     try {
       const res = await this._pgClient.query(
-        `SELECT type, COUNT(*) as count FROM __mb_logs GROUP BY type ORDER BY count DESC`
+        `SELECT type, COUNT(*) as count FROM mb_logs GROUP BY type ORDER BY count DESC`
       );
       const stats = {};
       res.rows.forEach(r => { stats[r.type] = parseInt(r.count); });

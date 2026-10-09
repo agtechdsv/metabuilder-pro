@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { createProgressReporter } = require('./progressReporter');
 const path = require('path');
 const xlsx = require('xlsx');
 const { jsPDF } = require('jspdf');
@@ -11,6 +12,11 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
   const security = extra.security || { projectId, secretToken, nonces: new NonceCache() };
   const router = extra.router || null;
   // Configured local download path
+  // andamento da exportação: avisa o SERVIDOR (assinado com o token do projeto); ele grava em download_jobs
+  const reportJob = createProgressReporter({
+    apiBase: configData.apiUrl || 'https://www.metabuilderpro.com', projectId, secretToken, supabase,
+    log: (m) => console.error(chalk.yellow(`[ EXPORT ] ${m}`)),
+  });
   const baseDownloadPath = configData.downloadPath || path.join(require('os').homedir(), 'Downloads', 'MetaBuilderExports');
   
   if (!fs.existsSync(baseDownloadPath)) {
@@ -34,11 +40,7 @@ function registerExportHandlers(channel, pgClient, oracleConnection, dbType, sec
     // Progresso por etapas: atualiza o banco (a Central de Downloads escuta essa tabela) e avisa por broadcast
     const reportProgress = async (pct) => {
       try {
-        if (supabase) {
-          await supabase.from('download_jobs')
-            .update({ status: 'processing', progress: pct, updated_at: new Date().toISOString() })
-            .eq('id', jobId);
-        }
+        await reportJob(jobId, { status: 'processing', progress: pct });
         // (o painel de downloads acompanha pelo registro em download_jobs; nada vai ao canal público)
       } catch (_) { /* progresso é informativo: nunca derruba a exportação */ }
     };
@@ -357,36 +359,13 @@ NEWFILEUID:NONE
       console.log(chalk.green(`[ EXPORT ] Arquivo salvo com sucesso em: ${localFilePath}`));
 
       // Step 4: Update database status via Supabase client (passed in from index.js)
-      if (supabase) {
-        const { error } = await supabase.from('download_jobs')
-          .update({
-             status: 'completed',
-             progress: 100,
-             local_path: localFilePath,
-             file_name: fileName,
-             record_count: rows.length,
-             updated_at: new Date().toISOString()
-          })
-          .eq('id', jobId);
-          
-        if (error) {
-          console.error(chalk.red('[ EXPORT ] Erro ao atualizar status no banco:'), error.message);
-        } else {
-          // o painel de downloads vê a conclusão pelo registro em download_jobs (nada vai ao canal público)
-        }
-      }
+      const saved = await reportJob(jobId, { status: 'completed', progress: 100, localPath: localFilePath, fileName, recordCount: rows.length });
+      if (!saved) console.error(chalk.red('[ EXPORT ] Não foi possível atualizar o status da exportação (o arquivo foi salvo).'));
 
     } catch (err) {
       console.error(chalk.red(`[ EXPORT ] Erro na geração local:`), err.message);
-      if (supabase) {
-        await supabase.from('download_jobs').update({
-           status: 'failed',
-           error_message: err.message,
-           updated_at: new Date().toISOString()
-        }).eq('id', jobId);
-        
-        // a falha aparece no painel pelo registro em download_jobs (a mensagem de erro não vai ao canal público)
-      }
+      // a falha aparece no painel pelo registro em download_jobs (o servidor grava; a mensagem não vai ao canal público)
+      await reportJob(jobId, { status: 'failed', error: err.message });
     }
   });
 
