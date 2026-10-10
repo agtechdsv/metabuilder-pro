@@ -1,4 +1,19 @@
 {
+  "v1.0.2": {
+    "date": "2026-10-10",
+    "pt": [
+      "Maior confiabilidade no acompanhamento de exportações via CLI (v1.3.4): as notificações de progresso agora operam de forma estável e sem interrupções durante todo o processo.",
+      "Otimização na comunicação de rede da CLI para garantir monitoramento preciso e contínuo, mesmo sob redirecionamentos de domínio."
+    ],
+    "en": [
+      "Enhanced export progress tracking in the CLI (v1.3.4): status notifications now run smoothly and reliably throughout the entire process.",
+      "Improved CLI network communication to ensure accurate and uninterrupted tracking, even when domain redirects occur."
+    ],
+    "es": [
+      "Mayor confiabilidad en el seguimiento de exportaciones mediante la CLI (v1.3.4): las notificaciones de progreso ahora funcionan de manera fluida y sin interrupciones.",
+      "Optimización en la comunicación de red de la CLI para garantizar un monitoreo preciso y continuo, incluso ante redirecciones de dominio."
+    ]
+  },
   "v1.0.1": {
     "date": "2026-10-09",
     "pt": [
