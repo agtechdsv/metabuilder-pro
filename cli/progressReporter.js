@@ -5,12 +5,29 @@
  * visitante). Agora manda um aviso ASSINADO com o token do projeto para o servidor, que valida e grava. Se o servidor não
  * responder (versão antiga do servidor), cai no caminho antigo (gravação direta), que só funciona se a tabela permitir.
  */
+const axios = require('axios');
 const { signCommand } = require('./security');
 
 const EVENT = 'export_progress';
 
+/**
+ * O CLI roda no Node 18.5 embutido pelo `pkg`, cujo `fetch` falha ao seguir um redirecionamento 307 com corpo
+ * ("Request body length does not match content-length header"). O endereço `metabuilderpro.com` (sem www) redireciona
+ * para o `www`, então um POST com `fetch` nunca chegava. O axios segue o redirecionamento preservando método e corpo.
+ */
+const axiosPost = async (url, init) => {
+  const res = await axios.post(url, init.body, {
+    headers: init.headers,
+    timeout: 15000,
+    maxRedirects: 5,
+    validateStatus: () => true, // quem decide é o código de status devolvido
+    transformRequest: [(data) => data], // o corpo já é JSON em texto
+  });
+  return { ok: res.status >= 200 && res.status < 300, status: res.status };
+};
+
 function createProgressReporter({ apiBase, projectId, secretToken, supabase, fetchImpl, log = () => {} }) {
-  const post = fetchImpl || ((...a) => fetch(...a));
+  const post = fetchImpl || axiosPost;
   const base = String(apiBase || '').replace(/\/+$/, '').replace(/\/api\/metadata\/sync$/, '');
 
   /** fields: { status, progress?, localPath?, fileName?, recordCount?, error? } */
