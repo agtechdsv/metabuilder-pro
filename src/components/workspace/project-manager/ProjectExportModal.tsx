@@ -45,13 +45,26 @@ export function ProjectExportModal({
   const [javaPort, setJavaPort] = useState(8080)
   // abre com o que o projeto já tem configurado (banco e login); o usuário ainda pode trocar
   const defaults = modalState.defaults || {}
-  const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>(defaults.dataMode || 'supabase')
+  const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres' | 'oracle' | 'mysql' | 'sqlserver'>(defaults.dataMode || 'supabase')
+  // banco do projeto que não é Postgres: vira uma opção própria (com a porta e o formato de conexão dele)
+  const nativeDb = (['oracle', 'mysql', 'sqlserver'] as const).find(k => k === defaults.dataMode)
+  const NATIVE_INFO = {
+    oracle: { label: 'Oracle (Nativo - oracledb)', port: '1521', dbLabel: 'Service name' },
+    mysql: { label: 'MySQL (Nativo - mysql2)', port: '3306', dbLabel: 'Banco' },
+    sqlserver: { label: 'SQL Server (Nativo - mssql)', port: '1433', dbLabel: 'Banco' },
+  } as const
+  const buildNativeConnection = (kind: 'oracle' | 'mysql' | 'sqlserver') => {
+    const u = encodeURIComponent(exportDbUser), p = encodeURIComponent(exportDbPassword)
+    if (kind === 'oracle') return `oracle://${u}:${p}@${exportDbHost}:${exportDbPort}/${exportDbName}`
+    if (kind === 'mysql') return `mysql://${u}:${p}@${exportDbHost}:${exportDbPort}/${exportDbName}`
+    return `Server=${exportDbHost},${exportDbPort};Database=${exportDbName};User Id=${exportDbUser};Password=${exportDbPassword};Encrypt=true`
+  }
   const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>(defaults.authStrategy || 'none')
   const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>(defaults.legacyDriver || 'supabase')
   const [exportDbUser, setExportDbUser] = useState('user')
   const [exportDbPassword, setExportDbPassword] = useState('password')
   const [exportDbHost, setExportDbHost] = useState('localhost')
-  const [exportDbPort, setExportDbPort] = useState('5432')
+  const [exportDbPort, setExportDbPort] = useState(nativeDb ? NATIVE_INFO[nativeDb].port : '5432')
   const [exportDbName, setExportDbName] = useState('dataBase')
   const [exportSupaUrl, setExportSupaUrl] = useState('')
   const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
@@ -98,6 +111,8 @@ export function ProjectExportModal({
             supabaseUrl: exportSupaUrl,
             supabaseAnonKey: exportSupaAnonKey
           }
+        : exportDataMode === 'oracle' || exportDataMode === 'mysql' || exportDataMode === 'sqlserver'
+        ? { connectionString: buildNativeConnection(exportDataMode) }
         : null,
       exportAuthStrategy === 'legacy'
         ? {
@@ -339,7 +354,52 @@ export function ProjectExportModal({
                         </p>
                       </div>
                     </button>
+                    {nativeDb && (
+                      <button
+                        type="button"
+                        onClick={() => setExportDataMode(nativeDb)}
+                        className={`flex items-start gap-3 p-4 rounded-2xl border text-left transition-all ${
+                          exportDataMode === nativeDb
+                            ? 'border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10'
+                            : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/40'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${exportDataMode === nativeDb ? 'border-indigo-500' : 'border-neutral-300 dark:border-neutral-700'}`}>
+                          {exportDataMode === nativeDb && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-neutral-900 dark:text-white">{NATIVE_INFO[nativeDb].label}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">O mesmo banco deste projeto. Gera o acesso direto, para hospedar no servidor do cliente.</p>
+                        </div>
+                      </button>
+                    )}
                   </div>
+
+                  {/* Configuração do banco nativo do projeto (Oracle, MySQL, SQL Server) */}
+                  {nativeDb && exportDataMode === nativeDb && (
+                    <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 text-xs text-neutral-600 dark:text-neutral-400">
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da Conexão</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {([
+                          ['Usuário', exportDbUser, setExportDbUser],
+                          ['Senha', exportDbPassword, setExportDbPassword],
+                          ['Host', exportDbHost, setExportDbHost],
+                          ['Porta', exportDbPort, setExportDbPort],
+                          [NATIVE_INFO[nativeDb].dbLabel, exportDbName, setExportDbName],
+                        ] as const).map(([label, value, setter]) => (
+                          <label key={label} className="flex flex-col gap-1">
+                            <span className="text-neutral-500">{label}</span>
+                            <input
+                              type="text"
+                              value={value}
+                              onChange={(e) => setter(e.target.value)}
+                              className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Configuração Supabase Data */}
                   {exportDataMode === 'supabase' && (

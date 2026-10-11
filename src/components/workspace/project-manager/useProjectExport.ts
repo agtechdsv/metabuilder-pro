@@ -27,7 +27,7 @@ export function useProjectExport() {
     // Abre o modal já com o que o projeto tem configurado (banco e login), em vez do padrão genérico
     const defaults: ExportDefaults = {}
     const dbType = String(projRow?.db_type || '').toLowerCase()
-    if (dbType === 'postgres') defaults.dataMode = 'postgres'
+    if (dbType === 'postgres' || dbType === 'oracle' || dbType === 'mysql' || dbType === 'sqlserver') defaults.dataMode = dbType
     const at = String(authConf?.auth_type || '').toLowerCase()
     if (at === 'database') {
       defaults.authStrategy = 'legacy'

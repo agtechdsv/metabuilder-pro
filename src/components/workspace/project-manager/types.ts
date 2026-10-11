@@ -17,7 +17,7 @@ export interface Project {
 
 /** O que o projeto já tem configurado: o modal de exportação abre com isso marcado (o usuário ainda pode trocar). */
 export interface ExportDefaults {
-  dataMode?: 'tunnel' | 'supabase' | 'postgres'
+  dataMode?: 'tunnel' | 'supabase' | 'postgres' | 'oracle' | 'mysql' | 'sqlserver'
   authStrategy?: 'managed' | 'legacy' | 'ldap' | 'none'
   legacyDriver?: 'supabase' | 'postgres'
   authTable?: string
