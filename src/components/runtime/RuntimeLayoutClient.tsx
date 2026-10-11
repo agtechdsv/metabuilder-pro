@@ -7,6 +7,7 @@ import { DynamicSidebar } from './DynamicSidebar'
 import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
 import DynamicIcon from './DynamicIcon'
 import { setPrivateTunnel, setRelayMode } from '@/lib/tunnel/relayClient'
+import { logoutEndUser } from '@/lib/tunnel/logoutClient'
 
 interface RuntimeLayoutClientProps {
   children: React.ReactNode
@@ -117,9 +118,27 @@ export function RuntimeLayoutClient({
 
   useEffect(() => {
     const sessionCookieName = `client_session_${project.id}`
-    const hasSession = relay ? serverSession : document.cookie.split('; ').some(row => row.trim().startsWith(`${sessionCookieName}=`))
+    const displayCookie = document.cookie.split('; ').find(row => row.trim().startsWith(`${sessionCookieName}=`))
+    let displayOk = false
+    if (displayCookie) {
+      try {
+        const u = JSON.parse(decodeURIComponent(displayCookie.slice(displayCookie.indexOf('=') + 1)))
+        displayOk = !!u && typeof u === 'object'
+      } catch { /* cookie ilegível: tratado como sem sessão */ }
+    }
+    const hasSession = relay ? serverSession : displayOk
 
     const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
+
+    // Meio do caminho: o servidor ainda aceita a sessão assinada (httpOnly), mas o cookie de exibição sumiu (ex.: sessão
+    // criada antes dele virar cookie de sessão). A tela abria "logada" sem usuário. Encerra a sessão e pede o login.
+    if (!isLoginPage && !isNoAuth && relay && serverSession && !displayOk) {
+      const here = window.location.pathname + window.location.search
+      logoutEndUser(project.id).finally(() => {
+        window.location.href = `${finalBaseNavUrl}/login?next=${encodeURIComponent(here)}`
+      })
+      return
+    }
 
     if (isLoginPage) {
       if (hasSession || isNoAuth) {
