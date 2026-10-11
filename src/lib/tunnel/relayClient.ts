@@ -9,6 +9,8 @@
  * As respostas continuam chegando pelo canal em tempo real; o que muda é só o caminho de ida.
  */
 
+import { handleEndUserSessionEnded } from './logoutClient'
+
 export interface BroadcastMessage { type?: string; event?: string; payload?: any }
 
 // Relay ligado nesta tela: TODO comando de dados passa pelo servidor, mesmo os das telas do Studio que ainda montam o
@@ -95,6 +97,7 @@ export async function relaySend(
       body: JSON.stringify({ projectId, event: msg.event, payload: msg.payload }),
     })
     if (res.ok) return { ok: true, status: res.status }
+    if (res.status === 401) handleEndUserSessionEnded()
     let detail = ''
     try { detail = (await res.json())?.error || '' } catch { /* corpo vazio */ }
     return { ok: false, status: res.status, error: MESSAGES[res.status] || detail || `Falha ao enviar o comando (HTTP ${res.status}).` }

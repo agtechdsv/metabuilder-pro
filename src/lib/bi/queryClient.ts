@@ -1,4 +1,5 @@
 import type { AccessDenied } from './access'
+import { handleEndUserSessionEnded } from '@/lib/tunnel/logoutClient'
 
 /**
  * Chamada do navegador ao servidor de consultas do BI (/api/bi/query). Devolve sempre no formato que o painel já lê do
@@ -25,6 +26,7 @@ export async function fetchBiQuery(body: Record<string, unknown>, fetcher: typeo
     })
     const json: any = await res.json().catch(() => ({}))
     if (res.ok) return json && typeof json === 'object' ? json : { success: false, error: 'Resposta inválida.' }
+    if (res.status === 401) handleEndUserSessionEnded()
     if (res.status === 401) return { success: false, error: 'Sessão expirada: entre novamente.', code: 'unauthorized', serverError: true }
     if (res.status === 504) return { success: false, error: 'tempo esgotado', code: 'timeout', serverError: true }
     return { success: false, error: json?.error || `Erro ${res.status}`, code: json?.code, serverError: true, ...(json?.denied ? { denied: json.denied } : {}) }
