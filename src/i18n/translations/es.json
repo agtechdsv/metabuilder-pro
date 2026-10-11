@@ -722,7 +722,7 @@
           "ta_open_list": "Tablas liberadas al usuario final",
           "ta_open_all": "Liberar todas",
           "ta_close_all": "Bloquear todas",
-          "ta_warn": "Las pantallas solo muestran datos de las tablas liberadas: libere las que usan (incluidas las tablas vinculadas por relaciones) y guarde con \"Guardar cambios\".",
+          "ta_warn": "Las pantallas solo muestran datos de las tablas liberadas: libere las que usan (incluidas las tablas vinculadas por relaciones) y haga clic en \"Guardar\" justo debajo.",
           "ta_off": "Todas las tablas están abiertas al usuario final (cada una con sus permisos y reglas por fila).",
           "visual_tab": "Personalización Visual",
           "users_tab": "Gestión de Usuarios",

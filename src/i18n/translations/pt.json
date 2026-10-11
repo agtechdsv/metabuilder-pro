@@ -635,7 +635,7 @@
           "ta_open_list": "Tabelas liberadas ao usuário final",
           "ta_open_all": "Liberar todas",
           "ta_close_all": "Bloquear todas",
-          "ta_warn": "As telas só mostram dados das tabelas liberadas: libere as que elas usam (inclusive as tabelas ligadas por relação) e salve em \"Salvar alterações\".",
+          "ta_warn": "As telas só mostram dados das tabelas liberadas: libere as que elas usam (inclusive as tabelas ligadas por relação) e clique em \"Salvar\" logo abaixo.",
           "ta_off": "Todas as tabelas estão abertas ao usuário final (cada uma com as suas permissões e regras por linha).",
           "visual_tab": "Personalização Visual",
           "users_tab": "Gestão de Usuários",

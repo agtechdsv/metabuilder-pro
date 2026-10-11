@@ -635,7 +635,7 @@
           "ta_open_list": "Tables released to end users",
           "ta_open_all": "Release all",
           "ta_close_all": "Block all",
-          "ta_warn": "Screens only show data from released tables: release the ones they use (including tables linked by relations) and save with \"Save changes\".",
+          "ta_warn": "Screens only show data from released tables: release the ones they use (including tables linked by relations) and click \"Save\" right below.",
           "ta_off": "All tables are open to end users (each with its own permissions and row rules).",
           "visual_tab": "Visual Customization",
           "users_tab": "User Management",

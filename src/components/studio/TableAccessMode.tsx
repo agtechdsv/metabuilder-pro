@@ -13,11 +13,14 @@ interface Props {
   tables: string[]
   value: Mode
   onChange: (next: Mode) => void
+  onSave: () => void
+  saving: boolean
+  saved: boolean
 }
 
 const t0 = 'dashboard.projects.studio.auth.'
 
-export function TableAccessMode({ tables, value, onChange }: Props) {
+export function TableAccessMode({ tables, value, onChange, onSave, saving, saved }: Props) {
   const { t } = useI18n()
   const names = [...new Set(tables.map(x => String(x)))].sort((a, b) => a.localeCompare(b))
   const isOpen = (name: string) => value.open.includes(name.toLowerCase())
@@ -71,6 +74,17 @@ export function TableAccessMode({ tables, value, onChange }: Props) {
           <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-relaxed">{t(t0 + 'ta_warn')}</p>
         </div>
       )}
+
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className={`px-6 h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50 ${saved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}
+        >
+          {saving ? t('common.saving') : saved ? t('common.saved') : t('common.save')}
+        </button>
+      </div>
     </div>
   )
 }

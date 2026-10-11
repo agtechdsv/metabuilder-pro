@@ -1005,6 +1005,9 @@ export default function AuthSettingsPage() {
               tables={models.map(m => m.db_table_name).filter(Boolean)}
               value={cleanTableAccessMode((visualConfig as any).table_access)}
               onChange={v => setVisualConfig((prev: any) => ({ ...prev, table_access: v }))}
+              onSave={handleSave}
+              saving={isSaving}
+              saved={isSuccess}
             />
           </div>
         ) : activeTab === 'strategy' ? (
