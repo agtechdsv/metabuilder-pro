@@ -70,39 +70,48 @@ export function GlobalDesktopListener() {
               }
               break;
             case 'start_tunnel':
-            case 'stop_tunnel':
+            case 'stop_tunnel': {
+              // O aviso (toast) só aparece dentro da janela. Com o app em segundo plano/minimizado, vai também como
+              // notificação nativa do sistema, sem trazer a janela para a frente.
+              const notify = async (title: string, body: string, kind: 'info' | 'success' | 'error') => {
+                toast(title, kind);
+                try {
+                  const { getCurrentWindow } = await import('@tauri-apps/api/window');
+                  const win = getCurrentWindow();
+                  const inFront = (await win.isVisible()) && !(await win.isMinimized()) && (await win.isFocused());
+                  if (inFront) return;
+                  const { isPermissionGranted, requestPermission, sendNotification } = await import('@tauri-apps/plugin-notification');
+                  let granted = await isPermissionGranted();
+                  if (!granted) granted = (await requestPermission()) === 'granted';
+                  if (granted) sendNotification({ title: 'MetaBuilder PRO', body: body || title });
+                } catch { /* sem permissão de notificação: o toast já foi mostrado */ }
+              };
               try {
-                const { getCurrentWindow } = await import('@tauri-apps/api/window');
-                const win = getCurrentWindow();
-                const isVisible = await win.isVisible();
-                
-                toast(
-                  payload === 'start_tunnel' 
-                    ? t('workspace_components.tunnel_control.starting_tunnel', 'Iniciando túnel...') 
-                    : t('workspace_components.tunnel_control.stopping_tunnel', 'Parando túnel...'), 
-                  'info'
-                );
+                const startingMsg = payload === 'start_tunnel'
+                  ? t('workspace_components.tunnel_control.starting_tunnel', 'Iniciando túnel...')
+                  : t('workspace_components.tunnel_control.stopping_tunnel', 'Parando túnel...');
+                await notify(startingMsg, startingMsg, 'info');
 
-                if (!isVisible) {
-                  await bringToFront();
-                }
-                
                 const { invoke } = await import('@tauri-apps/api/core');
                 if (payload === 'stop_tunnel') {
                   await invoke('stopcli');
-                  toast(t('workspace_components.tunnel_control.tunnel_stopped_success', 'Túnel parado com sucesso'), 'success');
+                  const okMsg = t('workspace_components.tunnel_control.tunnel_stopped_success', 'Túnel parado com sucesso');
+                  await notify(okMsg, okMsg, 'success');
                 } else {
                   const { appLocalDataDir, join } = await import('@tauri-apps/api/path');
                   const dir = await appLocalDataDir();
                   const configPath = await join(dir, 'metabuilder.config.json');
                   
                   await invoke('startcli', { mode: 1, configPath, lang: language });
-                  toast(t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.'), 'success');
+                  const okMsg = t('workspace_components.tunnel_control.tunnel_started_success', 'Túnel iniciado com sucesso.');
+                  await notify(okMsg, okMsg, 'success');
                 }
               } catch (e) {
-                toast(t('workspace_components.tunnel_control.tunnel_process_failed', 'Falha ao executar processo do túnel.'), 'error');
+                const failMsg = t('workspace_components.tunnel_control.tunnel_process_failed', 'Falha ao executar processo do túnel.');
+                await notify(failMsg, failMsg, 'error');
               }
               break;
+            }
           }
         });
       } catch (err) {
