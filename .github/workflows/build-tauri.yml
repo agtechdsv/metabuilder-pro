@@ -168,6 +168,24 @@ jobs:
             echo "[INFO] Updater JSON already present in artifacts, skipping manual generation."
           fi
 
+      - name: SHA-256 do instalador (para envio de falso positivo a Microsoft)
+        if: matrix.os == 'windows'
+        shell: bash
+        run: |
+          EXE_PATH=$(find src-tauri/target -name '*-setup.exe' | head -1)
+          if [ -z "$EXE_PATH" ]; then
+            echo "[WARN] Nenhum instalador NSIS encontrado, pulando hash."
+            exit 0
+          fi
+          HASH=$(sha256sum "$EXE_PATH" | cut -d' ' -f1)
+          echo "[INFO] $(basename "$EXE_PATH") SHA-256: $HASH"
+          {
+            echo "### Instalador Windows"
+            echo "- Arquivo: \`$(basename "$EXE_PATH")\`"
+            echo "- SHA-256: \`$HASH\`"
+            echo "- Enviar em https://www.microsoft.com/wdsi/filesubmission (ver docs/falso-positivo-defender.md)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Releases to Supabase
         run: |
           npm install ws
