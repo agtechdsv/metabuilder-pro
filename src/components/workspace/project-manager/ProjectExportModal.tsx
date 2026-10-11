@@ -43,9 +43,11 @@ export function ProjectExportModal({
   const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
   const [javaGroupId, setJavaGroupId] = useState('com.app')
   const [javaPort, setJavaPort] = useState(8080)
-  const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>('supabase')
-  const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>('none')
-  const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>('supabase')
+  // abre com o que o projeto já tem configurado (banco e login); o usuário ainda pode trocar
+  const defaults = modalState.defaults || {}
+  const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres'>(defaults.dataMode || 'supabase')
+  const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>(defaults.authStrategy || 'none')
+  const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>(defaults.legacyDriver || 'supabase')
   const [exportDbUser, setExportDbUser] = useState('user')
   const [exportDbPassword, setExportDbPassword] = useState('password')
   const [exportDbHost, setExportDbHost] = useState('localhost')
@@ -53,10 +55,10 @@ export function ProjectExportModal({
   const [exportDbName, setExportDbName] = useState('dataBase')
   const [exportSupaUrl, setExportSupaUrl] = useState('')
   const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
-  const [exportAuthTableName, setExportAuthTableName] = useState('usuarios')
-  const [exportAuthEmailCol, setExportAuthEmailCol] = useState('email')
-  const [exportAuthPassCol, setExportAuthPassCol] = useState('senha')
-  const [exportAuthHash, setExportAuthHash] = useState('Bcrypt')
+  const [exportAuthTableName, setExportAuthTableName] = useState(defaults.authTable || 'usuarios')
+  const [exportAuthEmailCol, setExportAuthEmailCol] = useState(defaults.authEmailColumn || 'email')
+  const [exportAuthPassCol, setExportAuthPassCol] = useState(defaults.authPasswordColumn || 'senha')
+  const [exportAuthHash, setExportAuthHash] = useState(defaults.authHash || 'Bcrypt')
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -675,7 +677,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {modalState.phase === 'error' && (
             <div className="space-y-3">
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl p-3 text-xs text-red-700 dark:text-red-400 text-center font-medium">
-                Ocorreu um erro ao gerar o arquivo de código fonte.
+                {modalState.errorMessage || 'Ocorreu um erro ao gerar o arquivo de código fonte.'}
               </div>
               <button
                 onClick={onClose}

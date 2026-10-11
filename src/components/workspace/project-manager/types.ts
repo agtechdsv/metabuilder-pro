@@ -15,6 +15,17 @@ export interface Project {
   theme_config?: any
 }
 
+/** O que o projeto já tem configurado: o modal de exportação abre com isso marcado (o usuário ainda pode trocar). */
+export interface ExportDefaults {
+  dataMode?: 'tunnel' | 'supabase' | 'postgres'
+  authStrategy?: 'managed' | 'legacy' | 'ldap' | 'none'
+  legacyDriver?: 'supabase' | 'postgres'
+  authTable?: string
+  authEmailColumn?: string
+  authPasswordColumn?: string
+  authHash?: string
+}
+
 export interface DownloadModalState {
   open: boolean
   phase: 'selecting' | 'downloading' | 'done' | 'error'
@@ -24,4 +35,7 @@ export interface DownloadModalState {
   savedDir: string
   projectId?: string
   authConfig?: any
+  defaults?: ExportDefaults
+  /** motivo da falha, mostrado no próprio modal na fase 'error' */
+  errorMessage?: string
 }

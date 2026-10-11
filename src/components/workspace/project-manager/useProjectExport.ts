@@ -5,7 +5,7 @@ import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
-import { DownloadModalState, Project } from './types'
+import { DownloadModalState, ExportDefaults, Project } from './types'
 
 export function useProjectExport() {
   const [downloadModal, setDownloadModal] = useState<DownloadModalState | null>(null)
@@ -15,11 +15,33 @@ export function useProjectExport() {
 
   const openExportModal = async (project: Project) => {
     const supabase = createClient()
-    const { data: authConf } = await supabase
-      .from('project_auth_config')
-      .select('auth_type, auth_config')
-      .eq('project_id', project.id)
-      .maybeSingle()
+    const [{ data: authConf }, { data: projRow }] = await Promise.all([
+      supabase
+        .from('project_auth_config')
+        .select('auth_type, db_table_name, db_email_column, db_password_column, db_password_hash_type')
+        .eq('project_id', project.id)
+        .maybeSingle(),
+      supabase.from('projects').select('db_type').eq('id', project.id).maybeSingle(),
+    ])
+
+    // Abre o modal já com o que o projeto tem configurado (banco e login), em vez do padrão genérico
+    const defaults: ExportDefaults = {}
+    const dbType = String(projRow?.db_type || '').toLowerCase()
+    if (dbType === 'postgres') defaults.dataMode = 'postgres'
+    const at = String(authConf?.auth_type || '').toLowerCase()
+    if (at === 'database') {
+      defaults.authStrategy = 'legacy'
+      defaults.legacyDriver = dbType === 'postgres' ? 'postgres' : 'supabase'
+      if (authConf?.db_table_name) defaults.authTable = authConf.db_table_name
+      if (authConf?.db_email_column) defaults.authEmailColumn = authConf.db_email_column
+      if (authConf?.db_password_column) defaults.authPasswordColumn = authConf.db_password_column
+      const hash = String(authConf?.db_password_hash_type || '').toLowerCase()
+      defaults.authHash = hash === 'md5' ? 'MD5' : hash === 'plain' || hash === 'plaintext' ? 'Plain' : 'Bcrypt'
+    } else if (at === 'ldap') {
+      defaults.authStrategy = 'ldap'
+    } else if (at === 'none') {
+      defaults.authStrategy = 'none'
+    }
 
     const { data: models, error: modelsError } = await supabase
       .from('models')
@@ -51,7 +73,8 @@ export function useProjectExport() {
       savedPath: '',
       savedDir: '',
       projectId: project.id,
-      authConfig: authConf?.auth_config
+      authConfig: authConf,
+      defaults
     })
   }
 
@@ -236,7 +259,7 @@ export function useProjectExport() {
         })
       }
     } catch (error: any) {
-      setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0 } : null)
+      setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0, errorMessage: error?.message || String(error) } : null)
       toast(t('ide.project.export_failed') + ' ' + (error?.message || String(error)), 'error')
     }
   }
