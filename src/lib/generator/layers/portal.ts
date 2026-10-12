@@ -112,88 +112,77 @@ body {
 // ─────────────────────────────────────────────────────────────────────────────
 // Portal Page (/)
 // ─────────────────────────────────────────────────────────────────────────────
-export function generatePortalPage(ast: WorkspaceAST): string {
-  const projectCards = ast.projects.map(p => `
-      <a
-        href="/${p.slug}"
-        className="group flex flex-col gap-4 bg-[var(--card)] border border-[var(--card-border)] rounded-2xl p-6 hover:border-indigo-500 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300"
+/** Textos do portal nos idiomas de geração. */
+const PORTAL_TEXT = {
+  pt: { badge: 'Portal de Aplicações', hero: 'Acesse suas aplicações e gerencie seus negócios em um só lugar.', enter: 'Entrar no sistema', screen: 'tela', screens: 'telas' },
+  en: { badge: 'Application Portal', hero: 'Access your applications and manage your business in one place.', enter: 'Enter the system', screen: 'screen', screens: 'screens' },
+  es: { badge: 'Portal de Aplicaciones', hero: 'Acceda a sus aplicaciones y gestione su negocio en un solo lugar.', enter: 'Entrar al sistema', screen: 'pantalla', screens: 'pantallas' },
+} as const
+
+/** Endereço de cada projeto: variável de ambiente do portal (NEXT_PUBLIC_PROJECT_URL_<SLUG>) ou a porta local padrão. */
+export function portalProjectEnvName(slug: string): string {
+  return 'NEXT_PUBLIC_PROJECT_URL_' + slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')
+}
+
+const esc = (v: string) => String(v ?? '').replace(/[{}<>\`$]/g, '')
+
+/**
+ * Portal de aplicações do workspace: um painel público (sem login) com um card por projeto. Cada projeto é um app independente,
+ * com o login e o banco dele; o card apenas abre o endereço do app.
+ */
+export function generatePortalPage(ast: WorkspaceAST, ports: Record<string, number> = {}): string {
+  const tx = PORTAL_TEXT[(ast.targetLanguage as 'pt' | 'en' | 'es') || 'pt'] || PORTAL_TEXT.pt
+  const urlEntries = ast.projects.map(p => `  ${JSON.stringify(p.slug)}: process.env.${portalProjectEnvName(p.slug)} || 'http://localhost:${ports[p.slug] ?? 3001}',`).join('\n')
+  const cards = ast.projects.map(p => {
+    const n = p.app.routes.length
+    return `      <a
+        key=${JSON.stringify(p.slug)}
+        href={PROJECT_URLS[${JSON.stringify(p.slug)}]}
+        className="group flex flex-col gap-4 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all"
       >
-        <div className="flex items-center justify-between">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600/15 flex items-center justify-center ring-1 ring-indigo-500/30 group-hover:bg-indigo-600/25 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
-              <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
-            </svg>
-          </div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[var(--muted)] group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
+        <div className="w-16 h-16 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
           </svg>
         </div>
-
         <div>
-          <h2 className="text-lg font-semibold text-white group-hover:text-indigo-300 transition-colors">${p.name}</h2>
-          ${p.description ? `<p className="text-sm text-[var(--muted)] mt-1">${p.description}</p>` : ''}
+          <h2 className="text-2xl font-black text-neutral-900 dark:text-white tracking-tight">${esc(p.name)}</h2>
+          ${p.description ? `<p className="text-sm text-neutral-500 mt-1">${esc(p.description)}</p>` : ''}
+          <p className="text-[11px] text-neutral-400 mt-2">${n} ${n !== 1 ? tx.screens : tx.screen}</p>
         </div>
-
-        <div className="flex items-center gap-2 mt-auto">
-          <span className="text-xs bg-indigo-600/15 text-indigo-400 rounded-full px-2.5 py-1 ring-1 ring-indigo-500/25">
-            ${p.app.routes.length} tela${p.app.routes.length !== 1 ? 's' : ''}
-          </span>
-          <span className="text-xs text-[var(--muted)]">/${p.slug}</span>
-        </div>
-      </a>`).join('\n')
+        <span className="mt-auto flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600">
+          ${tx.enter}
+          <span className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center group-hover:translate-x-1 transition-transform">→</span>
+        </span>
+      </a>`
+  }).join('\n')
 
   return `import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Portal — ${ast.workspaceName}",
+  title: "Portal — ${esc(ast.workspaceName)}",
+};
+
+// cada projeto é um app independente (login e banco próprios): o card abre o endereço dele
+const PROJECT_URLS: Record<string, string> = {
+${urlEntries}
 };
 
 export default function PortalPage() {
   return (
-    <main className="min-h-screen bg-[var(--background)]">
-      {/* Header */}
-      <header className="border-b border-[var(--card-border)] bg-[var(--card)]/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-            </div>
-            <span className="font-semibold text-white">${ast.workspaceName}</span>
-          </div>
-          <span className="text-xs text-[var(--muted)] bg-[var(--card)] border border-[var(--card-border)] rounded-full px-3 py-1">
-            Portal de Aplicações
-          </span>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-16 pb-10 text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-indigo-400 bg-indigo-600/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-          Portal de Aplicações
-        </div>
-        <h1 className="text-5xl font-bold text-white tracking-tight mb-4">${ast.workspaceName}</h1>
-        <p className="text-[var(--muted)] text-lg max-w-xl mx-auto">
-          Acesse suas aplicações e gerencie seus negócios em um só lugar.
-        </p>
-      </section>
-
-      {/* Projects Grid */}
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-${projectCards}
+    <main className="min-h-screen bg-neutral-50 dark:bg-[#050505] flex flex-col">
+      <section className="flex-1 max-w-5xl w-full mx-auto px-6 pt-24 pb-10 text-center">
+        <span className="inline-block text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-full px-5 py-2 shadow-sm">
+          ${tx.badge}
+        </span>
+        <h1 className="mt-10 text-6xl font-black tracking-tight text-neutral-900 dark:text-white">${esc(ast.workspaceName)}</h1>
+        <p className="mt-5 text-lg text-neutral-500 max-w-2xl mx-auto">${tx.hero}</p>
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+${cards}
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="border-t border-[var(--card-border)] py-6 text-center">
-        <p className="text-xs text-[var(--muted)]">
-          Powered by <span className="text-indigo-400 font-medium">MetaBuilder PRO</span>
-        </p>
+      <footer className="py-8 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400">Powered by MetaBuilder</p>
       </footer>
     </main>
   );

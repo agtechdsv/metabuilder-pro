@@ -1,5 +1,6 @@
 import type { AppAST } from '../ast'
 import { ACCESS_SLUGS, accessSql } from '../accessAdmin'
+import { getAccessDictionary } from '../accessI18n'
 
 /**
  * Gestão de acesso do app exportado (Node.js e frontend do Java Spring): permissões por tela (nenhum / leitura / escrita) e os
@@ -19,6 +20,9 @@ function fill(src: string, vars: Record<string, string>): string {
 export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): void {
   const a = ast.accessAdmin
   if (!a) return
+  const dict = getAccessDictionary(ast.targetLanguage)
+  // troca {{chave}} pelo texto do idioma de geração
+  const tr = (src: string) => src.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => (dict as any)[k] ?? k)
   const linkImport = a.link.kind === 'table'
     ? `import { get${a.link.model}List, get${a.link.model}ByField, create${a.link.model}, delete${a.link.model} } from '@/app/actions/${fileKey(a.link.model)}'\n`
     : ''
@@ -44,14 +48,14 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
 
   files.set('lib/access-setup.ts', `// ARQUIVO GERADO pelo MetaBuilder — configuração da gestão de acesso (quem são os usuários, os grupos e as telas).\nexport const ACCESS_SETUP = ${vars.SETUP} as const\n`)
   files.set('lib/access-control.ts', fill(ACCESS_CONTROL, vars))
-  files.set('lib/access-guard.ts', ACCESS_GUARD)
-  files.set('app/actions/access-admin.ts', fill(ACCESS_ADMIN_ACTIONS, vars))
+  files.set('lib/access-guard.ts', tr(ACCESS_GUARD))
+  files.set('app/actions/access-admin.ts', tr(fill(ACCESS_ADMIN_ACTIONS, vars)))
   files.set(`app/(protected)/${ACCESS_SLUGS.users}/page.tsx`, fill(USERS_PAGE, vars))
-  files.set(`app/(protected)/${ACCESS_SLUGS.users}/UsersClient.tsx`, USERS_CLIENT)
+  files.set(`app/(protected)/${ACCESS_SLUGS.users}/UsersClient.tsx`, tr(USERS_CLIENT))
   files.set(`app/(protected)/${ACCESS_SLUGS.groups}/page.tsx`, fill(GROUPS_PAGE, vars))
-  files.set(`app/(protected)/${ACCESS_SLUGS.groups}/GroupsClient.tsx`, GROUPS_CLIENT)
+  files.set(`app/(protected)/${ACCESS_SLUGS.groups}/GroupsClient.tsx`, tr(GROUPS_CLIENT))
   files.set(`app/(protected)/${ACCESS_SLUGS.permissions}/page.tsx`, fill(PERMS_PAGE, vars))
-  files.set(`app/(protected)/${ACCESS_SLUGS.permissions}/PermissionsClient.tsx`, PERMS_CLIENT)
+  files.set(`app/(protected)/${ACCESS_SLUGS.permissions}/PermissionsClient.tsx`, tr(PERMS_CLIENT))
   files.set('db/access-control.sql', accessSql(ast))
 }
 
@@ -97,7 +101,7 @@ export async function assertWriteAllowed(table: string): Promise<void> {
   const wt = user?.acc?.wt
   if (!wt || wt.length === 0) return
   const t = String(table).toLowerCase().split('.').pop() as string
-  if (wt.includes(t)) throw new Error('Seu grupo de acesso só pode consultar esta tela: criar, editar e excluir não são permitidos.')
+  if (wt.includes(t)) throw new Error('{{err_read_only_table}}')
 }
 `
 
@@ -204,10 +208,10 @@ type Need = 'read' | 'write'
 
 async function need(slug: string, level: Need) {
   const user = await getSessionUser()
-  if (!user) throw new Error('Sessão expirada. Entre novamente.')
+  if (!user) throw new Error('{{err_session_expired}}')
   const acc = user.acc
-  if (!acc || acc.no.includes(slug)) throw new Error('Você não tem acesso a esta tela.')
-  if (level === 'write' && acc.ro.includes(slug)) throw new Error('Seu grupo só pode consultar esta tela.')
+  if (!acc || acc.no.includes(slug)) throw new Error('{{err_no_access}}')
+  if (level === 'write' && acc.ro.includes(slug)) throw new Error('{{err_read_only_screen}}')
 }
 
 const NAME_COL = S.nameCol as string | null
@@ -276,7 +280,7 @@ export async function setUserRole(userId: string, roleId: string): Promise<void>
 export async function createUser(input: { email: string; name?: string; password: string; roleId?: string }): Promise<void> {
   await need('__SLUG_USERS__', 'write')
   const email = input.email.trim()
-  if (!email || !input.password) throw new Error('Informe o e-mail e a senha.')
+  if (!email || !input.password) throw new Error('{{err_email_password}}')
   await asAccessAdmin(async () => {
     const data: Record<string, any> = { [S.emailCol]: email, [S.passCol]: await hashPassword(input.password) }
     if (NAME_COL && input.name) data[NAME_COL] = input.name.trim()
@@ -291,7 +295,7 @@ export async function createUser(input: { email: string; name?: string; password
 
 export async function resetUserPassword(userId: string, password: string): Promise<void> {
   await need('__SLUG_USERS__', 'write')
-  if (!password) throw new Error('Informe a nova senha.')
+  if (!password) throw new Error('{{err_new_password}}')
   await asAccessAdmin(async () => { await update__UM__(userId, { [S.passCol]: await hashPassword(password) }) })
 }
 
@@ -306,7 +310,7 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function createRole(name: string): Promise<void> {
   await need('__SLUG_GROUPS__', 'write')
   const n = name.trim()
-  if (!n) throw new Error('Informe o nome do grupo.')
+  if (!n) throw new Error('{{err_group_name}}')
   const data: Record<string, any> = { [S.groups.nameCol]: n }
   // grupos próprios do app usam um identificador texto; os do banco legado deixam o banco numerar
   if ((S.groups as any).synthetic) data[S.groups.pk] = globalThis.crypto.randomUUID()
@@ -316,7 +320,7 @@ export async function createRole(name: string): Promise<void> {
 export async function renameRole(id: string, name: string): Promise<void> {
   await need('__SLUG_GROUPS__', 'write')
   const n = name.trim()
-  if (!n) throw new Error('Informe o nome do grupo.')
+  if (!n) throw new Error('{{err_group_name}}')
   await asAccessAdmin(async () => { await update__GM__(id, { [S.groups.nameCol]: n }) })
 }
 
@@ -355,8 +359,8 @@ export async function loadMatrix(): Promise<AccessMatrix> {
 export async function setPermission(roleId: string, slug: string, level: 'none' | 'read' | 'write'): Promise<void> {
   await need('__SLUG_PERMS__', 'write')
   const view = (S.views as ReadonlyArray<{ slug: string; denyByDefault?: boolean }>).find(v => v.slug === slug)
-  if (!view) throw new Error('Tela desconhecida.')
-  if (!['none', 'read', 'write'].includes(level)) throw new Error('Nível inválido.')
+  if (!view) throw new Error('{{err_unknown_screen}}')
+  if (!['none', 'read', 'write'].includes(level)) throw new Error('{{err_invalid_level}}')
   // sem linha = o padrão da tela (escrita; nas telas de gestão de acesso, nenhum)
   const isDefault = level === (view.denyByDefault ? 'none' : 'write')
   await asAccessAdmin(async () => {
@@ -428,18 +432,18 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
   const reload = async () => setUsers(await listUsers())
   const run = (fn: () => Promise<void>) => start(async () => {
     setError('')
-    try { await fn(); await reload() } catch (e: any) { setError(e?.message || 'Não foi possível concluir.') }
+    try { await fn(); await reload() } catch (e: any) { setError(e?.message || '{{generic_error}}') }
   })
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">Usuários</h1>
-          <p className="text-sm text-neutral-500">Quem entra no sistema e a qual grupo de acesso pertence.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">{{users_title}}</h1>
+          <p className="text-sm text-neutral-500">{{users_subtitle}}</p>
         </div>
         {canWrite && (
-          <button className={'${BTN} flex items-center gap-2'} onClick={() => setCreating(true)}><UserPlus className="w-4 h-4" /> Criar Usuário</button>
+          <button className={'${BTN} flex items-center gap-2'} onClick={() => setCreating(true)}><UserPlus className="w-4 h-4" /> {{create_user}}</button>
         )}
       </div>
       {error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
@@ -447,7 +451,7 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-400">
-              <th className="px-6 py-4">Usuário</th><th className="px-6 py-4">E-mail</th><th className="px-6 py-4">Grupo</th><th className="px-6 py-4 text-right">Ações</th>
+              <th className="px-6 py-4">{{col_user}}</th><th className="px-6 py-4">{{col_email}}</th><th className="px-6 py-4">{{col_group}}</th><th className="px-6 py-4 text-right">{{col_actions}}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -462,26 +466,26 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
                     onChange={e => run(() => setUserRole(u.id, e.target.value))}
                     className="px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-xs font-semibold text-neutral-900 dark:text-white"
                   >
-                    <option value="">Sem grupo</option>
+                    <option value="">{{no_group}}</option>
                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </td>
                 <td className="px-6 py-4 text-right">
                   {canWrite && (
                     <div className="inline-flex gap-1">
-                      <button title="Redefinir senha" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
-                        const pw = window.prompt('Nova senha para ' + u.email)
+                      <button title="{{reset_password}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
+                        const pw = window.prompt('{{new_password_for}} ' + u.email)
                         if (pw) run(() => resetUserPassword(u.id, pw))
                       }}><KeyRound className="w-4 h-4" /></button>
-                      <button title="Excluir" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
-                        if (window.confirm('Excluir o usuário ' + u.email + '?')) run(() => deleteUser(u.id))
+                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
+                        if (window.confirm('{{confirm_delete_user}} ' + u.email + '?')) run(() => deleteUser(u.id))
                       }}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </td>
               </tr>
             ))}
-            {users.length === 0 && <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-neutral-500">Nenhum usuário.</td></tr>}
+            {users.length === 0 && <tr><td colSpan={4} className="px-6 py-10 text-center text-sm text-neutral-500">{{no_users}}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -490,17 +494,17 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setCreating(false)}>
           <div className="${CARD} w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Criar Usuário</h2>
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{{create_user}}</h2>
               <button onClick={() => setCreating(false)} className="text-neutral-400 hover:text-neutral-700"><X className="w-4 h-4" /></button>
             </div>
-            <input className="${INPUT}" placeholder="Nome (opcional)" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <input className="${INPUT}" type="email" placeholder="E-mail" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            <input className="${INPUT}" type="password" placeholder="Senha" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+            <input className="${INPUT}" placeholder="{{name_optional}}" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            <input className="${INPUT}" type="email" placeholder="{{email}}" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            <input className="${INPUT}" type="password" placeholder="{{password}}" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
             <select className="${INPUT}" value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })}>
-              <option value="">Sem grupo</option>
+              <option value="">{{no_group}}</option>
               {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <button className={'${BTN} w-full'} disabled={pending} onClick={() => run(async () => { await createUser(form); setCreating(false); setForm({ email: '', name: '', password: '', roleId: '' }) })}>Salvar</button>
+            <button className={'${BTN} w-full'} disabled={pending} onClick={() => run(async () => { await createUser(form); setCreating(false); setForm({ email: '', name: '', password: '', roleId: '' }) })}>{{save}}</button>
           </div>
         </div>
       )}
@@ -520,21 +524,21 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
   const [pending, start] = useTransition()
   const run = (fn: () => Promise<void>) => start(async () => {
     setError('')
-    try { await fn(); setRoles(await listRoles()) } catch (e: any) { setError(e?.message || 'Não foi possível concluir.') }
+    try { await fn(); setRoles(await listRoles()) } catch (e: any) { setError(e?.message || '{{generic_error}}') }
   })
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">Grupos de Acesso</h1>
-          <p className="text-sm text-neutral-500">Os grupos a que os usuários pertencem. As telas de cada grupo ficam em Permissões de Telas.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">{{groups_title}}</h1>
+          <p className="text-sm text-neutral-500">{{groups_subtitle}}</p>
         </div>
         {canWrite && (
           <button className={'${BTN} flex items-center gap-2'} disabled={pending} onClick={() => {
-            const name = window.prompt('Nome do novo grupo')
+            const name = window.prompt('{{new_group_prompt}}')
             if (name) run(() => createRole(name))
-          }}><Plus className="w-4 h-4" /> Criar Grupo</button>
+          }}><Plus className="w-4 h-4" /> {{create_group}}</button>
         )}
       </div>
       {error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
@@ -542,7 +546,7 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-400">
-              <th className="px-6 py-4">ID</th><th className="px-6 py-4">Nome do grupo</th><th className="px-6 py-4 text-right">Ações</th>
+              <th className="px-6 py-4">{{col_id}}</th><th className="px-6 py-4">{{col_group_name}}</th><th className="px-6 py-4 text-right">{{col_actions}}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -553,19 +557,19 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
                 <td className="px-6 py-4 text-right">
                   {canWrite && (
                     <div className="inline-flex gap-1">
-                      <button title="Renomear" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
-                        const name = window.prompt('Novo nome do grupo', r.name)
+                      <button title="{{rename}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
+                        const name = window.prompt('{{rename_group_prompt}}', r.name)
                         if (name && name !== r.name) run(() => renameRole(r.id, name))
                       }}><Pencil className="w-4 h-4" /></button>
-                      <button title="Excluir" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
-                        if (window.confirm('Excluir o grupo ' + r.name + '? Os usuários dele ficam sem grupo.')) run(() => deleteRole(r.id))
+                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
+                        if (window.confirm('{{confirm_delete_group}} ' + r.name + '? {{confirm_delete_group_note}}')) run(() => deleteRole(r.id))
                       }}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </td>
               </tr>
             ))}
-            {roles.length === 0 && <tr><td colSpan={3} className="px-6 py-10 text-center text-sm text-neutral-500">Nenhum grupo.</td></tr>}
+            {roles.length === 0 && <tr><td colSpan={3} className="px-6 py-10 text-center text-sm text-neutral-500">{{no_groups}}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -580,9 +584,9 @@ import { loadMatrix, setPermission, type AccessMatrix } from '@/app/actions/acce
 
 type Level = 'none' | 'read' | 'write'
 const OPTIONS: Array<{ id: Level; label: string; on: string }> = [
-  { id: 'none', label: 'Nenhum', on: 'bg-neutral-500 text-white' },
-  { id: 'read', label: 'Leitura', on: 'bg-amber-500 text-white' },
-  { id: 'write', label: 'Escrita', on: 'bg-indigo-600 text-white' },
+  { id: 'none', label: '{{level_none}}', on: 'bg-neutral-500 text-white' },
+  { id: 'read', label: '{{level_read}}', on: 'bg-amber-500 text-white' },
+  { id: 'write', label: '{{level_write}}', on: 'bg-indigo-600 text-white' },
 ]
 
 export default function PermissionsClient({ initialMatrix, canWrite }: { initialMatrix: AccessMatrix; canWrite: boolean }) {
@@ -593,21 +597,21 @@ export default function PermissionsClient({ initialMatrix, canWrite }: { initial
   const levelOf = (roleId: string, slug: string, denyByDefault: boolean): Level => matrix.levels[roleId]?.[slug] ?? (denyByDefault ? 'none' : 'write')
   const change = (roleId: string, slug: string, level: Level) => start(async () => {
     setError('')
-    try { await setPermission(roleId, slug, level); setMatrix(await loadMatrix()) } catch (e: any) { setError(e?.message || 'Não foi possível concluir.') }
+    try { await setPermission(roleId, slug, level); setMatrix(await loadMatrix()) } catch (e: any) { setError(e?.message || '{{generic_error}}') }
   })
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">Permissões de Telas</h1>
-        <p className="text-sm text-neutral-500">Nenhum: a tela some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo. Vale no próximo login de cada usuário.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">{{perms_title}}</h1>
+        <p className="text-sm text-neutral-500">{{perms_subtitle}}</p>
       </div>
       {error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
       <div className="${CARD} overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-400">
-              <th className="px-6 py-4 min-w-[200px]">Tela</th>
+              <th className="px-6 py-4 min-w-[200px]">{{col_screen}}</th>
               {matrix.roles.map(r => <th key={r.id} className="px-6 py-4 text-center min-w-[200px]">{r.name}</th>)}
             </tr>
           </thead>

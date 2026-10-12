@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DownloadCloud, Loader2, Code2, Database, CheckCircle2, Server, Coffee, Shield, TestTube, Container, BookOpen } from 'lucide-react'
 import { DbType, BackendStack } from '@/lib/generator/ast'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
+import { createClient } from '@/utils/supabase/client'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface NativeExportModalProps {
   isOpen: boolean
@@ -38,6 +40,7 @@ const BACKEND_OPTIONS: { value: BackendStack; label: string; description: string
 
 export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: NativeExportModalProps) {
   const { toast } = useToast()
+  const { t } = useI18n()
   const [isExporting, setIsExporting] = useState(false)
   const [dbStack, setDbStack] = useState<DbType>('postgres')
   const [backendStack, setBackendStack] = useState<BackendStack>('nodejs')
@@ -55,6 +58,17 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
   const [generateDockerfile, setGenerateDockerfile] = useState(true)
   const [generateDockerCompose, setGenerateDockerCompose] = useState(true)
   const [generateEnvExample, setGenerateEnvExample] = useState(true)
+
+  // gestão de acesso (Usuários, Grupos de Acesso e Permissões de Telas): só existe com o login "Via Banco de Dados"
+  const [accessAdmin, setAccessAdmin] = useState(false)
+  const [hasDbAuth, setHasDbAuth] = useState(false)
+  useEffect(() => {
+    if (!isOpen || !projectId) return
+    let cancelled = false
+    createClient().from('project_auth_config').select('auth_type').eq('project_id', projectId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setHasDbAuth((data as any)?.auth_type === 'database') })
+    return () => { cancelled = true }
+  }, [isOpen, projectId])
 
   if (!isOpen) return null
 
@@ -74,6 +88,7 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
     setGenerateDockerfile(true)
     setGenerateDockerCompose(true)
     setGenerateEnvExample(true)
+    setAccessAdmin(false)
     onClose()
   }
 
@@ -99,6 +114,7 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
           generateDockerfile: backendStack === 'java-spring' ? generateDockerfile : false,
           generateDockerCompose: backendStack === 'java-spring' ? generateDockerCompose : false,
           generateEnvExample: backendStack === 'java-spring' ? generateEnvExample : false,
+          accessAdmin: hasDbAuth && accessAdmin,
         })
       })
 
@@ -501,6 +517,20 @@ export function NativeExportModal({ isOpen, onClose, projectSlug, projectId }: N
                 </>
               )}
             </>
+          )}
+          {!done && hasDbAuth && (
+            <div
+              onClick={() => setAccessAdmin(v => !v)}
+              className={`flex items-start justify-between gap-4 p-4 rounded-xl border cursor-pointer transition-all ${accessAdmin ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-neutral-800 bg-neutral-900/40 hover:border-neutral-700'}`}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white flex items-center gap-2"><Shield className="w-4 h-4 text-indigo-400" /> {t('access_admin.toggle_title', 'Exportar gestão de acesso')}</p>
+                <p className="text-xs text-neutral-400 mt-1 leading-relaxed">{t('access_admin.toggle_desc', 'Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.')}</p>
+              </div>
+              <button type="button" role="switch" aria-checked={accessAdmin} className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${accessAdmin ? 'bg-indigo-600' : 'bg-neutral-700'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${accessAdmin ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>
           )}
         </div>
 

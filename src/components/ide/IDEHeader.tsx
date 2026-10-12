@@ -261,14 +261,14 @@ function DetectedDbLine({ detected }: { detected: DetectedSetup | null }) {
 }
 
 /** Login que o projeto já tem (somente leitura) e a opção de exportar a gestão de acesso. */
-function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin }: { detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
+function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin, workspace }: { detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
   const { t } = useI18n()
   const auth = detected?.auth
   const rows: Array<[string, string]> = auth ? [
     [t('workspace_components.eject_modal.node.auth_type', 'Tipo de Autenticação'), AUTH_LABELS[auth.type] || auth.type],
     ...(auth.type === 'database' ? ([
-      ['Tabela de usuários', auth.table || '—'],
-      ['Colunas (e-mail / senha)', `${auth.emailColumn || '—'} / ${auth.passwordColumn || '—'}`],
+      [t('access_admin.summary_users_table', 'Tabela de usuários'), auth.table || '—'],
+      [t('access_admin.summary_columns', 'Colunas (e-mail / senha)'), `${auth.emailColumn || '—'} / ${auth.passwordColumn || '—'}`],
       [t('workspace_components.eject_modal.node.password_hash', 'Hash de Senha'), auth.hash || 'bcrypt'],
     ] as Array<[string, string]>) : []),
   ] : []
@@ -291,12 +291,12 @@ function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin }: { detected: 
           ))}
         </dl>
       ) : (
-        <p className="text-xs text-neutral-500">O login do projeto é aplicado automaticamente na sincronização.</p>
+        <p className="text-xs text-neutral-500">{t('access_admin.summary_auto', 'O login do projeto é aplicado automaticamente na sincronização.')}</p>
       )}
-      {auth?.type === 'database' && (
+      {(auth?.type === 'database' || workspace) && (
         <ToggleRow
-          label="Exportar gestão de acesso"
-          description="Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: script em db/access-control.sql."
+          label={t('access_admin.toggle_title', 'Exportar gestão de acesso')}
+          description={(workspace ? t('access_admin.workspace_note', 'Aplicada aos projetos do workspace que usam o login por banco de dados. ') : '') + t('access_admin.toggle_desc', 'Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.')}
           checked={accessAdmin}
           onChange={setAccessAdmin}
         />
@@ -306,7 +306,7 @@ function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin }: { detected: 
 }
 
 // ─── Node.js config panel ─────────────────────────────────────────────────────
-function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }: { config: NodeConfig; onChange: (c: NodeConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
+function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace }: { config: NodeConfig; onChange: (c: NodeConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
   const { t } = useI18n()
   const set = <K extends keyof NodeConfig>(k: K, v: NodeConfig[K]) => onChange({ ...config, [k]: v })
   const setAuth = <K extends keyof NodeConfig['auth']>(k: K, v: NodeConfig['auth'][K]) =>
@@ -338,7 +338,7 @@ function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }
       </div>
 
       {/* Autenticação (o que o projeto já tem; a sincronização usa isso) + gestão de acesso */}
-      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} />
 
       {/* Projeto */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -362,7 +362,7 @@ function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }
 }
 
 // ─── Java config panel ────────────────────────────────────────────────────────
-function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }: { config: JavaConfig; onChange: (c: JavaConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
+function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace }: { config: JavaConfig; onChange: (c: JavaConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
   const { t } = useI18n()
   const set = <K extends keyof JavaConfig>(k: K, v: JavaConfig[K]) => onChange({ ...config, [k]: v })
 
@@ -392,7 +392,7 @@ function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }: 
       </div>
 
       {/* Autenticação do projeto + gestão de acesso */}
-      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} />
 
       {/* Configurações Base */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -743,7 +743,7 @@ export function IDEHeader({
 
   const confirmSync = () => {
     setIsSyncModalOpen(false)
-    const withAccess = target.type === 'project' && detected?.auth?.type === 'database' && accessAdmin
+    const withAccess = accessAdmin && (target.type === 'workspace' || detected?.auth?.type === 'database')
     if (activeTab === 'java') {
       handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage, withAccess)
     } else {
@@ -1053,8 +1053,8 @@ export function IDEHeader({
 
               {/* Content Area */}
               <div className="p-6 bg-[#1a1a1a] flex-1 overflow-y-auto max-h-[65vh]">
-                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />}
-                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />}
+                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} />}
+                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} />}
                 {activeTab === 'nestjs' && (
                   <ComingSoonPanel stack="nestjs" icon="🦅" label="NestJS + Prisma"
                     features={['TypeScript nativo', 'Decorators', 'Prisma ORM', 'Swagger integrado', 'Guards & Interceptors']} />

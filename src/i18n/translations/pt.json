@@ -1,4 +1,19 @@
 {
+  "access_admin": {
+    "workspace_note": "Aplicada aos projetos do workspace que usam o login por banco de dados. ",
+    "toggle_title": "Exportar gestão de acesso",
+    "toggle_desc": "Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.",
+    "driver_note": "O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba Banco de Dados ({db}).",
+    "summary_users_table": "Tabela de usuários",
+    "summary_columns": "Colunas (e-mail / senha)",
+    "summary_auto": "O login do projeto é aplicado automaticamente na sincronização.",
+    "level_none": "Nenhum",
+    "level_read": "Leitura",
+    "level_write": "Escrita",
+    "perms_help": "Nenhum: some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo.",
+    "perm_updated": "Permissão atualizada com sucesso!",
+    "perm_error": "Erro inesperado: "
+  },
   "studio_downloads_path": {
     "title": "Pasta de Downloads",
     "load_error": "Erro ao ler o metabuilder.config.json.",

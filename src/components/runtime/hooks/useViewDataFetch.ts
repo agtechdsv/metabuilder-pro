@@ -5,6 +5,7 @@ import { resolveRelations, resolveAllJoins, buildJoinSql } from '@/lib/relationP
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
+import { clearViewCaches } from '@/lib/tunnel/logoutClient'
 
 const getCachedData = (key: string) => {
   if (typeof window === 'undefined') return null
@@ -190,6 +191,13 @@ export function useViewDataFetch({
         }
       } else {
         setError(payload.payload.error)
+        // Sessão recusada (usuário desativado/removido): some o que já estava na tela e no cache da aba. Sem isto, o
+        // próximo "Pesquisar" mostrava por um instante a lista antiga antes de repetir o erro.
+        if (/^Sessão expirada/i.test(String(payload.payload.error || ''))) {
+          setData([])
+          setTotalServerRows(0)
+          clearViewCaches()
+        }
       }
       setIsLoading(false)
       setIsFetchingBackground(false)

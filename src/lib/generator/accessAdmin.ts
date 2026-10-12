@@ -1,5 +1,6 @@
 import type { AccessAdminConfig, AppAST, DbType, FieldNode, ModelNode, NavigationItem, RouteNode } from './ast'
 import { accessLevelOf, type AccessLevel } from '../viewAccess'
+import { getAccessDictionary } from './accessI18n'
 
 /**
  * Gestão de acesso no app exportado: monta a configuração (quem são os usuários, os grupos, como um se liga ao outro, onde ficam
@@ -65,8 +66,11 @@ export function buildAccessAdmin(args: {
   routes: RouteNode[]
   rawViews: any[]
   authConfig: { tableName?: string; emailColumn?: string; passwordColumn?: string; hashFormat?: string } | undefined
+  /** idioma de geração (pt, en, es) dos nomes das telas e do menu */
+  lang?: string
 }): AccessAdminBuild {
   const { raw, dbStack, models, routes, rawViews, authConfig } = args
+  const tt = getAccessDictionary(args.lang)
   const ui = (raw?.ui || {}) as Record<string, any>
   const findModel = (table: unknown) => models.find(m => bare(m.dbTable) === bare(table) || norm(m.name) === norm(table))
   const pkOf = (m: ModelNode) => m.fields.find(f => f.isPrimary)?.dbColumn || 'id'
@@ -116,9 +120,9 @@ export function buildAccessAdmin(args: {
   // Telas controladas por permissão
   const views: AccessAdminConfig['views'] = [
     ...routes.filter(r => r.path && r.viewSlug).map(r => ({ slug: r.viewSlug, title: r.title, path: r.path, table: r.modelTable || null })),
-    { slug: ACCESS_SLUGS.users, title: 'Usuários', path: `/${ACCESS_SLUGS.users}`, table: null, denyByDefault: true },
-    { slug: ACCESS_SLUGS.groups, title: 'Grupos de Acesso', path: `/${ACCESS_SLUGS.groups}`, table: null, denyByDefault: true },
-    { slug: ACCESS_SLUGS.permissions, title: 'Permissões de Telas', path: `/${ACCESS_SLUGS.permissions}`, table: null, denyByDefault: true },
+    { slug: ACCESS_SLUGS.users, title: tt.users_title, path: `/${ACCESS_SLUGS.users}`, table: null, denyByDefault: true },
+    { slug: ACCESS_SLUGS.groups, title: tt.groups_title, path: `/${ACCESS_SLUGS.groups}`, table: null, denyByDefault: true },
+    { slug: ACCESS_SLUGS.permissions, title: tt.perms_title, path: `/${ACCESS_SLUGS.permissions}`, table: null, denyByDefault: true },
   ]
 
   // Dados atuais do MetaBuilder para o script SQL
@@ -160,13 +164,13 @@ export function buildAccessAdmin(args: {
 
   const navigation: NavigationItem = {
     id: 'acesso',
-    label: 'Gestão de Acesso',
+    label: tt.menu_folder,
     icon: 'ShieldCheck',
     type: 'folder',
     children: [
-      { id: ACCESS_SLUGS.users, label: 'Usuários', icon: 'Users', type: 'view', target: ACCESS_SLUGS.users },
-      { id: ACCESS_SLUGS.groups, label: 'Grupos de Acesso', icon: 'Shield', type: 'view', target: ACCESS_SLUGS.groups },
-      { id: ACCESS_SLUGS.permissions, label: 'Permissões de Telas', icon: 'KeyRound', type: 'view', target: ACCESS_SLUGS.permissions },
+      { id: ACCESS_SLUGS.users, label: tt.users_title, icon: 'Users', type: 'view', target: ACCESS_SLUGS.users },
+      { id: ACCESS_SLUGS.groups, label: tt.groups_title, icon: 'Shield', type: 'view', target: ACCESS_SLUGS.groups },
+      { id: ACCESS_SLUGS.permissions, label: tt.perms_title, icon: 'KeyRound', type: 'view', target: ACCESS_SLUGS.permissions },
     ],
   }
 

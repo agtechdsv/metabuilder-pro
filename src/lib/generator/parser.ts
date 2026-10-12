@@ -1464,6 +1464,8 @@ export interface ParseOptions {
   javaArtifactId?: string
   /** Porta do Spring Boot. Default: 8080. */
   javaPort?: number
+  /** Exportação de workspace: conexão (tipo + string) de cada projeto, pelo id do projeto. Vem do metabuilder.config.json local. */
+  connections?: Record<string, { type?: string; connectionString?: string }>
 
   // Eject Options - Seguranca
   jwtEnabled?: boolean
@@ -2841,7 +2843,7 @@ export function parseMetaBuilderJSON(
   // ── Gestão de acesso (opcional): Usuários, Grupos e Permissões de Telas no app exportado ──
   let accessAdmin: AppAST['accessAdmin']
   if (rawJson.access_admin?.enabled) {
-    const built = buildAccessAdmin({ raw: rawJson.access_admin, dbStack, models, routes, rawViews, authConfig })
+    const built = buildAccessAdmin({ raw: rawJson.access_admin, dbStack, models, routes, rawViews, authConfig, lang: options?.targetLanguage })
     accessAdmin = built.config
     models.push(...built.models)
     // sem menu configurado o app monta o menu a partir das rotas: mantém isso, agora com a pasta de gestão junto
@@ -2898,20 +2900,36 @@ export function parseMetaBuilderJSON(
 export function parseWorkspaceJSON(
   rawWorkspace: any,
   rawProjects: any[],
-  dbStack: DbType,
+  dbStack: DbType | 'auto',
   options?: ParseOptions
 ): WorkspaceAST {
-  const projects: WorkspaceProjectNode[] = rawProjects.map((p) => ({
-    slug: p.slug || p.id,
-    name: p.display_name || p.name || p.slug,
-    description: p.description || '',
-    app: parseMetaBuilderJSON(p, dbStack, options),
-  }))
+  const KNOWN: DbType[] = ['postgres', 'oracle', 'mysql', 'sqlserver', 'supabase']
+  const canon = (t: unknown): DbType | undefined => {
+    const v = String(t ?? '').toLowerCase()
+    const mapped = v === 'postgresql' ? 'postgres' : v === 'mssql' ? 'sqlserver' : v
+    return KNOWN.includes(mapped as DbType) ? (mapped as DbType) : undefined
+  }
+  // Cada projeto do workspace é um app independente: tem o banco e a conexão dele (a escolha única de banco só vale se não for "auto")
+  const projects: WorkspaceProjectNode[] = rawProjects.map((p, i) => {
+    const conn = options?.connections?.[String(p.id)]
+    const stack: DbType = dbStack === 'auto' ? (canon(conn?.type) || canon(p.db_type) || 'postgres') : dbStack
+    return {
+      slug: p.slug || p.id,
+      name: p.display_name || p.name || p.slug,
+      description: p.description || '',
+      app: parseMetaBuilderJSON(p, stack, {
+        ...options,
+        dbConnectionString: conn?.connectionString || options?.dbConnectionString,
+        // cada backend Java escuta numa porta própria
+        javaPort: (options?.javaPort ?? 8080) + i,
+      }),
+    }
+  })
 
   return {
     workspaceName: rawWorkspace.name || rawWorkspace.slug,
     workspaceSlug: rawWorkspace.slug,
-    dbStack,
+    dbStack: dbStack === 'auto' ? 'postgres' : dbStack,
     dbConnectionString: options?.dbConnectionString,
     supabaseUrl: options?.supabaseUrl,
     supabaseAnonKey: options?.supabaseAnonKey,

@@ -1,4 +1,19 @@
 {
+  "access_admin": {
+    "workspace_note": "Aplicada a los proyectos del workspace que usan inicio de sesión por base de datos. ",
+    "toggle_title": "Exportar gestión de acceso",
+    "toggle_desc": "Genera las pantallas Usuarios, Grupos de Acceso y Permisos de Pantallas en un menú propio y aplica el acceso de cada grupo (ninguno, lectura o escritura). Crea las tablas de acceso: el script SQL queda en db/access-control.sql.",
+    "driver_note": "El inicio de sesión consulta su tabla de usuarios por la misma base elegida en la pestaña Base de Datos ({db}).",
+    "summary_users_table": "Tabla de usuarios",
+    "summary_columns": "Columnas (correo / contraseña)",
+    "summary_auto": "El inicio de sesión del proyecto se aplica automáticamente en la sincronización.",
+    "level_none": "Ninguno",
+    "level_read": "Lectura",
+    "level_write": "Escritura",
+    "perms_help": "Ninguno: desaparece del menú y la ruta se bloquea. Lectura: abre la pantalla, pero no crea, edita ni elimina. Escritura: hace todo.",
+    "perm_updated": "¡Permiso actualizado con éxito!",
+    "perm_error": "Error inesperado: "
+  },
   "studio_downloads_path": {
     "title": "Carpeta de Descargas",
     "load_error": "Error al leer metabuilder.config.json.",

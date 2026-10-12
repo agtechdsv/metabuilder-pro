@@ -78,7 +78,7 @@ export function useIDEGit({
       
       payload.backendStack = backendStack
       payload.targetLanguage = targetLanguage
-      if (accessAdmin && target.type === 'project') payload.accessAdmin = true
+      if (accessAdmin) payload.accessAdmin = true
       if (backendStack === 'java-spring') {
         payload.javaGroupId = javaGroupId
         payload.javaPort = javaPort
@@ -88,6 +88,12 @@ export function useIDEGit({
         const configStr = await tauriFs.readTextFile('metabuilder.config.json', { baseDir: BaseDirectory.AppLocalData })
         if (configStr) {
           const tunnelConfig = JSON.parse(configStr)
+          // workspace: cada projeto leva a conexão dele (banco e string do metabuilder.config.json)
+          if (target.type === 'workspace') {
+            payload.connections = (tunnelConfig?.connections || [])
+              .filter((c: any) => c?.projectId && c?.connectionsString?.[0]?.connectionString)
+              .map((c: any) => ({ projectId: c.projectId, type: c.connectionsString[0].type, connectionString: c.connectionsString[0].connectionString }))
+          }
           const projectConn = tunnelConfig?.connections?.find((c: any) => c.projectId === target.id)
           if (projectConn && projectConn.connectionsString && projectConn.connectionsString.length > 0) {
             const primaryConn = projectConn.connectionsString[0]

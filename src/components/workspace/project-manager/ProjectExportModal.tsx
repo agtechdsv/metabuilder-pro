@@ -12,6 +12,7 @@ import {
   Coffee
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 import { isTauri } from '@/utils/tauriUtils'
 import { DownloadModalState } from './types'
 
@@ -40,6 +41,7 @@ export function ProjectExportModal({
   onStartExport,
   exportModels
 }: ProjectExportModalProps) {
+  const { t } = useI18n()
   const [exportTab, setExportTab] = useState<'backend' | 'database' | 'auth'>('backend')
   const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
   const [javaGroupId, setJavaGroupId] = useState('com.app')
@@ -533,8 +535,7 @@ export function ProjectExportModal({
                       <div className="ml-7 space-y-4 border-t border-white/10 pt-4">
                         {/* o login usa o mesmo driver escolhido na aba Banco de Dados (a escolha própria de driver aqui não era usada na geração) */}
                         <p className="text-xs text-gray-400">
-                          O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba <strong>Banco de Dados</strong>
-                          {' '}({({ tunnel: 'MetaBuilder Tunnel', supabase: 'Supabase SDK', postgres: 'PostgreSQL (pg)', oracle: 'Oracle (oracledb)', mysql: 'MySQL (mysql2)', sqlserver: 'SQL Server (mssql)' } as const)[exportDataMode]}).
+                          {t('access_admin.driver_note', 'O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba Banco de Dados ({db}).').replace('{db}', ({ tunnel: 'MetaBuilder Tunnel', supabase: 'Supabase SDK', postgres: 'PostgreSQL (pg)', oracle: 'Oracle (oracledb)', mysql: 'MySQL (mysql2)', sqlserver: 'SQL Server (mssql)' } as const)[exportDataMode])}
                         </p>
                         <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
                           <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-3 uppercase">Mapeamento de Autenticação</p>
@@ -602,10 +603,9 @@ export function ProjectExportModal({
                           )}
                         >
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-neutral-900 dark:text-white">Exportar gestão de acesso</p>
+                            <p className="text-sm font-semibold text-neutral-900 dark:text-white">{t('access_admin.toggle_title', 'Exportar gestão de acesso')}</p>
                             <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
-                              Gera as telas <strong>Usuários</strong>, <strong>Grupos de Acesso</strong> e <strong>Permissões de Telas</strong> num menu próprio e aplica no app o
-                              acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em <code>db/access-control.sql</code>.
+                              {t('access_admin.toggle_desc', 'Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.')}
                             </p>
                           </div>
                           <button

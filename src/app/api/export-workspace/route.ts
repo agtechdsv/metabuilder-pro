@@ -4,6 +4,7 @@ import { parseWorkspaceJSON } from '@/lib/generator/parser'
 import { generateWorkspaceProject } from '@/lib/generator/emitter'
 import { DbType } from '@/lib/generator/ast'
 import JSZip from 'jszip'
+import { fetchWorkspaceProjects } from '@/lib/generator/workspaceData'
 
 /**
  * POST /api/export-workspace
@@ -15,10 +16,12 @@ export async function POST(request: Request) {
   try {
     const {
       workspaceId,
-      dbStack = 'postgres',
+      dbStack = 'auto',
       backendStack = 'nodejs',
       javaGroupId,
-      javaPort
+      javaPort,
+      targetLanguage,
+      accessAdmin = false
     } = await request.json()
     const supabase = await createClient()
 
@@ -44,17 +47,18 @@ export async function POST(request: Request) {
     }
 
     // 3. Buscar todos os projetos com seus dados
-    const rawProjects = await fetchWorkspaceProjects(supabase, workspaceId)
+    const rawProjects = await fetchWorkspaceProjects(supabase, workspaceId, { accessAdmin: accessAdmin === true })
 
     if (rawProjects.length === 0) {
       return NextResponse.json({ error: 'Nenhum projeto encontrado neste workspace' }, { status: 404 })
     }
 
     // 4. Parser → AST
-    const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType, {
+    const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType | 'auto', {
       backendStack,
       javaGroupId,
-      javaPort
+      javaPort,
+      targetLanguage
     })
 
     // 5. Emitter → File Map
@@ -84,53 +88,4 @@ export async function POST(request: Request) {
     console.error('[ExportWorkspace] Error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno ao gerar código' }, { status: 500 })
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: busca projetos completos (models + views + fields)
-// ─────────────────────────────────────────────────────────────────────────────
-async function fetchWorkspaceProjects(supabase: any, workspaceId: string) {
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('workspace_id', workspaceId)
-
-  if (!projects || projects.length === 0) return []
-
-  const enriched = await Promise.all(projects.map(async (project: any) => {
-    const projectId = project.id
-
-    const [{ data: models }, { data: uiViewsPublished }, { data: relations }, { data: authConfig }] = await Promise.all([
-      supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
-      supabase.from('ui_views').select('*').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
-      supabase.from('relations').select('*').eq('project_id', projectId),
-      supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle()
-    ])
-
-    // Fallback: se não há views publicadas, pega todas
-    let finalViews = uiViewsPublished
-    if (!finalViews || finalViews.length === 0) {
-      const { data: allViews } = await supabase
-        .from('ui_views').select('*').eq('project_id', projectId).order('created_at', { ascending: true })
-      finalViews = allViews
-    }
-
-    return {
-      ...project,
-      models: models || [],
-      views: finalViews || [],
-      fields: (models || []).flatMap((m: any) => m.fields || []),
-      relations: relations || [],
-      auth_config: authConfig ? {
-        auth_type: authConfig.auth_type,
-        table_name: authConfig.db_table_name,
-        email_column: authConfig.db_email_column,
-        password_column: authConfig.db_password_column,
-        hash_format: authConfig.db_password_hash_type,
-        table_access: authConfig.ui_config?.table_access
-      } : undefined
-    }
-  }))
-
-  return enriched
 }

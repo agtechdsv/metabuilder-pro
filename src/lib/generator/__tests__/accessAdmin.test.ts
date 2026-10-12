@@ -214,3 +214,24 @@ describe('gestão de acesso no app exportado', () => {
     expect(() => parseMetaBuilderJSON(r, 'postgres')).toThrow(/tabela de usuários/)
   })
 })
+
+describe('idiomas da gestão de acesso', () => {
+  const generate = (lang: string) => generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres', { targetLanguage: lang } as any))
+
+  it('os três idiomas têm as mesmas chaves e nenhum texto vazio', async () => {
+    const { getAccessDictionary } = await import('../accessI18n')
+    const pt = Object.keys(getAccessDictionary('pt'))
+    for (const l of ['en', 'es']) {
+      expect(Object.keys(getAccessDictionary(l))).toEqual(pt)
+      for (const v of Object.values(getAccessDictionary(l))) expect(String(v).trim()).not.toBe('')
+    }
+  })
+
+  it.each([['pt', 'Criar Usuário', 'Gestão de Acesso'], ['en', 'Create User', 'Access Management'], ['es', 'Crear Usuario', 'Gestión de Acceso']])('%s: telas, mensagens e menu no idioma, sem marcadores soltos', (lang, create, folder) => {
+    const files = generate(lang)
+    expect(files.get('app/(protected)/acesso-usuarios/UsersClient.tsx')).toContain(create)
+    expect(files.get('app/(protected)/layout.tsx')).toContain(folder)
+    for (const p of ACCESS_FILES) expect(files.get(p), p).not.toMatch(/\{\{\w+\}\}/)
+    expect(syntaxErrors(files, ACCESS_FILES)).toEqual([])
+  })
+})

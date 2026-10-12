@@ -1,4 +1,19 @@
 {
+  "access_admin": {
+    "workspace_note": "Applied to the workspace projects that use database sign-in. ",
+    "toggle_title": "Export access management",
+    "toggle_desc": "Generates the Users, Access Groups and Screen Permissions screens in their own menu and applies each group access (none, read or write). Creates the access tables: the SQL script is in db/access-control.sql.",
+    "driver_note": "Sign-in reads your users table through the same database chosen in the Database tab ({db}).",
+    "summary_users_table": "Users table",
+    "summary_columns": "Columns (e-mail / password)",
+    "summary_auto": "The project sign-in is applied automatically on sync.",
+    "level_none": "None",
+    "level_read": "Read",
+    "level_write": "Write",
+    "perms_help": "None: hidden from the menu and the route is blocked. Read: opens the screen but cannot create, edit or delete. Write: full access.",
+    "perm_updated": "Permission updated successfully!",
+    "perm_error": "Unexpected error: "
+  },
   "studio_downloads_path": {
     "title": "Download Folder",
     "load_error": "Error reading metabuilder.config.json.",

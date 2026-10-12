@@ -644,10 +644,10 @@ export default function AuthSettingsPage() {
         if (error) throw error
         setRolePermissions(prev => [...prev, data])
       }
-      toast('Permissão atualizada com sucesso!', 'success')
+      toast(t('access_admin.perm_updated', 'Permissão atualizada com sucesso!'), 'success')
     } catch (err: any) {
       console.error('Unexpected permission level error:', err)
-      toast('Erro inesperado: ' + (err?.message || err), 'error')
+      toast(t('access_admin.perm_error', 'Erro inesperado: ') + (err?.message || err), 'error')
     }
   }
 
@@ -1883,7 +1883,7 @@ export default function AuthSettingsPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Permissões de Telas por Grupo</h3>
-                    <p className="text-[10px] text-neutral-500">Nenhum: some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo.</p>
+                    <p className="text-[10px] text-neutral-500">{t('access_admin.perms_help', 'Nenhum: some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo.')}</p>
                   </div>
                 </div>
 
@@ -1927,9 +1927,9 @@ export default function AuthSettingsPage() {
                                   // nenhum (não vê nem acessa) · leitura (vê, não grava) · escrita (faz tudo; marca leitura junto)
                                   const level = accessLevelOf(permission)
                                   const OPTIONS: Array<{ id: AccessLevel; label: string; on: string }> = [
-                                    { id: 'none', label: 'Nenhum', on: 'bg-neutral-500 text-white' },
-                                    { id: 'read', label: 'Leitura', on: 'bg-amber-500 text-white' },
-                                    { id: 'write', label: 'Escrita', on: 'bg-indigo-600 text-white' },
+                                    { id: 'none', label: t('access_admin.level_none', 'Nenhum'), on: 'bg-neutral-500 text-white' },
+                                    { id: 'read', label: t('access_admin.level_read', 'Leitura'), on: 'bg-amber-500 text-white' },
+                                    { id: 'write', label: t('access_admin.level_write', 'Escrita'), on: 'bg-indigo-600 text-white' },
                                   ]
                                   return (
                                     <td key={role.id} className="px-6 py-4 text-center">
