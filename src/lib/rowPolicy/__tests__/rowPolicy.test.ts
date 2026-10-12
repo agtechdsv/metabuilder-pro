@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createRequire } from 'node:module'
 import { cleanRowPolicy, cleanTableAccessMode, isTableClosed, resolveAccess, type TableAccessConfig } from '../policy'
-import { accessForSession, clearTableAccessCache, loadTableAccess } from '../server'
+import { accessForSession, clearTableAccessCache, clearWriteRestrictionCache, loadTableAccess } from '../server'
 import { exportProblem } from '../exportGuard'
 import { buildCommand } from '@/lib/tunnel/relayPolicy'
 import { signCommand, computeSignature } from '@/lib/tunnel/commandSigning'
@@ -262,5 +262,55 @@ describe('exportação de usuário final', () => {
     expect(exportProblem({ ...ok, columnsList: ['id', '1; DROP TABLE x'] }, ctx)).toMatch(/formato/)
     expect(exportProblem({ ...ok, columnsList: ['usuarios.hash_senha AS "usuarios.hash_senha"'] }, ctx)).toMatch(/coluna não permitida/)
     expect(exportProblem({ ...ok, columnsList: [] }, ctx)).toMatch(/inválida/)
+  })
+})
+
+describe('permissão de tela: leitura no servidor', () => {
+  beforeEach(() => { clearTableAccessCache(); clearWriteRestrictionCache() })
+  // tabela → linhas; cada consulta encadeia .eq() e termina em maybeSingle() ou numa lista
+  const fake = (data: Record<string, any>) => ({
+    from: (table: string) => {
+      const chain: any = { select: () => chain, eq: () => chain, in: () => chain, maybeSingle: async () => ({ data: Array.isArray(data[table]) ? data[table][0] ?? null : data[table] ?? null, error: null }), then: (res: any) => res({ data: data[table] ?? [], error: null }) }
+      return chain
+    },
+  }) as any
+
+  const baseTables = [
+    { db_table_name: 'clientes', can_create: true, can_update: true, can_delete: true },
+    { db_table_name: 'pedidos', can_create: true, can_update: true, can_delete: true },
+  ]
+  const world = (perms: any[]) => fake({
+    models: baseTables,
+    project_auth_config: { ui_config: {} },
+    project_user_roles: [{ role_id: 'r1' }],
+    project_role_permissions: perms,
+    ui_views: [
+      { id: 'v-cli', slug: 'clientes', model: { db_table_name: 'clientes' } },
+      { id: 'v-ped', slug: 'pedidos', model: { db_table_name: 'pedidos' } },
+    ],
+  })
+
+  it('grupo só com leitura nas telas de uma tabela: o Agente recusa criar, editar e excluir nela; as outras seguem', async () => {
+    const a = await accessForSession(PID, { sub: '5', email: 'a@x.com' }, { client: world([{ view_id: 'v-cli', can_read: true, can_write: false }]) })
+    expect(a.flags.clientes).toEqual({ create: false, update: false, delete: false })
+    expect(a.flags.pedidos).toBeUndefined()
+    await expect(sqlPolicy.enforceWrite({ access: a, action: 'insert', table: 'clientes', data: { x: 1 }, dbType: 'postgres', query: async () => [] })).rejects.toThrow(/não permite/)
+  })
+
+  it('sem nenhuma restrição configurada para o grupo, nada muda', async () => {
+    const a = await accessForSession(PID, { sub: '5', email: 'a@x.com' }, { client: world([]) })
+    expect(a.flags).toEqual({})
+  })
+
+  it('a coluna do grupo vem da linha do usuário quando o projeto usa os grupos do banco legado', async () => {
+    const c = fake({
+      models: baseTables,
+      project_auth_config: { ui_config: { sync_legacy_groups: true, db_user_role_column: 'perfil_id' } },
+      project_user_roles: [],
+      project_role_permissions: [{ view_id: 'v-ped', can_read: false, can_write: false }],
+      ui_views: [{ id: 'v-ped', slug: 'pedidos', model: { db_table_name: 'pedidos' } }],
+    })
+    const a = await accessForSession(PID, { sub: '5', email: 'a@x.com', row: { perfil_id: 3 } } as any, { client: c })
+    expect(a.flags.pedidos).toEqual({ create: false, update: false, delete: false })
   })
 })

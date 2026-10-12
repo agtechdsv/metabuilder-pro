@@ -23,6 +23,8 @@ export interface SessionUser {
   name?: string
   /** colunas do cadastro do usuário que as regras de acesso do BI consultam */
   attrs?: Record<string, string>
+  /** gestão de acesso: telas bloqueadas (no), só de leitura (ro) e tabelas em que o grupo não grava (wt) */
+  acc?: { no: string[]; ro: string[]; wt: string[] }
   /** expira em (segundos desde 1970) */
   exp: number
 }
@@ -98,13 +100,15 @@ export function generateLoginPage(ast: AppAST, files: Map<string, string>, opts:
     ...modelPolicyAttrColumns(ast),
     ...(opts.extraAttrColumns || []),
   ])]
+  // gestão de acesso: o login calcula o nível de cada tela do grupo do usuário e o grava na sessão assinada
+  const hasAccess = !!ast.accessAdmin
   files.set('lib/session.ts', SESSION_LIB_SOURCE)
   files.set('lib/session-server.ts', SESSION_SERVER_SOURCE)
 
   // trecho do login que assina a sessão; sem o segredo configurado, o login responde "config" em vez de quebrar
-  const signBlock = (nameExpr: string, attrsExpr: string) => `    let sessionToken: string
+  const signBlock = (nameExpr: string, attrsExpr: string, withAcc = false) => `${withAcc && hasAccess ? '    const acc = await loadAccess(user)\n' : ''}    let sessionToken: string
     try {
-      sessionToken = await signSession({ email, name: ${nameExpr}, attrs: ${attrsExpr} })
+      sessionToken = await signSession({ email, name: ${nameExpr}, attrs: ${attrsExpr}${withAcc && hasAccess ? ', acc' : ''} })
     } catch (e) {
       console.error('Sessão: ', e)
       return NextResponse.redirect(new URL('/login?error=config', request.url))
@@ -117,7 +121,7 @@ export function generateLoginPage(ast: AppAST, files: Map<string, string>, opts:
       const val = key ? (user as any)[key] : undefined
       if (val !== undefined && val !== null && String(val) !== '') attrs[col] = String(val)
     }
-` + signBlock('userName', 'attrs')
+` + signBlock('userName', 'attrs', true)
   const ATTRS_MANAGED_BLOCK = `    const meta: Record<string, any> = (data?.user?.user_metadata as Record<string, any>) || {}
     const attrs: Record<string, string> = {}
     for (const col of ${JSON.stringify(attrColumns)} as string[]) {
@@ -230,6 +234,17 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
 
   // app/api/login/route.ts — define o cookie de sessão
   let loginApiContent = `import { NextResponse } from 'next/server'\nimport { signSession } from '@/lib/session'\n`
+  if (hasAccess && ast.authConfig?.authType === 'database') loginApiContent += `import { loadAccess } from '@/lib/access-control'\n`
+  // menu e botões do navegador leem este cookie (só para exibir: quem decide é a sessão assinada, no servidor)
+  const accCookie = hasAccess && ast.authConfig?.authType === 'database'
+    ? `    response.cookies.set('mb_acc', JSON.stringify({ no: acc.no, ro: acc.ro }), {
+      httpOnly: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+`
+    : ''
   
   if (ast.authConfig?.authType === 'database') {
     const table = ast.authConfig.tableName || 'usuarios'
@@ -360,7 +375,7 @@ ${ATTRS_DB_BLOCK}    const response = NextResponse.redirect(new URL(redirect, re
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
-    return response
+${accCookie}    return response
 
   } catch (err) {
     console.error('Login DB Error:', err)
@@ -458,9 +473,28 @@ export async function GET(request: Request) {
   const response = NextResponse.redirect(new URL('/login', request.url))
   response.cookies.delete('mb_session')
   response.cookies.delete('mb_user')
+  response.cookies.delete('mb_acc')
   return response
 }
 `)
+
+  // gestão de acesso: telas bloqueadas redirecionam para o início; telas só de leitura não abrem o formulário de novo registro
+  const accessRoutes = hasAccess
+    ? (ast.accessAdmin!.views.filter(v => v.path && v.path !== '/').map(v => ({ path: v.path, slug: v.slug })).sort((a, b) => b.path.length - a.path.length))
+    : []
+  const accessCheck = hasAccess
+    ? `
+  // permissões por tela (nenhum / leitura / escrita), do grupo do usuário gravado na sessão assinada
+  const acc = user.acc
+  if (acc) {
+    const hit = ACCESS_ROUTES.find(r => pathname === r.path || pathname.startsWith(r.path + '/'))
+    if (hit) {
+      if (acc.no.includes(hit.slug)) return NextResponse.redirect(new URL('/', request.url))
+      if (acc.ro.includes(hit.slug) && pathname === hit.path + '/new') return NextResponse.redirect(new URL(hit.path, request.url))
+    }
+  }
+`
+    : ''
 
   // proxy.ts (antigo middleware.ts) — intercepta toda requisição e redireciona para /login se não autenticado
   files.set('proxy.ts', `import { NextResponse } from 'next/server'
@@ -468,6 +502,7 @@ import type { NextRequest } from 'next/server'
 import { verifySession } from '@/lib/session'
 
 const PUBLIC_PATHS = ['/login', '/api/login']
+${hasAccess ? `// telas do app (mais longas primeiro: "/clientes-geospatial" antes de "/clientes")\nconst ACCESS_ROUTES: Array<{ path: string; slug: string }> = ${JSON.stringify(accessRoutes)}\n` : ''}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -489,7 +524,7 @@ export async function proxy(request: NextRequest) {
     if (request.cookies.get('mb_session')) res.cookies.delete('mb_session')
     return res
   }
-
+${accessCheck}
   return NextResponse.next()
 }
 

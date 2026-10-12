@@ -28,7 +28,8 @@ interface ProjectExportModalProps {
     authConfig?: any,
     backendStack?: string,
     javaGroupId?: string,
-    javaPort?: number
+    javaPort?: number,
+    accessAdmin?: boolean
   ) => void
   exportModels: any[]
 }
@@ -73,6 +74,8 @@ export function ProjectExportModal({
   const [exportAuthEmailCol, setExportAuthEmailCol] = useState(defaults.authEmailColumn || 'email')
   const [exportAuthPassCol, setExportAuthPassCol] = useState(defaults.authPasswordColumn || 'senha')
   const [exportAuthHash, setExportAuthHash] = useState(defaults.authHash || 'Bcrypt')
+  // exporta também os casos de uso Usuários, Grupos de Acesso e Permissões de Telas (e aplica as permissões no app)
+  const [exportAccessAdmin, setExportAccessAdmin] = useState(false)
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -132,7 +135,8 @@ export function ProjectExportModal({
         : null,
       backendStack,
       javaGroupId,
-      javaPort
+      javaPort,
+      exportAuthStrategy === 'legacy' && exportAccessAdmin
     )
   }
 
@@ -527,29 +531,11 @@ export function ProjectExportModal({
 
                     {exportAuthStrategy === 'legacy' && (
                       <div className="ml-7 space-y-4 border-t border-white/10 pt-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-400 mb-2">Driver de Conexão do BD Legado</label>
-                          <div className="flex items-center space-x-4">
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                checked={exportLegacyDriver === 'supabase'}
-                                onChange={() => setExportLegacyDriver('supabase')}
-                                className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
-                              />
-                              <span className="text-xs">Supabase SDK</span>
-                            </label>
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                checked={exportLegacyDriver === 'postgres'}
-                                onChange={() => setExportLegacyDriver('postgres')}
-                                className="text-[#5E2BFF] focus:ring-[#5E2BFF]"
-                              />
-                              <span className="text-xs">Driver PostgreSQL Nativo (pg)</span>
-                            </label>
-                          </div>
-                        </div>
+                        {/* o login usa o mesmo driver escolhido na aba Banco de Dados (a escolha própria de driver aqui não era usada na geração) */}
+                        <p className="text-xs text-gray-400">
+                          O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba <strong>Banco de Dados</strong>
+                          {' '}({({ tunnel: 'MetaBuilder Tunnel', supabase: 'Supabase SDK', postgres: 'PostgreSQL (pg)', oracle: 'Oracle (oracledb)', mysql: 'MySQL (mysql2)', sqlserver: 'SQL Server (mssql)' } as const)[exportDataMode]}).
+                        </p>
                         <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
                           <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-3 uppercase">Mapeamento de Autenticação</p>
                           <div className="grid grid-cols-2 gap-4 text-xs">
@@ -605,6 +591,31 @@ export function ProjectExportModal({
                               </select>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Gestão de acesso: os 3 casos de uso + permissões nenhum/leitura/escrita aplicadas no app exportado */}
+                        <div
+                          onClick={(e) => { e.stopPropagation(); setExportAccessAdmin(v => !v) }}
+                          className={cn(
+                            'flex items-start justify-between gap-4 p-3 rounded-lg border cursor-pointer transition-all',
+                            exportAccessAdmin ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-neutral-900 dark:text-white">Exportar gestão de acesso</p>
+                            <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                              Gera as telas <strong>Usuários</strong>, <strong>Grupos de Acesso</strong> e <strong>Permissões de Telas</strong> num menu próprio e aplica no app o
+                              acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em <code>db/access-control.sql</code>.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={exportAccessAdmin}
+                            className={cn('relative w-11 h-6 rounded-full shrink-0 transition-colors', exportAccessAdmin ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700')}
+                          >
+                            <span className={cn('absolute top-1 w-4 h-4 rounded-full bg-white transition-all', exportAccessAdmin ? 'left-6' : 'left-1')} />
+                          </button>
                         </div>
                       </div>
                     )}

@@ -101,7 +101,8 @@ export function useProjectExport() {
     authConfig?: any,
     backendStack: string = 'nodejs',
     javaGroupId?: string,
-    javaPort?: number
+    javaPort?: number,
+    accessAdmin?: boolean
   ) => {
     setDownloadModal({
       open: true,
@@ -143,7 +144,8 @@ export function useProjectExport() {
           backendStack,
           javaGroupId: backendStack === 'java-spring' ? javaGroupId : undefined,
           javaPort: backendStack === 'java-spring' ? javaPort : undefined,
-          javaVersion: 21
+          javaVersion: 21,
+          accessAdmin: accessAdmin === true
         })
       })
       if (!res.ok) {

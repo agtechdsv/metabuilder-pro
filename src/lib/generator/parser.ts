@@ -1,5 +1,6 @@
 import { cleanRowPolicy, cleanTableAccessMode } from '../rowPolicy/policy'
 import { cleanAuditConfig, effectiveAudit } from '../rowPolicy/audit'
+import { buildAccessAdmin } from './accessAdmin'
 import {
   AppAST,
   BackendStack,
@@ -2837,7 +2838,25 @@ export function parseMetaBuilderJSON(
   const projectSlugSanitized = (rawJson.project?.slug || rawJson.slug || 'app').replace(/[^a-z0-9-]/g, '-')
   const resolvedArtifactId = options?.javaArtifactId ?? `${projectSlugSanitized}-backend`
 
+  // ── Gestão de acesso (opcional): Usuários, Grupos e Permissões de Telas no app exportado ──
+  let accessAdmin: AppAST['accessAdmin']
+  if (rawJson.access_admin?.enabled) {
+    const built = buildAccessAdmin({ raw: rawJson.access_admin, dbStack, models, routes, rawViews, authConfig })
+    accessAdmin = built.config
+    models.push(...built.models)
+    // sem menu configurado o app monta o menu a partir das rotas: mantém isso, agora com a pasta de gestão junto
+    if (navigation.length === 0) {
+      navigation.push(...routes.map(r => ({ id: r.viewSlug, label: r.title, icon: r.icon || 'Layout', type: 'view' as const, target: r.viewSlug })))
+    }
+    navigation.push(built.navigation)
+    // "bloquear por padrão": as tabelas auxiliares são do próprio app, não ficam fechadas
+    if (authConfig?.tableAccess?.closed) {
+      authConfig.tableAccess = { ...authConfig.tableAccess, open: [...authConfig.tableAccess.open, ...built.models.map(m => m.dbTable.toLowerCase())] }
+    }
+  }
+
   return {
+    accessAdmin,
     projectId: rawJson.project?.id || rawJson.id,
     projectName: rawJson.project?.name || rawJson.name || 'CRM',
     projectSlug: rawJson.project?.slug || rawJson.slug || 'app',

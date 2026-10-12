@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { parseMetaBuilderJSON } from '@/lib/generator/parser'
 import { generateNativeProject } from '@/lib/generator/emitter'
 import { DbType } from '@/lib/generator/ast'
+import { loadAccessAdminInput } from '@/lib/generator/accessAdminData'
 export async function POST(request: Request) {
   try {
     const payload = await request.json()
@@ -78,6 +79,15 @@ export async function POST(request: Request) {
         hash_format: authConfig.db_password_hash_type,
         table_access: authConfig.ui_config?.table_access
       } : undefined
+    }
+
+    // Gestão de acesso (opcional): Usuários, Grupos de Acesso e Permissões de Telas
+    if (payload.accessAdmin === true) {
+      const input = await loadAccessAdminInput(supabase, projectId, authConfig)
+      if (!input) {
+        return NextResponse.json({ error: 'A gestão de acesso só está disponível com o login "Via Banco de Dados Legado".' }, { status: 400 })
+      }
+      ;(rawJson as any).access_admin = input
     }
 
     // Resolver credenciais de conexão

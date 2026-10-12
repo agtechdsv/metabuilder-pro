@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { accessLevelOf, rowForLevel, type AccessLevel } from '@/lib/viewAccess'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { 
@@ -619,6 +620,33 @@ export default function AuthSettingsPage() {
       }
     } catch (err: any) {
       console.error('Unexpected permission toggle error:', err)
+      toast('Erro inesperado: ' + (err?.message || err), 'error')
+    }
+  }
+
+  // Telas normais: nenhum / leitura / escrita. Escrita = sem linha (padrão liberado); veja lib/viewAccess.ts
+  const handleSetPermissionLevel = async (roleId: string, viewId: string, level: AccessLevel) => {
+    const existing = rolePermissions.find(rp => rp.role_id === roleId && rp.view_id === viewId)
+    try {
+      const target = rowForLevel(level)
+      if (!target) {
+        if (existing) {
+          const { error } = await supabase.from('project_role_permissions').delete().eq('id', existing.id)
+          if (error) throw error
+          setRolePermissions(prev => prev.filter(rp => rp.id !== existing.id))
+        }
+      } else if (existing) {
+        const { data, error } = await supabase.from('project_role_permissions').update(target).eq('id', existing.id).select().single()
+        if (error) throw error
+        setRolePermissions(prev => prev.map(rp => rp.id === existing.id ? data : rp))
+      } else {
+        const { data, error } = await supabase.from('project_role_permissions').insert({ role_id: roleId, view_id: viewId, ...target }).select().single()
+        if (error) throw error
+        setRolePermissions(prev => [...prev, data])
+      }
+      toast('Permissão atualizada com sucesso!', 'success')
+    } catch (err: any) {
+      console.error('Unexpected permission level error:', err)
       toast('Erro inesperado: ' + (err?.message || err), 'error')
     }
   }
@@ -1855,7 +1883,7 @@ export default function AuthSettingsPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Permissões de Telas por Grupo</h3>
-                    <p className="text-[10px] text-neutral-500">Marque quais telas cada grupo pode visualizar no menu lateral do sistema.</p>
+                    <p className="text-[10px] text-neutral-500">Nenhum: some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo.</p>
                   </div>
                 </div>
 
@@ -1891,13 +1919,41 @@ export default function AuthSettingsPage() {
                               </td>
                               {roles.map(role => {
                                 const permission = rolePermissions.find(rp => rp.role_id === role.id && rp.view_id === view.id)
-                                const hasAccess = isAutomations 
+                                const hasAccess = isAutomations
                                   ? (permission && permission.can_read === true)
                                   : (!permission || permission.can_read !== false)
 
+                                if (!isAutomations) {
+                                  // nenhum (não vê nem acessa) · leitura (vê, não grava) · escrita (faz tudo; marca leitura junto)
+                                  const level = accessLevelOf(permission)
+                                  const OPTIONS: Array<{ id: AccessLevel; label: string; on: string }> = [
+                                    { id: 'none', label: 'Nenhum', on: 'bg-neutral-500 text-white' },
+                                    { id: 'read', label: 'Leitura', on: 'bg-amber-500 text-white' },
+                                    { id: 'write', label: 'Escrita', on: 'bg-indigo-600 text-white' },
+                                  ]
+                                  return (
+                                    <td key={role.id} className="px-6 py-4 text-center">
+                                      <div className="inline-flex rounded-full bg-neutral-100 dark:bg-neutral-800 p-0.5" role="radiogroup" aria-label={`${view.name} — ${role.name}`}>
+                                        {OPTIONS.map(o => (
+                                          <button
+                                            key={o.id}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={level === o.id}
+                                            onClick={() => level !== o.id && handleSetPermissionLevel(role.id, view.id, o.id)}
+                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${level === o.id ? o.on : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+                                          >
+                                            {o.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </td>
+                                  )
+                                }
+
                                 return (
                                   <td key={role.id} className="px-6 py-4 text-center">
-                                    <button 
+                                    <button
                                       onClick={() => handleTogglePermission(role.id, view.id, isAutomations)}
                                       className={`w-12 h-6 rounded-full transition-all relative inline-block align-middle ${hasAccess ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-800'}`}
                                     >

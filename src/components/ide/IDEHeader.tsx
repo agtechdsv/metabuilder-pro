@@ -25,7 +25,7 @@ export interface IDEHeaderProps {
   isDiscarding: boolean
   isConfirming: boolean
   handleOpenCommitModal: (mode: 'commit' | 'merge') => void
-  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number, targetLanguage?: string) => void
+  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number, targetLanguage?: string, accessAdmin?: boolean) => void
   isSyncing: boolean
   selectedBranch: string
   handleBranchChange: (branch: string) => void
@@ -202,8 +202,111 @@ function RadioGroup({ value, onChange, options }: { value: string; onChange: (v:
   )
 }
 
+// ─── O que o projeto já tem configurado (banco e login), mostrado só para conferência ─────────────────
+interface DetectedSetup {
+  dbType?: string
+  /** conexão do metabuilder.config.json local, sem a senha */
+  connection?: string
+  auth?: { type: string; table?: string; emailColumn?: string; passwordColumn?: string; hash?: string }
+}
+
+const DB_LABELS: Record<string, string> = { postgres: 'PostgreSQL', oracle: 'Oracle', mysql: 'MySQL', sqlserver: 'SQL Server', supabase: 'Supabase' }
+const AUTH_LABELS: Record<string, string> = { database: 'Banco de dados', managed: 'Gerenciada (Supabase)', ldap: 'LDAP', none: 'Nenhuma' }
+
+function useDetectedSetup(target: IDEHeaderProps['target'], enabled: boolean): DetectedSetup | null {
+  const [detected, setDetected] = useState<DetectedSetup | null>(null)
+  useEffect(() => {
+    if (!enabled || target.type !== 'project') return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const supabase = createClient()
+        const [{ data: proj }, { data: auth }] = await Promise.all([
+          supabase.from('projects').select('db_type').eq('id', target.id).maybeSingle(),
+          supabase.from('project_auth_config').select('auth_type, db_table_name, db_email_column, db_password_column, db_password_hash_type').eq('project_id', target.id).maybeSingle(),
+        ])
+        const dbType = String((proj as any)?.db_type || '').toLowerCase() || undefined
+        let connection: string | undefined
+        try {
+          const { getProjectDbConnection } = await import('@/utils/tunnelConfigFile')
+          const c = await getProjectDbConnection(target.id, dbType)
+          if (c) connection = `${c.user}@${c.host}${c.port ? ':' + c.port : ''}/${c.database}`
+        } catch { /* fora do desktop ou sem arquivo: só o tipo do banco */ }
+        if (cancelled) return
+        setDetected({
+          dbType,
+          connection,
+          auth: auth ? {
+            type: String((auth as any).auth_type || 'none'),
+            table: (auth as any).db_table_name || undefined,
+            emailColumn: (auth as any).db_email_column || undefined,
+            passwordColumn: (auth as any).db_password_column || undefined,
+            hash: (auth as any).db_password_hash_type || undefined,
+          } : { type: 'none' },
+        })
+      } catch { /* sem o resumo: o modal segue como antes */ }
+    })()
+    return () => { cancelled = true }
+  }, [target.id, target.type, enabled])
+  return detected
+}
+
+function DetectedDbLine({ detected }: { detected: DetectedSetup | null }) {
+  if (!detected?.dbType && !detected?.connection) return null
+  return (
+    <p className="text-[11px] font-mono text-emerald-300/90 mt-1.5 break-all">
+      {DB_LABELS[detected.dbType || ''] || detected.dbType}{detected.connection ? ` · ${detected.connection}` : ''}
+    </p>
+  )
+}
+
+/** Login que o projeto já tem (somente leitura) e a opção de exportar a gestão de acesso. */
+function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin }: { detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
+  const { t } = useI18n()
+  const auth = detected?.auth
+  const rows: Array<[string, string]> = auth ? [
+    [t('workspace_components.eject_modal.node.auth_type', 'Tipo de Autenticação'), AUTH_LABELS[auth.type] || auth.type],
+    ...(auth.type === 'database' ? ([
+      ['Tabela de usuários', auth.table || '—'],
+      ['Colunas (e-mail / senha)', `${auth.emailColumn || '—'} / ${auth.passwordColumn || '—'}`],
+      [t('workspace_components.eject_modal.node.password_hash', 'Hash de Senha'), auth.hash || 'bcrypt'],
+    ] as Array<[string, string]>) : []),
+  ] : []
+  return (
+    <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
+      <div className="flex items-center gap-2 text-white font-bold text-sm">
+        <ShieldCheck className="w-4 h-4 text-indigo-400" />
+        <span>{t('workspace_components.eject_modal.node.auth_title', 'Autenticação')}</span>
+        <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">
+          {t('workspace_components.eject_modal.node.auto_detected', 'Auto-detectado')}
+        </span>
+      </div>
+      {rows.length > 0 ? (
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+          {rows.map(([k, v]) => (
+            <div key={k} className="min-w-0">
+              <dt className="text-neutral-500">{k}</dt>
+              <dd className="font-mono text-neutral-200 truncate">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-xs text-neutral-500">O login do projeto é aplicado automaticamente na sincronização.</p>
+      )}
+      {auth?.type === 'database' && (
+        <ToggleRow
+          label="Exportar gestão de acesso"
+          description="Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: script em db/access-control.sql."
+          checked={accessAdmin}
+          onChange={setAccessAdmin}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Node.js config panel ─────────────────────────────────────────────────────
-function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: NodeConfig) => void }) {
+function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }: { config: NodeConfig; onChange: (c: NodeConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
   const { t } = useI18n()
   const set = <K extends keyof NodeConfig>(k: K, v: NodeConfig[K]) => onChange({ ...config, [k]: v })
   const setAuth = <K extends keyof NodeConfig['auth']>(k: K, v: NodeConfig['auth'][K]) =>
@@ -229,45 +332,13 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
             <p className="text-xs text-neutral-400 mt-0.5">
               {t('workspace_components.eject_modal.node.db_desc', 'O driver e a connection string configurados no projeto são injetados diretamente no código gerado durante a sincronização.')}
             </p>
+            <DetectedDbLine detected={detected} />
           </div>
         </div>
       </div>
 
-      {/* Autenticação */}
-      <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
-        <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <ShieldCheck className="w-4 h-4 text-indigo-400" />
-          <span>{t('workspace_components.eject_modal.node.auth_title', 'Autenticação')}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel>{t('workspace_components.eject_modal.node.auth_type', 'Tipo de Autenticação')}</FieldLabel>
-            <SelectInput
-              value={config.auth.authType}
-              onChange={v => setAuth('authType', v)}
-              options={[
-                { value: 'database', label: t('workspace_components.eject_modal.node.auth_database', 'Banco de dados') },
-                { value: 'supabase', label: 'Managed (Supabase)' },
-                { value: 'ldap',     label: 'LDAP' },
-                { value: 'none',     label: t('workspace_components.eject_modal.node.auth_none', 'Nenhum') },
-              ]}
-            />
-          </div>
-          <div>
-            <FieldLabel>{t('workspace_components.eject_modal.node.password_hash', 'Hash de Senha')}</FieldLabel>
-            <SelectInput
-              value={config.auth.hashFormat}
-              onChange={v => setAuth('hashFormat', v)}
-              options={[
-                { value: 'bcrypt',  label: 'bcrypt' },
-                { value: 'md5',     label: 'MD5' },
-                { value: 'sha256',  label: 'SHA-256' },
-                { value: 'plain',   label: 'Plain' },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
+      {/* Autenticação (o que o projeto já tem; a sincronização usa isso) + gestão de acesso */}
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />
 
       {/* Projeto */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -291,7 +362,7 @@ function NodeJsPanel({ config, onChange }: { config: NodeConfig; onChange: (c: N
 }
 
 // ─── Java config panel ────────────────────────────────────────────────────────
-function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: JavaConfig) => void }) {
+function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin }: { config: JavaConfig; onChange: (c: JavaConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void }) {
   const { t } = useI18n()
   const set = <K extends keyof JavaConfig>(k: K, v: JavaConfig[K]) => onChange({ ...config, [k]: v })
 
@@ -315,9 +386,13 @@ function JavaPanel({ config, onChange }: { config: JavaConfig; onChange: (c: Jav
             <p className="text-xs text-neutral-400 mt-0.5">
               {t('workspace_components.eject_modal.java.db_desc', 'O driver e a connection string configurados no projeto são injetados automaticamente no src/main/resources/application.properties durante o Eject.')}
             </p>
+            <DetectedDbLine detected={detected} />
           </div>
         </div>
       </div>
+
+      {/* Autenticação do projeto + gestão de acesso */}
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />
 
       {/* Configurações Base */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -662,12 +737,17 @@ export function IDEHeader({
     readme: true,
   })
 
+  // gestão de acesso (Usuários, Grupos de Acesso e Permissões de Telas) e resumo do que o projeto já tem configurado
+  const [accessAdmin, setAccessAdmin] = useState(false)
+  const detected = useDetectedSetup(target, isSyncModalOpen)
+
   const confirmSync = () => {
     setIsSyncModalOpen(false)
+    const withAccess = target.type === 'project' && detected?.auth?.type === 'database' && accessAdmin
     if (activeTab === 'java') {
-      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage)
+      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage, withAccess)
     } else {
-      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage)
+      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage, withAccess)
     }
   }
 
@@ -973,8 +1053,8 @@ export function IDEHeader({
 
               {/* Content Area */}
               <div className="p-6 bg-[#1a1a1a] flex-1 overflow-y-auto max-h-[65vh]">
-                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} />}
-                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} />}
+                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />}
+                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} />}
                 {activeTab === 'nestjs' && (
                   <ComingSoonPanel stack="nestjs" icon="🦅" label="NestJS + Prisma"
                     features={['TypeScript nativo', 'Decorators', 'Prisma ORM', 'Swagger integrado', 'Guards & Interceptors']} />

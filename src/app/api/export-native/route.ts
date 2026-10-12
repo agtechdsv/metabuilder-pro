@@ -4,6 +4,7 @@ import JSZip from 'jszip'
 import { parseMetaBuilderJSON } from '@/lib/generator/parser'
 import { generateNativeProject } from '@/lib/generator/emitter'
 import type { BackendStack, JavaVersion } from '@/lib/generator/ast'
+import { loadAccessAdminInput } from '@/lib/generator/accessAdminData'
 
 export async function POST(request: Request) {
   try {
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
       generateDockerCompose = false,
       generateEnvExample = false,
       targetLanguage,
+      accessAdmin = false,                        // exporta Usuários, Grupos de Acesso e Permissões de Telas
     } = await request.json()
 
     // Validar backendStack — tratar valores inválidos como 'nodejs' (GAP edge case)
@@ -103,6 +105,15 @@ export async function POST(request: Request) {
         hash_format: authConfig.db_password_hash_type,
         table_access: authConfig.ui_config?.table_access
       } : undefined
+    }
+
+    // Gestão de acesso: leva os grupos, as permissões por tela e o grupo de cada usuário (o app exportado não acessa o Supabase do MetaBuilder)
+    if (accessAdmin === true) {
+      const input = await loadAccessAdminInput(supabase, projectId, authConfig)
+      if (!input) {
+        return NextResponse.json({ error: 'A gestão de acesso só está disponível com o login "Via Banco de Dados Legado".' }, { status: 400 })
+      }
+      ;(rawJson as any).access_admin = input
     }
 
     // --- CLEAN CODE GENERATOR ---

@@ -466,6 +466,33 @@ export interface AuthConfig {
 // Navigation — espelho exato da estrutura navigation do projeto
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * "Gestão de acesso" do app exportado: casos de uso de Usuários, Grupos de Acesso e Permissões de Telas, mais a aplicação
+ * das permissões (nenhum / leitura / escrita) no menu, nas rotas e nas gravações. Só existe quando o desenvolvedor liga a opção.
+ */
+export interface AccessAdminConfig {
+  usersModel: string
+  usersTable: string
+  usersPk: string
+  emailCol: string
+  passCol: string
+  nameCol?: string
+  hash: string                 // 'bcrypt' | 'md5' | 'sha256' | 'plain'
+  groups: { model: string; table: string; pk: string; nameCol: string; synthetic: boolean }
+  link:
+    | { kind: 'column'; col: string }
+    | { kind: 'table'; model: string; table: string; pk: string; userCol: string; roleCol: string; synthetic: boolean }
+  perms: { model: string; table: string; pk: string; roleCol: string; viewCol: string; levelCol: string }
+  /** telas controladas por permissão (as do projeto + as 3 de gestão de acesso) */
+  views: Array<{ slug: string; title: string; path: string; table: string | null; denyByDefault?: boolean }>
+  /** dados atuais do MetaBuilder, gravados no script SQL de criação das tabelas de acesso */
+  seed: {
+    roles: Array<{ id: string; name: string }>
+    permissions: Array<{ roleId: string; viewSlug: string; level: 'none' | 'read' | 'write' }>
+    userRoles: Array<{ userId: string; roleId: string }>
+  }
+}
+
 export interface NavigationItem {
   id: string
   label: string
@@ -491,6 +518,8 @@ export interface AppAST {
   supabaseUrl?: string
   supabaseAnonKey?: string
   authConfig?: AuthConfig
+  /** presente quando o desenvolvedor pediu os casos de uso de gestão de acesso na exportação */
+  accessAdmin?: AccessAdminConfig
   /** Tabelas e relações no formato do projeto (entrada do planejador de BI embutido no app exportado) */
   biSchema?: { models: any[]; relations: any[] }
   navigation: NavigationItem[] // estrutura de menu (espelho do project.navigation)

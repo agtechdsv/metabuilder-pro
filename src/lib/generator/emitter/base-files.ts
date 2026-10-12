@@ -496,6 +496,24 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
     }
   }, [])
 
+  // gestão de acesso: telas que o grupo do usuário não vê somem do menu (a rota também é bloqueada no servidor)
+  const [hiddenSlugs, setHiddenSlugs] = useState<string[]>([])
+  useEffect(() => {
+    const c = document.cookie.split('; ').find(row => row.trim().startsWith('mb_acc='))
+    if (!c) return
+    try { setHiddenSlugs(JSON.parse(decodeURIComponent(c.substring('mb_acc='.length))).no || []) } catch (e) { /* sem filtro */ }
+  }, [])
+  const filterNav = (items: NavItem[]): NavItem[] => items.map(item => {
+    if (item.type === 'folder') {
+      const kids = filterNav(item.children || [])
+      return kids.length > 0 ? { ...item, children: kids } : null
+    }
+    const raw = item.target || item.id || ''
+    const slug = raw.startsWith('/') ? raw.slice(1) : raw
+    return item.type === 'view' && hiddenSlugs.includes(slug) ? null : item
+  }).filter(Boolean) as NavItem[]
+  const visibleItems = filterNav(navItems)
+
   const displayName = clientUser?.name || clientUser?.email || 'Usuário'
   const avatarLetter = displayName.charAt(0).toUpperCase()
 
@@ -592,7 +610,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
       </div>
 
       <nav className={\`flex-1 px-4 py-6 space-y-2 custom-scrollbar \${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}\`}>
-        {navItems.map(item => renderItem(item))}
+        {visibleItems.map(item => renderItem(item))}
       </nav>
 
       <div className="p-4 border-t border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-neutral-900/30">
@@ -646,6 +664,14 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // gestão de acesso: telas em que o grupo só tem leitura (cookie lido só para exibir; o servidor recusa as gravações)
+  const [readOnlySlugs, setReadOnlySlugs] = useState<string[]>([])
+  useEffect(() => {
+    const c = document.cookie.split('; ').find(row => row.trim().startsWith('mb_acc='))
+    if (!c) return
+    try { setReadOnlySlugs(JSON.parse(decodeURIComponent(c.substring('mb_acc='.length))).ro || []) } catch (e) { /* sem restrição */ }
+  }, [pathname])
+
   const isEmbedded = searchParams?.get('embedded') === 'true' || isIframe
 
   if (isEmbedded) {
@@ -664,8 +690,12 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
     return t === slugSegment || n.label?.toLowerCase() === slugSegment?.toLowerCase()
   })
 
+  // gestão de acesso: tela só de leitura não mostra "novo registro" nem os botões marcados como de gravação (o servidor também recusa)
+  const isReadOnlyView = !!slugSegment && readOnlySlugs.includes(slugSegment)
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#050505]">
+      {isReadOnlyView && <style>{'a[href$="/new"], a[href*="/new?"], [data-mb-write] { display: none !important; }'}</style>}
       <AppSidebar
         projectName={PROJECT_NAME}
         projectSlug={PROJECT_SLUG}

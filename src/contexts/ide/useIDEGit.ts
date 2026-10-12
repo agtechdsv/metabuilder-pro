@@ -66,7 +66,7 @@ export function useIDEGit({
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
 
-  const handleSyncFromWeb = async (backendStack: string = 'nodejs', javaGroupId?: string, javaPort?: number, targetLanguage: string = 'pt') => {
+  const handleSyncFromWeb = async (backendStack: string = 'nodejs', javaGroupId?: string, javaPort?: number, targetLanguage: string = 'pt', accessAdmin: boolean = false) => {
     if (!syncManager || !target) return
     setIsSyncing(true)
     try {
@@ -78,6 +78,7 @@ export function useIDEGit({
       
       payload.backendStack = backendStack
       payload.targetLanguage = targetLanguage
+      if (accessAdmin && target.type === 'project') payload.accessAdmin = true
       if (backendStack === 'java-spring') {
         payload.javaGroupId = javaGroupId
         payload.javaPort = javaPort

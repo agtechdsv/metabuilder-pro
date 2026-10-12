@@ -215,7 +215,8 @@ export function DeleteButton({ id, recordName, iconOnly, className, onDelete }: 
   return (
     <>
       <button 
-        type="button" 
+        type="button"
+        data-mb-write="delete"
         onClick={(e) => {
           e.stopPropagation()
           setErrorMsg(null)

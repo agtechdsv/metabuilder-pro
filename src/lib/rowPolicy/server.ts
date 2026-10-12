@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/tunnel/server'
 import { viewerFromSession } from '@/lib/bi/serverQuery'
 import { cleanRowPolicy, cleanTableAccessMode, isTableClosed, resolveAccess, type AccessPayload, type TableAccessConfig } from './policy'
 import { cleanAuditConfig, effectiveAudit } from './audit'
+import { writeRestrictedTables } from '@/lib/viewAccess'
 
 /**
  * Acesso a dados do usuário final, lado do servidor: lê a configuração de cada tabela do projeto (permissões e política
@@ -70,5 +71,74 @@ export async function accessForSession(
   deps: Parameters<typeof loadTableAccess>[1] = {},
 ): Promise<AccessPayload> {
   const configs = await loadTableAccess(projectId, deps)
-  return resolveAccess(configs, viewerFromSession(session))
+  const restricted = new Set(await loadWriteRestrictions(projectId, session, deps))
+  // grupo só com leitura nas telas de uma tabela: o Agente recusa criar/editar/excluir nela (o navegador não consegue tirar)
+  const effective = restricted.size === 0
+    ? configs
+    : configs.map(c => (restricted.has(c.table.split('.').pop()!.toLowerCase()) ? { ...c, canCreate: false, canUpdate: false, canDelete: false } : c))
+  return resolveAccess(effective, viewerFromSession(session))
+}
+
+/**
+ * Tabelas em que o grupo do usuário só tem leitura nas telas (nível "leitura" ou "nenhum"). Mesmo papel que o menu usa:
+ * coluna do grupo na linha do usuário (grupos do banco legado) ou project_user_roles. Sem sessão ou sem grupo: nada a restringir aqui
+ * (quem não tem grupo já não entra nas telas).
+ */
+export async function loadWriteRestrictions(
+  projectId: string,
+  session: { sub: string; row?: Record<string, unknown> } | null | undefined,
+  deps: { client?: Pick<SupabaseClient, 'from'>; now?: () => number } = {},
+): Promise<string[]> {
+  if (!session || String(session.sub).startsWith('anon:')) return []
+  const now = (deps.now ?? Date.now)()
+  // uma tela dispara dezenas de comandos de uma vez: o resultado de cada usuário fica guardado por poucos segundos
+  const key = `${projectId}:${session.sub}`
+  const hit = restrictionCache.get(key)
+  if (hit && hit.until > now) return hit.tables
+  let tables: string[] = []
+  try {
+    tables = await computeWriteRestrictions(projectId, session, deps.client ?? serviceClient())
+  } catch (e: any) {
+    // é um apertamento a mais sobre as permissões das tabelas (já lidas com falha fechada): se o grupo não puder ser lido, só registra
+    console.error('[rowPolicy] não foi possível ler as permissões de tela do grupo:', e?.message)
+    return []
+  }
+  restrictionCache.set(key, { tables, until: now + TTL_MS })
+  if (restrictionCache.size > 2000) for (const [k, c] of restrictionCache) if (c.until < now) restrictionCache.delete(k)
+  return tables
+}
+
+const restrictionCache = new Map<string, { tables: string[]; until: number }>()
+export function clearWriteRestrictionCache() { restrictionCache.clear() }
+
+async function computeWriteRestrictions(
+  projectId: string,
+  session: { sub: string; row?: Record<string, unknown> },
+  client: Pick<SupabaseClient, 'from'>,
+): Promise<string[]> {
+
+  const { data: authRow } = await client.from('project_auth_config').select('ui_config').eq('project_id', projectId).maybeSingle()
+  const ui = ((authRow as any)?.ui_config || {}) as any
+  let roleId: string | undefined
+  if (ui.sync_legacy_groups) {
+    const v = session.row?.[ui.db_user_role_column || 'role_id']
+    if (v !== undefined && v !== null && String(v) !== '') roleId = String(v)
+  }
+  if (!roleId) {
+    const { data } = await client.from('project_user_roles').select('role_id').eq('project_id', projectId).eq('external_user_id', String(session.sub)).maybeSingle()
+    roleId = (data as any)?.role_id
+  }
+  if (!roleId) return []
+
+  const [{ data: perms }, { data: views }] = await Promise.all([
+    client.from('project_role_permissions').select('view_id, can_read, can_write').eq('role_id', roleId),
+    client.from('ui_views').select('id, slug, model:models(db_table_name)').eq('project_id', projectId),
+  ])
+  const list = ((perms as any[]) || [])
+  // sem nenhuma restrição configurada para o grupo, nada muda (evita custo e risco nos projetos que não usam leitura/escrita)
+  if (!list.some(p => p.can_read === false || p.can_write === false)) return []
+  return writeRestrictedTables(
+    ((views as any[]) || []).map(v => ({ id: v.id, slug: v.slug, table: (Array.isArray(v.model) ? v.model[0] : v.model)?.db_table_name })),
+    list,
+  )
 }

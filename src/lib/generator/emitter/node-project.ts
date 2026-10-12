@@ -6,6 +6,7 @@ import { generateBiEngine } from '../layers/bi-engine'
 import { generateComponents } from '../layers/components'
 import { generateBaseFiles } from './base-files'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
+import { generateAccessAdmin } from './access-admin'
 
 /**
  * node-project.ts
@@ -29,6 +30,9 @@ export function generateNodeProject(ast: AppAST): Map<string, string> {
 
   // 3. Página de Login
   generateLoginPage(ast, files)
+
+  // 3b. Gestão de acesso (opcional): permissões por tela + Usuários, Grupos e Permissões de Telas
+  generateAccessAdmin(ast, files)
 
   // 4. Página de Downloads
   generateDownloadsPage(ast, files)

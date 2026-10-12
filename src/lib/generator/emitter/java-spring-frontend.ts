@@ -4,6 +4,7 @@ import { generateActions } from '../layers/actions'
 import { generateComponents } from '../layers/components'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
 import { generateBaseFiles } from './base-files'
+import { generateAccessAdmin, applyWriteGuard } from './access-admin'
 import { toPascalCase } from '../layers/routes/helpers'
 
 
@@ -35,7 +36,9 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
 
   // 6. REST Actions para cada modelo (substituem as Server Actions de banco)
   for (const model of ast.models) {
-    const actionContent = generateRestActions(model)
+    let actionContent = generateRestActions(model)
+    // gestão de acesso: quem só tem leitura nas telas da tabela não grava (o servidor do frontend recusa antes de chamar a API)
+    if (ast.accessAdmin) actionContent = applyWriteGuard(actionContent, model)
     const fileKeys = new Set<string>()
     if (model.dbTable) {
       fileKeys.add(model.dbTable.toLowerCase().trim())
@@ -61,12 +64,21 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
   generateComponents(frontendAst, tempFiles)
   generateLoginPage(frontendAst, tempFiles)
   generateDownloadsPage(frontendAst, tempFiles)
+  // gestão de acesso (opcional): o frontend lê os grupos e permissões pela API REST, como qualquer outra tabela
+  generateAccessAdmin(frontendAst, tempFiles)
 
   // Mover todos para frontend/ (ignorando config files da raiz que são recriados abaixo)
   for (const [path, content] of tempFiles) {
-    if (path.includes('/') || path === 'components.json') {
+    // o proxy.ts do login/permissões também vai: sem ele as telas não exigiriam sessão nem aplicariam o acesso por grupo
+    if (path.includes('/') || path === 'components.json' || path === 'proxy.ts') {
       files.set(`frontend/${path}`, content)
     }
+  }
+
+  // o login assina a sessão com MB_SESSION_SECRET: leva o segredo gerado junto da URL da API (cada exportação tem o seu)
+  const secretLine = (tempFiles.get('.env.local') || '').split('\n').find(l => l.startsWith('MB_SESSION_SECRET='))
+  if (secretLine) {
+    files.set('frontend/.env.local', `${files.get('frontend/.env.local') ?? ''}# Assina a sessão de login do app. Em produção defina esta variável no ambiente de hospedagem (nunca a publique).\n${secretLine}\n`)
   }
 
   // 8. tsconfig.json, tailwind, next.config, postcss, etc.

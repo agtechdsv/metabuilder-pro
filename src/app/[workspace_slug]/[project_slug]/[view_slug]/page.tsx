@@ -14,6 +14,7 @@ import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
 import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
 import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
+import { accessLevelOf, readOnlyButtons, type AccessLevel } from '@/lib/viewAccess'
 
 interface PageProps {
   params: Promise<{
@@ -234,6 +235,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   }
   if (view && view.logic_type === 'personalizado') await applyPersonalizadoInheritance()
   // RBAC Permission Check
+  let viewLevel: AccessLevel = 'write'
   if (view) {
     const rawAuthConfig = await supabase
       .from('project_auth_config')
@@ -283,17 +285,17 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         }
         
         if (roleId) {
-          // 2. Busca se essa view está explicitamente desabilitada para este papel
-          const { data: deniedPermission } = await supabase
+          // 2. Nível do papel nesta tela: nenhum (bloqueia), leitura (sem criar/editar/excluir) ou escrita
+          const { data: permission } = await supabase
             .from('project_role_permissions')
-            .select('id')
+            .select('can_read, can_write')
             .eq('role_id', roleId)
             .eq('view_id', view.id)
-            .eq('can_read', false)
             .limit(1)
             .maybeSingle()
-          
-          if (deniedPermission) {
+
+          viewLevel = accessLevelOf(permission)
+          if (viewLevel === 'none') {
             allowed = false
           }
         } else {
@@ -1058,8 +1060,10 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
       }
     }
 
-    const buttonsConfig = view.buttons_config || []
-    const canAdd = buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
+    // Só leitura: sem criar, editar nem excluir (o servidor também recusa a gravação nas tabelas da tela)
+    const isReadOnly = viewLevel === 'read'
+    const buttonsConfig = isReadOnly ? readOnlyButtons(view.buttons_config || []) : (view.buttons_config || [])
+    const canAdd = !isReadOnly && buttonsConfig.find((b: any) => b.id === 'add')?.visible !== false
     const canExport = buttonsConfig.find((b: any) => b.id === 'export')?.visible !== false
 
     const isUnpublished = view && Object.keys(view.layout_config || {}).length === 0;

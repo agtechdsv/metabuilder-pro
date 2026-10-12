@@ -1,5 +1,6 @@
 import { AppAST, ModelNode, FieldNode } from '../ast'
 import { toPascalCase } from './routes/helpers'
+import { applyWriteGuard } from '../emitter/access-admin'
 
 
 /**
@@ -55,6 +56,8 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
             : generatePgActions(model, ast.models)
 
     if (ast.dbStack !== 'postgres' && ast.dbStack !== 'oracle') actionContent = applyStaticTableFlags(actionContent, model)
+    // gestão de acesso: quem só tem leitura nas telas da tabela não grava (qualquer banco)
+    if (ast.accessAdmin) actionContent = applyWriteGuard(actionContent, model)
 
     // Exportar aliases de funções para variações de nomenclatura (ex: ItensPedido vs Itens_pedido, CLIENTES vs Clientes)
     const aliases = new Set<string>()
