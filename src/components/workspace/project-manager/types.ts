@@ -24,6 +24,8 @@ export interface ExportDefaults {
   authEmailColumn?: string
   authPasswordColumn?: string
   authHash?: string
+  /** conexão do projeto no metabuilder.config.json local (só no desktop) */
+  dbConnection?: { user: string; password: string; host: string; port: string; database: string }
 }
 
 export interface DownloadModalState {

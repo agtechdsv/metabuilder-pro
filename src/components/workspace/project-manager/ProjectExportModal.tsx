@@ -61,11 +61,12 @@ export function ProjectExportModal({
   }
   const [exportAuthStrategy, setExportAuthStrategy] = useState<'managed' | 'legacy' | 'ldap' | 'none'>(defaults.authStrategy || 'none')
   const [exportLegacyDriver, setExportLegacyDriver] = useState<'supabase' | 'postgres'>(defaults.legacyDriver || 'supabase')
-  const [exportDbUser, setExportDbUser] = useState('user')
-  const [exportDbPassword, setExportDbPassword] = useState('password')
-  const [exportDbHost, setExportDbHost] = useState('localhost')
-  const [exportDbPort, setExportDbPort] = useState(nativeDb ? NATIVE_INFO[nativeDb].port : '5432')
-  const [exportDbName, setExportDbName] = useState('dataBase')
+  const saved = defaults.dbConnection
+  const [exportDbUser, setExportDbUser] = useState(saved?.user || 'user')
+  const [exportDbPassword, setExportDbPassword] = useState(saved?.password || 'password')
+  const [exportDbHost, setExportDbHost] = useState(saved?.host || 'localhost')
+  const [exportDbPort, setExportDbPort] = useState(saved?.port || (nativeDb ? NATIVE_INFO[nativeDb].port : '5432'))
+  const [exportDbName, setExportDbName] = useState(saved?.database || 'dataBase')
   const [exportSupaUrl, setExportSupaUrl] = useState('')
   const [exportSupaAnonKey, setExportSupaAnonKey] = useState('')
   const [exportAuthTableName, setExportAuthTableName] = useState(defaults.authTable || 'usuarios')

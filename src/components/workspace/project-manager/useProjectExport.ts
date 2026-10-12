@@ -28,6 +28,19 @@ export function useProjectExport() {
     const defaults: ExportDefaults = {}
     const dbType = String(projRow?.db_type || '').toLowerCase()
     if (dbType === 'postgres' || dbType === 'oracle' || dbType === 'mysql' || dbType === 'sqlserver') defaults.dataMode = dbType
+    // Conexão já salva no metabuilder.config.json local deste projeto (só existe no desktop)
+    if (isTauri()) {
+      try {
+        const { getProjectDbConnection } = await import('@/utils/tunnelConfigFile')
+        const c = await getProjectDbConnection(project.id, dbType)
+        if (c) {
+          defaults.dbConnection = { user: c.user, password: c.password, host: c.host, port: c.port, database: c.database }
+          if (!defaults.dataMode && (c.type === 'postgres' || c.type === 'oracle' || c.type === 'mysql' || c.type === 'sqlserver')) defaults.dataMode = c.type
+        }
+      } catch (e) {
+        console.warn('Não foi possível ler a conexão do metabuilder.config.json:', e)
+      }
+    }
     const at = String(authConf?.auth_type || '').toLowerCase()
     if (at === 'database') {
       defaults.authStrategy = 'legacy'
