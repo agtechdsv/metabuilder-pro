@@ -168,6 +168,8 @@ export async function POST(request: Request) {
 
     return fail('Ação não suportada: ' + action)
   } catch (err: any) {
+    // permissão negada (tabela fechada, criar/editar/excluir desligado, regra por linha): 403, não erro de banco
+    if (err && err.name === 'PolicyError') return fail(err.message || 'Acesso negado', 403)
     console.error('[ai-db] Erro:', err)
     return NextResponse.json({ data: null, error: err.message || 'Erro no banco' }, { status: 500 })
   }

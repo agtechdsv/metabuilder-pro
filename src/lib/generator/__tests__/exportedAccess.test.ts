@@ -220,6 +220,8 @@ describe('actions geradas (Postgres): comportamento', () => {
     expect((await post({ table: 'pedidos', action: 'select', filters: [{ col: 'id', op: '= 1 OR 1=1 --', val: 1 }] })).status).toBe(400)
     expect((await post({ table: 'pedidos', action: 'update', mutationPayload: { status: 'x' } })).status).toBe(400)
     expect((await post({ table: 'pedidos', action: 'delete' })).status).toBe(400)
+    // permissão da tabela desligada (excluir em Pedidos): 403, não erro de banco
+    expect((await post({ table: 'pedidos', action: 'delete', filters: [{ col: 'id', op: '=', val: 1 }] })).status).toBe(403)
     // leitura válida sai filtrada pela regra
     sqls.length = 0
     const ok = await post({ table: 'pedidos', action: 'select', filters: [{ col: 'status', op: '=', val: 'aberto' }] })
