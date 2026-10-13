@@ -247,20 +247,25 @@ export function useProjectExport() {
 
         // gestão de acesso: cria as tabelas de acesso no banco do projeto (só com a confirmação do usuário)
         let accessSetupDone = false
+        let setupError = ''
         const needsAccessSetup = accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel'
-        if (needsAccessSetup && installOk && await askUser(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
+        const canRunSetup = needsAccessSetup && isWindows
+        if (canRunSetup && installOk && await askUser(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
           setDownloadModal(prev => prev ? { ...prev, phase: 'processing', statusMessage: t('export_modal.access_setup_running', "Criando as tabelas de acesso...") } : prev)
           try {
-            const setupCmd = isWindows
-              ? Command.create('cmd', ['/c', 'npm', 'run', 'db:setup'], { cwd: selectedDir })
-              : Command.create('npm', ['run', 'db:setup'], { cwd: selectedDir })
+            // as permissões do desktop só liberam comandos com os nomes/argumentos conhecidos; o PowerShell é o que aceita qualquer comando
+            const setupCmd = Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'npm run db:setup'], { cwd: selectedDir })
             const out = await setupCmd.execute()
             accessSetupDone = out.code === 0
-            if (!accessSetupDone) console.error('db:setup falhou:', out.stderr || out.stdout)
+            if (!accessSetupDone) {
+              console.error('db:setup falhou:', out.stderr || out.stdout)
+              setupError = String(out.stderr || out.stdout || '').trim().split(String.fromCharCode(10)).slice(-3).join(' ').slice(0, 300)
+            }
           } catch (setupErr) {
             console.error('db:setup não iniciou:', setupErr)
+            setupError = String((setupErr as any)?.message || setupErr).slice(0, 300)
           }
-          toast(accessSetupDone ? t('export_modal.access_setup_ok', "Tabelas de acesso criadas no banco.") : t('export_modal.access_setup_failed', "Não foi possível criar as tabelas de acesso. Rode npm run db:setup na pasta do projeto ou execute db/access-control.sql no banco."), accessSetupDone ? 'success' : 'error')
+          toast(accessSetupDone ? t('export_modal.access_setup_ok', "Tabelas de acesso criadas no banco.") : t('export_modal.access_setup_failed', "Não foi possível criar as tabelas de acesso. Rode npm run db:setup na pasta do projeto ou execute db/access-control.sql no banco.") + (setupError ? ' [' + setupError + ']' : ''), accessSetupDone ? 'success' : 'error')
         }
 
         setDownloadModal({
@@ -275,12 +280,14 @@ export function useProjectExport() {
 
         if (await askUser(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
           try {
+            // no Windows o nome liberado nas permissões para abrir o VS Code é 'cmd-code' (o 'cmd' só aceita npm install)
             const codeCmd = isWindows
-              ? Command.create('cmd', ['/c', 'code', '.'], { cwd: selectedDir })
+              ? Command.create('cmd-code', ['/c', 'code', '.'], { cwd: selectedDir })
               : Command.create('code', ['.'], { cwd: selectedDir })
             await codeCmd.execute()
           } catch (codeErr) {
             console.error('Não foi possível abrir o VS Code:', codeErr)
+            toast(t('export_modal.open_vscode_failed', 'Não foi possível abrir o VS Code. Abra a pasta do projeto nele manualmente.'), 'error')
           }
         }
 
