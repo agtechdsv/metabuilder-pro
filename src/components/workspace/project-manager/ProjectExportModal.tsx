@@ -53,9 +53,9 @@ export function ProjectExportModal({
   // banco do projeto que não é Postgres: vira uma opção própria (com a porta e o formato de conexão dele)
   const nativeDb = (['oracle', 'mysql', 'sqlserver'] as const).find(k => k === defaults.dataMode)
   const NATIVE_INFO = {
-    oracle: { label: 'Oracle (Nativo - oracledb)', port: '1521', dbLabel: 'Service name' },
-    mysql: { label: 'MySQL (Nativo - mysql2)', port: '3306', dbLabel: 'Banco' },
-    sqlserver: { label: 'SQL Server (Nativo - mssql)', port: '1433', dbLabel: 'Banco' },
+    oracle: { label: `Oracle (${t('export_modal.native', "Nativo")} - oracledb)`, port: '1521', dbLabel: 'Service name' },
+    mysql: { label: `MySQL (${t('export_modal.native', "Nativo")} - mysql2)`, port: '3306', dbLabel: t('export_modal.database', "Banco") },
+    sqlserver: { label: `SQL Server (${t('export_modal.native', "Nativo")} - mssql)`, port: '1433', dbLabel: t('export_modal.database', "Banco") },
   } as const
   const buildNativeConnection = (kind: 'oracle' | 'mysql' | 'sqlserver') => {
     const u = encodeURIComponent(exportDbUser), p = encodeURIComponent(exportDbPassword)
@@ -162,11 +162,11 @@ export function ProjectExportModal({
             )}
           </div>
           <h3 className="text-lg font-black">
-            {modalState.phase === 'selecting' && 'Configurar Exportação'}
-            {modalState.phase === 'downloading' && 'Baixando Código Fonte...'}
-            {modalState.phase === 'processing' && 'Preparando o projeto...'}
-            {modalState.phase === 'done' && 'Download Concluído!'}
-            {modalState.phase === 'error' && 'Erro no Download'}
+            {modalState.phase === 'selecting' && t('export_modal.title_selecting', "Configurar Exportação")}
+            {modalState.phase === 'downloading' && t('export_modal.title_downloading', "Baixando Código Fonte...")}
+            {modalState.phase === 'processing' && t('export_modal.title_processing', "Preparando o projeto...")}
+            {modalState.phase === 'done' && t('export_modal.title_done', "Download Concluído!")}
+            {modalState.phase === 'error' && t('export_modal.title_error', "Erro no Download")}
           </h3>
           <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{modalState.fileName}</p>
         </div>
@@ -186,7 +186,7 @@ export function ProjectExportModal({
                       : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
                   }`}
                 >
-                  Backend & API
+                  {t('export_modal.tab_backend', "Backend & API")}
                 </button>
                 <button
                   type="button"
@@ -197,7 +197,7 @@ export function ProjectExportModal({
                       : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
                   }`}
                 >
-                  Banco de Dados
+                  {t('export_modal.tab_database', "Banco de Dados")}
                 </button>
                 <button
                   type="button"
@@ -208,7 +208,7 @@ export function ProjectExportModal({
                       : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
                   }`}
                 >
-                  Autenticação (Login)
+                  {t('export_modal.tab_auth', "Autenticação (Login)")}
                 </button>
               </div>
 
@@ -234,7 +234,7 @@ export function ProjectExportModal({
                           <span className="text-green-400 font-bold text-xs">Node</span>
                         </div>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          App Router + React Server Components + Server Actions diretas ao banco.
+                          {t('export_modal.nodejs_desc', "App Router + React Server Components + Server Actions diretas ao banco.")}
                         </p>
                       </div>
                     </button>
@@ -256,7 +256,7 @@ export function ProjectExportModal({
                           <Coffee className="w-4 h-4 text-amber-400" />
                         </div>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Frontend Next.js chamando API REST Spring Boot — estrutura dual frontend/backend.
+                          {t('export_modal.java_desc', "Frontend Next.js chamando API REST Spring Boot — estrutura dual frontend/backend.")}
                         </p>
                       </div>
                     </button>
@@ -264,7 +264,7 @@ export function ProjectExportModal({
 
                   {backendStack === 'java-spring' && (
                     <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
-                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração Maven / Spring</p>
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">{t('export_modal.maven_config', "Configuração Maven / Spring")}</p>
                       <div className="space-y-2">
                         <div className="flex flex-col gap-1">
                           <span className="text-neutral-500 font-sans text-xs">Maven Group ID</span>
@@ -277,7 +277,7 @@ export function ProjectExportModal({
                           />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-neutral-500 font-sans text-xs">Porta Spring Boot</span>
+                          <span className="text-neutral-500 font-sans text-xs">{t('export_modal.spring_port', "Porta Spring Boot")}</span>
                           <input
                             type="number"
                             value={javaPort}
@@ -315,7 +315,7 @@ export function ProjectExportModal({
                       <div>
                         <p className="text-sm font-bold text-neutral-900 dark:text-white">MetaBuilder Tunnel (BaaS)</p>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Conecta via Websocket ao servidor online. Ideal para Frontend Desacoplado.
+                          {t('export_modal.tunnel_desc', "Conecta via Websocket ao servidor online. Ideal para Frontend Desacoplado.")}
                         </p>
                       </div>
                     </button>
@@ -336,9 +336,9 @@ export function ProjectExportModal({
                         {exportDataMode === 'supabase' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">Supabase (Nativo)</p>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-white">Supabase ({t('export_modal.native', "Nativo")})</p>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Conecta via SDK oficial do Supabase. Ideal para infraestrutura serverless na nuvem.
+                          {t('export_modal.supabase_desc', "Conecta via SDK oficial do Supabase. Ideal para infraestrutura serverless na nuvem.")}
                         </p>
                       </div>
                     </button>
@@ -359,9 +359,9 @@ export function ProjectExportModal({
                         {exportDataMode === 'postgres' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">PostgreSQL (Nativo - pg)</p>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-white">PostgreSQL ({t('export_modal.native', "Nativo")} - pg)</p>
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Gera queries SQL diretas via driver `pg`. Ideal para hospedar localmente (on-premise) no servidor do cliente.
+                          {t('export_modal.pg_desc', "Gera queries SQL diretas via driver `pg`. Ideal para hospedar localmente (on-premise) no servidor do cliente.")}
                         </p>
                       </div>
                     </button>
@@ -380,7 +380,7 @@ export function ProjectExportModal({
                         </div>
                         <div>
                           <p className="text-sm font-bold text-neutral-900 dark:text-white">{NATIVE_INFO[nativeDb].label}</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">O mesmo banco deste projeto. Gera o acesso direto, para hospedar no servidor do cliente.</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">{t('export_modal.native_desc', "O mesmo banco deste projeto. Gera o acesso direto, para hospedar no servidor do cliente.")}</p>
                         </div>
                       </button>
                     )}
@@ -389,13 +389,13 @@ export function ProjectExportModal({
                   {/* Configuração do banco nativo do projeto (Oracle, MySQL, SQL Server) */}
                   {nativeDb && exportDataMode === nativeDb && (
                     <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 text-xs text-neutral-600 dark:text-neutral-400">
-                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da Conexão</p>
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">{t('export_modal.conn_config', "Configuração da Conexão")}</p>
                       <div className="grid grid-cols-2 gap-3">
                         {([
-                          ['Usuário', exportDbUser, setExportDbUser],
-                          ['Senha', exportDbPassword, setExportDbPassword],
+                          [t('export_modal.user', "Usuário"), exportDbUser, setExportDbUser],
+                          [t('export_modal.password', "Senha"), exportDbPassword, setExportDbPassword],
                           ['Host', exportDbHost, setExportDbHost],
-                          ['Porta', exportDbPort, setExportDbPort],
+                          [t('export_modal.port', "Porta"), exportDbPort, setExportDbPort],
                           [NATIVE_INFO[nativeDb].dbLabel, exportDbName, setExportDbName],
                         ] as const).map(([label, value, setter]) => (
                           <label key={label} className="flex flex-col gap-1">
@@ -415,7 +415,7 @@ export function ProjectExportModal({
                   {/* Configuração Supabase Data */}
                   {exportDataMode === 'supabase' && (
                     <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
-                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração do Supabase</p>
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">{t('export_modal.supabase_config', "Configuração do Supabase")}</p>
                       <div className="space-y-2">
                         <div className="flex flex-col gap-1">
                           <span className="text-neutral-500 font-sans text-xs">Supabase URL</span>
@@ -444,7 +444,7 @@ export function ProjectExportModal({
                   {/* Configuração Postgres Data */}
                   {exportDataMode === 'postgres' && (
                     <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 font-mono text-[10px] text-neutral-600 dark:text-neutral-400">
-                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">Configuração da URL de Conexão</p>
+                      <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">{t('export_modal.url_config', "Configuração da URL de Conexão")}</p>
                       <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-neutral-950 p-3 rounded-xl border border-neutral-200/60 dark:border-neutral-800/80 leading-relaxed text-xs">
                         <span className="text-neutral-500">postgresql://</span>
                         <input
@@ -453,7 +453,7 @@ export function ProjectExportModal({
                           onChange={(e) => setExportDbUser(e.target.value)}
                           placeholder="user"
                           className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
-                          title="Usuário"
+                          title={t('export_modal.user', "Usuário")}
                         />
                         <span className="text-neutral-500">:</span>
                         <input
@@ -462,7 +462,7 @@ export function ProjectExportModal({
                           onChange={(e) => setExportDbPassword(e.target.value)}
                           placeholder="password"
                           className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-16"
-                          title="Senha"
+                          title={t('export_modal.password', "Senha")}
                         />
                         <span className="text-neutral-500">@</span>
                         <input
@@ -480,7 +480,7 @@ export function ProjectExportModal({
                           onChange={(e) => setExportDbPort(e.target.value)}
                           placeholder="5432"
                           className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-14"
-                          title="Porta"
+                          title={t('export_modal.port', "Porta")}
                         />
                         <span className="text-neutral-500">/</span>
                         <input
@@ -489,7 +489,7 @@ export function ProjectExportModal({
                           onChange={(e) => setExportDbName(e.target.value)}
                           placeholder="dataBase"
                           className="px-2 py-0.5 border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 rounded text-center text-neutral-900 dark:text-white outline-none focus:border-indigo-500 w-32"
-                          title="Nome do Banco de Dados"
+                          title={t('export_modal.database_full', "Nome do Banco de Dados")}
                         />
                       </div>
                     </div>
@@ -511,10 +511,10 @@ export function ProjectExportModal({
                       <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'none' ? "border-[#5E2BFF]" : "border-gray-500")}>
                         {exportAuthStrategy === 'none' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
                       </div>
-                      <span className="font-medium">Sem Autenticação</span>
+                      <span className="font-medium">{t('export_modal.none_title', "Sem Autenticação")}</span>
                     </div>
                     <p className="text-sm text-gray-400 ml-7">
-                      O app exportado não exigirá login. Middlewares de proteção serão removidos.
+                      {t('export_modal.none_desc', "O app exportado não exigirá login. Middlewares de proteção serão removidos.")}
                     </p>
                   </div>
 
@@ -529,10 +529,10 @@ export function ProjectExportModal({
                       <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", exportAuthStrategy === 'legacy' ? "border-[#5E2BFF]" : "border-gray-500")}>
                         {exportAuthStrategy === 'legacy' && <div className="w-2 h-2 bg-[#5E2BFF] rounded-full" />}
                       </div>
-                      <span className="font-medium">Via Banco de Dados Legado</span>
+                      <span className="font-medium">{t('export_modal.legacy_title', "Via Banco de Dados Legado")}</span>
                     </div>
                     <p className="text-sm text-gray-400 ml-7 mb-4">
-                      O app exportado validará o login comparando com SUA tabela de usuários sincronizada.
+                      {t('export_modal.legacy_desc', "O app exportado validará o login comparando com SUA tabela de usuários sincronizada.")}
                     </p>
 
                     {exportAuthStrategy === 'legacy' && (
@@ -542,56 +542,56 @@ export function ProjectExportModal({
                           {t('access_admin.driver_note', 'O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba Banco de Dados ({db}).').replace('{db}', ({ tunnel: 'MetaBuilder Tunnel', supabase: 'Supabase SDK', postgres: 'PostgreSQL (pg)', oracle: 'Oracle (oracledb)', mysql: 'MySQL (mysql2)', sqlserver: 'SQL Server (mssql)' } as const)[exportDataMode])}
                         </p>
                         <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                          <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-3 uppercase">Mapeamento de Autenticação</p>
+                          <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-3 uppercase">{t('export_modal.auth_mapping', "Mapeamento de Autenticação")}</p>
                           <div className="grid grid-cols-2 gap-4 text-xs">
                             <div className="flex flex-col gap-1">
-                              <span className="text-neutral-500 font-sans text-xs">Tabela Usuários:</span>
+                              <span className="text-neutral-500 font-sans text-xs">{t('export_modal.users_table', "Tabela Usuários:")}</span>
                               <select
                                 value={exportAuthTableName}
                                 onChange={(e) => setExportAuthTableName(e.target.value)}
                                 className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
                               >
-                                <option value="">Selecione a tabela...</option>
+                                <option value="">{t('export_modal.select_table', "Selecione a tabela...")}</option>
                                 {exportModels.map(m => (
                                   <option key={m.id} value={m.db_table_name}>{m.db_table_name}</option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-neutral-500 font-sans text-xs">Coluna Email:</span>
+                              <span className="text-neutral-500 font-sans text-xs">{t('export_modal.email_col', "Coluna Email:")}</span>
                               <select
                                 value={exportAuthEmailCol}
                                 onChange={(e) => setExportAuthEmailCol(e.target.value)}
                                 className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
                               >
-                                <option value="">Selecione o campo...</option>
+                                <option value="">{t('export_modal.select_field', "Selecione o campo...")}</option>
                                 {exportModels.find(m => m.db_table_name === exportAuthTableName)?.fields?.map((f: any) => (
                                   <option key={f.id || f.db_column_name} value={f.db_column_name}>{f.db_column_name}</option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-neutral-500 font-sans text-xs">Coluna Senha:</span>
+                              <span className="text-neutral-500 font-sans text-xs">{t('export_modal.pass_col', "Coluna Senha:")}</span>
                               <select
                                 value={exportAuthPassCol}
                                 onChange={(e) => setExportAuthPassCol(e.target.value)}
                                 className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
                               >
-                                <option value="">Selecione o campo...</option>
+                                <option value="">{t('export_modal.select_field', "Selecione o campo...")}</option>
                                 {exportModels.find(m => m.db_table_name === exportAuthTableName)?.fields?.map((f: any) => (
                                   <option key={f.id || f.db_column_name} value={f.db_column_name}>{f.db_column_name}</option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-neutral-500 font-sans text-xs">Formato Hash:</span>
+                              <span className="text-neutral-500 font-sans text-xs">{t('export_modal.hash_format', "Formato Hash:")}</span>
                               <select
                                 value={exportAuthHash}
                                 onChange={(e) => setExportAuthHash(e.target.value)}
                                 className="w-full px-2 py-1.5 bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white outline-none focus:border-indigo-500 font-mono"
                               >
                                 <option value="Bcrypt">Bcrypt</option>
-                                <option value="Plain">Texto Puro</option>
+                                <option value="Plain">{t('export_modal.plain_text', "Texto Puro")}</option>
                                 <option value="MD5">MD5</option>
                               </select>
                             </div>
@@ -639,29 +639,28 @@ export function ProjectExportModal({
                       <span className="font-medium">LDAP / AD</span>
                     </div>
                     <p className="text-sm text-gray-400 ml-7">
-                      Integração corporativa nativa. O app gerado validará no Active Directory do cliente.
+                      {t('export_modal.ldap_desc', "Integração corporativa nativa. O app gerado validará no Active Directory do cliente.")}
                     </p>
                     {exportAuthStrategy === 'ldap' && (
                       <div className="ml-7 mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg">
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-                          Por questões de segurança corporativa, você precisará configurar as variáveis do LDAP diretamente nas propriedades do projeto exportado.
-                          No fonte exportado, preencha as variáveis em seu arquivo <code className="bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded">.env.local</code> da seguinte forma:
+                          {t('export_modal.ldap_note_a', "Por questões de segurança corporativa, você precisará configurar as variáveis do LDAP diretamente nas propriedades do projeto exportado. No fonte exportado, preencha as variáveis em seu arquivo")} <code className="bg-neutral-200 dark:bg-neutral-800 px-1 py-0.5 rounded">.env.local</code> {t('export_modal.ldap_note_b', "da seguinte forma:")}
                         </p>
                         <div className="relative group">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               navigator.clipboard.writeText(
-                                `# Configurações do Active Directory (LDAP)\nLDAP_URL="ldap://10.0.0.15:389"\nLDAP_BASE_DN="dc=empresa,dc=local"\nLDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"\nLDAP_BIND_PASSWORD="senha_secreta_do_bind"\nLDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`
+                                `# ${t('export_modal.ldap_comment', 'Configurações do Active Directory (LDAP)')}\nLDAP_URL="ldap://10.0.0.15:389"\nLDAP_BASE_DN="dc=empresa,dc=local"\nLDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"\nLDAP_BIND_PASSWORD="senha_secreta_do_bind"\nLDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`
                               )
                             }}
                             className="absolute top-2 right-2 p-1.5 bg-neutral-800 hover:bg-neutral-700 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Copiar"
+                            title={t('export_modal.copy', "Copiar")}
                           >
                             <Copy className="w-3 h-3" />
                           </button>
                           <pre className="text-[10px] text-indigo-400 bg-neutral-950 p-3 rounded border border-neutral-800 overflow-x-auto font-mono leading-tight whitespace-pre">
-                            {`# Configurações do Active Directory (LDAP)
+                            {`# ${t('export_modal.ldap_comment', 'Configurações do Active Directory (LDAP)')}
 LDAP_URL="ldap://10.0.0.15:389"
 LDAP_BASE_DN="dc=empresa,dc=local"
 LDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"
@@ -680,13 +679,13 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                   onClick={handleSubmitExport}
                   className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(79,70,229,0.2)]"
                 >
-                  Iniciar Exportação
+                  {t('export_modal.start', "Iniciar Exportação")}
                 </button>
                 <button
                   onClick={onClose}
                   className="px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-950 dark:text-white rounded-xl text-sm font-bold transition-colors"
                 >
-                  Cancelar
+                  {t('export_modal.cancel', "Cancelar")}
                 </button>
               </div>
             </div>
@@ -696,7 +695,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {modalState.phase === 'downloading' && (
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-semibold text-neutral-500">
-                <span>Progresso</span>
+                <span>{t('export_modal.progress', "Progresso")}</span>
                 <span>{modalState.progress}%</span>
               </div>
               <div className="h-2.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
@@ -706,7 +705,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                 />
               </div>
               <p className="text-xs text-center text-neutral-400">
-                {isTauri() ? 'Salvando na pasta Downloads do sistema...' : 'Preparando arquivo no navegador...'}
+                {isTauri() ? t('export_modal.saving_downloads', "Salvando na pasta Downloads do sistema...") : t('export_modal.preparing_browser', "Preparando arquivo no navegador...")}
               </p>
             </div>
           )}
@@ -718,7 +717,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                 <div className="h-full w-1/3 bg-indigo-500 rounded-full animate-pulse" />
               </div>
               <p className="text-xs text-center text-neutral-500">{modalState.statusMessage}</p>
-              <p className="text-[11px] text-center text-neutral-400">Isso pode levar alguns minutos. Aguarde até o fim.</p>
+              <p className="text-[11px] text-center text-neutral-400">{t('export_modal.processing_wait', "Isso pode levar alguns minutos. Aguarde até o fim.")}</p>
             </div>
           )}
 
@@ -726,7 +725,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {modalState.phase === 'done' && (
             <div className="space-y-3">
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 text-center font-medium">
-                Arquivo salvo em: <span className="font-bold">Downloads</span>
+                {t('export_modal.saved_in', "Arquivo salvo em:")} <span className="font-bold">{t('export_modal.downloads', "Downloads")}</span>
               </div>
 
               {/* Action buttons */}
@@ -737,14 +736,14 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                   >
                     <FolderOpen className="w-4 h-4" />
-                    Abrir Pasta
+                    {t('export_modal.open_folder', "Abrir Pasta")}
                   </button>
                 ) : (
                   <button
                     onClick={onClose}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
                   >
-                    Concluído
+                    {t('export_modal.done_btn', "Concluído")}
                   </button>
                 )}
               </div>
@@ -754,7 +753,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                   onClick={onClose}
                   className="w-full text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 font-bold uppercase tracking-widest py-1 transition-colors"
                 >
-                  Fechar
+                  {t('export_modal.close', "Fechar")}
                 </button>
               )}
             </div>
@@ -764,13 +763,13 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {modalState.phase === 'error' && (
             <div className="space-y-3">
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl p-3 text-xs text-red-700 dark:text-red-400 text-center font-medium">
-                {modalState.errorMessage || 'Ocorreu um erro ao gerar o arquivo de código fonte.'}
+                {modalState.errorMessage || t('export_modal.default_error', "Ocorreu um erro ao gerar o arquivo de código fonte.")}
               </div>
               <button
                 onClick={onClose}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-xl text-sm font-bold transition-colors"
               >
-                Fechar
+                {t('export_modal.close', "Fechar")}
               </button>
             </div>
           )}
