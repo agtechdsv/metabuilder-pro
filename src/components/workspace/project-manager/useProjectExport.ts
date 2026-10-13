@@ -235,13 +235,32 @@ export function useProjectExport() {
           } catch (err) { console.error('Native notification error', err) }
         }
 
+        // gestão de acesso: cria as tabelas de acesso no banco do projeto (só com a confirmação do usuário)
+        let accessSetupDone = false
+        const needsAccessSetup = accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel'
+        if (needsAccessSetup && installOk && confirm(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
+          setDownloadModal(prev => prev ? { ...prev, phase: 'processing', statusMessage: t('export_modal.access_setup_running', "Criando as tabelas de acesso...") } : prev)
+          try {
+            const setupCmd = isWindows
+              ? Command.create('cmd', ['/c', 'npm', 'run', 'db:setup'], { cwd: selectedDir })
+              : Command.create('npm', ['run', 'db:setup'], { cwd: selectedDir })
+            const out = await setupCmd.execute()
+            accessSetupDone = out.code === 0
+            if (!accessSetupDone) console.error('db:setup falhou:', out.stderr || out.stdout)
+          } catch (setupErr) {
+            console.error('db:setup não iniciou:', setupErr)
+          }
+          toast(accessSetupDone ? t('export_modal.access_setup_ok', "Tabelas de acesso criadas no banco.") : t('export_modal.access_setup_failed', "Não foi possível criar as tabelas de acesso. Rode npm run db:setup na pasta do projeto ou execute db/access-control.sql no banco."), accessSetupDone ? 'success' : 'error')
+        }
+
         setDownloadModal({
           open: true,
           phase: 'done',
           fileName,
           progress: 100,
           savedPath: selectedDir,
-          savedDir: selectedDir
+          savedDir: selectedDir,
+          accessSetupNote: needsAccessSetup && !accessSetupDone,
         })
 
         if (confirm(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
@@ -272,7 +291,8 @@ export function useProjectExport() {
           fileName,
           progress: 100,
           savedPath: '',
-          savedDir: 'Downloads'
+          savedDir: 'Downloads',
+          accessSetupNote: accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel',
         })
       }
     } catch (error: any) {

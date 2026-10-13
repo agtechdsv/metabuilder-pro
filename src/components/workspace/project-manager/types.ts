@@ -39,6 +39,8 @@ export interface DownloadModalState {
   projectId?: string
   authConfig?: any
   defaults?: ExportDefaults
+  /** exportou a gestão de acesso e as tabelas de acesso ainda não foram criadas no banco */
+  accessSetupNote?: boolean
   /** o que está sendo feito na fase 'processing' */
   statusMessage?: string
   /** motivo da falha, mostrado no próprio modal na fase 'error' */

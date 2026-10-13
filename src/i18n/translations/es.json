@@ -1,5 +1,10 @@
 {
   "export_modal": {
+    "access_setup_confirm": "¿Crear ahora las tablas de acceso en la base del proyecto? (Ejecutará npm run db:setup con la conexión de .env.local. Si el usuario de la base no puede crear tablas, elija Cancelar y use db/access-control.sql.)",
+    "access_setup_running": "Creando las tablas de acceso...",
+    "access_setup_ok": "Tablas de acceso creadas en la base.",
+    "access_setup_failed": "No fue posible crear las tablas de acceso. Ejecute npm run db:setup en la carpeta del proyecto o ejecute db/access-control.sql en la base.",
+    "access_setup_note": "Antes de ingresar a la app, cree las tablas de acceso: en la carpeta del proyecto ejecute npm run db:setup (o ejecute db/access-control.sql en la base).",
     "title_selecting": "Configurar Exportación",
     "title_downloading": "Descargando Código Fuente...",
     "title_processing": "Preparando el proyecto...",

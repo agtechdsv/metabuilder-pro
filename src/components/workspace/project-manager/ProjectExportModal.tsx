@@ -724,6 +724,11 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {/* Done state */}
           {modalState.phase === 'done' && (
             <div className="space-y-3">
+              {modalState.accessSetupNote && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  {t('export_modal.access_setup_note', "Antes de entrar no app, crie as tabelas de acesso: na pasta do projeto rode npm run db:setup (ou execute db/access-control.sql no banco).")}
+                </div>
+              )}
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 text-center font-medium">
                 {t('export_modal.saved_in', "Arquivo salvo em:")} <span className="font-bold">{t('export_modal.downloads', "Downloads")}</span>
               </div>

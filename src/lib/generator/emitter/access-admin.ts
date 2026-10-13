@@ -1,6 +1,7 @@
 import type { AppAST } from '../ast'
-import { ACCESS_SLUGS, accessSql } from '../accessAdmin'
+import { ACCESS_SLUGS, accessSql, accessStatements } from '../accessAdmin'
 import { getAccessDictionary } from '../accessI18n'
+import { SETUP_SCRIPT } from './access-setup-script'
 
 /**
  * Gestão de acesso do app exportado (Node.js e frontend do Java Spring): permissões por tela (nenhum / leitura / escrita) e os
@@ -57,7 +58,25 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
   files.set(`app/(protected)/${ACCESS_SLUGS.permissions}/page.tsx`, fill(PERMS_PAGE, vars))
   files.set(`app/(protected)/${ACCESS_SLUGS.permissions}/PermissionsClient.tsx`, tr(PERMS_CLIENT))
   files.set('db/access-control.sql', accessSql(ast))
+  // app Node: o comando  npm run db:setup  cria as tabelas pela conexão do .env.local (no Java, o script SQL é rodado no banco do backend)
+  if (ast.backendStack !== 'java-spring') {
+    files.set('db/access-control.json', JSON.stringify({ statements: accessStatements(ast), tables: [a.perms.table, ...(a.groups.synthetic ? [a.groups.table] : []), ...(a.link.kind === 'table' && a.link.synthetic ? [a.link.table] : [])] }, null, 2) + '\n')
+    files.set('scripts/setup-access.mjs', SETUP_SCRIPT.split('__STACK__').join(ast.dbStack))
+  }
 }
+
+/** Acrescenta o comando  npm run db:setup  ao package.json do app. */
+export function addSetupScript(pkg: string): string {
+  try {
+    const p = JSON.parse(pkg)
+    p.scripts = { ...(p.scripts || {}), 'db:setup': 'node scripts/setup-access.mjs' }
+    return JSON.stringify(p, null, 2) + '\n'
+  } catch {
+    return pkg
+  }
+}
+
+
 
 // Código que cada ação de gravação do app executa primeiro: recusa quem só tem leitura na(s) tela(s) da tabela.
 export const WRITE_GUARD_IMPORT = `import { assertWriteAllowed } from '@/lib/access-guard'\n`

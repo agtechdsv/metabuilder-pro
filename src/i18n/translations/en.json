@@ -1,5 +1,10 @@
 {
   "export_modal": {
+    "access_setup_confirm": "Create the access tables in the project database now? (This runs npm run db:setup with the connection from .env.local. If the database user cannot create tables, choose Cancel and use db/access-control.sql.)",
+    "access_setup_running": "Creating the access tables...",
+    "access_setup_ok": "Access tables created in the database.",
+    "access_setup_failed": "Could not create the access tables. Run npm run db:setup in the project folder or run db/access-control.sql on the database.",
+    "access_setup_note": "Before signing in to the app, create the access tables: in the project folder run npm run db:setup (or run db/access-control.sql on the database).",
     "title_selecting": "Configure Export",
     "title_downloading": "Downloading Source Code...",
     "title_processing": "Preparing the project...",

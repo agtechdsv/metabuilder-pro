@@ -114,10 +114,10 @@ describe('gestão de acesso no app exportado', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS mb_role_permissions')
     expect(sql).not.toContain('CREATE TABLE IF NOT EXISTS mb_roles')
     // Funcionária (2) sem acesso a clientes; Administrador (1) em leitura; as telas de gestão só para o administrador
-    expect(sql).toContain("VALUES ('2', 'clientes', 'none')")
-    expect(sql).toContain("VALUES ('1', 'clientes', 'read')")
-    expect(sql).toContain("VALUES ('1', 'acesso-usuarios', 'write')")
-    expect(sql).not.toContain("VALUES ('2', 'acesso-usuarios'")
+    expect(sql).toContain("SELECT '2', 'clientes', 'none' WHERE NOT EXISTS")
+    expect(sql).toContain("SELECT '1', 'clientes', 'read' WHERE NOT EXISTS")
+    expect(sql).toContain("SELECT '1', 'acesso-usuarios', 'write' WHERE NOT EXISTS")
+    expect(sql).not.toContain("SELECT '2', 'acesso-usuarios'")
 
     // login grava as permissões na sessão assinada; proxy bloqueia a rota; menu filtra; ação de gravação confere
     expect(files.get('lib/session.ts')).toContain('acc?:')
@@ -171,8 +171,8 @@ describe('gestão de acesso no app exportado', () => {
     const sql = files.get('db/access-control.sql')!
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS mb_roles')
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS mb_user_roles')
-    expect(sql).toContain("INSERT INTO mb_roles (id, name) VALUES ('abc', 'Administradores')")
-    expect(sql).toContain("INSERT INTO mb_user_roles (user_id, role_id) VALUES ('10', 'abc')")
+    expect(sql).toContain("INSERT INTO mb_roles (id, name) SELECT 'abc', 'Administradores' WHERE NOT EXISTS")
+    expect(sql).toContain("INSERT INTO mb_user_roles (user_id, role_id) SELECT '10', 'abc' WHERE NOT EXISTS")
   })
 
   it('1:N (coluna do grupo no usuário): o vínculo é a coluna, sem tabela intermediária', () => {
@@ -233,5 +233,46 @@ describe('idiomas da gestão de acesso', () => {
     expect(files.get('app/(protected)/layout.tsx')).toContain(folder)
     for (const p of ACCESS_FILES) expect(files.get(p), p).not.toMatch(/\{\{\w+\}\}/)
     expect(syntaxErrors(files, ACCESS_FILES)).toEqual([])
+  })
+})
+
+describe('criação das tabelas de acesso pelo dev', () => {
+  it('Node: npm run db:setup + comandos em JSON; o script SQL é idempotente', () => {
+    const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres', { dbConnectionString: 'postgresql://mb_agent:x@localhost:5432/crm' } as any))
+    expect(JSON.parse(files.get('package.json')!).scripts['db:setup']).toBe('node scripts/setup-access.mjs')
+    const plan = JSON.parse(files.get('db/access-control.json')!)
+    expect(plan.tables).toContain('mb_role_permissions')
+    expect(plan.statements[0]).toContain('CREATE TABLE IF NOT EXISTS mb_role_permissions')
+    expect(plan.statements.every((s: string) => !s.trim().endsWith(';'))).toBe(true)
+    const script = files.get('scripts/setup-access.mjs')!
+    expect(script).toContain("const STACK = 'postgres'")
+    expect(syntaxErrors(new Map([['scripts/setup-access.mjs', script]]), ['scripts/setup-access.mjs'])).toEqual([])
+    // quem rodar como administrador recebe a dica de liberar as tabelas para o usuário do app
+    expect(files.get('db/access-control.sql')).toContain('GRANT SELECT, INSERT, UPDATE, DELETE ON mb_role_permissions TO "mb_agent"')
+  })
+
+  it('sem a gestão de acesso não há script de criação; no Java o SQL fica na raiz (sem runner Node)', () => {
+    const r: any = raw(); delete r.access_admin
+    const plain = generateNodeProject(parseMetaBuilderJSON(r, 'postgres'))
+    expect(plain.has('scripts/setup-access.mjs')).toBe(false)
+    expect(JSON.parse(plain.get('package.json')!).scripts['db:setup']).toBeUndefined()
+    const java = generateJavaSpringProject(parseMetaBuilderJSON(raw(), 'postgres', { backendStack: 'java-spring' } as any))
+    expect([...java.keys()].some(p => p.endsWith('setup-access.mjs'))).toBe(false)
+    expect(java.has('db/access-control.sql')).toBe(true)
+  })
+
+  it('Oracle e SQL Server usam a sintaxe própria nas inserções idempotentes', () => {
+    const ora = generateNodeProject(parseMetaBuilderJSON(raw(), 'oracle')).get('db/access-control.sql')!
+    expect(ora).toContain('FROM DUAL WHERE NOT EXISTS')
+    const mssql = generateNodeProject(parseMetaBuilderJSON(raw(), 'sqlserver')).get('db/access-control.sql')!
+    expect(mssql).toContain("IF OBJECT_ID('mb_role_permissions', 'U') IS NULL")
+    expect(mssql).not.toContain('FROM DUAL')
+  })
+
+  it('login sem as tabelas de acesso leva a uma mensagem que explica o que fazer (nos 3 idiomas)', () => {
+    const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres', { targetLanguage: 'en' } as any))
+    expect(files.get('app/api/login/route.ts')).toContain("'/login?error=setup'")
+    expect(files.get('app/(auth)/login/page.tsx')).toContain('npm run db:setup')
+    expect(files.get('app/(auth)/login/page.tsx')).toContain('The access tables do not exist')
   })
 })

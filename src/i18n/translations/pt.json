@@ -1,5 +1,10 @@
 {
   "export_modal": {
+    "access_setup_confirm": "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)",
+    "access_setup_running": "Criando as tabelas de acesso...",
+    "access_setup_ok": "Tabelas de acesso criadas no banco.",
+    "access_setup_failed": "Não foi possível criar as tabelas de acesso. Rode npm run db:setup na pasta do projeto ou execute db/access-control.sql no banco.",
+    "access_setup_note": "Antes de entrar no app, crie as tabelas de acesso: na pasta do projeto rode npm run db:setup (ou execute db/access-control.sql no banco).",
     "title_selecting": "Configurar Exportação",
     "title_downloading": "Baixando Código Fonte...",
     "title_processing": "Preparando o projeto...",

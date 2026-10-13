@@ -50,6 +50,7 @@ export interface AccessDictionary {
   err_unknown_screen: string
   err_invalid_level: string
   err_read_only_table: string
+  err_setup: string
 }
 
 const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
@@ -99,6 +100,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_unknown_screen: 'Tela desconhecida.',
     err_invalid_level: 'Nível inválido.',
     err_read_only_table: 'Seu grupo de acesso só pode consultar esta tela: criar, editar e excluir não são permitidos.',
+    err_setup: "As tabelas de acesso ainda não existem no banco. Rode npm run db:setup (ou o script db/access-control.sql) e tente de novo.",
   },
   en: {
     menu_folder: 'Access Management',
@@ -146,6 +148,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_unknown_screen: 'Unknown screen.',
     err_invalid_level: 'Invalid level.',
     err_read_only_table: 'Your access group can only view this screen: creating, editing and deleting are not allowed.',
+    err_setup: "The access tables do not exist in the database yet. Run npm run db:setup (or the db/access-control.sql script) and try again.",
   },
   es: {
     menu_folder: 'Gestión de Acceso',
@@ -193,6 +196,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_unknown_screen: 'Pantalla desconocida.',
     err_invalid_level: 'Nivel inválido.',
     err_read_only_table: 'Su grupo de acceso solo puede consultar esta pantalla: crear, editar y eliminar no están permitidos.',
+    err_setup: "Las tablas de acceso aún no existen en la base. Ejecute npm run db:setup (o el script db/access-control.sql) e intente de nuevo.",
   },
 }
 

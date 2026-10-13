@@ -1,6 +1,7 @@
 import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
 import { getGeneratorDictionary } from '../i18n'
+import { getAccessDictionary } from '../accessI18n'
 import { rlsAttrColumns } from '../../bi/access'
 import { modelPolicyAttrColumns } from '../layers/access'
 
@@ -152,7 +153,9 @@ export default async function LoginPage({ searchParams }: { searchParams?: Promi
     ? '${d.login.err_server}'
     : error === 'config'
     ? '${d.login.err_config}'
-    : null
+${hasAccess ? `    : error === 'setup'
+    ? '${getAccessDictionary(ast.targetLanguage).err_setup}'
+` : ''}    : null
 
   return (
     <main className="${T.LOGIN_PAGE}">
@@ -379,7 +382,12 @@ ${accCookie}    return response
 
   } catch (err) {
     console.error('Login DB Error:', err)
-    return NextResponse.redirect(new URL('/login?error=server', request.url))
+${hasAccess ? `    // as tabelas de acesso (mb_*) ainda não foram criadas no banco: diz o que fazer em vez de um erro genérico
+    const dbCode = (err as any)?.code
+    if (dbCode === '42P01' || dbCode === 'ER_NO_SUCH_TABLE' || /mb_(role_permissions|roles|user_roles)/i.test(String((err as any)?.message || ''))) {
+      return NextResponse.redirect(new URL('/login?error=setup', request.url))
+    }
+` : ''}    return NextResponse.redirect(new URL('/login?error=server', request.url))
   }
 }
 `
