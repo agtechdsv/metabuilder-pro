@@ -103,7 +103,9 @@ export function applyWriteGuard(content: string, model: { name: string; dbTable:
 const ACCESS_GUARD = `// ARQUIVO GERADO pelo MetaBuilder — recusa gravações de quem só tem permissão de leitura nas telas da tabela.
 // Vale no servidor (o navegador não consegue contornar): as ações de criar/editar/excluir chamam isto antes de gravar.
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { headers } from 'next/headers'
 import { getSessionUser } from '@/lib/session-server'
+import { ACCESS_SETUP } from '@/lib/access-setup'
 
 // um único armazenamento para o processo todo (o Next pode carregar este módulo em mais de um pacote)
 const g = globalThis as any
@@ -114,13 +116,37 @@ export function asAccessAdmin<T>(fn: () => Promise<T>): Promise<T> {
   return bypass.run(true, fn)
 }
 
+/** Tela (rota) de onde a gravação foi pedida: o navegador manda a página de origem junto da ação de servidor. */
+async function originScreen(): Promise<string | null> {
+  try {
+    const ref = (await headers()).get('referer')
+    if (!ref) return null
+    const path = new URL(ref).pathname
+    let best: { slug: string; path: string } | null = null
+    for (const v of ACCESS_SETUP.views as ReadonlyArray<{ slug: string; path: string }>) {
+      if (v.path === '/') continue
+      if ((path === v.path || path.startsWith(v.path + '/')) && (!best || v.path.length > best.path.length)) best = v
+    }
+    return best ? best.slug : null
+  } catch {
+    return null
+  }
+}
+
 export async function assertWriteAllowed(table: string): Promise<void> {
   if (bypass.getStore()) return
   const user = await getSessionUser()
-  const wt = user?.acc?.wt
-  if (!wt || wt.length === 0) return
+  const acc = user?.acc
+  if (!acc) return
+  // 1) a tela em que o usuário está é só de leitura (ex.: Clientes), mesmo que outra tela dele grave na mesma tabela
+  if (acc.ro.length > 0) {
+    const screen = await originScreen()
+    if (screen && acc.ro.includes(screen)) throw new Error('{{err_read_only_table}}')
+  }
+  // 2) nenhuma tela do grupo grava nesta tabela (vale também para pedidos feitos fora das telas)
+  if (acc.wt.length === 0) return
   const t = String(table).toLowerCase().split('.').pop() as string
-  if (wt.includes(t)) throw new Error('{{err_read_only_table}}')
+  if (acc.wt.includes(t)) throw new Error('{{err_read_only_table}}')
 }
 `
 

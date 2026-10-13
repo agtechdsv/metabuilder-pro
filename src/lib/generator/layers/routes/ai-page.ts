@@ -1,4 +1,5 @@
 import { RouteNode, AppAST } from '../../ast'
+import { prepareComponentCode } from '../../../aiComponentCode'
 
 /**
  * Gera a página de um Caso de Uso construído via IA (AI Builder).
@@ -6,6 +7,28 @@ import { RouteNode, AppAST } from '../../ast'
  */
 export function generateAiPage(route: RouteNode, ast: AppAST): string {
   let code = (route.componentCode || '').trim()
+
+  // O código da IA pode vir com JSX inválido (ex.: aspas escapadas dentro de um atributo): a plataforma repara ao renderizar,
+  // então a exportação repara igual. Se ainda assim não compilar, a tela mostra o erro em vez de derrubar o build do app inteiro.
+  const prepared = prepareComponentCode(code)
+  if (!prepared.ok) {
+    const title = JSON.stringify(String(route.title || route.viewSlug))
+    const detail = JSON.stringify(prepared.error.slice(0, 600))
+    return [
+      "'use client'",
+      "",
+      "export default function AiViewError() {",
+      "  return (",
+      "    <div className=\"p-8 m-4 rounded-2xl border border-red-200 bg-red-50 text-red-700\">",
+      "      <h3 className=\"font-bold text-sm mb-2\">{" + title + "}</h3>",
+      "      <pre className=\"text-xs whitespace-pre-wrap font-mono\">{" + detail + "}</pre>",
+      "    </div>",
+      "  )",
+      "}",
+      "",
+    ].join(String.fromCharCode(10))
+  }
+  code = prepared.code
 
   // Garante diretiva "use client" no topo
   const hasUseClient = /^['"]use client['"];?/m.test(code)

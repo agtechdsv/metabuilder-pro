@@ -276,3 +276,14 @@ describe('criação das tabelas de acesso pelo dev', () => {
     expect(files.get('app/(auth)/login/page.tsx')).toContain('The access tables do not exist')
   })
 })
+
+describe('tela só de leitura no app exportado', () => {
+  it('o guarda confere também a tela de origem (referer) e as ações de gravação ficam marcadas para esconder', () => {
+    const files = generateNodeProject(parseMetaBuilderJSON(raw(), 'postgres'))
+    const guard = files.get('lib/access-guard.ts')!
+    expect(guard).toContain("get('referer')")
+    expect(guard).toContain('acc.ro.includes(screen)')
+    expect(syntaxErrors(files, ['lib/access-guard.ts'])).toEqual([])
+    expect([...files.values()].some(c => c.includes('data-mb-write="save"'))).toBe(true)
+  })
+})

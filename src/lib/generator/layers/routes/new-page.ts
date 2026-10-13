@@ -267,7 +267,7 @@ ${formFieldsHtml}
               ${dict.form.cancel}
             </Link>
             <button
-              type="submit"
+              type="submit" data-mb-write="save"
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
             >
               <Save className="w-4 h-4" /> ${dict.form.create_record}

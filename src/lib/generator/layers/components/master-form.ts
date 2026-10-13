@@ -182,7 +182,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
           </Link>
           {!isView && (
             <button
-              type="submit"
+              type="submit" data-mb-write="save"
               disabled={isSubmitting}
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
             >
