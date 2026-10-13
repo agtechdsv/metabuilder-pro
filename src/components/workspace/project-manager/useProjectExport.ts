@@ -7,6 +7,16 @@ import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { DownloadModalState, ExportDefaults, Project } from './types'
 
+/** Pergunta sim/não: usa o diálogo nativo do desktop (o confirm() do navegador pode nem aparecer no webview). */
+async function askUser(message: string): Promise<boolean> {
+  try {
+    const { ask } = await import('@tauri-apps/plugin-dialog')
+    return await ask(message, { title: 'MetaBuilder PRO', kind: 'info' })
+  } catch {
+    return confirm(message)
+  }
+}
+
 export function useProjectExport() {
   const [downloadModal, setDownloadModal] = useState<DownloadModalState | null>(null)
   const [exportModels, setExportModels] = useState<any[]>([])
@@ -238,7 +248,7 @@ export function useProjectExport() {
         // gestão de acesso: cria as tabelas de acesso no banco do projeto (só com a confirmação do usuário)
         let accessSetupDone = false
         const needsAccessSetup = accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel'
-        if (needsAccessSetup && installOk && confirm(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
+        if (needsAccessSetup && installOk && await askUser(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
           setDownloadModal(prev => prev ? { ...prev, phase: 'processing', statusMessage: t('export_modal.access_setup_running', "Criando as tabelas de acesso...") } : prev)
           try {
             const setupCmd = isWindows
@@ -263,7 +273,7 @@ export function useProjectExport() {
           accessSetupNote: needsAccessSetup && !accessSetupDone,
         })
 
-        if (confirm(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
+        if (await askUser(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
           try {
             const codeCmd = isWindows
               ? Command.create('cmd', ['/c', 'code', '.'], { cwd: selectedDir })
