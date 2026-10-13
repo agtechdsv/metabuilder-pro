@@ -1,4 +1,22 @@
 {
+  "v1.0.1": {
+    "date": "2026-10-13",
+    "pt": [
+      "Nova experiência de exportação de código: acompanhamento visual aprimorado em tempo real, garantindo total estabilidade durante a preparação e instalação das dependências.",
+      "Suporte multilíngue global: a modal de exportação de código-fonte agora está totalmente traduzida para Português, Inglês e Espanhol.",
+      "Inicialização inteligente de banco de dados: configuração automatizada de tabelas de acesso, execuções seguras diretamente na IDE e mensagens de erro muito mais claras e intuitivas no login."
+    ],
+    "en": [
+      "Enhanced code export experience: improved real-time visual progress feedback, ensuring stability while preparing files and installing dependencies.",
+      "Global multi-language support: the source code export modal is now fully localized in English, Portuguese, and Spanish.",
+      "Smart database setup: automated access table generation, safe and resilient script execution directly in the IDE, and clear, informative login error messages."
+    ],
+    "es": [
+      "Experiencia mejorada de exportación de código: seguimiento visual en tiempo real que garantiza estabilidad total durante la preparación e instalación de dependencias.",
+      "Soporte multilingüe global: la ventana de exportación de código fuente ahora está completamente traducida al Español, Portugués e Inglés.",
+      "Configuración inteligente de base de datos: creación automatizada de tablas de acceso, ejecución segura directamente en el IDE y mensajes de diagnóstico mucho más claros al iniciar sesión."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
