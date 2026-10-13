@@ -185,7 +185,8 @@ export function useProjectExport() {
           return
         }
 
-        setDownloadModal(prev => prev ? { ...prev, phase: 'selecting', progress: 100 } : prev)
+        // grava e instala com a modal travada em "processando": não volta para a configuração enquanto isso
+        setDownloadModal(prev => prev ? { ...prev, phase: 'processing', progress: 100, statusMessage: t('ide.project.export_extracting') } : prev)
         toast(t('ide.project.export_extracting'), 'info')
 
         const zip = await JSZip.loadAsync(merged)
@@ -205,6 +206,7 @@ export function useProjectExport() {
           await writeFile(fullPath, fileBytes)
         }
 
+        setDownloadModal(prev => prev ? { ...prev, phase: 'processing', statusMessage: t('ide.project.export_installing') } : prev)
         toast(t('ide.project.export_installing'), 'info')
         // No Windows o npm é "npm.cmd": o Tauri só o encontra através do cmd
         const isWindows = /windows/i.test(navigator.userAgent)

@@ -8,6 +8,7 @@ import {
   X,
   FolderOpen,
   Copy,
+  Loader2,
   Server,
   Coffee
 } from 'lucide-react'
@@ -150,6 +151,8 @@ export function ProjectExportModal({
           <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3">
             {modalState.phase === 'selecting' ? (
               <Database className="w-7 h-7 text-white animate-pulse" />
+            ) : modalState.phase === 'processing' ? (
+              <Loader2 className="w-7 h-7 text-white animate-spin" />
             ) : modalState.phase === 'done' ? (
               <CheckCircle className="w-7 h-7 text-white" />
             ) : modalState.phase === 'error' ? (
@@ -161,6 +164,7 @@ export function ProjectExportModal({
           <h3 className="text-lg font-black">
             {modalState.phase === 'selecting' && 'Configurar Exportação'}
             {modalState.phase === 'downloading' && 'Baixando Código Fonte...'}
+            {modalState.phase === 'processing' && 'Preparando o projeto...'}
             {modalState.phase === 'done' && 'Download Concluído!'}
             {modalState.phase === 'error' && 'Erro no Download'}
           </h3>
@@ -704,6 +708,17 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
               <p className="text-xs text-center text-neutral-400">
                 {isTauri() ? 'Salvando na pasta Downloads do sistema...' : 'Preparando arquivo no navegador...'}
               </p>
+            </div>
+          )}
+
+          {/* Gravando arquivos e instalando dependências: sem botões, a modal só fecha ao terminar */}
+          {modalState.phase === 'processing' && (
+            <div className="space-y-3">
+              <div className="h-2.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-full w-1/3 bg-indigo-500 rounded-full animate-pulse" />
+              </div>
+              <p className="text-xs text-center text-neutral-500">{modalState.statusMessage}</p>
+              <p className="text-[11px] text-center text-neutral-400">Isso pode levar alguns minutos. Aguarde até o fim.</p>
             </div>
           )}
 

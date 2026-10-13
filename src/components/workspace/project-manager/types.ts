@@ -30,7 +30,8 @@ export interface ExportDefaults {
 
 export interface DownloadModalState {
   open: boolean
-  phase: 'selecting' | 'downloading' | 'done' | 'error'
+  /** 'processing' = gravando os arquivos e instalando as dependências (a modal fica travada até acabar) */
+  phase: 'selecting' | 'downloading' | 'processing' | 'done' | 'error'
   fileName: string
   progress: number
   savedPath: string
@@ -38,6 +39,8 @@ export interface DownloadModalState {
   projectId?: string
   authConfig?: any
   defaults?: ExportDefaults
+  /** o que está sendo feito na fase 'processing' */
+  statusMessage?: string
   /** motivo da falha, mostrado no próprio modal na fase 'error' */
   errorMessage?: string
 }
