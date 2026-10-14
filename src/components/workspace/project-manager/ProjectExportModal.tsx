@@ -115,9 +115,9 @@ export function ProjectExportModal({
     setDevError('')
     try {
       const { Command } = await import('@tauri-apps/plugin-shell')
-      // abre uma janela de terminal própria (fica viva mesmo se a IDE fechar e mostra o log do app); o PowerShell é o comando liberado para isso
+      // abre uma janela de terminal própria, MINIMIZADA (não cobre a IDE; fica na barra de tarefas com o log do app e viva mesmo se a IDE fechar); o PowerShell é o comando liberado para isso
       const safeDir = dir.replace(/'/g, "''")
-      const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "Start-Process cmd -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "'"]).execute()
+      const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "'"]).execute()
       if (out.code === 0) setDevStarted(true)
       else setDevError(String(out.stderr || '').trim().slice(0, 200))
     } catch (e: any) {

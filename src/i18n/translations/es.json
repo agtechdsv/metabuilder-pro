@@ -11,7 +11,7 @@
     "project_saved_in": "Proyecto guardado en:",
     "title_done_desktop": "¡Exportación Completada!",
     "run_dev": "Ejecutar la app (npm run dev)",
-    "dev_started": "La app se está iniciando en una ventana de terminal. Cuando muestre \"Ready\", ábrala en un navegador:",
+    "dev_started": "La app se está iniciando en una terminal minimizada (en la barra de tareas; haga clic para ver el log). Cuando muestre \"Ready\", ábrala en un navegador:",
     "open_in_browser": "Navegador",
     "open_in_ide": "Navegador del IDE",
     "dev_failed": "No fue posible iniciar npm run dev. Ejecútelo manualmente en la carpeta del proyecto.",
