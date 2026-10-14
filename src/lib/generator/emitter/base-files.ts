@@ -838,7 +838,14 @@ ${navCards}
   if (ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)) {
     files.set('utils/supabase/client.ts', `import { createBrowserClient } from '@supabase/ssr'
 
+// um único cliente por página: telas de IA que guardam o resultado de createClient() nas dependências de um useEffect/useCallback
+// (como o sandbox da plataforma permite) não podem receber um objeto novo a cada render, senão buscam os dados sem parar
+let cachedClient: any
 export function createClient() {
+  return (cachedClient ??= buildClient())
+}
+
+function buildClient() {
   ${ast.dbStack === 'supabase' ? `
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -1002,7 +1009,7 @@ function createLocalDbClient() {
   // Toast Component compatível com useToast() e addToast()
   files.set('components/ui/Toast.tsx', `'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
 
 interface ToastContextType {
   toast: (message: any, type?: string) => void
@@ -1031,8 +1038,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }
   }, [addToast])
 
+  // objeto estável: telas que põem o resultado de useToast() nas dependências de um useEffect/useCallback não entram em laço
+  // (cada aviso mostrado re-renderiza o provider; um objeto novo a cada render fazia a tela buscar os dados de novo, sem parar)
+  const value = useMemo(() => ({ toast, addToast }), [toast, addToast])
+
   return (
-    <ToastContext.Provider value={{ toast, addToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
         {toasts.map((t) => (
@@ -1060,15 +1071,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// sem provider: também um único objeto (identidade estável entre renderizações)
+const FALLBACK_TOAST: ToastContextType = {
+  toast: (msg: any) => console.log('[Toast]', msg),
+  addToast: (t: any) => console.log('[Toast]', t),
+}
+
 export function useToast() {
   const context = useContext(ToastContext)
-  if (!context) {
-    return {
-      toast: (msg: any) => console.log('[Toast]', msg),
-      addToast: (t: any) => console.log('[Toast]', t),
-    }
-  }
-  return context
+  return context ?? FALLBACK_TOAST
 }
 `)
 }

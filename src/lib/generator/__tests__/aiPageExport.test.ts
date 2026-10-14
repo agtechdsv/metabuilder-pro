@@ -62,3 +62,20 @@ describe('módulos que o código de IA importa existem no app exportado', () => 
     expect(modal).toContain('export function Modal')
   })
 })
+
+describe('identidade estável no app exportado (sem laço de requisições)', () => {
+  it('useToast() e createClient() devolvem sempre o mesmo objeto: telas de IA os usam nas dependências de useCallback/useEffect', async () => {
+    const { parseMetaBuilderJSON } = await import('../parser')
+    const { generateNodeProject } = await import('../emitter/node-project')
+    const files = generateNodeProject(parseMetaBuilderJSON({
+      project: { id: 'p', name: 'V', slug: 'v' }, models: [], fields: [], relations: [],
+      views: [{ id: 'v1', slug: 'ia', name: 'IA', view_type: 'advanced_use_case', layout_config: { generated_by_ai: true, component_code: 'export default function P() { return <div /> }' } }],
+    }, 'postgres'))
+    const toast = files.get('components/ui/Toast.tsx')!
+    expect(toast).toContain('useMemo(() => ({ toast, addToast })')
+    expect(toast).toContain('value={value}')
+    expect(toast).toContain('context ?? FALLBACK_TOAST')
+    const client = files.get('utils/supabase/client.ts')!
+    expect(client).toContain('cachedClient ??= buildClient()')
+  })
+})
