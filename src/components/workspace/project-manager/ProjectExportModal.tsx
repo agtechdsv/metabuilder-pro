@@ -9,12 +9,16 @@ import {
   FolderOpen,
   Copy,
   Loader2,
+  Play,
+  Globe,
+  AppWindow,
   Server,
   Coffee
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
-import { isTauri } from '@/utils/tauriUtils'
+import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
+import { usePreview } from '@/contexts/PreviewContext'
 import { DownloadModalState } from './types'
 
 interface ProjectExportModalProps {
@@ -43,6 +47,11 @@ export function ProjectExportModal({
   exportModels
 }: ProjectExportModalProps) {
   const { t } = useI18n()
+  const { openPreview } = usePreview()
+  // depois de exportar (desktop, Windows): sobe o app num terminal e abre no navegador ou no navegador da IDE
+  const [devStarted, setDevStarted] = useState(false)
+  const [devError, setDevError] = useState('')
+  const [devUrl, setDevUrl] = useState('http://localhost:3000')
   const [exportTab, setExportTab] = useState<'backend' | 'database' | 'auth'>('backend')
   const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
   const [javaGroupId, setJavaGroupId] = useState('com.app')
@@ -95,6 +104,24 @@ export function ProjectExportModal({
         const { openPath } = await import('@tauri-apps/plugin-opener')
         await openPath(dir)
       } catch { }
+    }
+  }
+
+  const canRunDev = isTauri() && typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
+
+  const handleRunDev = async () => {
+    const dir = modalState.savedDir
+    if (!dir) return
+    setDevError('')
+    try {
+      const { Command } = await import('@tauri-apps/plugin-shell')
+      // abre uma janela de terminal própria (fica viva mesmo se a IDE fechar e mostra o log do app); o PowerShell é o comando liberado para isso
+      const safeDir = dir.replace(/'/g, "''")
+      const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "Start-Process cmd -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "'"]).execute()
+      if (out.code === 0) setDevStarted(true)
+      else setDevError(String(out.stderr || '').trim().slice(0, 200))
+    } catch (e: any) {
+      setDevError(String(e?.message || e).slice(0, 200))
     }
   }
 
@@ -737,6 +764,47 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 text-center font-medium">
                 {isTauri() ? t('export_modal.project_saved_in', "Projeto salvo em:") : t('export_modal.saved_in', "Arquivo salvo em:")} <span className="font-bold break-all">{isTauri() && modalState.savedDir ? modalState.savedDir : t('export_modal.downloads', "Downloads")}</span>
               </div>
+
+              {/* Rodar o app exportado: terminal próprio + navegador ou navegador da IDE */}
+              {canRunDev && (
+                <div className="space-y-2">
+                  {!devStarted ? (
+                    <button
+                      onClick={handleRunDev}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                    >
+                      <Play className="w-4 h-4" />
+                      {t('export_modal.run_dev', "Executar o app (npm run dev)")}
+                    </button>
+                  ) : (
+                    <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/60 dark:bg-indigo-900/10 p-3 space-y-2.5">
+                      <p className="text-xs text-indigo-800 dark:text-indigo-300 leading-relaxed">{t('export_modal.dev_started', 'O app está subindo em uma janela de terminal. Quando ela mostrar "Ready", abra no navegador:')}</p>
+                      <input
+                        value={devUrl}
+                        onChange={(e) => setDevUrl(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs font-mono border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg outline-none focus:border-indigo-500"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openExternalUrl(devUrl)}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                          {t('export_modal.open_in_browser', "Navegador")}
+                        </button>
+                        <button
+                          onClick={() => openPreview(devUrl, modalState.fileName.replace(/-source-code\.zip$/, ''))}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                        >
+                          <AppWindow className="w-3.5 h-3.5" />
+                          {t('export_modal.open_in_ide', "Navegador da IDE")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {devError && <p className="text-[11px] text-red-600 dark:text-red-400 text-center">{t('export_modal.dev_failed', "Não foi possível iniciar o npm run dev. Rode manualmente na pasta do projeto.")} {devError}</p>}
+                </div>
+              )}
 
               {/* Action buttons */}
               <div className="flex gap-2.5">
