@@ -64,6 +64,9 @@ export function useProjectExport() {
       defaults.authStrategy = 'ldap'
     } else if (at === 'none') {
       defaults.authStrategy = 'none'
+    } else if (at) {
+      // login gerenciado (Supabase): a modal não tem esta opção, então a exportação mantém o login do projeto
+      defaults.authStrategy = 'managed'
     }
 
     const { data: models, error: modelsError } = await supabase
@@ -112,8 +115,15 @@ export function useProjectExport() {
     backendStack: string = 'nodejs',
     javaGroupId?: string,
     javaPort?: number,
-    accessAdmin?: boolean
+    accessAdmin?: boolean,
+    javaOptions?: Record<string, unknown>
   ) => {
+    if (!isTauri()) {
+      // o código fonte é gerado pela IDE Desktop (grava na pasta, instala, executa); o navegador não baixa mais ZIP
+      setDownloadModal({ open: true, phase: 'error', fileName, progress: 0, savedPath: '', savedDir: '', projectId, errorMessage: t('export_modal.desktop_only', 'A exportação do código fonte está disponível apenas na IDE Desktop. Baixe a IDE na Central de Downloads.') })
+      return
+    }
+
     setDownloadModal({
       open: true,
       phase: 'downloading',
@@ -149,13 +159,15 @@ export function useProjectExport() {
           dbConnectionString,
           supabaseUrl: dbConfig?.supabaseUrl,
           supabaseAnonKey: dbConfig?.supabaseAnonKey,
-          authStrategy,
           authConfig,
           backendStack,
           javaGroupId: backendStack === 'java-spring' ? javaGroupId : undefined,
           javaPort: backendStack === 'java-spring' ? javaPort : undefined,
           javaVersion: 21,
-          accessAdmin: accessAdmin === true
+          accessAdmin: accessAdmin === true,
+          ...(backendStack === 'java-spring' ? (javaOptions || {}) : {}),
+          // o que a modal escolheu para o login vale na geração (sem isso, o app seguia o login do projeto)
+          authStrategy: authStrategy === 'managed' ? undefined : authStrategy,
         })
       })
       if (!res.ok) {
@@ -200,6 +212,7 @@ export function useProjectExport() {
         toast(t('ide.project.export_extracting'), 'info')
 
         const zip = await JSZip.loadAsync(merged)
+        const nodeDir = backendStack === 'java-spring' ? await join(selectedDir, 'frontend') : selectedDir
 
         for (const relativePath of Object.keys(zip.files)) {
           const zipEntry = zip.files[relativePath]
@@ -223,8 +236,8 @@ export function useProjectExport() {
         let installOk = false
         try {
           const cmd = isWindows
-            ? Command.create('cmd', ['/c', 'npm', 'install'], { cwd: selectedDir })
-            : Command.create('npm', ['install'], { cwd: selectedDir })
+            ? Command.create('cmd', ['/c', 'npm', 'install'], { cwd: nodeDir })
+            : Command.create('npm', ['install'], { cwd: nodeDir })
           const output = await cmd.execute()
           installOk = output.code === 0
           if (!installOk) console.error('NPM Install failed:', output.stderr)
@@ -305,26 +318,6 @@ export function useProjectExport() {
           }
         }
 
-      } else {
-        const blob = new Blob([merged], { type: 'application/zip' })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        window.URL.revokeObjectURL(url)
-
-        setDownloadModal({
-          open: true,
-          phase: 'done',
-          fileName,
-          progress: 100,
-          savedPath: '',
-          savedDir: 'Downloads',
-          accessSetupNote: accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel',
-        })
       }
     } catch (error: any) {
       setDownloadModal(prev => prev ? { ...prev, phase: 'error', progress: 0, errorMessage: error?.message || String(error) } : null)

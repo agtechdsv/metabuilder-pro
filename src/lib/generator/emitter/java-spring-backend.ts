@@ -47,7 +47,7 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
 
   // 4. Config: CorsConfig + OpenApiConfig
   files.set(`${basePkg}/config/CorsConfig.java`, generateCorsConfig(ast, groupId))
-  files.set(`${basePkg}/config/OpenApiConfig.java`, generateOpenApiConfig(ast, groupId))
+  if (ast.generateOpenApi !== false) files.set(`${basePkg}/config/OpenApiConfig.java`, generateOpenApiConfig(ast, groupId))
 
   // 5. Por modelo: Entity, Repository, Service, Controller + Specification
   for (const model of ast.models) {
@@ -75,7 +75,7 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
   }
 
   // 6. README
-  files.set('backend/README.md', generateBackendReadme(ast))
+  if (ast.generateReadme !== false) files.set('backend/README.md', generateBackendReadme(ast))
 
   // 7. Eject Options Condicionais (JWT, Migrations, Testes, Dockerfile, docker-compose, .env.example)
   if (ast.jwtEnabled) generateJwtFiles(ast, files, basePkg, groupId)
@@ -315,12 +315,12 @@ function generatePomXml(ast: AppAST): string {
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
-    <dependency>
+${ast.generateOpenApi === false ? '' : `    <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <version>2.5.0</version>
     </dependency>
-    <dependency>
+`}    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
@@ -475,9 +475,11 @@ function generateApplicationProperties(ast: AppAST): string {
     `# ── Jackson JSON Serialization (snake_case) ──`,
     `spring.jackson.property-naming-strategy=SNAKE_CASE`,
     ``,
-    `# ── OpenAPI / Swagger ──`,
-    `springdoc.api-docs.path=/api-docs`,
-    `springdoc.swagger-ui.path=/swagger-ui.html`,
+    ...(ast.generateOpenApi === false ? [] : [
+      `# ── OpenAPI / Swagger ──`,
+      `springdoc.api-docs.path=/api-docs`,
+      `springdoc.swagger-ui.path=/swagger-ui.html`,
+    ]),
   ]
 
   // Virtual Threads (Project Loom) — Java 21

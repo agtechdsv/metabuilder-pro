@@ -18,7 +18,7 @@ import { IDECommitModal } from './IDECommitModal'
 import { IDEGitModals } from './IDEGitModals'
 import { IDEFileActionModals } from './IDEFileActionModals'
 import { IDEGitSettingsModal } from './IDEGitSettingsModal'
-import { NativeExportModal } from './NativeExportModal'
+import { IdeEjectModal } from './IdeEjectModal'
 
 export interface IDEModalProps {
   isOpen: boolean
@@ -330,12 +330,11 @@ export function IDEModal({
         onResetProject={handleResetProjectToCleanState}
       />
 
-      {/* Native Export Modal */}
-      <NativeExportModal
+      {/* Ejetar: gera o código final uma vez, na pasta escolhida (mesmo motor e mesmas opções do Ejetar & Sincronizar) */}
+      <IdeEjectModal
         isOpen={showNativeExport}
         onClose={() => setShowNativeExport(false)}
-        projectSlug={target?.slug || ''}
-        projectId={target?.id || ''}
+        target={target}
       />
     </>
   )

@@ -89,7 +89,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
               <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white rounded-2xl flex items-center justify-center mb-6">
                 <Apple className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold mb-2">macOS</h3>
+              <h3 className="text-2xl font-bold mb-2">macOS <span className="ml-1 align-middle text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{t('downloads_page.beta', 'Beta')}</span></h3>
               <p className="text-sm text-neutral-500 mb-8">{t('downloads_page.mac_desc', 'macOS 11+ (Intel & Apple Silicon)')}</p>
               
               {macAsset ? (
@@ -102,6 +102,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
                 </button>
               )}
               {macAsset && <p className="text-xs text-neutral-400 mt-4 font-mono">{formatSize(macAsset.size)}</p>}
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão beta: o desenvolvimento e os testes são feitos principalmente no Windows.')}</p>
             </div>
 
             {/* Linux */}
@@ -109,7 +110,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
               <div className="w-16 h-16 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center mb-6">
                 <Terminal className="w-8 h-8" />
               </div>
-              <h3 className="text-2xl font-bold mb-2">Linux</h3>
+              <h3 className="text-2xl font-bold mb-2">Linux <span className="ml-1 align-middle text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{t('downloads_page.beta', 'Beta')}</span></h3>
               <p className="text-sm text-neutral-500 mb-8">{t('downloads_page.linux_desc', 'Ubuntu, Debian, Linux Mint (.deb)')}</p>
               
               {linuxAsset ? (
@@ -122,6 +123,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
                 </button>
               )}
               {linuxAsset && <p className="text-xs text-neutral-400 mt-4 font-mono">{formatSize(linuxAsset.size)}</p>}
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão beta: o desenvolvimento e os testes são feitos principalmente no Windows.')}</p>
             </div>
           </div>
         </div>

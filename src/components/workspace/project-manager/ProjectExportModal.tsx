@@ -35,7 +35,8 @@ interface ProjectExportModalProps {
     backendStack?: string,
     javaGroupId?: string,
     javaPort?: number,
-    accessAdmin?: boolean
+    accessAdmin?: boolean,
+    javaOptions?: Record<string, unknown>
   ) => void
   exportModels: any[]
 }
@@ -56,6 +57,9 @@ export function ProjectExportModal({
   const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
   const [javaGroupId, setJavaGroupId] = useState('com.app')
   const [javaPort, setJavaPort] = useState(8080)
+  // opções do backend Java (valem de verdade na geração)
+  const [javaOpts, setJavaOpts] = useState({ jwt: true, migrations: true, tests: false, docker: true, env: true, swagger: true, readme: true })
+  const toggleJava = (k: keyof typeof javaOpts) => setJavaOpts(o => ({ ...o, [k]: !o[k] }))
   // abre com o que o projeto já tem configurado (banco e login); o usuário ainda pode trocar
   const defaults = modalState.defaults || {}
   const [exportDataMode, setExportDataMode] = useState<'tunnel' | 'supabase' | 'postgres' | 'oracle' | 'mysql' | 'sqlserver'>(defaults.dataMode || 'supabase')
@@ -110,7 +114,8 @@ export function ProjectExportModal({
   const canRunDev = isTauri() && typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
 
   const handleRunDev = async () => {
-    const dir = modalState.savedDir
+    // Java: o Next.js fica em frontend/ (o backend Spring Boot roda com o Maven, fora deste botão)
+    const dir = backendStack === 'java-spring' && modalState.savedDir ? modalState.savedDir + '\\frontend' : modalState.savedDir
     if (!dir) return
     setDevError('')
     try {
@@ -166,7 +171,20 @@ export function ProjectExportModal({
       backendStack,
       javaGroupId,
       javaPort,
-      exportAuthStrategy === 'legacy' && exportAccessAdmin
+      exportAuthStrategy === 'legacy' && exportAccessAdmin,
+      backendStack === 'java-spring'
+        ? {
+            jwtEnabled: javaOpts.jwt,
+            generateMigrations: javaOpts.migrations,
+            generateServiceTests: javaOpts.tests,
+            generateControllerTests: javaOpts.tests,
+            generateDockerfile: javaOpts.docker,
+            generateDockerCompose: javaOpts.docker,
+            generateEnvExample: javaOpts.env,
+            generateOpenApi: javaOpts.swagger,
+            generateReadme: javaOpts.readme,
+          }
+        : undefined
     )
   }
 
@@ -313,6 +331,23 @@ export function ProjectExportModal({
                             placeholder="8080"
                           />
                         </div>
+                      </div>
+                      <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 space-y-1.5">
+                        <p className="font-bold text-neutral-500 uppercase tracking-widest text-[9px]">{t('export_modal.java_options', "Opções do backend Java")}</p>
+                        {([
+                          ['jwt', t('export_modal.java_jwt', "Autenticação JWT")],
+                          ['migrations', t('export_modal.java_migrations', "Migrations SQL (Flyway)")],
+                          ['tests', t('export_modal.java_tests', "Testes unitários (Service e Controller)")],
+                          ['docker', t('export_modal.java_docker', "Dockerfile e docker-compose")],
+                          ['env', t('export_modal.java_env', ".env.example")],
+                          ['swagger', t('export_modal.java_swagger', "Swagger / OpenAPI")],
+                          ['readme', t('export_modal.java_readme', "README do backend")],
+                        ] as const).map(([k, label]) => (
+                          <label key={k} className="flex items-center gap-2 font-sans text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                            <input type="checkbox" checked={javaOpts[k]} onChange={() => toggleJava(k)} className="accent-indigo-600 w-3.5 h-3.5" />
+                            {label}
+                          </label>
+                        ))}
                       </div>
                     </div>
                   )}

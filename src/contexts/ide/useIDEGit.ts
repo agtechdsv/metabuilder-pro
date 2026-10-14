@@ -7,6 +7,12 @@ import { BaseDirectory } from '@tauri-apps/api/path'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 
+/** Opções extras da sincronização (além da linguagem, do grupo e da porta): gestão de acesso e opções reais do Java. */
+export interface SyncExtra {
+  accessAdmin?: boolean
+  javaOptions?: Record<string, unknown>
+}
+
 export interface UseIDEGitProps {
   target: any
   syncManager: LocalSyncManager | null
@@ -66,7 +72,8 @@ export function useIDEGit({
   const [newBranchName, setNewBranchName] = useState('')
   const [isCreatingBranch, setIsCreatingBranch] = useState(false)
 
-  const handleSyncFromWeb = async (backendStack: string = 'nodejs', javaGroupId?: string, javaPort?: number, targetLanguage: string = 'pt', accessAdmin: boolean = false) => {
+  const handleSyncFromWeb = async (backendStack: string = 'nodejs', javaGroupId?: string, javaPort?: number, targetLanguage: string = 'pt', extra: SyncExtra = {}) => {
+    const accessAdmin = extra.accessAdmin === true
     if (!syncManager || !target) return
     setIsSyncing(true)
     try {
@@ -82,6 +89,8 @@ export function useIDEGit({
       if (backendStack === 'java-spring') {
         payload.javaGroupId = javaGroupId
         payload.javaPort = javaPort
+        // JWT, migrations, testes, Docker, Swagger, README...: as opções marcadas na tela valem de verdade na geração
+        Object.assign(payload, extra.javaOptions || {})
       }
 
       try {
@@ -99,8 +108,6 @@ export function useIDEGit({
             const primaryConn = projectConn.connectionsString[0]
             payload.legacyDriver = primaryConn.type || 'postgres'
             payload.dbConfig = { url: primaryConn.connectionString }
-            payload.dataMode = 'legacy'
-            payload.authStrategy = 'legacy'
           }
         }
       } catch (e) {

@@ -28,8 +28,6 @@ import { ProjectCard } from './project-manager/ProjectCard'
 import { ProjectFormDrawer, ProjectFormData } from './project-manager/ProjectFormDrawer'
 import { ProjectDeleteModal } from './project-manager/ProjectDeleteModal'
 import { WorkspacePortalModal } from './project-manager/WorkspacePortalModal'
-import { ProjectExportModal } from './project-manager/ProjectExportModal'
-import { useProjectExport } from './project-manager/useProjectExport'
 
 interface ProjectManagerProps {
   initialProjects: Project[]
@@ -98,7 +96,6 @@ export function ProjectManager({
   const [activeTab, setActiveTab] = useState<'projects' | 'tunnel' | 'synced-dbs'>('projects')
 
   const { openUpgrade } = useUpgradeModal()
-  const { downloadModal, setDownloadModal, exportModels, openExportModal, handleStartExport } = useProjectExport()
 
   const supabase = createClient()
   const router = useRouter()
@@ -508,7 +505,6 @@ export function ProjectManager({
                   setShowDesktopModal(true)
                 }}
                 onOpenIDE={p => openIDE({ type: 'project', id: p.id, name: p.name, slug: p.slug })}
-                onOpenExportModal={p => openExportModal(p)}
                 onTogglePortal={p => toggleProjectPortal(p)}
                 onToggleActive={p => toggleActive(p)}
                 onEdit={p => openDrawer(p)}
@@ -599,16 +595,6 @@ export function ProjectManager({
               ? `${window.location.origin}/${workspaceSlug}/${selectedDesktopProject.slug}?standalone=true`
               : ''
           }
-        />
-      )}
-
-      {/* Source Code Download Progress Modal */}
-      {downloadModal?.open && (
-        <ProjectExportModal
-          modalState={downloadModal}
-          onClose={() => setDownloadModal(null)}
-          onStartExport={handleStartExport}
-          exportModels={exportModels}
         />
       )}
 

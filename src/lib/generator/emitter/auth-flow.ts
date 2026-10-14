@@ -2,6 +2,7 @@ import { AppAST } from '../ast'
 import { T } from '../layers/design-tokens'
 import { getGeneratorDictionary } from '../i18n'
 import { getAccessDictionary } from '../accessI18n'
+import { LDAP_LIB_SOURCE } from './ldap-auth'
 import { rlsAttrColumns } from '../../bi/access'
 import { modelPolicyAttrColumns } from '../layers/access'
 
@@ -399,6 +400,59 @@ export async function POST(request: Request) {
 }
 `
     }
+  } else if (ast.authConfig?.authType === 'ldap') {
+    // LDAP / Active Directory: o servidor procura o usuário com a conta de serviço e confere a senha autenticando como ele
+    files.set('lib/ldap.ts', LDAP_LIB_SOURCE)
+    loginApiContent += `import { authenticateLdap, LdapConfigError } from '@/lib/ldap'
+
+export async function POST(request: Request) {
+  const formData = await request.formData()
+  const username = (formData.get('email') as string || '').trim()
+  const password = formData.get('password') as string || ''
+  const redirect = new URL(request.url).searchParams.get('redirect') || '/'
+
+  if (!username || !password) {
+    return NextResponse.redirect(new URL('/login?error=credentials', request.url))
+  }
+
+  try {
+    const user = await authenticateLdap(username, password)
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?error=invalid', request.url))
+    }
+    const email = user.email
+    const userName = user.name
+
+    let sessionToken: string
+    try {
+      sessionToken = await signSession({ email, name: userName })
+    } catch (e) {
+      console.error('Sessão: ', e)
+      return NextResponse.redirect(new URL('/login?error=config', request.url))
+    }
+    const response = NextResponse.redirect(new URL(redirect, request.url))
+    response.cookies.set('mb_session', sessionToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+    response.cookies.set('mb_user', JSON.stringify({ email, name: userName }), {
+      httpOnly: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+    return response
+  } catch (err) {
+    console.error('Login LDAP Error:', err)
+    if (err instanceof LdapConfigError) {
+      return NextResponse.redirect(new URL('/login?error=config', request.url))
+    }
+    return NextResponse.redirect(new URL('/login?error=server', request.url))
+  }
+}
+`
   } else if (ast.authConfig?.authType === 'managed' && ast.dbStack === 'supabase') {
     loginApiContent += `import { createClient } from '@/app/actions/db'\n
 export async function POST(request: Request) {
@@ -540,8 +594,26 @@ export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
 `)
+  // sem autenticação configurada: nada de proxy com sessão
+  if (ast.authConfig?.authType === 'none') files.set('proxy.ts', NO_AUTH_PROXY_SOURCE)
 }
 
+
+/** "Sem autenticação": o app não exige login. O proxy deixa tudo passar e a rota /login volta para o início. */
+export const NO_AUTH_PROXY_SOURCE = `import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// ARQUIVO GERADO pelo MetaBuilder — app exportado sem autenticação: nenhuma tela exige login.
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  if (pathname === '/login') return NextResponse.redirect(new URL('/', request.url))
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+}
+`
 
 export function generateDownloadsPage(ast: AppAST, files: Map<string, string>) {
   const d = getGeneratorDictionary(ast.targetLanguage)

@@ -42,6 +42,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "@radix-ui/react-tabs": "^1.1.0",
       "bcryptjs": "^2.4.3",
       "jose": "^5.4.0",
+      ...(ast.authConfig?.authType === 'ldap' ? { "ldapts": "^7.2.0" } : {}),
       ...(ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)
           ? { "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.45.0" }
           : {}),
@@ -121,6 +122,15 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
   globalThis.crypto.getRandomValues(sessionSecretBytes)
   envLines.push('# Assina a sessão de login do app. Em produção defina esta variável no ambiente de hospedagem (nunca a publique).')
   envLines.push(`MB_SESSION_SECRET="${Array.from(sessionSecretBytes, b => b.toString(16).padStart(2, '0')).join('')}"`)
+
+  if (ast.authConfig?.authType === 'ldap') {
+    envLines.push('# Login por LDAP / Active Directory: preencha com os dados do seu servidor')
+    envLines.push('LDAP_URL="ldap://10.0.0.15:389"')
+    envLines.push('LDAP_BASE_DN="dc=empresa,dc=local"')
+    envLines.push('LDAP_BIND_DN="cn=metabuilder_service,ou=Services,dc=empresa,dc=local"')
+    envLines.push('LDAP_BIND_PASSWORD="senha_secreta_do_bind"')
+    envLines.push('LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"')
+  }
 
   files.set('.env.local', envLines.join('\n'))
 

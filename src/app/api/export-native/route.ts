@@ -1,167 +1,38 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import JSZip from 'jszip'
-import { parseMetaBuilderJSON } from '@/lib/generator/parser'
-import { generateNativeProject } from '@/lib/generator/emitter'
-import type { BackendStack, JavaVersion } from '@/lib/generator/ast'
-import { loadAccessAdminInput } from '@/lib/generator/accessAdminData'
+import { buildProjectSource, ProjectSourceError, type ProjectSourceInput } from '@/lib/generator/projectSource'
 
+/**
+ * POST /api/export-native
+ *
+ * Gera o código fonte do projeto (motor único: lib/generator/projectSource) e devolve um ZIP.
+ * Usado pelo Ejetar da IDE Local, que grava os arquivos na pasta escolhida.
+ */
 export async function POST(request: Request) {
   try {
-    const {
-      projectId,
-      dbStack = 'postgres',
-      dbConnectionString,
-      supabaseUrl,
-      supabaseAnonKey,
-      backendStack = 'nodejs' as BackendStack,   // NOVO: 'nodejs' | 'java-spring'
-      javaVersion = 21 as JavaVersion,            // NOVO: 17 | 21
-      javaGroupId,                                // NOVO: ex: 'com.empresa'
-      javaArtifactId,                             // NOVO: ex: 'crm-backend'
-      javaPort = 8080,                            // NOVO: porta Spring Boot
-      jwtEnabled = false,
-      passwordHashAlgorithm = 'bcrypt',
-      generateMigrations = false,
-      migrationEngine = 'flyway',
-      generateServiceTests = false,
-      generateControllerTests = false,
-      generateDockerfile = false,
-      generateDockerCompose = false,
-      generateEnvExample = false,
-      targetLanguage,
-      accessAdmin = false,                        // exporta Usuários, Grupos de Acesso e Permissões de Telas
-    } = await request.json()
-
-    // Validar backendStack — tratar valores inválidos como 'nodejs' (GAP edge case)
-    const resolvedBackendStack: BackendStack =
-      backendStack === 'java-spring' ? 'java-spring' : 'nodejs'
-
-    // Validar javaPort — clampar entre 1 e 65535
-    const resolvedJavaPort = (Number.isInteger(javaPort) && javaPort >= 1 && javaPort <= 65535)
-      ? javaPort
-      : 8080
+    const body = (await request.json()) as ProjectSourceInput & { dbStack?: string }
     const supabase = await createClient()
 
-    // 1. Authenticate
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
+    if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    // 2. Fetch Project Config
-    const { data: project, error: projError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', projectId)
-      .single()
+    const { files, project } = await buildProjectSource(supabase, body as ProjectSourceInput)
 
-    if (projError || !project) {
-      return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
-    }
-
-    // 3. Fetch Models, Views, Relations & Auth Config in parallel
-    const [
-      { data: models },
-      { data: views },
-      { data: relations },
-      { data: authConfig },
-      { data: enumerations }
-    ] = await Promise.all([
-      supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
-      supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published'),
-      supabase.from('relations').select('*').eq('project_id', projectId),
-      supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle(),
-      supabase.from('project_enumerations').select('*').eq('project_id', projectId)
-    ])
-
-    // Se não tiver views publicadas, pega todas
-    let finalViews = views
-    if (!finalViews || finalViews.length === 0) {
-      const { data: allViews } = await supabase
-        .from('ui_views')
-        .select('*, ui_components(*)')
-        .eq('project_id', projectId)
-      finalViews = allViews
-    }
-
-    // Flatten UI Components
-    const components = finalViews?.flatMap(v => v.ui_components || []) || []
-    const flatFields = models?.flatMap(m => m.fields || []) || []
-
-    // Constroi o JSON bruto simulando a exportação padrão
-    const rawJson = {
-      project,
-      models: models || [],
-      fields: flatFields,
-      views: finalViews || [],
-      components,
-      relations: relations || [],
-      enumerations: enumerations || [],
-      auth_config: authConfig ? {
-        auth_type: authConfig.auth_type,
-        table_name: authConfig.db_table_name,
-        email_column: authConfig.db_email_column,
-        password_column: authConfig.db_password_column,
-        hash_format: authConfig.db_password_hash_type,
-        table_access: authConfig.ui_config?.table_access
-      } : undefined
-    }
-
-    // Gestão de acesso: leva os grupos, as permissões por tela e o grupo de cada usuário (o app exportado não acessa o Supabase do MetaBuilder)
-    if (accessAdmin === true) {
-      const input = await loadAccessAdminInput(supabase, projectId, authConfig)
-      if (!input) {
-        return NextResponse.json({ error: 'A gestão de acesso só está disponível com o login "Via Banco de Dados Legado".' }, { status: 400 })
-      }
-      ;(rawJson as any).access_admin = input
-    }
-
-    // --- CLEAN CODE GENERATOR ---
-
-    // Parse (com as credenciais reais para gerar .env.local pré-preenchido)
-    const ast = parseMetaBuilderJSON(rawJson, dbStack, {
-      dbConnectionString,
-      supabaseUrl: supabaseUrl || project.supabase_url || process.env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: supabaseAnonKey || project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      backendStack: resolvedBackendStack,
-      javaVersion,
-      javaGroupId,
-      javaArtifactId,
-      javaPort: resolvedJavaPort,
-      jwtEnabled: Boolean(jwtEnabled),
-      passwordHashAlgorithm: (passwordHashAlgorithm === 'sha256' ? 'sha256' : 'bcrypt'),
-      generateMigrations: Boolean(generateMigrations),
-      migrationEngine: (migrationEngine === 'liquibase' ? 'liquibase' : 'flyway'),
-      generateServiceTests: Boolean(generateServiceTests),
-      generateControllerTests: Boolean(generateControllerTests),
-      generateDockerfile: Boolean(generateDockerfile),
-      generateDockerCompose: Boolean(generateDockerCompose),
-      generateEnvExample: Boolean(generateEnvExample),
-      targetLanguage,
-    })
-    
-    // Emit
-    const generatedFiles = generateNativeProject(ast)
-
-    // Zip
     const zip = new JSZip()
-    
-    for (const [filePath, content] of Array.from(generatedFiles.entries())) {
-      zip.file(filePath, content)
-    }
-
+    for (const [filePath, content] of files) zip.file(filePath, content)
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 9 } })
 
-    // Return as downloadable stream
+    const stack = body.backendStack === 'java-spring' ? 'java-spring' : 'nodejs'
     return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-${resolvedBackendStack === 'java-spring' ? 'java-spring' : 'nodejs'}-source.zip"`,
-        'Content-Length': zipBuffer.length.toString()
-      }
+        'Content-Disposition': `attachment; filename="${project.slug || 'app'}-${stack}-source.zip"`,
+        'Content-Length': zipBuffer.length.toString(),
+      },
     })
-
   } catch (err: any) {
+    if (err instanceof ProjectSourceError) return NextResponse.json({ error: err.message }, { status: err.status })
     console.error('[ExportNative] Error:', err)
     return NextResponse.json({ error: err.message || 'Erro interno ao gerar código nativo' }, { status: 500 })
   }

@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { parseWorkspaceJSON } from '@/lib/generator/parser'
 import { generateWorkspaceProject } from '@/lib/generator/emitter'
 import { DbType } from '@/lib/generator/ast'
+import { toParseOptions } from '@/lib/generator/projectSource'
 import { fetchWorkspaceProjects, connectionsMap } from '@/lib/generator/workspaceData'
 
 /**
@@ -16,6 +17,7 @@ import { fetchWorkspaceProjects, connectionsMap } from '@/lib/generator/workspac
  */
 export async function POST(request: Request) {
   try {
+    const body = await request.json()
     const {
       workspaceId,
       dbStack = 'auto',
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
       javaGroupId,
       javaPort,
       targetLanguage
-    } = await request.json()
+    } = body
     const supabase = await createClient()
 
     // 1. Autenticação
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
     // cada projeto usa o banco e a conexão dele (a IDE envia as conexões do metabuilder.config.json); sem isso, o banco de cada projeto
     const resolvedStack: DbType | 'auto' = (dbStack as DbType | 'auto') || 'auto'
     const options = {
+      ...toParseOptions(body),
       dbConnectionString: dbConfig?.url,
       connections: connectionsMap(connections),
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,

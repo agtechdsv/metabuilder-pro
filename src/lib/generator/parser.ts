@@ -1483,6 +1483,8 @@ export interface ParseOptions {
   generateDockerfile?: boolean
   generateDockerCompose?: boolean
   generateEnvExample?: boolean
+  generateOpenApi?: boolean
+  generateReadme?: boolean
 
   // Idioma de geração do código fonte
   targetLanguage?: 'pt' | 'en' | 'es'
@@ -2889,6 +2891,8 @@ export function parseMetaBuilderJSON(
     generateDockerfile: options?.generateDockerfile ?? false,
     generateDockerCompose: options?.generateDockerCompose ?? false,
     generateEnvExample: options?.generateEnvExample ?? false,
+    generateOpenApi: options?.generateOpenApi ?? true,
+    generateReadme: options?.generateReadme ?? true,
     targetLanguage: options?.targetLanguage ?? 'pt',
   }
 }

@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
+import type { SyncExtra } from '@/contexts/ide/useIDEGit'
 
 const GEN_LANGUAGES = [
   { code: 'pt', label: 'Português', flag: 'https://flagcdn.com/w80/br.png', short: 'PT' },
@@ -25,7 +26,7 @@ export interface IDEHeaderProps {
   isDiscarding: boolean
   isConfirming: boolean
   handleOpenCommitModal: (mode: 'commit' | 'merge') => void
-  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number, targetLanguage?: string, accessAdmin?: boolean) => void
+  handleSyncFromWeb: (backendStack?: string, javaGroupId?: string, javaPort?: number, targetLanguage?: string, extra?: SyncExtra) => void
   isSyncing: boolean
   selectedBranch: string
   handleBranchChange: (branch: string) => void
@@ -745,9 +746,26 @@ export function IDEHeader({
     setIsSyncModalOpen(false)
     const withAccess = accessAdmin && (target.type === 'workspace' || detected?.auth?.type === 'database')
     if (activeTab === 'java') {
-      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage, withAccess)
+      handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage, {
+        accessAdmin: withAccess,
+        javaOptions: {
+          javaVersion: Number(javaConfig.jdkVersion) === 17 ? 17 : 21,
+          javaArtifactId: javaConfig.artifactId,
+          jwtEnabled: javaConfig.jwt,
+          passwordHashAlgorithm: javaConfig.jwtHash,
+          generateMigrations: javaConfig.migrations,
+          migrationEngine: javaConfig.migrationEngine,
+          generateServiceTests: javaConfig.testService,
+          generateControllerTests: javaConfig.testController,
+          generateDockerfile: javaConfig.dockerfile,
+          generateDockerCompose: javaConfig.dockerCompose,
+          generateEnvExample: javaConfig.envExample,
+          generateOpenApi: javaConfig.swagger,
+          generateReadme: javaConfig.readme,
+        },
+      })
     } else {
-      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage, withAccess)
+      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage, { accessAdmin: withAccess })
     }
   }
 
@@ -871,7 +889,7 @@ export function IDEHeader({
           <button
             onClick={() => setShowNativeExport(true)}
             className="flex items-center justify-center gap-1.5 px-2.5 h-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-xs font-bold border border-indigo-500"
-            title={t('workspace_components.ide_local.eject_native_tooltip', 'Ejetar código-fonte nativo (Next.js puro)')}
+            title={t('workspace_components.ide_local.eject_native_tooltip', 'Ejetar: gerar o código final numa pasta (projeto independente, sem sincronização)')}
           >
             <Package className="w-3.5 h-3.5" />
             {t('workspace_components.ide_local.eject_btn', 'Ejetar')}

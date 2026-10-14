@@ -78,7 +78,7 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
   // o login assina a sessão com MB_SESSION_SECRET: leva o segredo gerado junto da URL da API (cada exportação tem o seu)
   const secretLine = (tempFiles.get('.env.local') || '').split('\n').find(l => l.startsWith('MB_SESSION_SECRET='))
   if (secretLine) {
-    files.set('frontend/.env.local', `${files.get('frontend/.env.local') ?? ''}# Assina a sessão de login do app. Em produção defina esta variável no ambiente de hospedagem (nunca a publique).\n${secretLine}\n`)
+    files.set('frontend/.env.local', `${files.get('frontend/.env.local') ?? ''}# Assina a sessão de login do app. Em produção defina esta variável no ambiente de hospedagem (nunca a publique).\n${secretLine}\n${(tempFiles.get('.env.local') || '').split('\n').filter(l => l.startsWith('LDAP_')).map(l => l + '\n').join('')}`)
   }
 
   // 8. tsconfig.json, tailwind, next.config, postcss, etc.
@@ -128,6 +128,7 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
       '@radix-ui/react-tabs': '^1.1.0',
       'bcryptjs': '^2.4.3',
       'jose': '^5.4.0',
+      ...(ast.authConfig?.authType === 'ldap' ? { ldapts: '^7.2.0' } : {}),
       // NOTA: sem pg, oracledb, mysql2, mssql, @supabase/ssr
       // O frontend chama a API REST do Spring Boot
     } as Record<string, string>,

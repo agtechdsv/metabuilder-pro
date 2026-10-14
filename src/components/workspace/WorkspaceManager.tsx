@@ -22,7 +22,6 @@ import {
   RefreshCw,
   ArrowUpRight,
   Monitor,
-  Download,
   Network,
   Bot,
   Database,
@@ -35,7 +34,6 @@ import Link from 'next/link'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
-import { WorkspaceExportModal } from '@/components/workspace/WorkspaceExportModal'
 import { createClient } from '@/utils/supabase/client'
 import { createTeamWorkspace } from '@/app/actions/workspace'
 import { isTauri } from '@/utils/tauriUtils'
@@ -120,7 +118,6 @@ export function WorkspaceManager({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [selectedDesktopWorkspace, setSelectedDesktopWorkspace] = useState<Workspace | null>(null)
-  const [selectedExportWorkspace, setSelectedExportWorkspace] = useState<Workspace | null>(null)
   const { openPreview } = usePreview()
   const { openIDE } = useIDE()
 
@@ -504,20 +501,6 @@ export function WorkspaceManager({
                                 <FolderGit2 className="w-4 h-4" />
                               </button>
                             </ProGate>
-                            {/* 4. Exportar Código Fonte */}
-                            <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  setSelectedExportWorkspace(workspace)
-                                }}
-                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-500 cursor-pointer"
-                                title={t('workspace_components.project_card_tooltips.export_source', 'Exportar Código Fonte (Next.js)')}
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                            </ProGate>
                             {/* 5. Editar Workspace */}
                             <button
                               onClick={(e) => {
@@ -741,15 +724,6 @@ export function WorkspaceManager({
           )}
         </div>
       </Modal>
-
-      {/* Modal Export Workspace */}
-      <WorkspaceExportModal
-        isOpen={!!selectedExportWorkspace}
-        onClose={() => setSelectedExportWorkspace(null)}
-        workspaceSlug={selectedExportWorkspace?.slug || ''}
-        workspaceId={selectedExportWorkspace?.id || ''}
-        projectCount={selectedExportWorkspace?.projects ? (Array.isArray(selectedExportWorkspace.projects) ? selectedExportWorkspace.projects.length : (selectedExportWorkspace.projects as any).count || 0) : 0}
-      />
     </div>
   )
 }

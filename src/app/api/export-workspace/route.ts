@@ -4,6 +4,7 @@ import { parseWorkspaceJSON } from '@/lib/generator/parser'
 import { generateWorkspaceProject } from '@/lib/generator/emitter'
 import { DbType } from '@/lib/generator/ast'
 import JSZip from 'jszip'
+import { toParseOptions } from '@/lib/generator/projectSource'
 import { fetchWorkspaceProjects } from '@/lib/generator/workspaceData'
 
 /**
@@ -14,6 +15,7 @@ import { fetchWorkspaceProjects } from '@/lib/generator/workspaceData'
  */
 export async function POST(request: Request) {
   try {
+    const body = await request.json()
     const {
       workspaceId,
       dbStack = 'auto',
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
       javaPort,
       targetLanguage,
       accessAdmin = false
-    } = await request.json()
+    } = body
     const supabase = await createClient()
 
     // 1. Autenticação
@@ -54,7 +56,9 @@ export async function POST(request: Request) {
     }
 
     // 4. Parser → AST
+    // as mesmas opções (Java, idioma...) do motor de um projeto valem para cada projeto do workspace
     const ast = parseWorkspaceJSON(workspace, rawProjects, dbStack as DbType | 'auto', {
+      ...toParseOptions(body),
       backendStack,
       javaGroupId,
       javaPort,

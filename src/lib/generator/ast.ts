@@ -555,6 +555,10 @@ export interface AppAST {
   generateDockerfile?: boolean
   generateDockerCompose?: boolean
   generateEnvExample?: boolean
+  /** Swagger / OpenAPI (springdoc + OpenApiConfig). Padrão: ligado. */
+  generateOpenApi?: boolean
+  /** backend/README.md. Padrão: ligado. */
+  generateReadme?: boolean
 
   // Idioma de geração do código fonte
   targetLanguage?: 'pt' | 'en' | 'es'
