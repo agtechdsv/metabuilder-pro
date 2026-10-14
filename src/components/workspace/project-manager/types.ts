@@ -39,6 +39,8 @@ export interface DownloadModalState {
   projectId?: string
   authConfig?: any
   defaults?: ExportDefaults
+  /** as tabelas de acesso já existiam no banco: quantas permissões havia (mantidas sem alteração) */
+  accessTablesExisted?: number
   /** exportou a gestão de acesso e as tabelas de acesso ainda não foram criadas no banco */
   accessSetupNote?: boolean
   /** o que está sendo feito na fase 'processing' */

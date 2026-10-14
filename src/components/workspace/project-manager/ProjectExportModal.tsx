@@ -724,6 +724,11 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
           {/* Done state */}
           {modalState.phase === 'done' && (
             <div className="space-y-3">
+              {modalState.accessTablesExisted !== undefined && (
+                <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/30 rounded-xl p-3 text-xs text-sky-800 dark:text-sky-300 leading-relaxed">
+                  {t('export_modal.access_exists', 'As tabelas de acesso já existem no banco ({n} permissões gravadas) e foram mantidas: nenhum dado foi alterado.').replace('{n}', String(modalState.accessTablesExisted))}
+                </div>
+              )}
               {modalState.accessSetupNote && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                   {t('export_modal.access_setup_note', "Antes de entrar no app, crie as tabelas de acesso: na pasta do projeto rode npm run db:setup (ou execute db/access-control.sql no banco).")}

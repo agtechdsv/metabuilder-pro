@@ -246,6 +246,10 @@ describe('criação das tabelas de acesso pelo dev', () => {
     expect(plan.statements.every((s: string) => !s.trim().endsWith(';'))).toBe(true)
     const script = files.get('scripts/setup-access.mjs')!
     expect(script).toContain("const STACK = 'postgres'")
+    // modo de conferência usado pela IDE antes de perguntar: não altera nada
+    expect(script).toContain('--check')
+    expect(script).toContain('MB_ACCESS_CHECK exists')
+    expect(script).toContain('MB_ACCESS_CHECK missing')
     expect(syntaxErrors(new Map([['scripts/setup-access.mjs', script]]), ['scripts/setup-access.mjs'])).toEqual([])
     // quem rodar como administrador recebe a dica de liberar as tabelas para o usuário do app
     expect(files.get('db/access-control.sql')).toContain('GRANT SELECT, INSERT, UPDATE, DELETE ON mb_role_permissions TO "mb_agent"')

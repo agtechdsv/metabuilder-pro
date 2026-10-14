@@ -4,7 +4,8 @@
  */
 export const SETUP_SCRIPT = `// ARQUIVO GERADO pelo MetaBuilder — cria as tabelas de acesso (permissões de telas, grupos) no banco do app.
 //
-//   npm run db:setup
+//   npm run db:setup             cria as tabelas (se faltarem) e grava os dados do projeto que ainda não estão lá
+//   npm run db:setup -- --check  só confere se as tabelas já existem (não altera nada)
 //
 // Usa a conexão do .env.local. Pode rodar mais de uma vez (não duplica dados). Se o usuário do app não pode criar tabelas,
 // rode com um usuário administrador:   DB_SETUP_URL="postgres://admin:senha@host:5432/banco" npm run db:setup
@@ -56,58 +57,106 @@ async function run(exec, label) {
   console.log('Tabelas de acesso prontas (' + label + '): ' + plan.tables.join(', ') + '.')
 }
 
-async function main() {
-  if (STACK === 'supabase') {
-    console.log('Banco Supabase: abra db/access-control.sql e rode no SQL Editor do seu projeto Supabase.')
-    return
-  }
+/** Conexão com o banco: exec roda um comando, count devolve o número da primeira coluna da primeira linha. */
+async function connect() {
   const setupUrl = env.DB_SETUP_URL || env.DATABASE_URL
+  const appUser = userOf(env.DATABASE_URL)
+  const asAdmin = !!env.DB_SETUP_URL && !!appUser && appUser !== userOf(env.DB_SETUP_URL)
 
   if (STACK === 'postgres') {
     const { Client } = require('pg')
     const c = new Client({ connectionString: setupUrl, options: '-c search_path=public' })
     await c.connect()
-    await run(s => c.query(s), 'PostgreSQL')
-    // criou como administrador: o usuário do app precisa enxergar as tabelas
-    const appUser = userOf(env.DATABASE_URL)
-    if (env.DB_SETUP_URL && appUser && appUser !== userOf(env.DB_SETUP_URL)) {
-      for (const t of plan.tables) await c.query('GRANT SELECT, INSERT, UPDATE, DELETE ON ' + t + ' TO "' + appUser + '"')
-      await c.query('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "' + appUser + '"')
-      console.log('Acesso concedido ao usuário do app: ' + appUser + '.')
+    return {
+      label: 'PostgreSQL',
+      exec: (s) => c.query(s),
+      count: async (s) => Number((await c.query(s)).rows[0].count),
+      grant: async () => {
+        // criou como administrador: o usuário do app precisa enxergar as tabelas
+        if (!asAdmin) return
+        for (const t of plan.tables) await c.query('GRANT SELECT, INSERT, UPDATE, DELETE ON ' + t + ' TO "' + appUser + '"')
+        await c.query('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "' + appUser + '"')
+        console.log('Acesso concedido ao usuário do app: ' + appUser + '.')
+      },
+      close: () => c.end(),
     }
-    await c.end()
-  } else if (STACK === 'mysql') {
+  }
+  if (STACK === 'mysql') {
     const mysql = require('mysql2/promise')
     const c = await mysql.createConnection(setupUrl)
-    await run(s => c.query(s), 'MySQL')
-    const appUser = userOf(env.DATABASE_URL)
-    if (env.DB_SETUP_URL && appUser && appUser !== userOf(env.DB_SETUP_URL)) {
-      for (const t of plan.tables) await c.query('GRANT SELECT, INSERT, UPDATE, DELETE ON ' + t + " TO '" + appUser + "'@'%'")
+    return {
+      label: 'MySQL',
+      exec: (s) => c.query(s),
+      count: async (s) => Number((await c.query(s))[0][0].count),
+      grant: async () => {
+        if (!asAdmin) return
+        for (const t of plan.tables) await c.query('GRANT SELECT, INSERT, UPDATE, DELETE ON ' + t + " TO '" + appUser + "'@'%'")
+      },
+      close: () => c.end(),
     }
-    await c.end()
-  } else if (STACK === 'sqlserver') {
+  }
+  if (STACK === 'sqlserver') {
     const sql = require('mssql')
     const pool = await sql.connect(setupUrl)
-    await run(s => pool.request().query(s), 'SQL Server')
-    await pool.close()
-  } else if (STACK === 'oracle') {
-    const oracledb = require('oracledb')
-    oracledb.autoCommit = true
-    const raw = String(env.DB_CONNECTION_STRING || env.DATABASE_URL || '').replace(/^oracle(db)?:\\/\\//, '')
-    let user = env.DB_SETUP_USER || env.DB_USER || ''
-    let password = env.DB_SETUP_PASSWORD || env.DB_PASSWORD || ''
-    let connectString = raw
-    if (raw.includes('@')) {
-      const at = raw.lastIndexOf('@')
-      connectString = raw.slice(at + 1)
-      const cred = raw.slice(0, at)
-      const i = cred.indexOf(':')
-      if (!user) user = decodeURIComponent(i >= 0 ? cred.slice(0, i) : cred)
-      if (!password && i >= 0) password = decodeURIComponent(cred.slice(i + 1))
+    return {
+      label: 'SQL Server',
+      exec: (s) => pool.request().query(s),
+      count: async (s) => Number((await pool.request().query(s)).recordset[0].count),
+      grant: async () => {},
+      close: () => pool.close(),
     }
-    const conn = await oracledb.getConnection({ user, password, connectString })
-    await run(s => conn.execute(s), 'Oracle')
-    await conn.close()
+  }
+  // oracle
+  const oracledb = require('oracledb')
+  oracledb.autoCommit = true
+  const raw = String(env.DB_CONNECTION_STRING || env.DATABASE_URL || '').replace(/^oracle(db)?:\\/\\//, '')
+  let user = env.DB_SETUP_USER || env.DB_USER || ''
+  let password = env.DB_SETUP_PASSWORD || env.DB_PASSWORD || ''
+  let connectString = raw
+  if (raw.includes('@')) {
+    const at = raw.lastIndexOf('@')
+    connectString = raw.slice(at + 1)
+    const cred = raw.slice(0, at)
+    const i = cred.indexOf(':')
+    if (!user) user = decodeURIComponent(i >= 0 ? cred.slice(0, i) : cred)
+    if (!password && i >= 0) password = decodeURIComponent(cred.slice(i + 1))
+  }
+  const conn = await oracledb.getConnection({ user, password, connectString })
+  return {
+    label: 'Oracle',
+    exec: (s) => conn.execute(s),
+    count: async (s) => Number((await conn.execute(s, [], { outFormat: oracledb.OUT_FORMAT_OBJECT })).rows[0].COUNT),
+    grant: async () => {},
+    close: () => conn.close(),
+  }
+}
+
+async function main() {
+  if (STACK === 'supabase') {
+    console.log('Banco Supabase: abra db/access-control.sql e rode no SQL Editor do seu projeto Supabase.')
+    return
+  }
+  const db = await connect()
+  try {
+    if (process.argv.includes('--check')) {
+      // só confere: as tabelas já existem? (a primeira é a de permissões; as demais, quando o projeto não usa os grupos do banco legado)
+      let rows = 0
+      for (const [i, t] of plan.tables.entries()) {
+        try {
+          const n = await db.count('SELECT COUNT(*) AS count FROM ' + t)
+          if (i === 0) rows = n
+        } catch {
+          console.log('MB_ACCESS_CHECK missing')
+          return
+        }
+      }
+      console.log('MB_ACCESS_CHECK exists ' + rows)
+      return
+    }
+    await run(db.exec, db.label)
+    await db.grant()
+  } finally {
+    await db.close()
   }
 }
 

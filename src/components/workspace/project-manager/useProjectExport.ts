@@ -250,7 +250,20 @@ export function useProjectExport() {
         let setupError = ''
         const needsAccessSetup = accessAdmin === true && backendStack !== 'java-spring' && dataMode !== 'supabase' && dataMode !== 'tunnel'
         const canRunSetup = needsAccessSetup && isWindows
-        if (canRunSetup && installOk && await askUser(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
+        // antes de perguntar, confere se as tabelas já existem (de uma exportação anterior): se existem, nada é recriado nem alterado
+        let tablesExisted: number | null = null
+        if (canRunSetup && installOk) {
+          try {
+            const chk = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'npm run db:setup -- --check'], { cwd: selectedDir }).execute()
+            const m = String(chk.stdout || '').match(/MB_ACCESS_CHECK (missing|exists)(?: (\d+))?/)
+            if (m && m[1] === 'exists') tablesExisted = Number(m[2] || 0)
+          } catch (checkErr) {
+            console.error('db:setup --check falhou:', checkErr)
+          }
+        }
+        if (tablesExisted !== null) {
+          toast(t('export_modal.access_exists', 'As tabelas de acesso já existem no banco ({n} permissões gravadas) e foram mantidas: nenhum dado foi alterado.').replace('{n}', String(tablesExisted)), 'info')
+        } else if (canRunSetup && installOk && await askUser(t('export_modal.access_setup_confirm', "Criar agora as tabelas de acesso no banco do projeto? (Rodará npm run db:setup com a conexão do .env.local. Se o usuário do banco não puder criar tabelas, responda Cancelar e use db/access-control.sql.)"))) {
           setDownloadModal(prev => prev ? { ...prev, phase: 'processing', statusMessage: t('export_modal.access_setup_running', "Criando as tabelas de acesso...") } : prev)
           try {
             // as permissões do desktop só liberam comandos com os nomes/argumentos conhecidos; o PowerShell é o que aceita qualquer comando
@@ -275,7 +288,8 @@ export function useProjectExport() {
           progress: 100,
           savedPath: selectedDir,
           savedDir: selectedDir,
-          accessSetupNote: needsAccessSetup && !accessSetupDone,
+          accessSetupNote: needsAccessSetup && !accessSetupDone && tablesExisted === null,
+          accessTablesExisted: tablesExisted ?? undefined,
         })
 
         if (await askUser(installOk ? t('ide.project.export_open_vscode_ok') : t('ide.project.export_open_vscode'))) {
