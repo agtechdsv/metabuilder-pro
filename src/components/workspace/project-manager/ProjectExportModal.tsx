@@ -165,10 +165,10 @@ export function ProjectExportModal({
             {modalState.phase === 'selecting' && t('export_modal.title_selecting', "Configurar Exportação")}
             {modalState.phase === 'downloading' && t('export_modal.title_downloading', "Baixando Código Fonte...")}
             {modalState.phase === 'processing' && t('export_modal.title_processing', "Preparando o projeto...")}
-            {modalState.phase === 'done' && t('export_modal.title_done', "Download Concluído!")}
+            {modalState.phase === 'done' && (isTauri() ? t('export_modal.title_done_desktop', "Exportação Concluída!") : t('export_modal.title_done', "Download Concluído!"))}
             {modalState.phase === 'error' && t('export_modal.title_error', "Erro no Download")}
           </h3>
-          <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{modalState.fileName}</p>
+          <p className="text-indigo-100 text-sm mt-1 truncate max-w-xs mx-auto">{isTauri() ? modalState.fileName.replace(/-source-code\.zip$/, '') : modalState.fileName}</p>
         </div>
 
         <div className="p-6 space-y-5">
@@ -705,7 +705,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                 />
               </div>
               <p className="text-xs text-center text-neutral-400">
-                {isTauri() ? t('export_modal.saving_downloads', "Salvando na pasta Downloads do sistema...") : t('export_modal.preparing_browser', "Preparando arquivo no navegador...")}
+                {isTauri() ? t('export_modal.generating_code', "Gerando o código fonte...") :t('export_modal.preparing_browser', "Preparando arquivo no navegador...")}
               </p>
             </div>
           )}
@@ -735,7 +735,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                 </div>
               )}
               <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl p-3 text-xs text-emerald-700 dark:text-emerald-400 text-center font-medium">
-                {t('export_modal.saved_in', "Arquivo salvo em:")} <span className="font-bold">{t('export_modal.downloads', "Downloads")}</span>
+                {isTauri() ? t('export_modal.project_saved_in', "Projeto salvo em:") : t('export_modal.saved_in', "Arquivo salvo em:")} <span className="font-bold break-all">{isTauri() && modalState.savedDir ? modalState.savedDir : t('export_modal.downloads', "Downloads")}</span>
               </div>
 
               {/* Action buttons */}
