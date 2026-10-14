@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Lock, Monitor } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { isTauri } from '@/utils/tauriUtils'
@@ -91,18 +91,13 @@ export function ProGate({ tier, featureName, gateType, children, className }: Pr
         {children}
       </div>
 
-      {/* Badge de bloqueio no canto superior direito */}
-      <div className={cn(
-        'absolute top-1 right-1 rounded-md p-1 shadow-sm transition-transform group-hover:scale-110',
-        icon === 'lock'
-          ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400'
-          : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300'
-      )}>
-        {icon === 'lock'
-          ? <Lock className="w-3 h-3" />
-          : <Monitor className="w-3 h-3" />
-        }
-      </div>
+      {/* Badge de cadeado (plano PRO). Na web (recurso só do desktop) não há badge: o ícone da própria ação fica visível, acinzentado,
+          com o cursor de proibido e a dica "Exclusivo da IDE Desktop" (um monitor por cima escondia o ícone real e deixava tudo igual) */}
+      {icon === 'lock' && (
+        <div className="absolute top-1 right-1 rounded-md p-1 shadow-sm transition-transform group-hover:scale-110 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+          <Lock className="w-3 h-3" />
+        </div>
+      )}
     </div>
   )
 }
