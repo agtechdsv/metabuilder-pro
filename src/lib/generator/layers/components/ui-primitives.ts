@@ -1,4 +1,5 @@
 import { getGeneratorDictionary } from '../../i18n'
+import { MODAL_SOURCE } from './modal'
 
 export function generateUiPrimitives(files: Map<string, string>, targetLang?: string) {
   const d = getGeneratorDictionary(targetLang)
@@ -165,6 +166,9 @@ TableCell.displayName = "TableCell"
 
 export { Table, TableHeader, TableBody, TableHead, TableRow, TableCell }
 `)
+
+  // Modal que o código das telas geradas por IA importa (a plataforma o oferece no sandbox)
+  files.set('components/ui/Modal.tsx', MODAL_SOURCE)
 
   files.set('components/ui/delete-button.tsx', `'use client'
 

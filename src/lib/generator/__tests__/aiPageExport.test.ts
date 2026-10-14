@@ -32,3 +32,33 @@ describe('tela gerada por IA no app exportado', () => {
     expect(out).toContain('ok')
   })
 })
+
+describe('módulos que o código de IA importa existem no app exportado', () => {
+  it('Modal, Toast, cliente de dados e utilitários: tudo que o sandbox da plataforma oferece sai no ZIP', async () => {
+    const { parseMetaBuilderJSON } = await import('../parser')
+    const { generateNodeProject } = await import('../emitter/node-project')
+    const code = [
+      "import React, { useState } from 'react'",
+      "import { createClient } from '@/utils/supabase/client'",
+      "import { useToast } from '@/components/ui/Toast'",
+      "import Modal from '@/components/ui/Modal'",
+      "import { Package } from 'lucide-react'",
+      'export default function P() { const [o, setO] = useState(false); return <Modal isOpen={o} onClose={() => setO(false)} title="x"><Package /></Modal> }',
+    ].join('\n')
+    const files = generateNodeProject(parseMetaBuilderJSON({
+      project: { id: 'p', name: 'V', slug: 'v' },
+      models: [], fields: [], relations: [],
+      views: [{ id: 'v1', slug: 'gerenciamento-produtos', name: 'Gerenciamento', view_type: 'advanced_use_case', layout_config: { generated_by_ai: true, component_code: code } }],
+    }, 'postgres'))
+    const page = files.get('app/(protected)/gerenciamento-produtos/page.tsx')!
+    expect(page).toContain("@/components/ui/Modal")
+    // cada importação "@/..." do código de IA aponta para um arquivo gerado
+    for (const m of page.matchAll(/from\s+['"]@\/([^'"]+)['"]/g)) {
+      const t = m[1]
+      expect([`${t}.ts`, `${t}.tsx`].some(p => files.has(p)), t).toBe(true)
+    }
+    const modal = files.get('components/ui/Modal.tsx')!
+    expect(modal).toContain('export default Modal')
+    expect(modal).toContain('export function Modal')
+  })
+})
