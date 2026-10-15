@@ -48,6 +48,26 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     if (isTauri) {
       try {
         const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow')
+
+        // App local (ex.: exportado, rodando com npm run dev): abre como janela de nível superior. Dentro do iframe do navegador interno
+        // o cookie de sessão do app é de terceiros (SameSite=Lax) e não é guardado: o login "pisca" e volta para a tela de login.
+        let isLocal = false
+        try { isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(new URL(targetUrl).hostname) } catch { /* url inválida */ }
+        if (isLocal) {
+          const old = await WebviewWindow.getByLabel('app-preview-local')
+          if (old) await old.destroy().catch(() => {})
+          new WebviewWindow('app-preview-local', {
+            url: targetUrl,
+            title: `${targetTitle} - MetaBuilder PRO`,
+            width: 1280,
+            height: 800,
+            center: true,
+            decorations: true,
+            dragDropEnabled: false,
+          })
+          return
+        }
+
         const existing = await WebviewWindow.getByLabel('app-preview')
 
         if (existing) {
