@@ -4,6 +4,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronLeft, ChevronRight, X, Save, CopyCheck } from 'lucide-react'
 import { useI18n } from '@/i18n'
+import { useTheme } from '@/components/CustomThemeProvider'
 import { getLanguageFromPath } from './ideUtils'
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false })
@@ -54,6 +55,8 @@ export function IDEEditorArea({
   handleSelectFile,
 }: IDEEditorAreaProps) {
   const { t } = useI18n()
+  const { theme: appTheme } = useTheme()
+  const monacoTheme = appTheme === 'light' ? 'vs' : 'vs-dark'
   const fileContentsRef = React.useRef(fileContents)
   const allFilePathsRef = React.useRef(allFilePaths)
   const editorInstanceRef = React.useRef<any>(null)
@@ -227,7 +230,7 @@ export function IDEEditorArea({
         ) : activeFile ? (
           <MonacoEditor
             language={getLanguageFromPath(activeFile)}
-            theme="vs-dark"
+            theme={monacoTheme}
             beforeMount={handleMonacoBeforeMount}
             path={activeFile}
             defaultValue={fileContents[activeFile] || ''}

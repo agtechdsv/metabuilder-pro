@@ -39,6 +39,19 @@ export function CustomThemeProvider({
     applyTheme(initialTheme)
   }, [defaultTheme, forcedTheme])
 
+  // outra janela do app (ex.: IDE Local) trocou o tema: acompanha
+  useEffect(() => {
+    if (forcedTheme) return
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'theme' || (e.newValue !== 'light' && e.newValue !== 'dark')) return
+      setThemeState(e.newValue as Theme)
+      applyTheme(e.newValue as Theme)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forcedTheme, attribute])
+
   const applyTheme = (t: Theme) => {
     const root = window.document.documentElement
     if (attribute === 'class') {

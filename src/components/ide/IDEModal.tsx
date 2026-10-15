@@ -101,7 +101,7 @@ export function IDEModal({
   }, [fs.fileTree])
 
   return (
-    <>
+    <div className="ide-skin contents">
       <AnimatePresence>
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -196,6 +196,7 @@ export function IDEModal({
             </div>
 
             {/* Console Bottom Panel */}
+            <div className="ide-dark contents">
             <IDEConsolePanel
               showConsole={consoleState.showConsole}
               setShowConsole={consoleState.setShowConsole}
@@ -227,6 +228,7 @@ export function IDEModal({
               javaPromptResolver={server.javaPromptResolver}
               setJavaPromptResolver={server.setJavaPromptResolver}
             />
+            </div>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -340,6 +342,6 @@ export function IDEModal({
         target={target}
         prefill={ejectPrefill}
       />
-    </>
+    </div>
   )
 }

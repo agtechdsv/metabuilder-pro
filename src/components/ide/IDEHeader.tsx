@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
+import { IdeThemeLanguage } from './IdeThemeLanguage'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 const GEN_LANGUAGES = [
@@ -926,6 +927,9 @@ export function IDEHeader({
           >
             <Settings className="w-4 h-4" />
           </button>
+
+          {/* Tema e idioma (valem para todas as janelas do app) */}
+          <IdeThemeLanguage />
 
           {/* Console toggle button */}
           <button

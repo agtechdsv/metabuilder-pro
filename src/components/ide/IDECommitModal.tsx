@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n'
+import { useTheme } from '@/components/CustomThemeProvider'
 import { handleMonacoBeforeMount, getLanguageFromPath } from './ideUtils'
 
 const MonacoDiffEditor = dynamic(
@@ -68,6 +69,8 @@ export function IDECommitModal({
   monacoRef
 }: IDECommitModalProps) {
   const { t } = useI18n()
+  const { theme: appTheme } = useTheme()
+  const monacoTheme = appTheme === 'light' ? 'vs' : 'vs-dark'
   const { toast } = useToast()
 
   const [commitMessage, setCommitMessage] = useState('')
@@ -502,7 +505,7 @@ export function IDECommitModal({
                         original={diffOriginalContent}
                         modified={diffLocalContent}
                         language={getLanguageFromPath(diffActiveFile)}
-                        theme="vs-dark"
+                        theme={monacoTheme}
                         beforeMount={handleMonacoBeforeMount}
                         options={{
                           readOnly: false,

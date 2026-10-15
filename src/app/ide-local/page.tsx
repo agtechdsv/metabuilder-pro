@@ -31,5 +31,5 @@ export default function IDELocalPage() {
     return () => { cancelled = true; unlisten?.() }
   }, [])
 
-  return <div className="w-full h-screen bg-[#1e1e1e]" />
+  return <div className="w-full h-screen bg-white dark:bg-[#1e1e1e]" />
 }

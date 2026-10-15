@@ -63,6 +63,17 @@ export function I18nProvider({
     sync()
   }, [initialLocale])
 
+  // outra janela do app (ex.: IDE Local) trocou o idioma: acompanha
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'app-language' || !e.newValue || !['pt', 'en', 'es'].includes(e.newValue)) return
+      setLanguageState(e.newValue as Language)
+      document.documentElement.lang = e.newValue
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('app-language', lang)
