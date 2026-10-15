@@ -11,6 +11,8 @@ import { useI18n } from '@/i18n/I18nContext'
 export interface SyncExtra {
   accessAdmin?: boolean
   javaOptions?: Record<string, unknown>
+  /** login do app gerado, quando o dev escolhe outro que não o do projeto */
+  authStrategy?: 'none' | 'ldap'
 }
 
 export interface UseIDEGitProps {
@@ -86,6 +88,7 @@ export function useIDEGit({
       payload.backendStack = backendStack
       payload.targetLanguage = targetLanguage
       if (accessAdmin) payload.accessAdmin = true
+      if (extra.authStrategy) payload.authStrategy = extra.authStrategy
       if (backendStack === 'java-spring') {
         payload.javaGroupId = javaGroupId
         payload.javaPort = javaPort

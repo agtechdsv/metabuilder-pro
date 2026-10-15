@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
+import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 const GEN_LANGUAGES = [
   { code: 'pt', label: 'Português', flag: 'https://flagcdn.com/w80/br.png', short: 'PT' },
@@ -39,7 +40,8 @@ export interface IDEHeaderProps {
   isPulling: boolean
   handleShowLogs: () => void
   setShowGitSettings: (show: boolean) => void
-  setShowNativeExport: (show: boolean) => void
+  /** abre o Ejetar (gerar uma vez numa pasta) já com o que foi escolhido na tela de sincronização */
+  onEject: (prefill: ExportDefaults) => void
   showConsole: boolean
   setShowConsole: React.Dispatch<React.SetStateAction<boolean>>
   showSidebar: boolean
@@ -211,6 +213,8 @@ interface DetectedSetup {
   auth?: { type: string; table?: string; emailColumn?: string; passwordColumn?: string; hash?: string }
 }
 
+type LoginMode = 'project' | 'none' | 'ldap'
+
 const DB_LABELS: Record<string, string> = { postgres: 'PostgreSQL', oracle: 'Oracle', mysql: 'MySQL', sqlserver: 'SQL Server', supabase: 'Supabase' }
 const AUTH_LABELS: Record<string, string> = { database: 'Banco de dados', managed: 'Gerenciada (Supabase)', ldap: 'LDAP', none: 'Nenhuma' }
 
@@ -262,7 +266,7 @@ function DetectedDbLine({ detected }: { detected: DetectedSetup | null }) {
 }
 
 /** Login que o projeto já tem (somente leitura) e a opção de exportar a gestão de acesso. */
-function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin, workspace }: { detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
+function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin, workspace, loginMode, setLoginMode }: { detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean; loginMode: LoginMode; setLoginMode: (m: LoginMode) => void }) {
   const { t } = useI18n()
   const auth = detected?.auth
   const rows: Array<[string, string]> = auth ? [
@@ -294,7 +298,21 @@ function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin, workspace }: {
       ) : (
         <p className="text-xs text-neutral-500">{t('access_admin.summary_auto', 'O login do projeto é aplicado automaticamente na sincronização.')}</p>
       )}
-      {(auth?.type === 'database' || workspace) && (
+      {!workspace && (
+        <div>
+          <FieldLabel>{t('access_admin.login_mode', "Login do app gerado")}</FieldLabel>
+          <SelectInput
+            value={loginMode}
+            onChange={v => setLoginMode(v as LoginMode)}
+            options={[
+              { value: 'project', label: t('access_admin.login_project', "O do projeto") },
+              { value: 'none', label: t('access_admin.login_none', "Sem autenticação") },
+              { value: 'ldap', label: t('access_admin.login_ldap', "LDAP / Active Directory") },
+            ]}
+          />
+        </div>
+      )}
+      {(workspace || (auth?.type === 'database' && loginMode === 'project')) && (
         <ToggleRow
           label={t('access_admin.toggle_title', 'Exportar gestão de acesso')}
           description={(workspace ? t('access_admin.workspace_note', 'Aplicada aos projetos do workspace que usam o login por banco de dados. ') : '') + t('access_admin.toggle_desc', 'Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.')}
@@ -307,7 +325,7 @@ function AuthSummaryCard({ detected, accessAdmin, setAccessAdmin, workspace }: {
 }
 
 // ─── Node.js config panel ─────────────────────────────────────────────────────
-function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace }: { config: NodeConfig; onChange: (c: NodeConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
+function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace, loginMode, setLoginMode }: { config: NodeConfig; onChange: (c: NodeConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean; loginMode: LoginMode; setLoginMode: (m: LoginMode) => void }) {
   const { t } = useI18n()
   const set = <K extends keyof NodeConfig>(k: K, v: NodeConfig[K]) => onChange({ ...config, [k]: v })
   const setAuth = <K extends keyof NodeConfig['auth']>(k: K, v: NodeConfig['auth'][K]) =>
@@ -339,7 +357,7 @@ function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, 
       </div>
 
       {/* Autenticação (o que o projeto já tem; a sincronização usa isso) + gestão de acesso */}
-      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} />
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} loginMode={loginMode} setLoginMode={setLoginMode} />
 
       {/* Projeto */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -363,7 +381,7 @@ function NodeJsPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, 
 }
 
 // ─── Java config panel ────────────────────────────────────────────────────────
-function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace }: { config: JavaConfig; onChange: (c: JavaConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean }) {
+function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, workspace, loginMode, setLoginMode }: { config: JavaConfig; onChange: (c: JavaConfig) => void; detected: DetectedSetup | null; accessAdmin: boolean; setAccessAdmin: (v: boolean) => void; workspace?: boolean; loginMode: LoginMode; setLoginMode: (m: LoginMode) => void }) {
   const { t } = useI18n()
   const set = <K extends keyof JavaConfig>(k: K, v: JavaConfig[K]) => onChange({ ...config, [k]: v })
 
@@ -393,7 +411,7 @@ function JavaPanel({ config, onChange, detected, accessAdmin, setAccessAdmin, wo
       </div>
 
       {/* Autenticação do projeto + gestão de acesso */}
-      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} />
+      <AuthSummaryCard detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={workspace} loginMode={loginMode} setLoginMode={setLoginMode} />
 
       {/* Configurações Base */}
       <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 space-y-4">
@@ -674,7 +692,7 @@ export function IDEHeader({
   isPulling,
   handleShowLogs,
   setShowGitSettings,
-  setShowNativeExport,
+  onEject,
   showConsole,
   setShowConsole,
   showSidebar,
@@ -740,14 +758,18 @@ export function IDEHeader({
 
   // gestão de acesso (Usuários, Grupos de Acesso e Permissões de Telas) e resumo do que o projeto já tem configurado
   const [accessAdmin, setAccessAdmin] = useState(false)
+  // login do app gerado: o do projeto, sem autenticação ou LDAP
+  const [loginMode, setLoginMode] = useState<LoginMode>('project')
   const detected = useDetectedSetup(target, isSyncModalOpen)
 
   const confirmSync = () => {
     setIsSyncModalOpen(false)
-    const withAccess = accessAdmin && (target.type === 'workspace' || detected?.auth?.type === 'database')
+    const withAccess = accessAdmin && loginMode === 'project' && (target.type === 'workspace' || detected?.auth?.type === 'database')
+    const authStrategy = loginMode === 'none' || loginMode === 'ldap' ? loginMode : undefined
     if (activeTab === 'java') {
       handleSyncFromWeb('java-spring', javaConfig.groupId, javaConfig.port, genLanguage, {
         accessAdmin: withAccess,
+        authStrategy,
         javaOptions: {
           javaVersion: Number(javaConfig.jdkVersion) === 17 ? 17 : 21,
           javaArtifactId: javaConfig.artifactId,
@@ -765,8 +787,27 @@ export function IDEHeader({
         },
       })
     } else {
-      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage, { accessAdmin: withAccess })
+      handleSyncFromWeb('nodejs', undefined, undefined, genLanguage, { accessAdmin: withAccess, authStrategy })
     }
+  }
+
+  // Ejetar para uma pasta: gera o código final uma vez (sem Git nem vínculo) com o que foi escolhido nesta tela
+  const ejectToFolder = () => {
+    setIsSyncModalOpen(false)
+    const isJava = activeTab === 'java'
+    onEject({
+      backendStack: isJava ? 'java-spring' : 'nodejs',
+      ...(isJava ? {
+        javaGroupId: javaConfig.groupId,
+        javaPort: javaConfig.port,
+        javaOptions: {
+          jwt: javaConfig.jwt, migrations: javaConfig.migrations, tests: javaConfig.testService || javaConfig.testController,
+          docker: javaConfig.dockerfile || javaConfig.dockerCompose, env: javaConfig.envExample, swagger: javaConfig.swagger, readme: javaConfig.readme,
+        },
+      } : {}),
+      accessAdmin: accessAdmin && loginMode === 'project',
+      ...(loginMode === 'none' || loginMode === 'ldap' ? { authStrategy: loginMode } : {}),
+    })
   }
 
   const activeTabDef = TABS.find(t => t.id === activeTab)!
@@ -884,15 +925,6 @@ export function IDEHeader({
             title={t('workspace_components.ide_local.git_settings_tooltip', 'Configurações Git (Remote & Pipeline)')}
           >
             <Settings className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setShowNativeExport(true)}
-            className="flex items-center justify-center gap-1.5 px-2.5 h-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors text-xs font-bold border border-indigo-500"
-            title={t('workspace_components.ide_local.eject_native_tooltip', 'Ejetar: gerar o código final numa pasta (projeto independente, sem sincronização)')}
-          >
-            <Package className="w-3.5 h-3.5" />
-            {t('workspace_components.ide_local.eject_btn', 'Ejetar')}
           </button>
 
           {/* Console toggle button */}
@@ -1071,8 +1103,8 @@ export function IDEHeader({
 
               {/* Content Area */}
               <div className="p-6 bg-[#1a1a1a] flex-1 overflow-y-auto max-h-[65vh]">
-                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} />}
-                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} />}
+                {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} loginMode={loginMode} setLoginMode={setLoginMode} />}
+                {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} loginMode={loginMode} setLoginMode={setLoginMode} />}
                 {activeTab === 'nestjs' && (
                   <ComingSoonPanel stack="nestjs" icon="🦅" label="NestJS + Prisma"
                     features={['TypeScript nativo', 'Decorators', 'Prisma ORM', 'Swagger integrado', 'Guards & Interceptors']} />
@@ -1116,6 +1148,14 @@ export function IDEHeader({
                     className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
                   >
                     {t('workspace_components.ide_local.cancel', 'Cancelar')}
+                  </button>
+                  <button
+                    onClick={ejectToFolder}
+                    disabled={!canSync}
+                    className="flex items-center gap-2 px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-200 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Package className="w-4 h-4" />
+                    {t('access_admin.eject_to_folder', "Ejetar para uma pasta…")}
                   </button>
                   <button
                     onClick={confirmSync}

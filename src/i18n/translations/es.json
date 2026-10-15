@@ -102,6 +102,11 @@
   },
   "access_admin": {
     "workspace_note": "Aplicada a los proyectos del workspace que usan inicio de sesión por base de datos. ",
+    "eject_to_folder": "Ejectar a una carpeta…",
+    "login_mode": "Inicio de sesión de la app generada",
+    "login_project": "El del proyecto",
+    "login_none": "Sin autenticación",
+    "login_ldap": "LDAP / Active Directory",
     "toggle_title": "Exportar gestión de acceso",
     "toggle_desc": "Genera las pantallas Usuarios, Grupos de Acceso y Permisos de Pantallas en un menú propio y aplica el acceso de cada grupo (ninguno, lectura o escritura). Crea las tablas de acceso: el script SQL queda en db/access-control.sql.",
     "driver_note": "El inicio de sesión consulta su tabla de usuarios por la misma base elegida en la pestaña Base de Datos ({db}).",

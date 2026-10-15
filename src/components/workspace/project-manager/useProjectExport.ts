@@ -23,7 +23,7 @@ export function useProjectExport() {
   const { toast } = useToast()
   const { t } = useI18n()
 
-  const openExportModal = async (project: Project) => {
+  const openExportModal = async (project: Project, prefill?: Partial<ExportDefaults>) => {
     const supabase = createClient()
     const [{ data: authConf }, { data: projRow }] = await Promise.all([
       supabase
@@ -68,6 +68,9 @@ export function useProjectExport() {
       // login gerenciado (Supabase): a modal não tem esta opção, então a exportação mantém o login do projeto
       defaults.authStrategy = 'managed'
     }
+
+    // o que o dev já escolheu na tela de sincronização vale aqui (stack, opções de Java, login, gestão de acesso)
+    if (prefill) Object.assign(defaults, Object.fromEntries(Object.entries(prefill).filter(([, v]) => v !== undefined)))
 
     const { data: models, error: modelsError } = await supabase
       .from('models')

@@ -24,6 +24,12 @@ export interface ExportDefaults {
   authEmailColumn?: string
   authPasswordColumn?: string
   authHash?: string
+  /** vindos da tela Ejetar & Sincronizar (a modal de ejetar abre com o que o dev já escolheu lá) */
+  backendStack?: 'nodejs' | 'java-spring'
+  javaGroupId?: string
+  javaPort?: number
+  javaOptions?: { jwt: boolean; migrations: boolean; tests: boolean; docker: boolean; env: boolean; swagger: boolean; readme: boolean }
+  accessAdmin?: boolean
   /** conexão do projeto no metabuilder.config.json local (só no desktop) */
   dbConnection?: { user: string; password: string; host: string; port: string; database: string }
 }

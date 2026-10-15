@@ -102,6 +102,11 @@
   },
   "access_admin": {
     "workspace_note": "Applied to the workspace projects that use database sign-in. ",
+    "eject_to_folder": "Eject to a folder…",
+    "login_mode": "Generated app sign-in",
+    "login_project": "The project one",
+    "login_none": "No authentication",
+    "login_ldap": "LDAP / Active Directory",
     "toggle_title": "Export access management",
     "toggle_desc": "Generates the Users, Access Groups and Screen Permissions screens in their own menu and applies each group access (none, read or write). Creates the access tables: the SQL script is in db/access-control.sql.",
     "driver_note": "Sign-in reads your users table through the same database chosen in the Database tab ({db}).",

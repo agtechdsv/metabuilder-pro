@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LocalSyncManager } from '@/utils/localSyncManager'
 import { useIDEFileSystem } from '@/contexts/ide/useIDEFileSystem'
@@ -19,6 +19,7 @@ import { IDEGitModals } from './IDEGitModals'
 import { IDEFileActionModals } from './IDEFileActionModals'
 import { IDEGitSettingsModal } from './IDEGitSettingsModal'
 import { IdeEjectModal } from './IdeEjectModal'
+import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 export interface IDEModalProps {
   isOpen: boolean
@@ -73,6 +74,8 @@ export function IDEModal({
   server,
   consoleState
 }: IDEModalProps) {
+  // escolhas da tela Ejetar & Sincronizar levadas para o Ejetar (gerar uma vez numa pasta)
+  const [ejectPrefill, setEjectPrefill] = useState<Partial<ExportDefaults> | undefined>(undefined)
   if (!isOpen || !target) {
     return (
       <IDEMinimizedBar
@@ -134,7 +137,7 @@ export function IDEModal({
             isPulling={git.isPulling}
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
-            setShowNativeExport={setShowNativeExport}
+            onEject={(prefill) => { setEjectPrefill(prefill); setShowNativeExport(true) }}
             showConsole={consoleState.showConsole}
             setShowConsole={consoleState.setShowConsole}
             showSidebar={showSidebar}
@@ -335,6 +338,7 @@ export function IDEModal({
         isOpen={showNativeExport}
         onClose={() => setShowNativeExport(false)}
         target={target}
+        prefill={ejectPrefill}
       />
     </>
   )

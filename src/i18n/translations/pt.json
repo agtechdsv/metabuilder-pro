@@ -102,6 +102,11 @@
   },
   "access_admin": {
     "workspace_note": "Aplicada aos projetos do workspace que usam o login por banco de dados. ",
+    "eject_to_folder": "Ejetar para uma pasta…",
+    "login_mode": "Login do app gerado",
+    "login_project": "O do projeto",
+    "login_none": "Sem autenticação",
+    "login_ldap": "LDAP / Active Directory",
     "toggle_title": "Exportar gestão de acesso",
     "toggle_desc": "Gera as telas Usuários, Grupos de Acesso e Permissões de Telas num menu próprio e aplica o acesso de cada grupo (nenhum, leitura ou escrita). Cria as tabelas de acesso: o script SQL vai em db/access-control.sql.",
     "driver_note": "O login consulta sua tabela de usuários pelo mesmo banco escolhido na aba Banco de Dados ({db}).",

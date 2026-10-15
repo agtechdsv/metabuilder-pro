@@ -54,11 +54,12 @@ export function ProjectExportModal({
   const [devError, setDevError] = useState('')
   const [devUrl, setDevUrl] = useState('http://localhost:3000')
   const [exportTab, setExportTab] = useState<'backend' | 'database' | 'auth'>('backend')
-  const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>('nodejs')
-  const [javaGroupId, setJavaGroupId] = useState('com.app')
-  const [javaPort, setJavaPort] = useState(8080)
+  const prefill = modalState.defaults || {}
+  const [backendStack, setBackendStack] = useState<'nodejs' | 'java-spring'>(prefill.backendStack || 'nodejs')
+  const [javaGroupId, setJavaGroupId] = useState(prefill.javaGroupId || 'com.app')
+  const [javaPort, setJavaPort] = useState(prefill.javaPort || 8080)
   // opções do backend Java (valem de verdade na geração)
-  const [javaOpts, setJavaOpts] = useState({ jwt: true, migrations: true, tests: false, docker: true, env: true, swagger: true, readme: true })
+  const [javaOpts, setJavaOpts] = useState(prefill.javaOptions || { jwt: true, migrations: true, tests: false, docker: true, env: true, swagger: true, readme: true })
   const toggleJava = (k: keyof typeof javaOpts) => setJavaOpts(o => ({ ...o, [k]: !o[k] }))
   // abre com o que o projeto já tem configurado (banco e login); o usuário ainda pode trocar
   const defaults = modalState.defaults || {}
@@ -91,7 +92,7 @@ export function ProjectExportModal({
   const [exportAuthPassCol, setExportAuthPassCol] = useState(defaults.authPasswordColumn || 'senha')
   const [exportAuthHash, setExportAuthHash] = useState(defaults.authHash || 'Bcrypt')
   // exporta também os casos de uso Usuários, Grupos de Acesso e Permissões de Telas (e aplica as permissões no app)
-  const [exportAccessAdmin, setExportAccessAdmin] = useState(false)
+  const [exportAccessAdmin, setExportAccessAdmin] = useState(prefill.accessAdmin === true)
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
