@@ -1,6 +1,6 @@
 /* Tema claro da IDE Local (edite à mão; o teste src/styles/__tests__/ideSkin.test.ts avisa quando a IDE usa uma cor escura que falta aqui).
  * A IDE Local foi desenhada com classes escuras fixas. No tema claro do MetaBuilder, estas regras trocam cada cor escura por
- * a equivalente clara, só dentro de .ide-skin e fora de .ide-dark (console/terminal, que continuam escuros). No tema escuro nada muda. */
+ * a equivalente clara, só dentro de .ide-skin e fora de .ide-dark (a classe .ide-dark exclui um trecho do tema claro, se um dia for preciso manter algo escuro). No tema escuro nada muda. */
 
 html.light .ide-skin .bg-\[\#1e1e1e\]:not(.ide-dark *) { background-color: #ffffff; }
 html.light .ide-skin .bg-\[\#1a1b1e\]:not(.ide-dark *) { background-color: #f4f4f5; }
@@ -55,6 +55,11 @@ html.light .ide-skin .text-green-400:not(.ide-dark *) { color: #15803d; }
 html.light .ide-skin .text-amber-400:not(.ide-dark *) { color: #b45309; }
 html.light .ide-skin .text-amber-500:not(.ide-dark *) { color: #b45309; }
 html.light .ide-skin .text-yellow-400:not(.ide-dark *) { color: #a16207; }
+html.light .ide-skin .text-neutral-100:not(.ide-dark *) { color: #18181b; }
+html.light .ide-skin .text-green-500\/70:not(.ide-dark *) { color: #15803d; }
+html.light .ide-skin .text-cyan-200:not(.ide-dark *) { color: #155e75; }
+html.light .ide-skin .text-cyan-200\/90:not(.ide-dark *) { color: #155e75; }
+html.light .ide-skin .text-amber-500\/70:not(.ide-dark *) { color: #b45309; }
 html.light .ide-skin .text-sky-400:not(.ide-dark *) { color: #0284c7; }
 html.light .ide-skin .text-blue-400:not(.ide-dark *) { color: #2563eb; }
 html.light .ide-skin .text-cyan-400:not(.ide-dark *) { color: #0e7490; }
@@ -71,6 +76,7 @@ html.light .ide-skin .hover\:bg-neutral-800\/40:hover:not(.ide-dark *) { backgro
 html.light .ide-skin .hover\:bg-neutral-800\/80:hover:not(.ide-dark *) { background-color: #e4e4e7; }
 html.light .ide-skin .hover\:border-neutral-700:hover:not(.ide-dark *) { border-color: #a1a1aa; }
 html.light .ide-skin .hover\:text-white:hover:not(.ide-dark *) { color: #000000; }
+html.light .ide-skin .hover\:text-neutral-100:hover:not(.ide-dark *) { color: #000000; }
 html.light .ide-skin .hover\:text-neutral-300:hover:not(.ide-dark *) { color: #18181b; }
 html.light .ide-skin .hover\:text-neutral-200:hover:not(.ide-dark *) { color: #18181b; }
 html.light .ide-skin .hover\:text-red-400:hover:not(.ide-dark *) { color: #b91c1c; }

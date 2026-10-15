@@ -196,7 +196,6 @@ export function IDEModal({
             </div>
 
             {/* Console Bottom Panel */}
-            <div className="ide-dark contents">
             <IDEConsolePanel
               showConsole={consoleState.showConsole}
               setShowConsole={consoleState.setShowConsole}
@@ -228,7 +227,6 @@ export function IDEModal({
               javaPromptResolver={server.javaPromptResolver}
               setJavaPromptResolver={server.setJavaPromptResolver}
             />
-            </div>
           </div>
         </motion.div>
       </AnimatePresence>
