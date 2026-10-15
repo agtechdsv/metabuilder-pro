@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { ProjectExportModal } from '@/components/workspace/project-manager/ProjectExportModal'
 import { useProjectExport } from '@/components/workspace/project-manager/useProjectExport'
 import { WorkspaceExportModal } from '@/components/workspace/WorkspaceExportModal'
@@ -29,6 +29,16 @@ export function IdeEjectModal({ isOpen, onClose, target, prefill }: IdeEjectModa
     openExportModal({ id: target.id, name: target.name, slug: target.slug, is_active: true, workspace_id: '' } as Project, prefill)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, target?.id])
+
+  // se a modal sumir sem passar pelo onClose (ex.: o usuário cancela a escolha da pasta), avisa o pai: senão ele continua "aberto" e o próximo clique em Ejetar não faz nada
+  const wasShown = useRef(false)
+  useEffect(() => {
+    if (!isOpen) { wasShown.current = false; return }
+    if (target?.type !== 'project') return
+    if (downloadModal?.open) wasShown.current = true
+    else if (wasShown.current) { wasShown.current = false; onClose(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, downloadModal])
 
   if (!isOpen || !target) return null
 
