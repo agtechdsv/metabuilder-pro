@@ -42,7 +42,8 @@ export interface IDEHeaderProps {
   handleShowLogs: () => void
   setShowGitSettings: (show: boolean) => void
   /** abre o Ejetar (gerar uma vez numa pasta) já com o que foi escolhido na tela de sincronização */
-  onEject: (prefill: ExportDefaults) => void
+  /** onFinished: chamado quando a exportação termina (a tela de sincronização então se fecha; ao cancelar ela continua aberta) */
+  onEject: (prefill: ExportDefaults, onFinished?: () => void) => void
   showConsole: boolean
   setShowConsole: React.Dispatch<React.SetStateAction<boolean>>
   showSidebar: boolean
@@ -794,7 +795,7 @@ export function IDEHeader({
 
   // Ejetar para uma pasta: gera o código final uma vez (sem Git nem vínculo) com o que foi escolhido nesta tela
   const ejectToFolder = () => {
-    setIsSyncModalOpen(false)
+    // a tela de sincronização continua aberta por baixo: cancelar o Ejetar volta para ela
     const isJava = activeTab === 'java'
     onEject({
       backendStack: isJava ? 'java-spring' : 'nodejs',
@@ -808,7 +809,7 @@ export function IDEHeader({
       } : {}),
       accessAdmin: accessAdmin && loginMode === 'project',
       ...(loginMode === 'none' || loginMode === 'ldap' ? { authStrategy: loginMode } : {}),
-    })
+    }, () => setIsSyncModalOpen(false))
   }
 
   const activeTabDef = TABS.find(t => t.id === activeTab)!

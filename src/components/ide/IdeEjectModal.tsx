@@ -8,7 +8,8 @@ import type { Project, ExportDefaults } from '@/components/workspace/project-man
 
 interface IdeEjectModalProps {
   isOpen: boolean
-  onClose: () => void
+  /** finished: a exportação foi concluída (e não apenas cancelada) */
+  onClose: (finished?: boolean) => void
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
   /** escolhas já feitas na tela Ejetar & Sincronizar */
   prefill?: Partial<ExportDefaults>
@@ -33,7 +34,7 @@ export function IdeEjectModal({ isOpen, onClose, target, prefill }: IdeEjectModa
 
   if (target.type === 'workspace') {
     return (
-      <div className="relative z-[100000]">
+      <div className="relative z-[1000000]">
         <WorkspaceExportModal
           isOpen
           onClose={onClose}
@@ -47,10 +48,10 @@ export function IdeEjectModal({ isOpen, onClose, target, prefill }: IdeEjectModa
 
   if (!downloadModal?.open) return null
   return (
-    <div className="relative z-[100000]">
+    <div className="relative z-[1000000]">
       <ProjectExportModal
         modalState={downloadModal}
-        onClose={() => { setDownloadModal(null); onClose() }}
+        onClose={() => { const finished = downloadModal.phase === 'done'; setDownloadModal(null); onClose(finished) }}
         onStartExport={handleStartExport}
         exportModels={exportModels}
       />

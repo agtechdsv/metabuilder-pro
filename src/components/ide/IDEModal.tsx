@@ -76,6 +76,7 @@ export function IDEModal({
 }: IDEModalProps) {
   // escolhas da tela Ejetar & Sincronizar levadas para o Ejetar (gerar uma vez numa pasta)
   const [ejectPrefill, setEjectPrefill] = useState<Partial<ExportDefaults> | undefined>(undefined)
+  const ejectFinishedRef = React.useRef<(() => void) | undefined>(undefined)
   if (!isOpen || !target) {
     return (
       <IDEMinimizedBar
@@ -137,7 +138,7 @@ export function IDEModal({
             isPulling={git.isPulling}
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
-            onEject={(prefill) => { setEjectPrefill(prefill); setShowNativeExport(true) }}
+            onEject={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setShowNativeExport(true) }}
             showConsole={consoleState.showConsole}
             setShowConsole={consoleState.setShowConsole}
             showSidebar={showSidebar}
@@ -336,7 +337,12 @@ export function IDEModal({
       {/* Ejetar: gera o código final uma vez, na pasta escolhida (mesmo motor e mesmas opções do Ejetar & Sincronizar) */}
       <IdeEjectModal
         isOpen={showNativeExport}
-        onClose={() => setShowNativeExport(false)}
+        onClose={(finished) => {
+          setShowNativeExport(false)
+          // terminou: fecha também a tela de sincronização; cancelou: ela continua aberta
+          if (finished) ejectFinishedRef.current?.()
+          ejectFinishedRef.current = undefined
+        }}
         target={target}
         prefill={ejectPrefill}
       />

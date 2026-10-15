@@ -10,7 +10,7 @@ import { isWindowsDesktop, pickFolder, writeZipToFolder, runNpm, startInTerminal
 
 interface WorkspaceExportModalProps {
   isOpen: boolean
-  onClose: () => void
+  onClose: (finished?: boolean) => void
   workspaceSlug: string
   workspaceId: string
   projectCount: number
@@ -62,8 +62,9 @@ export function WorkspaceExportModal({ isOpen, onClose, workspaceSlug, workspace
 
   const handleClose = () => {
     if (phase === 'working') return // gravando e instalando: espera terminar
+    const finished = phase === 'done'
     setPhase('form'); setStatus(''); setSavedDir(''); setInstallFailed(false); setPortalStarted(false)
-    onClose()
+    onClose(finished)
   }
 
   const handleExport = async () => {
