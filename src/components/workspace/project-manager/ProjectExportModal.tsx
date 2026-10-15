@@ -131,6 +131,28 @@ export function ProjectExportModal({
     }
   }
 
+  // sonda a URL do app até ele responder: só então os botões de abrir são liberados (o terminal fica minimizado, o usuário não vê o "Ready")
+  const [devReady, setDevReady] = useState(false)
+  React.useEffect(() => {
+    if (!devStarted) return
+    setDevReady(false)
+    let stop = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const probe = async () => {
+      const ctrl = new AbortController()
+      const abort = setTimeout(() => ctrl.abort(), 2500)
+      try {
+        // no-cors: basta a conexão ser aceita (a resposta é opaca); recusada = ainda não subiu
+        await fetch(devUrl, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        if (!stop) setDevReady(true)
+        return
+      } catch { /* ainda subindo */ } finally { clearTimeout(abort) }
+      if (!stop) timer = setTimeout(probe, 1500)
+    }
+    probe()
+    return () => { stop = true; if (timer) clearTimeout(timer) }
+  }, [devStarted, devUrl])
+
   const handleSubmitExport = () => {
     onStartExport(
       modalState.projectId!,
@@ -820,17 +842,23 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                         onChange={(e) => setDevUrl(e.target.value)}
                         className="w-full px-3 py-1.5 text-xs font-mono border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg outline-none focus:border-indigo-500"
                       />
+                      <p className={cn('flex items-center gap-1.5 text-[11px] font-semibold', devReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+                        {devReady ? <CheckCircle className="w-3.5 h-3.5" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        {devReady ? t('export_modal.dev_ready', 'App no ar! Abra no navegador:') : t('export_modal.dev_waiting', 'Aguardando o app subir...')}
+                      </p>
                       <div className="flex gap-2">
                         <button
+                          disabled={!devReady}
                           onClick={() => openExternalUrl(devUrl)}
-                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-neutral-900"
                         >
                           <Globe className="w-3.5 h-3.5" />
                           {t('export_modal.open_in_browser', "Navegador")}
                         </button>
                         <button
+                          disabled={!devReady}
                           onClick={() => openPreview(devUrl, modalState.fileName.replace(/-source-code\.zip$/, ''))}
-                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-neutral-900"
                         >
                           <AppWindow className="w-3.5 h-3.5" />
                           {t('export_modal.open_in_ide', "Navegador da IDE")}

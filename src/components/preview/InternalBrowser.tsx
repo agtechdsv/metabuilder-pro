@@ -240,6 +240,9 @@ export function InternalBrowser({
   }, [])
 
   const activeTab = tabs.find(t => t.id === activeTabId)
+  const isLocalApp = (() => {
+    try { return ['localhost', '127.0.0.1', '[::1]'].includes(new URL(activeTab?.url || '').hostname) } catch { return false }
+  })()
 
   // Compute active base origin (e.g. https://www.metabuilderpro.com or window.location.origin)
   const getBaseOrigin = () => {
@@ -747,7 +750,8 @@ export function InternalBrowser({
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Botão Start / Stop Tunnel */}
+          {/* Túnel: serve para a plataforma acessar o banco local; um app local (ex.: exportado e rodando com npm run dev) não usa */}
+          {!isLocalApp && (<>
           <button
             type="button"
             onClick={toggleTunnel}
@@ -784,6 +788,7 @@ export function InternalBrowser({
           >
             <ScrollText className="w-4 h-4" />
           </button>
+          </>)}
 
           <button
             onClick={handleOpenDevTools}
