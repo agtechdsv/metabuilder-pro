@@ -11,7 +11,7 @@ import { auditAttrColumn } from '../../rowPolicy/audit'
 // nunca do navegador. Sem política numa tabela, todos veem todas as linhas (como antes).
 //
 // Regras por linha precisam reescrever o SQL entre aspas duplas ("tabela"): valem para PostgreSQL e Oracle. Para os outros
-// bancos (e para o backend Java) o app NÃO pode ser exportado com política, em vez de sair sem ela: falha fechada.
+// bancos o app NÃO pode ser exportado com política, em vez de sair sem ela: falha fechada. O backend Java as aplica por conta própria (JPA).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Bancos em que a regra por linha pode ser aplicada no SQL do app exportado. */
@@ -40,7 +40,20 @@ export function assertPolicySupported(ast: AppAST): void {
     throw new Error(`A tabela de login (${authTable}) tem regra de acesso por linha, o que impediria o login no app exportado (ele lê essa tabela antes de existir sessão). Remova a regra dessa tabela para exportar.`)
   }
   if (ast.backendStack === 'java-spring') {
-    throw new Error(`Acesso por linha ou bloqueio por padrão (tabelas: ${tables.join(', ')}) ainda não é aplicado no backend Java Spring. Remova a regra/o bloqueio ou exporte o app Node.js (PostgreSQL ou Oracle).`)
+    // o backend Java aplica as regras com os dados do usuário que vêm no JWT que o frontend assina: sem JWT não há quem aplicar
+    if (!ast.jwtEnabled) {
+      throw new Error(`Acesso por linha ou bloqueio por padrão (tabelas: ${tables.join(', ')}) no backend Java Spring exige a opção JWT ligada (é por ele que o backend sabe quem é o usuário). Ligue o JWT ou remova a regra/o bloqueio.`)
+    }
+    // regra "relacionada": a tabela de consulta precisa existir no backend
+    for (const m of ast.models) {
+      for (const r of m.rowPolicy?.rules || []) {
+        const rel = r.related?.table?.toLowerCase()
+        if (rel && !ast.models.some(x => x.dbTable.split('.').pop()!.toLowerCase() === rel)) {
+          throw new Error(`A regra de acesso da tabela ${m.dbTable} consulta a tabela ${r.related!.table}, que não está entre as tabelas do projeto exportado para Java.`)
+        }
+      }
+    }
+    return
   }
   if (!ROW_POLICY_STACKS.includes(ast.dbStack)) {
     throw new Error(`Acesso por linha ou bloqueio por padrão (tabelas: ${tables.join(', ')}) só é aplicado no app exportado com PostgreSQL ou Oracle; o banco escolhido é ${ast.dbStack}. Remova a regra/o bloqueio ou exporte com PostgreSQL/Oracle.`)

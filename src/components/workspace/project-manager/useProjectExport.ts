@@ -8,7 +8,7 @@ import { createClient } from '@/utils/supabase/client'
 import { DownloadModalState, ExportDefaults, Project } from './types'
 
 /** Pergunta sim/não: usa o diálogo nativo do desktop (o confirm() do navegador pode nem aparecer no webview). */
-async function askUser(message: string): Promise<boolean> {
+export async function askUser(message: string): Promise<boolean> {
   try {
     const { ask } = await import('@tauri-apps/plugin-dialog')
     return await ask(message, { title: 'MetaBuilder PRO', kind: 'info' })

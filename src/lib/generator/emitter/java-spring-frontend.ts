@@ -6,6 +6,7 @@ import { generateLoginPage, generateDownloadsPage } from './auth-flow'
 import { generateBaseFiles } from './base-files'
 import { generateAccessAdmin, applyWriteGuard } from './access-admin'
 import { toPascalCase } from '../layers/routes/helpers'
+import { javaNeedsAccess } from './java-spring-access'
 
 
 /**
@@ -18,12 +19,14 @@ import { toPascalCase } from '../layers/routes/helpers'
  *  - src/lib/api-client.ts com wrapper de fetch REST
  *  - app/actions/{model}.ts com chamadas REST ao invés de Server Actions de banco
  */
-export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): void {
+export function generateJavaFrontend(ast: AppAST, files: Map<string, string>, jwtSecret?: string): void {
   // 1. package.json — SEM drivers de banco
   generateFrontendPackageJson(ast, files)
 
   // 2. .env.local com API URL
-  files.set('frontend/.env.local', `NEXT_PUBLIC_API_URL=http://localhost:${ast.javaPort ?? 8080}\n`)
+  // com JWT ligado, o frontend assina cada chamada à API com o mesmo segredo do backend (só o servidor do frontend o conhece)
+  const jwtLines = ast.jwtEnabled && jwtSecret ? `# Segredo JWT compartilhado com o backend (application.properties). Em produção defina JWT_SECRET nos dois lados.\nJWT_SECRET=${jwtSecret}\n` : ''
+  files.set('frontend/.env.local', `NEXT_PUBLIC_API_URL=http://localhost:${ast.javaPort ?? 8080}\n${jwtLines}`)
 
   // 3. .gitignore
   files.set('frontend/.gitignore', `/node_modules\n/.next/\n/out/\n.env*.local\n.env\n.DS_Store\n`)
@@ -32,7 +35,8 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
   files.set('frontend/.npmrc', `legacy-peer-deps=true\nprefer-offline=true\naudit=false\nfund=false\n`)
 
   // 5. api-client.ts — wrapper de fetch REST
-  files.set('frontend/lib/api-client.ts', generateApiClient())
+  const withUser = javaNeedsAccess(ast)
+  files.set('frontend/lib/api-client.ts', generateApiClient(withUser))
 
   // 6. REST Actions para cada modelo (substituem as Server Actions de banco)
   for (const model of ast.models) {
@@ -66,6 +70,22 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>): v
   generateDownloadsPage(frontendAst, tempFiles)
   // gestão de acesso (opcional): o frontend lê os grupos e permissões pela API REST, como qualquer outra tabela
   generateAccessAdmin(frontendAst, tempFiles)
+
+  // com regras de acesso no backend: o login (lê o cadastro do usuário e o grupo) e as telas de gestão de acesso chamam a API como "sistema"
+  if (withUser) {
+    const login = tempFiles.get('app/api/login/route.ts')
+    if (login && login.includes('export async function POST(request: Request) {')) {
+      tempFiles.set('app/api/login/route.ts', "import { asSystem } from '@/lib/api-client'\n" + login.replace('export async function POST(request: Request) {', 'async function handleLogin(request: Request) {') +
+        '\nexport async function POST(request: Request) {\n  return asSystem(() => handleLogin(request))\n}\n')
+    }
+    const admin = tempFiles.get('app/actions/access-admin.ts')
+    if (admin) {
+      const names: string[] = []
+      const wrapped = admin.replace(/export async function (\w+)\(/g, (_m, n: string) => { names.push(n); return 'async function ' + n + 'Impl(' })
+      const wrappers = names.map(n => '\nexport async function ' + n + '(...args: Parameters<typeof ' + n + 'Impl>): ReturnType<typeof ' + n + 'Impl> {\n  return asSystem(() => ' + n + 'Impl(...args))\n}\n').join('')
+      tempFiles.set('app/actions/access-admin.ts', wrapped.replace(/^('use server'\n)/, "$1import { asSystem } from '@/lib/api-client'\n") + wrappers)
+    }
+  }
 
   // Mover todos para frontend/ (ignorando config files da raiz que são recriados abaixo)
   for (const [path, content] of tempFiles) {
@@ -153,42 +173,87 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
 // api-client.ts — wrapper de fetch REST (Seção 4.3 do plano)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateApiClient(): string {
-  return `const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+function generateApiClient(withUser: boolean): string {
+  const userImports = withUser ? "import { AsyncLocalStorage } from 'node:async_hooks'\n" : ''
+  // com regras de acesso no backend, cada chamada leva os dados do usuário logado (a API aplica as regras da tabela para ele)
+  const userBlock = withUser ? `
+// Chamadas internas do app (login, gestão de acesso) não passam pelas regras do usuário final: vão marcadas como "sistema".
+const g = globalThis as any
+const systemCtx: AsyncLocalStorage<boolean> = (g.__mbSystemCtx ||= new AsyncLocalStorage<boolean>())
+export function asSystem<T>(fn: () => Promise<T>): Promise<T> {
+  return systemCtx.run(true, fn)
+}
 
-export async function apiGet<T>(path: string, params?: Record<string, any>): Promise<T> {
-  const url = new URL(\`\${API_BASE}\${path}\`)
+// Quem está chamando: o usuário da sessão assinada (nunca algo que o navegador mande).
+async function userClaims(): Promise<Record<string, unknown>> {
+  if (systemCtx.getStore()) return { sys: true }
+  try {
+    const { getSessionUser } = await import('@/lib/session-server')
+    const u = await getSessionUser()
+    if (u) return { email: u.email, name: u.name ?? '', attrs: u.attrs ?? {} }
+  } catch { /* fora de uma requisição: sem usuário */ }
+  return {}
+}
+` : ''
+  const claimsExpr = withUser ? 'await userClaims()' : '{}'
+  return `import { SignJWT } from 'jose'
+${userImports}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+${userBlock}
+// A API Spring só aceita chamadas com um JWT assinado com o segredo compartilhado (JWT_SECRET, em .env.local).
+// Só o servidor do frontend conhece esse segredo: as chamadas partem das ações do servidor, nunca do navegador.
+async function authHeaders(): Promise<Record<string, string>> {
+  const secret = process.env.JWT_SECRET
+  if (!secret) return {}
+  const claims: Record<string, unknown> = ${claimsExpr}
+  const token = await new SignJWT(claims)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setSubject(typeof claims.email === 'string' && claims.email ? claims.email : 'mb-frontend')
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(new TextEncoder().encode(secret))
+  return { Authorization: 'Bearer ' + token }
+}
+
+async function call(path: string, init: RequestInit = {}, params?: Record<string, any>): Promise<Response> {
+  const url = new URL(API_BASE + path)
   if (params) {
     Object.entries(params).forEach(([k, v]) => v != null && url.searchParams.set(k, String(v)))
   }
-  const res = await fetch(url.toString(), { cache: 'no-store' })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  let res: Response
+  try {
+    res = await fetch(url.toString(), {
+      cache: 'no-store',
+      ...init,
+      headers: { ...((init.headers as Record<string, string> | undefined) ?? {}), ...(await authHeaders()) },
+    })
+  } catch {
+    throw new Error('Não foi possível conectar ao backend (' + API_BASE + '). Confira se ele está rodando.')
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    let msg = text
+    try { const j = JSON.parse(text); msg = j.message || j.error || text } catch { /* texto simples */ }
+    if (!msg && (res.status === 401 || res.status === 403)) msg = 'O backend recusou a chamada (o JWT_SECRET do frontend precisa ser o mesmo do backend).'
+    throw new Error(msg || 'A API respondeu ' + res.status + ' ' + res.statusText)
+  }
+  return res
+}
+
+export async function apiGet<T>(path: string, params?: Record<string, any>): Promise<T> {
+  return (await call(path, {}, params)).json()
 }
 
 export async function apiPost<T>(path: string, body: any): Promise<T> {
-  const res = await fetch(\`\${API_BASE}\${path}\`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  return (await call(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()
 }
 
 export async function apiPut<T>(path: string, body: any): Promise<T> {
-  const res = await fetch(\`\${API_BASE}\${path}\`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  return (await call(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  const res = await fetch(\`\${API_BASE}\${path}\`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(await res.text())
+  await call(path, { method: 'DELETE' })
 }
 `
 }
@@ -231,19 +296,30 @@ function generateRestActions(model: ModelNode): string {
   return `'use server'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client'
 
+// Parâmetros da tela (paginação e ordenação da URL) que não são filtros da API
+const UI_PARAMS = new Set(['page', 'limit', 'size', 'sort', 'sort_by', 'sort_order', 'embedded'])
+
 export async function get${mn}List(opts?: { page?: number; limit?: number; search?: string; filters?: Record<string, any> }) {
-  const queryParams: Record<string, any> = {}
-  if (opts) {
-    if (opts.page != null) queryParams.page = Math.max(0, opts.page - 1)
-    if (opts.limit != null) queryParams.size = opts.limit
-    if (opts.search) queryParams.search = opts.search
-    if (opts.filters) {
-      Object.entries(opts.filters).forEach(([k, v]) => {
-        if (v != null && v !== '') queryParams[k] = v
-      })
-    }
+  const query: Record<string, any> = {}
+  if (opts?.filters) {
+    Object.entries(opts.filters).forEach(([k, v]) => {
+      if (v != null && v !== '' && !UI_PARAMS.has(k)) query[k] = v
+    })
   }
-  return apiGet('${endpoint}', queryParams)
+  // página pedida explicitamente: devolve só ela (a API Spring conta as páginas a partir de 0)
+  if (opts?.page != null) {
+    return apiGet('${endpoint}', { ...query, page: Math.max(0, opts.page - 1), size: opts.limit ?? 50 })
+  }
+  // sem página: traz todos os registros (as telas paginam e ordenam no servidor do Next; a API devolve 50 por página por padrão)
+  const all: any[] = []
+  for (let page = 0; page < 200; page++) {
+    const res: any = await apiGet('${endpoint}', { ...query, page, size: 500 })
+    if (Array.isArray(res)) return res
+    all.push(...(res?.content ?? []))
+    const totalPages = res?.page?.totalPages ?? res?.totalPages ?? 1
+    if (page + 1 >= totalPages) break
+  }
+  return all
 }
 
 export async function get${mn}ById(id: string) {
@@ -251,7 +327,7 @@ export async function get${mn}ById(id: string) {
 }
 
 export async function get${mn}ByField(field: string, value: any) {
-  const res: any = await apiGet('${endpoint}', { [field]: value })
+  const res: any = await apiGet('${endpoint}', { [field]: value, size: 500 })
   let items: any[] = []
   if (Array.isArray(res)) items = res
   else if (res && Array.isArray(res.content)) items = res.content

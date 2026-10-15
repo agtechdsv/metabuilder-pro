@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { usePreview } from '@/contexts/PreviewContext'
+import { detectJava, installPortableJdk, startBackendCommand } from '@/utils/javaRuntime'
+import { askUser } from './useProjectExport'
 import { DownloadModalState } from './types'
 
 interface ProjectExportModalProps {
@@ -52,6 +54,8 @@ export function ProjectExportModal({
   // depois de exportar (desktop, Windows): sobe o app num terminal e abre no navegador ou no navegador da IDE
   const [devStarted, setDevStarted] = useState(false)
   const [devError, setDevError] = useState('')
+  // mensagem enquanto prepara (ex.: baixando o JDK portátil)
+  const [devPreparing, setDevPreparing] = useState('')
   const [devUrl, setDevUrl] = useState('http://localhost:3000')
   const [exportTab, setExportTab] = useState<'backend' | 'database' | 'auth'>('backend')
   const prefill = modalState.defaults || {}
@@ -59,7 +63,7 @@ export function ProjectExportModal({
   const [javaGroupId, setJavaGroupId] = useState(prefill.javaGroupId || 'com.app')
   const [javaPort, setJavaPort] = useState(prefill.javaPort || 8080)
   // opções do backend Java (valem de verdade na geração)
-  const [javaOpts, setJavaOpts] = useState(prefill.javaOptions || { jwt: true, migrations: true, tests: false, docker: true, env: true, swagger: true, readme: true })
+  const [javaOpts, setJavaOpts] = useState(prefill.javaOptions || { jwt: true, migrations: false, tests: false, docker: true, env: true, swagger: true, readme: true })
   const toggleJava = (k: keyof typeof javaOpts) => setJavaOpts(o => ({ ...o, [k]: !o[k] }))
   // abre com o que o projeto já tem configurado (banco e login); o usuário ainda pode trocar
   const defaults = modalState.defaults || {}
@@ -115,18 +119,38 @@ export function ProjectExportModal({
   const canRunDev = isTauri() && typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
 
   const handleRunDev = async () => {
-    // Java: o Next.js fica em frontend/ (o backend Spring Boot roda com o Maven, fora deste botão)
+    // Java: o Next.js fica em frontend/ e o backend Spring Boot em backend/ (sobe com o Maven, em outra janela minimizada)
     const dir = backendStack === 'java-spring' && modalState.savedDir ? modalState.savedDir + '\\frontend' : modalState.savedDir
     if (!dir) return
     setDevError('')
     try {
       const { Command } = await import('@tauri-apps/plugin-shell')
+      const isJava = backendStack === 'java-spring'
+      if (isJava) {
+        // o backend Spring roda com o Maven Wrapper da pasta (baixa o Maven sozinho). Java: o JDK portátil da IDE, o do PATH, ou oferece baixar o portátil
+        if ((await detectJava()) === 'none') {
+          if (!(await askUser(t('export_modal.java_download_confirm', 'O Java (JDK 21) não foi encontrado nesta máquina. Baixar o JDK 21 portátil (Eclipse Temurin, cerca de 200 MB) para a pasta .metabuilder do seu usuário? Não altera o PATH nem instala nada no sistema.')))) {
+            setDevError(t('export_modal.java_tools_missing', 'Para rodar o backend Java é preciso ter o JDK 21. Instale-o (ou aceite o download do JDK portátil) e tente de novo.'))
+            return
+          }
+          setDevPreparing(t('export_modal.java_downloading', 'Baixando o JDK 21 portátil (cerca de 200 MB)... pode levar alguns minutos.'))
+          const installed = await installPortableJdk()
+          setDevPreparing('')
+          if (!installed) {
+            setDevError(t('export_modal.java_download_failed', 'Não foi possível baixar o JDK 21. Verifique a internet ou instale o JDK 21 manualmente e tente de novo.'))
+            return
+          }
+        }
+        const be = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', startBackendCommand(modalState.savedDir + '\\backend')]).execute()
+        if (be.code !== 0) { setDevError(String(be.stderr || '').trim().slice(0, 200)); return }
+      }
       // abre uma janela de terminal própria, MINIMIZADA (não cobre a IDE; fica na barra de tarefas com o log do app e viva mesmo se a IDE fechar); o PowerShell é o comando liberado para isso
       const safeDir = dir.replace(/'/g, "''")
       const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "'"]).execute()
       if (out.code === 0) setDevStarted(true)
       else setDevError(String(out.stderr || '').trim().slice(0, 200))
     } catch (e: any) {
+      setDevPreparing('')
       setDevError(String(e?.message || e).slice(0, 200))
     }
   }
@@ -138,20 +162,26 @@ export function ProjectExportModal({
     setDevReady(false)
     let stop = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    const probe = async () => {
+    const up = async (url: string) => {
       const ctrl = new AbortController()
       const abort = setTimeout(() => ctrl.abort(), 2500)
       try {
-        // no-cors: basta a conexão ser aceita (a resposta é opaca); recusada = ainda não subiu
-        await fetch(devUrl, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
-        if (!stop) setDevReady(true)
-        return
-      } catch { /* ainda subindo */ } finally { clearTimeout(abort) }
-      if (!stop) timer = setTimeout(probe, 1500)
+        // no-cors: basta a conexão ser aceita (a resposta é opaca, mesmo 401/403); recusada = ainda não subiu
+        await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        return true
+      } catch { return false } finally { clearTimeout(abort) }
+    }
+    const probe = async () => {
+      const feUp = await up(devUrl)
+      // no Java o frontend só funciona com o backend (Spring) no ar: a primeira subida baixa dependências e leva alguns minutos
+      const beUp = backendStack === 'java-spring' ? await up('http://localhost:' + javaPort + '/') : true
+      if (stop) return
+      if (feUp && beUp) { setDevReady(true); return }
+      timer = setTimeout(probe, 1500)
     }
     probe()
     return () => { stop = true; if (timer) clearTimeout(timer) }
-  }, [devStarted, devUrl])
+  }, [devStarted, devUrl, backendStack, javaPort])
 
   const handleSubmitExport = () => {
     onStartExport(
@@ -814,6 +844,11 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                   {t('export_modal.access_exists', 'As tabelas de acesso já existem no banco ({n} permissões gravadas) e foram mantidas: nenhum dado foi alterado.').replace('{n}', String(modalState.accessTablesExisted))}
                 </div>
               )}
+              {backendStack === 'java-spring' && exportAccessAdmin && (
+                <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/30 rounded-xl p-3 text-xs text-sky-800 dark:text-sky-300 leading-relaxed">
+                  {t('export_modal.access_setup_java_note', 'As tabelas de acesso são criadas pelo backend ao subir (db/access-control.sql). Se o usuário do banco não puder criar tabelas, execute esse script no banco com um administrador.')}
+                </div>
+              )}
               {modalState.accessSetupNote && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
                   {t('export_modal.access_setup_note', "Antes de entrar no app, crie as tabelas de acesso: na pasta do projeto rode npm run db:setup (ou execute db/access-control.sql no banco).")}
@@ -826,7 +861,12 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
               {/* Rodar o app exportado: terminal próprio + navegador ou navegador da IDE */}
               {canRunDev && (
                 <div className="space-y-2">
-                  {!devStarted ? (
+                  {!devStarted && devPreparing ? (
+                    <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      {devPreparing}
+                    </div>
+                  ) : !devStarted ? (
                     <button
                       onClick={handleRunDev}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
@@ -844,7 +884,7 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                       />
                       <p className={cn('flex items-center gap-1.5 text-[11px] font-semibold', devReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
                         {devReady ? <CheckCircle className="w-3.5 h-3.5" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        {devReady ? t('export_modal.dev_ready', 'App no ar! Abra no navegador:') : t('export_modal.dev_waiting', 'Aguardando o app subir...')}
+                        {devReady ? t('export_modal.dev_ready', 'App no ar! Abra no navegador:') : (backendStack === 'java-spring' ? t('export_modal.dev_waiting_java', 'Aguardando o backend Java e o frontend subirem (a primeira vez baixa dependências e pode levar alguns minutos)...') : t('export_modal.dev_waiting', 'Aguardando o app subir...'))}
                       </p>
                       <div className="flex gap-2">
                         <button

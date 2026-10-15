@@ -747,7 +747,7 @@ export function IDEHeader({
     connectionString: '',
     jwt: true,
     jwtHash: 'bcrypt',
-    migrations: true,
+    migrations: false,
     migrationEngine: 'flyway',
     testService: false,
     testController: false,

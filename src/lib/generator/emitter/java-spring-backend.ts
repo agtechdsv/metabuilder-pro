@@ -1,7 +1,8 @@
 import { AppAST, ModelNode, FieldNode, RouteNode, DbType } from '../ast'
+import { javaNeedsAccess, generateJavaAccess, generateGuardedServiceClass, jwtFilterWithUser, auditColumnNames } from './java-spring-access'
 
 /** Segredo aleatório de 256 bits, único por exportação: o app exportado nunca sai com uma chave igual à de outro projeto. */
-function randomJwtSecret(): string {
+export function randomJwtSecret(): string {
   const bytes = new Uint8Array(32)
   globalThis.crypto.getRandomValues(bytes)
   let bin = ''
@@ -24,7 +25,7 @@ function randomJwtSecret(): string {
  *   backend/src/main/java/{groupPath}/controllers/{Model}Controller.java
  *   backend/README.md
  */
-export function generateSpringBootBackend(ast: AppAST, files: Map<string, string>): void {
+export function generateSpringBootBackend(ast: AppAST, files: Map<string, string>, jwtSecret: string = randomJwtSecret()): void {
   const groupId = (ast.javaGroupId ?? 'com.app').toLowerCase()
   const groupPath = groupIdToPath(groupId)
   const basePkg = `backend/src/main/java/${groupPath}`
@@ -40,7 +41,7 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
   files.set('backend/pom.xml', generatePomXml(ast))
 
   // 2. application.properties
-  files.set('backend/src/main/resources/application.properties', generateApplicationProperties(ast))
+  files.set('backend/src/main/resources/application.properties', generateApplicationProperties(ast, jwtSecret))
 
   // 3. Application.java (main class)
   files.set(`${basePkg}/Application.java`, generateMainClass(ast, groupId))
@@ -79,11 +80,17 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
 
   // 7. Eject Options Condicionais (JWT, Migrations, Testes, Dockerfile, docker-compose, .env.example)
   if (ast.jwtEnabled) generateJwtFiles(ast, files, basePkg, groupId)
+  // acesso por linha, tabela fechada e auditoria: o backend aplica as regras do usuário que vem no JWT
+  if (javaNeedsAccess(ast)) {
+    generateJavaAccess(ast, files, basePkg, groupId)
+    if (ast.jwtEnabled) files.set(`${basePkg}/security/JwtFilter.java`, jwtFilterWithUser(groupId))
+  }
   if (ast.generateMigrations) generateMigrationFiles(ast, files)
-  if (ast.generateServiceTests || ast.generateControllerTests) generateTestFiles(ast, files, groupId)
+  // com regras de acesso os serviços dependem do usuário da requisição: os testes de exemplo (que montam o serviço sem ele) não são gerados
+  if ((ast.generateServiceTests || ast.generateControllerTests) && !javaNeedsAccess(ast)) generateTestFiles(ast, files, groupId)
   if (ast.generateDockerfile) files.set('backend/Dockerfile', generateBackendDockerfile(ast))
   if (ast.generateDockerCompose) files.set('docker-compose.yml', generateDockerCompose(ast))
-  if (ast.generateEnvExample) files.set('backend/.env.example', generateEnvExample(ast))
+  if (ast.generateEnvExample) files.set('backend/.env.example', generateEnvExample(ast, jwtSecret))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,32 +98,54 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Converte snake_case para camelCase */
-function toCamelCase(str: string): string {
+export function toCamelCase(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
 }
 
 /** Converte snake_case para PascalCase */
-function toPascalCaseJava(str: string): string {
+export function toPascalCaseJava(str: string): string {
   const camel = toCamelCase(str)
   return camel.charAt(0).toUpperCase() + camel.slice(1)
 }
 
-/** Mapeia dbType para tipo Java */
-function toJavaType(dataType: string): string {
+/** Mapeia o tipo da coluna (de qualquer banco, com ou sem precisão) para o tipo Java do atributo */
+export function toJavaType(dataType: string): string {
+  const t = (dataType ?? '').toLowerCase().trim().replace(/\(.*\)/, '').trim()
   const map: Record<string, string> = {
-    varchar: 'String', text: 'String', char: 'String', 'character varying': 'String',
-    integer: 'Integer', int4: 'Integer', int: 'Integer',
-    bigint: 'Long', int8: 'Long', serial: 'Long', bigserial: 'Long',
-    numeric: 'BigDecimal', decimal: 'BigDecimal', 'double precision': 'Double',
-    float4: 'Float', float8: 'Double', real: 'Float',
-    boolean: 'Boolean', bool: 'Boolean',
+    varchar: 'String', text: 'String', char: 'String', character: 'String', 'character varying': 'String', bpchar: 'String',
+    nvarchar: 'String', nchar: 'String', varchar2: 'String', nvarchar2: 'String', ntext: 'String', clob: 'String', nclob: 'String',
+    longtext: 'String', mediumtext: 'String', tinytext: 'String', citext: 'String',
+    integer: 'Integer', int4: 'Integer', int: 'Integer', smallint: 'Integer', int2: 'Integer', tinyint: 'Integer', mediumint: 'Integer',
+    serial: 'Integer', serial4: 'Integer', smallserial: 'Integer',
+    bigint: 'Long', int8: 'Long', bigserial: 'Long', serial8: 'Long',
+    numeric: 'BigDecimal', decimal: 'BigDecimal', number: 'BigDecimal', money: 'BigDecimal', smallmoney: 'BigDecimal',
+    'double precision': 'Double', double: 'Double', float: 'Double', float8: 'Double',
+    float4: 'Float', real: 'Float',
+    boolean: 'Boolean', bool: 'Boolean', bit: 'Boolean',
     date: 'LocalDate',
-    timestamp: 'LocalDateTime', 'timestamp without time zone': 'LocalDateTime',
-    timestamptz: 'OffsetDateTime', 'timestamp with time zone': 'OffsetDateTime',
-    uuid: 'UUID', json: 'String', jsonb: 'String',
+    timestamp: 'LocalDateTime', 'timestamp without time zone': 'LocalDateTime', datetime: 'LocalDateTime', datetime2: 'LocalDateTime', smalldatetime: 'LocalDateTime',
+    timestamptz: 'OffsetDateTime', 'timestamp with time zone': 'OffsetDateTime', datetimeoffset: 'OffsetDateTime',
+    uuid: 'UUID', uniqueidentifier: 'UUID', json: 'String', jsonb: 'String',
     bytea: 'byte[]',
   }
-  return map[dataType.toLowerCase()] ?? 'String'
+  return map[t] ?? 'String'
+}
+
+/** Expressão Java que converte um texto (variável `expr`) para o tipo Java dado. */
+export function javaParseExpr(jt: string, expr: string): string {
+  switch (jt) {
+    case 'Integer': return `Integer.valueOf(${expr}.trim())`
+    case 'Long': return `Long.valueOf(${expr}.trim())`
+    case 'BigDecimal': return `new java.math.BigDecimal(${expr}.trim())`
+    case 'Double': return `Double.valueOf(${expr}.trim())`
+    case 'Float': return `Float.valueOf(${expr}.trim())`
+    case 'Boolean': return `Boolean.valueOf(${expr}.trim())`
+    case 'UUID': return `java.util.UUID.fromString(${expr}.trim())`
+    case 'LocalDate': return `java.time.LocalDate.parse(${expr}.trim())`
+    case 'LocalDateTime': return `java.time.LocalDateTime.parse(${expr}.trim())`
+    case 'OffsetDateTime': return `java.time.OffsetDateTime.parse(${expr}.trim())`
+    default: return expr
+  }
 }
 
 /**
@@ -166,27 +195,44 @@ function groupIdToPath(groupId: string): string {
 }
 
 /** Retorna todos os campos marcados como PK (sem ponto) */
-function getPkFields(model: ModelNode) {
+export function getPkFields(model: ModelNode) {
   return model.fields.filter(f => f.isPrimary && !f.dbColumn.includes('.'))
 }
 
 /** Detecta se o modelo possui chave composta (mais de 1 PK real) */
-function hasCompositePk(model: ModelNode): boolean {
+export function hasCompositePk(model: ModelNode): boolean {
   return getPkFields(model).length > 1
 }
 
+/** Campo que a entidade usa como @Id (sem PK declarada, o primeiro campo da tabela assume o papel, como na entidade) */
+export function getEffectivePkField(model: ModelNode) {
+  const pk = model.fields.find(f => f.isPrimary && !f.dbColumn.includes('.'))
+  return pk ?? model.fields.find(f => !f.dbColumn.includes('.'))
+}
+
 /** Determina o tipo Java da PK de um modelo */
-function getPkJavaType(model: ModelNode): string {
+export function getPkJavaType(model: ModelNode): string {
   if (hasCompositePk(model)) return `${model.name}Id`
-  const pkField = model.fields.find(f => f.isPrimary)
+  const pkField = getEffectivePkField(model)
   if (!pkField) return 'Long'
   return toJavaType(pkField.dataType)
 }
 
 /** Determina o nome camelCase do campo PK */
 function getPkFieldName(model: ModelNode): string {
-  const pkField = model.fields.find(f => f.isPrimary)
+  const pkField = getEffectivePkField(model)
   return pkField ? toCamelCase(pkField.dbColumn) : 'id'
+}
+
+/** O @Id é gerado pelo banco (identity)? Só para chaves numéricas: texto/UUID o app informa. */
+function isGeneratedPk(jt: string): boolean {
+  return jt === 'Integer' || jt === 'Long' || jt === 'BigDecimal'
+}
+
+/** Nome da propriedade da relação (@ManyToOne) de uma coluna FK: cliente_id -> cliente */
+function relationPropName(camelName: string): string {
+  const base = camelName.endsWith('Id') ? camelName.slice(0, -2) : camelName
+  return base && base !== camelName ? base : camelName + 'Ref'
 }
 
 /** Sanitiza nome de tabela para uso em @RequestMapping (hífens → underscores) */
@@ -202,11 +248,6 @@ function generatePomXml(ast: AppAST): string {
   const groupId = (ast.javaGroupId ?? 'com.app').toLowerCase()
   const artifactId = ast.javaArtifactId ?? `${ast.projectSlug}-backend`
   const javaVersion = ast.javaVersion ?? 21
-  const enablePreview = javaVersion === 21
-    ? `
-      <compilerArgs>
-        <arg>--enable-preview</arg>
-      </compilerArgs>` : ''
 
   const dbDriver = (() => {
     switch (ast.dbStack) {
@@ -267,10 +308,23 @@ function generatePomXml(ast: AppAST): string {
       <scope>runtime</scope>
     </dependency>` : ''
 
+  // Flyway 10: cada banco tem o seu módulo (sem ele a subida falha com "Unsupported Database")
+  const flywayDbModule = (() => {
+    switch (ast.dbStack) {
+      case 'mysql': return 'flyway-mysql'
+      case 'sqlserver': return 'flyway-sqlserver'
+      case 'oracle': return 'flyway-database-oracle'
+      default: return 'flyway-database-postgresql'
+    }
+  })()
   const flywayDep = (ast.generateMigrations && ast.migrationEngine !== 'liquibase') ? `
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>${flywayDbModule}</artifactId>
     </dependency>` : ''
 
   const liquibaseDep = (ast.generateMigrations && ast.migrationEngine === 'liquibase') ? `
@@ -355,7 +409,14 @@ ${ast.generateOpenApi === false ? '' : `    <dependency>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>${enablePreview}
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>\${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
         </configuration>
       </plugin>
     </plugins>
@@ -368,66 +429,74 @@ ${ast.generateOpenApi === false ? '' : `    <dependency>
 // 5.3 — application.properties
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateApplicationProperties(ast: AppAST): string {
-  const port = ast.javaPort ?? 8080
-  const javaVersion = ast.javaVersion ?? 21
+/** Monta a URL JDBC e as credenciais a partir da conexão escolhida (URL no formato postgresql://u:s@host:porta/banco, jdbc:..., ou o texto "Server=...;Database=..." do SQL Server). */
+function buildDatasource(ast: AppAST): { jdbcUrl: string; username: string; password: string } {
   const dbConn = ast.dbConnectionString
+  if (!dbConn) return { jdbcUrl: '', username: '', password: '' }
+  const dec = (v: string) => { try { return decodeURIComponent(v) } catch { return v } }
+  const stack = ast.dbStack
 
-  let jdbcUrl = ''
-  let username = ''
-  let password = ''
-
-  if (dbConn) {
-    try {
-      const uriStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
-      // Garante que tenha protocolo para o URL parser funcionar (ex: postgresql://)
-      const parseableUri = uriStr.includes('://') ? uriStr : `postgresql://${uriStr}`
-      const uri = new URL(parseableUri)
-      
-      const host = uri.hostname
-      const portNum = uri.port
-      const dbName = uri.pathname
-      username = uri.username
-      password = uri.password
-      
-      const portStr = portNum ? `:${portNum}` : ''
-      
-      switch (ast.dbStack) {
-        case 'postgres':
-        case 'supabase':
-          jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}${ast.dbStack === 'supabase' ? '?sslmode=require' : ''}`
-          break
-        case 'mysql':
-          jdbcUrl = `jdbc:mysql://${host}${portStr}${dbName}?useSSL=false&allowPublicKeyRetrieval=true`
-          break
-        case 'sqlserver':
-          jdbcUrl = `jdbc:sqlserver://${host}${portStr}${dbName}`
-          break
-        case 'oracle':
-          jdbcUrl = `jdbc:oracle:thin:@//${host}${portStr}${dbName}`
-          break
-        default:
-          jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}`
-      }
-    } catch (e) {
-      // Fallback
-      const dbStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
-      switch (ast.dbStack) {
-        case 'postgres': jdbcUrl = `jdbc:postgresql://${dbStr}`; break
-        case 'supabase': jdbcUrl = `jdbc:postgresql://${dbStr}?sslmode=require`; break
-        case 'mysql': jdbcUrl = `jdbc:mysql://${dbStr}?useSSL=false&allowPublicKeyRetrieval=true`; break
-        case 'sqlserver': jdbcUrl = `jdbc:sqlserver://${dbStr}`; break
-        case 'oracle': jdbcUrl = `jdbc:oracle:thin:@//${dbStr}`; break
-        default: jdbcUrl = `jdbc:postgresql://${dbStr}`
-      }
+  // SQL Server em texto de conexão: Server=host,1433;Database=db;User Id=u;Password=p
+  if (/^\s*Server=/i.test(dbConn)) {
+    const kv = Object.fromEntries(dbConn.split(';').map(p => p.trim()).filter(Boolean).map(p => { const i = p.indexOf('='); return [p.slice(0, i).trim().toLowerCase(), p.slice(i + 1).trim()] }))
+    const [host, port] = String(kv['server'] || 'localhost').split(',')
+    return {
+      jdbcUrl: `jdbc:sqlserver://${host}:${port || '1433'};databaseName=${kv['database'] || ''};encrypt=true;trustServerCertificate=true`,
+      username: kv['user id'] || kv['uid'] || '',
+      password: kv['password'] || kv['pwd'] || '',
     }
   }
 
+  try {
+    const uriStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
+    // Garante que tenha protocolo para o URL parser funcionar (ex: postgresql://)
+    const uri = new URL(uriStr.includes('://') ? uriStr : `postgresql://${uriStr}`)
+    const host = uri.hostname
+    const portStr = uri.port ? `:${uri.port}` : ''
+    const dbName = uri.pathname
+    const db = dbName.replace(/^\//, '')
+    const username = dec(uri.username)
+    const password = dec(uri.password)
+
+    let jdbcUrl: string
+    switch (stack) {
+      case 'postgres': jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}${uri.search}`; break
+      case 'supabase': jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}${uri.search || '?sslmode=require'}`; break
+      case 'mysql': jdbcUrl = `jdbc:mysql://${host}${portStr}${dbName}?useSSL=false&allowPublicKeyRetrieval=true`; break
+      case 'sqlserver': jdbcUrl = `jdbc:sqlserver://${host}${portStr};databaseName=${db};encrypt=true;trustServerCertificate=true`; break
+      case 'oracle': jdbcUrl = `jdbc:oracle:thin:@//${host}${portStr}${dbName}`; break
+      default: jdbcUrl = `jdbc:postgresql://${host}${portStr}${dbName}`
+    }
+    return { jdbcUrl, username, password }
+  } catch {
+    // Fallback: texto que o parser não entendeu (ex.: já no formato host:porta/banco)
+    const dbStr = dbConn.startsWith('jdbc:') ? dbConn.substring(5) : dbConn
+    const urls: Record<string, string> = {
+      postgres: `jdbc:postgresql://${dbStr}`,
+      supabase: `jdbc:postgresql://${dbStr}?sslmode=require`,
+      mysql: `jdbc:mysql://${dbStr}?useSSL=false&allowPublicKeyRetrieval=true`,
+      sqlserver: `jdbc:sqlserver://${dbStr}`,
+      oracle: `jdbc:oracle:thin:@//${dbStr}`,
+    }
+    return { jdbcUrl: urls[stack] ?? `jdbc:postgresql://${dbStr}`, username: '', password: '' }
+  }
+}
+
+/** Valor seguro para uma linha de .properties (barra invertida e quebra de linha têm significado). */
+function propValue(v: string): string {
+  return v.replace(/\\/g, '\\\\').replace(/\r?\n/g, '')
+}
+
+function generateApplicationProperties(ast: AppAST, jwtSecret: string): string {
+  const port = ast.javaPort ?? 8080
+  const javaVersion = ast.javaVersion ?? 21
+  const { jdbcUrl, username, password } = buildDatasource(ast)
+
   const datasourceLines = jdbcUrl
     ? [
-        `spring.datasource.url=${jdbcUrl}`,
-        `spring.datasource.username=${username || '# PREENCHER: usuário do banco'}`,
-        `spring.datasource.password=${password || '# PREENCHER: senha do banco'}`,
+        `spring.datasource.url=${propValue(jdbcUrl)}`,
+        `spring.datasource.username=${username ? propValue(username) : '# PREENCHER: usuário do banco'}`,
+        `spring.datasource.password=${password ? propValue(password) : '# PREENCHER: senha do banco'}`,
       ]
     : [
         `# PREENCHER: configure a URL JDBC do banco de dados`,
@@ -456,7 +525,8 @@ function generateApplicationProperties(ast: AppAST): string {
     `spring.datasource.driver-class-name=${driverClass}`,
     ``,
     `# ── JPA / Hibernate ──`,
-    `spring.jpa.hibernate.ddl-auto=validate`,
+    `# O esquema do banco é o que já existe (o MetaBuilder não o recria): sem validação na subida, para um detalhe de tipo não impedir o app de iniciar.`,
+    `spring.jpa.hibernate.ddl-auto=none`,
     `spring.jpa.show-sql=false`,
     `spring.jpa.properties.hibernate.format_sql=false`,
     `spring.jpa.properties.hibernate.highlight_sql=false`,
@@ -465,8 +535,8 @@ function generateApplicationProperties(ast: AppAST): string {
     `spring.data.web.pageable.page-serialization-mode=via-dto`,
     ``,
     `# ── Logging SQL & Connection Pool ──`,
+    `# Para ver os valores dos parâmetros em desenvolvimento use logging.level.org.hibernate.orm.jdbc.bind=TRACE (podem aparecer dados sensíveis).`,
     `logging.level.org.hibernate.SQL=DEBUG`,
-    `logging.level.org.hibernate.orm.jdbc.bind=TRACE`,
     `logging.level.com.zaxxer.hikari=INFO`,
     ``,
     `# ── CORS ──`,
@@ -474,6 +544,7 @@ function generateApplicationProperties(ast: AppAST): string {
     ``,
     `# ── Jackson JSON Serialization (snake_case) ──`,
     `spring.jackson.property-naming-strategy=SNAKE_CASE`,
+    `spring.jackson.serialization.fail-on-empty-beans=false`,
     ``,
     ...(ast.generateOpenApi === false ? [] : [
       `# ── OpenAPI / Swagger ──`,
@@ -493,9 +564,22 @@ function generateApplicationProperties(ast: AppAST): string {
     lines.push(
       ``,
       `# ── JWT Security ──`,
-      `# Chave gerada para ESTE projeto na exportação. Em produção defina a variável de ambiente JWT_SECRET (e não publique este arquivo).`,
-      `jwt.secret=\${JWT_SECRET:${randomJwtSecret()}}`,
+      `# Chave gerada para ESTE projeto na exportação (a mesma está em frontend/.env.local como JWT_SECRET: o frontend assina com ela cada chamada à API).`,
+      `# Em produção defina a variável de ambiente JWT_SECRET nos dois lados (e não publique estes arquivos).`,
+      `jwt.secret=\${JWT_SECRET:${jwtSecret}}`,
       `jwt.expiration-ms=\${JWT_EXPIRATION_MS:86400000}`
+    )
+  }
+
+  if (ast.accessAdmin) {
+    lines.push(
+      ``,
+      `# ── Tabelas de acesso (gestão de acesso) ──`,
+      `# Ao subir, cria as tabelas de acesso que faltarem e grava os dados do projeto que ainda não estão lá (não altera dados existentes).`,
+      `# Se o usuário do banco não puder criar tabelas, o erro só é registrado no log: rode db/access-control.sql (na raiz) com um administrador. Para desligar, troque always por never.`,
+      `spring.sql.init.mode=always`,
+      `spring.sql.init.schema-locations=classpath:db/access-control.sql`,
+      `spring.sql.init.continue-on-error=true`
     )
   }
 
@@ -505,8 +589,7 @@ function generateApplicationProperties(ast: AppAST): string {
       `# ── Flyway Migrations ──`,
       `spring.flyway.enabled=true`,
       `spring.flyway.locations=classpath:db/migration`,
-      `spring.flyway.baseline-on-migrate=true`,
-      `spring.jpa.hibernate.ddl-auto=validate`
+      `spring.flyway.baseline-on-migrate=true`
     )
   }
 
@@ -515,8 +598,7 @@ function generateApplicationProperties(ast: AppAST): string {
       ``,
       `# ── Liquibase Migrations ──`,
       `spring.liquibase.enabled=true`,
-      `spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml`,
-      `spring.jpa.hibernate.ddl-auto=validate`
+      `spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml`
     )
   }
 
@@ -611,21 +693,22 @@ public class OpenApiConfig {
 // 5.5 — Entity.java
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface InverseRelation {
-  sourceModel: string
-  sourceTable: string
-  foreignKey: string
-  propertyName: string
-}
 
 function resolveFieldRelation(field: FieldNode, ast: AppAST): { targetModel: string, targetTable: string } | null {
+  // a relação só vira @ManyToOne se o modelo de destino também está no backend (senão a classe não existiria) e tem chave simples
+  const resolve = (modelName: string, table: string) => {
+    const t = table.toLowerCase()
+    const m = ast.models.find(x => (modelName && x.name === modelName) || (t && x.dbTable.toLowerCase() === t))
+    return m && !hasCompositePk(m) ? { targetModel: m.name, targetTable: m.dbTable } : null
+  }
+
   const rel = field.config?.relation || field.relation
   if (rel) {
-    const targetTbl = ('targetTable' in rel ? (rel.targetTable || '') : '').toLowerCase()
+    const targetTbl = ('targetTable' in rel ? (rel.targetTable || '') : '')
     const targetModelName = rel.targetModel || ''
-    return { targetModel: targetModelName, targetTable: targetTbl }
+    return resolve(targetModelName, targetTbl)
   }
-  
+
   if (field.isPrimary) return null
 
   // Fallback: tenta deduzir FK pelo nome (ex: cliente_id -> clientes)
@@ -634,34 +717,11 @@ function resolveFieldRelation(field: FieldNode, ast: AppAST): { targetModel: str
     const base = col.endsWith('_id') ? col.slice(0, -3) : col.slice(3)
     const candidates = [base, `${base}s`]
     for (const cand of candidates) {
-      const match = ast.models.find(m => m.dbTable.toLowerCase() === cand || m.name.toLowerCase() === cand)
+      const match = ast.models.find(m => (m.dbTable.toLowerCase() === cand || m.name.toLowerCase() === cand) && !hasCompositePk(m))
       if (match) return { targetModel: match.name, targetTable: match.dbTable }
     }
   }
   return null
-}
-
-function getInverseRelations(model: ModelNode, ast: AppAST): InverseRelation[] {
-  const inverses: InverseRelation[] = []
-  for (const m of ast.models) {
-    if (m.id === model.id) continue
-    for (const f of m.fields) {
-      const rel = resolveFieldRelation(f, ast)
-      if (rel) {
-        if (rel.targetTable.toLowerCase() === model.dbTable.toLowerCase() || rel.targetModel === model.name) {
-          const camelName = toCamelCase(f.dbColumn)
-          const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
-          inverses.push({
-            sourceModel: m.name,
-            sourceTable: m.dbTable,
-            foreignKey: f.dbColumn,
-            propertyName: propName
-          })
-        }
-      }
-    }
-  }
-  return inverses
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -672,15 +732,18 @@ function generateEmbeddableIdClass(model: ModelNode, groupId: string): string {
   const pkFields = getPkFields(model)
   const javaTypes = new Set<string>()
   const fieldLines: string[] = []
+  const parseLines: string[] = []
 
-  for (const field of pkFields) {
+  pkFields.forEach((field, i) => {
     const jt = toJavaType(field.dataType)
+    const camel = toCamelCase(field.dbColumn)
     javaTypes.add(jt)
     fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
     fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
-    fieldLines.push(`    private ${jt} ${toCamelCase(field.dbColumn)};`)
+    fieldLines.push(`    private ${jt} ${camel};`)
     fieldLines.push(``)
-  }
+    parseLines.push(`        id.set${camel.charAt(0).toUpperCase() + camel.slice(1)}(${javaParseExpr(jt, `p[${i}]`)});`)
+  })
 
   const imports = [
     `import jakarta.persistence.*;`,
@@ -702,6 +765,16 @@ import java.io.Serializable;
 public class ${model.name}Id implements Serializable {
 
 ${fieldLines.join('\n')}
+    /** Lê a chave composta de um texto com os valores separados por vírgula, na ordem: ${pkFields.map(f => f.dbColumn).join(', ')} */
+    public static ${model.name}Id parse(String raw) {
+        String[] p = raw.split(",", -1);
+        if (p.length != ${pkFields.length}) {
+            throw new IllegalArgumentException("Chave composta inválida: informe ${pkFields.length} valores separados por vírgula (${pkFields.map(f => f.dbColumn).join(', ')}).");
+        }
+        ${model.name}Id id = new ${model.name}Id();
+${parseLines.join('\n')}
+        return id;
+    }
 }
 `
 }
@@ -713,143 +786,78 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
   const entityFields = model.fields.filter(f => !f.dbColumn.includes('.'))
   const pkFieldNames = new Set(getPkFields(model).map(f => f.dbColumn))
   const isComposite = hasCompositePk(model)
+  const usedProps = new Set(entityFields.map(f => toCamelCase(f.dbColumn)))
 
   const fieldLines: string[] = []
+  const isJson = (f: FieldNode) => ['json', 'jsonb'].includes(f.dataType.toLowerCase().trim())
+
+  // coluna comum (inclui a coluna da chave estrangeira: o JSON e a gravação usam o valor, ex.: cliente_id)
+  const columnLines = (field: FieldNode, jt: string, camelName: string, isId = false): string[] => {
+    const out: string[] = []
+    if (isId) {
+      out.push(`    @Id`)
+      if (isGeneratedPk(jt)) out.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+    }
+    if (isJson(field)) {
+      out.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
+      javaTypes.add('JdbcTypeCode')
+      javaTypes.add('SqlTypes')
+    }
+    out.push(`    @Column(name = "${field.dbColumn}")`, `    @JsonProperty("${field.dbColumn}")`, `    private ${jt} ${camelName};`)
+    return out
+  }
+
+  // relação @ManyToOne SOMENTE LEITURA e fora do JSON: serve para consultas/joins; quem grava é a coluna acima
+  const relationLines = (field: FieldNode, rel: { targetModel: string; targetTable: string }, camelName: string): string[] => {
+    let prop = relationPropName(camelName)
+    if (usedProps.has(prop)) prop += 'Rel'
+    javaTypes.add('JsonIgnore')
+    return [
+      `    @ManyToOne(fetch = FetchType.LAZY)`,
+      `    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`,
+      `    @JsonIgnore`,
+      `    @lombok.ToString.Exclude`,
+      `    @lombok.EqualsAndHashCode.Exclude`,
+      `    private ${rel.targetModel} ${prop};`,
+    ]
+  }
 
   // ── Chave COMPOSTA: usar @EmbeddedId ──────────────────────────────────────
   if (isComposite) {
     const idClassName = `${model.name}Id`
+    // @JsonUnwrapped: no JSON as colunas da chave aparecem soltas (pedido_id, produto_id), como nas outras tabelas
     fieldLines.push(`    @EmbeddedId`)
+    fieldLines.push(`    @com.fasterxml.jackson.annotation.JsonUnwrapped`)
     fieldLines.push(`    private ${idClassName} id;`)
     fieldLines.push(``)
 
-    // Campos PK que também são FK → gerar @ManyToOne read-only
     for (const field of entityFields) {
-      if (!pkFieldNames.has(field.dbColumn)) continue
-      const rel = resolveFieldRelation(field, ast)
-      if (!rel) continue
-      const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
       const camelName = toCamelCase(field.dbColumn)
-      const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : camelName + 'Ref'
-      fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-      fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
-      fieldLines.push(`    private ${targetPascal} ${propName};`)
+      const rel = resolveFieldRelation(field, ast)
+      if (pkFieldNames.has(field.dbColumn)) {
+        // coluna da chave que também é FK: o valor já está no id; só a relação (leitura)
+        if (rel) { fieldLines.push(...relationLines(field, rel, camelName)); fieldLines.push(``) }
+        continue
+      }
+      const jt = toJavaType(field.dataType)
+      javaTypes.add(jt)
+      fieldLines.push(...columnLines(field, jt, camelName))
       fieldLines.push(``)
+      if (rel) { fieldLines.push(...relationLines(field, rel, camelName)); fieldLines.push(``) }
     }
 
-    // Campos não-PK normais
+  // ── Chave SIMPLES (ou sem PK): o primeiro campo assume o papel de @Id ────
+  } else {
+    const idField = getEffectivePkField(model)
     for (const field of entityFields) {
-      if (pkFieldNames.has(field.dbColumn)) continue
       const jt = toJavaType(field.dataType)
       javaTypes.add(jt)
       const camelName = toCamelCase(field.dbColumn)
       const rel = resolveFieldRelation(field, ast)
-      if (rel) {
-        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
-        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : camelName + 'Ref'
-        fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-        fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
-        fieldLines.push(`    private ${targetPascal} ${propName};`)
-      } else {
-        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-          javaTypes.add('JdbcTypeCode')
-          javaTypes.add('SqlTypes')
-        }
-        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
-        fieldLines.push(`    private ${jt} ${camelName};`)
-      }
+      fieldLines.push(...columnLines(field, jt, camelName, field === idField))
       fieldLines.push(``)
+      if (rel) { fieldLines.push(...relationLines(field, rel, camelName)); fieldLines.push(``) }
     }
-
-  // ── Chave SIMPLES (ou sem PK): comportamento original ────────────────────
-  } else {
-    // Pre-process: guarantee at least one primary key
-    const hasPk = entityFields.some(f => f.isPrimary)
-    let processedFields = entityFields
-    if (!hasPk && entityFields.length > 0) {
-      processedFields = [...entityFields]
-      processedFields[0] = { ...processedFields[0], isPrimary: true }
-    }
-
-    let pkGenerated = false
-    for (const field of processedFields) {
-      const jt = toJavaType(field.dataType)
-      if (!javaTypes.has(jt)) javaTypes.add(jt)
-      const camelName = toCamelCase(field.dbColumn)
-
-      const rel = resolveFieldRelation(field, ast)
-
-      if (rel) {
-        const targetPascal = rel.targetModel || toPascalCaseJava(rel.targetTable || '')
-        const propName = camelName.endsWith('Id') ? camelName.slice(0, -2) : (camelName.endsWith('id') ? camelName.slice(0, -2) : camelName + 'Ref')
-        
-        if (field.isPrimary && !pkGenerated) {
-          pkGenerated = true
-          fieldLines.push(`    @Id`)
-          if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-            fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-            javaTypes.add('JdbcTypeCode')
-            javaTypes.add('SqlTypes')
-          }
-          fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-          fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
-          fieldLines.push(`    private ${jt} ${camelName};`)
-          fieldLines.push(``)
-          fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-          fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}", insertable = false, updatable = false)`)
-          fieldLines.push(`    private ${targetPascal} ${propName};`)
-        } else {
-          fieldLines.push(`    @ManyToOne(fetch = FetchType.LAZY)`)
-          fieldLines.push(`    @JoinColumn(name = "${field.dbColumn}")`)
-          fieldLines.push(`    private ${targetPascal} ${propName};`)
-        }
-        
-      } else if (field.isPrimary && !pkGenerated) {
-        pkGenerated = true
-        fieldLines.push(`    @Id`)
-        if (ast.dbStack === 'oracle') {
-          const seqName = `SEQ_${model.dbTable.toUpperCase()}`
-          const genName = `${model.dbTable.toLowerCase()}_seq`
-          fieldLines.push(`    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "${genName}")`)
-          fieldLines.push(`    @SequenceGenerator(name = "${genName}", sequenceName = "${seqName}", allocationSize = 1)`)
-        } else {
-          fieldLines.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
-        }
-        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-          javaTypes.add('JdbcTypeCode')
-          javaTypes.add('SqlTypes')
-        }
-        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
-        fieldLines.push(`    private ${jt} ${camelName};`)
-        
-      } else {
-        if (field.dataType.toLowerCase() === 'json' || field.dataType.toLowerCase() === 'jsonb') {
-          fieldLines.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
-          javaTypes.add('JdbcTypeCode')
-          javaTypes.add('SqlTypes')
-        }
-        fieldLines.push(`    @Column(name = "${field.dbColumn}")`)
-        fieldLines.push(`    @JsonProperty("${field.dbColumn}")`)
-        fieldLines.push(`    private ${jt} ${camelName};`)
-      }
-      fieldLines.push(``)
-    }
-  }
-
-  const inverseRels = getInverseRelations(model, ast)
-  for (const inv of inverseRels) {
-    javaTypes.add('List')
-    javaTypes.add('ArrayList')
-    javaTypes.add('JsonIgnore')
-    const listProp = toCamelCase(inv.sourceTable)
-    fieldLines.push(`    @OneToMany(mappedBy = "${inv.propertyName}", cascade = CascadeType.ALL, orphanRemoval = true)`)
-    fieldLines.push(`    @JsonIgnore`)
-    fieldLines.push(`    private List<${inv.sourceModel}> ${listProp} = new ArrayList<>();`)
-    fieldLines.push(``)
   }
 
   const idClassImport = isComposite ? `import ${groupId}.entities.${model.name}Id;` : ''
@@ -882,13 +890,19 @@ ${fieldLines.join('\n')}
 // Helpers para Relacionamentos Mestre-Detalhe e Ações Customizadas
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface IncomingFkDef {
+export interface IncomingFkDef {
   fkField: string
   fkCamel: string
   fkJavaType: string
 }
 
-function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
+/** Sufixo do método derivado findBy<Coluna>: as colunas da chave composta ficam dentro do id embutido (findByIdPedidoId) */
+function fkMethodSuffix(model: ModelNode, fkColumn: string): string {
+  const pascal = toPascalCaseJava(toCamelCase(fkColumn))
+  return hasCompositePk(model) && getPkFields(model).some(f => f.dbColumn === fkColumn) ? 'Id' + pascal : pascal
+}
+
+export function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
   const fks = new Map<string, IncomingFkDef>()
   for (const route of ast.routes) {
     for (const tab of route.relationTabs || []) {
@@ -896,7 +910,7 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
         if (!tab.foreignKey.includes('.')) {
           const fkFieldNode = model.fields.find(f => f.dbColumn === tab.foreignKey)
           const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-          const fkCamel = toPascalCaseJava(toCamelCase(tab.foreignKey))
+          const fkCamel = fkMethodSuffix(model, tab.foreignKey)
           fks.set(tab.foreignKey, { fkField: tab.foreignKey, fkCamel, fkJavaType })
         }
       }
@@ -906,7 +920,7 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
         if (!slot.foreignKey.includes('.')) {
           const fkFieldNode = model.fields.find(f => f.dbColumn === slot.foreignKey)
           const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-          const fkCamel = toPascalCaseJava(toCamelCase(slot.foreignKey))
+          const fkCamel = fkMethodSuffix(model, slot.foreignKey)
           fks.set(slot.foreignKey, { fkField: slot.foreignKey, fkCamel, fkJavaType })
         }
       }
@@ -921,7 +935,7 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
               if (!fkField.includes('.')) {
                 const fkFieldNode = model.fields.find(f => f.dbColumn === fkField)
                 const fkJavaType = fkFieldNode ? toJavaType(fkFieldNode.dataType) : 'UUID'
-                const fkCamel = toPascalCaseJava(toCamelCase(fkField))
+                const fkCamel = fkMethodSuffix(model, fkField)
                 fks.set(fkField, { fkField, fkCamel, fkJavaType })
               }
             }
@@ -930,7 +944,8 @@ function getIncomingFks(model: ModelNode, ast: AppAST): IncomingFkDef[] {
       }
     }
   }
-  return Array.from(fks.values())
+  // a consulta derivada findBy<Coluna> só existe se a tabela tem essa coluna
+  return Array.from(fks.values()).filter(fk => model.fields.some(f => f.dbColumn === fk.fkField && !f.dbColumn.includes('.')))
 }
 
 interface OutgoingSubResourceDef {
@@ -980,7 +995,6 @@ function getOutgoingSubResources(route: RouteNode): OutgoingSubResourceDef[] {
 
 function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   const pkType = getPkJavaType(model)
-  const pkFieldPascal = toPascalCaseJava(getPkFieldName(model))
   const incomingFks = getIncomingFks(model, ast)
 
   const isComposite = hasCompositePk(model)
@@ -1005,7 +1019,6 @@ ${imports}
 
 @Repository
 public interface ${model.name}Repository extends ${extendsClause} {
-    List<${model.name}> findBy${pkFieldPascal}In(List<${pkType}> ids);
     Page<${model.name}> findAll(Pageable pageable);
 ${(route && route.gridFields && route.gridFields.length > 0) ? `    Page<${model.name}ListView> findAllProjectedBy(Pageable pageable);` : ''}
 ${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, Pageable pageable);`).join('\n')}
@@ -1018,6 +1031,7 @@ ${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJava
 // ─────────────────────────────────────────────────────────────────────────────
 
 function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
+  if (javaNeedsAccess(ast)) return generateGuardedServiceClass(model, ast, groupId, route)
   const pkType = getPkJavaType(model)
   const isComposite = hasCompositePk(model)
   const incomingFks = getIncomingFks(model, ast)
@@ -1098,7 +1112,18 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
   const isComposite = hasCompositePk(model)
   const mapping = sanitizeTableForMapping(model.dbTable)
   const incomingFks = getIncomingFks(model, ast)
-  const outgoingSubResources = route ? getOutgoingSubResources(route) : []
+  // sub-recursos só quando a tabela filha tem a coluna da chave estrangeira (senão o método do serviço da filha não existiria)
+  const outgoingSubResources = (route ? getOutgoingSubResources(route) : []).filter(out =>
+    ast.models.find(m => m.name === out.childModelName)?.fields.some(f => f.dbColumn === out.fkField && !f.dbColumn.includes('.')))
+  // chave composta chega na URL como texto "valor1,valor2" (na ordem das colunas da chave)
+  const pathType = isComposite ? 'String' : pkType
+  const keyExpr = isComposite ? `${model.name}Id.parse(id)` : 'id'
+  const pkColumns = (isComposite ? getPkFields(model) : [getEffectivePkField(model)]).filter(Boolean).map(f => (f as FieldNode).dbColumn)
+  const childModelOf = (out: OutgoingSubResourceDef) => ast.models.find(m => m.name === out.childModelName)
+  const childFkType = (out: OutgoingSubResourceDef) => {
+    const f = ast.models.find(m => m.name === out.childModelName)?.fields.find(x => x.dbColumn === out.fkField)
+    return f ? toJavaType(f.dataType) : 'String'
+  }
 
   const extraImports = new Set<string>()
   for (const out of outgoingSubResources) {
@@ -1112,6 +1137,9 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
     `import ${groupId}.services.${model.name}Service;`,
     (route && route.gridFields && route.gridFields.length > 0) ? `import ${groupId}.dto.${model.name}ListView;` : ``,
     ...Array.from(extraImports),
+    `import com.fasterxml.jackson.databind.JsonNode;`,
+    `import com.fasterxml.jackson.databind.ObjectMapper;`,
+    `import com.fasterxml.jackson.databind.node.ObjectNode;`,
     `import jakarta.validation.Valid;`,
     `import lombok.RequiredArgsConstructor;`,
     `import org.springframework.data.domain.Page;`,
@@ -1151,13 +1179,37 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
   const outgoingEndpoints = outgoingSubResources.map(out => `
     @GetMapping("/{id}/${out.urlSegment}")
     public ResponseEntity<Page<${out.childModelName}>> get${out.childModelName}By${toPascalCaseJava(toCamelCase(model.dbTable))}(
-            @PathVariable ${pkType} id,
+            @PathVariable String id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(${toCamelCase(out.childModelName)}Service.findBy${out.fkCamel}(id, page, size, sort));
+        return ResponseEntity.ok(${toCamelCase(out.childModelName)}Service.findBy${fkMethodSuffix(childModelOf(out)!, out.fkField)}(${javaParseExpr(childFkType(out), 'id')}, page, size, sort));
     }
 `).join('')
+
+  // permissões da tabela (Dados & Schemas): criar / editar / excluir desligados no projeto valem também na API
+  const deny = (text: string) => `        return ResponseEntity.status(403).body(Map.of("message", "${text}"));\n`
+  const createGuard = model.canCreate === false ? deny('Esta tabela não permite criar registros.') : ''
+  const updateGuard = model.canUpdate === false ? deny('Esta tabela não permite editar registros.') : ''
+  const deleteGuard = model.canDelete === false ? deny('Esta tabela não permite excluir registros.') : ''
+
+  const createBody = createGuard || `        return ResponseEntity.status(201).body(service.save(entity));\n`
+  const guarded = javaNeedsAccess(ast)
+  // colunas de auditoria: quem/quando é do servidor, o que a tela mandar nelas é descartado
+  const auditCols = auditColumnNames(model)
+  const updateBody = updateGuard || `        if (!body.isObject()) return ResponseEntity.badRequest().body(Map.of("message", "Corpo inválido: esperado um objeto JSON."));
+        var existing = service.findById(${keyExpr});
+        if (existing.isEmpty()) return ResponseEntity.notFound().build();
+        // atualização parcial: só as colunas enviadas mudam (o resto do registro é mantido); a chave vem sempre da URL
+        ObjectNode patch = ((ObjectNode) body).deepCopy();
+${[...pkColumns, ...(guarded ? auditCols : [])].map(c => `        patch.remove("${c}");`).join('\n')}
+        mapper.readerForUpdating(existing.get()).readValue(patch);
+        return ResponseEntity.ok(service.${guarded ? 'update' : 'save'}(existing.get()));
+`
+  // com regras: só apaga o que o usuário enxerga (fora do acesso, é como se não existisse)
+  const deleteBody = deleteGuard || `${guarded ? `        if (service.findById(${keyExpr}).isEmpty()) return ResponseEntity.notFound().build();\n` : ''}        service.delete(${keyExpr});
+        return ResponseEntity.noContent().build();
+`
 
   return `package ${groupId}.controllers;
 
@@ -1170,6 +1222,7 @@ ${imports}
 public class ${model.name}Controller {
 
     private final ${model.name}Service service;
+    private final ObjectMapper mapper;
 ${outgoingSubResources.map(out => `    private final ${out.childModelName}Service ${toCamelCase(out.childModelName)}Service;`).join('\n')}
 
     @GetMapping
@@ -1205,30 +1258,25 @@ ${(route && route.gridFields && route.gridFields.length > 0) ? `
 
 ${searchEndpoint}${incomingEndpoints}${outgoingEndpoints}
     @GetMapping("/{id}")
-    public ResponseEntity<${model.name}> getById(@PathVariable ${pkType} id) {
-        return service.findById(id)
+    public ResponseEntity<${model.name}> getById(@PathVariable ${pathType} id) {
+        return service.findById(${keyExpr})
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<${model.name}> create(@RequestBody @Valid ${model.name} entity) {
-        return ResponseEntity.status(201).body(service.save(entity));
-    }
+    public ResponseEntity<?> create(@RequestBody @Valid ${model.name} entity) {
+${createBody}    }
 
     @PutMapping("/{id}")
-    public ResponseEntity<${model.name}> update(
-            @PathVariable ${pkType} id,
-            @RequestBody ${model.name} entity) {
-        if (service.findById(id).isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(service.save(entity));
-    }
+    public ResponseEntity<?> update(
+            @PathVariable ${pathType} id,
+            @RequestBody JsonNode body) throws Exception {
+${updateBody}    }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable ${pkType} id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+    public ResponseEntity<?> delete(@PathVariable ${pathType} id) {
+${deleteBody}    }
 }
 `
 }
@@ -1468,6 +1516,8 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
     'import java.util.Map;',
     `import ${groupId}.entities.${model.name};`
   ])
+  const isComposite = hasCompositePk(model)
+  const pkCols = new Set(getPkFields(model).map(f => f.dbColumn))
 
   // Usa filterFields da rota se configurados, caso contrário utiliza todos os campos escalares do modelo
   const filterFields = (route?.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0)
@@ -1475,65 +1525,46 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
     : model.fields.filter(f => !f.dbColumn.includes('.'))
 
   for (const field of filterFields) {
+    // o tipo do filtro segue o tipo do atributo da entidade (comparar Long com Integer falha na consulta)
     const javaProp = toCamelCase(field.dbColumn)
     const paramKey = field.dbColumn
-    const dbType = canonicalDbType(field.dataType)
+    const jt = toJavaType(field.dataType)
+    // colunas da chave composta ficam dentro do id embutido
+    const path = isComposite && pkCols.has(field.dbColumn) ? `root.get("id").get("${javaProp}")` : `root.get("${javaProp}")`
+    const read = `String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");`
 
     let predicateLogic = ''
-    if (dbType === 'varchar') {
+    if (jt === 'String') {
       predicateLogic = `
-            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            ${read}
             if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("${javaProp}")),
+                predicates.add(cb.like(cb.lower(${path}),
                     "%" + val_${javaProp}.toLowerCase() + "%"));
             }`
-    } else if (dbType === 'date' || dbType === 'timestamp') {
-      const cls = dbType === 'date' ? 'LocalDate' : 'LocalDateTime'
-      if (dbType === 'date') imports.add('import java.time.LocalDate;')
-      else imports.add('import java.time.LocalDateTime;')
-
+    } else if (jt === 'LocalDate' || jt === 'LocalDateTime' || jt === 'OffsetDateTime') {
+      imports.add(`import java.time.${jt};`)
       predicateLogic = `
             String start_${javaProp} = params.get("${paramKey}_start") != null ? params.get("${paramKey}_start") : params.get("${javaProp}_start");
             if (start_${javaProp} != null && !start_${javaProp}.isBlank()) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("${javaProp}"),
-                    ${cls}.parse(start_${javaProp})));
+                try {
+                    predicates.add(cb.greaterThanOrEqualTo(${path}.as(${jt}.class), ${jt}.parse(start_${javaProp})));
+                } catch (Exception ignored) {}
             }
             String end_${javaProp} = params.get("${paramKey}_end") != null ? params.get("${paramKey}_end") : params.get("${javaProp}_end");
             if (end_${javaProp} != null && !end_${javaProp}.isBlank()) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("${javaProp}"),
-                    ${cls}.parse(end_${javaProp})));
-            }`
-    } else if (dbType === 'uuid') {
-      imports.add('import java.util.UUID;')
-      predicateLogic = `
-            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
-            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
                 try {
-                    predicates.add(cb.equal(root.get("${javaProp}"), UUID.fromString(val_${javaProp})));
+                    predicates.add(cb.lessThanOrEqualTo(${path}.as(${jt}.class), ${jt}.parse(end_${javaProp})));
                 } catch (Exception ignored) {}
             }`
-    } else if (dbType === 'integer') {
+    } else if (jt === 'Integer' || jt === 'Long' || jt === 'BigDecimal' || jt === 'Double' || jt === 'Float' || jt === 'Boolean' || jt === 'UUID') {
+      if (jt === 'BigDecimal') imports.add('import java.math.BigDecimal;')
+      if (jt === 'UUID') imports.add('import java.util.UUID;')
       predicateLogic = `
-            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
+            ${read}
             if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
                 try {
-                    predicates.add(cb.equal(root.get("${javaProp}"), Integer.parseInt(val_${javaProp})));
+                    predicates.add(cb.equal(${path}, ${javaParseExpr(jt, `val_${javaProp}`)}));
                 } catch (Exception ignored) {}
-            }`
-    } else if (dbType === 'numeric') {
-      imports.add('import java.math.BigDecimal;')
-      predicateLogic = `
-            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
-            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
-                try {
-                    predicates.add(cb.equal(root.get("${javaProp}"), new BigDecimal(val_${javaProp})));
-                } catch (Exception ignored) {}
-            }`
-    } else if (dbType === 'boolean') {
-      predicateLogic = `
-            String val_${javaProp} = params.get("${paramKey}") != null ? params.get("${paramKey}") : params.get("${javaProp}");
-            if (val_${javaProp} != null && !val_${javaProp}.isBlank()) {
-                predicates.add(cb.equal(root.get("${javaProp}"), Boolean.parseBoolean(val_${javaProp})));
             }`
     }
 
@@ -1929,19 +1960,10 @@ public class AuthController {
     public record LoginRequest(String email, String password) {}
 
     @PostMapping("/login")
-    @Operation(summary = "Autenticar usuário", description = "Valida credenciais e gera token JWT")
+    @Operation(summary = "Login (desativado)", description = "O login dos usuários é feito pelo frontend; ele assina cada chamada a esta API com o JWT_SECRET compartilhado")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        // TODO: Integrar com a tabela de usuários do banco para validação de senha
-        if (request.email() == null || request.password() == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email e senha são obrigatórios"));
-        }
-
-        String token = jwtUtil.generateToken(request.email());
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("email", request.email());
-        response.put("expiresIn", 86400000L);
-        return ResponseEntity.ok(response);
+        // Emitir token aqui sem conferir a senha deixaria qualquer pessoa entrar. Mantido só por compatibilidade: responde 501.
+        return ResponseEntity.status(501).body(Map.of("error", "Login não é feito por esta API. Use o login do frontend."));
     }
 
     @GetMapping("/me")
@@ -2326,7 +2348,7 @@ networks:
 // 5.19 — .env.example
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateEnvExample(ast: AppAST): string {
+function generateEnvExample(ast: AppAST, jwtSecret: string): string {
   const port = ast.javaPort ?? 8080
   const slug = ast.projectSlug || 'app'
 
@@ -2362,7 +2384,7 @@ function generateEnvExample(ast: AppAST): string {
 # ── Segurança JWT ──
 # Chave de assinatura HMAC-SHA256 (mínimo de 256 bits / 32 caracteres)
 # Recomendado gerar com: openssl rand -hex 32
-JWT_SECRET=${randomJwtSecret()}
+JWT_SECRET=${jwtSecret}
 
 # Tempo de vida do token em milissegundos (86400000 ms = 24 horas)
 JWT_EXPIRATION_MS=86400000
