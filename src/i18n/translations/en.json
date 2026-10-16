@@ -18,6 +18,8 @@
     "java_download_confirm": "Java (JDK 21) was not found on this machine. Download the portable JDK 21 (Eclipse Temurin, about 200 MB) to the .metabuilder folder of your user? It does not change the PATH or install anything on the system.",
     "java_downloading": "Downloading the portable JDK 21 (about 200 MB)... this can take a few minutes.",
     "java_download_failed": "Could not download JDK 21. Check your internet connection or install JDK 21 manually and try again.",
+    "stop_dev": "Stop the server",
+    "stopping_dev": "Stopping...",
     "dev_waiting_java": "Waiting for the Java backend and the frontend to start (the first time it downloads dependencies and can take a few minutes)...",
     "dev_ready": "App is up! Open it in a browser:",
     "open_in_browser": "Browser",

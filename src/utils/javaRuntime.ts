@@ -42,10 +42,10 @@ export async function installPortableJdk(): Promise<boolean> {
 
 /**
  * Comando PowerShell que sobe o backend numa janela de terminal MINIMIZADA (fica na barra de tarefas, com o log, e continua viva
- * mesmo se a IDE fechar). Usa o Maven Wrapper da pasta (não precisa de Maven instalado) e, se houver, o JDK portátil como JAVA_HOME.
+ * mesmo se a IDE fechar). Escreve na saída o PID da janela (para parar o servidor depois). Usa o Maven Wrapper da pasta (não precisa de Maven instalado) e, se houver, o JDK portátil como JAVA_HOME.
  */
 export function startBackendCommand(backendDir: string): string {
   const dir = backendDir.replace(/'/g, "''")
   return "$jh = Join-Path $env:USERPROFILE '.metabuilder\\jdk21'; if (Test-Path (Join-Path $jh 'bin\\java.exe')) { $env:JAVA_HOME = $jh }; " +
-    "Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','.\\mvnw.cmd spring-boot:run' -WorkingDirectory '" + dir + "'"
+    "$p = Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','.\\mvnw.cmd spring-boot:run' -WorkingDirectory '" + dir + "' -PassThru; $p.Id"
 }

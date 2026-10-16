@@ -10,6 +10,7 @@ import {
   Copy,
   Loader2,
   Play,
+  Square,
   Globe,
   AppWindow,
   Server,
@@ -53,6 +54,9 @@ export function ProjectExportModal({
   const { openPreview } = usePreview()
   // depois de exportar (desktop, Windows): sobe o app num terminal e abre no navegador ou no navegador da IDE
   const [devStarted, setDevStarted] = useState(false)
+  // PIDs das janelas de terminal do app (frontend e, no Java, backend): é por eles que o servidor é parado
+  const [devPids, setDevPids] = useState<number[]>([])
+  const [devStopping, setDevStopping] = useState(false)
   const [devError, setDevError] = useState('')
   // mensagem enquanto prepara (ex.: baixando o JDK portátil)
   const [devPreparing, setDevPreparing] = useState('')
@@ -126,6 +130,7 @@ export function ProjectExportModal({
     try {
       const { Command } = await import('@tauri-apps/plugin-shell')
       const isJava = backendStack === 'java-spring'
+      const pids: number[] = []
       if (isJava) {
         // o backend Spring roda com o Maven Wrapper da pasta (baixa o Maven sozinho). Java: o JDK portátil da IDE, o do PATH, ou oferece baixar o portátil
         if ((await detectJava()) === 'none') {
@@ -143,15 +148,39 @@ export function ProjectExportModal({
         }
         const be = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', startBackendCommand(modalState.savedDir + '\\backend')]).execute()
         if (be.code !== 0) { setDevError(String(be.stderr || '').trim().slice(0, 200)); return }
+        const bePid = Number(String(be.stdout || '').trim().split(/\s+/).pop())
+        if (Number.isInteger(bePid) && bePid > 0) pids.push(bePid)
       }
       // abre uma janela de terminal própria, MINIMIZADA (não cobre a IDE; fica na barra de tarefas com o log do app e viva mesmo se a IDE fechar); o PowerShell é o comando liberado para isso
       const safeDir = dir.replace(/'/g, "''")
-      const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "'"]).execute()
-      if (out.code === 0) setDevStarted(true)
+      const out = await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', "$p = Start-Process cmd -WindowStyle Minimized -ArgumentList '/k','npm run dev' -WorkingDirectory '" + safeDir + "' -PassThru; $p.Id"]).execute()
+      const fePid = Number(String(out.stdout || '').trim().split(/\s+/).pop())
+      if (Number.isInteger(fePid) && fePid > 0) pids.push(fePid)
+      if (out.code === 0) { setDevPids(pids); setDevStarted(true) }
       else setDevError(String(out.stderr || '').trim().slice(0, 200))
     } catch (e: any) {
       setDevPreparing('')
       setDevError(String(e?.message || e).slice(0, 200))
+    }
+  }
+
+  const handleStopDev = async () => {
+    setDevStopping(true)
+    setDevError('')
+    try {
+      const { Command } = await import('@tauri-apps/plugin-shell')
+      // taskkill /T encerra a janela e os processos filhos (npm, node, Java); se a janela já foi fechada à mão, o erro é ignorado
+      const ids = devPids.filter(n => Number.isInteger(n) && n > 0)
+      if (ids.length > 0) {
+        await Command.create('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'foreach ($id in @(' + ids.join(',') + ')) { taskkill /PID $id /T /F 2>$null | Out-Null }']).execute()
+      }
+      setDevPids([])
+      setDevReady(false)
+      setDevStarted(false)
+    } catch (e: any) {
+      setDevError(String(e?.message || e).slice(0, 200))
+    } finally {
+      setDevStopping(false)
     }
   }
 
@@ -904,6 +933,14 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                           {t('export_modal.open_in_ide', "Navegador da IDE")}
                         </button>
                       </div>
+                      <button
+                        onClick={handleStopDev}
+                        disabled={devStopping}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-red-200 dark:border-red-900/40 bg-white dark:bg-neutral-900 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                      >
+                        {devStopping ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-current" />}
+                        {devStopping ? t('export_modal.stopping_dev', 'Parando...') : t('export_modal.stop_dev', 'Parar o servidor')}
+                      </button>
                     </div>
                   )}
                   {devError && <p className="text-[11px] text-red-600 dark:text-red-400 text-center">{t('export_modal.dev_failed', "Não foi possível iniciar o npm run dev. Rode manualmente na pasta do projeto.")} {devError}</p>}
