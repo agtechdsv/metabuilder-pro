@@ -599,6 +599,52 @@ class BpmEngine {
          }
       }
     }
+    // fila ainda com nós ao esgotar os 100 passos = fluxo em laço
+    return { steps: 100 - maxSteps, loop: queue.length > 0 };
+  }
+
+  /**
+   * Executa um fluxo e reporta o resultado à plataforma (POST /api/automations/runs): histórico em bpm_runs,
+   * aviso por e-mail em caso de erro/laço e retenção de logs configurados no Studio (módulo Automações).
+   */
+  async runFlow(flow, triggerNode, tableName, rowData, source) {
+    const startedAt = new Date();
+    let status = 'success';
+    let errorMessage = null;
+    let steps = 0;
+    try {
+      const result = await this.traverseGraph(flow.flow_data, triggerNode, tableName, rowData);
+      steps = result?.steps || 0;
+      if (result?.loop) { status = 'loop'; errorMessage = 'O fluxo passou de 100 passos (possível laço infinito) e foi interrompido.'; }
+    } catch (e) {
+      status = 'error';
+      errorMessage = (e && e.message) ? e.message : String(e);
+      console.error(chalk.red(`[BPM] Falha na execução do fluxo ${flow.name}:`), e);
+    }
+    if (status === 'loop') console.error(chalk.red(`[BPM] Fluxo "${flow.name}" interrompido: ${errorMessage}`));
+    await this.reportRun(flow, status, startedAt, errorMessage, { table: tableName, source, steps });
+  }
+
+  async reportRun(flow, status, startedAt, errorMessage, details) {
+    try {
+      const finishedAt = new Date();
+      await axios.post(`${this.apiUrl}/api/automations/runs`, {
+        project_id: this.project.id,
+        token: this.project.secret_token,
+        workflow_id: flow.id,
+        workflow_name: flow.name,
+        status,
+        trigger_source: details?.source || null,
+        started_at: startedAt.toISOString(),
+        finished_at: finishedAt.toISOString(),
+        duration_ms: finishedAt.getTime() - startedAt.getTime(),
+        error_message: errorMessage || undefined,
+        details
+      }, { timeout: 8000 });
+    } catch (err) {
+      // o registro é um extra: nunca derruba nem atrasa o fluxo
+      console.log(chalk.gray(`[BPM] Não foi possível registrar a execução: ${err.response?.data?.error || err.message}`));
+    }
   }
 
   async processEvent(tableName, actionType, rowData) {
@@ -630,11 +676,7 @@ class BpmEngine {
 
         if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
           console.log(chalk.cyan(`[BPM] Disparando fluxo "${flow.name}" para a tabela ${tableName}...`));
-          try {
-             await this.traverseGraph(flowData, triggerNode, tableName, rowData);
-          } catch(e) {
-             console.error(chalk.red(`[BPM] Falha na execução do fluxo ${flow.name}:`, e));
-          }
+          await this.runFlow(flow, triggerNode, tableName, rowData, `evento ${actionType.toUpperCase()}`);
         }
       }
     }
@@ -667,21 +709,17 @@ class BpmEngine {
       }
 
       console.log(chalk.cyan(`[BPM] Disparando fluxo customizado "${flow.name}" via Ação de Interface...`));
-      try {
-         // Garantir que temos o rowData completo caso a interface tenha enviado parcial
-         let fullRowData = { ...rowData };
-         if (fullRowData && fullRowData.id) {
-            try {
-               const sql = `SELECT * FROM "${tableName}" WHERE "id" = $1 LIMIT 1`;
-               const rows = await this.executeQuery(sql, [fullRowData.id]);
-               if (rows.length > 0) fullRowData = { ...fullRowData, ...rows[0] };
-            } catch(e) {}
-         }
-
-         await this.traverseGraph(flowData, triggerNode, tableName, fullRowData);
-      } catch(e) {
-         console.error(chalk.red(`[BPM] Falha na execução customizada do fluxo ${flow.name}:`), e);
+      // Garantir que temos o rowData completo caso a interface tenha enviado parcial
+      let fullRowData = { ...rowData };
+      if (fullRowData && fullRowData.id) {
+         try {
+            const sql = `SELECT * FROM "${tableName}" WHERE "id" = $1 LIMIT 1`;
+            const rows = await this.executeQuery(sql, [fullRowData.id]);
+            if (rows.length > 0) fullRowData = { ...fullRowData, ...rows[0] };
+         } catch(e) {}
       }
+
+      await this.runFlow(flow, triggerNode, tableName, fullRowData, 'ação de interface');
     }
   }
   async runNodeActionSync(node, triggerTable, triggerData) {
