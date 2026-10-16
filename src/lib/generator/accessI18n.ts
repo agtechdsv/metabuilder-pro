@@ -51,6 +51,25 @@ export interface AccessDictionary {
   err_invalid_level: string
   err_read_only_table: string
   err_setup: string
+  cancel: string
+  edit: string
+  edit_user: string
+  name_label: string
+  email_label: string
+  password_label: string
+  group_label: string
+  new_password_label: string
+  confirm_password_label: string
+  group_name_label: string
+  new_group_title: string
+  rename_group_title: string
+  reset_password_title: string
+  delete_user_title: string
+  delete_group_title: string
+  irreversible: string
+  password_effect: string
+  err_email: string
+  err_password_mismatch: string
 }
 
 const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
@@ -101,6 +120,25 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_invalid_level: 'Nível inválido.',
     err_read_only_table: 'Seu grupo de acesso só pode consultar esta tela: criar, editar e excluir não são permitidos.',
     err_setup: "As tabelas de acesso ainda não existem no banco. Rode npm run db:setup (ou o script db/access-control.sql) e tente de novo.",
+    cancel: 'Cancelar',
+    edit: 'Editar',
+    edit_user: 'Editar Usuário',
+    name_label: 'Nome',
+    email_label: 'E-mail',
+    password_label: 'Senha',
+    group_label: 'Grupo',
+    new_password_label: 'Nova senha',
+    confirm_password_label: 'Confirmar nova senha',
+    group_name_label: 'Nome do grupo',
+    new_group_title: 'Novo Grupo',
+    rename_group_title: 'Renomear Grupo',
+    reset_password_title: 'Redefinir Senha',
+    delete_user_title: 'Excluir Usuário',
+    delete_group_title: 'Excluir Grupo',
+    irreversible: 'Esta ação não pode ser desfeita.',
+    password_effect: 'A nova senha vale a partir do próximo login do usuário.',
+    err_email: 'Informe o e-mail.',
+    err_password_mismatch: 'As senhas não conferem.',
   },
   en: {
     menu_folder: 'Access Management',
@@ -149,6 +187,25 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_invalid_level: 'Invalid level.',
     err_read_only_table: 'Your access group can only view this screen: creating, editing and deleting are not allowed.',
     err_setup: "The access tables do not exist in the database yet. Run npm run db:setup (or the db/access-control.sql script) and try again.",
+    cancel: 'Cancel',
+    edit: 'Edit',
+    edit_user: 'Edit User',
+    name_label: 'Name',
+    email_label: 'E-mail',
+    password_label: 'Password',
+    group_label: 'Group',
+    new_password_label: 'New password',
+    confirm_password_label: 'Confirm new password',
+    group_name_label: 'Group name',
+    new_group_title: 'New Group',
+    rename_group_title: 'Rename Group',
+    reset_password_title: 'Reset Password',
+    delete_user_title: 'Delete User',
+    delete_group_title: 'Delete Group',
+    irreversible: 'This action cannot be undone.',
+    password_effect: 'The new password applies from the next sign-in of the user.',
+    err_email: 'Enter the e-mail.',
+    err_password_mismatch: 'The passwords do not match.',
   },
   es: {
     menu_folder: 'Gestión de Acceso',
@@ -197,6 +254,25 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_invalid_level: 'Nivel inválido.',
     err_read_only_table: 'Su grupo de acceso solo puede consultar esta pantalla: crear, editar y eliminar no están permitidos.',
     err_setup: "Las tablas de acceso aún no existen en la base. Ejecute npm run db:setup (o el script db/access-control.sql) e intente de nuevo.",
+    cancel: 'Cancelar',
+    edit: 'Editar',
+    edit_user: 'Editar Usuario',
+    name_label: 'Nombre',
+    email_label: 'Correo electrónico',
+    password_label: 'Contraseña',
+    group_label: 'Grupo',
+    new_password_label: 'Nueva contraseña',
+    confirm_password_label: 'Confirmar nueva contraseña',
+    group_name_label: 'Nombre del grupo',
+    new_group_title: 'Nuevo Grupo',
+    rename_group_title: 'Renombrar Grupo',
+    reset_password_title: 'Restablecer Contraseña',
+    delete_user_title: 'Eliminar Usuario',
+    delete_group_title: 'Eliminar Grupo',
+    irreversible: 'Esta acción no se puede deshacer.',
+    password_effect: 'La nueva contraseña vale desde el próximo inicio de sesión del usuario.',
+    err_email: 'Informe el correo electrónico.',
+    err_password_mismatch: 'Las contraseñas no coinciden.',
   },
 }
 

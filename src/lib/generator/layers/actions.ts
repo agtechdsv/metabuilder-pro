@@ -822,7 +822,7 @@ import { secureSelect, secureWrite } from './access'
 
 ${generateParsePayloadCode(model)}
 
-const schemaRelations = ${JSON.stringify(schemaRelations)}
+const schemaRelations: Array<{ fromTable: string; fromCol: string; toTable: string; toCol: string }> = ${JSON.stringify(schemaRelations)}
 
 function findRelationPath(startTable: string, targetTable: string): Array<{ table: string; on: string }> | null {
   if (startTable === targetTable || startTable.replace(/s$/, '') === targetTable.replace(/s$/, '')) return []

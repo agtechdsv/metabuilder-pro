@@ -52,6 +52,7 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
   files.set('lib/access-guard.ts', tr(ACCESS_GUARD))
   files.set('app/actions/access-admin.ts', tr(fill(ACCESS_ADMIN_ACTIONS, vars)))
   files.set(`app/(protected)/${ACCESS_SLUGS.users}/page.tsx`, fill(USERS_PAGE, vars))
+  files.set('components/AccessDialog.tsx', ACCESS_DIALOG)
   files.set(`app/(protected)/${ACCESS_SLUGS.users}/UsersClient.tsx`, tr(USERS_CLIENT))
   files.set(`app/(protected)/${ACCESS_SLUGS.groups}/page.tsx`, fill(GROUPS_PAGE, vars))
   files.set(`app/(protected)/${ACCESS_SLUGS.groups}/GroupsClient.tsx`, tr(GROUPS_CLIENT))
@@ -338,6 +339,17 @@ export async function createUser(input: { email: string; name?: string; password
   })
 }
 
+export async function updateUser(userId: string, input: { email: string; name?: string }): Promise<void> {
+  await need('__SLUG_USERS__', 'write')
+  const email = input.email.trim()
+  if (!email) throw new Error('{{err_email}}')
+  await asAccessAdmin(async () => {
+    const data: Record<string, any> = { [S.emailCol]: email }
+    if (NAME_COL) data[NAME_COL] = (input.name || '').trim() || null
+    await update__UM__(userId, data)
+  })
+}
+
 export async function resetUserPassword(userId: string, password: string): Promise<void> {
   await need('__SLUG_USERS__', 'write')
   if (!password) throw new Error('{{err_new_password}}')
@@ -441,9 +453,9 @@ ${load}
 
 const USERS_PAGE = pageShell(
   ACCESS_SLUGS.users,
-  `import { listUsers, listRoles } from '@/app/actions/access-admin'\nimport UsersClient from './UsersClient'`,
+  `import { listUsers, listRoles } from '@/app/actions/access-admin'\nimport { ACCESS_SETUP } from '@/lib/access-setup'\nimport UsersClient from './UsersClient'`,
   `  const [users, roles] = await Promise.all([listUsers(), listRoles()])`,
-  `<UsersClient initialUsers={users} roles={roles} canWrite={canWrite} />`,
+  `<UsersClient initialUsers={users} roles={roles} canWrite={canWrite} hasName={!!ACCESS_SETUP.nameCol} />`,
 )
 const GROUPS_PAGE = pageShell(
   ACCESS_SLUGS.groups,
@@ -462,23 +474,77 @@ const CARD = 'bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:bor
 const BTN = 'px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all active:scale-95 disabled:opacity-50'
 const INPUT = 'w-full px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-sm text-neutral-900 dark:text-white outline-none focus:border-indigo-500'
 
+// Janela de diálogo das telas de gestão de acesso (no lugar dos prompt/confirm do navegador): mesmo visual do app, fecha com Esc.
+const ACCESS_DIALOG = `'use client'
+import { useEffect, type ReactNode } from 'react'
+import { X } from 'lucide-react'
+
+export const DIALOG_INPUT = 'w-full px-3 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 text-sm text-neutral-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all'
+export const DIALOG_LABEL = 'block text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1.5'
+export const BTN_PRIMARY = 'px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+export const BTN_DANGER = 'px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold tracking-wide transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+export const BTN_GHOST = 'px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-xs font-bold tracking-wide transition-all disabled:opacity-50'
+
+export function AccessDialog({ title, subtitle, icon, tone = 'indigo', busy = false, onClose, children, footer }: {
+  title: string
+  subtitle?: string
+  icon?: ReactNode
+  tone?: 'indigo' | 'red'
+  busy?: boolean
+  onClose: () => void
+  children?: ReactNode
+  footer?: ReactNode
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [busy, onClose])
+
+  const badge = tone === 'red' ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-500'
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { if (!busy) onClose() }}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 px-6 pt-6">
+          {icon && <div className={'w-10 h-10 shrink-0 rounded-2xl flex items-center justify-center ' + badge}>{icon}</div>}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-white">{title}</h2>
+            {subtitle && <p className="text-xs text-neutral-500 mt-0.5 break-words">{subtitle}</p>}
+          </div>
+          <button type="button" disabled={busy} onClick={onClose} className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"><X className="w-4 h-4" /></button>
+        </div>
+        {children && <div className="px-6 py-5 space-y-4">{children}</div>}
+        {footer && <div className="px-6 pb-6 pt-1 flex items-center justify-end gap-2.5">{footer}</div>}
+      </div>
+    </div>
+  )
+}
+`
+
 const USERS_CLIENT = `'use client'
 import { useState, useTransition } from 'react'
-import { UserPlus, KeyRound, Trash2, X } from 'lucide-react'
-import { listUsers, setUserRole, createUser, resetUserPassword, deleteUser, type AccessUser, type AccessRole } from '@/app/actions/access-admin'
+import { UserPlus, UserCog, KeyRound, Trash2, Pencil } from 'lucide-react'
+import { listUsers, setUserRole, createUser, updateUser, resetUserPassword, deleteUser, type AccessUser, type AccessRole } from '@/app/actions/access-admin'
+import { AccessDialog, DIALOG_INPUT, DIALOG_LABEL, BTN_PRIMARY, BTN_DANGER, BTN_GHOST } from '@/components/AccessDialog'
 
-export default function UsersClient({ initialUsers, roles, canWrite }: { initialUsers: AccessUser[]; roles: AccessRole[]; canWrite: boolean }) {
+type Dialog = null | { kind: 'create' } | { kind: 'edit'; user: AccessUser } | { kind: 'password'; user: AccessUser } | { kind: 'delete'; user: AccessUser }
+
+export default function UsersClient({ initialUsers, roles, canWrite, hasName }: { initialUsers: AccessUser[]; roles: AccessRole[]; canWrite: boolean; hasName: boolean }) {
   const [users, setUsers] = useState(initialUsers)
   const [error, setError] = useState('')
   const [pending, start] = useTransition()
-  const [creating, setCreating] = useState(false)
+  const [dialog, setDialog] = useState<Dialog>(null)
   const [form, setForm] = useState({ email: '', name: '', password: '', roleId: '' })
+  const [pw, setPw] = useState({ next: '', again: '' })
 
   const reload = async () => setUsers(await listUsers())
   const run = (fn: () => Promise<void>) => start(async () => {
     setError('')
     try { await fn(); await reload() } catch (e: any) { setError(e?.message || '{{generic_error}}') }
   })
+  const open = (d: Dialog) => { setError(''); setDialog(d) }
+  const close = () => { setError(''); setDialog(null) }
+  const errorBox = error ? <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div> : null
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-6">
@@ -488,10 +554,10 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
           <p className="text-sm text-neutral-500">{{users_subtitle}}</p>
         </div>
         {canWrite && (
-          <button className={'${BTN} flex items-center gap-2'} onClick={() => setCreating(true)}><UserPlus className="w-4 h-4" /> {{create_user}}</button>
+          <button className={'${BTN} flex items-center gap-2'} onClick={() => { setForm({ email: '', name: '', password: '', roleId: '' }); open({ kind: 'create' }) }}><UserPlus className="w-4 h-4" /> {{create_user}}</button>
         )}
       </div>
-      {error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
+      {!dialog && error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
       <div className="${CARD} overflow-hidden">
         <table className="w-full text-left">
           <thead>
@@ -518,13 +584,9 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
                 <td className="px-6 py-4 text-right">
                   {canWrite && (
                     <div className="inline-flex gap-1">
-                      <button title="{{reset_password}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
-                        const pw = window.prompt('{{new_password_for}} ' + u.email)
-                        if (pw) run(() => resetUserPassword(u.id, pw))
-                      }}><KeyRound className="w-4 h-4" /></button>
-                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
-                        if (window.confirm('{{confirm_delete_user}} ' + u.email + '?')) run(() => deleteUser(u.id))
-                      }}><Trash2 className="w-4 h-4" /></button>
+                      <button title="{{edit}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => { setForm({ email: u.email, name: u.name, password: '', roleId: u.roleId }); open({ kind: 'edit', user: u }) }}><Pencil className="w-4 h-4" /></button>
+                      <button title="{{reset_password}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => { setPw({ next: '', again: '' }); open({ kind: 'password', user: u }) }}><KeyRound className="w-4 h-4" /></button>
+                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => open({ kind: 'delete', user: u })}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </td>
@@ -535,23 +597,63 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
         </table>
       </div>
 
-      {creating && (
-        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4" onClick={() => setCreating(false)}>
-          <div className="${CARD} w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{{create_user}}</h2>
-              <button onClick={() => setCreating(false)} className="text-neutral-400 hover:text-neutral-700"><X className="w-4 h-4" /></button>
-            </div>
-            <input className="${INPUT}" placeholder="{{name_optional}}" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <input className="${INPUT}" type="email" placeholder="{{email}}" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            <input className="${INPUT}" type="password" placeholder="{{password}}" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-            <select className="${INPUT}" value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })}>
+      {dialog?.kind === 'create' && (
+        <AccessDialog title="{{create_user}}" icon={<UserPlus className="w-5 h-5" />} busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_PRIMARY} disabled={pending || !form.email.trim() || !form.password} onClick={() => run(async () => { await createUser(form); close() })}>{{save}}</button></>}>
+          {errorBox}
+          {hasName && <div><label className={DIALOG_LABEL}>{{name_label}}</label><input className={DIALOG_INPUT} placeholder="{{name_optional}}" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>}
+          <div><label className={DIALOG_LABEL}>{{email_label}}</label><input className={DIALOG_INPUT} type="email" autoFocus value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+          <div><label className={DIALOG_LABEL}>{{password_label}}</label><input className={DIALOG_INPUT} type="password" autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
+          <div><label className={DIALOG_LABEL}>{{group_label}}</label>
+            <select className={DIALOG_INPUT} value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })}>
               <option value="">{{no_group}}</option>
               {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <button className={'${BTN} w-full'} disabled={pending} onClick={() => run(async () => { await createUser(form); setCreating(false); setForm({ email: '', name: '', password: '', roleId: '' }) })}>{{save}}</button>
           </div>
-        </div>
+        </AccessDialog>
+      )}
+
+      {dialog?.kind === 'edit' && (
+        <AccessDialog title="{{edit_user}}" subtitle={dialog.user.email} icon={<UserCog className="w-5 h-5" />} busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_PRIMARY} disabled={pending || !form.email.trim()} onClick={() => run(async () => {
+            const u = dialog.user
+            await updateUser(u.id, { email: form.email, name: form.name })
+            if (form.roleId !== u.roleId) await setUserRole(u.id, form.roleId)
+            close()
+          })}>{{save}}</button></>}>
+          {errorBox}
+          {hasName && <div><label className={DIALOG_LABEL}>{{name_label}}</label><input className={DIALOG_INPUT} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>}
+          <div><label className={DIALOG_LABEL}>{{email_label}}</label><input className={DIALOG_INPUT} type="email" autoFocus value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+          <div><label className={DIALOG_LABEL}>{{group_label}}</label>
+            <select className={DIALOG_INPUT} value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })}>
+              <option value="">{{no_group}}</option>
+              {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </div>
+        </AccessDialog>
+      )}
+
+      {dialog?.kind === 'password' && (
+        <AccessDialog title="{{reset_password_title}}" subtitle={dialog.user.email} icon={<KeyRound className="w-5 h-5" />} busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_PRIMARY} disabled={pending || !pw.next || !pw.again} onClick={() => run(async () => {
+            if (pw.next !== pw.again) throw new Error('{{err_password_mismatch}}')
+            await resetUserPassword(dialog.user.id, pw.next)
+            close()
+          })}>{{save}}</button></>}>
+          {errorBox}
+          <div><label className={DIALOG_LABEL}>{{new_password_label}}</label><input className={DIALOG_INPUT} type="password" autoFocus autoComplete="new-password" value={pw.next} onChange={e => setPw({ ...pw, next: e.target.value })} /></div>
+          <div><label className={DIALOG_LABEL}>{{confirm_password_label}}</label><input className={DIALOG_INPUT} type="password" autoComplete="new-password" value={pw.again} onChange={e => setPw({ ...pw, again: e.target.value })} /></div>
+          <p className="text-xs text-neutral-500">{{password_effect}}</p>
+        </AccessDialog>
+      )}
+
+      {dialog?.kind === 'delete' && (
+        <AccessDialog title="{{delete_user_title}}" icon={<Trash2 className="w-5 h-5" />} tone="red" busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_DANGER} disabled={pending} onClick={() => run(async () => { await deleteUser(dialog.user.id); close() })}>{{delete}}</button></>}>
+          {errorBox}
+          <p className="text-sm text-neutral-700 dark:text-neutral-300">{{confirm_delete_user}} <strong className="text-neutral-900 dark:text-white">{dialog.user.email}</strong>?</p>
+          <p className="text-xs text-neutral-500">{{irreversible}}</p>
+        </AccessDialog>
       )}
     </div>
   )
@@ -560,17 +662,25 @@ export default function UsersClient({ initialUsers, roles, canWrite }: { initial
 
 const GROUPS_CLIENT = `'use client'
 import { useState, useTransition } from 'react'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Shield } from 'lucide-react'
 import { listRoles, createRole, renameRole, deleteRole, type AccessRole } from '@/app/actions/access-admin'
+import { AccessDialog, DIALOG_INPUT, DIALOG_LABEL, BTN_PRIMARY, BTN_DANGER, BTN_GHOST } from '@/components/AccessDialog'
+
+type Dialog = null | { kind: 'create' } | { kind: 'rename'; role: AccessRole } | { kind: 'delete'; role: AccessRole }
 
 export default function GroupsClient({ initialRoles, canWrite }: { initialRoles: AccessRole[]; canWrite: boolean }) {
   const [roles, setRoles] = useState(initialRoles)
   const [error, setError] = useState('')
   const [pending, start] = useTransition()
+  const [dialog, setDialog] = useState<Dialog>(null)
+  const [name, setName] = useState('')
   const run = (fn: () => Promise<void>) => start(async () => {
     setError('')
     try { await fn(); setRoles(await listRoles()) } catch (e: any) { setError(e?.message || '{{generic_error}}') }
   })
+  const open = (d: Dialog, initial = '') => { setError(''); setName(initial); setDialog(d) }
+  const close = () => { setError(''); setDialog(null) }
+  const errorBox = error ? <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div> : null
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
@@ -580,13 +690,10 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
           <p className="text-sm text-neutral-500">{{groups_subtitle}}</p>
         </div>
         {canWrite && (
-          <button className={'${BTN} flex items-center gap-2'} disabled={pending} onClick={() => {
-            const name = window.prompt('{{new_group_prompt}}')
-            if (name) run(() => createRole(name))
-          }}><Plus className="w-4 h-4" /> {{create_group}}</button>
+          <button className={'${BTN} flex items-center gap-2'} disabled={pending} onClick={() => open({ kind: 'create' })}><Plus className="w-4 h-4" /> {{create_group}}</button>
         )}
       </div>
-      {error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
+      {!dialog && error && <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold">{error}</div>}
       <div className="${CARD} overflow-hidden">
         <table className="w-full text-left">
           <thead>
@@ -602,13 +709,8 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
                 <td className="px-6 py-4 text-right">
                   {canWrite && (
                     <div className="inline-flex gap-1">
-                      <button title="{{rename}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => {
-                        const name = window.prompt('{{rename_group_prompt}}', r.name)
-                        if (name && name !== r.name) run(() => renameRole(r.id, name))
-                      }}><Pencil className="w-4 h-4" /></button>
-                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => {
-                        if (window.confirm('{{confirm_delete_group}} ' + r.name + '? {{confirm_delete_group_note}}')) run(() => deleteRole(r.id))
-                      }}><Trash2 className="w-4 h-4" /></button>
+                      <button title="{{rename}}" className="p-2 rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10" onClick={() => open({ kind: 'rename', role: r }, r.name)}><Pencil className="w-4 h-4" /></button>
+                      <button title="{{delete}}" className="p-2 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-500/10" onClick={() => open({ kind: 'delete', role: r })}><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                 </td>
@@ -618,6 +720,27 @@ export default function GroupsClient({ initialRoles, canWrite }: { initialRoles:
           </tbody>
         </table>
       </div>
+
+      {(dialog?.kind === 'create' || dialog?.kind === 'rename') && (
+        <AccessDialog title={dialog.kind === 'create' ? '{{new_group_title}}' : '{{rename_group_title}}'} icon={<Shield className="w-5 h-5" />} busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_PRIMARY} disabled={pending || !name.trim() || (dialog.kind === 'rename' && name.trim() === dialog.role.name)} onClick={() => run(async () => {
+            if (dialog.kind === 'create') await createRole(name)
+            else await renameRole(dialog.role.id, name)
+            close()
+          })}>{{save}}</button></>}>
+          {errorBox}
+          <div><label className={DIALOG_LABEL}>{{group_name_label}}</label><input className={DIALOG_INPUT} autoFocus value={name} onChange={e => setName(e.target.value)} /></div>
+        </AccessDialog>
+      )}
+
+      {dialog?.kind === 'delete' && (
+        <AccessDialog title="{{delete_group_title}}" icon={<Trash2 className="w-5 h-5" />} tone="red" busy={pending} onClose={close}
+          footer={<><button className={BTN_GHOST} disabled={pending} onClick={close}>{{cancel}}</button><button className={BTN_DANGER} disabled={pending} onClick={() => run(async () => { await deleteRole(dialog.role.id); close() })}>{{delete}}</button></>}>
+          {errorBox}
+          <p className="text-sm text-neutral-700 dark:text-neutral-300">{{confirm_delete_group}} <strong className="text-neutral-900 dark:text-white">{dialog.role.name}</strong>? {{confirm_delete_group_note}}</p>
+          <p className="text-xs text-neutral-500">{{irreversible}}</p>
+        </AccessDialog>
+      )}
     </div>
   )
 }
