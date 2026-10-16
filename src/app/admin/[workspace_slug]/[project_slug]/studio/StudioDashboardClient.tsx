@@ -1613,7 +1613,7 @@ export function StudioDashboardClient({
               <div>
                 <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">{t('dashboard.projects.studio.bpm_modal.log_retention')}</label>
                 <select 
-                  value={bpmConfig?.log_retention || 30}
+                  value={bpmConfig?.log_retention ?? 30}
                   onChange={(e) => setBpmConfig((prev: any) => ({ ...prev, log_retention: Number(e.target.value) }))}
                   className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 text-sm focus:ring-2 focus:ring-indigo-500"
                 >
