@@ -7,6 +7,7 @@ import { generateBaseFiles } from './base-files'
 import { generateAccessAdmin, applyWriteGuard } from './access-admin'
 import { toPascalCase } from '../layers/routes/helpers'
 import { javaNeedsAccess } from './java-spring-access'
+import { routesNeedExport } from '../layers/export'
 
 
 /**
@@ -149,6 +150,7 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
       'bcryptjs': '^2.4.3',
       'jose': '^5.4.0',
       ...(ast.authConfig?.authType === 'ldap' ? { ldapts: '^7.2.0' } : {}),
+      ...(routesNeedExport(ast) ? { exceljs: '^4.4.0' } : {}),
       // NOTA: sem pg, oracledb, mysql2, mssql, @supabase/ssr
       // O frontend chama a API REST do Spring Boot
     } as Record<string, string>,

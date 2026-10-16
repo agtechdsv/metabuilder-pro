@@ -81,7 +81,7 @@ export function generateNewPage(route: RouteNode, targetLang?: string): string {
   const wrapClose = '</MaskScope>'
 
   const formFieldsHtml = route.formFields
-    .map(f => appendFieldActions(renderFormField(f, false, false, 'relationalOptions'), route, f, '{}'))
+    .map(f => appendFieldActions(renderFormField(f, false, false, 'relationalOptions', false, true), route, f, '{}'))
     .filter(Boolean)
     .join('\n')
   const masterTopHtml = masterActionButtonsHtml(route, '{}')
@@ -99,6 +99,7 @@ import { redirect } from 'next/navigation'
 import { create${mn}${selfActionImport} } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { MaskScope } from '@/components/MaskScope'
+import { AutocompleteInput } from '@/components/AutocompleteInput'
 import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 

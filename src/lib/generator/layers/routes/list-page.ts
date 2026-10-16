@@ -1,5 +1,6 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
+import { exportMenuHtml, exportImportLine, routeExportFormats } from '../export'
 import { renderGridCellValue, toPascalCase, toCamel } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -11,6 +12,10 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const hasCreate = route.buttons.some(b => b.actionType === 'create') || route.buttons.length === 0
+  // marcar linhas só faz sentido onde há exportação (leva as marcadas)
+  const selectable = routeExportFormats(route).length > 0
+  // tamanho de página padrão: o que o dev configurou no Studio (items_per_page), como na plataforma (padrão 15)
+  const defaultLimit = Math.max(1, Math.floor(Number(route.rawLayoutConfig?.items_per_page)) || 15)
 
   // Detecta todas as tabelas relacionadas necessárias para lookups dos filtros e colunas da grid
   const lookupModels = new Map<string, string>() // table -> modelName
@@ -220,7 +225,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
     })
     .join('\n')
 
-  return `import type { Metadata } from 'next'
+  return `${exportImportLine(route)}import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'
@@ -260,7 +265,7 @@ async function ${mn}TableContent({
   const sortBy = params?.sort_by
   const sortOrder = params?.sort_order || 'asc'
   const page = Math.max(1, parseInt(params?.page || '1', 10) || 1)
-  const limit = Math.max(1, parseInt(params?.limit || '15', 10) || 15)
+  const limit = Math.max(1, parseInt(params?.limit || '${defaultLimit}', 10) || ${defaultLimit})
   const isEmbedded = params?.embedded === 'true'
 
 ${fetchDataCode}
@@ -329,7 +334,7 @@ ${filterFields.map(f => {
         <table className="w-full text-left border-collapse min-w-[1000px]">
           <thead className="sticky top-0 z-20">
             <tr className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-              <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] text-center">#</th>
+              <th className="px-4 py-4 w-[60px] border-r border-neutral-200/50 dark:border-neutral-700/50 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] text-center">${selectable ? '<SelectAllBox />' : '#'}</th>
 ${thCells}
               <th className="px-4 py-4 text-right text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] border-l border-neutral-200/50 dark:border-neutral-700/50">${dict.list.actions_header}</th>
             </tr>
@@ -340,7 +345,9 @@ ${thCells}
               return (
               <tr key={itemId || idx} className={"group border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors " + (idx % 2 === 0 ? "" : "bg-neutral-50/50 dark:bg-neutral-900/20")}>
                 <td className="px-4 py-4 w-[60px] text-center border-r border-neutral-200/50 dark:border-neutral-700/50">
-                  <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{(page - 1) * limit + idx + 1}</span>
+${selectable
+  ? `                  <RowSelectBox value={String(itemId ?? '')} />`
+  : `                  <span className="text-[11px] font-black text-neutral-300 dark:text-neutral-600">{(page - 1) * limit + idx + 1}</span>`}
                 </td>
 ${tdCells}
                 <td className="px-4 py-4 text-right border-l border-neutral-200/50 dark:border-neutral-700/50">
@@ -453,9 +460,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
           </Link>`
   }
   if (b.actionType === 'export') {
-    return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
-          </button>`
+    return `          ${exportMenuHtml(route, b.label)}`
   }
   if (b.actionType === 'custom') {
     const actionConfig = {

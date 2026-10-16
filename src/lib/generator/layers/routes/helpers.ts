@@ -1,4 +1,5 @@
 import { ResolvedField, RouteNode, CustomActionDef } from '../../ast'
+import { isAutocompleteField, autocompleteProps } from '../autocomplete'
 
 export function toCamel(str: string): string {
   return str
@@ -192,7 +193,8 @@ export function renderFormField(
   isEdit: boolean,
   readOnly: boolean | string = false,
   relationalOptionsVar = 'relationalOptions',
-  isModal = false
+  isModal = false,
+  useAutocomplete = false
 ): string {
   const col = field.dbColumn
   const colCamel = toCamel(col)
@@ -270,6 +272,21 @@ export function renderFormField(
     ['select', 'combo (select)', 'radio', 'radio buttons'].includes(compType) ||
     ((col.endsWith('_id') || Boolean(field.config?.relation?.targetTable)) && !field.isPrimaryKey && !isTextLike) ||
     (Boolean(options && options.length > 0) && !isTextLike)
+
+  // campo configurado no Studio como Autocomplete (Busca Dinâmica): a busca vai ao servidor, a lista não é carregada inteira
+  if (useAutocomplete && isAutocompleteField(field)) {
+    return `
+          <div className="space-y-1.5 ${colSpanClass}">
+            <label htmlFor="${col}" className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">${label}${required ? ' *' : ''}</label>
+            <AutocompleteInput
+              name="${col}"
+              defaultValue={isEdit ? String(${valExpr} ?? '') : ''}
+              ${autocompleteProps(field)}
+              disabled={${readOnlyCond}}
+              options={${relationalOptionsVar}?.['${col}'] || []}
+            />
+          </div>`
+  }
 
   if (isSelect) {
     const defaultOpts = options && options.length > 0 ? JSON.stringify(options) : '[]'

@@ -1,5 +1,6 @@
 import { RouteNode } from '../../ast'
 import { renderFormField, getByocComponentName, toPascalCase, FORM_INPUT_FORMAT_HELPERS } from './helpers'
+import { exportMenuHtml, exportImportLine } from '../export'
 // ─────────────────────────────────────────────────────────────────────────────
 // Gallery Page (Server Component)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,10 +180,8 @@ export function generateGalleryPage(route: RouteNode): string {
           </Link>`
     }
     if (b.actionType === 'export') {
-      return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
-            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
-          </button>`
-    }
+    return `          ${exportMenuHtml(route, b.label)}`
+  }
     return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer">
             ${b.label}
           </button>`
@@ -196,7 +195,7 @@ export function generateGalleryPage(route: RouteNode): string {
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : ''}`
 
-  return `import { get${mn}List } from '@/app/actions/${mnLower}'
+  return `${exportImportLine(route)}import { get${mn}List } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}import { GalleryClient } from './GalleryClient'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import Link from 'next/link'

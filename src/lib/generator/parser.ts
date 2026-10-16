@@ -845,6 +845,13 @@ function parseButtons(buttonsConfig: any[]): ViewButton[] {
         linkTarget: b.link_target || b.url,
       }
     })
+    // topo da tela como na plataforma: Exportar, depois os demais, e Novo Registro por último (sort estável)
+    .sort((x, y) => headerRank(x) - headerRank(y))
+}
+
+function headerRank(b: ViewButton): number {
+  if (b.placement !== 'header') return 1
+  return b.actionType === 'export' ? 0 : b.actionType === 'create' ? 2 : 1
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1489,7 +1496,7 @@ function resolveRelationTabs(
         relatedTable: subModel.db_table_name,
         relatedModelName: subModelName,
         foreignKey: subFkCol,
-        label: subModel.display_name || subModelName,
+        label: layoutConfig.details_tab_titles?.[subModel.id] || subModel.display_name || subModelName,
         itemTitleField: subItemTitleField,
         gridFields: subGridFields,
         formFields: subFormFields,

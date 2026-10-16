@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { CustomActionButton } from '@/components/ui/custom-action-button'
+import { AutocompleteInput } from '@/components/AutocompleteInput'
 import {
   ChevronDown,
   ChevronUp,
@@ -331,11 +332,31 @@ function getFieldMask(f: any, isComputed: boolean = false): string {
   return ''
 }
 
+/** Campo configurado no Studio como Autocomplete (Busca Dinâmica): tabela, colunas, mínimo de caracteres, espera, limite e texto de busca. */
+function getAutocompleteConfig(f: any): { table: string; labelCol: string; valueCol: string; minChars: number; debounceMs: number; limit: number; placeholder?: string } | null {
+  if (!f || f.isPrimaryKey) return null
+  const comp = f.config?.form_config?.component || f.config?.component || (f as any).component || {}
+  const t = String(comp.type || f.config?.type || '').toLowerCase()
+  if (!['autocomplete', 'autocomplete (busca dinâmica)', 'autocomplete (busca dinamica)'].includes(t)) return null
+  const rel = f.config?.relation || {}
+  const rawTable = String(comp.rel_table || rel.targetTable || f.config?.rel_table || (String(f.dbColumn || '').endsWith('_id') ? String(f.dbColumn).slice(0, -3) + 's' : ''))
+  return {
+    table: (rawTable.split('.').pop() || '').toLowerCase(),
+    labelCol: String(comp.rel_label || rel.displayColumn || f.config?.rel_label || ''),
+    valueCol: String(comp.rel_value || rel.valueColumn || f.config?.rel_value || 'id'),
+    minChars: Number(comp.min_chars ?? 2) || 2,
+    debounceMs: Number(comp.debounce_ms ?? 300) || 300,
+    limit: Number(comp.limit) > 0 ? Number(comp.limit) : 20,
+    placeholder: comp.search_placeholder || undefined,
+  }
+}
+
 function isSelectField(f: any, options: any[] = [], isComputed: boolean = false): boolean {
   if (!f) return false
   if (isComputed) return false
   if (isDateField(f)) return false
   if (getFieldFormulaTokens(f).length > 0) return false
+  if (getAutocompleteConfig(f)) return true
 
   const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
   const compType = String(comp.type || f.config?.type || '').toLowerCase()
@@ -837,7 +858,7 @@ const SubItemAccordion = React.forwardRef(({
             const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
             const widthVal = sf.config?.width || sf.config?.component?.width || ''
             
-            let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
+            let colSpanClass = 'col-span-12'
             if (numCols) {
               if (numCols >= 12) colSpanClass = 'col-span-12'
               else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
@@ -870,16 +891,21 @@ const SubItemAccordion = React.forwardRef(({
                 return oV === String(val) || oL === String(val)
               })
               const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val ?? '')
+              const onSelectChange1 = (e: any) => onSubItemChange?.(sf.dbColumn, e.target.value)
+
               return (
                 <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                   <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
                     {sf.label}
                   </label>
-                  <select
+                  {getAutocompleteConfig(sf) ? (
+<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} options={finalOptions} onChange={(v: string) => onSelectChange1({ target: { value: v } } as any)} />
+) : (
+<select
                     key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
                     name={sf.dbColumn}
                     value={defVal}
-                    onChange={(e) => onSubItemChange?.(sf.dbColumn, e.target.value)}
+                    onChange={onSelectChange1}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                   >
                     <option value="">Selecione...</option>
@@ -892,6 +918,7 @@ const SubItemAccordion = React.forwardRef(({
                       return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                     })}
                   </select>
+)}
                 </div>
               )
             }
@@ -2188,7 +2215,7 @@ export function DetailRelationSection({
                         const widthVal = f.config?.width || f.config?.component?.width || ''
                         const rawCols = f.config?.gridSpan ?? f.config?.modalGridSpan ?? f.config?.component?.gridSpan ?? f.config?.component?.modalGridSpan ?? f.config?.columns ?? f.config?.col_span ?? f.config?.component?.columns ?? f.config?.component?.col_span ?? f.config?.colSpan
                         const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
-                        let colSpanClass = 'col-span-12 md:col-span-6'
+                        let colSpanClass = 'col-span-12'
                         if (numCols) {
                           if (numCols >= 12) colSpanClass = 'col-span-12'
                           else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
@@ -2224,17 +2251,22 @@ export function DetailRelationSection({
                           })
                           const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val || '')
 
+                          const onSelectChange2 = (e: any) => handleItemFieldChange(idx, f.dbColumn, e.target.value)
+
                           return (
                             <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                               <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                                 {f.label}
                               </label>
-                              <select
+                              {getAutocompleteConfig(f) ? (
+<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} options={displayedOptions} onChange={(v: string) => onSelectChange2({ target: { value: v } } as any)} />
+) : (
+<select
                                 key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
                                 name={f.dbColumn}
                                 value={defVal}
                                 disabled={isReadOnly}
-                                onChange={(e) => handleItemFieldChange(idx, f.dbColumn, e.target.value)}
+                                onChange={onSelectChange2}
                                 className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-white dark:bg-neutral-900'} border border-neutral-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                               >
                                 <option value="">Selecione...</option>
@@ -2247,6 +2279,7 @@ export function DetailRelationSection({
                                   return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                                 })}
                               </select>
+)}
                             </div>
                           )
                         }
@@ -2336,8 +2369,18 @@ export function DetailRelationSection({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const newSub: any = { id: \`temp-\${Date.now()}\` }
-                                  setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
+                                  // nova linha na própria lista, já aberta para preencher (gravada junto com o registro)
+                                  const newSub: any = { id: \`temp-\${Date.now()}\`, _isNew: true, _dirty: true }
+                                  subFields.forEach((sf: any) => { newSub[sf.dbColumn] = '' })
+                                  const parentRef = item.id || idx
+                                  const nextIndex = itemChildRecords.length
+                                  setLocalItems(prev => prev.map((it, itIdx) => {
+                                    const isParent = (it.id || it.codigo) === parentRef || String(itIdx) === String(parentRef) || String(it.id) === String(parentRef)
+                                    if (!isParent) return it
+                                    const kids = [...getSubRecords(it), newSub]
+                                    return { ...it, items: kids, ...(subTable ? { [subTable]: kids } : {}), _dirty: true }
+                                  }))
+                                  setExpandedSubItems(prev => ({ ...prev, [\`\${parentRef}-\${nextIndex}\`]: true }))
                                 }}
                                 className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors shadow-sm"
                                 title="Adicionar"
@@ -2347,7 +2390,11 @@ export function DetailRelationSection({
                             )}
                             <button
                               type="button"
-                              onClick={() => handleOpenEditModal(item)}
+                              onClick={() => {
+                                // modal do registro do subdetalhe (um item novo)
+                                const newSub: any = { id: \`temp-\${Date.now()}\` }
+                                setEditingSubItem({ subItem: newSub, sIdx: itemChildRecords.length, parentId: item.id || idx, subFields })
+                              }}
                               className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 rounded-lg transition-colors"
                               title="Abrir Modal"
                             >
@@ -2356,7 +2403,7 @@ export function DetailRelationSection({
                           </div>
                         </div>
 
-                        {isNew || itemChildRecords.length === 0 ? (
+                        {itemChildRecords.length === 0 ? (
                           <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center bg-neutral-50/20 dark:bg-neutral-900/10">
                             <p className="text-xs italic text-neutral-400 dark:text-neutral-500">
                               Nenhum registro de Itens encontrado.
@@ -2538,7 +2585,7 @@ export function DetailRelationSection({
                     const rawWidth = String(f.config?.modalWidth || comp.modalWidth || formCfg.modalWidth || formComp.modalWidth ||
                                             f.config?.width || comp.width || formCfg.width || formComp.width || '')
 
-                    let colSpanClass = 'col-span-12 md:col-span-6'
+                    let colSpanClass = 'col-span-12'
                     if (numCols) {
                       if (numCols >= 12) colSpanClass = 'col-span-12'
                       else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
@@ -2574,17 +2621,22 @@ export function DetailRelationSection({
                       })
                       const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val || '')
 
+                      const onSelectChange3 = (e: any) => handleModalFieldChange(f.dbColumn, e.target.value)
+
                       return (
                         <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
                           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
                             {f.label}
                           </label>
-                          <select
+                          {getAutocompleteConfig(f) ? (
+<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} options={displayedOptions} onChange={(v: string) => onSelectChange3({ target: { value: v } } as any)} />
+) : (
+<select
                             key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
                             name={f.dbColumn}
                             value={defVal}
                             disabled={isReadOnly}
-                            onChange={(e) => handleModalFieldChange(f.dbColumn, e.target.value)}
+                            onChange={onSelectChange3}
                             className={\`w-full \${isReadOnly ? 'bg-neutral-100/80 dark:bg-neutral-800/80 cursor-not-allowed opacity-90' : 'bg-slate-50 dark:bg-neutral-800'} border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all\`}
                           >
                             <option value="">Selecione...</option>
@@ -2597,6 +2649,7 @@ export function DetailRelationSection({
                               return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                             })}
                           </select>
+)}
                         </div>
                       )
                     }
@@ -2871,7 +2924,7 @@ export function DetailRelationSection({
                   const numCols = typeof rawCols === 'number' ? rawCols : (typeof rawCols === 'string' && rawCols.match(/\d+/) ? parseInt(rawCols.match(/\d+/)![0], 10) : null)
                   const widthVal = sf.config?.width || sf.config?.component?.width || ''
                   
-                  let colSpanClass = 'col-span-12 sm:col-span-6 lg:col-span-3'
+                  let colSpanClass = 'col-span-12'
                   if (numCols) {
                     if (numCols >= 12) colSpanClass = 'col-span-12'
                     else if (numCols === 9) colSpanClass = 'col-span-12 md:col-span-9'
@@ -2905,16 +2958,7 @@ export function DetailRelationSection({
                     })
                     const defVal = selectedOpt ? (typeof selectedOpt === 'object' ? String(selectedOpt.value ?? selectedOpt.id) : String(selectedOpt)) : String(val ?? '')
 
-                    return (
-                      <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
-                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
-                          {sf.label}
-                        </label>
-                        <select
-                          key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
-                          name={sf.dbColumn}
-                          value={defVal}
-                          onChange={(e) => {
+                    const onSelectChange4 = (e: any) => {
                             let newSub = { ...editingSubItem.subItem, [sf.dbColumn]: e.target.value }
                             const chosenOpt = finalOptions.find((o: any) => String(o.value ?? o.id ?? o) === String(e.target.value))
                             if (chosenOpt?.label) {
@@ -2933,7 +2977,21 @@ export function DetailRelationSection({
                               }
                             })
                             setEditingSubItem(prev => prev ? { ...prev, subItem: newSub } : null)
-                          }}
+                          }
+
+                    return (
+                      <div key={sf.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
+                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                          {sf.label}
+                        </label>
+                        {getAutocompleteConfig(sf) ? (
+<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} options={finalOptions} onChange={(v: string) => onSelectChange4({ target: { value: v } } as any)} />
+) : (
+<select
+                          key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
+                          name={sf.dbColumn}
+                          value={defVal}
+                          onChange={onSelectChange4}
                           className="w-full bg-slate-50 dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 text-slate-900 dark:text-neutral-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                         >
                           <option value="">Selecione...</option>
@@ -2946,6 +3004,7 @@ export function DetailRelationSection({
                             return <option key={oIdx} value={String(optVal)}>{String(optLabel)}</option>
                           })}
                         </select>
+)}
                       </div>
                     )
                   }

@@ -1,5 +1,6 @@
 import { RouteNode, AppAST } from '../../ast'
 import { renderFormField, getByocComponentName, toPascalCase, findDisplayColumn, FORM_INPUT_FORMAT_HELPERS } from './helpers'
+import { exportMenuHtml, exportImportLine } from '../export'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scheduler Page (Server Component)
@@ -295,10 +296,8 @@ export function generateSchedulerPage(route: RouteNode, ast?: AppAST): string {
           </Link>`
     }
     if (b.actionType === 'export') {
-      return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-            <Download className="w-4 h-4 text-neutral-400" /> ${b.label}
-          </button>`
-    }
+    return `          ${exportMenuHtml(route, b.label)}`
+  }
     return `          <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             ${b.label}
           </button>`
@@ -312,7 +311,7 @@ export function generateSchedulerPage(route: RouteNode, ast?: AppAST): string {
             <Plus className="w-4 h-4" /> Novo Registro
           </Link>` : ''}`
 
-  return `import type { Metadata } from 'next'
+  return `${exportImportLine(route)}import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { get${mn}List } from '@/app/actions/${mnLower}'

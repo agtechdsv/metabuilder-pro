@@ -43,6 +43,11 @@ export interface GeneratorDictionary {
     clear: string
     new_record: string
     export_data: string
+    export_format_title: string
+    export_xlsx: string
+    export_csv: string
+    export_json: string
+    export_failed: string
     all_filter: string
     filter_by: string
     connecting_db: string
@@ -59,6 +64,10 @@ export interface GeneratorDictionary {
     view_record: string
     fill_fields_desc: string
     save_first_hint: string
+    autocomplete_hint: string
+    autocomplete_empty: string
+    autocomplete_loading: string
+    autocomplete_placeholder: string
     cancel: string
     create_record: string
     save_changes: string
@@ -150,6 +159,11 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       clear: 'Limpar',
       new_record: 'Novo Registro',
       export_data: 'Exportar Dados',
+      export_format_title: 'Selecione o formato',
+      export_xlsx: 'Excel (.xlsx)',
+      export_csv: 'CSV (.csv)',
+      export_json: 'JSON (.json)',
+      export_failed: 'Não foi possível exportar.',
       all_filter: 'Todos',
       filter_by: 'Filtrar por',
       connecting_db: 'Conectando ao banco...',
@@ -166,6 +180,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       view_record: 'Visualizar Registro',
       fill_fields_desc: 'Preencha os campos para criar um novo registro no sistema.',
       save_first_hint: 'Salve o registro para liberar esta aba.',
+      autocomplete_hint: 'Digite pelo menos {n} caracteres para buscar...',
+      autocomplete_empty: 'Nenhum resultado encontrado.',
+      autocomplete_loading: 'Buscando...',
+      autocomplete_placeholder: 'Digite para pesquisar...',
       cancel: 'Cancelar',
       create_record: 'Criar Registro',
       save_changes: 'Salvar Alterações',
@@ -255,6 +273,11 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       clear: 'Clear',
       new_record: 'New Record',
       export_data: 'Export Data',
+      export_format_title: 'Select format',
+      export_xlsx: 'Excel Spreadsheet (.xlsx)',
+      export_csv: 'CSV File (.csv)',
+      export_json: 'JSON Format (.json)',
+      export_failed: 'Could not export.',
       all_filter: 'All',
       filter_by: 'Filter by',
       connecting_db: 'Connecting to database...',
@@ -271,6 +294,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       view_record: 'View Record',
       fill_fields_desc: 'Fill in the fields to create a new record in the system.',
       save_first_hint: 'Save the record to unlock this tab.',
+      autocomplete_hint: 'Type at least {n} characters to search...',
+      autocomplete_empty: 'No results found.',
+      autocomplete_loading: 'Searching...',
+      autocomplete_placeholder: 'Type to search...',
       cancel: 'Cancel',
       create_record: 'Create Record',
       save_changes: 'Save Changes',
@@ -360,6 +387,11 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       clear: 'Limpiar',
       new_record: 'Nuevo Registro',
       export_data: 'Exportar Datos',
+      export_format_title: 'Seleccione el formato',
+      export_xlsx: 'Excel (.xlsx)',
+      export_csv: 'CSV (.csv)',
+      export_json: 'JSON (.json)',
+      export_failed: 'No fue posible exportar.',
       all_filter: 'Todos',
       filter_by: 'Filtrar por',
       connecting_db: 'Conectando a la base de datos...',
@@ -376,6 +408,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       view_record: 'Visualizar Registro',
       fill_fields_desc: 'Complete los campos para crear un nuevo registro en el sistema.',
       save_first_hint: 'Guarde el registro para habilitar esta pestaña.',
+      autocomplete_hint: 'Escriba al menos {n} caracteres para buscar...',
+      autocomplete_empty: 'No se encontraron resultados.',
+      autocomplete_loading: 'Buscando...',
+      autocomplete_placeholder: 'Escriba para buscar...',
       cancel: 'Cancelar',
       create_record: 'Crear Registro',
       save_changes: 'Guardar Cambios',

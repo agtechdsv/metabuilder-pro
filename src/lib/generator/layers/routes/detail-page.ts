@@ -1,4 +1,5 @@
 import { RouteNode } from '../../ast'
+import { exportMenuHtml, exportImportLine, exportLabel } from '../export'
 import { getGeneratorDictionary } from '../../i18n'
 import { renderFormField, getByocComponentName, isValidIdentifier, appendFieldActions, masterActionButtonsHtml, customActionConfigJson } from './helpers'
 
@@ -89,7 +90,7 @@ export function generateDetailTabsClient(route: RouteNode, targetLang?: string):
   const backPath = route.path
 
   const formFieldsHtml = route.formFields
-    .map(f => appendFieldActions(renderFormField(f, true, 'isView', 'relationalOptions'), route, f, 'data'))
+    .map(f => appendFieldActions(renderFormField(f, true, 'isView', 'relationalOptions', false, true), route, f, 'data'))
     .filter(Boolean)
     .join('\n')
   const masterTopHtml = masterActionButtonsHtml(route, 'data')
@@ -348,7 +349,8 @@ import { useSearchParams } from 'next/navigation'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
-${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap, Loader2 } from 'lucide-react'
+import { AutocompleteInput } from '@/components/AutocompleteInput'
+${exportImportLine(route)}${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap, Loader2 } from 'lucide-react'
 
 function formatDateForInput(v: any) {
   if (!v) return ''
@@ -525,12 +527,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
           </div>
 
           <div className="flex items-center gap-3">
-            <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-              <Zap className="w-4 h-4 text-neutral-400" /> Automações
-            </button>
-            <button type="button" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
-              <Download className="w-4 h-4 text-neutral-400" /> Exportar
-            </button>
+            ${exportMenuHtml(route, exportLabel(route, dict.list.export_data), 'id')}
             <Link href={newPath + (isEmbedded ? '?embedded=true' : '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold tracking-wide transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
               <Plus className="w-4 h-4" /> ${dict.list.new_record}
             </Link>

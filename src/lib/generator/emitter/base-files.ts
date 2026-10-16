@@ -1,4 +1,5 @@
 import { AppAST } from '../ast'
+import { routesNeedExport } from '../layers/export'
 import { getGeneratorDictionary } from '../i18n'
 
 import { generateAiDbRoute } from '../layers/ai-db-route'
@@ -43,6 +44,7 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "bcryptjs": "^2.4.3",
       "jose": "^5.4.0",
       ...(ast.authConfig?.authType === 'ldap' ? { "ldapts": "^7.2.0" } : {}),
+      ...(routesNeedExport(ast) ? { "exceljs": "^4.4.0" } : {}),
       ...(ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)
           ? { "@supabase/ssr": "^0.5.0", "@supabase/supabase-js": "^2.45.0" }
           : {}),

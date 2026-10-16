@@ -1,5 +1,7 @@
 import { AppAST } from '../../ast'
 import { generateListPage } from './list-page'
+import { generateExportLayer } from '../export'
+import { generateAutocomplete } from '../autocomplete'
 import { generateDetailPage, generateDetailTabsClient, generateDetailSchema } from './detail-page'
 import { generateNewPage } from './new-page'
 import { generateKanbanPage, generateKanbanClient, generateKanbanSchema } from './kanban-page'
@@ -36,6 +38,11 @@ export * from './ai-page'
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateRoutes(ast: AppAST, files: Map<string, string>) {
+  // exportação (Excel/CSV/JSON) das telas com o botão Exportar ligado no Studio
+  generateExportLayer(ast, files)
+  // campo Autocomplete (busca dinâmica): componente e ação de busca
+  generateAutocomplete(ast, files)
+
   for (const route of ast.routes) {
     const routeDir = `app/(protected)${route.path}`
 
