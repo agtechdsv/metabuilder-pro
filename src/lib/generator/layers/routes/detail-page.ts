@@ -260,6 +260,7 @@ export function generateDetailTabsClient(route: RouteNode, targetLang?: string):
           `              readOnly={isView}`,
           `              relationalOptions={relationalOptions}`,
           `              parentItem={data}`,
+          `              parentPending={isNew}`,
           (tab.actionsTop && tab.actionsTop.length > 0) ? `              actionsTop={[${tab.actionsTop.map(customActionConfigJson).join(', ')}]}` : '',
           (tab.actionsRow && tab.actionsRow.length > 0) ? `              actionsRow={[${tab.actionsRow.map(customActionConfigJson).join(', ')}]}` : '',
           subActionProps,
@@ -278,7 +279,10 @@ export function generateDetailTabsClient(route: RouteNode, targetLang?: string):
           : (masterTable ? `${masterTable}.${masterPk}=\${id}` : `parent_id=\${id}`)
         return [
           `          <div className={activeTab === ${i + 1} ? 'block w-full' : 'hidden'}>`,
-          `            {visitedTabs[${i + 1}] && (`,
+          `            {visitedTabs[${i + 1}] && isNew && (`,
+          `              <div className="py-16 text-center text-xs font-medium text-neutral-400">${dict.form.save_first_hint}</div>`,
+          `            )}`,
+          `            {visitedTabs[${i + 1}] && !isNew && (`,
           `              <div className="relative w-full min-h-[400px]">`,
           `                {!loadedIframes[${i + 1}] && (`,
           `                  <div className="py-24 flex flex-col items-center justify-center gap-3 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-100 dark:border-neutral-800 rounded-3xl animate-in fade-in duration-200">`,
@@ -447,6 +451,8 @@ export function ${mn}DetailTabsClient({
   newPath,
   relationalOptions = {},
   initialMode,
+  createAction,
+  isNew = false,
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,`).join('\n') : ''}
 }: {
   id: string
@@ -458,6 +464,9 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items,
   newPath: string
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   initialMode?: 'edit' | 'view'
+  /** cadastro: cria o mestre (e as abas preenchidas) em vez de atualizar */
+  createAction?: (payload: Record<string, any>) => Promise<any>
+  isNew?: boolean
 ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?: any[]`).join('\n') : ''}
 }) {
   const searchParams = useSearchParams()
@@ -540,20 +549,20 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
         <div className="flex items-center justify-between p-8 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
-              {isView ? <Eye className="w-5 h-5" /> : <Pencil className="w-5 h-5" />}
+              {isView ? <Eye className="w-5 h-5" /> : (isNew ? <Plus className="w-5 h-5" /> : <Pencil className="w-5 h-5" />)}
             </div>
             <div>
               <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
                 ${hasCustomSlots
-                  ? `{(isView ? '${dict.form.view_record}' : '${dict.form.edit_record}')}`
-                  : `{(isView ? '${dict.list.view_tooltip} ' : '${dict.list.edit_tooltip} ') + (title.endsWith('s') ? title.slice(0, -1) : title)}`}
+                  ? `{isNew ? '${dict.form.new_prefix}' : (isView ? '${dict.form.view_record}' : '${dict.form.edit_record}')}`
+                  : `{isNew ? '${dict.form.new_prefix} ' + (title.endsWith('s') ? title.slice(0, -1) : title) : (isView ? '${dict.list.view_tooltip} ' : '${dict.list.edit_tooltip} ') + (title.endsWith('s') ? title.slice(0, -1) : title)}`}
               </h3>
               <p className="text-[10px] font-black tracking-[0.2em] text-neutral-400 mt-0.5">
                 ${hasCustomSlots
-                  ? `{\`Registro #\${data?.id ?? data?.${pk} ?? id ?? 'N/A'}\`}`
+                  ? `{isNew ? '${dict.form.fill_fields_desc}' : \`Registro #\${data?.id ?? data?.${pk} ?? id ?? 'N/A'}\`}`
                   : (route.rawLayoutConfig?.form_header_subtitle_field
-                      ? `{String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.display_label ?? data?.${pk} ?? '')}`
-                      : `{String(data?.display_label ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.titulo ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')}`)}
+                      ? `{isNew ? '${dict.form.fill_fields_desc}' : String(data?.[${JSON.stringify(route.rawLayoutConfig.form_header_subtitle_field)}] ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.display_label ?? data?.${pk} ?? '')}`
+                      : `{isNew ? '${dict.form.fill_fields_desc}' : String(data?.display_label ?? data?.nome ?? data?.name ?? data?.razao_social ?? data?.titulo ?? data?.${pk} ?? Object.values(data || {})[1] ?? '')}`)}
               </p>
             </div>
           </div>
@@ -579,7 +588,7 @@ ${tabsHeader}
         <div className="p-8">
           {/* Formulário com Suporte a Abas */}
           <div className={(!${hasAnyTabs} || activeTab === 0) ? 'block' : 'hidden'}>
-            <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView}>
+            <DetailMasterForm id={id} backPath={backPath} title={title} updateAction={updateAction} isView={isView} createAction={createAction} pkColumn="${pk}">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-6">
 ${formFieldsHtml}
               </div>
@@ -604,7 +613,7 @@ ${hasCustomSlots ? customTabPanels : tabPanels}
 // [id]/page.tsx        → Server Component (fetch) → passa props ao Client
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function generateDetailPage(route: RouteNode, targetLang?: string): string {
+export function generateDetailPage(route: RouteNode, targetLang?: string, mode: 'edit' | 'new' = 'edit'): string {
   const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
@@ -832,8 +841,12 @@ export function generateDetailPage(route: RouteNode, targetLang?: string): strin
   }
 
   // Modelo principal
-  addServerAction(mnLower, `get${mn}ById`)
-  addServerAction(mnLower, `update${mn}`)
+  if (mode === 'new') {
+    addServerAction(mnLower, `create${mn}`)
+  } else {
+    addServerAction(mnLower, `get${mn}ById`)
+    addServerAction(mnLower, `update${mn}`)
+  }
   if (hasSelfRel || lookupModels.has(mnLower)) {
     addServerAction(mnLower, `get${mn}List`)
   }
@@ -904,6 +917,41 @@ export function generateDetailPage(route: RouteNode, targetLang?: string): strin
     .filter((v, i, a) => v && a.indexOf(v) === i)
     .map(name => `import { ${name} } from '@/components/${name}'`)
     .join('\n')
+
+  if (mode === 'new') {
+    // Cadastro: o mesmo formulário mestre/detalhe da edição, sem registro. Detalhes e subdetalhes preenchidos na tela são
+    // gravados junto com o mestre (o mestre é criado primeiro e as abas gravam com o id novo).
+    const emptyLists = hasRelationTabs ? route.relationTabs.map(tab => `  const ${tab.relatedTable}List: any[] = []\n`).join('') : ''
+    return `import type { Metadata } from 'next'
+${serverActionImports}
+${byocImports ? `${byocImports}\n` : ''}import { ${mn}DetailTabsClient } from '../[id]/DetailTabsClient'
+
+export const metadata: Metadata = { title: '${dict.form.new_prefix} — ${route.title}' }
+
+export default async function ${mn}NewPage() {
+${lookupQueries}${selfLookupQuery}${emptyLists}
+  const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
+${buildOptionsCode.join('\n')}
+  }
+
+  return (
+    <${mn}DetailTabsClient
+      id="new"
+      data={{}}
+      isNew
+      createAction={create${mn}}
+      updateAction={create${mn}}
+      backPath="${route.path}"
+      title="${route.title}"
+      icon="${route.icon || 'Users'}"
+      newPath="${route.path}/new"
+      relationalOptions={relationalOptions}
+${hasRelationTabs ? route.relationTabs.map((tab) => `      ${tab.relatedTable}Items={${tab.relatedTable}List}`).join('\n') : ''}
+    />
+  )
+}
+`
+  }
 
   return `import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'

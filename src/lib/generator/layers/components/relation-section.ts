@@ -66,6 +66,8 @@ export interface DetailRelationSectionProps {
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
   /** registro mestre aberto (origem dos parâmetros das ações do topo da aba) */
   parentItem?: any
+  /** o registro mestre ainda não foi criado (cadastro): detalhes e subdetalhes ficam na tela e são gravados junto com o mestre */
+  parentPending?: boolean
   /** ações customizadas configuradas pelo dev para esta aba: no topo e em cada linha */
   actionsTop?: any[]
   actionsRow?: any[]
@@ -971,6 +973,7 @@ export function DetailRelationSection({
   deleteSubAction,
   relationalOptions,
   parentItem,
+  parentPending = false,
   actionsTop = [],
   actionsRow = [],
 }: DetailRelationSectionProps) {
@@ -1548,7 +1551,10 @@ export function DetailRelationSection({
       let savedParentId = editingItem?.id || editingItem?.codigo
       const isNewParent = !savedParentId || String(savedParentId).startsWith('temp-')
 
-      if (isNewParent) {
+      if (parentPending) {
+        // mestre ainda não criado: o item continua só na tela (id temporário) e é gravado quando o mestre for salvo
+        if (isNewParent) savedParentId = editingItem?.id || \`temp-\${Date.now()}\`
+      } else if (isNewParent) {
         const created = await createAction(masterData)
         savedParentId = created?.id || created?.codigo || \`item-\${Date.now()}\`
       } else {
@@ -1593,7 +1599,9 @@ export function DetailRelationSection({
           }
 
           const isNewSub = !subItem.id || String(subItem.id).startsWith('temp-')
-          if (isNewSub && createSubAction) {
+          if (parentPending) {
+            updatedChildRecords[sIdx] = { ...subItem, ...subData, id: subItem.id || \`temp-\${Date.now()}-\${sIdx}\`, _dirty: true }
+          } else if (isNewSub && createSubAction) {
             const createdSub = await createSubAction(subData)
             if (createdSub?.id) {
               updatedChildRecords[sIdx] = { ...subItem, ...subData, id: createdSub.id }
@@ -2405,7 +2413,7 @@ export function DetailRelationSection({
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={() => handleSaveAll()}
+              onClick={() => (parentPending ? window.dispatchEvent(new CustomEvent('save-master-form')) : handleSaveAll())}
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

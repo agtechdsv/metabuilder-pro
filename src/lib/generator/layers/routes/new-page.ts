@@ -1,12 +1,17 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
 import { renderFormField, getByocComponentName, appendFieldActions, masterActionButtonsHtml } from './helpers'
+import { generateDetailPage } from './detail-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cadastro (new/page.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function generateNewPage(route: RouteNode, targetLang?: string): string {
+  // com abas (relacionamentos ou casos de uso) o cadastro é o mesmo formulário mestre/detalhe da edição: detalhes e subdetalhes
+  // podem ser preenchidos antes de o mestre existir e são gravados junto com ele
+  if ((route.customSlots && route.customSlots.length > 0) || route.relationTabs.length > 0) return generateDetailPage(route, targetLang, 'new')
+
   const dict = getGeneratorDictionary(targetLang)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
@@ -72,13 +77,8 @@ export function generateNewPage(route: RouteNode, targetLang?: string): string {
     }
   })
 
-  // abas do registro (como no formulário de edição): as de relacionamento só liberam depois de salvar
-  const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
-  const tabLabels: string[] = hasCustomSlots ? (route.customSlots || []).map((sl: any) => String(sl.title)) : (route.relationTabs || []).map(t => String(t.label))
-  const wrapOpen = tabLabels.length > 0
-    ? `<NewRecordTabs mainLabel={${JSON.stringify(route.title)}} tabs={${JSON.stringify(tabLabels)}} hint={${JSON.stringify(dict.form.save_first_hint)}}>\n        <MaskScope>`
-    : '<MaskScope>'
-  const wrapClose = tabLabels.length > 0 ? '</MaskScope>\n        </NewRecordTabs>' : '</MaskScope>'
+  const wrapOpen = '<MaskScope>'
+  const wrapClose = '</MaskScope>'
 
   const formFieldsHtml = route.formFields
     .map(f => appendFieldActions(renderFormField(f, false, false, 'relationalOptions'), route, f, '{}'))
@@ -99,7 +99,7 @@ import { redirect } from 'next/navigation'
 import { create${mn}${selfActionImport} } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
 import { MaskScope } from '@/components/MaskScope'
-${tabLabels.length > 0 ? "import { NewRecordTabs } from '@/components/NewRecordTabs'\n" : ''}import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
+import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {

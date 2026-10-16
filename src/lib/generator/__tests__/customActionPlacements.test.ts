@@ -56,7 +56,9 @@ describe('ações customizadas: aparecem onde o dev configurou', () => {
     const edit = files.get('app/(protected)/clientes/[id]/DetailTabsClient.tsx')!
     const create = files.get('app/(protected)/clientes/new/page.tsx')!
     const list = files.get('app/(protected)/clientes/page.tsx')!
-    for (const src of [edit, create]) {
+    // com abas, o cadastro é o mesmo formulário da edição (os botões vêm dele, sem registro ainda)
+    expect(create).toContain('isNew')
+    for (const src of [edit]) {
       expect(syntax(src)).toBe(true)
       expect(src).toContain('"label":"Produtos"')
       expect(src).toContain('variant="header"')
@@ -66,7 +68,6 @@ describe('ações customizadas: aparecem onde o dev configurou', () => {
     }
     // o botão leva o registro aberto (origem dos parâmetros: id do cliente -> cliente_id); no cadastro ainda não há registro
     expect(edit).toContain('item={data}')
-    expect(create).toContain('item={{}}')
     expect(edit).toContain('"usecaseSelectedFields":[{"source":"id","target":"cliente_id"}]')
     // grid: as duas ações
     expect(list).toContain('"label":"Produtos"')
@@ -75,7 +76,7 @@ describe('ações customizadas: aparecem onde o dev configurou', () => {
 
   it('ação agrupada a um campo aparece junto do campo, na edição e no cadastro', async () => {
     const files = await gen([noCampo])
-    for (const path of ['app/(protected)/clientes/[id]/DetailTabsClient.tsx', 'app/(protected)/clientes/new/page.tsx']) {
+    for (const path of ['app/(protected)/clientes/[id]/DetailTabsClient.tsx']) {
       const src = files.get(path)!
       expect(syntax(src), path).toBe(true)
       const at = src.indexOf('"label":"Consultar CNPJ"')
@@ -107,5 +108,24 @@ describe('ações customizadas: aparecem onde o dev configurou', () => {
     expect(edit).not.toContain('variant="header"')
     expect(edit).not.toContain('actionsTop=')
     expect(syntax(edit)).toBe(true)
+  })
+})
+
+describe('ações customizadas no cadastro sem abas', () => {
+  it('o cadastro simples mostra o botão do topo (sem registro ainda) e a ação junto do campo', async () => {
+    const w = fakeSupabase({
+      projects: { id: 'p1', slug: 'vendas', name: 'Vendas', db_type: 'postgres' },
+      models: [{ id: 'mc', db_table_name: 'clientes', display_name: 'Clientes', db_schema_name: 'public', fields: [f('a', 'mc', 'id', 'integer', true), f('b', 'mc', 'nome_empresa', 'varchar'), f('c', 'mc', 'cnpj_cpf', 'varchar')] }],
+      ui_views: [{ id: 'v1', slug: 'clientes', name: 'Clientes', logic_type: 'pesquisa_cadastro', model_id: 'mc', layout_config: { custom_actions: [produtos, noCampo] }, ui_components: [] }],
+      relations: [], project_enumerations: [], project_auth_config: null,
+    })
+    const files = (await buildProjectSource(w, { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d', authStrategy: 'none' } as any)).files
+    const page = files.get('app/(protected)/clientes/new/page.tsx')!
+    expect(syntax(page)).toBe(true)
+    expect(page).not.toContain('DetailTabsClient')
+    expect(page).toContain('"label":"Produtos"')
+    expect(page).toContain('item={{}}')
+    expect(page).toContain('"label":"Consultar CNPJ"')
+    expect(page.lastIndexOf('name="cnpj_cpf"', page.indexOf('"label":"Consultar CNPJ"'))).toBeGreaterThan(0)
   })
 })

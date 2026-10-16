@@ -65,6 +65,7 @@ export function generateMasterFormComponent(files: Map<string, string>, targetLa
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
 
 export interface DetailMasterFormProps {
@@ -74,10 +75,14 @@ export interface DetailMasterFormProps {
   updateAction: (id: string, payload: Record<string, any>) => Promise<any>
   children: React.ReactNode
   isView?: boolean
+  /** cadastro: cria o mestre e, com o id novo, grava as abas (detalhes e subdetalhes) que foram preenchidas antes */
+  createAction?: (payload: Record<string, any>) => Promise<any>
+  pkColumn?: string
 }
 
 ${MASK_FUNCTION}
-export function DetailMasterForm({ id, backPath, title, updateAction, children, isView }: DetailMasterFormProps) {
+export function DetailMasterForm({ id, backPath, title, updateAction, children, isView, createAction, pkColumn }: DetailMasterFormProps) {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -128,6 +133,21 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
       formData.forEach((v, k) => { payload[k] = v })
+      if (createAction) {
+        // cadastro: 1) cria o mestre; 2) as abas gravam seus itens com o id novo (detalhes e subdetalhes); 3) abre o registro criado
+        const created: any = await createAction(payload)
+        const newId = created?.id ?? (pkColumn ? created?.[pkColumn] : undefined) ?? created?.ID
+        if (newId === undefined || newId === null || newId === '') throw new Error('${dict.feedback.err_saving_changes}')
+        const promises: Promise<any>[] = []
+        window.dispatchEvent(new CustomEvent('save-all-relations', { detail: { parentId: String(newId), promises } }))
+        await Promise.allSettled(promises)
+        const embedded = typeof window !== 'undefined' && (new URLSearchParams(window.location.search).get('embedded') === 'true' || window.parent !== window)
+        if (typeof window !== 'undefined' && window.parent !== window) {
+          window.parent.postMessage({ type: 'RECORD_SAVED', action: 'create', id: String(newId), payload, updatedRecord: { ...payload, id: newId } }, '*')
+        }
+        router.push(backPath + '/' + newId + (embedded ? '?embedded=true' : ''))
+        return
+      }
       await updateAction(id, payload)
       if (!silent) {
         setToastType('success')
@@ -191,7 +211,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSubmitting ? '${dict.form.saving}' : '${dict.form.save_changes}'}
+              {isSubmitting ? '${dict.form.saving}' : (createAction ? '${dict.form.create_record}' : '${dict.form.save_changes}')}
             </button>
           )}
         </div>
@@ -241,36 +261,6 @@ export function MaskScope({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </div>
-  )
-}
-`)
-
-  // Cadastro (new): abas do registro (as de relacionamento só liberam depois de salvar)
-  files.set('components/NewRecordTabs.tsx', `'use client'
-
-import React, { useState } from 'react'
-import { Lock } from 'lucide-react'
-
-export function NewRecordTabs({ mainLabel, tabs, hint, children }: { mainLabel: string; tabs: string[]; hint: string; children: React.ReactNode }) {
-  const [active, setActive] = useState(0)
-  const cls = (on: boolean) => 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 ' + (on ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300')
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-1 border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
-        <button type="button" onClick={() => setActive(0)} className={cls(active === 0)}>{mainLabel}</button>
-        {tabs.map((t, i) => (
-          <button key={i} type="button" onClick={() => setActive(i + 1)} className={cls(active === i + 1)}>{t}</button>
-        ))}
-      </div>
-      {/* o formulário continua montado ao trocar de aba: nada do que foi digitado se perde */}
-      <div className={active === 0 ? '' : 'hidden'}>{children}</div>
-      {active > 0 && (
-        <div className="py-16 flex flex-col items-center gap-3 text-neutral-400">
-          <Lock className="w-6 h-6" />
-          <p className="text-xs font-medium">{hint}</p>
-        </div>
-      )}
     </div>
   )
 }

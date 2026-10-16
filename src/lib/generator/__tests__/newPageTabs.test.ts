@@ -29,24 +29,37 @@ const syntax = (src: string) => (ts.transpileModule(src, { reportDiagnostics: tr
 describe('cadastro (new) do app exportado', () => {
   it('aplica a máscara ao digitar (CNPJ/CPF) e mostra as abas de relacionamento como na plataforma', async () => {
     const { files } = await buildProjectSource(world(true), { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d', authStrategy: 'none' } as any)
+    // com abas, o cadastro é o mesmo formulário mestre/detalhe da edição (máscara e abas já vêm dele)
     const page = files.get('app/(protected)/clientes/new/page.tsx')!
     expect(syntax(page)).toBe(true)
-    expect(page).toContain("import { MaskScope } from '@/components/MaskScope'")
-    expect(page).toContain("import { NewRecordTabs } from '@/components/NewRecordTabs'")
-    expect(page).toContain('<NewRecordTabs mainLabel=')
-    expect(page).toContain('"Pedidos"')
-    expect(page).toContain('data-mask="00.000.000/0000-00"')
-    expect(page).toContain('</MaskScope>')
+    expect(page).toContain("from '../[id]/DetailTabsClient'")
+    expect(page).toContain('isNew')
+    expect(page).toContain('createAction={createClientes}')
+    expect(page).not.toContain('getClientesById')
+    expect(page).toContain('pedidosItems={pedidosList}')
 
-    const scope = files.get('components/MaskScope.tsx')!
-    expect(syntax(scope)).toBe(true)
-    expect(scope).toContain("getAttribute?.('data-mask')")
-    expect(scope).toContain("mask === '00.000.000/0000-00'")
-    // a função de máscara é a mesma do formulário de edição
-    expect(files.get('components/DetailMasterForm.tsx')).toContain("mask === '00.000.000/0000-00'")
-    const tabs = files.get('components/NewRecordTabs.tsx')!
-    expect(syntax(tabs)).toBe(true)
-    expect(tabs).toContain('hidden')
+    const client = files.get('app/(protected)/clientes/[id]/DetailTabsClient.tsx')!
+    expect(syntax(client)).toBe(true)
+    expect(client).toContain('createAction={createAction}')
+    expect(client).toContain('parentPending={isNew}')
+    expect(client).toContain('data-mask="00.000.000/0000-00"')
+    expect(client).not.toContain('Salve o registro para liberar esta aba')
+
+    // cadastro: cria o mestre, as abas gravam os itens preenchidos com o id novo e abre o registro criado
+    const master = files.get('components/DetailMasterForm.tsx')!
+    expect(syntax(master)).toBe(true)
+    expect(master).toContain("new CustomEvent('save-all-relations', { detail: { parentId: String(newId), promises } })")
+    expect(master).toContain('await Promise.allSettled(promises)')
+    expect(master).toContain("router.push(backPath + '/' + newId")
+    expect(master).toContain("mask === '00.000.000/0000-00'")
+
+    // abas: com o mestre ainda não criado a modal só guarda na tela (id temporário), em detalhe e subdetalhe
+    const section = files.get('components/DetailRelationSection.tsx')!
+    expect(syntax(section)).toBe(true)
+    expect(section).toContain('parentPending = false')
+    expect(section).toContain('if (parentPending) {')
+    expect(section).toContain('updatedChildRecords[sIdx] = { ...subItem, ...subData, id: subItem.id ||')
+    expect(section).toContain("window.dispatchEvent(new CustomEvent('save-master-form'))")
   })
 
   it('sem relacionamentos não há abas, mas a máscara continua valendo', async () => {
@@ -54,6 +67,10 @@ describe('cadastro (new) do app exportado', () => {
     const page = files.get('app/(protected)/clientes/new/page.tsx')!
     expect(syntax(page)).toBe(true)
     expect(page).toContain('<MaskScope>')
-    expect(page).not.toContain('NewRecordTabs')
+    expect(page).toContain('data-mask="00.000.000/0000-00"')
+    expect(page).not.toContain('DetailTabsClient')
+    const scope = files.get('components/MaskScope.tsx')!
+    expect(syntax(scope)).toBe(true)
+    expect(scope).toContain("getAttribute?.('data-mask')")
   })
 })
