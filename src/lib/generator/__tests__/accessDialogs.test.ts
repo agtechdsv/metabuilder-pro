@@ -53,6 +53,22 @@ describe('telas de gestão de acesso: janelas do app no lugar dos prompt/confirm
     expect(files.get('app/(protected)/acesso-usuarios/page.tsx')).toContain('hasName={!!ACCESS_SETUP.nameCol}')
   })
 
+  it('dashboard: o card de uma tela com nível "nenhum" para o grupo não aparece (como no menu)', async () => {
+    const withAccess = await buildProjectSource(world('nome'), { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d', accessAdmin: true } as any)
+    const page = withAccess.files.get('app/(protected)/page.tsx')!
+    expect(syntax(page)).toBe(true)
+    expect(page).toContain('export default async function DashboardPage()')
+    expect(page).toContain('const no: string[] = user?.acc?.no ?? []')
+    expect(page).toContain('{show(["clientes"]) && (')
+    // a pasta de gestão de acesso some quando nenhuma das telas dela está liberada
+    expect(page).toMatch(/show\(\["acesso-usuarios","acesso-grupos","acesso-permissoes"\]\)/)
+
+    const plain = await buildProjectSource(world('nome'), { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d' } as any)
+    const plainPage = plain.files.get('app/(protected)/page.tsx')!
+    expect(plainPage).toContain('export default function DashboardPage()')
+    expect(plainPage).not.toContain('show(')
+  })
+
   it('textos novos existem nos três idiomas e o diálogo sai no idioma de geração', async () => {
     const en = await buildProjectSource(world('nome'), { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d', accessAdmin: true, targetLanguage: 'en' } as any)
     const users = en.files.get('app/(protected)/acesso-usuarios/UsersClient.tsx')!

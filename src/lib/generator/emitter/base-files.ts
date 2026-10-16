@@ -763,13 +763,18 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 `)
 
   // Dashboard page — fiel à DynamicDashboard.tsx da Web Produção
+  // gestão de acesso: o card de uma tela que o grupo do usuário não vê (nível "nenhum") não aparece, como no menu
+  const hasAccessAdmin = !!ast.accessAdmin
+  const slugOf = (n: any): string => { const raw = String(n.target || n.id || ''); return raw.startsWith('/') ? raw.slice(1) : raw }
+  const leafSlugs = (n: any): string[] => (n.type === 'folder' ? (n.children || []).flatMap(leafSlugs) : [slugOf(n)])
   const navCards = (ast.navigation.length > 0 ? ast.navigation : ast.routes.map(r => ({
     id: r.viewSlug,
     label: r.title,
     icon: r.icon || 'Layout',
     type: 'view',
     target: r.viewSlug,
-  }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => `
+  }))).filter((n: any) => n.type === 'view' || n.type === 'folder').map((n: any) => {
+    const card = `
         <Link
           key="${n.id}"
           href="/${String(n.target || n.id).startsWith('/') ? String(n.target || n.id).slice(1) : String(n.target || n.id)}"
@@ -801,17 +806,21 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
               </div>
             </div>
           </div>
-        </Link>`).join('\n')
+        </Link>`
+    return hasAccessAdmin ? `
+        {show(${JSON.stringify(leafSlugs(n))}) && (${card}
+        )}` : card
+  }).join('\n')
 
   files.set('app/(protected)/page.tsx', `import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
-
+${hasAccessAdmin ? "import { getSessionUser } from '@/lib/session-server'\n" : ''}
 export const metadata: Metadata = { title: '${d.nav.dashboard} - ${ast.projectName}' }
-
-export default function DashboardPage() {
-  return (
+${hasAccessAdmin ? '\nexport const dynamic = \'force-dynamic\'\n' : ''}
+export default ${hasAccessAdmin ? 'async ' : ''}function DashboardPage() {
+${hasAccessAdmin ? "  const user = await getSessionUser()\n  const no: string[] = user?.acc?.no ?? []\n  const show = (slugs: string[]) => slugs.length === 0 || slugs.some(s => !no.includes(s))\n" : ''}  return (
     <div className="space-y-6">
       {/* Header idêntico ao RuntimeHeader da Web Produção */}
       <div className="px-6 sm:px-10 py-8 flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
