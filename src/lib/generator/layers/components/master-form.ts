@@ -103,7 +103,7 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
     const handleExternalSave = () => {
       if (isView) return
       const form = document.getElementById('master-detail-form') as HTMLFormElement
-      if (form && form.requestSubmit) {
+      if (form && typeof (form as any).requestSubmit === 'function') {
         // We use a custom flag on the event to identify it as silent
         const ev = new CustomEvent('submit', { cancelable: true, bubbles: true })
         ;(ev as any).isSilentSave = true

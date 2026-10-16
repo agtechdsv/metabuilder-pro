@@ -40,3 +40,14 @@ describe('o exportador lê a configuração do Studio da tela', () => {
     expect(files.get('components/ExportMenu.tsx')).toContain("input[data-mb-row-select]:checked")
   })
 })
+
+describe('package.json do app exportado instala e compila', () => {
+  it('fixa traverse (exceljs) e traz os tipos do pg, que o next build confere', async () => {
+    const { files } = await buildProjectSource(world(), opts as any)
+    const pkg = JSON.parse(files.get('package.json')!)
+    expect(pkg.overrides).toEqual({ traverse: '0.3.9' })
+    expect(pkg.devDependencies['@types/pg']).toBeTruthy()
+    const java = JSON.parse((await buildProjectSource(world(), { ...opts, backendStack: 'java-spring', jwtEnabled: true } as any)).files.get('frontend/package.json')!)
+    expect(java.overrides).toEqual({ traverse: '0.3.9' })
+  })
+})

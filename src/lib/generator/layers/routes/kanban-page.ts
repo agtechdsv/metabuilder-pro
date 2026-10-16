@@ -38,7 +38,7 @@ export function generateKanbanPage(route: RouteNode): string {
   ).join('\n')
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+    `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])`
   ).join('\n')
 
   const buildOptionsCode: string[] = []
@@ -98,7 +98,7 @@ export function generateKanbanPage(route: RouteNode): string {
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
 
       relationalFilterComponents.push(`async function Filter_${col}_Select({ defaultValue }: { defaultValue?: string }) {
-  const list = await get${modelName}List().catch(() => [])
+  const list: any = await get${modelName}List().catch((): any => [])
   return (
     <select
       name="${col}_filter"
@@ -230,7 +230,7 @@ ${buildOptionsCode.join('\n')}
 
   return (
     <KanbanClient
-      initialData={Array.isArray(rawData) ? rawData : (rawData?.content ?? [])}
+      initialData={Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])}
       relationalOptions={relationalOptions}
       initialParams={params}
       isEmbedded={isEmbedded}

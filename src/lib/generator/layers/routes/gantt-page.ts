@@ -43,7 +43,7 @@ export function generateGanttPage(route: RouteNode): string {
   ).join('\n')
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+    `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])`
   ).join('\n')
 
   const buildOptionsCode: string[] = []
@@ -209,7 +209,7 @@ ${buildOptionsCode.join('\n')}
   }
 
   // Filtros dinâmicos da URL
-  const data = (Array.isArray(rawData) ? rawData : (rawData?.content ?? [])).filter((item: any) => {
+  const data = (Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])).filter((item: any) => {
 ${filterFields.map(f => {
   const col = f.dbColumn.replace('.', '_')
   const rawCol = f.dbColumn

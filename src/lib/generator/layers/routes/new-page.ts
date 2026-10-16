@@ -47,13 +47,13 @@ export function generateNewPage(route: RouteNode, targetLang?: string): string {
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) => {
     if (table === mnLower) {
-      return `  const ${table}LookupList = await get${mn}List().catch(() => [])\n`
+      return `  const ${table}LookupList: any = await get${mn}List().catch((): any => [])\n`
     }
-    return `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
+    return `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])\n`
   }).join('')
 
   const selfLookupQuery = (hasSelfRel && !lookupModels.has(mnLower))
-    ? `  const ${mnLower}LookupList = await get${mn}List().catch(() => [])\n`
+    ? `  const ${mnLower}LookupList: any = await get${mn}List().catch((): any => [])\n`
     : ''
 
   const buildOptionsCode: string[] = []
@@ -192,6 +192,7 @@ function formatWithMask(v: any, mask?: string) {
   return s
 }
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: '${dict.form.new_prefix} — ${route.title}' }
 
 export default async function ${mn}NewPage(props: {
@@ -260,7 +261,7 @@ ${masterTopHtml}
           'use server'
           const payload: Record<string, any> = {}
           formData.forEach((v, k) => { payload[k] = v })
-          const result = await create${mn}(payload)
+          const result: any = await create${mn}(payload)
           const targetUrl = result?.id ? \`${route.path}/\${result.id}\` : '${route.path}'
           if (isEmbedded) {
             redirect(targetUrl + (targetUrl.includes('?') ? '&embedded=true' : '?embedded=true'))

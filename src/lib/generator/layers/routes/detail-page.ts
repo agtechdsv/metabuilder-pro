@@ -694,13 +694,13 @@ export function generateDetailPage(route: RouteNode, targetLang?: string, mode: 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) => {
     if (!isValidIdentifier(table) || !isValidIdentifier(modelName)) return ''
     if (table === mnLower) {
-      return `  const ${table}LookupList = await get${mn}List().catch(() => [])\n`
+      return `  const ${table}LookupList: any = await get${mn}List().catch((): any => [])\n`
     }
-    return `  const ${table}LookupList = await get${modelName}List().catch(() => [])\n`
+    return `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])\n`
   }).join('')
 
   const selfLookupQuery = (hasSelfRel && !lookupModels.has(mnLower))
-    ? `  const ${mnLower}LookupList = await get${mn}List().catch(() => [])\n`
+    ? `  const ${mnLower}LookupList: any = await get${mn}List().catch((): any => [])\n`
     : ''
 
   const buildOptionsCode: string[] = []
@@ -877,7 +877,7 @@ export function generateDetailPage(route: RouteNode, targetLang?: string, mode: 
     .join('\n')
 
   const subDetailQueries = Array.from(subDetailModels.entries()).map(([table, modelName]) =>
-    `  const ${table}AllList = await get${modelName}List().catch(() => [])\n`
+    `  const ${table}AllList: any = await get${modelName}List().catch((): any => [])\n`
   ).join('')
 
   const relationQueries = [
@@ -923,6 +923,7 @@ export function generateDetailPage(route: RouteNode, targetLang?: string, mode: 
 ${serverActionImports}
 ${byocImports ? `${byocImports}\n` : ''}import { ${mn}DetailTabsClient } from '../[id]/DetailTabsClient'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: '${dict.form.new_prefix} — ${route.title}' }
 
 export default async function ${mn}NewPage() {

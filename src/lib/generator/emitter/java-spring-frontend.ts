@@ -166,6 +166,8 @@ function generateFrontendPackageJson(ast: AppAST, files: Map<string, string>): v
       autoprefixer: '^10.4.20',
       '@types/bcryptjs': '^2.4.6',
     } as Record<string, string>,
+    // exceljs (exportação) puxa traverse@>=0.3 <0.4: a 0.3.10 exige uma versão de which-typed-array que o registro não tem e o npm install falha
+    ...(routesNeedExport(ast) ? { overrides: { traverse: '0.3.9' } } : {}),
   }
 
   files.set('frontend/package.json', JSON.stringify(pkg, null, 2))

@@ -135,11 +135,11 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
 
   const masterFetchCall = dateFilterField
     ? `get${mn}List({ dateField: '${dateFilterField}', startDate, endDate, limit: 50_000 }).catch(() => [])`
-    : `get${mn}List().catch(() => [])`
+    : `get${mn}List().catch((): any => [])`
 
   const allFetchCalls = [
     masterFetchCall,
-    ...relatedModels.map(rm => `get${rm.modelName}List().catch(() => [])`),
+    ...relatedModels.map(rm => `get${rm.modelName}List().catch((): any => [])`),
   ]
   const parallelFetch = `  const [${allFetchNames.join(', ')}] = await Promise.all([\n    ${allFetchCalls.join(',\n    ')}\n  ])`
 
@@ -242,7 +242,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
 
       relationalFilterComponents.push(`async function Filter_${col}_Select({ defaultValue }: { defaultValue?: string }) {
-  const list = await get${modelName}List().catch(() => [])
+  const list: any = await get${modelName}List().catch((): any => [])
   return (
     <select
       name="${col}_filter"

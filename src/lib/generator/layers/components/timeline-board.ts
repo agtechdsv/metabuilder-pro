@@ -156,7 +156,7 @@ export function TimelineBoard({
     if (val !== null && val !== undefined && val !== '') {
       const opts = relationalOptions[colName] ?? relationalOptions[colName.toLowerCase()] ?? relationalOptions[colName.toUpperCase()]
       if (opts && Array.isArray(opts)) {
-        const match = opts.find(o => String(o.value) === String(val))
+        const match: any = (opts as any[]).find((o: any) => String(o.value) === String(val))
         if (match) {
           const matchVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()] ?? match.label ?? match.display_label
           return matchVal || match.label || String(val)
@@ -171,7 +171,7 @@ export function TimelineBoard({
       if (!Array.isArray(opts)) continue
       const rowVal = row[optKey] ?? row[optKey.toLowerCase()] ?? row[optKey.toUpperCase()]
       if (rowVal !== undefined && rowVal !== null && rowVal !== '') {
-        const match = opts.find(o => String(o.value) === String(rowVal))
+        const match: any = (opts as any[]).find((o: any) => String(o.value) === String(rowVal))
         if (match) {
           const colVal = match[colName] ?? match[colName.toLowerCase()] ?? match[colName.toUpperCase()]
           if (colVal !== undefined && colVal !== null && colVal !== '') {

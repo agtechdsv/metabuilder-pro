@@ -98,7 +98,7 @@ function resolveDisplayLabel(val: any, field?: KanbanField, relationalOptions?: 
   if (field && relationalOptions) {
     const opts = relationalOptions[field.dbColumn] || (field.id ? relationalOptions[field.id] : undefined) || field.config?.options
     if (opts && Array.isArray(opts)) {
-      const found = opts.find((o: any) => String(o.value) === strVal || String(o.id) === strVal)
+      const found: any = (opts as any[]).find((o: any) => String(o.value) === strVal || String(o.id) === strVal)
       if (found) return found.label || found.name || strVal
     }
   }

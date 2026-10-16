@@ -68,7 +68,7 @@ export function generateGalleryPage(route: RouteNode): string {
   ).join('\n')
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+    `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])`
   ).join('\n')
 
   const buildOptionsCode: string[] = []
@@ -217,7 +217,7 @@ ${lookupQueries ? `${lookupQueries}\n` : ''}
     ${Array.from(lookupModels.keys()).map(t => `'${t}': ${t}LookupList || [],`).join('\n    ')}
   }
 
-  const enrichedData = (Array.isArray(rawData) ? rawData : (rawData?.content ?? [])).map((row: any) => {
+  const enrichedData = (Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])).map((row: any) => {
     const item: Record<string, any> = { ...row }
     for (const [tbl, list] of Object.entries(tablesData)) {
       const singular = tbl.endsWith('s') ? tbl.slice(0, -1) : tbl

@@ -42,7 +42,7 @@ export function generateMapPage(route: RouteNode): string {
   ).join('\n')
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+    `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])`
   ).join('\n')
 
   const buildOptionsCode: string[] = []
@@ -78,7 +78,7 @@ export default async function ${mn}MapPage(props: {
   searchParams?: Promise<Record<string, string | undefined>>
 }) {
   const searchParams = props.searchParams ? await props.searchParams : {}
-  const data = await get${mn}List().catch(() => [])
+  const data: any = await get${mn}List().catch((): any => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}

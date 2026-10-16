@@ -105,7 +105,7 @@ export function generateTimelinePage(route: RouteNode, ast?: AppAST): string {
   ).join('\n')
 
   const lookupQueries = Array.from(lookupModels.entries()).map(([table, modelName]) =>
-    `  const ${table}LookupList = await get${modelName}List().catch(() => [])`
+    `  const ${table}LookupList: any = await get${modelName}List().catch((): any => [])`
   ).join('\n')
 
   const optionsMap = new Map<string, string>()
@@ -254,7 +254,7 @@ ${Array.from(optionsMap.values()).join('\n')}
 
   return (
     <TimelineClient
-      initialData={Array.isArray(rawData) ? rawData : (rawData?.content ?? [])}
+      initialData={Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])}
       relationalOptions={relationalOptions}
       initialParams={params}
     />

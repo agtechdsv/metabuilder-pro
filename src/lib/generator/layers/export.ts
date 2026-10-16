@@ -86,7 +86,7 @@ function exportDataModule(route: RouteNode): string {
     .map(([table, modelName]) => `import { get${modelName}List } from '@/app/actions/${table}'`)
     .join('\n')
   const lookupQueries = Array.from(lookupModels.entries())
-    .map(([table, modelName]) => `    get${modelName}List().catch(() => []),`)
+    .map(([table, modelName]) => `    get${modelName}List().catch((): any => []),`)
     .join('\n')
   const lookupNames = Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')
 
@@ -135,7 +135,7 @@ const pick = (item: any, col: string) => {
 
 /** Linhas da tela com os filtros e a ordenação da URL; ids (opcional) restringe aos registros informados. */
 export async function getExportRows(params: Record<string, string | undefined>, ids?: string[]): Promise<Record<string, any>[]> {
-  const [rawData${lookupNames ? ', ' + lookupNames : ''}] = await Promise.all([
+  const [rawData${lookupNames ? ', ' + lookupNames : ''}] : any[] = await Promise.all([
     get${mn}List({ filters: params }),
 ${lookupQueries ? lookupQueries + '\n' : ''}  ])
   const dataArray: any[] = Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])

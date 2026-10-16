@@ -507,7 +507,7 @@ export function CustomActionButton({
     if (!slug) return '#'
 
     const selectedFields = action.usecaseSelectedFields || (action as any).usecase_selected_fields || []
-    const fieldParamParts = selectedFields.map(f => {
+    const fieldParamParts = selectedFields.map((f: any) => {
       if (typeof f === 'string') {
         const cleanKey = f.includes('.') ? f.split('.').pop()! : f
         let val = item?.[f] !== undefined ? item[f] : item?.[cleanKey]
@@ -553,7 +553,7 @@ export function CustomActionButton({
 
     let extraParams = (action.usecaseParams || (action as any).usecase_params || '').trim()
     if (extraParams && item) {
-      extraParams = extraParams.replace(/\\{\\{\\s*([a-zA-Z0-9_]+)\\s*\\}\\}|\\{\\s*([a-zA-Z0-9_]+)\\s*\\}/g, (match, p1, p2) => {
+      extraParams = extraParams.replace(/\\{\\{\\s*([a-zA-Z0-9_]+)\\s*\\}\\}|\\{\\s*([a-zA-Z0-9_]+)\\s*\\}/g, (match: string, p1: string, p2: string) => {
         const key = p1 || p2
         let val = item[key]
         if (val === undefined) {

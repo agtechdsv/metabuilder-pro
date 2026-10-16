@@ -45,7 +45,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
 
   const hasLookups = lookupModels.size > 0
   const fetchDataCode = hasLookups
-    ? `  const [rawData, ${Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')}] = await Promise.all([\n    get${mn}List({ filters: params }),\n    ${Array.from(lookupModels.values()).map(m => `get${m}List().catch(() => [])`).join(',\n    ')}\n  ])`
+    ? `  const [rawData, ${Array.from(lookupModels.keys()).map(t => `${t}LookupList`).join(', ')}] : any[] = await Promise.all([\n    get${mn}List({ filters: params }),\n    ${Array.from(lookupModels.values()).map(m => `get${m}List().catch((): any => [])`).join(',\n    ')}\n  ])`
     : `  const rawData = await get${mn}List({ filters: params })`
 
   const buildOptionsCode: string[] = []
@@ -134,7 +134,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
       const valueExpr = `r[${JSON.stringify(relValue)}] ?? r[${JSON.stringify(relValue.toLowerCase())}] ?? r.id ?? Object.values(r)[0] ?? ''`
 
       relationalFilterComponents.push(`async function Filter_${col}_Select({ defaultValue }: { defaultValue?: string }) {
-  const list = await get${modelName}List().catch(() => [])
+  const list: any = await get${modelName}List().catch((): any => [])
   return (
     <select
       name="${col}_filter"
@@ -271,7 +271,7 @@ async function ${mn}TableContent({
 ${fetchDataCode}
 
   // Normaliza resposta: suporta array direto (Node.js) e Page object (Spring Boot / REST APIs paginadas)
-  const dataArray: any[] = Array.isArray(rawData) ? rawData : (rawData?.content ?? [])
+  const dataArray: any[] = Array.isArray(rawData) ? rawData : ((rawData as any)?.content ?? [])
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
 ${buildOptionsCode.join('\n')}
