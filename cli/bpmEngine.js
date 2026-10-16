@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const axios = require('axios');
+const { AsyncLocalStorage } = require('async_hooks');
 const oracledb = require('oracledb');
 const cron = require('node-cron');
 const { wrapEmailInTemplate } = require('./emailTemplates');
@@ -7,6 +8,7 @@ const { t } = require('./i18n');
 
 class BpmEngine {
   constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl) {
+    this.runCtx = new AsyncLocalStorage();
     this.supabase = supabase;
     this.pgClient = pgClient;
     this.oracleConnection = oracleConnection;
@@ -16,6 +18,12 @@ class BpmEngine {
     this.workflows = [];
     this.models = [];
     this.scheduledJobs = [];
+  }
+
+  /** Anota uma falha que não interrompe o fluxo (webhook, e-mail): a execução termina, mas é reportada como erro. */
+  noteIssue(message) {
+    const ctx = this.runCtx.getStore();
+    if (ctx && ctx.issues.length < 5) ctx.issues.push(String(message).slice(0, 400));
   }
 
   async init() {
@@ -442,6 +450,7 @@ class BpmEngine {
         console.log(chalk.green(`[ OK ] Webhook Retornou: ${response.status} ${response.statusText}`));
       } catch (webhookErr) {
         console.log(chalk.red(`[ ERRO ] Falha no Webhook: ${webhookErr.message}`));
+        this.noteIssue(`Webhook ${method} ${finalUrl}: ${webhookErr.response?.status ? 'HTTP ' + webhookErr.response.status : webhookErr.message}`);
       }
     }
     else if (data.actionType === 'email') {
@@ -541,6 +550,7 @@ class BpmEngine {
 
         if (!to) {
           console.log(chalk.red(`[BPM] E-mail não enviado: Destinatário não encontrado.`));
+          this.noteIssue('E-mail não enviado: destinatário não encontrado.');
           continue;
         }
 
@@ -559,6 +569,7 @@ class BpmEngine {
           console.log(chalk.green(`[BPM] E-mail disparado com sucesso!`));
         } catch (err) {
           console.error(chalk.red(`[BPM] Erro ao enviar e-mail:`, err.response?.data || err.message));
+          this.noteIssue(`E-mail para ${to}: ${err.response?.data?.error || err.message}`);
         }
       }
     }
@@ -608,21 +619,39 @@ class BpmEngine {
    * aviso por e-mail em caso de erro/laço e retenção de logs configurados no Studio (módulo Automações).
    */
   async runFlow(flow, triggerNode, tableName, rowData, source) {
+    await this.runReported(flow, tableName, source, async () => {
+      const result = await this.traverseGraph(flow.flow_data, triggerNode, tableName, rowData);
+      return { steps: result?.steps || 0, loop: !!result?.loop };
+    });
+  }
+
+  /**
+   * Executa fn (que percorre o fluxo) e reporta o resultado: success, error (exceção ou falha anotada em webhook/e-mail)
+   * ou loop (passou de 100 passos). fn devolve { steps, loop, details? }.
+   */
+  async runReported(flow, tableName, source, fn) {
     const startedAt = new Date();
     let status = 'success';
     let errorMessage = null;
-    let steps = 0;
-    try {
-      const result = await this.traverseGraph(flow.flow_data, triggerNode, tableName, rowData);
-      steps = result?.steps || 0;
-      if (result?.loop) { status = 'loop'; errorMessage = 'O fluxo passou de 100 passos (possível laço infinito) e foi interrompido.'; }
-    } catch (e) {
-      status = 'error';
-      errorMessage = (e && e.message) ? e.message : String(e);
-      console.error(chalk.red(`[BPM] Falha na execução do fluxo ${flow.name}:`), e);
-    }
+    let extra = { table: tableName, source };
+    await this.runCtx.run({ issues: [] }, async () => {
+      try {
+        const result = await fn();
+        extra = { ...extra, steps: result?.steps || 0, ...(result?.details || {}) };
+        if (result?.loop) { status = 'loop'; errorMessage = 'O fluxo passou de 100 passos (possível laço infinito) e foi interrompido.'; }
+      } catch (e) {
+        status = 'error';
+        errorMessage = (e && e.message) ? e.message : String(e);
+        console.error(chalk.red(`[BPM] Falha na execução do fluxo ${flow.name}:`), e);
+      }
+      const issues = this.runCtx.getStore().issues;
+      if (issues.length > 0) {
+        extra.issues = issues;
+        if (status === 'success') { status = 'error'; errorMessage = issues.join(' | '); }
+      }
+    });
     if (status === 'loop') console.error(chalk.red(`[BPM] Fluxo "${flow.name}" interrompido: ${errorMessage}`));
-    await this.reportRun(flow, status, startedAt, errorMessage, { table: tableName, source, steps });
+    await this.reportRun(flow, status, startedAt, errorMessage, extra);
   }
 
   async reportRun(flow, status, startedAt, errorMessage, details) {
@@ -808,7 +837,7 @@ class BpmEngine {
       }
     }
     
-    return { success: finalSuccess, data: currentData, error: finalError, message: finalMessage };
+    return { success: finalSuccess, data: currentData, error: finalError, message: finalMessage, steps: 100 - maxSteps, loop: queue.length > 0 };
   }
 
   async processSyncEvent(tableName, actionType, rowData) {
@@ -838,7 +867,13 @@ class BpmEngine {
         if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
           console.log(chalk.cyan(`[BPM] Disparando fluxo SÍNCRONO "${flow.name}" para a tabela ${tableName}...`));
           try {
-             const result = await this.traverseGraphSync(flowData, triggerNode, tableName, currentData);
+             let result;
+             // reporta a execução; bloquear a ação é um resultado normal do fluxo (vai nos detalhes), não uma falha
+             await this.runReported(flow, tableName, `validação ${actionType.toUpperCase()}`, async () => {
+               result = await this.traverseGraphSync(flowData, triggerNode, tableName, currentData);
+               return { steps: result.steps, loop: result.loop, details: { sync: true, blocked: !result.success, ...(result.success ? {} : { message: result.error }) } };
+             });
+             if (!result) throw new Error('fluxo síncrono sem resultado');
              currentData = result.data;
              if (result.message) message = result.message; // Last message wins
              if (!result.success) {
