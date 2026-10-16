@@ -534,6 +534,8 @@ export interface NavigationItem {
 
 export interface AppAST {
   projectId?: string
+  /** Horas que as exportações ficam guardadas (Studio: Retenção de exports). null = sem expiração; ausente = 24. */
+  downloadRetentionHours?: number | null
   projectName: string
   projectSlug: string          // ex: 'crm' — usado como sub-rota no workspace
   projectDescription?: string   // ex: 'CRM COMPLETO'

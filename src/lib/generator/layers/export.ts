@@ -307,9 +307,10 @@ export function ExportMenu({ slug, formats, label, recordId }: { slug: string; f
 }
 `
 
-const API_ROUTE = (guard: string) => `// ARQUIVO GERADO pelo MetaBuilder — exportação de dados (Excel, CSV e JSON) das telas com o botão Exportar ligado.
+const API_ROUTE = (guard: string, ownerExpr: string) => `// ARQUIVO GERADO pelo MetaBuilder — exportação de dados (Excel, CSV e JSON) das telas com o botão Exportar ligado.
 import { NextResponse } from 'next/server'
 import { EXPORT_REGISTRY } from '@/lib/export-registry'
+import { saveExport } from '@/lib/export-store'
 ${guard ? "import { getSessionUser } from '@/lib/session-server'\n" : ''}
 export const dynamic = 'force-dynamic'
 
@@ -342,32 +343,32 @@ ${guard}
   const base = slug + '-' + day
   const cols = mod.EXPORT_COLUMNS
 
+  let body: string | ArrayBuffer
+  let contentType: string
   if (format === 'json') {
-    return new NextResponse(JSON.stringify(rows, null, 2), {
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': 'attachment; filename="' + base + '.json"' },
-    })
-  }
-
-  if (format === 'csv') {
+    body = JSON.stringify(rows, null, 2)
+    contentType = 'application/json; charset=utf-8'
+  } else if (format === 'csv') {
     const lines = [cols.map(c => csvCell(c.label)).join(';'), ...rows.map(r => cols.map(c => csvCell(r[c.key])).join(';'))]
     // BOM para o Excel abrir com acentos; separador ";" (padrão do Excel em português)
-    return new NextResponse('\\uFEFF' + lines.join('\\r\\n'), {
-      headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="' + base + '.csv"' },
-    })
+    body = '\\uFEFF' + lines.join('\\r\\n')
+    contentType = 'text/csv; charset=utf-8'
+  } else {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet(entry.title.replace(/[\\\\/?*[\\]:]/g, ' ').slice(0, 31) || 'Dados')
+    ws.columns = cols.map(c => ({ header: c.label, key: c.key, width: Math.min(60, Math.max(12, c.label.length + 4)) }))
+    rows.forEach(r => ws.addRow(r))
+    ws.getRow(1).font = { bold: true }
+    body = (await wb.xlsx.writeBuffer()) as ArrayBuffer
+    contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   }
 
-  const ExcelJS = (await import('exceljs')).default
-  const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet(entry.title.replace(/[\\\\/?*[\\]:]/g, ' ').slice(0, 31) || 'Dados')
-  ws.columns = cols.map(c => ({ header: c.label, key: c.key, width: Math.min(60, Math.max(12, c.label.length + 4)) }))
-  rows.forEach(r => ws.addRow(r))
-  ws.getRow(1).font = { bold: true }
-  const buffer = await wb.xlsx.writeBuffer()
-  return new NextResponse(buffer as ArrayBuffer, {
-    headers: {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': 'attachment; filename="' + base + '.xlsx"',
-    },
+  // cópia na pasta de exportações do app (Central de Downloads); se não der para guardar, o download segue normalmente
+  saveExport(typeof body === 'string' ? Buffer.from(body, 'utf8') : Buffer.from(body), { ext: format, screen: slug, screenTitle: entry.title, recordCount: rows.length, owner: ${ownerExpr} })
+
+  return new NextResponse(body, {
+    headers: { 'Content-Type': contentType, 'Content-Disposition': 'attachment; filename="' + base + '.' + format + '"' },
   })
 }
 `
@@ -396,7 +397,7 @@ ${entries.join('\n')}
   if (!user) return NextResponse.json({ error: 'Sessão expirada. Entre novamente.' }, { status: 401 })
   if (user.acc?.no.includes(slug)) return NextResponse.json({ error: 'Você não tem acesso a esta tela.' }, { status: 403 })`
     : ''
-  files.set('app/api/export/[slug]/route.ts', API_ROUTE(guard))
+  files.set('app/api/export/[slug]/route.ts', API_ROUTE(guard, authOn ? 'user.email' : "''"))
 
   const l = dict.list as any
   files.set('components/RowSelect.tsx', ROW_SELECT)

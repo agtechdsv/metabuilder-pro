@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import ts from 'typescript'
+import nodeFs from 'node:fs'
+import nodePath from 'node:path'
+import nodeOs from 'node:os'
+import nodeCrypto from 'node:crypto'
 import { buildProjectSource } from '../projectSource'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
@@ -37,6 +41,7 @@ const gen = async (exportVisible = true, formats?: string[]) =>
   (await buildProjectSource(world(exportVisible, formats), { projectId: 'p1', dbStack: 'postgres', dbConnectionString: 'postgresql://u:p@h:5432/d', authStrategy: 'none' } as any)).files
 
 /** Executa um módulo TypeScript gerado, trocando os imports pelos módulos de mentira. */
+const NODE_MODS = { 'node:fs': nodeFs, 'node:path': nodePath, 'node:os': nodeOs, 'node:crypto': nodeCrypto }
 function load(src: string, mods: Record<string, any>) {
   const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText
   const m: any = { exports: {} }
@@ -104,7 +109,10 @@ describe('exportação de dados do app gerado', () => {
       },
     }
     class FakeResponse { constructor(public body: any, public init: any = {}) {} static json(b: any, init: any = {}) { return new FakeResponse(JSON.stringify(b), init) } }
-    const route = load(files.get('app/api/export/[slug]/route.ts')!, { 'next/server': { NextResponse: FakeResponse }, '@/lib/export-registry': registry })
+    const dir = nodeFs.mkdtempSync(nodePath.join(nodeOs.tmpdir(), 'mb-exp-'))
+    process.env.EXPORT_DIR = dir
+    const store = load(files.get('lib/export-store.ts')!, NODE_MODS)
+    const route = load(files.get('app/api/export/[slug]/route.ts')!, { 'next/server': { NextResponse: FakeResponse }, '@/lib/export-registry': registry, '@/lib/export-store': store })
     const call = (slug: string, q: string) => route.GET({ url: 'http://x/api/export/' + slug + '?' + q }, { params: Promise.resolve({ slug }) })
     const csv: any = await call('clientes', 'format=csv')
     expect(csv.body).toBe('﻿Id;Nome\r\n1;"A;B"')
@@ -113,6 +121,52 @@ describe('exportação de dados do app gerado', () => {
     expect(JSON.parse(json.body)).toEqual(rows)
     expect((await call('clientes', 'format=xlsx') as any).init.status).toBe(400)
     expect((await call('nada', 'format=csv') as any).init.status).toBe(404)
+    // cada exportação deixa uma cópia na pasta (a Central de Downloads lista)
+    const saved = store.listExports('')
+    expect(saved.map((r: any) => r.fileType).sort()).toEqual(['csv', 'json'])
+    expect(saved[0]).toMatchObject({ recordCount: 1, screen: 'clientes', screenTitle: 'Clientes' })
+    nodeFs.rmSync(dir, { recursive: true, force: true })
+    delete process.env.EXPORT_DIR
+  })
+
+  it('Central de Downloads: guarda, lista por pessoa, baixa, exclui e apaga o que venceu', async () => {
+    const files = await gen(true, ['csv'])
+    const dir = nodeFs.mkdtempSync(nodePath.join(nodeOs.tmpdir(), 'mb-exp-'))
+    process.env.EXPORT_DIR = dir
+    process.env.EXPORT_RETENTION_HOURS = '24'
+    const store = load(files.get('lib/export-store.ts')!, NODE_MODS)
+    const mine = store.saveExport(Buffer.from('a;b'), { ext: 'csv', screen: 'clientes', screenTitle: 'Clientes', recordCount: 3, owner: 'ana@x.com' })
+    store.saveExport(Buffer.from('x'), { ext: 'json', screen: 'clientes', screenTitle: 'Clientes', recordCount: 1, owner: 'bia@x.com' })
+    expect(store.listExports('ana@x.com').map((r: any) => r.id)).toEqual([mine.id])
+    expect(store.listExports('')).toHaveLength(2)
+    expect(store.findExport(mine.id, 'bia@x.com')).toBeNull()
+    expect(nodeFs.readFileSync(store.exportFilePath(mine), 'utf8')).toBe('a;b')
+    // vencida: some da lista e do disco
+    const metaPath = nodePath.join(dir, mine.fileName + '.meta.json')
+    nodeFs.writeFileSync(metaPath, JSON.stringify({ ...mine, createdAt: new Date(Date.now() - 25 * 3_600_000).toISOString() }))
+    expect(store.listExports('ana@x.com')).toEqual([])
+    expect(nodeFs.existsSync(nodePath.join(dir, mine.fileName))).toBe(false)
+    // 0 = não expira
+    process.env.EXPORT_RETENTION_HOURS = '0'
+    const keep = store.saveExport(Buffer.from('k'), { ext: 'csv', screen: 'c', screenTitle: 'C', recordCount: 0, owner: 'ana@x.com' })
+    nodeFs.writeFileSync(nodePath.join(dir, keep.fileName + '.meta.json'), JSON.stringify({ ...keep, createdAt: '2020-01-01T00:00:00.000Z' }))
+    expect(store.listExports('ana@x.com')).toHaveLength(1)
+    // meta adulterado apontando para fora da pasta é ignorado
+    nodeFs.writeFileSync(nodePath.join(dir, 'zz.meta.json'), JSON.stringify({ id: 'x', fileName: '../segredo.txt', createdAt: new Date().toISOString() }))
+    expect(store.listExports('')).toHaveLength(2)
+
+    // rota de download
+    class FakeResponse { constructor(public body: any, public init: any = {}) {} static json(b: any, init: any = {}) { return new FakeResponse(JSON.stringify(b), init) } }
+    const api = load(files.get('app/api/downloads/[id]/route.ts')!, { 'next/server': { NextResponse: FakeResponse }, 'node:fs': nodeFs, '@/lib/export-store': store })
+    const ok: any = await api.GET({}, { params: Promise.resolve({ id: keep.id }) })
+    expect(String(ok.body)).toBe('k')
+    expect(ok.init.headers['Content-Disposition']).toContain(keep.fileName)
+    expect((await api.GET({}, { params: Promise.resolve({ id: 'nao-existe' }) }) as any).init.status).toBe(404)
+    await api.DELETE({}, { params: Promise.resolve({ id: keep.id }) })
+    expect(nodeFs.existsSync(nodePath.join(dir, keep.fileName))).toBe(false)
+    nodeFs.rmSync(dir, { recursive: true, force: true })
+    delete process.env.EXPORT_DIR
+    delete process.env.EXPORT_RETENTION_HOURS
   })
 
   it('com login, a rota exige sessão e o acesso à tela', async () => {

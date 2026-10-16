@@ -138,6 +138,11 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
     envLines.push('LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"')
   }
 
+  // Central de Downloads: onde ficam as cópias das exportações e por quanto tempo (a retenção vem do Studio; 0 = não expira)
+  envLines.push('# Pasta das cópias das exportações (vazio = Downloads/MetaBuilderExports do usuário que roda o app)')
+  envLines.push('EXPORT_DIR=""')
+  envLines.push(`EXPORT_RETENTION_HOURS="${ast.downloadRetentionHours === null ? 0 : (ast.downloadRetentionHours ?? 24)}"`)
+
   files.set('.env.local', envLines.join('\n'))
 
   // .gitignore

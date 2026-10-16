@@ -2943,6 +2943,7 @@ export function parseMetaBuilderJSON(
   return {
     accessAdmin,
     projectId: rawJson.project?.id || rawJson.id,
+    downloadRetentionHours: rawJson.project?.download_retention_hours === null ? null : (Number.isFinite(Number(rawJson.project?.download_retention_hours)) && rawJson.project?.download_retention_hours !== undefined ? Number(rawJson.project.download_retention_hours) : undefined),
     projectName: rawJson.project?.name || rawJson.name || 'CRM',
     projectSlug: rawJson.project?.slug || rawJson.slug || 'app',
     projectDescription: projectDesc,
