@@ -7,6 +7,7 @@ export function generateRelationSectionComponent(files: Map<string, string>, tar
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { CustomActionButton } from '@/components/ui/custom-action-button'
 import {
   ChevronDown,
   ChevronUp,
@@ -63,6 +64,11 @@ export interface DetailRelationSectionProps {
   updateSubAction?: (id: string, formData: FormData | Record<string, any>) => Promise<any>
   deleteSubAction?: (id: string) => Promise<any>
   relationalOptions?: Record<string, Array<{ value: string; label: string }>>
+  /** registro mestre aberto (origem dos parâmetros das ações do topo da aba) */
+  parentItem?: any
+  /** ações customizadas configuradas pelo dev para esta aba: no topo e em cada linha */
+  actionsTop?: any[]
+  actionsRow?: any[]
 }
 
 function parseAnyNumber(val: any): number {
@@ -964,6 +970,9 @@ export function DetailRelationSection({
   updateSubAction,
   deleteSubAction,
   relationalOptions,
+  parentItem,
+  actionsTop = [],
+  actionsRow = [],
 }: DetailRelationSectionProps) {
   const isReadOnlyMode = Boolean(readOnly || isView)
   const sectionRef = useRef<HTMLDivElement>(null)
@@ -1918,6 +1927,11 @@ export function DetailRelationSection({
             </button>
           </div>
 
+          {/* Ações customizadas do topo da aba (configuradas pelo dev) */}
+          {actionsTop.map((a: any) => (
+            <CustomActionButton key={a.id} action={a} item={parentItem} variant="icon" />
+          ))}
+
           {/* Adicionar Registro (+) */}
           {!isReadOnlyMode && (
             <button
@@ -2088,6 +2102,9 @@ export function DetailRelationSection({
                     >
                       <ChevronDown className={\`w-3.5 h-3.5 transition-transform duration-300 \${isExpanded ? 'rotate-180' : ''}\`} />
                     </button>
+                    {actionsRow.map((a: any) => (
+                      <CustomActionButton key={a.id} action={a} item={item} variant="icon" />
+                    ))}
                     {isReadOnlyMode ? (
                       <button
                         type="button"
@@ -2388,7 +2405,7 @@ export function DetailRelationSection({
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={handleSaveAll}
+              onClick={() => handleSaveAll()}
               className="inline-flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs tracking-wide transition-colors shadow-lg shadow-indigo-500/20 active:scale-95"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

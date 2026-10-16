@@ -233,6 +233,11 @@ import { LimitSelector } from '@/components/ui/limit-selector'
 
 export const metadata: Metadata = { title: '${route.title}' }
 
+// nome da coluna em camelCase (a ordenação tenta também esta forma)
+function toCamel(str: string): string {
+  return str.replace(/[^a-zA-Z0-9]+(.)/g, (_m, c) => c.toUpperCase()).replace(/^[A-Z]/, (m) => m.toLowerCase())
+}
+
 function TableLoading() {
   return (
     <div className="py-20 flex flex-col items-center justify-center gap-4 text-neutral-400 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">

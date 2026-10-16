@@ -58,6 +58,7 @@ export interface GeneratorDictionary {
     edit_record: string
     view_record: string
     fill_fields_desc: string
+    save_first_hint: string
     cancel: string
     create_record: string
     save_changes: string
@@ -164,6 +165,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       edit_record: 'Editar Registro',
       view_record: 'Visualizar Registro',
       fill_fields_desc: 'Preencha os campos para criar um novo registro no sistema.',
+      save_first_hint: 'Salve o registro para liberar esta aba.',
       cancel: 'Cancelar',
       create_record: 'Criar Registro',
       save_changes: 'Salvar Alterações',
@@ -268,6 +270,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       edit_record: 'Edit Record',
       view_record: 'View Record',
       fill_fields_desc: 'Fill in the fields to create a new record in the system.',
+      save_first_hint: 'Save the record to unlock this tab.',
       cancel: 'Cancel',
       create_record: 'Create Record',
       save_changes: 'Save Changes',
@@ -372,6 +375,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       edit_record: 'Editar Registro',
       view_record: 'Visualizar Registro',
       fill_fields_desc: 'Complete los campos para crear un nuevo registro en el sistema.',
+      save_first_hint: 'Guarde el registro para habilitar esta pestaña.',
       cancel: 'Cancelar',
       create_record: 'Crear Registro',
       save_changes: 'Guardar Cambios',

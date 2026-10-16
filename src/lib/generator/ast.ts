@@ -117,6 +117,24 @@ export interface CustomActionParam {
   target: string
 }
 
+/** Ação customizada já resolvida (botão), sem o lugar onde aparece: cada tela decide pelas configurações do dev. */
+export interface CustomActionDef {
+  id: string
+  label: string
+  icon?: string
+  color?: string
+  style: ButtonStyle
+  triggerType?: 'sql' | 'usecase' | 'rest' | 'custom'
+  usecaseSlug?: string
+  usecaseOpenMode?: 'page' | 'modal' | 'drawer'
+  usecaseModalSize?: string
+  usecaseModalWidth?: string
+  usecaseModalHeight?: string
+  usecaseSelectedFields?: Array<CustomActionParam | string>
+  usecaseParams?: string
+  linkTarget?: string
+}
+
 export interface ViewButton {
   id: string
   label: string
@@ -132,7 +150,7 @@ export interface ViewButton {
   triggerType?: 'sql' | 'usecase' | 'rest' | 'custom'
   usecaseSlug?: string
   usecaseOpenMode?: 'page' | 'modal' | 'drawer'
-  usecaseModalSize?: 'sm' | 'md' | 'lg' | 'full' | 'custom'
+  usecaseModalSize?: string
   usecaseModalWidth?: string
   usecaseModalHeight?: string
   usecaseSelectedFields?: Array<CustomActionParam | string>
@@ -184,6 +202,9 @@ export interface RelationTab {
   gridFields: ResolvedField[]  // campos da tabela filha visíveis na aba
   formFields?: ResolvedField[] // campos do formulário da tabela filha
   subDetails?: SubRelationDetail[] // sub-detalhes (ex: itens_pedido para pedidos)
+  /** ações customizadas configuradas para esta aba (location detail:<modelo>): no topo da aba e em cada linha */
+  actionsTop?: CustomActionDef[]
+  actionsRow?: CustomActionDef[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -234,6 +255,10 @@ export interface ModelNode {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface RouteNode {
+  /** ações customizadas no topo do formulário mestre (location master, contexto global_top) */
+  masterActions?: CustomActionDef[]
+  /** ações customizadas agrupadas a um campo do formulário mestre (contexto field_group), por coluna */
+  fieldActions?: Record<string, { left: CustomActionDef[]; right: CustomActionDef[] }>
   path: string                 // ex: '/clientes'
   viewSlug: string             // slug original da view (ex: 'clientes')
   logicType: LogicType         // tipo da view (pesquisa_cadastro, kanban, etc.)

@@ -1,4 +1,4 @@
-import { ResolvedField } from '../../ast'
+import { ResolvedField, RouteNode, CustomActionDef } from '../../ast'
 
 export function toCamel(str: string): string {
   return str
@@ -593,3 +593,41 @@ function formatWithMask(v: any, mask?: string) {
 }
 `
 
+
+/** Configuração do botão de ação customizada, como o CustomActionButton do app gerado a recebe. */
+export function customActionConfigJson(a: CustomActionDef): string {
+  return JSON.stringify({
+    id: a.id,
+    label: a.label,
+    icon: a.icon || 'Zap',
+    style: a.style,
+    triggerType: a.triggerType,
+    usecaseSlug: a.usecaseSlug,
+    usecaseOpenMode: a.usecaseOpenMode || 'modal',
+    usecaseModalSize: a.usecaseModalSize || '4xl',
+    usecaseModalWidth: a.usecaseModalWidth,
+    usecaseModalHeight: a.usecaseModalHeight,
+    usecaseSelectedFields: a.usecaseSelectedFields || [],
+    usecaseParams: a.usecaseParams || '',
+    linkTarget: a.linkTarget || '',
+  })
+}
+
+/** Botões de ação customizada no topo do formulário mestre (item = registro aberto; no cadastro, vazio). */
+export function masterActionButtonsHtml(route: RouteNode, itemExpr: string): string {
+  return (route.masterActions || [])
+    .map(a => `            <CustomActionButton action={${customActionConfigJson(a)}} item={${itemExpr}} variant="header" />`)
+    .join('\n')
+}
+
+/** Acrescenta ao campo os botões de ação customizada agrupados a ele (field_group), esquerda antes da direita. */
+export function appendFieldActions(html: string, route: RouteNode, field: ResolvedField, itemExpr: string): string {
+  const acts = route.fieldActions?.[field.dbColumn]
+  if (!acts || !html) return html
+  const buttons = [...acts.left, ...acts.right]
+    .map(a => `<CustomActionButton action={${customActionConfigJson(a)}} item={${itemExpr}} variant="icon" />`)
+    .join('\n              ')
+  const idx = html.lastIndexOf('</div>')
+  if (idx < 0) return html
+  return html.slice(0, idx) + `  <div className="flex flex-wrap items-center gap-1.5 pt-1">\n              ${buttons}\n            </div>\n          ` + html.slice(idx)
+}

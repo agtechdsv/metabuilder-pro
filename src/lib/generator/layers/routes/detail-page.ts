@@ -1,6 +1,6 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
-import { renderFormField, getByocComponentName, isValidIdentifier } from './helpers'
+import { renderFormField, getByocComponentName, isValidIdentifier, appendFieldActions, masterActionButtonsHtml, customActionConfigJson } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Declarative Schema para Abas de Relacionamento ([id]/schema.ts)
@@ -89,9 +89,10 @@ export function generateDetailTabsClient(route: RouteNode, targetLang?: string):
   const backPath = route.path
 
   const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, true, 'isView', 'relationalOptions'))
+    .map(f => appendFieldActions(renderFormField(f, true, 'isView', 'relationalOptions'), route, f, 'data'))
     .filter(Boolean)
     .join('\n')
+  const masterTopHtml = masterActionButtonsHtml(route, 'data')
 
   const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
   const hasRelationTabs = !hasCustomSlots && route.relationTabs.length > 0
@@ -258,6 +259,9 @@ export function generateDetailTabsClient(route: RouteNode, targetLang?: string):
           `              backPath={backPath}`,
           `              readOnly={isView}`,
           `              relationalOptions={relationalOptions}`,
+          `              parentItem={data}`,
+          (tab.actionsTop && tab.actionsTop.length > 0) ? `              actionsTop={[${tab.actionsTop.map(customActionConfigJson).join(', ')}]}` : '',
+          (tab.actionsRow && tab.actionsRow.length > 0) ? `              actionsRow={[${tab.actionsRow.map(customActionConfigJson).join(', ')}]}` : '',
           subActionProps,
           `            />`,
           `          </div>`,
@@ -339,7 +343,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { DetailMasterForm } from '@/components/DetailMasterForm'
 import { DynamicIcon } from '@/app/components/DynamicIcon'
-import { CloseModalButton } from '@/components/ui/custom-action-button'
+import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
 ${byocImports ? `${byocImports}\n` : ''}${relationImports ? `${relationImports}\n` : ''}${schemaImports ? `${schemaImports}\n` : ''}import { ArrowLeft, Save, Plus, Pencil, Eye, Download, Zap, Loader2 } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -554,6 +558,8 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
             </div>
           </div>
 
+          <div className="flex items-center gap-3">
+${masterTopHtml}
           <Link
             href={backPath}
             onClick={(e) => {
@@ -566,6 +572,7 @@ ${hasRelationTabs ? route.relationTabs.map((tab) => `  ${tab.relatedTable}Items?
           >
             <ArrowLeft className="w-4 h-4" /> ${dict.form.back_to_list}
           </Link>
+          </div>
         </div>
 ${tabsHeader}
 

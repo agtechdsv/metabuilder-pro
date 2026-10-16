@@ -452,7 +452,7 @@ export interface CustomActionConfig {
   triggerType?: string
   usecaseSlug?: string
   usecaseOpenMode?: 'page' | 'modal' | 'drawer'
-  usecaseModalSize?: 'sm' | 'md' | 'lg' | 'full' | 'custom'
+  usecaseModalSize?: string
   usecaseModalWidth?: string
   usecaseModalHeight?: string
   usecaseSelectedFields?: Array<CustomActionParam | string>

@@ -15,6 +15,7 @@ import {
   ResolvedField,
   ResolvedFieldConfig,
   ViewButton,
+  CustomActionDef,
   CustomSlotTab,
   RelationTab,
   SubRelationDetail,
@@ -33,7 +34,7 @@ import {
   MindmapConfig,
   MindmapLevel,
 } from './ast'
-import { getActionContexts } from '@/lib/customActionsHelper'
+import { getActionContexts, getActionGroupFields } from '@/lib/customActionsHelper'
 import { resolveRelations, resolveAllJoins } from '@/lib/relationPathFinder'
 import { flattenGroupChildren } from '@/lib/slotGroups'
 import { cleanRlsRules } from '@/lib/bi/access'
@@ -940,6 +941,74 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
 }
 
 
+/** Ação customizada → definição do botão (sem o lugar onde aparece). */
+function customActionDef(act: any, allViews: any[]): CustomActionDef {
+  const label = act.label || act.name || 'Ação Customizada'
+  const targetUseCaseSlug = act.usecase_slug || act.target_use_case
+  let linkTarget = act.linkTarget || act.url || act.target_url
+  if (!linkTarget && targetUseCaseSlug) {
+    const targetView = allViews.find(
+      (v: any) => v.slug === targetUseCaseSlug || v.id === targetUseCaseSlug || v.name?.toLowerCase() === String(targetUseCaseSlug).toLowerCase()
+    )
+    linkTarget = '/' + (targetView?.slug || targetUseCaseSlug)
+  }
+  return {
+    id: act.id || ('custom_act_' + String(label).toLowerCase().replace(/\s+/g, '_')),
+    label,
+    icon: act.icon || act.custom_icon || 'Receipt',
+    color: act.color,
+    style: (act.style || 'primary') as ButtonStyle,
+    triggerType: act.trigger_type || (targetUseCaseSlug ? 'usecase' : 'custom'),
+    usecaseSlug: targetUseCaseSlug,
+    usecaseOpenMode: act.usecase_open_mode || 'modal',
+    usecaseModalSize: act.usecase_modal_size || '4xl',
+    usecaseModalWidth: act.usecase_modal_width,
+    usecaseModalHeight: act.usecase_modal_height,
+    usecaseSelectedFields: act.usecase_selected_fields || [],
+    usecaseParams: act.usecase_params || '',
+    linkTarget,
+  }
+}
+
+/**
+ * Onde o dev colocou cada ação customizada, fora da tela de pesquisa (essa já vira botão de linha/topo em parseCustomActions):
+ *  - formulário mestre: no topo (global_top) ou agrupada a um campo (field_group, à esquerda ou à direita do campo);
+ *  - cada aba de relacionamento (location detail:<modelo da aba>): no topo da aba (global_top) ou em cada linha (row).
+ * Usa as mesmas regras de leitura da plataforma (getActionContexts / getActionGroupFields).
+ */
+function resolveActionPlacements(rawActions: any[], allViews: any[], relationTabs: RelationTab[]): {
+  masterActions: CustomActionDef[]
+  fieldActions: Record<string, { left: CustomActionDef[]; right: CustomActionDef[] }>
+} {
+  const masterActions: CustomActionDef[] = []
+  const fieldActions: Record<string, { left: CustomActionDef[]; right: CustomActionDef[] }> = {}
+  if (!Array.isArray(rawActions)) return { masterActions, fieldActions }
+  for (const tab of relationTabs) { tab.actionsTop = []; tab.actionsRow = [] }
+
+  for (const act of rawActions) {
+    if (!act || act.enabled === false) continue
+    const def = customActionDef(act, allViews)
+
+    const master = getActionContexts(act, 'master')
+    if (master.includes('global_top')) masterActions.push(def)
+    if (master.includes('field_group')) {
+      for (const raw of getActionGroupFields(act, 'master')) {
+        const col = String(raw).replace(/^(master|detail):/, '')
+        if (!col) continue
+        const slot = (fieldActions[col] ||= { left: [], right: [] })
+        ;(act.group_position === 'left' ? slot.left : slot.right).push(def)
+      }
+    }
+
+    for (const tab of relationTabs) {
+      const ctx = getActionContexts(act, 'detail:' + tab.relatedModelId)
+      if (ctx.includes('global_top')) tab.actionsTop!.push(def)
+      if (ctx.includes('row')) tab.actionsRow!.push(def)
+    }
+  }
+  return { masterActions, fieldActions }
+}
+
 function extractItemTitleField(
   rawItemTitle: any,
   localModelId: string,
@@ -1769,6 +1838,9 @@ export function parseMetaBuilderJSON(
       byocMap,
       enumsMap
     )
+
+    // Ações customizadas do formulário mestre, de campos e das abas (a pesquisa já vai em 'buttons')
+    const actionPlacements = resolveActionPlacements(resolvedView.layout_config?.custom_actions || [], rawViews, relationTabs)
 
     // Encontra ícone do nav item correspondente
     const navIcon = findNavIcon(navigation, resolvedView)
@@ -2797,6 +2869,8 @@ export function parseMetaBuilderJSON(
       mindmapConfig,
       analyticsConfig,
       buttons,
+      masterActions: actionPlacements.masterActions,
+      fieldActions: actionPlacements.fieldActions,
       relationTabs,
       customSlots,
       actionInterfaceType: resolvedView.layout_config?.action_interface_type || resolvedView.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (resolvedView.logic_type === 'mapa_mental' || resolvedView.logic_type === 'timeline' ? 'modal' : 'page'),

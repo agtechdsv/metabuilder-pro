@@ -1,23 +1,7 @@
 import { getGeneratorDictionary } from '../../i18n'
 
-export function generateMasterFormComponent(files: Map<string, string>, targetLang?: string) {
-  const dict = getGeneratorDictionary(targetLang)
-  files.set('components/DetailMasterForm.tsx', `'use client'
-
-import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import Link from 'next/link'
-import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
-
-export interface DetailMasterFormProps {
-  id: string
-  backPath: string
-  title: string
-  updateAction: (id: string, payload: Record<string, any>) => Promise<any>
-  children: React.ReactNode
-}
-
-function formatWithMask(value: string, mask?: string): string {
+// função de máscara (CNPJ, CPF, CEP, telefone, data, moeda) compartilhada pelos formulários gerados
+const MASK_FUNCTION = `function formatWithMask(value: string, mask?: string): string {
   if (!value || !mask) return value || ''
   const numbers = String(value).replace(/\\D/g, '')
   if (!numbers) return ''
@@ -72,7 +56,27 @@ function formatWithMask(value: string, mask?: string): string {
 
   return value
 }
+`
 
+export function generateMasterFormComponent(files: Map<string, string>, targetLang?: string) {
+  const dict = getGeneratorDictionary(targetLang)
+  files.set('components/DetailMasterForm.tsx', `'use client'
+
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import Link from 'next/link'
+import { Save, CheckCircle, AlertTriangle, X, Loader2 } from 'lucide-react'
+
+export interface DetailMasterFormProps {
+  id: string
+  backPath: string
+  title: string
+  updateAction: (id: string, payload: Record<string, any>) => Promise<any>
+  children: React.ReactNode
+  isView?: boolean
+}
+
+${MASK_FUNCTION}
 export function DetailMasterForm({ id, backPath, title, updateAction, children, isView }: DetailMasterFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -217,6 +221,57 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
         document.body
       )}
     </>
+  )
+}
+`)
+
+  // Cadastro (new): aplica a máscara dos campos (data-mask) enquanto o usuário digita, como no formulário de edição
+  files.set('components/MaskScope.tsx', `'use client'
+
+import React from 'react'
+
+${MASK_FUNCTION}
+export function MaskScope({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      onInput={(e) => {
+        const target = e.target as HTMLInputElement
+        const mask = target?.getAttribute?.('data-mask')
+        if (mask) target.value = formatWithMask(target.value, mask)
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+`)
+
+  // Cadastro (new): abas do registro (as de relacionamento só liberam depois de salvar)
+  files.set('components/NewRecordTabs.tsx', `'use client'
+
+import React, { useState } from 'react'
+import { Lock } from 'lucide-react'
+
+export function NewRecordTabs({ mainLabel, tabs, hint, children }: { mainLabel: string; tabs: string[]; hint: string; children: React.ReactNode }) {
+  const [active, setActive] = useState(0)
+  const cls = (on: boolean) => 'flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap shrink-0 ' + (on ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300')
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-1 border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+        <button type="button" onClick={() => setActive(0)} className={cls(active === 0)}>{mainLabel}</button>
+        {tabs.map((t, i) => (
+          <button key={i} type="button" onClick={() => setActive(i + 1)} className={cls(active === i + 1)}>{t}</button>
+        ))}
+      </div>
+      {/* o formulário continua montado ao trocar de aba: nada do que foi digitado se perde */}
+      <div className={active === 0 ? '' : 'hidden'}>{children}</div>
+      {active > 0 && (
+        <div className="py-16 flex flex-col items-center gap-3 text-neutral-400">
+          <Lock className="w-6 h-6" />
+          <p className="text-xs font-medium">{hint}</p>
+        </div>
+      )}
+    </div>
   )
 }
 `)

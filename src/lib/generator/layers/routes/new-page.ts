@@ -1,6 +1,6 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
-import { renderFormField, getByocComponentName } from './helpers'
+import { renderFormField, getByocComponentName, appendFieldActions, masterActionButtonsHtml } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cadastro (new/page.tsx)
@@ -72,10 +72,19 @@ export function generateNewPage(route: RouteNode, targetLang?: string): string {
     }
   })
 
+  // abas do registro (como no formulário de edição): as de relacionamento só liberam depois de salvar
+  const hasCustomSlots = Boolean(route.customSlots && route.customSlots.length > 0)
+  const tabLabels: string[] = hasCustomSlots ? (route.customSlots || []).map((sl: any) => String(sl.title)) : (route.relationTabs || []).map(t => String(t.label))
+  const wrapOpen = tabLabels.length > 0
+    ? `<NewRecordTabs mainLabel={${JSON.stringify(route.title)}} tabs={${JSON.stringify(tabLabels)}} hint={${JSON.stringify(dict.form.save_first_hint)}}>\n        <MaskScope>`
+    : '<MaskScope>'
+  const wrapClose = tabLabels.length > 0 ? '</MaskScope>\n        </NewRecordTabs>' : '</MaskScope>'
+
   const formFieldsHtml = route.formFields
-    .map(f => renderFormField(f, false, false, 'relationalOptions'))
+    .map(f => appendFieldActions(renderFormField(f, false, false, 'relationalOptions'), route, f, '{}'))
     .filter(Boolean)
     .join('\n')
+  const masterTopHtml = masterActionButtonsHtml(route, '{}')
 
   const byocImports = route.formFields
     .filter(f => f.isByoc || f.dataType === 'byoc' || f.id.startsWith('byoc_'))
@@ -89,7 +98,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { create${mn}${selfActionImport} } from '@/app/actions/${mnLower}'
 ${lookupImports ? `${lookupImports}\n` : ''}${byocImports ? `${byocImports}\n` : ''}import { DynamicIcon } from '@/app/components/DynamicIcon'
-import { CloseModalButton } from '@/components/ui/custom-action-button'
+import { MaskScope } from '@/components/MaskScope'
+${tabLabels.length > 0 ? "import { NewRecordTabs } from '@/components/NewRecordTabs'\n" : ''}import { CloseModalButton, CustomActionButton } from '@/components/ui/custom-action-button'
 import { ArrowLeft, Save, Plus, Download, Zap } from 'lucide-react'
 
 function formatDateForInput(v: any) {
@@ -220,6 +230,7 @@ ${buildOptionsCode.join('\n')}
         </div>
 
         <div className="flex items-center gap-3">
+${masterTopHtml}
           <Link href={\`${route.path}\${isEmbedded ? '?embedded=true' : ''}\`} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold tracking-wide transition-all shadow-sm active:scale-95">
             <ArrowLeft className="w-4 h-4" /> ${dict.form.back_to_list}
           </Link>
@@ -243,6 +254,7 @@ ${buildOptionsCode.join('\n')}
           </div>
         </div>
 
+        ${wrapOpen}
         <form action={async (formData: FormData) => {
           'use server'
           const payload: Record<string, any> = {}
@@ -274,6 +286,7 @@ ${formFieldsHtml}
             </button>
           </div>
         </form>
+        ${wrapClose}
       </div>
     </div>
   )
