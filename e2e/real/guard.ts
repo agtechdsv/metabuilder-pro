@@ -33,6 +33,8 @@ export const REAL = {
   password: val('E2E_REAL_PASSWORD'),
   userFunc: val('E2E_REAL_USER_FUNC'),
   passwordFunc: val('E2E_REAL_PASSWORD_FUNC'),
+  userLeitura: val('E2E_REAL_USER_LEITURA'),
+  passwordLeitura: val('E2E_REAL_PASSWORD_LEITURA'),
   pgUrl: val('E2E_REAL_PG_URL'),
   allowedDbs: val('E2E_REAL_ALLOWED_DBS', 'crm').split(',').map(s => s.trim()).filter(Boolean),
   appDir: val('E2E_REAL_APP_DIR', 'C:\\AgTech\\Apps\\e2e-vendas-pg'),
@@ -109,5 +111,8 @@ export async function limparTeste(prefixo = PREFIXO) {
   await realQuery(`delete from clientes where nome_empresa like $1`, [like])
   await realQuery(`delete from funcionarios where nome like $1`, [like])
   await realQuery(`delete from departamentos where nome like $1`, [like])
+  // usuários criados pelos testes da tela de gestão de acesso (e-mail e2e_robo_tmp*): vínculo com o grupo e depois o usuário
+  await realQuery(`delete from perfis_usuarios where usuario_id in (select id from usuarios where email like 'e2e_robo_tmp%')`)
+  await realQuery(`delete from usuarios where email like 'e2e_robo_tmp%'`)
   await realQuery(`delete from produtos where nome like $1`, [like])
 }

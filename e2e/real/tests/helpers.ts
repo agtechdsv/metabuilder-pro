@@ -5,9 +5,9 @@ import { REAL, PREFIXO } from '../guard'
 export const RODADA = PREFIXO + new Date().toISOString().replace(/[-:T]/g, '').slice(2, 12) // E2E-2610181030
 
 /** Entra no app exportado com o usuário robô. */
-export async function entrar(page: Page, quem: 'admin' | 'func' = 'admin') {
-  const user = quem === 'func' ? REAL.userFunc : REAL.user
-  const password = quem === 'func' ? REAL.passwordFunc : REAL.password
+export async function entrar(page: Page, quem: 'admin' | 'func' | 'leitura' = 'admin') {
+  const user = quem === 'func' ? REAL.userFunc : quem === 'leitura' ? REAL.userLeitura : REAL.user
+  const password = quem === 'func' ? REAL.passwordFunc : quem === 'leitura' ? REAL.passwordLeitura : REAL.password
   if (!user || !password) throw new Error('Robô "' + quem + '" sem credenciais em e2e/.env.real (rode npm run real:robot ou real:robot:func).')
   await page.goto('/login')
   await page.locator('input[name="email"]').fill(user)
