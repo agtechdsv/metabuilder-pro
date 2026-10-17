@@ -50,7 +50,7 @@ export function autocompleteConfig(f: ResolvedField): AutocompleteConfig {
 /** Propriedades do componente para este campo (texto JSX). */
 export function autocompleteProps(f: ResolvedField): string {
   const c = autocompleteConfig(f)
-  return `table=${JSON.stringify(c.table)} labelCol=${JSON.stringify(c.labelCol)} valueCol=${JSON.stringify(c.valueCol)} minChars={${c.minChars}} debounceMs={${c.debounceMs}} limit={${c.limit}}${c.placeholder ? ` placeholder=${JSON.stringify(c.placeholder)}` : ''}`
+  return `table=${JSON.stringify(c.table)} labelCol=${JSON.stringify(c.labelCol)} valueCol=${JSON.stringify(c.valueCol)} minChars={${c.minChars}} debounceMs={${c.debounceMs}} limit={${c.limit}} placeholder=${JSON.stringify(c.placeholder || `Digite o valor para ${f.label}...`)}`
 }
 
 /** O componente de aba de relacionamento (sempre gerado) usa o autocomplete: basta o app ter tabelas. */

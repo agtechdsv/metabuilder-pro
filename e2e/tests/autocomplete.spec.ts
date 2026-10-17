@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 // Campo "produto_id" configurado no Studio como Autocomplete (busca dinâmica no servidor, mínimo 2 caracteres).
 test('autocomplete do produto busca no servidor, escolhe e grava', async ({ page }) => {
   await page.goto('/itens/new')
-  const busca = page.getByPlaceholder('Digite para pesquisar...')
+  const busca = page.getByPlaceholder('Digite o valor para produto_id...')
   await busca.fill('M')
   await expect(page.getByText(/pelo menos 2 caracteres/i)).toBeVisible()
   await busca.fill('M8')

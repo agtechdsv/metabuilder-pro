@@ -327,7 +327,9 @@ export function renderFormField(
           </div>`
   }
 
-  const isDate =
+  // o tipo escolhido no Studio manda (date = só data; datetime/datetime-local = data e hora); sem ele vale o tipo da coluna e o nome
+  const explicitDateTime = compType === 'datetime' || compType === 'datetime-local'
+  const isDate = !explicitDateTime && (
     dt === 'date' ||
     compType === 'date' ||
     col.toLowerCase().includes('data') ||
@@ -335,7 +337,7 @@ export function renderFormField(
     col.toLowerCase().includes('criado') ||
     col.toLowerCase().includes('created') ||
     col.toLowerCase().includes('atualizado') ||
-    col.toLowerCase().includes('updated')
+    col.toLowerCase().includes('updated'))
 
   if (isDate) {
     return `

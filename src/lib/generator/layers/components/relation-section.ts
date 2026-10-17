@@ -278,6 +278,8 @@ function isDateTimeField(f: any): boolean {
   const dt = (f.dataType || '').toLowerCase()
   const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
   const compType = String(comp.type || f.config?.type || '').toLowerCase()
+  // o tipo escolhido no Studio manda: "date" mostra só a data (como na plataforma), mesmo em coluna timestamp
+  if (compType === 'date') return false
   return dt.includes('timestamp') || dt.includes('datetime') || compType === 'datetime' || compType === 'datetime-local'
 }
 
@@ -919,7 +921,7 @@ const SubItemAccordion = React.forwardRef(({
                     {sf.label}
                   </label>
                   {getAutocompleteConfig(sf) ? (
-<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} options={finalOptions} onChange={(v: string) => onSelectChange1({ target: { value: v } } as any)} />
+<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} placeholder={getAutocompleteConfig(sf)?.placeholder || 'Digite para buscar...'} options={finalOptions} onChange={(v: string) => onSelectChange1({ target: { value: v } } as any)} />
 ) : (
 <select
                     key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}
@@ -2281,7 +2283,7 @@ export function DetailRelationSection({
                                 {f.label}
                               </label>
                               {getAutocompleteConfig(f) ? (
-<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} options={displayedOptions} onChange={(v: string) => onSelectChange2({ target: { value: v } } as any)} />
+<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} placeholder={getAutocompleteConfig(f)?.placeholder || 'Digite para buscar...'} options={displayedOptions} onChange={(v: string) => onSelectChange2({ target: { value: v } } as any)} />
 ) : (
 <select
                                 key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
@@ -2653,7 +2655,7 @@ export function DetailRelationSection({
                             {f.label}
                           </label>
                           {getAutocompleteConfig(f) ? (
-<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} options={displayedOptions} onChange={(v: string) => onSelectChange3({ target: { value: v } } as any)} />
+<AutocompleteInput name={f.dbColumn} value={defVal} disabled={isReadOnly} {...(getAutocompleteConfig(f) as any)} placeholder={getAutocompleteConfig(f)?.placeholder || \`Digite o valor para \${f.label}...\`} options={displayedOptions} onChange={(v: string) => onSelectChange3({ target: { value: v } } as any)} />
 ) : (
 <select
                             key={\`\${f.dbColumn}-\${defVal}-\${displayedOptions.length}\`}
@@ -3011,7 +3013,7 @@ export function DetailRelationSection({
                           {sf.label}
                         </label>
                         {getAutocompleteConfig(sf) ? (
-<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} options={finalOptions} onChange={(v: string) => onSelectChange4({ target: { value: v } } as any)} />
+<AutocompleteInput name={sf.dbColumn} value={defVal} disabled={false} {...(getAutocompleteConfig(sf) as any)} placeholder={getAutocompleteConfig(sf)?.placeholder || \`Digite o valor para \${sf.label}...\`} options={finalOptions} onChange={(v: string) => onSelectChange4({ target: { value: v } } as any)} />
 ) : (
 <select
                           key={\`\${sf.dbColumn}-\${defVal}-\${finalOptions.length}\`}

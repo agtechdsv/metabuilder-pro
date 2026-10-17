@@ -31,6 +31,8 @@ export const REAL = {
   flag: val('E2E_REAL'),
   user: val('E2E_REAL_USER'),
   password: val('E2E_REAL_PASSWORD'),
+  userFunc: val('E2E_REAL_USER_FUNC'),
+  passwordFunc: val('E2E_REAL_PASSWORD_FUNC'),
   pgUrl: val('E2E_REAL_PG_URL'),
   allowedDbs: val('E2E_REAL_ALLOWED_DBS', 'crm').split(',').map(s => s.trim()).filter(Boolean),
   appDir: val('E2E_REAL_APP_DIR', 'C:\\AgTech\\Apps\\e2e-vendas-pg'),
@@ -76,7 +78,7 @@ export async function contagemOriginal(): Promise<Record<string, number>> {
     pedidos: await q(`select count(*) n from pedidos where cliente_id is null or cliente_id not in (select id from clientes where nome_empresa like '${PREFIXO}%')`),
     itens_pedido: await q(`select count(*) n from itens_pedido where pedido_id is null or pedido_id not in (select id from pedidos where cliente_id in (select id from clientes where nome_empresa like '${PREFIXO}%'))`),
     produtos: await q(`select count(*) n from produtos where nome not like '${PREFIXO}%'`),
-    usuarios: await q(`select count(*) n from usuarios where email <> '${REAL.user}'`),
+    usuarios: await q(`select count(*) n from usuarios where email not like 'e2e_robo%'`),
   }
 }
 

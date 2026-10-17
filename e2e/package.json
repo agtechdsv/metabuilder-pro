@@ -17,7 +17,8 @@
     "real:test": "playwright test -c playwright.real.config.ts",
     "real:ui": "playwright test -c playwright.real.config.ts --ui",
     "real:start": "npm run real:prepare && npm run real:ui",
-    "real:run": "npm run real:prepare && npm run real:test"
+    "real:run": "npm run real:prepare && npm run real:test",
+    "real:robot:func": "node scripts/create-robot.mjs func"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

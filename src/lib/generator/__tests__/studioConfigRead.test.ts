@@ -64,3 +64,13 @@ describe('correções achadas pelos testes de ponta a ponta', () => {
     expect(master).toContain('payload[c.name] = c.checked')
   })
 })
+
+describe('o tipo de campo escolhido no Studio manda sobre o tipo da coluna', () => {
+  it('timestamp configurado como "date" mostra só a data; "datetime-local" mostra data e hora', async () => {
+    const { files } = await buildProjectSource(world(), opts as any)
+    const section = files.get('components/DetailRelationSection.tsx')!
+    expect(section).toContain("if (compType === 'date') return false")
+    const master = files.get('app/(protected)/clientes/[id]/DetailTabsClient.tsx')!
+    expect(master).toBeTruthy()
+  })
+})

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { query } from './_db'
 
 test.describe('cadastro de Clientes', () => {
   test('cria um cliente, ele aparece na lista e pode ser excluído', async ({ page }) => {
@@ -17,6 +18,9 @@ test.describe('cadastro de Clientes', () => {
     // exclusão (com confirmação na janela do app)
     await linha.locator('button').last().click()
     await page.getByRole('button', { name: /excluir|confirmar/i }).last().click()
+    // a exclusão é conferida no banco (a lista pode demorar a atualizar) e depois na tela
+    await expect.poll(async () => (await query('SELECT 1 FROM clientes WHERE nome_empresa = $1', ['Cliente E2E'])).length).toBe(0)
+    await page.reload()
     await expect(page.locator('tbody tr').filter({ hasText: 'Cliente E2E' })).toHaveCount(0)
   })
 
