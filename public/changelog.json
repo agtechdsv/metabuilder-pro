@@ -1,4 +1,22 @@
 {
+  "v1.0.1": {
+    "date": "2026-10-17",
+    "pt": [
+      "Aprimoramento na Exportação de BI: Relatórios e planilhas exportados agora contam com fórmulas ativas entre abas e dados 100% limpos e formatados para apresentação direta.",
+      "Suporte Otimizado para Visualizações Complexas: Maior consistência e precisão nas configurações e dados ao trabalhar com modos de Galeria, Blueprint e Mapas.",
+      "Maior Confiabilidade e Estabilidade: Correção de duplicidades em opções e reforço estrutural para garantir processos de exportação rápidos e sem falhas."
+    ],
+    "en": [
+      "Enhanced BI Export Capabilities: Exported reports now include active cross-tab formulas and clean, presentation-ready data with no lingering placeholders.",
+      "Optimized Rich Views (Gallery, Blueprint & Maps): Improved configuration reliability and data consistency across advanced visual formats.",
+      "Increased Platform Reliability: Resolved option duplicates and reinforced internal processes to guarantee smooth, dependable export workflows."
+    ],
+    "es": [
+      "Exportación de BI Mejorada: Los reportes exportados ahora cuentan con fórmulas activas entre pestañas y datos limpios listos para su presentación.",
+      "Optimización en Vistas Avanzadas (Galería, Blueprint y Mapas): Mayor precisión y coherencia en las configuraciones para formatos visuales complejos.",
+      "Mayor Estabilidad y Fiabilidad: Corrección de duplicidades en opciones y mejoras estructurales para garantizar exportaciones fluidas y sin errores."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
