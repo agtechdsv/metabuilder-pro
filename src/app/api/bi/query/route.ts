@@ -7,7 +7,7 @@ import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunne
 import { perfSettings } from '@/lib/bi/perf'
 import { composeBiQuery, parseBiRequest, viewerFromSession } from '@/lib/bi/serverQuery'
 import { loadBiContext } from '@/lib/bi/serverContext'
-import { accessForSession } from '@/lib/rowPolicy/server'
+import { accessForSession, groupNamesForSession } from '@/lib/rowPolicy/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -47,7 +47,10 @@ export async function POST(request: NextRequest) {
 
     // Quem vê o painel vem SEMPRE da sessão assinada. Membro que também entrou no app como usuário final testa a regra com esse usuário.
     const session = verifyEndUserSession(request.cookies.get(endUserCookieName(req.projectId))?.value, req.projectId)
-    const viewer = viewerFromSession(session)
+    // os grupos só entram para quem tem sessão de usuário final (exceção "por grupo" das regras do painel)
+    const baseViewer = viewerFromSession(session)
+    const groups = baseViewer && session ? await groupNamesForSession(req.projectId, session) : []
+    const viewer = baseViewer && groups.length > 0 ? { ...baseViewer, groups } : baseViewer
 
     const composed = composeBiQuery({ req, config, actor: isMember ? 'member' : 'end_user', viewer, ctx })
     if (!composed.ok) return NextResponse.json({ error: composed.message, code: composed.code, ...(composed.denied ? { denied: composed.denied } : {}) }, { status: composed.status })

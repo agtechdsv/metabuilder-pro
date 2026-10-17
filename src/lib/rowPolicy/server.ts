@@ -72,11 +72,58 @@ export async function accessForSession(
 ): Promise<AccessPayload> {
   const configs = await loadTableAccess(projectId, deps)
   const restricted = new Set(await loadWriteRestrictions(projectId, session, deps))
+  // grupos do usuário: só consultados quando alguma regra tem exceção "por grupo" (nos demais projetos nada muda)
+  const usesGroups = configs.some(c => c.policy?.rules.some(r => r.bypass?.source === 'user.group'))
+  const groups = usesGroups ? await groupNamesForSession(projectId, session, deps) : []
   // grupo só com leitura nas telas de uma tabela: o Agente recusa criar/editar/excluir nela (o navegador não consegue tirar)
   const effective = restricted.size === 0
     ? configs
     : configs.map(c => (restricted.has(c.table.split('.').pop()!.toLowerCase()) ? { ...c, canCreate: false, canUpdate: false, canDelete: false } : c))
-  return resolveAccess(effective, viewerFromSession(session))
+  const viewer = viewerFromSession(session)
+  return resolveAccess(effective, viewer && groups.length > 0 ? { ...viewer, groups } : viewer)
+}
+
+const groupCache = new Map<string, { names: string[]; until: number }>()
+export function clearGroupNamesCache() { groupCache.clear() }
+
+/**
+ * Nomes dos grupos do usuário final, para a exceção "por grupo" das regras de acesso por linha. Mesmo critério do menu:
+ * coluna do grupo na linha do usuário (banco legado) e/ou project_user_roles. Sem sessão, visitante ou erro ao ler: lista vazia
+ * (falha fechada: sem grupo conhecido ninguém escapa da regra).
+ */
+export async function groupNamesForSession(
+  projectId: string,
+  session: { sub: string; row?: Record<string, unknown> } | null | undefined,
+  deps: { client?: Pick<SupabaseClient, 'from'>; now?: () => number } = {},
+): Promise<string[]> {
+  if (!session || String(session.sub).startsWith('anon:')) return []
+  const now = (deps.now ?? Date.now)()
+  const key = `${projectId}:${session.sub}`
+  const hit = groupCache.get(key)
+  if (hit && hit.until > now) return hit.names
+  let names: string[] = []
+  try {
+    const client = deps.client ?? serviceClient()
+    const { data: authRow } = await client.from('project_auth_config').select('ui_config').eq('project_id', projectId).maybeSingle()
+    const ui = ((authRow as any)?.ui_config || {}) as any
+    const ids = new Set<string>()
+    if (ui.sync_legacy_groups) {
+      const v = session.row?.[ui.db_user_role_column || 'role_id']
+      if (v !== undefined && v !== null && String(v) !== '') ids.add(String(v))
+    }
+    const { data: links } = await client.from('project_user_roles').select('role_id').eq('project_id', projectId).eq('external_user_id', String(session.sub))
+    for (const l of ((links as any[]) || [])) if (l?.role_id) ids.add(String(l.role_id))
+    if (ids.size > 0) {
+      const { data: roles } = await client.from('project_roles').select('id, name').eq('project_id', projectId).in('id', [...ids])
+      names = ((roles as any[]) || []).map(r => String(r?.name ?? '').trim()).filter(Boolean)
+    }
+  } catch (e: any) {
+    console.error('[rowPolicy] não foi possível ler o grupo do usuário:', e?.message)
+    return []
+  }
+  groupCache.set(key, { names, until: now + TTL_MS })
+  if (groupCache.size > 2000) for (const [k, c] of groupCache) if (c.until < now) groupCache.delete(k)
+  return names
 }
 
 /**

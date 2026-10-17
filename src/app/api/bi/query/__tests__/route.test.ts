@@ -6,7 +6,7 @@ const tunnelCall = vi.fn()
 const getToken = vi.fn()
 const accessCtx = vi.fn()
 const accessFor = vi.fn()
-vi.mock('@/lib/rowPolicy/server', () => ({ accessForSession: (...a: any[]) => accessFor(...a) }))
+vi.mock('@/lib/rowPolicy/server', () => ({ accessForSession: (...a: any[]) => accessFor(...a), groupNamesForSession: async () => [] }))
 
 vi.mock('@/lib/tunnel/authorize', () => ({ authorizeProjectActor: (...a: any[]) => authorize(...a) }))
 vi.mock('@/lib/bi/serverContext', () => ({ loadBiContext: (...a: any[]) => loadCtx(...a) }))
