@@ -5,10 +5,14 @@
 
 export const isWindowsDesktop = (): boolean => typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
 
-/** Abre o seletor de pasta do sistema. null = cancelado. */
+/**
+ * Abre o seletor de pasta do sistema. null = cancelado.
+ * `recursive: true` libera a pasta escolhida e tudo dentro dela para gravação (o Tauri só deixa gravar em $HOME e na pasta escolhida;
+ * sem isto, escolher uma pasta fora do perfil do usuário, como C:\AgTech\Apps, dava "forbidden path" ao extrair o projeto).
+ */
 export async function pickFolder(): Promise<string | null> {
   const { open } = await import('@tauri-apps/plugin-dialog')
-  const dir = await open({ directory: true })
+  const dir = await open({ directory: true, recursive: true })
   return dir && typeof dir === 'string' ? dir : null
 }
 

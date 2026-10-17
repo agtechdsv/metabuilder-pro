@@ -204,7 +204,8 @@ export function useProjectExport() {
         const { Command } = await import('@tauri-apps/plugin-shell')
         const JSZip = (await import('jszip')).default
 
-        const selectedDir = await open({ directory: true })
+        // recursive: libera a pasta escolhida (e o que há dentro) para gravação, mesmo fora do perfil do usuário
+        const selectedDir = await open({ directory: true, recursive: true })
         if (!selectedDir || typeof selectedDir !== 'string') {
           setDownloadModal(null)
           return
