@@ -272,6 +272,25 @@ function formatDateForInput(v: any): string {
   return s.slice(0, 10)
 }
 
+/** Coluna com data E hora (timestamp/datetime): o campo precisa guardar a hora, não só o dia. */
+function isDateTimeField(f: any): boolean {
+  if (!f) return false
+  const dt = (f.dataType || '').toLowerCase()
+  const comp = f.config?.component || f.config?.form_config?.component || (f as any).component || {}
+  const compType = String(comp.type || f.config?.type || '').toLowerCase()
+  return dt.includes('timestamp') || dt.includes('datetime') || compType === 'datetime' || compType === 'datetime-local'
+}
+
+function formatDateTimeForInput(v: any): string {
+  if (v === null || v === undefined || v === '') return ''
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const p = (n: number) => String(n).padStart(2, '0')
+    return \`\${v.getFullYear()}-\${p(v.getMonth() + 1)}-\${p(v.getDate())}T\${p(v.getHours())}:\${p(v.getMinutes())}\`
+  }
+  const s = String(v).trim().replace(' ', 'T')
+  return s.length >= 16 ? s.slice(0, 16) : formatDateForInput(v)
+}
+
 function isDateField(f: any): boolean {
   if (!f) return false
   const dt = (f.dataType || '').toLowerCase()
@@ -844,6 +863,7 @@ const SubItemAccordion = React.forwardRef(({
             const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
             const dt = (sf.dataType || '').toLowerCase()
             const isDate = isDateField(sf)
+            const isDateTime = isDate && isDateTimeField(sf)
             const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
             const dynamicOptions = getRelationalOptionsForField(sf, subTable || '', relationalOptions || {})
             const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
@@ -941,7 +961,7 @@ const SubItemAccordion = React.forwardRef(({
             }
 
             const mask = getFieldMask(sf, comp.isComputed)
-            let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
+            let initialFormatted = isDate ? (isDateTime ? formatDateTimeForInput(val) : formatDateForInput(val)) : String(val ?? '')
             if (mask) {
               initialFormatted = applyFieldMask(val, mask)
             }
@@ -955,7 +975,7 @@ const SubItemAccordion = React.forwardRef(({
                   key={sf.dbColumn}
                   name={sf.dbColumn}
                   data-mask={mask}
-                  type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
+                  type={isDate ? (isDateTime ? 'datetime-local' : 'date') : (isNumber && !mask) ? 'number' : 'text'}
                   step={isNumber && !dt.includes('int') ? 'any' : undefined}
                   value={initialFormatted || ''}
                   onChange={(e) => {
@@ -2187,6 +2207,7 @@ export function DetailRelationSection({
                         const compConfig = f.config?.component || f.config?.form_config?.component || {}
                         const dt = (f.dataType || '').toLowerCase()
                         const isDate = isDateField(f)
+                        const isDateTime = isDate && isDateTimeField(f)
                         const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                         const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
                         const rawFixedOpts = f.config?.options || compConfig.options || f.config?.fixed_options || compConfig.fixed_options || f.config?.enum_values || compConfig.enum_values
@@ -2285,7 +2306,7 @@ export function DetailRelationSection({
                           )
                         }
 
-                        const dateInputVal = isDate ? formatDateForInput(val ?? displayVal) : ''
+                        const dateInputVal = isDate ? (isDateTime ? formatDateTimeForInput(val ?? displayVal) : formatDateForInput(val ?? displayVal)) : ''
 
                         return (
                           <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -2297,7 +2318,7 @@ export function DetailRelationSection({
                               name={f.dbColumn}
                               data-mask={mask || undefined}
                               data-type={isNumber ? 'number' : undefined}
-                              type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
+                              type={isDate ? (isDateTime ? 'datetime-local' : 'date') : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                   step={isNumber && !dt.includes('int') ? 'any' : undefined}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
@@ -2550,6 +2571,7 @@ export function DetailRelationSection({
                     const optsType = String(compConfig.options_type || f.config?.options_type || f.config?.optionsType || '').toLowerCase()
                     const dt = (f.dataType || '').toLowerCase()
                     const isDate = isDateField(f)
+                    const isDateTime = isDate && isDateTimeField(f)
                     const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                     const allOptions = getRelationalOptionsForField(f, relatedTable, relationalOptions)
                     const rawFixedOpts = f.config?.options || compConfig.options || f.config?.fixed_options || compConfig.fixed_options || f.config?.enum_values || compConfig.enum_values
@@ -2656,7 +2678,7 @@ export function DetailRelationSection({
                       )
                     }
 
-                    const dateInputVal = isDate ? formatDateForInput(val ?? displayVal) : ''
+                    const dateInputVal = isDate ? (isDateTime ? formatDateTimeForInput(val ?? displayVal) : formatDateForInput(val ?? displayVal)) : ''
 
                     return (
                       <div key={f.dbColumn} className={\`space-y-1.5 \${colSpanClass}\`}>
@@ -2668,7 +2690,7 @@ export function DetailRelationSection({
                           name={f.dbColumn}
                           data-mask={mask || undefined}
                           data-type={isNumber ? 'number' : undefined}
-                          type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
+                          type={isDate ? (isDateTime ? 'datetime-local' : 'date') : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
                   step={isNumber && !dt.includes('int') ? 'any' : undefined}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
@@ -2911,6 +2933,7 @@ export function DetailRelationSection({
                   const dt = (sf.dataType || '').toLowerCase()
                   const sfComp = sf.config?.component || sf.config?.form_config?.component || {}
                   const isDate = isDateField(sf)
+                  const isDateTime = isDate && isDateTimeField(sf)
                   const isNumber = dt.includes('int') || dt.includes('num') || dt.includes('float') || dt.includes('decimal') || dt.includes('double')
                   const dynamicOptions = getRelationalOptionsForField(sf, subTable || '', relationalOptions || {})
                   const rawFixedOpts = sf.config?.options || sfComp.options || sf.config?.fixed_options || sfComp.fixed_options || sf.config?.enum_values || sfComp.enum_values
@@ -3029,7 +3052,7 @@ export function DetailRelationSection({
                     )
                   }
 
-                  let initialFormatted = isDate ? formatDateForInput(val) : String(val ?? '')
+                  let initialFormatted = isDate ? (isDateTime ? formatDateTimeForInput(val) : formatDateForInput(val)) : String(val ?? '')
                   if (mask) {
                     initialFormatted = applyFieldMask(val, mask)
                   }
@@ -3043,7 +3066,7 @@ export function DetailRelationSection({
                         name={sf.dbColumn}
                         data-mask={mask || undefined}
                         data-type={isNumber ? 'number' : undefined}
-                        type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
+                        type={isDate ? (isDateTime ? 'datetime-local' : 'date') : (isNumber && !mask) ? 'number' : 'text'}
                   step={isNumber && !dt.includes('int') ? 'any' : undefined}
                         value={initialFormatted || ''}
                         onChange={(e) => {

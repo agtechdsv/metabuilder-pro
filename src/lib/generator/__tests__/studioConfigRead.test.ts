@@ -51,3 +51,16 @@ describe('package.json do app exportado instala e compila', () => {
     expect(java.overrides).toEqual({ traverse: '0.3.9' })
   })
 })
+
+describe('correções achadas pelos testes de ponta a ponta', () => {
+  it('numérico com casas decimais aceita decimais; data/hora das abas guarda a hora; booleano desmarcado é enviado', async () => {
+    const { files } = await buildProjectSource(world(), opts as any)
+    const section = files.get('components/DetailRelationSection.tsx')!
+    expect(section).toContain("step={isNumber && !dt.includes('int') ? 'any' : undefined}")
+    expect(section).toContain("'datetime-local'")
+    expect(section).toContain('formatDateTimeForInput')
+    const master = files.get('components/DetailMasterForm.tsx')!
+    expect(master).toContain("querySelectorAll('input[type=\"checkbox\"][name]')")
+    expect(master).toContain('payload[c.name] = c.checked')
+  })
+})
