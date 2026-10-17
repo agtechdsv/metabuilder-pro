@@ -33,3 +33,22 @@ Cole o código gerado em `tests/<assunto>.spec.ts`.
 - `tests/*.spec.ts` — os testes.
 
 Variáveis: `E2E_PG_ADMIN` (conexão usada para criar o banco; padrão `postgresql://crm:crm@localhost:5432/postgres`), `E2E_PG_DB` (nome do banco; padrão `mb_e2e`).
+
+## Modo banco real (app exportado de verdade + banco crm do dia a dia)
+
+Roda no app que a **IDE ejetou** (Vendas PG) apontando para o banco real, logando com um usuário robô (`e2e_robo@metabuilder.local`, grupo Administrador).
+
+```bash
+cd e2e
+npm run real:robot      # 1x: cria o usuário robô no crm e grava a senha em e2e/.env.real (fora do git)
+# IDE > Ejetar para uma pasta > C:\AgTech\Apps\e2e-vendas-pg  (Vendas PG, Node + Postgres crm, login via banco, gestão de acesso)
+npm run real:prepare    # instala e compila o app ejetado (de novo a cada nova ejeção)
+npm run real:test       # roda os testes (npm run real:ui para ver ao vivo)
+```
+
+Regras de segurança (`real/guard.ts`):
+- só roda com `E2E_REAL=1` e se o banco do app e o da verificação forem **localhost** e estiverem em `E2E_REAL_ALLOWED_DBS` (padrão `crm`);
+- tudo o que o teste cria leva o prefixo `E2E-` no nome; a limpeza só apaga linhas com esse prefixo (itens → pedidos → clientes);
+- no fim, a contagem de linhas **sem** o prefixo (clientes, pedidos, itens, produtos, usuários) precisa ser igual à do início, senão a rodada falha.
+
+Pasta do app ejetado: `E2E_REAL_APP_DIR` (padrão `C:\AgTech\Apps\e2e-vendas-pg`); porta `E2E_REAL_PORT` (padrão 3102).

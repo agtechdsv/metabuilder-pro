@@ -38,6 +38,22 @@ test.describe('relações: detalhes e subdetalhe', () => {
       .toEqual(['2025-03-10T14:30', '2025-03-11T09:00'])
   })
 
+  test('editar um pedido e salvar mantém a hora e grava a alteração', async ({ page }) => {
+    await query("UPDATE pedidos SET status = 'Fechado', data_pedido = '2025-03-11 09:00:00' WHERE id = 2")
+    try {
+      await page.goto('/clientes/1')
+      await page.getByRole('button', { name: 'Meus Pedidos' }).click()
+      await page.getByRole('button', { name: 'Expandir Todos' }).locator('visible=true').first().click()
+      // a linha do pedido de 80,50 (id 2) está Fechada: passa para Aberto
+      const linha = page.locator('select[name="status"]').locator('visible=true').filter({ has: page.locator('option[value="Fechado"]:checked') })
+      await linha.first().selectOption('Aberto')
+      await page.getByRole('button', { name: 'Salvar Alterações' }).locator('visible=true').last().click()
+      await expect.poll(async () => (await query("SELECT status, to_char(data_pedido, 'YYYY-MM-DD HH24:MI') AS quando FROM pedidos WHERE id = 2"))[0]).toEqual({ status: 'Aberto', quando: '2025-03-11 09:00' })
+    } finally {
+      await query("UPDATE pedidos SET status = 'Fechado', data_pedido = '2025-03-11 09:00:00' WHERE id = 2")
+    }
+  })
+
   test('cria o cliente já com contato e pedido preenchidos antes de o mestre existir', async ({ page }) => {
     const nome = 'Cliente Relacoes E2E'
     await apagarCliente(nome)
