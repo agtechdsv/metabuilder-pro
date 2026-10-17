@@ -1,4 +1,25 @@
 {
+  "v1.0.2": {
+    "date": "2026-10-17",
+    "pt": [
+      "Formatação Aprimorada nas Exportações do Studio: Campos de data agora são exibidos de forma limpa e objetiva, com termos de busca perfeitamente padronizados com a plataforma.",
+      "Governança e Controle de Acesso Reforçados: Políticas avançadas de regras por linha e permissões por e-mail, garantindo que edição e exclusão sejam estritamente controladas de acordo com o perfil do usuário.",
+      "Gestão Visual e Precisa de Pedidos: Melhorias no detalhamento de itens, cálculo de totais e novos ícones interativos por linha para agilizar a conferência de dados.",
+      "Maior Confiabilidade em Telas de Departamentos e Equipes: Estabilidade aprimorada em fluxos corporativos de ponta a ponta, assegurando uma experiência fluida no gerenciamento interno."
+    ],
+    "en": [
+      "Enhanced Studio Data Exports: Date fields now feature a cleaner, standardized format, with search terms fully unified across the entire platform.",
+      "Strengthened Row-Level Security and Governance: Advanced row-level access policies and email-based permission exceptions, keeping edits and deletions safe and restricted to authorized users.",
+      "Streamlined Order and Item Management: Improved order item breakdowns, accurate summary totals, and intuitive row-level status icons for faster daily operations.",
+      "Superior Stability for Departments and Staff Screens: Robust quality improvements across essential administrative workflows, delivering a smoother and more reliable platform experience."
+    ],
+    "es": [
+      "Exportaciones Mejoradas en Studio: Los campos de fecha ahora muestran un formato más limpio y estandarizado, con términos de búsqueda perfectamente alineados con la plataforma.",
+      "Gobernanza y Control de Acceso Reforzados: Políticas avanzadas de seguridad por fila y excepciones de permisos por correo electrónico, garantizando modificaciones y eliminaciones completamente seguras.",
+      "Gestión Optimizada de Pedidos y Artículos: Mejoras en el desglose de artículos, visualización clara de totales e íconos de estado intuitivos por línea para una revisión más ágil.",
+      "Mayor Confiabilidad en Departamentos y Gestión de Personal: Mejoras sustanciales de estabilidad en pantallas administrativas clave, asegurando una experiencia corporativa fluida y confiable."
+    ]
+  },
   "v1.0.1": {
     "date": "2026-10-17",
     "pt": [
