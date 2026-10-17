@@ -406,6 +406,7 @@ export function renderFormField(
               id="${col}"
               name="${col}"
               type="${inputType}"
+              ${inputType === 'number' && !dt.includes('int') ? 'step="any"' : ''}
               ${required ? 'required' : ''}
               readOnly={${hasFormula ? 'true' : readOnlyCond}}
               disabled={${hasFormula ? 'false' : readOnlyCond}}

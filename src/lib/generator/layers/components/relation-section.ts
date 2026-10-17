@@ -956,6 +956,7 @@ const SubItemAccordion = React.forwardRef(({
                   name={sf.dbColumn}
                   data-mask={mask}
                   type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
+                  step={isNumber && !dt.includes('int') ? 'any' : undefined}
                   value={initialFormatted || ''}
                   onChange={(e) => {
                     if (mask) {
@@ -2297,6 +2298,7 @@ export function DetailRelationSection({
                               data-mask={mask || undefined}
                               data-type={isNumber ? 'number' : undefined}
                               type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
+                  step={isNumber && !dt.includes('int') ? 'any' : undefined}
                               readOnly={isReadOnly}
                               placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
                               {...(computed.isComputed ? { value: displayVal } : isDate ? { value: dateInputVal } : { defaultValue: displayVal })}
@@ -2667,6 +2669,7 @@ export function DetailRelationSection({
                           data-mask={mask || undefined}
                           data-type={isNumber ? 'number' : undefined}
                           type={isDate ? 'date' : (isNumber && !mask && !computed.isComputed) ? 'number' : 'text'}
+                  step={isNumber && !dt.includes('int') ? 'any' : undefined}
                           readOnly={isReadOnly}
                           placeholder={f.config?.placeholder || \`Digite o valor para \${f.label}...\`}
                           {...(computed.isComputed ? { value: displayVal } : isDate ? { value: dateInputVal } : { defaultValue: displayVal })}
@@ -3041,6 +3044,7 @@ export function DetailRelationSection({
                         data-mask={mask || undefined}
                         data-type={isNumber ? 'number' : undefined}
                         type={isDate ? 'date' : (isNumber && !mask) ? 'number' : 'text'}
+                  step={isNumber && !dt.includes('int') ? 'any' : undefined}
                         value={initialFormatted || ''}
                         onChange={(e) => {
                           if (mask) {

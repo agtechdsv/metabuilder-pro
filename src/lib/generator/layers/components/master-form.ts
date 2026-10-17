@@ -133,6 +133,10 @@ export function DetailMasterForm({ id, backPath, title, updateAction, children, 
       const formData = new FormData(e.currentTarget)
       const payload: Record<string, any> = {}
       formData.forEach((v, k) => { payload[k] = v })
+      // caixa desmarcada não vai no FormData: sem isto, desmarcar um booleano e salvar não gravaria nada
+      ;(e.currentTarget as HTMLFormElement).querySelectorAll('input[type="checkbox"][name]').forEach((c: any) => {
+        if (!c.name.includes('.')) payload[c.name] = c.checked
+      })
       if (createAction) {
         // cadastro: 1) cria o mestre; 2) as abas gravam seus itens com o id novo (detalhes e subdetalhes); 3) abre o registro criado
         const created: any = await createAction(payload)

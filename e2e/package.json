@@ -1,0 +1,18 @@
+{
+  "name": "metabuilder-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Testes de ponta a ponta dos apps exportados pelo MetaBuilder PRO (Playwright)",
+  "scripts": {
+    "gen": "node scripts/generate.mjs",
+    "seed": "node scripts/seed-postgres.mjs",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "record": "playwright codegen http://localhost:3101",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "pg": "^8.13.0"
+  }
+}
