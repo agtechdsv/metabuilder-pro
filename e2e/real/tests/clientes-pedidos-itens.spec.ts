@@ -108,17 +108,30 @@ test.describe('cliente + pedido + itens no app real', () => {
     await expect.poll(async () => (await realQuery('select 1 from clientes where id = $1', [cli.id])).length).toBe(0)
   })
 
-  test('regra por linha: o robô não enxerga clientes criados por outras pessoas', async ({ page }) => {
+  test('regra por linha com exceção: Administrador (na lista de exceção) vê clientes de outras pessoas; Funcionária não', async ({ page, browser }) => {
     const [existente] = await realQuery("select id, nome_empresa from clientes where nome_empresa not like 'E2E-%' limit 1")
+    const buscar = async (p: Page) => {
+      await p.goto('/clientes')
+      await p.locator('input[name="nome_empresa_filter"]').fill(existente.nome_empresa)
+      await p.getByRole('button', { name: 'Pesquisar' }).click()
+      return p.locator('tbody tr').filter({ hasText: existente.nome_empresa })
+    }
+
+    // Administrador: a exceção da regra (e-mail na lista) libera todas as linhas
     await entrar(page)
-    await page.goto('/clientes')
-    await page.locator('input[name="nome_empresa_filter"]').fill(existente.nome_empresa)
-    await page.getByRole('button', { name: 'Pesquisar' }).click()
-    await expect(page.locator('tbody tr').filter({ hasText: existente.nome_empresa })).toHaveCount(0)
-    // e abrir pelo endereço também não entrega o registro de outra pessoa
+    await expect(await buscar(page)).not.toHaveCount(0)
     await page.goto('/clientes/' + existente.id)
-    await page.waitForLoadState('networkidle').catch(() => {})
-    await expect(page.getByText(existente.nome_empresa)).toHaveCount(0)
-    await expect(page.locator('input[name="nome_empresa"]')).toHaveCount(0)
+    await expect(page.locator('input[name="nome_empresa"]')).toHaveValue(existente.nome_empresa)
+
+    // Funcionária: só o que ela mesma criou; nem pela lista nem abrindo o endereço
+    const ctx = await browser.newContext()
+    const func = await ctx.newPage()
+    await entrar(func, 'func')
+    await expect(await buscar(func)).toHaveCount(0)
+    await func.goto('/clientes/' + existente.id)
+    await func.waitForLoadState('networkidle').catch(() => {})
+    await expect(func.getByText(existente.nome_empresa)).toHaveCount(0)
+    await expect(func.locator('input[name="nome_empresa"]')).toHaveCount(0)
+    await ctx.close()
   })
 })

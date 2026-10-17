@@ -78,6 +78,8 @@ export async function contagemOriginal(): Promise<Record<string, number>> {
     pedidos: await q(`select count(*) n from pedidos where cliente_id is null or cliente_id not in (select id from clientes where nome_empresa like '${PREFIXO}%')`),
     itens_pedido: await q(`select count(*) n from itens_pedido where pedido_id is null or pedido_id not in (select id from pedidos where cliente_id in (select id from clientes where nome_empresa like '${PREFIXO}%'))`),
     produtos: await q(`select count(*) n from produtos where nome not like '${PREFIXO}%'`),
+    departamentos: await q(`select count(*) n from departamentos where nome not like '${PREFIXO}%'`),
+    funcionarios: await q(`select count(*) n from funcionarios where nome not like '${PREFIXO}%'`),
     usuarios: await q(`select count(*) n from usuarios where email not like 'e2e_robo%'`),
   }
 }
@@ -88,5 +90,7 @@ export async function limparTeste(prefixo = PREFIXO) {
   await realQuery(`delete from itens_pedido where pedido_id in (select id from pedidos where cliente_id in (select id from clientes where nome_empresa like $1))`, [like])
   await realQuery(`delete from pedidos where cliente_id in (select id from clientes where nome_empresa like $1)`, [like])
   await realQuery(`delete from clientes where nome_empresa like $1`, [like])
+  await realQuery(`delete from funcionarios where nome like $1`, [like])
+  await realQuery(`delete from departamentos where nome like $1`, [like])
   await realQuery(`delete from produtos where nome like $1`, [like])
 }

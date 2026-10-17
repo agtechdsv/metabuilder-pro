@@ -52,7 +52,9 @@ test.describe('itens do pedido no app real', () => {
     await entrar(page)
     await abrirPedido(page, d.clienteId)
 
-    await page.locator('button[title="Editar Item"]').locator('visible=true').first().click() // 1º item (ordem da tela)
+    // o item é escolhido pelo produto (a ordem das linhas na tela não é fixa): Plataforma ERP Cloud (2) passa para 5
+    const linhaDoItem = page.locator('div').filter({ hasText: /^Plataforma ERP Cloud/ }).filter({ has: page.locator('button[title="Editar Item"]') }).last()
+    await linhaDoItem.locator('button[title="Editar Item"]').click()
     const j = janela(page)
     await expect(j.getByText('Editar Registro')).toBeVisible()
     await j.locator('input[name="quantidade"]').fill('5')
@@ -61,7 +63,7 @@ test.describe('itens do pedido no app real', () => {
 
     // volta para a aba de pedidos; o Salvar da tela grava tudo
     await page.getByRole('button', { name: 'Salvar Alterações' }).last().click()
-    await expect.poll(async () => (await itensDoPedido(d.pedidoId)).map(i => i.quantidade).sort()).toEqual([3, 5].sort())
+    await expect.poll(async () => (await itensDoPedido(d.pedidoId)).map(i => i.quantidade).sort()).toEqual([3, 5])
   })
 
   test('"+" do item: linha nova na própria aba (produto por busca, mínimo 3 letras) e o Salvar da tela grava', async ({ page }) => {
