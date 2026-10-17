@@ -728,6 +728,7 @@
           "row_policy_bypass_values": "Valores (separados por coma)",
           "row_policy_bypass_hint": "Ej.: perfil = admin, gerente",
           "row_policy_bypass_hint_group": "Ej.: Administrador, Gerente",
+          "row_policy_group_add": "Agregar grupo...",
           "row_policy_warn_no_auth": "El login de la app aún no está configurado: sin él ningún usuario tiene datos para la regla y la tabla quedará sin filas para todos.",
           "row_policy_warn_attr": "La columna \"{attr}\" no existe en la tabla de usuarios del login.",
           "row_policy_fail_closed": "Falla cerrada: un usuario sin el dato que pide la regla no ve ninguna fila. Quien usted libere por excepción ve todas.",
@@ -4873,6 +4874,7 @@
     "rls_bypass_attr_ph": "ej.: perfil",
     "rls_bypass_values_ph": "ej.: admin, gerente",
     "rls_bypass_group_ph": "ej.: Administrador, Gerente",
+    "rls_group_add": "Agregar grupo...",
     "rls_remove": "Quitar regla",
     "rls_note_export": "En la app exportada la regla se aplica en el servidor, con la sesión firmada del usuario.",
     "rls_note_panel": "En el panel de MetaBuilder se aplica en el navegador: sirve para probar, pero solo la app exportada garantiza la seguridad."

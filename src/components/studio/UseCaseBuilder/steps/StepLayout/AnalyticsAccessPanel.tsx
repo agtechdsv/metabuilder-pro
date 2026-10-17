@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { CACHE_OPTIONS, REFRESH_OPTIONS, TIMEOUT_OPTIONS } from '@/lib/bi/perf'
 import type { RlsRule, RlsSource } from '@/lib/bi/access'
+import { GroupPicker } from '@/components/studio/GroupPicker'
 
 interface Props {
   /** analytics_config atual do caso de uso */
@@ -165,12 +166,24 @@ export function AnalyticsAccessPanel({ analytics, setAnalytics, models }: Props)
                       {r.bypass.source === 'user.attr' ? (
                         <input className={inputCls} list="bi-rls-columns" value={r.bypass.attr || ''} placeholder={t('bi_access.rls_bypass_attr_ph')} onChange={e => patchRule(i, { bypass: { ...r.bypass!, attr: e.target.value.trim() } })} />
                       ) : <span />}
-                      <input
-                        className={inputCls}
-                        value={r.bypass.values.join(', ')}
-                        placeholder={t(r.bypass.source === 'user.group' ? 'bi_access.rls_bypass_group_ph' : 'bi_access.rls_bypass_values_ph')}
-                        onChange={e => patchRule(i, { bypass: { ...r.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
-                      />
+                      {r.bypass.source === 'user.group' ? (
+                        <GroupPicker
+                          projectId={(models || []).find((m: any) => m?.project_id)?.project_id}
+                          values={r.bypass.values}
+                          onChange={values => patchRule(i, { bypass: { ...r.bypass!, values } })}
+                          addLabel={t('bi_access.rls_group_add')}
+                          placeholder={t('bi_access.rls_bypass_group_ph')}
+                          selectClassName={selectCls}
+                          inputClassName={inputCls}
+                        />
+                      ) : (
+                        <input
+                          className={inputCls}
+                          value={r.bypass.values.join(', ')}
+                          placeholder={t('bi_access.rls_bypass_values_ph')}
+                          onChange={e => patchRule(i, { bypass: { ...r.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

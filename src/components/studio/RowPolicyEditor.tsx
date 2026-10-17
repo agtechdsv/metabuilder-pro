@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import type { RowPolicyRule, PolicyOp } from '@/lib/rowPolicy/policy'
 import type { RlsSource } from '@/lib/bi/access'
 import { useAuthTable } from './useAuthTable'
+import { GroupPicker } from './GroupPicker'
 
 /**
  * Acesso por linha de UMA tabela (Dados & Schemas). As regras valem para o usuário final em todas as telas, no BI e nas
@@ -208,13 +209,25 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
                     <input className={inputCls} value={rule.bypass.attr || ''} placeholder="ex.: perfil" onChange={e => patch(i, { bypass: { ...rule.bypass!, attr: e.target.value } })} />
                   )
                 ) : <span />}
-                <input
-                  className={inputCls}
-                  value={rule.bypass.values.join(', ')}
-                  placeholder={t(t0 + (rule.bypass.source === 'user.group' ? 'bypass_hint_group' : 'bypass_hint'))}
-                  title={t(t0 + 'bypass_values')}
-                  onChange={e => patch(i, { bypass: { ...rule.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
-                />
+                {rule.bypass.source === 'user.group' ? (
+                  <GroupPicker
+                    projectId={project?.id}
+                    values={rule.bypass.values}
+                    onChange={values => patch(i, { bypass: { ...rule.bypass!, values } })}
+                    addLabel={t(t0 + 'group_add')}
+                    placeholder={t(t0 + 'bypass_hint_group')}
+                    selectClassName={inputCls}
+                    inputClassName={inputCls}
+                  />
+                ) : (
+                  <input
+                    className={inputCls}
+                    value={rule.bypass.values.join(', ')}
+                    placeholder={t(t0 + 'bypass_hint')}
+                    title={t(t0 + 'bypass_values')}
+                    onChange={e => patch(i, { bypass: { ...rule.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
+                  />
+                )}
               </div>
             )}
 
