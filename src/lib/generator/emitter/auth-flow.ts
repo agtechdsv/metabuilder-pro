@@ -26,8 +26,8 @@ export interface SessionUser {
   name?: string
   /** colunas do cadastro do usuário que as regras de acesso do BI consultam */
   attrs?: Record<string, string>
-  /** gestão de acesso: telas bloqueadas (no), só de leitura (ro) e tabelas em que o grupo não grava (wt) */
-  acc?: { no: string[]; ro: string[]; wt: string[] }
+  /** gestão de acesso: telas bloqueadas (no), só de leitura (ro), tabelas em que o grupo não grava (wt) e nomes dos grupos do usuário (gr) */
+  acc?: { no: string[]; ro: string[]; wt: string[]; gr?: string[] }
   /** expira em (segundos desde 1970) */
   exp: number
 }

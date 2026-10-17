@@ -156,10 +156,11 @@ export function AnalyticsAccessPanel({ analytics, setAnalytics, models }: Props)
                   </label>
                   {r.bypass && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-6">
-                      <select className={selectCls} value={r.bypass.source} onChange={e => patchRule(i, { bypass: { ...r.bypass!, source: e.target.value as RlsSource } })}>
+                      <select className={selectCls} value={r.bypass.source} onChange={e => patchRule(i, { bypass: { ...r.bypass!, source: e.target.value as any } })}>
                         <option value="user.email">{t('bi_access.rls_src_email')}</option>
                         <option value="user.name">{t('bi_access.rls_src_name')}</option>
                         <option value="user.attr">{t('bi_access.rls_src_attr')}</option>
+                        <option value="user.group">{t('bi_access.rls_src_group')}</option>
                       </select>
                       {r.bypass.source === 'user.attr' ? (
                         <input className={inputCls} list="bi-rls-columns" value={r.bypass.attr || ''} placeholder={t('bi_access.rls_bypass_attr_ph')} onChange={e => patchRule(i, { bypass: { ...r.bypass!, attr: e.target.value.trim() } })} />
@@ -167,7 +168,7 @@ export function AnalyticsAccessPanel({ analytics, setAnalytics, models }: Props)
                       <input
                         className={inputCls}
                         value={r.bypass.values.join(', ')}
-                        placeholder={t('bi_access.rls_bypass_values_ph')}
+                        placeholder={t(r.bypass.source === 'user.group' ? 'bi_access.rls_bypass_group_ph' : 'bi_access.rls_bypass_values_ph')}
                         onChange={e => patchRule(i, { bypass: { ...r.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
                       />
                     </div>

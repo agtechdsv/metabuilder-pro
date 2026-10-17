@@ -73,22 +73,39 @@ export async function realQuery<T = any>(sql: string, params: unknown[] = []): P
 /** Linhas que NÃO são do teste, por tabela: precisam ser as mesmas antes e depois da rodada. */
 export async function contagemOriginal(): Promise<Record<string, number>> {
   const q = async (sql: string) => Number((await realQuery(sql))[0].n)
+  const cliE2E = `select id from clientes where nome_empresa like '${PREFIXO}%'`
+  const pedE2E = `select id from pedidos where cliente_id in (${cliE2E})`
   return {
     clientes: await q(`select count(*) n from clientes where nome_empresa not like '${PREFIXO}%'`),
-    pedidos: await q(`select count(*) n from pedidos where cliente_id is null or cliente_id not in (select id from clientes where nome_empresa like '${PREFIXO}%')`),
-    itens_pedido: await q(`select count(*) n from itens_pedido where pedido_id is null or pedido_id not in (select id from pedidos where cliente_id in (select id from clientes where nome_empresa like '${PREFIXO}%'))`),
+    pedidos: await q(`select count(*) n from pedidos where cliente_id is null or cliente_id not in (${cliE2E})`),
+    itens_pedido: await q(`select count(*) n from itens_pedido where pedido_id is null or pedido_id not in (${pedE2E})`),
     produtos: await q(`select count(*) n from produtos where nome not like '${PREFIXO}%'`),
     departamentos: await q(`select count(*) n from departamentos where nome not like '${PREFIXO}%'`),
     funcionarios: await q(`select count(*) n from funcionarios where nome not like '${PREFIXO}%'`),
+    projetos: await q(`select count(*) n from projetos where nome not like '${PREFIXO}%'`),
+    tarefas: await q(`select count(*) n from tarefas where titulo not like '${PREFIXO}%'`),
+    entregas: await q(`select count(*) n from entregas where pedido_id is null or pedido_id not in (${pedE2E})`),
     usuarios: await q(`select count(*) n from usuarios where email not like 'e2e_robo%'`),
   }
 }
 
-/** Apaga só o que o teste criou (clientes com o prefixo e o que pendura neles), na ordem das chaves estrangeiras. */
+/**
+ * Apaga só o que o teste criou (nomes com o prefixo e o que pendura neles), na ordem das chaves estrangeiras:
+ * entregas > itens > pedidos > tarefas > projetos > clientes > funcionários > departamentos > produtos.
+ */
 export async function limparTeste(prefixo = PREFIXO) {
   const like = prefixo + '%'
-  await realQuery(`delete from itens_pedido where pedido_id in (select id from pedidos where cliente_id in (select id from clientes where nome_empresa like $1))`, [like])
-  await realQuery(`delete from pedidos where cliente_id in (select id from clientes where nome_empresa like $1)`, [like])
+  const cliE2E = `select id from clientes where nome_empresa like $1`
+  const pedE2E = `select id from pedidos where cliente_id in (${cliE2E})`
+  const funE2E = `select id from funcionarios where nome like $1`
+  const proE2E = `select id from projetos where nome like $1 or cliente_id in (${cliE2E}) or gerente_id in (${funE2E})`
+  const tarE2E = `select id from tarefas where titulo like $1 or projeto_id in (${proE2E}) or responsavel_id in (${funE2E})`
+  await realQuery(`delete from entregas where pedido_id in (${pedE2E}) or motorista_id in (${funE2E})`, [like])
+  await realQuery(`delete from itens_pedido where pedido_id in (${pedE2E}) or produto_id in (select id from produtos where nome like $1)`, [like])
+  await realQuery(`delete from pedidos where cliente_id in (${cliE2E}) or funcionario_id in (${funE2E})`, [like])
+  await realQuery(`update tarefas set tarefa_antecessora_id = null where tarefa_antecessora_id in (${tarE2E})`, [like])
+  await realQuery(`delete from tarefas where id in (${tarE2E})`, [like])
+  await realQuery(`delete from projetos where id in (${proE2E})`, [like])
   await realQuery(`delete from clientes where nome_empresa like $1`, [like])
   await realQuery(`delete from funcionarios where nome like $1`, [like])
   await realQuery(`delete from departamentos where nome like $1`, [like])

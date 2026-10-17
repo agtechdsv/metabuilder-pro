@@ -11,7 +11,7 @@ const aba = (page: Page, nome: string) => page.getByRole('button', { name: nome,
 const visivel = (page: Page, sel: string) => page.locator(sel).locator('visible=true')
 
 async function escolherProduto(page: Page, linha: number, nomeProduto: string) {
-  const busca = page.getByPlaceholder('Digite para pesquisar...').locator('visible=true').nth(linha)
+  const busca = page.getByPlaceholder(/Digite (para (buscar|pesquisar)|o valor para Produto).../).locator('visible=true').nth(linha)
   await busca.fill(nomeProduto.slice(0, 6))
   await page.getByText(nomeProduto, { exact: true }).locator('visible=true').first().click()
 }
@@ -38,7 +38,7 @@ test.describe('cliente + pedido + itens no app real', () => {
     // 2. dados do pedido
     await aba(page, 'Pedidos')
     await page.getByRole('button', { name: 'Adicionar na Lista' }).locator('visible=true').first().click()
-    await visivel(page, 'input[name="data_pedido"]').first().fill('2026-10-18T10:30')
+    await visivel(page, 'input[name="data_pedido"]').first().fill('2026-10-18') // tipo date no Studio: só a data
     await visivel(page, 'select[name="status"]').first().selectOption('Pendente')
     await visivel(page, 'select[name="funcionario_id"]').first().selectOption({ label: 'Carlos Moura Silva' })
 
@@ -99,6 +99,7 @@ test.describe('cliente + pedido + itens no app real', () => {
 
     // exclusão pela lista (janela de confirmação do app)
     await page.goto('/clientes')
+    await page.waitForLoadState('networkidle').catch(() => {})
     await page.locator('input[name="nome_empresa_filter"]').fill(nome)
     await page.getByRole('button', { name: 'Pesquisar' }).click()
     const linha = page.locator('tbody tr').filter({ hasText: nome })

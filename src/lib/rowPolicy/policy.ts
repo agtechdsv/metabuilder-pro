@@ -7,7 +7,7 @@
  *
  * Sem regra numa tabela, todos veem todas as linhas dela (como antes): a política é opcional e por tabela.
  */
-import { viewerValue, type BiViewer, type RlsBypass, type RlsSource } from '../bi/access'
+import { viewerValue, bypassMatches, BYPASS_SOURCES, type BiViewer, type RlsBypass, type RlsSource } from '../bi/access'
 import type { AuditColumns, EffectiveAudit } from './audit'
 
 export type PolicyOp = 'eq' | 'in' | 'related'
@@ -93,7 +93,7 @@ export function cleanRowPolicy(raw: unknown): RowPolicy | null {
       rule.related = { table, key, column: col }
     }
     const b = (r as any).bypass
-    if (b && typeof b === 'object' && SOURCES.includes(b.source) && Array.isArray(b.values)) {
+    if (b && typeof b === 'object' && BYPASS_SOURCES.includes(b.source) && Array.isArray(b.values)) {
       const values = b.values.map((v: unknown) => text(v)).filter(Boolean).slice(0, MAX_BYPASS_VALUES)
       const bAttr = text(b.attr)
       if (values.length > 0 && (b.source !== 'user.attr' || bAttr)) rule.bypass = { source: b.source, ...(b.source === 'user.attr' ? { attr: bAttr } : {}), values }
@@ -103,11 +103,7 @@ export function cleanRowPolicy(raw: unknown): RowPolicy | null {
   return rules.length ? { rules } : null
 }
 
-const bypassed = (rule: RowPolicyRule, viewer: BiViewer | null): boolean => {
-  if (!rule.bypass) return false
-  const v = viewerValue(viewer, rule.bypass.source, rule.bypass.attr)
-  return v !== null && rule.bypass.values.some(x => x.toLowerCase() === v.toLowerCase())
-}
+const bypassed = (rule: RowPolicyRule, viewer: BiViewer | null): boolean => bypassMatches(rule.bypass, viewer)
 
 /**
  * Resolve as tabelas do projeto para UM usuário: quais restrições valem para ele.

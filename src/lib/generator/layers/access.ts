@@ -104,7 +104,7 @@ const MESSAGES = {
 /** Permissões e regras por linha que valem para quem está logado (sem sessão: tabelas com regra ficam negadas). */
 export async function currentAccess(): Promise<AccessPayload> {
   const u = await getSessionUser()
-  return resolveAccess(TABLE_ACCESS, u ? { email: u.email, name: u.name ?? null, attrs: u.attrs ?? {} } : null)
+  return resolveAccess(TABLE_ACCESS, u ? { email: u.email, name: u.name ?? null, attrs: u.attrs ?? {}, groups: u.acc?.gr ?? [] } : null)
 }
 
 /** Aplica as regras por linha das tabelas citadas num SELECT (cada tabela com regra vira uma subconsulta filtrada). */

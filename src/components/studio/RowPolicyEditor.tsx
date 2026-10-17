@@ -196,6 +196,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
                   <option value="user.email">{t(t0 + 'src_email')}</option>
                   <option value="user.name">{t(t0 + 'src_name')}</option>
                   <option value="user.attr">{t(t0 + 'src_attr')}</option>
+                  <option value="user.group">{t(t0 + 'src_group')}</option>
                 </Select>
                 {rule.bypass.source === 'user.attr' ? (
                   authColumns.length > 0 ? (
@@ -210,7 +211,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
                 <input
                   className={inputCls}
                   value={rule.bypass.values.join(', ')}
-                  placeholder={t(t0 + 'bypass_hint')}
+                  placeholder={t(t0 + (rule.bypass.source === 'user.group' ? 'bypass_hint_group' : 'bypass_hint'))}
                   title={t(t0 + 'bypass_values')}
                   onChange={e => patch(i, { bypass: { ...rule.bypass!, values: e.target.value.split(',').map(v => v.trim()).filter(Boolean) } })}
                 />

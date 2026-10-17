@@ -143,6 +143,7 @@ describe('gestão de acesso no app exportado', () => {
     }
     const stubs: Record<string, any> = {
       './access-setup': load(compile('lib/access-setup.ts'), {}),
+      '@/app/actions/perfis': { getPerfisList: async () => [{ id: 1, nome: 'Administrador' }, { id: 2, nome: 'Funcionária' }] },
       '@/app/actions/mbrolepermissions': { getMbRolePermissionsByField: async (_f: string, v: string) => perms[v] || [] },
       '@/app/actions/perfisusuarios': { getPerfisUsuariosByField: async (_f: string, v: number) => (v === 7 ? [{ usuario_id: 7, perfil_id: 1 }, { usuario_id: 7, perfil_id: 2 }] : v === 8 ? [{ usuario_id: 8, perfil_id: 2 }] : []) },
     }
@@ -157,8 +158,12 @@ describe('gestão de acesso no app exportado', () => {
     expect(u7.no).not.toContain('acesso-usuarios')
     expect(u7.no).toEqual(expect.arrayContaining(['acesso-grupos', 'acesso-permissoes']))
     expect(u7.wt).toEqual(['clientes'])
+    // nomes dos grupos do usuário (exceção por grupo das regras de acesso por linha)
+    expect(u7.gr.sort()).toEqual(['Administrador', 'Funcionária'])
+    expect(u8.gr).toEqual(['Funcionária'])
     // sem grupo: nada
     expect((await ctl.loadAccess({ id: 99 })).no).toContain('clientes')
+    expect((await ctl.loadAccess({ id: 99 })).gr).toEqual([])
   })
 
   it('sem grupos do banco legado: cria também grupos e vínculo usuário-grupo', () => {

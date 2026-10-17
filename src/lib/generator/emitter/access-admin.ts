@@ -157,10 +157,11 @@ export async function assertWriteAllowed(table: string): Promise<void> {
 const ACCESS_CONTROL = `// ARQUIVO GERADO pelo MetaBuilder — descobre o grupo do usuário e o nível de cada tela (nenhum, leitura ou escrita).
 import { ACCESS_SETUP as S } from './access-setup'
 import { get__PM__ByField } from '@/app/actions/__PF__'
+import { get__GM__List } from '@/app/actions/__GF__'
 __LINK_IMPORT__
 export type AccessLevel = 'none' | 'read' | 'write'
-/** no = telas bloqueadas · ro = telas só de leitura · wt = tabelas em que o usuário não pode gravar */
-export interface AccessInfo { no: string[]; ro: string[]; wt: string[] }
+/** no = telas bloqueadas · ro = telas só de leitura · wt = tabelas em que o usuário não pode gravar · gr = nomes dos grupos do usuário */
+export interface AccessInfo { no: string[]; ro: string[]; wt: string[]; gr: string[] }
 
 export function rowsOf(res: any): any[] {
   if (Array.isArray(res)) return res
@@ -194,6 +195,16 @@ const RANK: Record<string, number> = { none: 0, read: 1, write: 2 }
 
 export async function loadAccess(user: any): Promise<AccessInfo> {
   const roleIds = await roleIdsOf(user)
+  // nomes dos grupos do usuário: usados na exceção "por grupo" das regras de acesso por linha
+  let gr: string[] = []
+  if (roleIds.length > 0) {
+    try {
+      gr = rowsOf(await get__GM__List())
+        .filter(r => roleIds.includes(String(pick(r, S.groups.pk))))
+        .map(r => String(pick(r, S.groups.nameCol) ?? '').trim())
+        .filter(Boolean)
+    } catch { gr = [] }
+  }
   const perRole: Array<Record<string, string>> = []
   for (const rid of roleIds) {
     const rows = rowsOf(await get__PM__ByField(S.perms.roleCol, rid))
@@ -226,7 +237,7 @@ export async function loadAccess(user: any): Promise<AccessInfo> {
       if (lvl === 'write') writable.add(t)
     }
   }
-  return { no, ro, wt: [...seen].filter(t => !writable.has(t)) }
+  return { no, ro, wt: [...seen].filter(t => !writable.has(t)), gr }
 }
 `
 

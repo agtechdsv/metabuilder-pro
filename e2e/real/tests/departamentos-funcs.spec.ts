@@ -10,6 +10,7 @@ const idDoRobo = async (): Promise<string> => (await realQuery('select id from u
 
 async function filtrarPorNome(page: Page, rota: string, nome: string) {
   await page.goto(rota)
+  await page.waitForLoadState('networkidle').catch(() => {}) // evita pegar a barra de filtro duplicada do esqueleto de carregamento
   await page.locator('input[name="nome_filter"]').fill(nome)
   await page.getByRole('button', { name: 'Pesquisar' }).click()
   return page.locator('tbody tr').filter({ hasText: nome })

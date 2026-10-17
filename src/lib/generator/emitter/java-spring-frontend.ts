@@ -194,7 +194,7 @@ async function userClaims(): Promise<Record<string, unknown>> {
   try {
     const { getSessionUser } = await import('@/lib/session-server')
     const u = await getSessionUser()
-    if (u) return { email: u.email, name: u.name ?? '', attrs: u.attrs ?? {} }
+    if (u) return { email: u.email, name: u.name ?? '', attrs: u.attrs ?? {}, groups: u.acc?.gr ?? [] }
   } catch { /* fora de uma requisição: sem usuário */ }
   return {}
 }

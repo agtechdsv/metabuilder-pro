@@ -180,7 +180,7 @@ async function runQuery(rawSql: string, perf: BiPerf, fresh: boolean): Promise<{
 /** Quem está logado (sessão assinada); as regras de acesso usam este usuário, nunca algo enviado pelo navegador. */
 async function currentViewer(): Promise<BiViewer | null> {
   const u = await getSessionUser()
-  return u ? { email: u.email, name: u.name ?? null, attrs: u.attrs ?? {} } : null
+  return u ? { email: u.email, name: u.name ?? null, attrs: u.attrs ?? {}, groups: u.acc?.gr ?? [] } : null
 }
 
 function denyMessage(d: AccessDenied): string {

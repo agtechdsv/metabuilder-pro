@@ -11,12 +11,14 @@
 import type { BiWidgetCondition } from './widget'
 
 export type RlsSource = 'user.email' | 'user.name' | 'user.attr'
+/** Na lista de exceção da regra também vale o GRUPO do usuário (ele pode estar em mais de um). */
+export type RlsBypassSource = RlsSource | 'user.group'
 
 export interface RlsBypass {
-  source: RlsSource
+  source: RlsBypassSource
   /** coluna da tabela de usuários (quando source = 'user.attr') */
   attr?: string
-  /** quem tiver um destes valores não sofre a regra (ex.: perfil "admin") */
+  /** quem tiver um destes valores não sofre a regra (ex.: perfil "admin"; com source = 'user.group', os nomes dos grupos) */
   values: string[]
 }
 
@@ -36,6 +38,8 @@ export interface BiViewer {
   email?: string | null
   name?: string | null
   attrs?: Record<string, unknown> | null
+  /** nomes dos grupos do usuário (vem da sessão; usado só nas exceções por grupo) */
+  groups?: string[] | null
 }
 
 export type AccessDenied =
@@ -48,6 +52,7 @@ export interface AccessResult {
 }
 
 const SOURCES: RlsSource[] = ['user.email', 'user.name', 'user.attr']
+export const BYPASS_SOURCES: RlsBypassSource[] = [...SOURCES, 'user.group']
 const MAX_RULES = 20
 const MAX_BYPASS_VALUES = 50
 
@@ -87,7 +92,7 @@ export function cleanRlsRules(raw: unknown): RlsRule[] {
       ...(source === 'user.attr' ? { attr } : {}),
     }
     const b = (r as any).bypass
-    if (b && typeof b === 'object' && SOURCES.includes(b.source) && Array.isArray(b.values)) {
+    if (b && typeof b === 'object' && BYPASS_SOURCES.includes(b.source) && Array.isArray(b.values)) {
       const values = b.values.map((v: unknown) => text(v)).filter(Boolean).slice(0, MAX_BYPASS_VALUES)
       const bAttr = text(b.attr)
       if (values.length > 0 && (b.source !== 'user.attr' || bAttr)) {
@@ -99,11 +104,17 @@ export function cleanRlsRules(raw: unknown): RlsRule[] {
   return out
 }
 
-/** O usuário está na lista de exceção da regra? (compara sem diferenciar maiúsculas) */
+/** O usuário está na lista de exceção? (compara sem diferenciar maiúsculas; por grupo, basta UM dos grupos dele estar na lista) */
+export function bypassMatches(bypass: RlsBypass | undefined, viewer: BiViewer | null | undefined): boolean {
+  if (!bypass || !viewer) return false
+  const wanted = bypass.values.map(x => x.toLowerCase())
+  if (bypass.source === 'user.group') return (viewer.groups || []).some(g => typeof g === 'string' && wanted.includes(g.trim().toLowerCase()))
+  const v = viewerValue(viewer, bypass.source, bypass.attr)
+  return v !== null && wanted.includes(v.toLowerCase())
+}
+
 function bypassed(rule: RlsRule, viewer: BiViewer | null | undefined): boolean {
-  if (!rule.bypass) return false
-  const v = viewerValue(viewer, rule.bypass.source, rule.bypass.attr)
-  return v !== null && rule.bypass.values.some(x => x.toLowerCase() === v.toLowerCase())
+  return bypassMatches(rule.bypass, viewer)
 }
 
 /** Condições que as regras impõem a este usuário (ou o motivo de negar o acesso). */

@@ -136,11 +136,13 @@ function currentUserJava(groupId: string, jwt: boolean): string {
 ${jwt ? 'import io.jsonwebtoken.Claims;\n' : ''}import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Quem está chamando a API: lido do JWT que o frontend assina com a sessão do usuário final. */
-public record CurrentUser(String email, String name, Map<String, String> attrs, boolean system) {
+public record CurrentUser(String email, String name, Map<String, String> attrs, List<String> groups, boolean system) {
 ${jwt ? `
     public static CurrentUser from(Claims claims) {
         Map<String, String> attrs = new HashMap<>();
@@ -150,7 +152,14 @@ ${jwt ? `
                 if (k != null && v != null) attrs.put(String.valueOf(k), String.valueOf(v));
             });
         }
-        return new CurrentUser(claims.get("email", String.class), claims.get("name", String.class), attrs,
+        List<String> groups = new ArrayList<>();
+        Object rawGroups = claims.get("groups");
+        if (rawGroups instanceof List<?> l) {
+            for (Object g : l) {
+                if (g != null && !String.valueOf(g).isBlank()) groups.add(String.valueOf(g).trim());
+            }
+        }
+        return new CurrentUser(claims.get("email", String.class), claims.get("name", String.class), attrs, groups,
                 Boolean.TRUE.equals(claims.get("sys", Boolean.class)));
     }
 ` : ''}
@@ -279,6 +288,10 @@ public class AccessRules {
 
     private boolean bypassed(Rule rule, CurrentUser user) {
         if (rule.bypass() == null || user == null || rule.bypass().values() == null) return false;
+        // exceção por grupo: basta UM dos grupos do usuário estar na lista
+        if ("user.group".equals(rule.bypass().source())) {
+            return user.groups() != null && user.groups().stream().anyMatch(g -> rule.bypass().values().stream().anyMatch(x -> x.equalsIgnoreCase(g)));
+        }
         String v = user.value(rule.bypass().source(), rule.bypass().attr());
         return v != null && rule.bypass().values().stream().anyMatch(x -> x.equalsIgnoreCase(v));
     }
