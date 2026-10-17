@@ -93,7 +93,7 @@ export default async function ${mn}MindMapPage(props: {
   const data: any = await get${mn}List().catch((): any => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${[...new Map(buildOptionsCode.map(l => [(/^\s*'([^']+)'/.exec(l) || [])[1] || l, l])).values()].join('\n')}
   }
 
   return (

@@ -205,7 +205,7 @@ export default async function ${mn}GanttPage(props: {
   const rawData = await get${mn}List({ filters: searchParams }).catch(() => [])
 ${lookupQueries ? `${lookupQueries}\n` : ''}
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${[...new Map(buildOptionsCode.map(l => [(/^\s*'([^']+)'/.exec(l) || [])[1] || l, l])).values()].join('\n')}
   }
 
   // Filtros dinâmicos da URL

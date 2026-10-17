@@ -438,7 +438,7 @@ ${lookupQueries}
   })
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${[...new Map(buildOptionsCode.map(l => [(/^\s*'([^']+)'/.exec(l) || [])[1] || l, l])).values()].join('\n')}
   }
 
   return (

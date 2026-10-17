@@ -820,7 +820,7 @@ ${tablesDataEntries}
   }
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${[...new Map(buildOptionsCode.map(l => [(/^\s*'([^']+)'/.exec(l) || [])[1] || l, l])).values()].join('\n')}
   }
 
 ${useBiEngine ? engineAggregationCode : legacyAggregationCode}
@@ -880,7 +880,7 @@ ${filterFields.map(f => {
         widgets={WIDGETS as any}
         aggregatedData={aggregatedData}
         groups={${JSON.stringify(route.analyticsConfig?.groups || [])}}
-${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        canDrill={canDrill}\n        filters={biFilters}\n        refreshSeconds={${route.analyticsConfig?.refreshSeconds || 0}}\n        timeoutSeconds={${route.analyticsConfig?.timeoutSeconds || 30}}\n        updatedAt={biUpdatedAt || undefined}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
+${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n        errors={widgetErrors}\n        canDrill={canDrill}\n        filters={biFilters}\n        refreshSeconds={' + (route.analyticsConfig?.refreshSeconds || 0) + '}\n        timeoutSeconds={' + (route.analyticsConfig?.timeoutSeconds || 30) + '}\n        updatedAt={biUpdatedAt || undefined}\n        initialPeriod={biPeriod ? { preset: "custom", from: biPeriod.from, to: biPeriod.to } : undefined}\n' : ''}      />
 
       {/* Grid de Registros (quando houver gridFields configurados) */}
       {${route.gridFields.length > 0} && (

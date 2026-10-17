@@ -281,7 +281,7 @@ ${lookupQueries ? `${lookupQueries}\n` : ''}
   })
 
   const relationalOptions: Record<string, Array<{ value: string; label: string }>> = {
-${buildOptionsCode.join('\n')}
+${[...new Map(buildOptionsCode.map(l => [(/^\s*'([^']+)'/.exec(l) || [])[1] || l, l])).values()].join('\n')}
   }
 
   // Filtros dinâmicos da URL
@@ -545,7 +545,7 @@ export const filterFields = ${filterFieldsData}
 
 export const fields = ${fieldsData}
 
-export const galleryConfig = ${galleryConfigData}
+export const galleryConfig: any = ${galleryConfigData}
 
 export const customActions = ${customActionsData}
 
