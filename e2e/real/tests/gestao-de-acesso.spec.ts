@@ -110,6 +110,7 @@ test.describe('gestão de acesso: usuários', () => {
     const antes = Number((await realQuery('select count(*) n from usuarios'))[0].n)
     await page.getByRole('button', { name: 'Criar Usuário' }).click()
     const j = janela(page)
+    await j.getByPlaceholder('Nome (opcional)').fill('E2E Repetido') // com nome, para o erro vir do e-mail repetido e não do nome vazio
     await j.locator('input[type="email"]').fill('e2e_robo@metabuilder.local')
     await j.locator('input[type="password"]').fill('Qualquer-Senha-1')
     await j.getByRole('button', { name: 'Salvar' }).click()

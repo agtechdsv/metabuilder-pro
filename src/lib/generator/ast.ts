@@ -98,6 +98,7 @@ export interface ResolvedField {
   label: string                // label customizado ou display_name do campo
   dataType: string             // 'varchar' | 'integer' | 'boolean' | 'date' | 'timestamp' | 'uuid' | 'text' | 'byoc' | 'virtual'
   isPrimaryKey: boolean
+  notNull?: boolean            // coluna NOT NULL sem valor padrão (e não é de auditoria): o formulário exige o preenchimento
   isSortable: boolean
   isVirtual: boolean           // campo calculado (virt_*)
   isByoc: boolean              // campo custom code (byoc_*)

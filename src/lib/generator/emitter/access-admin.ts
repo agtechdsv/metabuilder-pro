@@ -352,7 +352,8 @@ export async function createUser(input: { email: string; name?: string; password
   if (!email || !input.password) throw new Error('{{err_email_password}}')
   await asAccessAdmin(async () => {
     const data: Record<string, any> = { [S.emailCol]: email, [S.passCol]: await hashPassword(input.password) }
-    if (NAME_COL && input.name) data[NAME_COL] = input.name.trim()
+    // a coluna do nome costuma ser NOT NULL: sem nome informado, usa a parte do e-mail antes do @
+    if (NAME_COL) data[NAME_COL] = (input.name || '').trim() || email.split('@')[0]
     if ((S.link as any).kind === 'column' && input.roleId) data[(S.link as any).col] = input.roleId
     await create__UM__(data)
     if ((S.link as any).kind === 'table' && input.roleId) {
@@ -368,7 +369,7 @@ export async function updateUser(userId: string, input: { email: string; name?: 
   if (!email) throw new Error('{{err_email}}')
   await asAccessAdmin(async () => {
     const data: Record<string, any> = { [S.emailCol]: email }
-    if (NAME_COL) data[NAME_COL] = (input.name || '').trim() || null
+    if (NAME_COL && (input.name || '').trim()) data[NAME_COL] = input.name!.trim()
     await update__UM__(userId, data)
   })
 }

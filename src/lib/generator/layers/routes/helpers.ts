@@ -201,7 +201,7 @@ export function renderFormField(
   const valExpr = `(data?.['${col}'] ?? (data as any)?.['${colCamel}'] ?? (data as any)?.['${col.toLowerCase()}'])`
   const label = field.label
   const dt = (field.dataType || '').toLowerCase()
-  const required = field.config?.required || false
+  const required = field.config?.required || field.notNull || false
   const placeholder = field.config?.placeholder || `Digite ${label}...`
   const colSpanClass = getColSpanClass(field, isModal)
 

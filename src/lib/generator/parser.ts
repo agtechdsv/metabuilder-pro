@@ -464,11 +464,21 @@ function buildResolvedField(
     label,
     dataType: normalizeDbColumnType(field.data_type || 'varchar'),
     isPrimaryKey: field.is_primary_key || false,
+    notNull: isRequiredColumn(field),
     isSortable: field.is_sortable || false,
     isVirtual: false,
     isByoc: false,
     config,
   }
+}
+
+const AUDIT_COLUMN = /^(criado_|atualizado_|created_|updated_|deleted_)|^(created|updated)(_at|_by)?$/i
+
+/** NOT NULL, sem valor padrão, fora a chave primária e as colunas de auditoria (preenchidas pelo próprio app/banco). */
+function isRequiredColumn(field: any): boolean {
+  if (field.is_nullable !== false || field.is_primary_key) return false
+  if (field.default_value != null && String(field.default_value).trim() !== '') return false
+  return !AUDIT_COLUMN.test(String(field.db_column_name || ''))
 }
 
 /**
