@@ -1,19 +1,4 @@
 {
-  "v1.0.1": {
-    "date": "2026-10-18",
-    "pt": [
-      "Validação inteligente em formulários de exportação: campos essenciais agora são automaticamente marcados como obrigatórios, garantindo integridade e prevenindo dados incompletos.",
-      "Experiência aprimorada na gestão de usuários: maior estabilidade e tolerância no fluxo de criação e edição de perfis, eliminando falhas inesperadas."
-    ],
-    "en": [
-      "Smarter export form validation: mandatory fields are now automatically required, ensuring data completeness and preventing export errors.",
-      "Enhanced user management stability: more resilient creation and editing flows, eliminating unexpected errors when updating user profiles."
-    ],
-    "es": [
-      "Validación inteligente en formularios de exportación: los campos esenciales ahora se configuran como obligatorios automáticamente, asegurando la consistencia de los datos.",
-      "Mayor estabilidad en la gestión de usuarios: procesos más robustos al crear y editar perfiles, evitando fallos inesperados con datos incompletos."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
