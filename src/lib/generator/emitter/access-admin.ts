@@ -25,7 +25,7 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
   // troca {{chave}} pelo texto do idioma de geração
   const tr = (src: string) => src.replace(/\{\{(\w+)\}\}/g, (_m, k: string) => (dict as any)[k] ?? k)
   const linkImport = a.link.kind === 'table'
-    ? `import { get${a.link.model}List, get${a.link.model}ByField, create${a.link.model}, delete${a.link.model} } from '@/app/actions/${fileKey(a.link.model)}'\n`
+    ? `import { get${a.link.model}List, get${a.link.model}ByField, create${a.link.model}, delete${a.link.model}${ast.backendStack === 'java-spring' ? '' : `, delete${a.link.model}Where`} } from '@/app/actions/${fileKey(a.link.model)}'\n`
     : ''
   const vars = {
     SETUP: JSON.stringify({ ...a, nameCol: a.nameCol ?? null, seed: undefined }, null, 2),
@@ -37,6 +37,8 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
     LINK_LIST: a.link.kind === 'table' ? `get${a.link.model}List` : 'null as any',
     LINK_CREATE: a.link.kind === 'table' ? `create${a.link.model}` : 'null as any',
     LINK_DELETE: a.link.kind === 'table' ? `delete${a.link.model}` : 'null as any',
+    // exclusão pelo par usuário + grupo (nunca só pelo código do grupo, que apagaria o vínculo de todos os usuários dele)
+    LINK_DELETE_WHERE: a.link.kind === 'table' && ast.backendStack !== 'java-spring' ? `delete${a.link.model}Where` : 'null as any',
     HASH_IMPORT: a.hash === 'bcrypt' ? `import bcrypt from 'bcryptjs'\n` : (a.hash === 'md5' || a.hash === 'sha256') ? `import crypto from 'node:crypto'\n` : '',
     HASH_EXPR:
       a.hash === 'bcrypt' ? 'await bcrypt.hash(pw, 10)'
@@ -260,6 +262,7 @@ const linkByField: any = __LINK_BY_FIELD__
 const linkList: any = __LINK_LIST__
 const linkCreate: any = __LINK_CREATE__
 const linkDelete: any = __LINK_DELETE__
+const linkDeleteWhere: any = __LINK_DELETE_WHERE__
 
 type Need = 'read' | 'write'
 
@@ -324,7 +327,16 @@ async function assignRole(userId: string, roleId: string) {
     return
   }
   for (const r of rowsOf(await linkByField(L.userCol, userId))) {
-    if (str(pick(r, L.userCol)) === userId) await linkDelete(str(pick(r, L.pk)))
+    if (str(pick(r, L.userCol)) !== userId) continue
+    if (linkDeleteWhere) {
+      // só o vínculo DESTE usuário com o grupo (excluir pelo código do grupo apagaria o vínculo de todos os outros usuários dele)
+      const res = await linkDeleteWhere({ [L.userCol]: userId, [L.roleCol]: str(pick(r, L.roleCol)) })
+      if (res && res.success === false) throw new Error(res.error || 'Erro ao trocar o grupo.')
+    } else if (L.pk !== L.userCol && L.pk !== L.roleCol) {
+      await linkDelete(str(pick(r, L.pk)))   // a tabela de ligação tem um código próprio por linha
+    } else {
+      throw new Error('Não foi possível trocar o grupo com segurança: a tabela de ligação não tem código próprio por linha.')
+    }
   }
   if (roleId) await linkCreate({ [L.userCol]: userId, [L.roleCol]: roleId })
 }

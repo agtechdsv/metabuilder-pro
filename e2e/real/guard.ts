@@ -88,6 +88,10 @@ export async function contagemOriginal(): Promise<Record<string, number>> {
     tarefas: await q(`select count(*) n from tarefas where titulo not like '${PREFIXO}%'`),
     entregas: await q(`select count(*) n from entregas where pedido_id is null or pedido_id not in (${pedE2E})`),
     usuarios: await q(`select count(*) n from usuarios where email not like 'e2e_robo%'`),
+    // grupos e permissões que NÃO são dos testes (os grupos de verdade, quem está neles e as permissões deles)
+    perfis: await q(`select count(*) n from perfis where nome not like 'E2E-%'`),
+    perfis_usuarios: await q(`select count(*) n from perfis_usuarios where perfil_id in (select id from perfis where nome not like 'E2E-%') and usuario_id in (select id from usuarios where email not like 'e2e_robo%')`),
+    permissoes: await q(`select count(*) n from mb_role_permissions where role_id in (select id::text from perfis where nome not like 'E2E-%')`),
   }
 }
 
@@ -114,5 +118,22 @@ export async function limparTeste(prefixo = PREFIXO) {
   // usuários criados pelos testes da tela de gestão de acesso (e-mail e2e_robo_tmp*): vínculo com o grupo e depois o usuário
   await realQuery(`delete from perfis_usuarios where usuario_id in (select id from usuarios where email like 'e2e_robo_tmp%')`)
   await realQuery(`delete from usuarios where email like 'e2e_robo_tmp%'`)
+  // grupos temporários dos testes de gestão de acesso (nome E2E-Tmp*) e o que pendura neles
+  await realQuery(`delete from perfis_usuarios where perfil_id in (select id from perfis where nome like 'E2E-Tmp%')`)
+  await realQuery(`delete from mb_role_permissions where role_id in (select id::text from perfis where nome like 'E2E-Tmp%')`)
+  await realQuery(`delete from perfis where nome like 'E2E-Tmp%'`)
+  // o grupo fixo de teste E2E-Leitura volta às permissões de partida (Clientes só leitura, Departamentos bloqueado)
+  await restaurarPermissoesLeitura()
   await realQuery(`delete from produtos where nome like $1`, [like])
+}
+
+/** Grupo fixo de teste (criado por `npm run real:robot:leitura`) e as permissões com que ele começa. */
+export const GRUPO_LEITURA_ID = 'e2e00000-0000-4000-8000-0000000000e1'
+export async function restaurarPermissoesLeitura() {
+  const existe = await realQuery('select 1 from perfis where id = $1', [GRUPO_LEITURA_ID])
+  if (existe.length === 0) return
+  await realQuery('delete from mb_role_permissions where role_id = $1', [GRUPO_LEITURA_ID])
+  for (const [slug, nivel] of [['clientes', 'read'], ['departamentos', 'none']]) {
+    await realQuery('insert into mb_role_permissions (role_id, view_slug, access_level) values ($1, $2, $3)', [GRUPO_LEITURA_ID, slug, nivel])
+  }
 }

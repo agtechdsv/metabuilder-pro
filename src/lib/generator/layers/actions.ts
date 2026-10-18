@@ -793,6 +793,24 @@ ${childCleanups ? `${childCleanups}\n` : ''}    const { error } = await supabase
     return { success: false, error: err?.message || 'Erro ao excluir registro.' }
   }
 }
+
+/** Exclui só as linhas que casam com TODAS as colunas informadas (ex.: o vínculo usuário + grupo numa tabela de ligação, sem apagar os dos outros). */
+export async function delete${model.name}Where(filters: Record<string, any>) {
+  try {
+    const cols = Object.keys(filters || {})
+    if (cols.length === 0 || cols.some(c => !allowedColumns.has(c))) throw new Error('Filtro inválido.')
+    const supabase = await createClient()
+    let q: any = supabase.from('${model.dbTable}').delete()
+    for (const c of cols) q = q.eq(c, filters[c])
+    const { error } = await q
+    if (error) throw new Error(error.message)
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
+}
 `
 }
 
@@ -818,7 +836,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
-import { secureSelect, secureWrite } from './access'
+import { secureSelect, secureWrite, secureCustom } from './access'
 
 ${generateParsePayloadCode(model)}
 
@@ -966,6 +984,23 @@ ${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM ${table
     return { success: false, error: msg }
   }
 }
+
+/** Exclui só as linhas que casam com TODAS as colunas informadas (ex.: o vínculo usuário + grupo numa tabela de ligação, sem apagar os dos outros). */
+export async function delete${model.name}Where(filters: Record<string, any>) {
+  try {
+    const cols = Object.keys(filters || {})
+    if (cols.length === 0 || cols.some(c => !allowedColumns.has(c))) throw new Error('Filtro inválido.')
+    const where = cols.map((c, i) => \`"\${c}" = $\${i + 1}\`).join(' AND ')
+    // permissão da tabela e regra por linha no WHERE (ver app/actions/access)
+    const sql = await secureCustom(\`DELETE FROM ${tableRef} WHERE \${where}\`)
+    await query(sql, cols.map(c => filters[c]))
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.detail || err?.message || 'Erro ao excluir registro.' }
+  }
+}
 `
 }
 
@@ -982,7 +1017,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
   return `'use server'
 import { query } from './db'
 import { revalidatePath } from 'next/cache'
-import { secureSelect, secureWrite } from './access'
+import { secureSelect, secureWrite, secureCustom } from './access'
 
 ${generateParsePayloadCode(model, 'oracle')}
 
@@ -1075,6 +1110,23 @@ ${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM "${mode
     return { success: false, error: err?.message || 'Erro ao excluir registro.' }
   }
 }
+
+/** Exclui só as linhas que casam com TODAS as colunas informadas (ex.: o vínculo usuário + grupo numa tabela de ligação, sem apagar os dos outros). */
+export async function delete${model.name}Where(filters: Record<string, any>) {
+  try {
+    const cols = Object.keys(filters || {})
+    if (cols.length === 0 || cols.some(c => !allowedColumns.has(c))) throw new Error('Filtro inválido.')
+    const where = cols.map((c, i) => \`"\${c}" = :c\${i}\`).join(' AND ')
+    // permissão da tabela e regra por linha no WHERE (ver app/actions/access)
+    const sql = await secureCustom(\`DELETE FROM "${model.dbTable}" WHERE \${where}\`)
+    await query(sql, Object.fromEntries(cols.map((c, i) => ['c' + i, filters[c]])))
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
+}
 `
 }
 
@@ -1129,7 +1181,7 @@ export async function create${model.name}(formData: FormData | Record<string, an
   const placeholders = keys.map(() => '?').join(', ')
   const columns = keys.map(k => \`\\\`\${k}\\\`\`).join(', ')
   
-  await query(\`INSERT INTO \`${model.dbTable}\` (\${columns}) VALUES (\${placeholders})\`, values)
+  await query(\`INSERT INTO \\\`${model.dbTable}\\\` (\${columns}) VALUES (\${placeholders})\`, values)
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
@@ -1143,13 +1195,28 @@ export async function update${model.name}(id: string, formData: FormData | Recor
   const values = Object.values(clean)
   const setString = keys.map(k => \`\\\`\${k}\\\` = ?\`).join(', ')
   
-  await query(\`UPDATE \`${model.dbTable}\` SET \${setString} WHERE \`${pk}\` = ?\`, [...values, id])
+  await query(\`UPDATE \\\`${model.dbTable}\\\` SET \${setString} WHERE \\\`${pk}\\\` = ?\`, [...values, id])
   revalidatePath('/${model.name.toLowerCase()}')
 }
 
 export async function delete${model.name}(id: string) {
   try {
 ${childCleanups ? `${childCleanups}\n` : ''}    await query('DELETE FROM \`${model.dbTable}\` WHERE \`${pk}\` = ?', [id])
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
+}
+
+/** Exclui só as linhas que casam com TODAS as colunas informadas (ex.: o vínculo usuário + grupo numa tabela de ligação, sem apagar os dos outros). */
+export async function delete${model.name}Where(filters: Record<string, any>) {
+  try {
+    const cols = Object.keys(filters || {})
+    if (cols.length === 0 || cols.some(c => !allowedColumns.has(c))) throw new Error('Filtro inválido.')
+    const where = cols.map(c => '\`' + c + '\` = ?').join(' AND ')
+    await query('DELETE FROM \`${model.dbTable}\` WHERE ' + where, cols.map(c => filters[c]))
     revalidatePath('/${model.name.toLowerCase()}')
     return { success: true }
   } catch (err: any) {
@@ -1243,6 +1310,23 @@ export async function delete${model.name}(id: string) {
   try {
     const pool = await getPool()
 ${childCleanups ? `${childCleanups}\n` : ''}    await pool.request().input('id', id).query('DELETE FROM [${model.dbTable}] WHERE [${pk}] = @id')
+    revalidatePath('/${model.name.toLowerCase()}')
+    return { success: true }
+  } catch (err: any) {
+    console.error('Erro ao excluir em ${model.name}:', err)
+    return { success: false, error: err?.message || 'Erro ao excluir registro.' }
+  }
+}
+
+/** Exclui só as linhas que casam com TODAS as colunas informadas (ex.: o vínculo usuário + grupo numa tabela de ligação, sem apagar os dos outros). */
+export async function delete${model.name}Where(filters: Record<string, any>) {
+  try {
+    const cols = Object.keys(filters || {})
+    if (cols.length === 0 || cols.some(c => !allowedColumns.has(c))) throw new Error('Filtro inválido.')
+    const pool = await getPool()
+    const req = pool.request()
+    cols.forEach((c, i) => req.input('c' + i, filters[c]))
+    await req.query('DELETE FROM [${model.dbTable}] WHERE ' + cols.map((c, i) => '[' + c + '] = @c' + i).join(' AND '))
     revalidatePath('/${model.name.toLowerCase()}')
     return { success: true }
   } catch (err: any) {

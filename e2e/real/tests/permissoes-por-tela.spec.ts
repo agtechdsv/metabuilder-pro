@@ -34,10 +34,12 @@ test.describe('permissões por tela (grupo E2E-Leitura)', () => {
     await page.getByRole('button', { name: 'Pesquisar' }).click()
     const linha = page.locator('tbody tr').filter({ hasText: nome })
     await expect(linha).toHaveCount(1) // leitura: enxerga o que é dele
-    // sem os controles de gravação na tela
-    await expect(page.getByRole('link', { name: 'Novo Registro' })).toHaveCount(0)
-    await expect(linha.locator('button[title="Excluir"]')).toHaveCount(0)
-    await expect(linha.locator('a[title="Editar"]')).toHaveCount(0)
+    // sem os controles de gravação visíveis (o app os esconde com CSS nas telas só de leitura)
+    await expect(page.getByRole('link', { name: 'Novo Registro' }).locator('visible=true')).toHaveCount(0)
+    await expect(linha.locator('button[title="Excluir"]').locator('visible=true')).toHaveCount(0)
+    await expect(linha.locator('a[title="Editar"]').locator('visible=true')).toHaveCount(0)
+    // a leitura continua disponível
+    await expect(linha.locator('a[title="Visualizar"]').locator('visible=true')).toHaveCount(1)
 
     // e o servidor recusa gravar mesmo se a pessoa forçar o endereço do formulário
     await page.goto('/clientes/' + cli.id)
