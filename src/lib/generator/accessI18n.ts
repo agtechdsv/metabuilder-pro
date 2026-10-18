@@ -45,6 +45,7 @@ export interface AccessDictionary {
   err_no_access: string
   err_read_only_screen: string
   err_email_password: string
+  err_email_taken: string
   err_new_password: string
   err_group_name: string
   err_unknown_screen: string
@@ -114,6 +115,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_no_access: 'Você não tem acesso a esta tela.',
     err_read_only_screen: 'Seu grupo só pode consultar esta tela.',
     err_email_password: 'Informe o e-mail e a senha.',
+    err_email_taken: 'Já existe um usuário com este e-mail.',
     err_new_password: 'Informe a nova senha.',
     err_group_name: 'Informe o nome do grupo.',
     err_unknown_screen: 'Tela desconhecida.',
@@ -181,6 +183,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_no_access: 'You do not have access to this screen.',
     err_read_only_screen: 'Your group can only view this screen.',
     err_email_password: 'Enter the e-mail and the password.',
+    err_email_taken: 'A user with this e-mail already exists.',
     err_new_password: 'Enter the new password.',
     err_group_name: 'Enter the group name.',
     err_unknown_screen: 'Unknown screen.',
@@ -248,6 +251,7 @@ const DICTIONARIES: Record<GeneratorLanguage, AccessDictionary> = {
     err_no_access: 'No tiene acceso a esta pantalla.',
     err_read_only_screen: 'Su grupo solo puede consultar esta pantalla.',
     err_email_password: 'Informe el correo y la contraseña.',
+    err_email_taken: 'Ya existe un usuario con este correo.',
     err_new_password: 'Informe la nueva contraseña.',
     err_group_name: 'Informe el nombre del grupo.',
     err_unknown_screen: 'Pantalla desconocida.',

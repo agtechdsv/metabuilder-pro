@@ -346,11 +346,18 @@ export async function setUserRole(userId: string, roleId: string): Promise<void>
   await asAccessAdmin(() => assignRole(userId, roleId))
 }
 
+/** O banco pode não ter índice único no e-mail: dois usuários com o mesmo e-mail quebram o login dos dois. */
+async function assertEmailFree(email: string, exceptUserId?: string): Promise<void> {
+  const same = rowsOf(await get__UM__ByField(S.emailCol, email)).filter(r => str(pick(r, S.emailCol)).trim().toLowerCase() === email.toLowerCase())
+  if (same.some(r => !exceptUserId || str(pick(r, S.usersPk)) !== exceptUserId)) throw new Error('{{err_email_taken}}')
+}
+
 export async function createUser(input: { email: string; name?: string; password: string; roleId?: string }): Promise<void> {
   await need('__SLUG_USERS__', 'write')
   const email = input.email.trim()
   if (!email || !input.password) throw new Error('{{err_email_password}}')
   await asAccessAdmin(async () => {
+    await assertEmailFree(email)
     const data: Record<string, any> = { [S.emailCol]: email, [S.passCol]: await hashPassword(input.password) }
     // a coluna do nome costuma ser NOT NULL: sem nome informado, usa a parte do e-mail antes do @
     if (NAME_COL) data[NAME_COL] = (input.name || '').trim() || email.split('@')[0]
@@ -368,6 +375,7 @@ export async function updateUser(userId: string, input: { email: string; name?: 
   const email = input.email.trim()
   if (!email) throw new Error('{{err_email}}')
   await asAccessAdmin(async () => {
+    await assertEmailFree(email, userId)
     const data: Record<string, any> = { [S.emailCol]: email }
     if (NAME_COL && (input.name || '').trim()) data[NAME_COL] = input.name!.trim()
     await update__UM__(userId, data)

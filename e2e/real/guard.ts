@@ -118,6 +118,9 @@ export async function limparTeste(prefixo = PREFIXO) {
   // usuários criados pelos testes da tela de gestão de acesso (e-mail e2e_robo_tmp*): vínculo com o grupo e depois o usuário
   await realQuery(`delete from perfis_usuarios where usuario_id in (select id from usuarios where email like 'e2e_robo_tmp%')`)
   await realQuery(`delete from usuarios where email like 'e2e_robo_tmp%'`)
+  // duplicata do robô, caso um app antigo deixe o e-mail repetido passar (o teste de e-mail repetido usa este nome)
+  await realQuery(`delete from perfis_usuarios where usuario_id in (select id from usuarios where nome_completo = 'E2E Repetido')`)
+  await realQuery(`delete from usuarios where nome_completo = 'E2E Repetido'`)
   // grupos temporários dos testes de gestão de acesso (nome E2E-Tmp*) e o que pendura neles
   await realQuery(`delete from perfis_usuarios where perfil_id in (select id from perfis where nome like 'E2E-Tmp%')`)
   await realQuery(`delete from mb_role_permissions where role_id in (select id::text from perfis where nome like 'E2E-Tmp%')`)

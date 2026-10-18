@@ -117,6 +117,7 @@ test.describe('gestão de acesso: usuários', () => {
     await page.waitForTimeout(1500)
     await expect(janela(page).getByRole('button', { name: 'Salvar' })).toBeVisible() // continua aberta, com o erro dentro
     expect(Number((await realQuery('select count(*) n from usuarios'))[0].n)).toBe(antes)
+    expect((await realQuery("select 1 from usuarios where email = 'e2e_robo@metabuilder.local'")).length).toBe(1)
   })
 })
 
