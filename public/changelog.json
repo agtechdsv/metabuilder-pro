@@ -1,4 +1,25 @@
 {
+  "v1.0.2": {
+    "date": "2026-10-18",
+    "pt": [
+      "Gestão de Acessos e Usuários Aprimorada: Validação inteligente para prevenir e-mails duplicados e sinalização visual intuitiva de campos obrigatórios no cadastro e edição.",
+      "Maior Segurança e Precisão no Gerenciamento de Grupos: Garantia de que a troca de grupos ou remoção de um usuário seja isolada, preservando os vínculos e permissões de toda a equipe.",
+      "Formulários Mais Inteligentes e Confiáveis: Validação automática de campos essenciais para evitar inconsistências e garantir preenchimentos completos em toda a plataforma.",
+      "Estabilidade e Desempenho Reforçados: Aprimoramento nas grades de visualização, telas de clientes e rotinas de exportação para uma navegação muito mais rápida e confiável."
+    ],
+    "en": [
+      "Enhanced User & Access Management: Smart validation prevents duplicate email registrations and clearly highlights mandatory fields during user creation and updates.",
+      "Greater Security in Team & Group Management: Resolved group reassignment handling, ensuring changes or removals only apply to the selected user without affecting other team members.",
+      "Smarter, More Reliable Forms: Automatic enforcement of required fields across forms and exports, preventing incomplete submissions and data errors.",
+      "Strengthened Platform Stability: Performance improvements across data grids, customer tabs, and export workflows, delivering a smoother and more robust experience."
+    ],
+    "es": [
+      "Gestión de Usuarios y Accesos Mejorada: Validación inteligente para evitar correos electrónicos duplicados y señalización clara de campos obligatorios en el registro y edición.",
+      "Mayor Seguridad en la Administración de Equipos: Corrección en la gestión de grupos para asegurar que la reasignación o baja de un usuario no afecte al resto del equipo.",
+      "Formularios Más Inteligentes y Confiables: Detección automática de campos requeridos para evitar omisiones y asegurar la integridad de la información en toda la plataforma.",
+      "Estabilidad y Rendimiento Reforzados: Optimizaciones en tablas interactivas, pestañas de clientes y exportaciones de datos para una experiencia ágil y sin interrupciones."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
