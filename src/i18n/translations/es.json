@@ -5051,6 +5051,26 @@
     "ffmpeg_ask_body": "Para grabar el vídeo de las pruebas que fallen, Playwright necesita descargar ffmpeg (cerca de 1 MB, de internet, a la carpeta de Playwright de su usuario). No se instala nada en el sistema. Sin él, solo se graba la captura de pantalla.",
     "ffmpeg_ask_yes": "Descargar y ejecutar",
     "ffmpeg_ask_no": "Ejecutar sin vídeo",
-    "ffmpeg_ask_never": "Ejecutar sin vídeo y no preguntar más"
+    "ffmpeg_ask_never": "Ejecutar sin vídeo y no preguntar más",
+    "engine_title": "Motor de pruebas",
+    "engine_managed": "Instalado por el IDE (recomendado)",
+    "engine_custom": "Carpeta e2e del proyecto (avanzado)",
+    "engine_not_installed": "El motor aún no está instalado en esta máquina.",
+    "engine_install": "Instalar motor",
+    "engine_update": "Actualizar motor",
+    "engine_ok": "Motor instalado y actualizado (versión {v}).",
+    "engine_outdated": "Hay una versión nueva del motor.",
+    "engine_installing_files": "Grabando los archivos del motor...",
+    "engine_installing_npm": "Instalando las dependencias (npm install, puede tardar un minuto)...",
+    "engine_err": "No se pudo instalar el motor.",
+    "engine_node_missing": "Para instalar el motor se necesita Node.js. Instálelo desde nodejs.org e inténtelo de nuevo.",
+    "engine_hint": "Instale el motor de pruebas en la sección 3 antes de ejecutar.",
+    "cred_title": "Usuario de prueba de la app",
+    "cred_help": "correo y contraseña de un usuario de la app exportada con acceso total; solo las pruebas lo usan.",
+    "cred_email": "Correo",
+    "cred_pass": "Contraseña",
+    "err_cred": "Indique el correo y la contraseña del usuario de prueba de la app.",
+    "err_dburl": "No se encontró DATABASE_URL en el .env.local de la app exportada.",
+    "browser_none": "No se encontró un navegador compatible (Chrome o Edge)."
   }
 }

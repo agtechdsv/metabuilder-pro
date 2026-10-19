@@ -1,8 +1,9 @@
 import { test as base, expect, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { entrar } from '../../real/tests/helpers'
-import { realQuery, REAL } from '../../real/guard'
+import { entrar } from '../lib/login'
+import { consultar } from '../lib/db'
+import { CONFIG } from '../lib/config'
 import type { ManifestField, TestManifest } from '../../../src/lib/testing/manifestTypes'
 import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, describeName, ehData, planView } from '../../../src/lib/testing/plan'
 
@@ -64,7 +65,7 @@ let compartilhada: Page | undefined
 const test = base.extend<object, { contexto: BrowserContext }>({
   contexto: [async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR',
+      baseURL: `http://localhost:${CONFIG.port}`, locale: 'pt-BR',
       ...(COM_JANELA ? { viewport: null } : { viewport: { width: 1280, height: 800 } }),
       ...(!COM_JANELA && ARTEFATOS && TEM_FFMPEG ? { recordVideo: { dir: path.join(ARTEFATOS, '_video'), size: { width: 1280, height: 800 } } } : {}),
     })
@@ -249,7 +250,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'obrigatorios') {
         test(t.title, async ({ page }) => {
-          const ids = async () => new Set((await realQuery(`select ${view.primaryKey}::text as id from ${view.table}`)).map(r => String(r.id)))
+          const ids = async () => new Set((await consultar(`select ${view.primaryKey}::text as id from ${view.table}`)).map(r => String(r.id)))
           const antes = await ids()
           await abrir(page, `${view.path}/new`)
           await page.getByRole('button', { name: 'Criar Registro' }).first().click()
@@ -257,7 +258,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const novos = [...(await ids())].filter(id => !antes.has(id))
           if (novos.length > 0) {
             // o app aceitou salvar vazio: apaga só o que esta tela criou e falha
-            for (const id of novos) await realQuery(`delete from ${view.table} where ${view.primaryKey}::text = $1`, [id])
+            for (const id of novos) await consultar(`delete from ${view.table} where ${view.primaryKey}::text = $1`, [id])
           }
           expect(novos, `o app criou ${novos.length} registro(s) com os campos obrigatórios vazios`).toEqual([])
         })
@@ -265,7 +266,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'grid_total') {
         test(t.title, async ({ page }) => {
-          const noBanco = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const noBanco = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarLista(page)
           const naTela = await totalMostrado(page)
@@ -297,7 +298,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
       if (t.kind === 'grid_filtro') {
         const campo = view.filter.find(x => x.column === t.field)!
         test(t.title, async ({ page }) => {
-          const [linha] = await realQuery(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
+          const [linha] = await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
           test.skip(!linha, 'a tabela não tem dados para filtrar')
           const valor = String(linha.v)
           const busca = (valor.split(/\s+/).find(w => w.length >= 3) ?? valor).slice(0, 20)
@@ -346,7 +347,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'grid_paginacao') {
         test(t.title, async ({ page }) => {
-          const noBanco = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const noBanco = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarLista(page)
           const seletor = page.locator('main select').last()
@@ -371,10 +372,10 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         const campo = view.filter.find(x => x.column === t.field)!
         const gcol = view.grid.find(x => x.column === t.field)!
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           let escolha: { label: string; n: number } | undefined
           for (const o of campo.options ?? []) {
-            const n = Number((await realQuery(`select count(*) n from ${view.table} where ${campo.column}::text = $1`, [o.value]))[0].n)
+            const n = Number((await consultar(`select count(*) n from ${view.table} where ${campo.column}::text = $1`, [o.value]))[0].n)
             if (n > 0 && n < total) { escolha = { label: o.label, n }; break }
           }
           test.skip(!escolha, 'nenhuma opção do filtro separa as linhas (todas ou nenhuma)')
@@ -414,7 +415,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
       if (t.kind === 'exportacao_filtrada') {
         const campo = view.filter.find(x => x.column === (campoDeFiltro(view) as ManifestField).column)!
         test(t.title, async ({ page }) => {
-          const [linha] = await realQuery(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
+          const [linha] = await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
           test.skip(!linha, 'a tabela não tem dados para filtrar')
           const busca = (String(linha.v).split(/\s+/).find(w => w.length >= 3) ?? String(linha.v)).slice(0, 20)
           await abrir(page, view.path)
@@ -509,7 +510,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'abas') {
         test(t.title, async ({ page }) => {
-          const [reg] = await realQuery(`select ${view.primaryKey}::text as id from ${view.table} limit 1`)
+          const [reg] = await consultar(`select ${view.primaryKey}::text as id from ${view.table} limit 1`)
           test.skip(!reg, 'a tabela não tem registros para abrir')
           await abrir(page, `${view.path}/${reg.id}`)
           for (const d of view.details) {
@@ -547,7 +548,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'tipo_galeria') {
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarTela(page)
           await expect(page.locator('main img'), 'um cartão (imagem) por registro').toHaveCount(total)
@@ -556,7 +557,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'tipo_kanban') {
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarTela(page)
           const cartoes = await page.locator('main button[title="Detalhes"]').count()
@@ -567,7 +568,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'tipo_fluxo') {
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarTela(page)
           await expect(page.locator('.react-flow')).toBeVisible()
@@ -592,7 +593,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await aguardarTela(page)
           await expect(page.getByRole('button', { name: /^Hoje$/i })).toBeVisible()
           for (const tam of ['Pequeno', 'Normal', 'Grande']) await expect.soft(page.locator(`main button[title="${tam}"]`).first(), `tamanho "${tam}"`).toBeVisible()
-          const linhas = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const linhas = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           if (linhas > 0) expect(await page.locator('main [title="Editar"]').count(), 'ações de linha (Editar)').toBeGreaterThan(0)
         })
       }
@@ -616,7 +617,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'tipo_mapa_mental') {
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           await abrir(page, view.path)
           await aguardarTela(page)
           await expect(page.getByText(new RegExp(`${total} REGISTROS`, 'i')).first(), `"${total} REGISTROS" na tela`).toBeVisible()
@@ -625,7 +626,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'tipo_mapa') {
         test(t.title, async ({ page }) => {
-          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const total = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           const lat = view.form.find(f => /^lat/i.test(f.column))?.column
           const lng = view.form.find(f => /^(lng|lon)/i.test(f.column))?.column
           await abrir(page, view.path)
@@ -633,7 +634,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await expect(page.locator('.leaflet-container')).toBeVisible()
           await expect(page.getByText(new RegExp(`REGISTROS \\(${total}\\)`, 'i')).first(), `"REGISTROS (${total})"`).toBeVisible()
           if (lat && lng) {
-            const comGps = Number((await realQuery(`select count(*) n from ${view.table} where ${lat} is not null and ${lng} is not null`))[0].n)
+            const comGps = Number((await consultar(`select count(*) n from ${view.table} where ${lat} is not null and ${lng} is not null`))[0].n)
             await expect(page.getByText(new RegExp(`${comGps} DE ${total} REGISTROS COM COORDENADAS`, 'i')).first()).toBeVisible()
           }
         })

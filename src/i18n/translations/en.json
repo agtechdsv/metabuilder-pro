@@ -4963,6 +4963,26 @@
     "ffmpeg_ask_body": "To record a video of the tests that fail, Playwright needs to download ffmpeg (about 1 MB, from the internet, into your user Playwright folder). Nothing is installed on the system. Without it, only the screenshot is recorded.",
     "ffmpeg_ask_yes": "Download and run",
     "ffmpeg_ask_no": "Run without video",
-    "ffmpeg_ask_never": "Run without video and do not ask again"
+    "ffmpeg_ask_never": "Run without video and do not ask again",
+    "engine_title": "Test engine",
+    "engine_managed": "Installed by the IDE (recommended)",
+    "engine_custom": "Project e2e folder (advanced)",
+    "engine_not_installed": "Engine not installed on this machine yet.",
+    "engine_install": "Install engine",
+    "engine_update": "Update engine",
+    "engine_ok": "Engine installed and up to date (version {v}).",
+    "engine_outdated": "A new version of the engine is available.",
+    "engine_installing_files": "Writing the engine files...",
+    "engine_installing_npm": "Installing dependencies (npm install, may take a minute)...",
+    "engine_err": "Could not install the engine.",
+    "engine_node_missing": "Installing the engine requires Node.js. Install it from nodejs.org and try again.",
+    "engine_hint": "Install the test engine in section 3 before running.",
+    "cred_title": "App test user",
+    "cred_help": "e-mail and password of an exported-app user with full access; only the tests use it.",
+    "cred_email": "E-mail",
+    "cred_pass": "Password",
+    "err_cred": "Enter the e-mail and password of the app test user.",
+    "err_dburl": "DATABASE_URL was not found in the exported app .env.local.",
+    "browser_none": "No compatible browser (Chrome or Edge) found."
   }
 }

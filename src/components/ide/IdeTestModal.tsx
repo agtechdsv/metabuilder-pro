@@ -9,6 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
 import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { detectBrowser, engineE2eDir, engineStatus, installEngine, readAppDbUrl, writeEngineConfig, type EngineStatus } from '@/utils/testEngine'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
@@ -42,8 +43,19 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
-  const [runnerDir, setRunnerDir] = useState('')
+  const [customDir, setRunnerDir] = useState('')
   const [appDir, setAppDir] = useState('')
+  // motor: instalado pela IDE (padrão) ou a pasta e2e do repositório (avançado); o que roda é sempre `runnerDir`
+  const [engineMode, setEngineModeState] = useState<'managed' | 'custom'>('managed')
+  const [managedDir, setManagedDir] = useState('')
+  const [engineSt, setEngineSt] = useState<EngineStatus | null>(null)
+  const [engineBusy, setEngineBusy] = useState<'' | 'files' | 'npm'>('')
+  const [engineErr, setEngineErr] = useState('')
+  const [browserName, setBrowserName] = useState<'chrome' | 'msedge' | null>(null)
+  const [testUser, setTestUser] = useState('')
+  const [testPass, setTestPass] = useState('')
+  const runnerDir = engineMode === 'managed' ? managedDir : customDir
+  const setEngineMode = (m: 'managed' | 'custom') => { setEngineModeState(m); lsSet('mb_tests_engine_mode', m) }
   const [mode, setMode] = useState<TestWatchMode>('internal')
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
@@ -97,7 +109,26 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!isOpen) return
     setRunnerDir(lsGet('mb_tests_runner_dir'))
     setAppDir(lsGet(`mb_tests_app_dir_${projectId}`))
+    setTestUser(lsGet(`mb_tests_user_${projectId}`))
+    setTestPass(lsGet(`mb_tests_pass_${projectId}`))
+    // quem já usava a pasta e2e continua nela; quem nunca escolheu começa pelo motor instalado pela IDE
+    setEngineModeState((lsGet('mb_tests_engine_mode') as 'managed' | 'custom') || (lsGet('mb_tests_runner_dir') ? 'custom' : 'managed'))
+    if (!isTauri()) return
+    engineE2eDir().then(setManagedDir).catch(() => {})
+    engineStatus().then(setEngineSt).catch(() => setEngineSt(null))
+    detectBrowser().then(setBrowserName).catch(() => setBrowserName(null))
   }, [isOpen, projectId])
+
+  /** Instala (ou atualiza) o motor na pasta do usuário. O clique do usuário é o consentimento: baixa pacotes do npm. */
+  const doInstallEngine = async () => {
+    setEngineErr(''); setEngineBusy('files')
+    try {
+      await installEngine(step => setEngineBusy(step as 'files' | 'npm'))
+      setEngineSt(await engineStatus())
+    } catch (e: any) {
+      setEngineErr(e?.message === 'NODE_MISSING' ? t('ide_tests.engine_node_missing', 'Para instalar o motor é preciso ter o Node.js. Instale-o em nodejs.org e tente de novo.') : `${t('ide_tests.engine_err', 'Não foi possível instalar o motor.')} (${e?.message || e})`)
+    } finally { setEngineBusy('') }
+  }
 
   useEffect(() => {
     if (!isOpen || !isTauri()) return
@@ -215,8 +246,18 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
+    if (engineMode === 'managed') {
+      if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
+      if (!testUser.trim() || !testPass) { setRunError(t('ide_tests.err_cred', 'Informe o e-mail e a senha do usuário de teste do app.')); return }
+    }
     setRunning(true)
     try {
+      let configPath: string | undefined
+      if (engineMode === 'managed') {
+        const dbUrl = await readAppDbUrl(appDir)
+        if (!dbUrl) { setRunning(false); setRunError(t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
+        configPath = await writeEngineConfig(projectSlug, { appDir, dbUrl, user: testUser.trim(), password: testPass })
+      }
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
       const startedAt = new Date()
@@ -226,7 +267,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
-        artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
+        configPath, browser: browserName, artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
       })
     } catch (e: any) {
       setRunning(false); runMeta.current = null
@@ -555,8 +596,46 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               {/* 3. Onde rodar */}
               <section>
                 <h3 className={lblSection}>3 · {t('ide_tests.where', 'Onde rodar')}</h3>
+                {desktop && (
+                  <div className="mb-3 rounded-xl border border-neutral-700 bg-neutral-800/40 px-4 py-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-white mr-2">{t('ide_tests.engine_title', 'Motor de testes')}</span>
+                      {([['managed', t('ide_tests.engine_managed', 'Instalado pela IDE (recomendado)')], ['custom', t('ide_tests.engine_custom', 'Pasta e2e do projeto (avançado)')]] as const).map(([id, label]) => (
+                        <button key={id} onClick={() => setEngineMode(id)} disabled={running} className={`rounded-lg border px-2.5 py-1 text-[11px] ${engineMode === id ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}>{label}</button>
+                      ))}
+                    </div>
+                    {engineMode === 'managed' && (
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        {engineBusy
+                          ? <span className="flex items-center gap-1.5 text-neutral-400"><Loader2 className="w-3 h-3 animate-spin" /> {engineBusy === 'files' ? t('ide_tests.engine_installing_files', 'Gravando os arquivos do motor...') : t('ide_tests.engine_installing_npm', 'Instalando as dependências (npm install, pode levar um minuto)...')}</span>
+                          : !engineSt?.installed
+                            ? <>
+                                <span className="text-amber-700 [html:not(.light)_&]:text-amber-400">{t('ide_tests.engine_not_installed', 'Motor ainda não instalado nesta máquina.')}</span>
+                                <button onClick={doInstallEngine} disabled={running} className="rounded-md border border-indigo-500/50 px-2 py-0.5 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-40">{t('ide_tests.engine_install', 'Instalar motor')}</button>
+                              </>
+                            : engineSt.upToDate
+                              ? <span className="text-emerald-400">{t('ide_tests.engine_ok', 'Motor instalado e atualizado (versão {v}).').replace('{v}', engineSt.currentVersion)}</span>
+                              : <>
+                                  <span className="text-amber-700 [html:not(.light)_&]:text-amber-400">{t('ide_tests.engine_outdated', 'Há uma versão nova do motor.')}</span>
+                                  <button onClick={doInstallEngine} disabled={running} className="rounded-md border border-indigo-500/50 px-2 py-0.5 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-40">{t('ide_tests.engine_update', 'Atualizar motor')}</button>
+                                </>}
+                        {browserName === null && engineSt?.installed && <span className="text-red-300">{t('ide_tests.browser_none', 'Nenhum navegador compatível (Chrome ou Edge) encontrado.')}</span>}
+                      </div>
+                    )}
+                    {engineErr && <p className="text-[11px] text-red-300 whitespace-pre-wrap">{engineErr}</p>}
+                    {engineMode === 'managed' && (
+                      <div>
+                        <p className="text-[11px] text-neutral-400 mb-1">{t('ide_tests.cred_title', 'Usuário de teste do app')} — {t('ide_tests.cred_help', 'e-mail e senha de um usuário do app exportado com acesso total; só os testes o usam.')}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <input value={testUser} onChange={e => { setTestUser(e.target.value); lsSet(`mb_tests_user_${projectId}`, e.target.value) }} disabled={running} placeholder={t('ide_tests.cred_email', 'E-mail')} className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600" />
+                          <input type="password" value={testPass} onChange={e => { setTestPass(e.target.value); lsSet(`mb_tests_pass_${projectId}`, e.target.value) }} disabled={running} placeholder={t('ide_tests.cred_pass', 'Senha')} className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {([['runner', t('ide_tests.runner', 'Motor de testes (pasta e2e)'), runnerDir], ['app', t('ide_tests.app', 'App exportado a testar'), appDir]] as const).map(([kind, label, value]) => (
+                  {(([...(engineMode === 'custom' ? [['runner', t('ide_tests.runner', 'Motor de testes (pasta e2e)'), customDir]] : []), ['app', t('ide_tests.app', 'App exportado a testar'), appDir]]) as ['runner' | 'app', string, string][]).map(([kind, label, value]) => (
                     <div key={kind}>
                       <p className="text-xs text-neutral-400 mb-1">{label}</p>
                       <button onClick={() => pick(kind)} disabled={running || !desktop} className="w-full flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 px-3 py-2 text-left text-xs disabled:opacity-50">

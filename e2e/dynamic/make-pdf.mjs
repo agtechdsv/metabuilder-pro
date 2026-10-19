@@ -10,7 +10,7 @@ if (!html || !pdf) {
   process.exit(2)
 }
 
-const browser = await chromium.launch({ channel: 'chrome' })
+const browser = await chromium.launch({ channel: process.env.E2E_BROWSER || 'chrome' })
 try {
   const page = await browser.newPage()
   await page.goto(pathToFileURL(path.resolve(html)).href)

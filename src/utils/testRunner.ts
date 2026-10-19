@@ -43,6 +43,10 @@ export interface StartTestRunOptions {
   mode: TestWatchMode
   /** espera entre as ações no modo ao vivo (ms) */
   slowMoMs?: number
+  /** JSON de configuração do motor instalado (E2E_CONFIG); sem ele vale o modo do repositório (e2e/.env.real) */
+  configPath?: string
+  /** navegador do motor: chrome ou msedge */
+  browser?: 'chrome' | 'msedge' | null
   /** pasta onde o motor grava a captura de tela e o vídeo das falhas desta rodada */
   artifactsDir?: string
   onEvent: (ev: TestEvent) => void
@@ -72,6 +76,10 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
     `$env:E2E_VIEWS = '${q(o.viewSlugs.join(','))}'`,
     `$env:E2E_LIVE_DIR = '${q(liveDir)}'`,
     o.artifactsDir ? `$env:E2E_ARTIFACTS_DIR = '${q(o.artifactsDir)}'` : '',
+    o.configPath ? `$env:E2E_CONFIG = '${q(o.configPath)}'` : '',
+    o.browser ? `$env:E2E_BROWSER = '${o.browser}'` : '',
+    // instala as dependências e compila o app exportado se ainda não foi feito (ou se o código mudou)
+    `if (Test-Path 'dynamic/prepare-app.mjs') { node dynamic/prepare-app.mjs; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }`,
     o.mode === 'external' ? `$env:E2E_HEADED = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     o.mode === 'internal' ? `$env:E2E_STREAM = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     'npx playwright test -c playwright.dynamic.config.ts --timeout=60000',
