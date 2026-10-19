@@ -1,4 +1,31 @@
 {
+  "v1.0.8": {
+    "date": "2026-10-19",
+    "pt": [
+      "Nova Suíte de Testes de Segurança: Validação automatizada de permissões por tabela, papéis de acesso e regras por linha (RLS) com usuários temporários para máxima conformidade.",
+      "Ambientes de Teste Isolados e Seguros: Criação e limpeza automática de bancos de dados de teste para simulações completas de ponta a ponta (CRUD) sem risco aos dados de produção.",
+      "Motor de Testes Expandido para Interfaces Ricas: Suporte nativo e validação completa de componentes avançados como Kanban, BI, Gantt, Fluxos, Galeria, Mapas, paginações e filtros.",
+      "Gravação de Vídeo e Evidências Visuais de Falhas: Captura automática em vídeo e telas detalhadas durante falhas de execução para resolução ágil de problemas.",
+      "Relatórios Técnicos e Executivos Completos: Nova central de relatórios com métricas de desempenho dos testes mais lentos e exportação flexível em PDF, HTML e JSON.",
+      "Gestão Simplificada do Motor de Execução: Instalação e execução direta pela IDE com suporte aos navegadores Chrome e Edge e controle intuitivo pelo painel."
+    ],
+    "en": [
+      "New Automated Security Testing Suite: Automatic validation of table permissions, user roles, and row-level security (RLS) using temporary profiles for full compliance.",
+      "Isolated and Safe Testing Environments: Seamless creation and automated cleanup of test databases for complete end-to-end CRUD testing without risking live data.",
+      "Expanded UI Testing Engine: Native support and comprehensive validation for rich views including Kanban, BI dashboards, Gantt charts, Flowcharts, Galleries, Maps, and dynamic filters.",
+      "Automated Video Recording & Failure Evidence: Instant video capture and screenshots upon test failures directly integrated into the execution history for rapid debugging.",
+      "Comprehensive Technical & Executive Reporting: Consolidated test reports with performance insights on slower test cases and one-click export to PDF, HTML, and JSON.",
+      "Simplified Test Engine Management: Seamless engine deployment via IDE with native Chrome and Edge browser support, managed directly from an intuitive control panel."
+    ],
+    "es": [
+      "Nueva Suite de Pruebas de Seguridad: Validación automatizada de permisos por tabla, roles de acceso y reglas por fila (RLS) con usuarios temporales para máxima conformidad.",
+      "Entornos de Prueba Aislados y Seguros: Creación y limpieza automática de bases de datos de prueba para simulaciones completas de extremo a extremo (CRUD) sin riesgo para los datos reales.",
+      "Motor de Pruebas Extendido para Vistas Avanzadas: Soporte nativo y validación integral para componentes como Kanban, BI, Gantt, Flujos, Galerías, Mapas, paginación y filtros.",
+      "Grabación en Video y Evidencia Visual de Fallos: Captura automática en video y capturas de pantalla de errores integrada en el historial para diagnósticos inmediatos.",
+      "Informes Técnicos y Ejecutivos Completos: Nuevo centro de reportes con métricas de rendimiento en pruebas lentas y exportación versátil en PDF, HTML y JSON.",
+      "Gestión Simplificada del Motor de Ejecución: Instalación sencilla desde el IDE con compatibilidad para navegadores Chrome y Edge, gestionable desde un panel centralizado."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
