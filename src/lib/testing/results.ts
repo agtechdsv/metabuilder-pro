@@ -16,6 +16,9 @@ export interface TestEvent {
   ms?: number
   /** primeiras linhas do erro, quando falhou */
   error?: string
+  /** arquivos de evidência da falha (captura da tela e vídeo), quando o motor os gravou */
+  shot?: string
+  video?: string
   /** só em done */
   total?: number
   passed?: number

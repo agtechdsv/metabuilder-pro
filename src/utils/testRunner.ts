@@ -25,7 +25,7 @@ export async function checkRunnerDir(runnerDir: string): Promise<{ ok: boolean; 
 }
 
 /** Pasta de trabalho do motor dentro do perfil do usuário (sempre liberada): manifesto da rodada e quadros do navegador interno. */
-async function workDir(...parts: string[]): Promise<string> {
+export async function workDir(...parts: string[]): Promise<string> {
   const { homeDir, join } = await import('@tauri-apps/api/path')
   return join(await homeDir(), '.metabuilder', 'testes', ...parts)
 }
@@ -43,6 +43,8 @@ export interface StartTestRunOptions {
   mode: TestWatchMode
   /** espera entre as ações no modo ao vivo (ms) */
   slowMoMs?: number
+  /** pasta onde o motor grava a captura de tela e o vídeo das falhas desta rodada */
+  artifactsDir?: string
   onEvent: (ev: TestEvent) => void
   /** linha de saída que não é evento (para o log) */
   onLog?: (line: string) => void
@@ -69,6 +71,7 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
     `$env:E2E_REAL_APP_DIR = '${q(o.appDir)}'`,
     `$env:E2E_VIEWS = '${q(o.viewSlugs.join(','))}'`,
     `$env:E2E_LIVE_DIR = '${q(liveDir)}'`,
+    o.artifactsDir ? `$env:E2E_ARTIFACTS_DIR = '${q(o.artifactsDir)}'` : '',
     o.mode === 'external' ? `$env:E2E_HEADED = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     o.mode === 'internal' ? `$env:E2E_STREAM = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     'npx playwright test -c playwright.dynamic.config.ts --timeout=60000',
@@ -108,4 +111,15 @@ export async function readLiveFrame(): Promise<Uint8Array | null> {
     const { join } = await import('@tauri-apps/api/path')
     return await readFile(await join(await workDir('live'), 'frame.jpg'))
   } catch { return null }
+}
+
+/**
+ * Gera um PDF de verdade a partir do HTML do relatório: o Chrome do motor de testes abre o arquivo e imprime em PDF (e2e/dynamic/make-pdf.mjs).
+ * O arquivo é gravado direto na pasta de destino pelo Node, então não depende da permissão de pastas do Tauri.
+ */
+export async function makePdf(runnerDir: string, htmlPath: string, pdfPath: string): Promise<void> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const script = `Set-Location '${q(runnerDir)}'; node dynamic/make-pdf.mjs '${q(htmlPath)}' '${q(pdfPath)}'`
+  const out = await Command.create('powershell', [...PS, script]).execute()
+  if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao gerar o PDF').trim().split('\n').slice(-3).join(' '))
 }

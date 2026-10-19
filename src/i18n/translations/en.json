@@ -4942,6 +4942,16 @@
     "reset": "Clear",
     "reset_hint": "Clear results and go back to the original state",
     "live_collapse": "Collapse",
-    "live_expand": "Expand"
+    "live_expand": "Expand",
+    "report_generic": "Test report",
+    "report_generic_desc": "Summary, charts, failures and all tests",
+    "download": "Download",
+    "pdf_busy": "Generating the PDF...",
+    "saved_in": "Saved in {path}",
+    "shot_btn": "Screenshot",
+    "video_btn": "Video",
+    "media_shot": "Screenshot of the failure",
+    "media_video": "Video of the failure",
+    "media_missing": "Could not open the file (it may have been deleted)."
   }
 }

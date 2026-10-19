@@ -32,7 +32,10 @@ export default class IdeReporter implements Reporter {
     const message = result.error?.message ?? ''
     // sem os códigos de cor do terminal, e só o começo: o relatório HTML tem o resto
     const error = message ? message.replace(/\u001b\[[0-9;]*m/g, '').split('\n').slice(0, 6).join('\n') : undefined
-    this.emit({ t: 'end', ...this.names(test), status, ms: result.duration, ...(error ? { error } : {}) })
+    const anexo = (nome: string) => result.attachments.find(a => a.name === nome)?.body?.toString()
+    const shot = anexo('mb-shot')
+    const video = anexo('mb-video')
+    this.emit({ t: 'end', ...this.names(test), status, ms: result.duration, ...(error ? { error } : {}), ...(shot ? { shot } : {}), ...(video ? { video } : {}) })
   }
 
   onEnd(_result: FullResult) {

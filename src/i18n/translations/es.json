@@ -5030,6 +5030,16 @@
     "reset": "Limpiar",
     "reset_hint": "Limpiar resultados y volver al estado original",
     "live_collapse": "Contraer",
-    "live_expand": "Expandir"
+    "live_expand": "Expandir",
+    "report_generic": "Informe de pruebas",
+    "report_generic_desc": "Resumen, gráficos, fallos y todas las pruebas",
+    "download": "Descargar",
+    "pdf_busy": "Generando el PDF...",
+    "saved_in": "Guardado en {path}",
+    "shot_btn": "Captura",
+    "video_btn": "Vídeo",
+    "media_shot": "Captura de pantalla del fallo",
+    "media_video": "Vídeo del fallo",
+    "media_missing": "No se pudo abrir el archivo (puede haber sido eliminado)."
   }
 }

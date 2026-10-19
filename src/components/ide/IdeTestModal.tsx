@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser,
+  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser, Image as ImageIcon, Video as VideoIcon,
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, openTestReport, readLiveFrame, startTestRun, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
-import { deleteRuns, historyDir, listRuns, saveRun } from '@/utils/testHistory'
+import { checkRunnerDir, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
@@ -25,7 +25,7 @@ interface Props {
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
 }
 
-interface Result { status: TestStatus; ms?: number; error?: string }
+interface Result { status: TestStatus; ms?: number; error?: string; shot?: string; video?: string }
 const keyOf = (group: string, title: string) => `${group}||${title}`
 
 const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
@@ -57,7 +57,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [logs, setLogs] = useState<string[]>([])
   const handle = useRef<TestRunHandle | null>(null)
   const [reportMenu, setReportMenu] = useState(false)
-  const [report, setReport] = useState<{ mode: 'html' | 'pdf'; html: string } | null>(null)
+  const [report, setReport] = useState<{ html: string; json: string; base: string } | null>(null)
+  const [downloadMenu, setDownloadMenu] = useState(false)
+  const [reportMsg, setReportMsg] = useState<{ kind: 'busy' | 'ok' | 'err'; text: string } | null>(null)
+  const [media, setMedia] = useState<{ kind: 'image' | 'video'; url: string; title: string } | null>(null)
   const reportFrame = useRef<HTMLIFrameElement | null>(null)
   // histórico
   const [history, setHistory] = useState<HistoryRun[]>([])
@@ -156,7 +159,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       rows: planView(v).map(p => {
         const r = res[keyOf(describeName(v), p.title)]
         const status: RowStatus = !r || r.status === 'running' ? 'pending' : r.status
-        return { ...p, status, ms: r?.ms, error: r?.error }
+        return { ...p, status, ms: r?.ms, error: r?.error, shot: r?.shot, video: r?.video }
       }),
     }))
     return { version: 1, id: runId(meta.startedAt), projectId, projectName: target?.name || '', startedAt: meta.startedAt.toISOString(), finishedAt: new Date().toISOString(), mode: meta.mode, stopped: meta.stopped || undefined, groups }
@@ -177,7 +180,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (ev.t === 'done') { setSummary({ total: ev.total ?? 0, passed: ev.passed ?? 0, failed: ev.failed ?? 0, skipped: ev.skipped ?? 0 }); return }
     if (!ev.group || !ev.title) return
     const k = keyOf(ev.group, ev.title)
-    const r: Result = ev.t === 'begin' ? { status: 'running' } : { status: ev.status || 'failed', ms: ev.ms, error: ev.error }
+    const r: Result = ev.t === 'begin' ? { status: 'running' } : { status: ev.status || 'failed', ms: ev.ms, error: ev.error, shot: ev.shot, video: ev.video }
     resultsRef.current = { ...resultsRef.current, [k]: r }
     setResults(prev => ({ ...prev, [k]: r }))
   }, [])
@@ -193,12 +196,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     try {
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
-      runMeta.current = { startedAt: new Date(), views: toRun, mode, stopped: false }
+      const startedAt = new Date()
+      const artifactsDir = await artifactsDirFor(runId(startedAt))
+      runMeta.current = { startedAt, views: toRun, mode, stopped: false }
       setRunTotal(toRun.reduce((n, v) => n + planView(v).length, 0)); setLiveOpen(true)
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
-        onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
+        artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
       })
     } catch (e: any) {
       setRunning(false); runMeta.current = null
@@ -222,7 +227,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   // abrir uma execução do histórico: a tela mostra os resultados como no fim de uma rodada
   const openRun = (r: HistoryRun) => {
     const res: Record<string, Result> = {}
-    for (const g of r.groups) for (const row of g.rows) if (row.status !== 'pending') res[keyOf(g.name, row.title)] = { status: row.status as TestStatus, ms: row.ms, error: row.error }
+    for (const g of r.groups) for (const row of g.rows) if (row.status !== 'pending') res[keyOf(g.name, row.title)] = { status: row.status as TestStatus, ms: row.ms, error: row.error, shot: row.shot, video: row.video }
     const tt = runTotals(r)
     setResults(res); setSummary({ total: tt.total, passed: tt.passed, failed: tt.failed, skipped: tt.other }); setViewing(r); setRunError(''); setTab('run')
   }
@@ -254,36 +259,80 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   }, [running, mode])
   useEffect(() => { if (!isOpen) setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' }) }, [isOpen])
 
+  // ---- evidências da falha (captura de tela e vídeo)
+  const openMedia = async (kind: 'image' | 'video', file: string, title: string) => {
+    const url = await readEvidenceBlob(file, kind === 'image' ? 'image/png' : 'video/webm')
+    if (!url) { setRunError(t('ide_tests.media_missing', 'Não foi possível abrir o arquivo (ele pode ter sido apagado).')); return }
+    setMedia(old => { if (old) URL.revokeObjectURL(old.url); return { kind, url, title } })
+  }
+  const closeMedia = () => setMedia(old => { if (old) URL.revokeObjectURL(old.url); return null })
+
   // ---- relatório (da rodada na tela ou da execução aberta do histórico)
-  const currentGroups = (): { name: string; logicType: string; rows: { title: string; status: RowStatus; ms?: number; error?: string }[] }[] => {
-    if (viewing) return viewing.groups.map(g => ({ name: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ title: planTitle(r, language), status: r.status, ms: r.ms, error: r.error })) }))
+  type GroupData = { name: string; logicType: string; rows: { title: string; text: string; status: RowStatus; ms?: number; error?: string; shot?: string }[] }
+  const currentGroups = (): GroupData[] => {
+    if (viewing) return viewing.groups.map(g => ({ name: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ title: r.title, text: planTitle(r, language), status: r.status, ms: r.ms, error: r.error, shot: r.shot })) }))
     return chosen.map(v => ({
       name: describeName(v), logicType: v.logicType,
-      rows: planView(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: planTitle(p, language), status: (r?.status ?? 'pending') as RowStatus, ms: r?.ms, error: r?.error } }),
+      rows: planView(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: p.title, text: planTitle(p, language), status: (r?.status ?? 'pending') as RowStatus, ms: r?.ms, error: r?.error, shot: r?.shot } }),
     }))
   }
 
-  const showReport = (rmode: 'html' | 'pdf') => {
-    setReportMenu(false)
-    setReport({ mode: rmode, html: buildReportHtml({ project: viewing?.projectName || target?.name || '', generatedAt: viewing ? new Date(viewing.finishedAt) : new Date(), groups: currentGroups(), mode: rmode, lang: language }) })
+  const watchLabel = (m: string) => m === 'internal' ? t('ide_tests.mode_internal_short', 'Navegador interno') : m === 'external' ? t('ide_tests.mode_external_short', 'Navegador do sistema') : t('ide_tests.mode_background_short', 'Segundo plano')
+
+  /** Abre o relatório da rodada: monta o HTML (com a captura de tela das falhas embutida) e o JSON com os mesmos dados. */
+  const showReport = async () => {
+    setReportMenu(false); setReportMsg(null); setDownloadMenu(false)
+    const groups = currentGroups()
+    const when = viewing ? new Date(viewing.finishedAt) : new Date()
+    const watch = watchLabel(viewing?.mode || mode)
+    const withShots = await Promise.all(groups.map(async g => ({
+      name: g.name, logicType: g.logicType,
+      rows: await Promise.all(g.rows.map(async r => ({ title: r.text, status: r.status, ms: r.ms, error: r.error, shot: r.shot && r.status === 'failed' ? await readEvidenceDataUri(r.shot) : undefined }))),
+    })))
+    const project = viewing?.projectName || target?.name || ''
+    const tt = runTotals({ groups: groups.map(g => ({ slug: '', name: g.name, viewTitle: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ kind: 'abre' as const, title: r.title, status: r.status, ms: r.ms })) })) })
+    const json = JSON.stringify({
+      project, generatedAt: when.toISOString(), mode: viewing?.mode || mode, language,
+      totals: { total: tt.total, passed: tt.passed, failed: tt.failed, notRun: tt.other, successRate: tt.rate, totalMs: tt.ms },
+      groups: groups.map(g => ({ name: g.name, logicType: g.logicType, tests: g.rows.map(r => ({ name: r.title, description: r.text, status: r.status, ms: r.ms ?? null, error: r.error ?? null, screenshot: r.shot ?? null })) })),
+    }, null, 2)
+    setReport({
+      html: buildReportHtml({ project, generatedAt: when, groups: withShots, mode: 'html', lang: language, watch }),
+      json, base: `relatorio-testes-${(target?.slug || 'projeto')}-${when.toISOString().slice(0, 16).replace(/[:T]/g, '-')}`,
+    })
   }
 
-  const downloadReport = async () => {
+  /** Download do relatório em PDF (gerado de verdade pelo Chrome do motor de testes), HTML ou JSON. */
+  const downloadReport = async (fmt: 'pdf' | 'html' | 'json') => {
     if (!report) return
-    const name = `relatorio-testes-${(target?.slug || 'projeto')}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.html`
+    setDownloadMenu(false); setReportMsg(null)
+    const file = `${report.base}.${fmt}`
     try {
-      if (isTauri()) {
-        const dir = await pickFolder()
-        if (!dir) return
-        const { writeTextFile } = await import('@tauri-apps/plugin-fs')
-        const { join } = await import('@tauri-apps/api/path')
-        await writeTextFile(await join(dir, name), report.html)
-      } else {
+      if (!isTauri()) {
         const a = document.createElement('a')
-        a.href = URL.createObjectURL(new Blob([report.html], { type: 'text/html' }))
-        a.download = name; a.click(); URL.revokeObjectURL(a.href)
+        a.href = URL.createObjectURL(new Blob([fmt === 'json' ? report.json : report.html], { type: fmt === 'json' ? 'application/json' : 'text/html' }))
+        a.download = file; a.click(); URL.revokeObjectURL(a.href)
+        return
       }
-    } catch (e: any) { setRunError(e?.message || t('ide_tests.err_save_report', 'Não foi possível salvar o relatório.')) }
+      if (fmt === 'pdf' && !runnerDir) { setReportMsg({ kind: 'err', text: t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).') }); return }
+      const dir = await pickFolder()
+      if (!dir) return
+      const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs')
+      const { join } = await import('@tauri-apps/api/path')
+      if (fmt === 'pdf') {
+        setReportMsg({ kind: 'busy', text: t('ide_tests.pdf_busy', 'Gerando o PDF...') })
+        const tmpDir = await workDir('report')
+        await mkdir(tmpDir, { recursive: true }).catch(() => {})
+        const html = await join(tmpDir, `${report.base}.html`)
+        await writeTextFile(html, report.html)
+        await makePdf(runnerDir, html, await join(dir, file))
+      } else {
+        await writeTextFile(await join(dir, file), fmt === 'json' ? report.json : report.html)
+      }
+      setReportMsg({ kind: 'ok', text: t('ide_tests.saved_in', 'Salvo em {path}').replace('{path}', await join(dir, file)) })
+    } catch (e: any) {
+      setReportMsg({ kind: 'err', text: `${t('ide_tests.err_save_report', 'Não foi possível salvar o relatório.')} (${e?.message || e})` })
+    }
   }
 
   if (!isOpen || !target) return null
@@ -295,13 +344,20 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       <button onClick={() => setReportMenu(m => !m)} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"><FileText className="w-4 h-4" /> {t('ide_tests.report', 'Abrir relatório')} <ChevronDown className="w-3.5 h-3.5" /></button>
       {reportMenu && (
         <div className="absolute bottom-full right-0 mb-2 w-72 rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl p-1 z-10">
-          <button onClick={() => showReport('html')} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_html', 'HTML interativo')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_html_desc', 'Painel com filtros, busca e grupos por caso de uso')}</span></button>
-          <button onClick={() => showReport('pdf')} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">PDF</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_pdf_desc', 'Layout de papel: imprimir ou salvar como PDF')}</span></button>
+          <button onClick={showReport} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_generic', 'Relatório de testes')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_generic_desc', 'Resumo, gráficos, falhas e todos os testes')}</span></button>
           {!viewing && <button onClick={() => { setReportMenu(false); openTestReport(runnerDir) }} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_tech', 'Relatório técnico (Playwright)')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_tech_desc', 'Com rastros e capturas das falhas')}</span></button>}
         </div>
       )}
     </div>
   )
+
+  /** Captura e vídeo da falha, ao lado do teste que falhou. */
+  const evidence = (shot?: string, video?: string, title = '') => (shot || video) ? (
+    <span className="ml-2 inline-flex gap-1">
+      {shot && <button onClick={() => openMedia('image', shot, title)} className="inline-flex items-center gap-1 rounded-md border border-red-500/30 px-1.5 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"><ImageIcon className="w-3 h-3" /> {t('ide_tests.shot_btn', 'Captura')}</button>}
+      {video && <button onClick={() => openMedia('video', video, title)} className="inline-flex items-center gap-1 rounded-md border border-red-500/30 px-1.5 py-0.5 text-[10px] text-red-300 hover:bg-red-500/10"><VideoIcon className="w-3 h-3" /> {t('ide_tests.video_btn', 'Vídeo')}</button>}
+    </span>
+  ) : null
 
   return (
     <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
@@ -395,7 +451,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                         <li key={p.title} className="text-xs">
                           <div className="flex items-start gap-2">
                             <StatusIcon s={p.status} />
-                            <span className={p.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>
+                            <span className={p.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{p.status === 'failed' && evidence(p.shot, p.video, planTitle(p, language))}
                             {p.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(p.ms / 1000).toFixed(1)}s</span>}
                           </div>
                           {p.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{p.error}</pre>}
@@ -456,7 +512,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                                 <li key={p.title} className="text-xs">
                                   <div className="flex items-start gap-2">
                                     <StatusIcon s={r?.status ?? 'pending'} />
-                                    <span className={r?.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>
+                                    <span className={r?.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{r?.status === 'failed' && evidence(r.shot, r.video, planTitle(p, language))}
                                     {r?.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(r.ms / 1000).toFixed(1)}s</span>}
                                   </div>
                                   {r?.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{r.error}</pre>}
@@ -542,12 +598,36 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
           <div className="w-full max-w-5xl h-[92vh] flex flex-col rounded-2xl bg-neutral-900 border border-neutral-700 overflow-hidden shadow-2xl">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800">
               <FileText className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm font-bold text-white flex-1">{report.mode === 'pdf' ? t('ide_tests.report_title_pdf', 'Relatório (PDF)') : t('ide_tests.report_title', 'Relatório de testes')}</span>
-              <button onClick={() => reportFrame.current?.contentWindow?.print()} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"><Printer className="w-4 h-4" /> {report.mode === 'pdf' ? t('ide_tests.print_pdf', 'Imprimir / Salvar PDF') : t('ide_tests.print', 'Imprimir')}</button>
-              <button onClick={downloadReport} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"><Download className="w-4 h-4" /> {t('ide_tests.download_html', 'Baixar HTML')}</button>
-              <button onClick={() => setReport(null)} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
+              <span className="text-sm font-bold text-white flex-1">{t('ide_tests.report_title', 'Relatório de testes')}</span>
+              {reportMsg && <span className={`text-[11px] max-w-xs truncate ${reportMsg.kind === 'err' ? 'text-red-300' : reportMsg.kind === 'ok' ? 'text-emerald-300' : 'text-neutral-400'}`} title={reportMsg.text}>{reportMsg.kind === 'busy' && <Loader2 className="inline w-3 h-3 animate-spin mr-1" />}{reportMsg.text}</span>}
+              <button onClick={() => reportFrame.current?.contentWindow?.print()} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"><Printer className="w-4 h-4" /> {t('ide_tests.print', 'Imprimir')}</button>
+              <div className="relative">
+                <button onClick={() => setDownloadMenu(m => !m)} disabled={reportMsg?.kind === 'busy'} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"><Download className="w-4 h-4" /> {t('ide_tests.download', 'Download')} <ChevronDown className="w-3.5 h-3.5" /></button>
+                {downloadMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl p-1 z-10">
+                    {(['pdf', 'html', 'json'] as const).map(f => <button key={f} onClick={() => downloadReport(f)} className="w-full text-left rounded-lg px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800">{f.toUpperCase()}</button>)}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => { setReport(null); setReportMsg(null); setDownloadMenu(false) }} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
             </div>
             <iframe ref={reportFrame} title={t('ide_tests.report_title', 'Relatório de testes')} srcDoc={report.html} sandbox="allow-scripts allow-modals allow-same-origin" className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
+
+      {media && (
+        <div className="fixed inset-0 z-[1000003] flex items-center justify-center bg-black/80 p-4" onClick={closeMedia}>
+          <div className="w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl bg-neutral-900 border border-neutral-700 overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800">
+              {media.kind === 'image' ? <ImageIcon className="w-4 h-4 text-red-300" /> : <VideoIcon className="w-4 h-4 text-red-300" />}
+              <span className="text-sm font-bold text-white">{media.kind === 'image' ? t('ide_tests.media_shot', 'Captura da tela da falha') : t('ide_tests.media_video', 'Vídeo da falha')}</span>
+              <span className="text-xs text-neutral-400 flex-1 truncate">{media.title}</span>
+              <button onClick={closeMedia} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="overflow-auto bg-black flex items-center justify-center">
+              {media.kind === 'image' ? <img src={media.url} alt="" className="max-w-full" /> : <video src={media.url} controls autoPlay className="max-w-full max-h-[78vh]" />}
+            </div>
           </div>
         </div>
       )}

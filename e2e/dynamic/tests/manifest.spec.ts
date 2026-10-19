@@ -1,4 +1,4 @@
-import { test as base, expect, type Locator, type Page } from '@playwright/test'
+import { test as base, expect, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { entrar } from '../../real/tests/helpers'
@@ -20,20 +20,15 @@ import { aplicarMascara, camposEditaveis, describeName, planView } from '../../.
  * Variáveis: E2E_MANIFEST (caminho do manifesto) e E2E_VIEWS (slugs dos casos de uso a testar, separados por vírgula; vazio = todos).
  */
 /**
- * Uma janela do navegador para a rodada inteira (no modo "ver ao vivo" ela não abre e fecha a cada teste). Entre um teste e outro a sessão é
- * encerrada (cookies e armazenamento limpos = logout) e o login é refeito, então cada teste continua começando do zero.
- */
-/**
- * "Navegador interno" da IDE: com E2E_STREAM=1 o navegador roda escondido e cada quadro da tela (screencast do Chrome) é gravado em dynamic/live/frame.jpg;
+ * "Navegador interno" da IDE: com E2E_STREAM=1 o navegador roda escondido e cada quadro da tela (screencast do Chrome) é gravado em E2E_LIVE_DIR/frame.jpg;
  * o painel da IDE lê esse arquivo e mostra a execução dentro dele. Grava num arquivo temporário e renomeia, para o painel nunca ler um quadro pela metade.
  */
-async function transmitirTela(ctx: import('@playwright/test').BrowserContext, pagina: Page): Promise<() => Promise<void>> {
+async function transmitirTela(ctx: BrowserContext, pagina: Page): Promise<() => Promise<void>> {
   if (process.env.E2E_STREAM !== '1') return async () => {}
   const dir = process.env.E2E_LIVE_DIR || path.join(import.meta.dirname, '..', 'live')
   fs.mkdirSync(dir, { recursive: true })
   const quadro = path.join(dir, 'frame.jpg')
   const tmp = path.join(dir, 'frame.tmp')
-  try { fs.rmSync(quadro, { force: true }) } catch { /* nada a limpar */ }
   const cdp = await ctx.newCDPSession(pagina)
   cdp.on('Page.screencastFrame', (f: { data: string; sessionId: number }) => {
     try { fs.writeFileSync(tmp, Buffer.from(f.data, 'base64')); fs.renameSync(tmp, quadro) } catch { /* o painel leu no mesmo instante: o próximo quadro cobre */ }
@@ -43,21 +38,68 @@ async function transmitirTela(ctx: import('@playwright/test').BrowserContext, pa
   return async () => { await cdp.send('Page.stopScreencast').catch(() => {}) }
 }
 
-const test = base.extend<object, { janela: Page }>({
-  janela: [async ({ browser }, use) => {
-    const ctx = await browser.newContext({ baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR', ...(process.env.E2E_HEADED === '1' ? { viewport: null } : {}) })
-    const pagina = await ctx.newPage()
-    const parar = await transmitirTela(ctx, pagina)
-    await use(pagina)
-    await parar()
+/**
+ * Evidências das falhas (E2E_ARTIFACTS_DIR): captura da tela no momento da falha e vídeo do teste que falhou. O caminho dos arquivos vai para o
+ * relator (anexos "mb-shot" e "mb-video") e dali para o painel e o histórico. O vídeo só existe quando cada teste tem a sua página (modo sem janela
+ * do sistema); com a janela do sistema fica a captura de tela.
+ */
+const ARTEFATOS = process.env.E2E_ARTIFACTS_DIR || ''
+const COM_JANELA = process.env.E2E_HEADED === '1'
+/** O vídeo precisa do ffmpeg do Playwright (npx playwright install ffmpeg). Sem ele, a falha fica só com a captura de tela. */
+const TEM_FFMPEG = (() => {
+  try {
+    const raiz = process.env.PLAYWRIGHT_BROWSERS_PATH && process.env.PLAYWRIGHT_BROWSERS_PATH !== '0' ? process.env.PLAYWRIGHT_BROWSERS_PATH : path.join(process.env.LOCALAPPDATA || path.join(process.env.HOME || '', '.cache'), 'ms-playwright')
+    return fs.readdirSync(raiz).some(d => d.startsWith('ffmpeg-') && fs.readdirSync(path.join(raiz, d)).some(f => f.startsWith('ffmpeg')))
+  } catch { return false }
+})()
+const nomeSeguro = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+const anexar = (info: TestInfo, nome: string, arquivo: string) => info.attach(nome, { body: Buffer.from(arquivo), contentType: 'text/plain' })
+let sequencia = 0
+let compartilhada: Page | undefined
+
+/**
+ * Com a janela do sistema: uma só janela para a rodada inteira (não abre e fecha a cada teste). Sem ela: uma página nova por teste (é o que permite
+ * gravar o vídeo de cada um). Nos dois casos a sessão começa limpa (cookies apagados = logout) e o login é refeito, então cada teste começa do zero.
+ */
+const test = base.extend<object, { contexto: BrowserContext }>({
+  contexto: [async ({ browser }, use) => {
+    const ctx = await browser.newContext({
+      baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR',
+      ...(COM_JANELA ? { viewport: null } : { viewport: { width: 1280, height: 800 } }),
+      ...(!COM_JANELA && ARTEFATOS && TEM_FFMPEG ? { recordVideo: { dir: path.join(ARTEFATOS, '_video'), size: { width: 1280, height: 800 } } } : {}),
+    })
+    await use(ctx)
     await ctx.close()
   }, { scope: 'worker' }],
-  page: async ({ janela }, use) => {
-    janela.removeAllListeners('pageerror')
-    await janela.context().clearCookies()
-    await janela.goto('about:blank')
-    await janela.evaluate(() => { try { localStorage.clear(); sessionStorage.clear() } catch { /* sem armazenamento */ } }).catch(() => {})
-    await use(janela)
+  page: async ({ contexto }, use, testInfo) => {
+    await contexto.clearCookies()
+    let pagina: Page
+    if (COM_JANELA) {
+      if (!compartilhada || compartilhada.isClosed()) compartilhada = await contexto.newPage()
+      pagina = compartilhada
+      await pagina.goto('about:blank')
+    } else {
+      pagina = await contexto.newPage()
+    }
+    const parar = await transmitirTela(contexto, pagina)
+    await use(pagina)
+    await parar()
+    const falhou = testInfo.status !== testInfo.expectedStatus
+    const base = `${String(++sequencia).padStart(3, '0')}-${nomeSeguro(testInfo.title)}`
+    if (ARTEFATOS && falhou) {
+      fs.mkdirSync(ARTEFATOS, { recursive: true })
+      try { const png = path.join(ARTEFATOS, base + '.png'); await pagina.screenshot({ path: png }); await anexar(testInfo, 'mb-shot', png) } catch { /* página já fechada */ }
+    }
+    if (!COM_JANELA) {
+      const video = pagina.video()
+      await pagina.close().catch(() => {})
+      if (video) {
+        try {
+          if (ARTEFATOS && falhou) { const webm = path.join(ARTEFATOS, base + '.webm'); await video.saveAs(webm); await anexar(testInfo, 'mb-video', webm) }
+          await video.delete()
+        } catch { /* sem vídeo desta vez */ }
+      }
+    }
   },
 })
 

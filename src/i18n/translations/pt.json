@@ -4942,6 +4942,16 @@
     "reset": "Limpar",
     "reset_hint": "Limpar resultados e voltar ao estado original",
     "live_collapse": "Recolher",
-    "live_expand": "Expandir"
+    "live_expand": "Expandir",
+    "report_generic": "Relatório de testes",
+    "report_generic_desc": "Resumo, gráficos, falhas e todos os testes",
+    "download": "Download",
+    "pdf_busy": "Gerando o PDF...",
+    "saved_in": "Salvo em {path}",
+    "shot_btn": "Captura",
+    "video_btn": "Vídeo",
+    "media_shot": "Captura da tela da falha",
+    "media_video": "Vídeo da falha",
+    "media_missing": "Não foi possível abrir o arquivo (ele pode ter sido apagado)."
   }
 }
