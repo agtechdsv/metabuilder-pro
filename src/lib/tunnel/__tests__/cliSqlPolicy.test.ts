@@ -53,6 +53,19 @@ describe('leitura — cada referência à tabela vira uma subconsulta filtrada',
     expect(applyToSelect('SELECT * FROM "pedidos"', a, { dbType: 'oracle' })).toBe('SELECT * FROM (SELECT * FROM "pedidos" WHERE ("funcionario_id" = \'7\')) "pedidos"')
   })
 
+  it('Oracle: a lista paginada com JOIN usa o apelido da subconsulta sem AS e não é recusada', () => {
+    const sql = `SELECT "pedidos"."id" FROM (
+    SELECT DISTINCT "pedidos".* FROM "pedidos"
+    LEFT JOIN "clientes" ON "pedidos"."cliente_id" = "clientes"."id"
+    ORDER BY "pedidos"."id" DESC
+    OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
+  ) "pedidos" LEFT JOIN "clientes" ON "pedidos"."cliente_id" = "clientes"."id"`
+    const out = applyToSelect(sql, a, { dbType: 'oracle' })
+    expect(out).toContain(`FROM ${SUB7} "pedidos"
+    LEFT JOIN "clientes"`)
+    expect(out).toContain(') "pedidos" LEFT JOIN "clientes"')
+  })
+
   it('sem política nas tabelas citadas, o SQL não muda', () => {
     const sql = 'SELECT * FROM "clientes" WHERE 1=1'
     expect(applyToSelect(sql, a)).toBe(sql)

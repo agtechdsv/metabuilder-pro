@@ -268,7 +268,9 @@ function rewriteTokens(toks, policies, dbType, from = 0) {
       const qualifier = nx >= 0 && isPunct(toks[nx], '.');
       const aliasDef = pv >= 0 && isWord(toks[pv], 'as');
       const afterDot = pv >= 0 && isPunct(toks[pv], '.');
-      if (!qualifier && !aliasDef && !afterDot) {
+      // Oracle não aceita AS antes do apelido: `FROM (subconsulta) "tabela"` é o apelido da subconsulta já filtrada
+      const aliasAfterParen = pv >= 0 && isPunct(toks[pv], ')');
+      if (!qualifier && !aliasDef && !afterDot && !aliasAfterParen) {
         throw new PolicyError(`A tabela "${nm}" tem acesso restrito e foi citada numa forma não permitida.`);
       }
     }
