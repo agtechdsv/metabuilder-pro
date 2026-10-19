@@ -161,8 +161,11 @@ test.describe('gestão de acesso: permissões de telas', () => {
     await entrar(page)
     await abrir(page, '/acesso-permissoes')
     const linhaProdutos = page.locator('tbody tr').filter({ has: page.locator('td p', { hasText: /^\/produtos$/ }) })
-    const celulaLeitura = linhaProdutos.locator('td').nth(1) // 1ª coluna de grupo = E2E-Leitura
-    // primeira coluna de grupo = E2E-Leitura: Produtos → Nenhum
+    // a coluna do grupo de teste é achada pelo NOME no cabeçalho (nunca por posição: um clique no grupo errado alteraria um grupo de verdade)
+    const colunaLeitura = (await page.locator('thead th').allInnerTexts()).findIndex(t => /E2E-Leitura/i.test(t))
+    expect(colunaLeitura).toBeGreaterThan(0)
+    const celulaLeitura = linhaProdutos.locator('td').nth(colunaLeitura)
+    // Produtos → Nenhum só para o grupo E2E-Leitura
     await celulaLeitura.locator('button', { hasText: /^Nenhum$/ }).click()
     await expect.poll(async () => (await realQuery('select access_level from mb_role_permissions where role_id = $1 and view_slug = $2', [GRUPO_LEITURA_ID, 'produtos']))[0]?.access_level).toBe('none')
 

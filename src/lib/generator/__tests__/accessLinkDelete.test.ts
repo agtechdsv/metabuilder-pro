@@ -77,6 +77,15 @@ describe('gestão de acesso: trocar o grupo não apaga o vínculo dos outros usu
     expect(calls).toHaveLength(1)
   })
 
+  it('Oracle: o UPDATE grava o que o controle de acesso devolve (com atualizado_por/em), não a lista de colunas de antes', () => {
+    const files = generateNodeProject(parseMetaBuilderJSON(raw('oracle'), 'oracle'))
+    const src = files.get('app/actions/usuarios.ts')!
+    expect(src).toContain("const clean = (await secureWrite({ action: 'update'")
+    // as colunas do SET vêm do resultado do secureWrite (onde a auditoria foi aplicada)
+    const apartirDoUpdate = src.slice(src.indexOf('export async function updateUsuarios'))
+    expect(apartirDoUpdate.indexOf("const clean = (await secureWrite({ action: 'update'")).toBeLessThan(apartirDoUpdate.indexOf('const keys = Object.keys(clean)'))
+  })
+
   it('as outras pilhas (Oracle, MySQL, SQL Server) também têm a exclusão por filtro', () => {
     for (const stack of ['oracle', 'mysql', 'sqlserver'] as const) {
       const files = generateNodeProject(parseMetaBuilderJSON(raw(stack), stack))

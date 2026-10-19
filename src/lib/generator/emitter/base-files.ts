@@ -69,8 +69,8 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
       "postcss": "^8.4.0",
       "autoprefixer": "^10.4.20",
       "@types/bcryptjs": "^2.4.6",
-      // o `next build` confere os tipos: pg e mssql não trazem os seus
-      ...(ast.dbStack === 'sqlserver' ? { "@types/mssql": "^9.1.5" } : ast.dbStack === 'supabase' || ast.dbStack === 'oracle' || ast.dbStack === 'mysql' ? {} : { "@types/pg": "^8.11.10" })
+      // o `next build` confere os tipos: pg, mssql e oracledb não trazem os seus
+      ...(ast.dbStack === 'sqlserver' ? { "@types/mssql": "^9.1.5" } : ast.dbStack === 'oracle' ? { "@types/oracledb": "^6.5.0" } : ast.dbStack === 'supabase' || ast.dbStack === 'mysql' ? {} : { "@types/pg": "^8.11.10" })
     },
     // exceljs (exportação) puxa traverse@>=0.3 <0.4: a 0.3.10 exige uma versão de which-typed-array que o registro não tem e o npm install falha
     ...(routesNeedExport(ast) ? { overrides: { "traverse": "0.3.9" } } : {})

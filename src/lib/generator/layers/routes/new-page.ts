@@ -1,6 +1,6 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
-import { renderFormField, getByocComponentName, appendFieldActions, masterActionButtonsHtml } from './helpers'
+import { renderFormField, getByocComponentName, appendFieldActions, masterActionButtonsHtml, FORMULA_EVAL_HELPERS } from './helpers'
 import { generateDetailPage } from './detail-page'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,6 +192,7 @@ function formatWithMask(v: any, mask?: string) {
   return s
 }
 
+${FORMULA_EVAL_HELPERS}
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: '${dict.form.new_prefix} — ${route.title}' }
 

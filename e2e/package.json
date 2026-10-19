@@ -19,7 +19,15 @@
     "real:start": "npm run real:prepare && npm run real:ui",
     "real:run": "npm run real:prepare && npm run real:test",
     "real:robot:func": "node scripts/create-robot.mjs func",
-    "real:robot:leitura": "node scripts/create-robot.mjs leitura"
+    "real:robot:leitura": "node scripts/create-robot.mjs leitura",
+    "ora:robot": "node scripts/create-robot-oracle.mjs",
+    "ora:robot:func": "node scripts/create-robot-oracle.mjs func",
+    "ora:robot:leitura": "node scripts/create-robot-oracle.mjs leitura",
+    "ora:prepare": "node scripts/prepare-real.mjs oracle",
+    "ora:test": "playwright test -c playwright.oracle.config.ts",
+    "ora:ui": "playwright test -c playwright.oracle.config.ts --ui",
+    "ora:start": "npm run ora:prepare && npm run ora:ui",
+    "ora:run": "npm run ora:prepare && npm run ora:test"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

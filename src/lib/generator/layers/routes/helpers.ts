@@ -420,38 +420,8 @@ export function renderFormField(
           </div>`
 }
 
-export const FORM_INPUT_FORMAT_HELPERS = `
-function formatDateForInput(v: any) {
-  if (!v) return ''
-  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v
-  try {
-    const d = new Date(v)
-    if (!isNaN(d.getTime())) {
-      const year = d.getUTCFullYear()
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
-      const day = String(d.getUTCDate()).padStart(2, '0')
-      return \`\${year}-\${month}-\${day}\`
-    }
-  } catch (e) {}
-  return String(v).slice(0, 10)
-}
-
-function formatDatetimeForInput(v: any) {
-  if (!v) return ''
-  try {
-    const d = new Date(v)
-    if (!isNaN(d.getTime())) {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const hours = String(d.getHours()).padStart(2, '0')
-      const minutes = String(d.getMinutes()).padStart(2, '0')
-      return \`\${year}-\${month}-\${day}T\${hours}:\${minutes}\`
-    }
-  } catch (e) {}
-  return String(v).slice(0, 16)
-}
-
+/** Cálculo de campos de fórmula do Studio (também usado pela página de cadastro, que tem os próprios helpers de formato). */
+export const FORMULA_EVAL_HELPERS = `
 function parseAnyNumber(val: any): number {
   if (typeof val === 'number') return isNaN(val) ? 0 : val
   if (!val) return 0
@@ -532,6 +502,41 @@ function evaluateFormula(tokens: any[], currentRow: Record<string, any> = {}): a
     return null
   }
 }
+`
+
+export const FORM_INPUT_FORMAT_HELPERS = `
+function formatDateForInput(v: any) {
+  if (!v) return ''
+  if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(d.getUTCDate()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 10)
+}
+
+function formatDatetimeForInput(v: any) {
+  if (!v) return ''
+  try {
+    const d = new Date(v)
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      return \`\${year}-\${month}-\${day}T\${hours}:\${minutes}\`
+    }
+  } catch (e) {}
+  return String(v).slice(0, 16)
+}
+
+${FORMULA_EVAL_HELPERS}
 
 function recalculateFormulas(container: HTMLElement | null) {
   if (!container) return

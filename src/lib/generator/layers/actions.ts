@@ -1081,17 +1081,17 @@ export async function create${model.name}(formData: FormData | Record<string, an
 }
 
 export async function update${model.name}(id: string, formData: FormData | Record<string, any>) {
-  const clean = parsePayload(formData)
-  delete clean['${pk}']
-  delete clean['${pk.toLowerCase()}']
-  delete clean['${pk.toUpperCase()}']
-  const keys = Object.keys(clean)
-  if (keys.length === 0) {
+  const parsed = parsePayload(formData)
+  delete parsed['${pk}']
+  delete parsed['${pk.toLowerCase()}']
+  delete parsed['${pk.toUpperCase()}']
+  if (Object.keys(parsed).length === 0) {
     revalidatePath('/${model.name.toLowerCase()}')
     return
   }
-  // permissão da tabela, valores gravados e linha atingida dentro da regra de acesso (ver app/actions/access)
-  await secureWrite({ action: 'update', table: ${JSON.stringify(accessTable)}, data: clean, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => query(q) })
+  // permissão da tabela, valores gravados (com a auditoria: atualizado_por/em) e linha atingida dentro da regra de acesso (ver app/actions/access)
+  const clean = (await secureWrite({ action: 'update', table: ${JSON.stringify(accessTable)}, data: parsed, idColumn: ${JSON.stringify(pk)}, idValue: id, query: async (q) => query(q) })) || {}
+  const keys = Object.keys(clean)
   const setString = keys.map(k => \`"\${k}" = :\${k}\`).join(', ')
   
   await query(\`UPDATE "${model.dbTable}" SET \${setString} WHERE "${pk}" = :id\`, { ...clean, id })
