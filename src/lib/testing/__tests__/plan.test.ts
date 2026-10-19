@@ -14,8 +14,9 @@ const view = (over: Partial<ManifestView> = {}): ManifestView => ({
 describe('plano de testes de um caso de uso', () => {
   it('Pesquisa + Cadastro: lista e formulário sempre; obrigatórios só se há campo obrigatório', () => {
     const p = planView(view())
-    expect(p.map(t => t.kind)).toEqual(['lista', 'formulario', 'obrigatorios'])
-    expect(planView(view({ form: [campo('nome')] })).map(t => t.kind)).toEqual(['lista', 'formulario'])
+    expect(p.map(t => t.kind)).toContain('obrigatorios')
+    expect(planView(view({ form: [campo('nome')] })).map(t => t.kind)).not.toContain('obrigatorios')
+    expect(p.map(t => t.kind).slice(0, 3)).toEqual(['abre', 'lista', 'formulario'])
   })
 
   it('um teste de máscara por campo com máscara de padrão fixo; máscara numérica não entra', () => {
@@ -25,9 +26,31 @@ describe('plano de testes de um caso de uso', () => {
     expect(mascaraDePadrao('(00) 00000-0000')).toBe(true)
   })
 
-  it('tipos de tela sem gabarito não geram testes (aparecem como "ainda sem teste automático")', () => {
+  it('campo de data não ganha teste de máscara (o app usa o seletor nativo de data)', () => {
+    const p = planView(view({ form: [campo('data', { dataType: 'date', mask: '00/00/0000' }), campo('quando', { dataType: 'timestamp', mask: '00/00/0000' }), campo('cnpj', { mask: '00.000.000/0000-00' })] }))
+    expect(p.filter(t => t.kind === 'mascara').map(t => t.field)).toEqual(['cnpj'])
+  })
+
+  it('tipos de tela sem gabarito completo ganham só "a tela abre"', () => {
     expect(isSupportedView(view({ logicType: 'kanban' }))).toBe(false)
-    expect(planView(view({ logicType: 'kanban' }))).toEqual([])
+    expect(planView(view({ logicType: 'kanban' })).map(t => t.kind)).toEqual(['abre'])
+  })
+
+  it('grid: total sempre; ordenação e filtro só com campo de texto (o filtro também precisa estar no grid)', () => {
+    const base = { grid: [campo('nome', { label: 'Nome' }), campo('status', { options: [{ value: 'a', label: 'A' }] })], filter: [campo('nome', { label: 'Nome' })] }
+    const p = planView(view(base))
+    expect(p.filter(t => t.kind === 'grid_total')).toHaveLength(1)
+    expect(p.find(t => t.kind === 'grid_ordenacao')?.field).toBe('nome')
+    expect(p.find(t => t.kind === 'grid_filtro')?.field).toBe('nome')
+    const semGrid = planView(view({ grid: [campo('status', { options: [{ value: 'a', label: 'A' }] })], filter: [campo('nome')] }))
+    expect(semGrid.some(t => t.kind === 'grid_ordenacao')).toBe(false)
+    expect(semGrid.some(t => t.kind === 'grid_filtro')).toBe(false)
+  })
+
+  it('exportação: um teste por formato liberado no Studio (csv, json, xlsx)', () => {
+    const p = planView(view({ exportFormats: ['xlsx', 'csv', 'json', 'pdf'] }))
+    expect(p.filter(t => t.kind === 'exportacao').map(t => t.format)).toEqual(['xlsx', 'csv', 'json'])
+    expect(planView(view({ exportFormats: [] })).some(t => t.kind === 'exportacao')).toBe(false)
   })
 
   it('aplicarMascara: cada 0 consome um dígito e o resto é literal', () => {

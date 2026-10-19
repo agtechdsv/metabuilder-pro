@@ -24,7 +24,7 @@ const keyOf = (group: string, title: string) => `${group}||${title}`
 
 /** Tipos de teste: só o primeiro existe hoje; os demais mostram o caminho que vem. */
 const TEST_TYPES = [
-  { id: 'funcional', label: 'Funcional · Pesquisa + Cadastro', desc: 'Lista, filtros, formulário, obrigatórios e máscaras de cada caso de uso', available: true },
+  { id: 'funcional', label: 'Funcional · Pesquisa + Cadastro', desc: 'Todo caso de uso: a tela abre. Pesquisa + Cadastro: lista, formulário, obrigatórios, máscaras, total, ordenação, filtro e exportação', available: true },
   { id: 'integracao', label: 'Integração', desc: 'Cadastro completo gravando no banco de teste', available: false },
   { id: 'seguranca', label: 'Segurança', desc: 'Permissões, regras por linha e entradas maliciosas', available: false },
   { id: 'visual', label: 'Responsividade e acessibilidade', desc: 'Tamanhos de tela, contraste e leitor de tela', available: false },
@@ -87,7 +87,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       if (!res.ok) throw new Error(json?.error || `Erro ${res.status}`)
       const m = json as TestManifest
       setManifest(m)
-      setSelected(Object.fromEntries(m.views.map(v => [v.slug, isSupportedView(v)])))
+      setSelected(Object.fromEntries(m.views.map(v => [v.slug, planView(v).length > 0])))
     } catch (e: any) {
       setLoadError(e?.message || 'Não foi possível gerar o plano.')
     } finally {
@@ -99,7 +99,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   useEffect(() => { if (!isOpen) { setManifest(null); setResults({}); setSummary(null); setRunError('') } }, [isOpen])
 
   const views = manifest?.views ?? []
-  const chosen = useMemo(() => views.filter(v => selected[v.slug] && isSupportedView(v)), [views, selected])
+  const chosen = useMemo(() => views.filter(v => selected[v.slug] && planView(v).length > 0), [views, selected])
   const plannedCount = useMemo(() => chosen.reduce((n, v) => n + planView(v).length, 0), [chosen])
 
   const pick = async (kind: 'runner' | 'app') => {
@@ -154,7 +154,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Segurança */}
-          <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+          <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
             <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste. Hoje o motor só aceita banco local da lista permitida e confere, no fim, que nenhuma linha real foi alterada. Rodar no banco original só com o seu consentimento (em breve).')}</p>
           </div>
@@ -188,15 +188,16 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
             {target.type !== 'project' && <p className="text-sm text-neutral-400">{t('ide_tests.only_project', 'Por enquanto os testes rodam por projeto. Abra um projeto na IDE.')}</p>}
             <div className="space-y-2">
               {views.map((v: ManifestView) => {
-                const ok = isSupportedView(v)
                 const plan = planView(v)
+                const ok = plan.length > 0
+                const completo = isSupportedView(v)
                 return (
                   <div key={v.slug} className={`rounded-xl border ${ok ? 'border-neutral-700 bg-neutral-800/40' : 'border-neutral-800 bg-neutral-900/40 opacity-60'}`}>
                     <label className="flex items-center gap-3 px-4 py-2.5 cursor-pointer">
                       <input type="checkbox" disabled={!ok || running} checked={!!selected[v.slug] && ok} onChange={e => setSelected(s => ({ ...s, [v.slug]: e.target.checked }))} className="accent-indigo-500" />
                       <span className="text-sm font-semibold text-white">{v.title}</span>
                       <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400">{v.logicType}</span>
-                      <span className="ml-auto text-xs text-neutral-400">{ok ? `${plan.length} ${t('ide_tests.tests', 'testes')}` : t('ide_tests.no_template', 'ainda sem teste automático')}</span>
+                      <span className="ml-auto text-xs text-neutral-400">{ok ? `${plan.length} ${plan.length === 1 ? t('ide_tests.test', 'teste') : t('ide_tests.tests', 'testes')}${completo ? '' : ' · ' + t('ide_tests.basic_only', 'só "a tela abre" (gabarito completo em breve)')}` : t('ide_tests.no_template', 'ainda sem teste automático')}</span>
                     </label>
                     {ok && selected[v.slug] && (
                       <ul className="px-4 pb-3 space-y-1">
@@ -209,7 +210,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                                 <span className={r?.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{p.title}</span>
                                 {r?.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(r.ms / 1000).toFixed(1)}s</span>}
                               </div>
-                              {r?.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300/90 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{r.error}</pre>}
+                              {r?.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{r.error}</pre>}
                             </li>
                           )
                         })}
@@ -242,8 +243,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
           <section>
             <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">4 · {t('ide_tests.mode', 'Como acompanhar')}</h3>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => setLive(true)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${live ? 'border-indigo-500/50 bg-indigo-500/10 text-white' : 'border-neutral-700 text-neutral-400'}`}><Eye className="w-4 h-4" /> {t('ide_tests.live', 'Ver ao vivo (abre o navegador)')}</button>
-              <button onClick={() => setLive(false)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${!live ? 'border-indigo-500/50 bg-indigo-500/10 text-white' : 'border-neutral-700 text-neutral-400'}`}><EyeOff className="w-4 h-4" /> {t('ide_tests.background', 'Em segundo plano (mais rápido)')}</button>
+              <button onClick={() => setLive(true)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${live ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}><Eye className="w-4 h-4" /> {t('ide_tests.live', 'Ver ao vivo (abre o navegador)')}</button>
+              <button onClick={() => setLive(false)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${!live ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}><EyeOff className="w-4 h-4" /> {t('ide_tests.background', 'Em segundo plano (mais rápido)')}</button>
               {live && (
                 <select value={slow} onChange={e => setSlow(Number(e.target.value))} disabled={running} className="rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-xs text-neutral-200">
                   <option value={0}>{t('ide_tests.speed_fast', 'Rápido')}</option>
