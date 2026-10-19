@@ -1,4 +1,5 @@
 import type { TestStatus } from './results'
+import type { PlanLang } from './plan'
 
 /**
  * Relatório de uma rodada do Ambiente de Testes: um único HTML autossuficiente (sem rede, sem bibliotecas), agrupado por caso de uso, com filtro por
@@ -13,10 +14,17 @@ export interface ReportInput {
   groups: ReportGroup[]
   /** modo da rodada: impressão abre direto com layout de papel */
   mode: 'html' | 'pdf'
+  /** idioma do relatório (os títulos dos testes já vêm traduzidos em `groups`) */
+  lang?: PlanLang
+}
+
+const TXT: Record<PlanLang, Record<string, string>> = {
+  pt: { title: 'Relatório de testes', generated: 'Gerado em', engine: 'motor dinâmico do MetaBuilder PRO', ok: 'Aprovado', bad: 'Reprovado', none: 'Sem execução', tests: 'Testes', passed: 'Passaram', failed: 'Falharam', rate: 'Taxa de sucesso', time: 'Tempo total', all: 'Todos', notrun: 'Não executados', search: 'Buscar teste ou caso de uso...', okw: 'ok', fail: 'falha', fails: 'falhas', testsw: 'testes', foot: 'Os testes só leem dados e conferem, no fim, que nenhuma linha real foi alterada.', s_passed: 'Passou', s_failed: 'Falhou', s_skipped: 'Ignorado', s_running: 'Interrompido', s_pending: 'Não executado', locale: 'pt-BR' },
+  en: { title: 'Test report', generated: 'Generated on', engine: 'MetaBuilder PRO dynamic engine', ok: 'Approved', bad: 'Failed', none: 'Not run', tests: 'Tests', passed: 'Passed', failed: 'Failed', rate: 'Success rate', time: 'Total time', all: 'All', notrun: 'Not run', search: 'Search test or use case...', okw: 'ok', fail: 'failure', fails: 'failures', testsw: 'tests', foot: 'The tests only read data and check, at the end, that no real row was changed.', s_passed: 'Passed', s_failed: 'Failed', s_skipped: 'Skipped', s_running: 'Interrupted', s_pending: 'Not run', locale: 'en-US' },
+  es: { title: 'Informe de pruebas', generated: 'Generado el', engine: 'motor dinámico de MetaBuilder PRO', ok: 'Aprobado', bad: 'Reprobado', none: 'Sin ejecución', tests: 'Pruebas', passed: 'Pasaron', failed: 'Fallaron', rate: 'Tasa de éxito', time: 'Tiempo total', all: 'Todas', notrun: 'No ejecutadas', search: 'Buscar prueba o caso de uso...', okw: 'ok', fail: 'fallo', fails: 'fallos', testsw: 'pruebas', foot: 'Las pruebas solo leen datos y comprueban, al final, que ninguna fila real fue modificada.', s_passed: 'Pasó', s_failed: 'Falló', s_skipped: 'Omitida', s_running: 'Interrumpida', s_pending: 'No ejecutada', locale: 'es-ES' },
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const LABEL: Record<string, string> = { passed: 'Passou', failed: 'Falhou', skipped: 'Ignorado', running: 'Interrompido', pending: 'Não executado' }
 
 export function reportTotals(groups: ReportGroup[]) {
   const all = groups.flatMap(g => g.rows)
@@ -28,8 +36,9 @@ export function reportTotals(groups: ReportGroup[]) {
 
 export function buildReportHtml(input: ReportInput): string {
   const t = reportTotals(input.groups)
-  const when = input.generatedAt.toLocaleString('pt-BR')
-  const veredito = t.failed === 0 && t.passed > 0 ? ['ok', 'Aprovado'] : t.failed > 0 ? ['bad', 'Reprovado'] : ['warn', 'Sem execução']
+  const L = TXT[input.lang || 'pt']
+  const when = input.generatedAt.toLocaleString(L.locale)
+  const veredito = t.failed === 0 && t.passed > 0 ? ['ok', L.ok] : t.failed > 0 ? ['bad', L.bad] : ['warn', L.none]
   const groups = input.groups.map(g => {
     const gp = g.rows.filter(r => r.status === 'passed').length
     const gf = g.rows.filter(r => r.status === 'failed').length
@@ -37,21 +46,21 @@ export function buildReportHtml(input: ReportInput): string {
       <li class="row ${r.status}" data-status="${r.status}">
         <span class="dot"></span>
         <div class="main"><div class="ttl">${esc(r.title)}</div>${r.error ? `<pre class="err">${esc(r.error)}</pre>` : ''}</div>
-        <span class="badge ${r.status}">${LABEL[r.status] || r.status}</span>
+        <span class="badge ${r.status}">${L['s_' + r.status] || r.status}</span>
         <span class="ms">${r.ms != null ? (r.ms / 1000).toFixed(1) + ' s' : ''}</span>
       </li>`).join('')
     return `
     <section class="grp" data-open="1">
       <header onclick="this.parentNode.classList.toggle('closed')">
         <h3>${esc(g.name)}</h3><span class="tag">${esc(g.logicType)}</span>
-        <span class="cnt"><b class="g">${gp}</b> ok${gf ? ` · <b class="r">${gf}</b> falha${gf > 1 ? 's' : ''}` : ''} · ${g.rows.length} testes</span>
+        <span class="cnt"><b class="g">${gp}</b> ${L.okw}${gf ? ` · <b class="r">${gf}</b> ${gf > 1 ? L.fails : L.fail}` : ''} · ${g.rows.length} ${L.testsw}</span>
       </header>
       <ul>${rows}</ul>
     </section>`
   }).join('')
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Relatório de testes · ${esc(input.project)}</title>
+  return `<!doctype html><html lang="${input.lang || 'pt'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${L.title} · ${esc(input.project)}</title>
 <style>
 :root{--bg:#f5f6fa;--card:#fff;--ink:#14161f;--mut:#667085;--line:#e4e7ee;--ok:#12a150;--okb:#e6f6ec;--bad:#d92d20;--badb:#fdecea;--warn:#b54708;--warnb:#fef3e2;--acc:#4f46e5}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1117;--card:#171a23;--ink:#eceef5;--mut:#98a2b3;--line:#262b38;--okb:#10281b;--badb:#2e1512;--warnb:#2b2112}}
@@ -86,18 +95,18 @@ input[type=search]{flex:1;min-width:180px;border:1px solid var(--line);backgroun
 @media print{:root{--bg:#fff;--card:#fff;--ink:#111;--mut:#555;--line:#ddd;--okb:#e6f6ec;--badb:#fdecea;--warnb:#fef3e2}
  .tools{display:none}.wrap{padding:0;max-width:none}.grp{break-inside:avoid;page-break-inside:avoid}.grp.closed ul{display:block}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head><body><div class="wrap">
-<div class="top"><div><h1>Relatório de testes · ${esc(input.project)}</h1><div class="sub">Gerado em ${esc(when)} · motor dinâmico do MetaBuilder PRO</div></div><span class="verdict ${veredito[0]}">${veredito[1]}</span></div>
+<div class="top"><div><h1>${L.title} · ${esc(input.project)}</h1><div class="sub">${L.generated} ${esc(when)} · ${L.engine}</div></div><span class="verdict ${veredito[0]}">${veredito[1]}</span></div>
 <div class="cards">
- <div class="card"><div class="n">${t.total}</div><div class="l">Testes</div></div>
- <div class="card"><div class="n g">${t.passed}</div><div class="l">Passaram</div></div>
- <div class="card"><div class="n r">${t.failed}</div><div class="l">Falharam</div></div>
- <div class="card"><div class="n">${t.rate}%</div><div class="l">Taxa de sucesso</div></div>
- <div class="card"><div class="n">${(t.ms / 1000).toFixed(0)} s</div><div class="l">Tempo total</div></div>
+ <div class="card"><div class="n">${t.total}</div><div class="l">${L.tests}</div></div>
+ <div class="card"><div class="n g">${t.passed}</div><div class="l">${L.passed}</div></div>
+ <div class="card"><div class="n r">${t.failed}</div><div class="l">${L.failed}</div></div>
+ <div class="card"><div class="n">${t.rate}%</div><div class="l">${L.rate}</div></div>
+ <div class="card"><div class="n">${(t.ms / 1000).toFixed(0)} s</div><div class="l">${L.time}</div></div>
 </div>
 <div class="bar"><i class="p" style="width:${t.total ? (t.passed / t.total) * 100 : 0}%"></i><i class="f" style="width:${t.total ? (t.failed / t.total) * 100 : 0}%"></i><i class="o" style="width:${t.total ? (t.other / t.total) * 100 : 0}%"></i></div>
-<div class="tools"><button class="chip on" data-f="all">Todos</button><button class="chip" data-f="passed">Passaram</button><button class="chip" data-f="failed">Falharam</button><button class="chip" data-f="other">Não executados</button><input type="search" id="q" placeholder="Buscar teste ou caso de uso..."></div>
+<div class="tools"><button class="chip on" data-f="all">${L.all}</button><button class="chip" data-f="passed">${L.passed}</button><button class="chip" data-f="failed">${L.failed}</button><button class="chip" data-f="other">${L.notrun}</button><input type="search" id="q" placeholder="${L.search}"></div>
 ${groups}
-<div class="foot">Os testes só leem dados e conferem, no fim, que nenhuma linha real foi alterada.</div>
+<div class="foot">${L.foot}</div>
 </div>
 <script>
 (function(){var f='all',q='';function ap(){document.querySelectorAll('.grp').forEach(function(g){var any=false;g.querySelectorAll('.row').forEach(function(r){var s=r.dataset.status,okf=f==='all'||s===f||(f==='other'&&s!=='passed'&&s!=='failed');var okq=!q||(r.textContent+g.querySelector('h3').textContent).toLowerCase().indexOf(q)>=0;var show=okf&&okq;r.classList.toggle('hide',!show);if(show)any=true});g.classList.toggle('hide',!any)})}

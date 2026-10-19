@@ -18,7 +18,44 @@ export interface PlannedTest {
   field?: string
   /** formato, quando é de exportação (csv, json, xlsx) */
   format?: string
+  /** rótulo do campo e máscara (entram no texto traduzido do teste) */
+  label?: string
+  mask?: string
 }
+
+export type PlanLang = 'pt' | 'en' | 'es'
+
+/**
+ * Texto do teste no idioma da tela. O `title` (português) é o NOME do teste para o Playwright e a chave dos resultados e do histórico: não muda
+ * com o idioma. Só o que aparece na tela (painel, relatório, comparativo) passa por aqui.
+ */
+const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest) => string>> = {
+  en: {
+    abre: () => 'the screen opens without errors and shows the use case title',
+    lista: () => 'list: the use case filters and columns are on the screen',
+    formulario: () => 'new form: the fields exist, with required and read-only as configured',
+    mascara: p => `mask of "${p.label}" (${p.mask}) formats what is typed`,
+    obrigatorios: () => 'required fields: saving the empty form does not create a record',
+    grid_total: () => 'grid: the total shown equals the database total',
+    grid_ordenacao: p => `grid: sort by "${p.label}" in both directions`,
+    grid_filtro: p => `filter by "${p.label}": filters the rows and the Clear button undoes it`,
+    exportacao: p => `${FORMATOS_EXPORTACAO[p.format || ''] || p.format} export: ${({ csv: 'header with the grid columns and one line per record', json: 'one item per record', xlsx: 'valid .xlsx file' } as Record<string, string>)[p.format || ''] || ''}`,
+  },
+  es: {
+    abre: () => 'la pantalla abre sin errores y muestra el título del caso de uso',
+    lista: () => 'lista: los filtros y las columnas del caso de uso están en la pantalla',
+    formulario: () => 'formulario nuevo: los campos existen, con obligatorio y solo lectura como configurado',
+    mascara: p => `la máscara de "${p.label}" (${p.mask}) formatea lo que se escribe`,
+    obrigatorios: () => 'obligatorios: guardar el formulario vacío no crea registro',
+    grid_total: () => 'grid: el total mostrado es igual al total de la base de datos',
+    grid_ordenacao: p => `grid: ordenar por "${p.label}" en ambos sentidos`,
+    grid_filtro: p => `filtro de "${p.label}": filtra las filas y el botón Limpiar lo deshace`,
+    exportacao: p => `exportación ${FORMATOS_EXPORTACAO[p.format || ''] || p.format}: ${({ csv: 'encabezado con las columnas del grid y una línea por registro', json: 'un elemento por registro', xlsx: 'archivo .xlsx válido' } as Record<string, string>)[p.format || ''] || ''}`,
+  },
+}
+
+/** Texto do teste para mostrar na tela, no idioma pedido (português = o próprio título). */
+export const planTitle = (p: PlannedTest, lang: PlanLang): string => (lang === 'pt' ? p.title : PLAN_TEXT[lang]?.[p.kind]?.(p) ?? p.title)
 
 /** Tipos de tela com gabarito COMPLETO (lista, formulário, grid, exportação). Os demais têm só "a tela abre" por enquanto (kanban, gantt, BI... entram aqui). */
 export const SUPPORTED_LOGIC_TYPES = ['pesquisa_cadastro']
@@ -68,14 +105,14 @@ export function planView(v: ManifestView): PlannedTest[] {
     { kind: 'lista', title: 'lista: os filtros e as colunas do caso de uso estão na tela' },
     { kind: 'formulario', title: 'formulário novo: os campos existem, com obrigatório e somente leitura como configurado' },
   )
-  for (const f of editaveis.filter(x => mascaraDePadrao(x.mask) && !ehData(x))) plano.push({ kind: 'mascara', field: f.column, title: `máscara de "${f.label}" (${f.mask}) formata o que se digita` })
+  for (const f of editaveis.filter(x => mascaraDePadrao(x.mask) && !ehData(x))) plano.push({ kind: 'mascara', field: f.column, label: f.label, mask: f.mask, title: `máscara de "${f.label}" (${f.mask}) formata o que se digita` })
   if (editaveis.some(f => f.required)) plano.push({ kind: 'obrigatorios', title: 'obrigatórios: salvar o formulário vazio não cria registro' })
 
   plano.push({ kind: 'grid_total', title: 'grid: o total mostrado é igual ao total do banco' })
   const ord = campoDeOrdenacao(v)
-  if (ord) plano.push({ kind: 'grid_ordenacao', field: ord.column, title: `grid: ordenar por "${ord.label}" nos dois sentidos` })
+  if (ord) plano.push({ kind: 'grid_ordenacao', field: ord.column, label: ord.label, title: `grid: ordenar por "${ord.label}" nos dois sentidos` })
   const fil = campoDeFiltro(v)
-  if (fil) plano.push({ kind: 'grid_filtro', field: fil.column, title: `filtro de "${fil.label}": filtra as linhas e o botão Limpar desfaz` })
+  if (fil) plano.push({ kind: 'grid_filtro', field: fil.column, label: fil.label, title: `filtro de "${fil.label}": filtra as linhas e o botão Limpar desfaz` })
 
   const descr: Record<string, string> = {
     csv: 'cabeçalho com as colunas do grid e uma linha por registro',
