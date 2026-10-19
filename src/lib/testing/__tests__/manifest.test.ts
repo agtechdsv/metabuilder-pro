@@ -66,4 +66,19 @@ describe('manifesto de testes a partir do projeto', () => {
     expect(buildTestManifest(ast, { viewSlugs: ['nao-existe'] }).views).toEqual([])
     expect(buildTestManifest(ast, { viewSlugs: ['clientes'] }).views).toHaveLength(1)
   })
+  it('traz a configuração de login (tabela de usuários, colunas, hash e, com gestão de acesso, grupos e vínculo)', async () => {
+    const { ast } = await loadProjectAst(world(), { projectId: 'p1', dbStack: 'postgres' })
+    expect(buildTestManifest(ast).auth).toMatchObject({ type: 'none' })
+    const comLogin = { ...ast, authConfig: { authType: 'database', tableName: 'usuarios', emailColumn: 'email', passwordColumn: 'hash_senha', hashFormat: 'BCRYPT' } }
+    expect(buildTestManifest(comLogin as any).auth).toEqual({ type: 'database', usersTable: 'usuarios', emailColumn: 'email', passwordColumn: 'hash_senha', hash: 'bcrypt' })
+    const comAcesso = { ...comLogin, accessAdmin: {
+      usersModel: 'Usuarios', usersTable: 'usuarios', usersPk: 'id', emailCol: 'email', passCol: 'hash_senha', nameCol: 'nome_completo', hash: 'bcrypt',
+      groups: { model: 'Perfis', table: 'perfis', pk: 'id', nameCol: 'nome', synthetic: false },
+      link: { kind: 'table', model: 'PerfisUsuarios', table: 'perfis_usuarios', pk: 'id', userCol: 'usuario_id', roleCol: 'perfil_id', synthetic: false },
+      perms: { model: 'P', table: 'mb_role_permissions', pk: 'id', roleCol: 'role_id', viewCol: 'view_slug', levelCol: 'access_level' }, views: [], seed: { roles: [], permissions: [], userRoles: [] },
+    } }
+    const a = buildTestManifest(comAcesso as any).auth!
+    expect(a.access).toEqual({ groupsTable: 'perfis', groupsPk: 'id', groupsNameColumn: 'nome', link: { kind: 'table', table: 'perfis_usuarios', userColumn: 'usuario_id', roleColumn: 'perfil_id' }, permsTable: 'mb_role_permissions' })
+    expect(a.nameColumn).toBe('nome_completo')
+  })
 })

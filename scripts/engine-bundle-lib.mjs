@@ -15,6 +15,7 @@ export const ENGINE_FILES = {
   'e2e/dynamic/ide-reporter.ts': 'e2e/dynamic/ide-reporter.ts',
   'e2e/dynamic/make-pdf.mjs': 'e2e/dynamic/make-pdf.mjs',
   'e2e/dynamic/prepare-app.mjs': 'e2e/dynamic/prepare-app.mjs',
+  'e2e/dynamic/db-tool.mjs': 'e2e/dynamic/db-tool.mjs',
   'e2e/dynamic/global-setup.ts': 'e2e/dynamic/global-setup.ts',
   'e2e/dynamic/global-teardown.ts': 'e2e/dynamic/global-teardown.ts',
   'e2e/dynamic/lib/config.ts': 'e2e/dynamic/lib/config.ts',

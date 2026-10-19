@@ -57,15 +57,23 @@ export interface StartTestRunOptions {
 
 export interface TestRunHandle { stop: () => Promise<void> }
 
+/** Grava o manifesto da rodada na pasta de trabalho (dentro do perfil do usuário) e devolve o caminho. */
+export async function writeManifest(manifest: TestManifest): Promise<string> {
+  const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs')
+  const { join } = await import('@tauri-apps/api/path')
+  const dir = await workDir('manifests')
+  try { await mkdir(dir, { recursive: true }) } catch { /* já existe */ }
+  const file = await join(dir, '_ide.json')
+  await writeTextFile(file, JSON.stringify(manifest, null, 2))
+  return file
+}
+
 export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandle> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs')
   const { join } = await import('@tauri-apps/api/path')
 
-  const manifestDir = await workDir('manifests')
-  try { await mkdir(manifestDir, { recursive: true }) } catch { /* já existe */ }
-  const manifestPath = await join(manifestDir, '_ide.json')
-  await writeTextFile(manifestPath, JSON.stringify(o.manifest, null, 2))
+  const manifestPath = await writeManifest(o.manifest)
   const liveDir = await workDir('live')
   try { await mkdir(liveDir, { recursive: true }) } catch { /* já existe */ }
 

@@ -3,6 +3,7 @@ import { CONFIG } from './config'
 
 /** Entra no app exportado com o usuário de teste. */
 export async function entrar(page: Page) {
+  if (CONFIG.noAuth) return // app sem login
   await page.goto('/login')
   await page.locator('input[name="email"]').fill(CONFIG.user)
   await page.locator('input[name="password"]').fill(CONFIG.password)

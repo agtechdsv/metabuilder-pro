@@ -1,5 +1,5 @@
 import type { AppAST, ResolvedField, RouteNode, RelationTab } from '../generator/ast'
-import { MANIFEST_VERSION, type ManifestDetail, type ManifestField, type ManifestView, type TestManifest } from './manifestTypes'
+import { MANIFEST_VERSION, type ManifestAuth, type ManifestDetail, type ManifestField, type ManifestView, type TestManifest } from './manifestTypes'
 
 export * from './manifestTypes'
 
@@ -66,6 +66,24 @@ export function manifestView(r: RouteNode): ManifestView {
 }
 
 /** Manifesto de um projeto (ou só dos casos de uso pedidos, pelo slug). Telas do sistema (login, downloads, gestão de acesso) não entram. */
+/** Configuração de login do projeto (a mesma que o gerador usa), no formato do manifesto. */
+export function manifestAuth(ast: AppAST): ManifestAuth {
+  const c = ast.authConfig
+  const a = ast.accessAdmin
+  const type = c?.authType || 'none'
+  if (a) {
+    return {
+      type, usersTable: a.usersTable, usersPk: a.usersPk, emailColumn: a.emailCol, passwordColumn: a.passCol, nameColumn: a.nameCol, hash: a.hash,
+      access: {
+        groupsTable: a.groups.table, groupsPk: a.groups.pk, groupsNameColumn: a.groups.nameCol,
+        link: a.link.kind === 'column' ? { kind: 'column', column: a.link.col } : { kind: 'table', table: a.link.table, userColumn: a.link.userCol, roleColumn: a.link.roleCol },
+        permsTable: a.perms.table,
+      },
+    }
+  }
+  return { type, usersTable: c?.tableName, emailColumn: c?.emailColumn, passwordColumn: c?.passwordColumn, hash: (c?.hashFormat || 'bcrypt').toLowerCase() }
+}
+
 export function buildTestManifest(ast: AppAST, opts: { viewSlugs?: string[]; now?: Date } = {}): TestManifest {
   const only = opts.viewSlugs && opts.viewSlugs.length > 0 ? new Set(opts.viewSlugs) : null
   return {
@@ -73,6 +91,7 @@ export function buildTestManifest(ast: AppAST, opts: { viewSlugs?: string[]; now
     generatedAt: (opts.now ?? new Date()).toISOString(),
     project: { id: ast.projectId ?? '', name: ast.projectName ?? '', slug: ast.projectSlug ?? '' },
     dbStack: ast.dbStack,
+    auth: manifestAuth(ast),
     views: ast.routes.filter(r => !only || only.has(r.viewSlug)).map(manifestView),
   }
 }

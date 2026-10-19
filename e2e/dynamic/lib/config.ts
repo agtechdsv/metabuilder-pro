@@ -15,6 +15,14 @@ export interface EngineConfig {
   /** usuário do app que o robô usa para entrar */
   user: string
   password: string
+  /** copy = uma cópia do banco que o cliente informou (padrão) · original = o banco do próprio app, só com o consentimento do cliente */
+  mode: 'copy' | 'original'
+  /** o cliente confirmou na IDE que o banco informado é uma cópia de teste (modo copy) */
+  copyConfirmed: boolean
+  /** o cliente consentiu na IDE em rodar no banco original (modo original) */
+  consentOriginal: boolean
+  /** app sem login: o robô não entra */
+  noAuth: boolean
   /** permite banco que não é desta máquina (só com o consentimento do cliente, dado na IDE) */
   allowRemote: boolean
   /** bancos permitidos; vazio = o próprio banco de dbUrl */
@@ -40,7 +48,7 @@ export function loadConfig(): EngineConfig {
   const file = process.env.E2E_CONFIG
   if (file) {
     const j = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<EngineConfig>
-    return { appDir: '', port: 3102, dbUrl: '', user: '', password: '', allowRemote: false, allowedDbs: [], exportDir, ...j }
+    return { appDir: '', port: 3102, dbUrl: '', user: '', password: '', mode: 'copy', copyConfirmed: false, consentOriginal: false, noAuth: false, allowRemote: false, allowedDbs: [], exportDir, ...j }
   }
   const env = parseEnv(path.join(engineRoot, '.env.real'))
   const val = (k: string, d = '') => process.env[k] ?? env[k] ?? d
@@ -50,6 +58,10 @@ export function loadConfig(): EngineConfig {
     dbUrl: val('E2E_REAL_PG_URL'),
     user: val('E2E_REAL_USER'),
     password: val('E2E_REAL_PASSWORD'),
+    mode: 'original',
+    copyConfirmed: false,
+    consentOriginal: true, // modo do repositório: o dev usa o próprio banco de desenvolvimento, com as travas antigas (lista de bancos permitidos, só local)
+    noAuth: false,
     allowRemote: false,
     allowedDbs: val('E2E_REAL_ALLOWED_DBS', 'crm').split(',').map(s => s.trim()).filter(Boolean),
     exportDir,

@@ -8,8 +8,9 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
-import { detectBrowser, engineE2eDir, engineStatus, installEngine, readAppDbUrl, writeEngineConfig, type EngineStatus } from '@/utils/testEngine'
+import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { buildDbUrl, dbKey, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
+import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
@@ -52,8 +53,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [engineBusy, setEngineBusy] = useState<'' | 'files' | 'npm'>('')
   const [engineErr, setEngineErr] = useState('')
   const [browserName, setBrowserName] = useState<'chrome' | 'msedge' | null>(null)
-  const [testUser, setTestUser] = useState('')
-  const [testPass, setTestPass] = useState('')
+  const [dbSettings, setDbSettings] = useState<DbSettings>(emptyDbSettings())
+  const [dbBusy, setDbBusy] = useState<DbBusy>('')
+  const [dbResult, setDbResult] = useState<DbResult | null>(null)
+  const [appDbHint, setAppDbHint] = useState('')
   const runnerDir = engineMode === 'managed' ? managedDir : customDir
   const setEngineMode = (m: 'managed' | 'custom') => { setEngineModeState(m); lsSet('mb_tests_engine_mode', m) }
   const [mode, setMode] = useState<TestWatchMode>('internal')
@@ -109,15 +112,90 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!isOpen) return
     setRunnerDir(lsGet('mb_tests_runner_dir'))
     setAppDir(lsGet(`mb_tests_app_dir_${projectId}`))
-    setTestUser(lsGet(`mb_tests_user_${projectId}`))
-    setTestPass(lsGet(`mb_tests_pass_${projectId}`))
+    setDbResult(null)
+    if (isTauri()) loadDbSettings(projectSlug).then(setDbSettings).catch(() => {})
     // quem já usava a pasta e2e continua nela; quem nunca escolheu começa pelo motor instalado pela IDE
     setEngineModeState((lsGet('mb_tests_engine_mode') as 'managed' | 'custom') || (lsGet('mb_tests_runner_dir') ? 'custom' : 'managed'))
     if (!isTauri()) return
     engineE2eDir().then(setManagedDir).catch(() => {})
     engineStatus().then(setEngineSt).catch(() => setEngineSt(null))
     detectBrowser().then(setBrowserName).catch(() => setBrowserName(null))
-  }, [isOpen, projectId])
+  }, [isOpen, projectId, projectSlug])
+
+  // a conexão que o app exportado já usa (com a senha escondida): é o que o modo "banco original" mostra
+  useEffect(() => {
+    if (!isOpen || !appDir || !isTauri()) { setAppDbHint(''); return }
+    readAppDbUrl(appDir).then(u => setAppDbHint(u ? u.replace(/(:\/\/[^:@/]+:)[^@]+@/, '$1***@') : '')).catch(() => setAppDbHint(''))
+  }, [isOpen, appDir])
+
+  const updateDb = (patch: Partial<DbSettings>) => {
+    setDbSettings(prev => { const next = { ...prev, ...patch }; saveDbSettings(projectSlug, next).catch(() => {}); return next })
+    setDbResult(null)
+  }
+
+  /** Conexão com o banco de teste escolhido (cópia informada ou o banco do próprio app). */
+  const resolveDbUrl = async (ds: DbSettings): Promise<string | null> => {
+    if (ds.mode === 'copy') return ds.host.trim() && ds.port.trim() && ds.database.trim() && ds.user.trim() ? buildDbUrl(ds) : null
+    return readAppDbUrl(appDir)
+  }
+
+  /** Grava a configuração da rodada e chama a ferramenta de banco do motor. */
+  const callDbTool = async (action: 'check' | 'prepare' | 'remove', ds: DbSettings) => {
+    if (!manifest) return { ok: false as const, error: t('ide_tests.err_plan', 'Não foi possível gerar o plano.') }
+    const dbUrl = await resolveDbUrl(ds)
+    if (!dbUrl) return { ok: false as const, error: ds.mode === 'copy' ? t('ide_tests.db_err_fields', 'Preencha servidor, porta, banco e usuário.') : t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.') }
+    const manifestPath = await writeManifest(manifest)
+    const configPath = await writeEngineConfig(projectSlug, {
+      appDir, dbUrl, user: '', password: '', mode: ds.mode, copyConfirmed: ds.copyConfirmed, consentOriginal: ds.consentOriginal, noAuth: false,
+      allowRemote: ds.mode === 'original' && ds.consentOriginal, robotPassword: ds.robot?.password,
+    })
+    return { ...(await runDbTool(action, { runnerDir, configPath, manifestPath })), dbUrl }
+  }
+
+  const testDb = async () => {
+    setDbBusy('test'); setDbResult(null)
+    try {
+      const r = await callDbTool('check', dbSettings)
+      if (!r.ok) { setDbResult({ kind: 'err', text: `${t('ide_tests.db_fail', 'Não foi possível conectar:')} ${r.error}` }); return }
+      const falt = (r as any).tables?.missing ?? []
+      const total = (r as any).tables?.expected ?? 0
+      setDbResult({
+        kind: falt.length ? 'warn' : 'ok',
+        text: t('ide_tests.db_ok', 'Conectado a {db} ({version}). Tabelas dos casos de uso: {n} de {total} encontradas.').replace('{db}', String((r as any).database)).replace('{version}', String((r as any).version)).replace('{n}', String(total - falt.length)).replace('{total}', String(total))
+          + (falt.length ? ` ${t('ide_tests.db_missing', 'Faltam no banco: {list}').replace('{list}', falt.join(', '))}` : ''),
+      })
+    } catch (e: any) { setDbResult({ kind: 'err', text: String(e?.message || e) }) } finally { setDbBusy('') }
+  }
+
+  /** Cria (ou renova) o usuário de teste do app no banco de teste e guarda a senha gerada. Devolve o que a rodada precisa. */
+  const prepareRobot = async (ds: DbSettings): Promise<{ ok: boolean; error?: string; noAuth?: boolean; robot?: DbSettings['robot'] }> => {
+    const r = await callDbTool('prepare', ds)
+    if (!r.ok) return { ok: false, error: r.error }
+    if ((r as any).noAuth) return { ok: true, noAuth: true }
+    const robot = { user: String((r as any).user), password: String((r as any).password), forDb: dbKey((r as any).dbUrl), group: (r as any).group ?? null }
+    const next = { ...ds, robot }
+    setDbSettings(next); saveDbSettings(projectSlug, next).catch(() => {})
+    return { ok: true, robot }
+  }
+
+  const prepareDb = async () => {
+    setDbBusy('prepare'); setDbResult(null)
+    try {
+      const r = await prepareRobot(dbSettings)
+      setDbResult(r.ok
+        ? { kind: 'ok', text: r.noAuth ? t('ide_tests.db_robot_noauth', 'O app não tem login: nenhum usuário é necessário.') : t('ide_tests.db_robot_ready', 'Usuário de teste pronto ({user}).').replace('{user}', r.robot!.user) + (r.robot!.group ? ` ${t('ide_tests.db_robot_group', 'No grupo "{g}".').replace('{g}', r.robot!.group)}` : '') }
+        : { kind: 'err', text: r.error || '' })
+    } catch (e: any) { setDbResult({ kind: 'err', text: String(e?.message || e) }) } finally { setDbBusy('') }
+  }
+
+  const removeRobot = async () => {
+    setDbBusy('remove'); setDbResult(null)
+    try {
+      const r = await callDbTool('remove', dbSettings)
+      if (r.ok) { const next = { ...dbSettings, robot: undefined }; setDbSettings(next); saveDbSettings(projectSlug, next).catch(() => {}); setDbResult({ kind: 'ok', text: t('ide_tests.db_robot_removed', 'Usuário de teste removido do banco.') }) }
+      else setDbResult({ kind: 'err', text: r.error || '' })
+    } catch (e: any) { setDbResult({ kind: 'err', text: String(e?.message || e) }) } finally { setDbBusy('') }
+  }
 
   /** Instala (ou atualiza) o motor na pasta do usuário. O clique do usuário é o consentimento: baixa pacotes do npm. */
   const doInstallEngine = async () => {
@@ -248,15 +326,25 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
     if (engineMode === 'managed') {
       if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
-      if (!testUser.trim() || !testPass) { setRunError(t('ide_tests.err_cred', 'Informe o e-mail e a senha do usuário de teste do app.')); return }
+      if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
     }
     setRunning(true)
     try {
       let configPath: string | undefined
       if (engineMode === 'managed') {
-        const dbUrl = await readAppDbUrl(appDir)
-        if (!dbUrl) { setRunning(false); setRunError(t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
-        configPath = await writeEngineConfig(projectSlug, { appDir, dbUrl, user: testUser.trim(), password: testPass })
+        const dbUrl = await resolveDbUrl(dbSettings)
+        if (!dbUrl) { setRunning(false); setRunError(dbSettings.mode === 'copy' ? t('ide_tests.db_err_fields', 'Preencha servidor, porta, banco e usuário.') : t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
+        let robot = dbSettings.robot && dbSettings.robot.forDb === dbKey(dbUrl) ? dbSettings.robot : undefined
+        let noAuth = manifest.auth?.type === 'none'
+        if (!robot && !noAuth) {
+          const prep = await prepareRobot(dbSettings)
+          if (!prep.ok) { setRunning(false); setRunError(`${t('ide_tests.db_fail', 'Não foi possível conectar:')} ${prep.error}`); return }
+          robot = prep.robot; noAuth = !!prep.noAuth
+        }
+        configPath = await writeEngineConfig(projectSlug, {
+          appDir, dbUrl, user: robot?.user ?? '', password: robot?.password ?? '', mode: dbSettings.mode, copyConfirmed: dbSettings.copyConfirmed,
+          consentOriginal: dbSettings.consentOriginal, noAuth, allowRemote: dbSettings.mode === 'original' && dbSettings.consentOriginal,
+        })
       }
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
@@ -623,16 +711,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                       </div>
                     )}
                     {engineErr && <p className="text-[11px] text-red-300 whitespace-pre-wrap">{engineErr}</p>}
-                    {engineMode === 'managed' && (
-                      <div>
-                        <p className="text-[11px] text-neutral-400 mb-1">{t('ide_tests.cred_title', 'Usuário de teste do app')} — {t('ide_tests.cred_help', 'e-mail e senha de um usuário do app exportado com acesso total; só os testes o usam.')}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <input value={testUser} onChange={e => { setTestUser(e.target.value); lsSet(`mb_tests_user_${projectId}`, e.target.value) }} disabled={running} placeholder={t('ide_tests.cred_email', 'E-mail')} className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600" />
-                          <input type="password" value={testPass} onChange={e => { setTestPass(e.target.value); lsSet(`mb_tests_pass_${projectId}`, e.target.value) }} disabled={running} placeholder={t('ide_tests.cred_pass', 'Senha')} className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600" />
-                        </div>
-                      </div>
-                    )}
                   </div>
+                )}
+                {desktop && engineMode === 'managed' && (
+                  <IdeTestDb settings={dbSettings} onChange={updateDb} appDbHint={appDbHint} busy={dbBusy} result={dbResult} engineReady={!!engineSt?.installed} disabled={running}
+                    authType={manifest?.auth?.type ?? null} onTest={testDb} onPrepare={prepareDb} onRemove={removeRobot} />
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {(([...(engineMode === 'custom' ? [['runner', t('ide_tests.runner', 'Motor de testes (pasta e2e)'), customDir]] : []), ['app', t('ide_tests.app', 'App exportado a testar'), appDir]]) as ['runner' | 'app', string, string][]).map(([kind, label, value]) => (

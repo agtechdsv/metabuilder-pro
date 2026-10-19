@@ -80,15 +80,80 @@ export async function readAppDbUrl(appDir: string): Promise<string | null> {
   return m ? m[1].trim() : null
 }
 
-export interface EngineRunConfig { appDir: string; dbUrl: string; user: string; password: string; port?: number; allowRemote?: boolean }
+export interface EngineRunConfig {
+  appDir: string; dbUrl: string; user: string; password: string; port?: number
+  mode: 'copy' | 'original'; copyConfirmed: boolean; consentOriginal: boolean; noAuth: boolean; allowRemote: boolean
+}
 
 /** Grava a configuração da rodada (um arquivo por projeto, na pasta do usuário) e devolve o caminho para o E2E_CONFIG. */
-export async function writeEngineConfig(projectSlug: string, cfg: EngineRunConfig): Promise<string> {
+export async function writeEngineConfig(projectSlug: string, cfg: EngineRunConfig & { robotPassword?: string }): Promise<string> {
   const { mkdir, writeTextFile } = await import('@tauri-apps/plugin-fs')
   const { join } = await import('@tauri-apps/api/path')
   const dir = await workDir('config')
   await mkdir(dir, { recursive: true }).catch(() => {})
-  const file = await join(dir, `${(projectSlug || 'projeto').replace(/[^a-zA-Z0-9_-]+/g, '_')}.json`)
-  await writeTextFile(file, JSON.stringify({ port: 3102, allowRemote: false, allowedDbs: [], ...cfg }, null, 2))
+  const file = await join(dir, `${safeSlug(projectSlug)}.json`)
+  await writeTextFile(file, JSON.stringify({ port: 3102, allowedDbs: [], ...cfg }, null, 2))
   return file
+}
+
+const safeSlug = (s: string) => (s || 'projeto').replace(/[^a-zA-Z0-9_-]+/g, '_')
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Banco de teste do cliente
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Escolhas do cliente para o banco de teste de um projeto (ficam num arquivo na pasta do usuário, não no navegador: têm senha). */
+export interface DbSettings {
+  mode: 'copy' | 'original'
+  host: string; port: string; database: string; user: string; password: string
+  /** confirmou que o banco informado é uma cópia de teste */
+  copyConfirmed: boolean
+  /** consentiu em rodar no banco original e em criar nele o usuário de teste */
+  consentOriginal: boolean
+  consentAt?: string
+  /** usuário de teste do app já criado, e para qual banco (host:porta/banco) */
+  robot?: { user: string; password: string; forDb: string; group?: string | null }
+}
+
+export const emptyDbSettings = (): DbSettings => ({ mode: 'copy', host: 'localhost', port: '5432', database: '', user: '', password: '', copyConfirmed: false, consentOriginal: false })
+
+export const buildDbUrl = (s: Pick<DbSettings, 'host' | 'port' | 'database' | 'user' | 'password'>): string =>
+  `postgres://${encodeURIComponent(s.user)}:${encodeURIComponent(s.password)}@${s.host.trim()}:${s.port.trim() || '5432'}/${encodeURIComponent(s.database.trim())}`
+
+/** host:porta/banco: identifica o banco de um usuário de teste (se o banco muda, o usuário é criado de novo). */
+export const dbKey = (url: string): string => { try { const u = new URL(url); return `${u.hostname}:${u.port || '5432'}${u.pathname}` } catch { return url } }
+
+async function settingsFile(slug: string): Promise<string> {
+  const { join } = await import('@tauri-apps/api/path')
+  return join(await workDir('config'), `${safeSlug(slug)}.db.json`)
+}
+
+export async function loadDbSettings(slug: string): Promise<DbSettings> {
+  try {
+    const { exists, readTextFile } = await import('@tauri-apps/plugin-fs')
+    const f = await settingsFile(slug)
+    if (await exists(f)) return { ...emptyDbSettings(), ...(JSON.parse(await readTextFile(f)) as Partial<DbSettings>) }
+  } catch { /* arquivo ilegível: começa do zero */ }
+  return emptyDbSettings()
+}
+
+export async function saveDbSettings(slug: string, s: DbSettings): Promise<void> {
+  const { mkdir, writeTextFile } = await import('@tauri-apps/plugin-fs')
+  await mkdir(await workDir('config'), { recursive: true }).catch(() => {})
+  await writeTextFile(await settingsFile(slug), JSON.stringify(s, null, 2))
+}
+
+export interface DbToolResult {
+  ok: boolean; error?: string
+  database?: string; version?: string; tables?: { expected: number; missing: string[] }; authType?: string | null
+  noAuth?: boolean; user?: string; password?: string; created?: boolean; group?: string | null; removed?: boolean
+}
+
+/** Roda a ferramenta de banco do motor (e2e/dynamic/db-tool.mjs): check, prepare ou remove. */
+export async function runDbTool(action: 'check' | 'prepare' | 'remove', o: { runnerDir: string; configPath: string; manifestPath: string }): Promise<DbToolResult> {
+  const script = `Set-Location '${q(o.runnerDir)}'; $env:E2E_CONFIG = '${q(o.configPath)}'; $env:E2E_MANIFEST = '${q(o.manifestPath)}'; node dynamic/db-tool.mjs ${action}`
+  const r = await powershell(script)
+  const linha = r.out.split(/\r?\n/).find(l => l.includes('@@MB-DB@@'))
+  if (!linha) return { ok: false, error: r.out.split('\n').slice(-3).join(' ') || 'A ferramenta de banco não respondeu.' }
+  try { return JSON.parse(linha.slice(linha.indexOf('@@MB-DB@@') + 9)) as DbToolResult } catch { return { ok: false, error: 'Resposta ilegível da ferramenta de banco.' } }
 }

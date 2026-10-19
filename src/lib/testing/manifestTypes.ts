@@ -4,6 +4,28 @@
  */
 export const MANIFEST_VERSION = 1
 
+/**
+ * Como o app exportado faz o login e controla o acesso. Com isto o motor cria sozinho o usuário de teste no banco de teste, para qualquer projeto.
+ * `type`: database (tabela de usuários do próprio banco), none (app sem login) ou outro (managed, ldap...: ainda sem suporte nos testes).
+ */
+export interface ManifestAuth {
+  type: string
+  usersTable?: string
+  usersPk?: string
+  emailColumn?: string
+  passwordColumn?: string
+  nameColumn?: string
+  hash?: string
+  /** só quando a gestão de acesso está ligada: grupos, vínculo usuário-grupo e permissões por tela */
+  access?: {
+    groupsTable: string
+    groupsPk: string
+    groupsNameColumn: string
+    link: { kind: 'column'; column: string } | { kind: 'table'; table: string; userColumn: string; roleColumn: string }
+    permsTable: string
+  }
+}
+
 export interface ManifestOption { value: string; label: string }
 
 export interface ManifestField {
@@ -55,6 +77,7 @@ export interface TestManifest {
   version: number
   generatedAt: string
   project: { id: string; name: string; slug: string }
+  auth?: ManifestAuth
   dbStack: string
   views: ManifestView[]
 }

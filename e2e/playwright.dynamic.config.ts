@@ -32,6 +32,7 @@ export default defineConfig({
     url: `http://localhost:${CONFIG.port}/login`,
     reuseExistingServer: false,
     timeout: 90_000,
-    env: { EXPORT_DIR: CONFIG.exportDir },
+    // com a configuração da IDE (E2E_CONFIG) o app sobe apontando para o banco de TESTE: DATABASE_URL do ambiente vale mais que o do .env.local
+    env: { EXPORT_DIR: CONFIG.exportDir, ...(process.env.E2E_CONFIG ? { DATABASE_URL: CONFIG.dbUrl } : {}) },
   },
 })

@@ -12,7 +12,7 @@ if (!appDir || !fs.existsSync(path.join(appDir, 'package.json'))) {
 }
 
 const run = (cmd, args) => {
-  const r = spawnSync(cmd, args, { cwd: appDir, stdio: 'inherit', shell: true })
+  const r = spawnSync(cmd, args, { cwd: appDir, stdio: 'inherit', shell: true, env: { ...process.env, ...(cfg.dbUrl ? { DATABASE_URL: cfg.dbUrl } : {}) } })
   if (r.status !== 0) { console.error(`Falhou: ${cmd} ${args.join(' ')}`); process.exit(r.status || 1) }
 }
 
