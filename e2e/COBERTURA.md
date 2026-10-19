@@ -28,7 +28,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 1. **Feito (só leitura):** tela abre, formulário, tipos de campo, obrigatórios, máscaras, grid completo (total, ordenação, filtros, paginação, Visualizar), exportação completa, botões, abas e um gabarito por tipo de tela, no Postgres + Node.
 2. **Entrega do motor ao cliente e banco de teste do cliente:** copiar o motor para a pasta do usuário e tela de conexão da cópia do banco, com consentimento para o banco original.
 3. **Cadastro, edição e exclusão com dados gerados:** exige o item 2 e a limpeza por prefixo.
-4. **Feito:** kanban (arrastar cartão grava a coluna) e gantt (Visualizar abre o registro); regra por linha "related" só com testes unitários. **Falta:** fluxo (arrastar e conectar etapas) e as ações das linhas que abrem outra tela em janela.
+4. **Feito:** kanban (arrastar cartão grava a coluna), fluxo (arrastar só move, ligar grava a etapa anterior, ciclo é recusado), gantt (Visualizar abre o registro) e regra por linha "related" (validada num app de teste, com controle negativo). **Falta:** as ações das linhas que abrem outra tela em janela.
 5. **Feito:** segurança gerada da configuração de acesso (grupos, permissões por tela, regras por linha, gestão de usuários, grupos e permissões). A gestão de acesso ainda não rodou no Oracle.
 
 ## Lista completa (um teste por linha)

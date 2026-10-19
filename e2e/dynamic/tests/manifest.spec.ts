@@ -296,6 +296,31 @@ async function registroExiste(view: ManifestView, id: string): Promise<boolean> 
   return Number((await consultar(`select count(*)::int n from "${view.table}" where "${view.primaryKey}"::text = $1`, [id]))[0].n) > 0
 }
 
+/** A tabela inteira como JSON por id (mantém a precisão exata de datas e números), para devolver depois as linhas que um arraste mudou. */
+async function fotografar(view: ManifestView): Promise<Map<string, Record<string, unknown>>> {
+  const pk = view.primaryKey
+  return new Map((await consultar(`select "${pk}"::text as id, to_jsonb(t) as j from "${view.table}" t`)).map(r => [String(r.id), r.j as Record<string, unknown>]))
+}
+
+/**
+ * Devolve ao que era (inclusive a auditoria de quem/quando gravou) as linhas que mudaram desde a foto. O gatilho de auditoria da tabela é
+ * desligado só durante a devolução, senão a própria devolução marcaria a linha de novo.
+ */
+async function devolverLinhas(view: ManifestView, originais: Map<string, Record<string, unknown>>) {
+  const pk = view.primaryKey
+  const aDevolver = [...(await fotografar(view))].filter(([id, j]) => originais.has(id) && JSON.stringify(j) !== JSON.stringify(originais.get(id)))
+  if (aDevolver.length === 0) return
+  await comBanco(async d => {
+    await d.query('begin')
+    try {
+      await d.query(`alter table "${view.table}" disable trigger user`)
+      for (const [id, j] of aDevolver) await d.query(`update "${view.table}" t set (${Object.keys(j).map(c => `"${c}"`).join(', ')}) = (select ${Object.keys(j).map(c => `r."${c}"`).join(', ')} from jsonb_populate_record(null::"${view.table}", $2::jsonb) r) where t."${pk}"::text = $1`, [id, JSON.stringify(originais.get(id))])
+      await d.query(`alter table "${view.table}" enable trigger user`)
+      await d.query('commit')
+    } catch (e) { await d.query('rollback').catch(() => {}); throw e }
+  })
+}
+
 /** Os ids da tabela (para achar o registro novo quando não há campo de texto para marcar). null se a tabela é grande demais para isso. */
 async function idsDaTabela(view: ManifestView): Promise<Set<string> | null> {
   if (Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n) > 20_000) return null
@@ -962,7 +987,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const total = Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
           test.skip(total > 5000, 'a tabela é grande demais para guardar uma cópia e devolver a linha ao que era')
           // a tabela como estava, em JSON (mantém a precisão exata de datas e números): a linha movida volta inteira, inclusive a auditoria de quem/quando gravou
-          const foto = async () => new Map<string, Record<string, unknown>>((await consultar(`select "${pk}"::text as id, to_jsonb(t) as j from "${view.table}" t`)).map(r => [String(r.id), r.j as Record<string, unknown>]))
+          const foto = () => fotografar(view)
           const originais = await foto()
           const valores = [...new Set([...originais.values()].map(j => String(j[grupo] ?? '')).filter(Boolean))]
           test.skip(valores.length < 2, 'precisa de pelo menos dois valores diferentes na coluna do quadro para arrastar o cartão')
@@ -1011,19 +1036,82 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             const nova = page.locator('main div.w-80').filter({ has: page.locator('h3', { hasText: new RegExp(`^${escapar(tituloDestino)}$`, 'i') }) }).first()
             expect.soft(await nova.locator('div.cursor-grab').count(), 'cartões na coluna de destino depois de recarregar').toBeGreaterThan(0)
           } finally {
-            // devolve ao que era o que o arraste mudou (mesmo se o teste falhou no meio). O gatilho de auditoria da tabela (atualizado_em) é desligado
-            // só durante a devolução, senão a própria devolução marcaria a linha de novo.
-            const atuais = await foto()
-            const aDevolver = [...atuais].filter(([id, j]) => originais.has(id) && JSON.stringify(j) !== JSON.stringify(originais.get(id)))
-            if (aDevolver.length > 0) await comBanco(async d => {
-              await d.query('begin')
-              try {
-                await d.query(`alter table "${view.table}" disable trigger user`)
-                for (const [id, j] of aDevolver) await d.query(`update "${view.table}" t set (${Object.keys(j).map(c => `"${c}"`).join(', ')}) = (select ${Object.keys(j).map(c => `r."${c}"`).join(', ')} from jsonb_populate_record(null::"${view.table}", $2::jsonb) r) where t."${pk}"::text = $1`, [id, JSON.stringify(originais.get(id))])
-                await d.query(`alter table "${view.table}" enable trigger user`)
-                await d.query('commit')
-              } catch (e) { await d.query('rollback').catch(() => {}); throw e }
-            })
+            await devolverLinhas(view, originais) // o que o arraste mudou volta ao que era, mesmo se o teste falhou no meio
+          }
+        })
+      }
+
+      // --- fluxo: arrastar só move; ligar grava a etapa anterior; ciclo é recusado ---
+
+      if (t.kind === 'fluxo_conectar') {
+        test(t.title, async ({ page }) => {
+          test.skip(dialeto() !== 'postgres', 'devolver as linhas ao que eram (sem a auditoria do gatilho) só está implementado para Postgres')
+          const pred = view.blueprintPredecessorColumn!
+          const total = Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
+          test.skip(total > 500, 'a tabela é grande demais para o quadro mostrar todas as etapas')
+          const originais = await fotografar(view)
+          const anterioresDe = (m: Map<string, Record<string, unknown>>, id: string) => String(m.get(id)?.[pred] ?? '').split(',').map(x => x.trim()).filter(Boolean)
+          const descendentes = (id: string): Set<string> => { const out = new Set<string>(); const fila = [id]; while (fila.length) { const x = fila.pop()!; for (const o of originais.keys()) if (!out.has(o) && anterioresDe(originais, o).includes(x)) { out.add(o); fila.push(o) } } return out }
+          try {
+            await abrir(page, view.path)
+            await aguardarTela(page)
+            await expect(page.locator('.react-flow')).toBeVisible()
+            await page.locator('.react-flow').scrollIntoViewIfNeeded()
+            await page.waitForTimeout(1200) // o quadro se ajusta sozinho à tela (fitView animado) logo que abre
+            const no = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`)
+            const naTela = await page.locator('.react-flow__node').evaluateAll(ns => ns.map(n => n.getAttribute('data-id') ?? ''))
+            // destino: uma etapa sem anterior; origem: outra que não seja descendente dela (ligar não fecha um ciclo). Escolhe o par mais próximo na tela, para dar zoom nos dois.
+            const caixas = new Map<string, { x: number; y: number }>()
+            const pane = (await page.locator('.react-flow').boundingBox())!
+            // só as etapas que estão dentro do quadro (as outras ficam fora da parte visível)
+            for (const id of naTela) { const c = await no(id).boundingBox(); if (c && c.x >= pane.x && c.x + c.width <= pane.x + pane.width && c.y >= pane.y && c.y + c.height <= pane.y + Math.min(pane.height, 780 - pane.y + 0)) caixas.set(id, { x: c.x + c.width / 2, y: c.y + c.height / 2 }) }
+            const dist = (a: string, b: string) => Math.hypot(caixas.get(a)!.x - caixas.get(b)!.x, caixas.get(a)!.y - caixas.get(b)!.y)
+            let melhor: { B: string; A: string; d: number } | null = null
+            for (const b of naTela) {
+              if (!caixas.has(b) || !originais.has(b) || anterioresDe(originais, b).length > 0) continue
+              const desc = descendentes(b)
+              for (const a of naTela) if (a !== b && caixas.has(a) && originais.has(a) && !desc.has(a) && (!melhor || dist(a, b) < melhor.d)) melhor = { B: b, A: a, d: dist(a, b) }
+            }
+            test.skip(!melhor, 'não há duas etapas visíveis que possam ser ligadas sem formar um ciclo')
+            const { A, B } = melhor!
+            // com muitas etapas o quadro mostra tudo miúdo: dá zoom (roda do mouse) no meio do par até as etapas ficarem grandes e continuarem as duas na tela
+            const meio = { x: (caixas.get(A)!.x + caixas.get(B)!.x) / 2, y: (caixas.get(A)!.y + caixas.get(B)!.y) / 2 }
+            await page.mouse.move(meio.x, meio.y)
+            for (let i = 0; i < 12 && (((await no(B).boundingBox())?.width ?? 0) < 150); i++) { await page.mouse.wheel(0, -250); await page.waitForTimeout(120) }
+            const quadro = (await page.locator('.react-flow').boundingBox())!
+            const cabe = async (id: string) => { const c = await no(id).boundingBox(); return !!c && c.x >= quadro.x && c.y >= quadro.y && c.x + c.width <= quadro.x + quadro.width && c.y + c.height <= quadro.y + quadro.height }
+            test.skip(!(await cabe(A)) || !(await cabe(B)), 'as duas etapas a ligar não cabem juntas na tela depois do zoom')
+            const centro = async (l: Locator) => { const c = (await l.boundingBox())!; return { x: c.x + c.width / 2, y: c.y + c.height / 2 } }
+            const arrastar = async (de: { x: number; y: number }, para: { x: number; y: number }) => {
+              await page.mouse.move(de.x, de.y); await page.mouse.down()
+              await page.mouse.move(de.x + 6, de.y + 6, { steps: 3 }); await page.mouse.move(para.x, para.y, { steps: 20 }); await page.mouse.up()
+            }
+            const mudadas = async () => [...(await fotografar(view))].filter(([id, j]) => JSON.stringify(j) !== JSON.stringify(originais.get(id)))
+            const aresta = (de: string, para: string) => page.locator(`[data-testid^="rf__edge-edge-${de}-${para}-"], .react-flow__edge[data-id^="edge-${de}-${para}-"]`)
+
+            // 1) arrastar a etapa só a move na tela: nada é gravado
+            const posicao = async () => (await no(B).boundingBox())!
+            const antes = await posicao()
+            const corpo = { x: antes.x + antes.width / 2, y: antes.y + 14 } // a faixa de cima da etapa (sem botões)
+            await arrastar(corpo, { x: corpo.x + 90, y: corpo.y + 60 })
+            await expect.poll(async () => { const d = await posicao(); return Math.abs(d.x - antes.x) + Math.abs(d.y - antes.y) }, { message: 'a etapa se moveu na tela', timeout: 5_000 }).toBeGreaterThan(20)
+            await page.waitForTimeout(500)
+            expect((await mudadas()).length, 'mover a etapa na tela não grava nada').toBe(0)
+
+            // 2) ligar A -> B grava o id de A como etapa anterior de B (e só isso)
+            await arrastar(await centro(no(A).locator('.react-flow__handle.source').first()), await centro(no(B).locator('.react-flow__handle.target').first()))
+            await expect.poll(async () => String((await fotografar(view)).get(B)?.[pred] ?? ''), { message: 'a etapa anterior de B é A no banco', timeout: 15_000 }).toBe(A)
+            expect((await mudadas()).map(([id]) => id), 'só a etapa de destino mudou').toEqual([B])
+            await expect(aresta(A, B).first(), 'a linha A → B aparece na tela').toBeVisible()
+
+            // 3) ligar B -> A fecharia um ciclo (A já vem antes de B): é recusado e nada muda
+            const aposLigar = JSON.stringify([...(await fotografar(view))])
+            await arrastar(await centro(no(B).locator('.react-flow__handle.source').first()), await centro(no(A).locator('.react-flow__handle.target').first()))
+            await page.waitForTimeout(1500)
+            expect(JSON.stringify([...(await fotografar(view))]), 'a ligação que formaria um ciclo foi recusada: o banco não mudou').toBe(aposLigar)
+            await expect(aresta(B, A), 'e a linha B → A não foi criada').toHaveCount(0)
+          } finally {
+            await devolverLinhas(view, originais) // as etapas voltam ao que eram, mesmo se o teste falhou no meio
           }
         })
       }

@@ -89,6 +89,8 @@ export interface ManifestView {
   rowPolicy?: ManifestRowRule[]
   /** kanban: a coluna da tabela que define em que coluna do quadro o cartão fica (arrastar o cartão a muda) */
   kanbanGroupColumn?: string
+  /** fluxo: a coluna que guarda a etapa anterior (ligar duas etapas grava o id da origem nela) */
+  blueprintPredecessorColumn?: string
   filter: ManifestField[]
   grid: ManifestField[]
   form: ManifestField[]

@@ -56,6 +56,7 @@ export function manifestView(r: RouteNode, model?: ModelNode): ManifestView {
     logicType: String(r.logicType),
     table: r.modelTable,
     primaryKey: r.primaryKey,
+    ...(r.logicType === 'blueprint' ? { blueprintPredecessorColumn: r.blueprintConfig?.predecessorField || 'predecessor_id' } : {}),
     ...(r.logicType === 'kanban' ? { kanbanGroupColumn: r.kanbanGroupField || 'status' } : {}),
     displayType: r.displayType,
     actionInterface: r.actionInterfaceType || raw.action_interface_type || 'page',

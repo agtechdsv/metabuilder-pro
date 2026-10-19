@@ -11,7 +11,7 @@ export type PlannedKind =
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
   | 'botoes' | 'campos_tipos' | 'abas'
-  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover'
+  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
@@ -68,6 +68,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
     crud_reabrir: () => 'registration: reopening the record shows what was saved',
     crud_edicao: () => 'edit: changing and saving writes only the change',
+    fluxo_conectar: () => 'flow: dragging a step only moves it; linking two steps saves the previous step in the database; a link that would make a loop is refused (and the steps go back afterwards)',
     kanban_mover: () => 'kanban: dragging a card to another column saves the new column in the database (and the card goes back afterwards)',
     crud_exclusao: () => 'deletion: deleting from the list removes the record',
     grid_paginacao: () => 'grid: pagination respects the chosen page size',
@@ -115,6 +116,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
     crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
     crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
+    fluxo_conectar: () => 'flujo: arrastrar una etapa solo la mueve; unir dos etapas guarda la etapa anterior en la base de datos; una unión que cree un ciclo se rechaza (y las etapas vuelven después)',
     kanban_mover: () => 'kanban: arrastrar una tarjeta a otra columna guarda la nueva columna en la base de datos (y la tarjeta vuelve después)',
     crud_exclusao: () => 'eliminación: eliminar desde la lista quita el registro',
     grid_paginacao: () => 'grid: la paginación respeta el tamaño de página elegido',
@@ -255,6 +257,7 @@ function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
 
 /** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com pelo menos um campo editável. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
+  if (v.logicType === 'blueprint') return v.blueprintPredecessorColumn ? [{ kind: 'fluxo_conectar', title: 'fluxo: arrastar uma etapa só a move; ligar duas etapas grava a etapa anterior no banco; ligação que formaria um ciclo é recusada (e as etapas voltam depois)' }] : []
   if (v.logicType === 'kanban') return v.kanbanGroupColumn ? [{ kind: 'kanban_mover', title: 'kanban: arrastar um cartão para outra coluna grava a nova coluna no banco (e o cartão volta depois)' }] : []
   // com campo de texto, o registro é marcado com E2E-; sem ele (só listas, datas, números...), o motor o identifica pelo id novo e o anota num diário para limpar
   if (v.logicType !== 'pesquisa_cadastro' || camposDeTipo(v).every(f => f.readOnly)) return []

@@ -88,6 +88,7 @@ describe('plano de testes de um caso de uso', () => {
     expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('total', { readOnly: true })] }), ['integracao'])).toEqual([])
     expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
     expect(kinds(view({ logicType: 'kanban', kanbanGroupColumn: 'status' }), ['integracao'])).toEqual(['kanban_mover'])
+    expect(kinds(view({ logicType: 'blueprint', blueprintPredecessorColumn: 'predecessor_id' }), ['integracao'])).toEqual(['fluxo_conectar'])
     expect(campoMarcador(view())?.column).toBe('nome')
     expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
   })
