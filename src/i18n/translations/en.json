@@ -4952,6 +4952,17 @@
     "video_btn": "Video",
     "media_shot": "Screenshot of the failure",
     "media_video": "Video of the failure",
-    "media_missing": "Could not open the file (it may have been deleted)."
+    "media_missing": "Could not open the file (it may have been deleted).",
+    "ffmpeg_on": "Failure videos: enabled",
+    "ffmpeg_missing": "Failure videos: disabled (only the screenshot is recorded)",
+    "ffmpeg_enable": "Enable failure videos",
+    "ffmpeg_installing": "Downloading ffmpeg...",
+    "ffmpeg_err": "Could not download ffmpeg.",
+    "ffmpeg_external": "Failure videos: only in internal browser and background modes (the screenshot works in all of them).",
+    "ffmpeg_ask_title": "Record videos of failures?",
+    "ffmpeg_ask_body": "To record a video of the tests that fail, Playwright needs to download ffmpeg (about 1 MB, from the internet, into your user Playwright folder). Nothing is installed on the system. Without it, only the screenshot is recorded.",
+    "ffmpeg_ask_yes": "Download and run",
+    "ffmpeg_ask_no": "Run without video",
+    "ffmpeg_ask_never": "Run without video and do not ask again"
   }
 }

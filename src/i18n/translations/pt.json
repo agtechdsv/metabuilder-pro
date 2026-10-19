@@ -4952,6 +4952,17 @@
     "video_btn": "Vídeo",
     "media_shot": "Captura da tela da falha",
     "media_video": "Vídeo da falha",
-    "media_missing": "Não foi possível abrir o arquivo (ele pode ter sido apagado)."
+    "media_missing": "Não foi possível abrir o arquivo (ele pode ter sido apagado).",
+    "ffmpeg_on": "Vídeo das falhas: ativado",
+    "ffmpeg_missing": "Vídeo das falhas: desativado (só a captura de tela é gravada)",
+    "ffmpeg_enable": "Ativar vídeo das falhas",
+    "ffmpeg_installing": "Baixando o ffmpeg...",
+    "ffmpeg_err": "Não foi possível baixar o ffmpeg.",
+    "ffmpeg_external": "Vídeo das falhas: só nos modos navegador interno e segundo plano (a captura de tela vale em todos).",
+    "ffmpeg_ask_title": "Gravar vídeo das falhas?",
+    "ffmpeg_ask_body": "Para gravar o vídeo dos testes que falharem, o Playwright precisa baixar o ffmpeg (cerca de 1 MB, da internet, para a pasta do Playwright do seu usuário). Nada é instalado no sistema. Sem ele, só a captura de tela é gravada.",
+    "ffmpeg_ask_yes": "Baixar e executar",
+    "ffmpeg_ask_no": "Executar sem vídeo",
+    "ffmpeg_ask_never": "Executar sem vídeo e não perguntar mais"
   }
 }

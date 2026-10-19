@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { checkRunnerDir, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
@@ -59,6 +59,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [reportMenu, setReportMenu] = useState(false)
   const [report, setReport] = useState<{ html: string; json: string; base: string } | null>(null)
   const [downloadMenu, setDownloadMenu] = useState(false)
+  // vídeo das falhas: precisa do ffmpeg do Playwright (download pequeno, só com o aceite do usuário)
+  const [ffmpeg, setFfmpeg] = useState<'unknown' | 'ok' | 'missing' | 'installing'>('unknown')
+  const [ffmpegErr, setFfmpegErr] = useState('')
+  const [askFfmpeg, setAskFfmpeg] = useState<{ only?: ManifestView[] } | null>(null)
+  const ffmpegSkipped = useRef(false)
   const [reportMsg, setReportMsg] = useState<{ kind: 'busy' | 'ok' | 'err'; text: string } | null>(null)
   const [media, setMedia] = useState<{ kind: 'image' | 'video'; url: string; title: string } | null>(null)
   const reportFrame = useRef<HTMLIFrameElement | null>(null)
@@ -93,6 +98,19 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     setRunnerDir(lsGet('mb_tests_runner_dir'))
     setAppDir(lsGet(`mb_tests_app_dir_${projectId}`))
   }, [isOpen, projectId])
+
+  useEffect(() => {
+    if (!isOpen || !isTauri()) return
+    hasFfmpeg().then(ok => setFfmpeg(ok ? 'ok' : 'missing')).catch(() => setFfmpeg('unknown'))
+  }, [isOpen])
+
+  /** Baixa o ffmpeg (a pasta do motor é onde está o Playwright que sabe instalá-lo). */
+  const enableVideo = async (): Promise<boolean> => {
+    if (!runnerDir) { setFfmpegErr(t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).')); return false }
+    setFfmpeg('installing'); setFfmpegErr('')
+    try { await installFfmpeg(runnerDir); const ok = await hasFfmpeg(); setFfmpeg(ok ? 'ok' : 'missing'); return ok }
+    catch (e: any) { setFfmpeg('missing'); setFfmpegErr(`${t('ide_tests.ffmpeg_err', 'Não foi possível baixar o ffmpeg.')} (${e?.message || e})`); return false }
+  }
 
   const loadManifest = useCallback(async () => {
     if (!target || target.type !== 'project') return
@@ -185,13 +203,15 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     setResults(prev => ({ ...prev, [k]: r }))
   }, [])
 
-  const run = async (only?: ManifestView[]) => {
+  const run = async (only?: ManifestView[], skipAsk = false) => {
     if (!manifest || !isTauri()) return
     const toRun = only ?? chosen
     setViewing(null); setRunError(''); setSummary(null); setResults({}); setLogs([]); resultsRef.current = {}
     if (toRun.length === 0) { setRunError(t('ide_tests.err_none', 'Nenhum caso de uso para testar.')); return }
     if (!runnerDir) { setRunError(t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).')); return }
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
+    // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
+    if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
     setRunning(true)
     try {
       const chk = await checkRunnerDir(runnerDir)
@@ -563,6 +583,23 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     </select>
                   )}
                 </div>
+                {desktop && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                    {mode === 'external'
+                      ? <span className="text-neutral-500">{t('ide_tests.ffmpeg_external', 'Vídeo das falhas: só nos modos navegador interno e segundo plano (a captura de tela vale em todos).')}</span>
+                      : ffmpeg === 'ok'
+                        ? <span className="text-emerald-400">{t('ide_tests.ffmpeg_on', 'Vídeo das falhas: ativado')}</span>
+                        : ffmpeg === 'installing'
+                          ? <span className="flex items-center gap-1.5 text-neutral-400"><Loader2 className="w-3 h-3 animate-spin" /> {t('ide_tests.ffmpeg_installing', 'Baixando o ffmpeg...')}</span>
+                          : ffmpeg === 'missing' && (
+                            <>
+                              <span className="text-amber-700 [html:not(.light)_&]:text-amber-400">{t('ide_tests.ffmpeg_missing', 'Vídeo das falhas: desativado (só a captura de tela é gravada)')}</span>
+                              <button onClick={enableVideo} disabled={running} className="rounded-md border border-indigo-500/50 px-2 py-0.5 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-40">{t('ide_tests.ffmpeg_enable', 'Ativar vídeo das falhas')}</button>
+                            </>
+                          )}
+                    {ffmpegErr && <span className="text-red-300 whitespace-pre-wrap">{ffmpegErr}</span>}
+                  </div>
+                )}
               </section>
             </>)}
 
@@ -612,6 +649,20 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               <button onClick={() => { setReport(null); setReportMsg(null); setDownloadMenu(false) }} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
             </div>
             <iframe ref={reportFrame} title={t('ide_tests.report_title', 'Relatório de testes')} srcDoc={report.html} sandbox="allow-scripts allow-modals allow-same-origin" className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
+
+      {askFfmpeg && (
+        <div className="fixed inset-0 z-[1000004] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-700 p-5 shadow-2xl space-y-3">
+            <div className="flex items-center gap-2"><VideoIcon className="w-5 h-5 text-indigo-400" /><h3 className="text-sm font-bold text-white">{t('ide_tests.ffmpeg_ask_title', 'Gravar vídeo das falhas?')}</h3></div>
+            <p className="text-xs text-neutral-300">{t('ide_tests.ffmpeg_ask_body', 'Para gravar o vídeo dos testes que falharem, o Playwright precisa baixar o ffmpeg (cerca de 1 MB, da internet, para a pasta do Playwright do seu usuário). Nada é instalado no sistema. Sem ele, só a captura de tela é gravada.')}</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={async () => { const a = askFfmpeg; setAskFfmpeg(null); await enableVideo(); run(a.only, true) }} className="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-xs font-bold text-white">{t('ide_tests.ffmpeg_ask_yes', 'Baixar e executar')}</button>
+              <button onClick={() => { const a = askFfmpeg; setAskFfmpeg(null); ffmpegSkipped.current = true; run(a.only, true) }} className="rounded-lg border border-neutral-600 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800">{t('ide_tests.ffmpeg_ask_no', 'Executar sem vídeo')}</button>
+              <button onClick={() => { const a = askFfmpeg; setAskFfmpeg(null); lsSet('mb_tests_ffmpeg_never', '1'); run(a.only, true) }} className="text-[11px] text-neutral-400 hover:text-neutral-200">{t('ide_tests.ffmpeg_ask_never', 'Executar sem vídeo e não perguntar mais')}</button>
+            </div>
           </div>
         </div>
       )}

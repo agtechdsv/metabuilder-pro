@@ -123,3 +123,21 @@ export async function makePdf(runnerDir: string, htmlPath: string, pdfPath: stri
   const out = await Command.create('powershell', [...PS, script]).execute()
   if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao gerar o PDF').trim().split('\n').slice(-3).join(' '))
 }
+
+/**
+ * O vídeo das falhas precisa do ffmpeg do Playwright (cerca de 1 MB). Sem ele o motor grava só a captura de tela.
+ * Verifica pelo PowerShell, na mesma pasta onde o Playwright o instala (PLAYWRIGHT_BROWSERS_PATH ou %LOCALAPPDATA%\ms-playwright).
+ */
+export async function hasFfmpeg(): Promise<boolean> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const script = `$r = if ($env:PLAYWRIGHT_BROWSERS_PATH -and $env:PLAYWRIGHT_BROWSERS_PATH -ne '0') { $env:PLAYWRIGHT_BROWSERS_PATH } else { Join-Path $env:LOCALAPPDATA 'ms-playwright' }; if (Get-ChildItem -Path $r -Directory -Filter 'ffmpeg-*' -ErrorAction SilentlyContinue | Where-Object { Get-ChildItem $_.FullName -Filter 'ffmpeg*' -ErrorAction SilentlyContinue }) { 'OK' } else { 'MISSING' }`
+  const out = await Command.create('powershell', [...PS, script]).execute()
+  return out.stdout.includes('OK')
+}
+
+/** Baixa o ffmpeg do Playwright (só depois de o usuário aceitar). */
+export async function installFfmpeg(runnerDir: string): Promise<void> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const out = await Command.create('powershell', [...PS, `Set-Location '${q(runnerDir)}'; npx playwright install ffmpeg`]).execute()
+  if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao instalar o ffmpeg').trim().split('\n').slice(-3).join(' '))
+}
