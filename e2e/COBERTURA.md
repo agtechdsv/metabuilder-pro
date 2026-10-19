@@ -8,20 +8,20 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 | Categoria | O que o motor dinâmico fará | Quando | Testes (real / oracle / exemplo) | Total |
 |---|---|---|---|---|
-| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 27 / 5 / 3 | **35** |
+| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 27 / 16 / 3 | **46** |
 | **Autoteste do motor** | Login do robô: o motor confere antes de qualquer teste | Interno ao motor | 1 / 1 / 0 | **2** |
-| **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 1 / 5 / 1 | **7** |
+| **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 1 / 2 / 1 | **4** |
 | **Tipos de campo e opções** | Por tipo: texto, número, data/hora, booleano, opções fixas, relação, autocomplete; o formulário mostra o que está no banco | Fase 2 | 3 / 1 / 6 | **10** |
-| **Grid e filtros** | Tamanho de página do Studio, paginação, ordenação, filtros, Limpar, Visualizar só leitura, total igual ao banco | Fase 2 | 1 / 4 / 4 | **9** |
-| **Exportação de dados** | Formatos liberados no Studio (CSV, JSON, Excel), só o filtrado, só as linhas marcadas, Central de Downloads | Fase 2 | 1 / 4 / 3 | **8** |
+| **Grid e filtros** | Tamanho de página do Studio, paginação, ordenação, filtros, Limpar, Visualizar só leitura, total igual ao banco | Fase 2 | 1 / 1 / 4 | **6** |
+| **Exportação de dados** | Formatos liberados no Studio (CSV, JSON, Excel), só o filtrado, só as linhas marcadas, Central de Downloads | Fase 2 | 1 / 1 / 3 | **5** |
 | **Botões e ações** | Botões do Studio na ordem, ações de linha e ações customizadas (abrir outra tela em modal) | Fase 3 | 3 / 2 / 0 | **5** |
 | **Abas, seções e subdetalhes** | Detalhe como aba ou seção, subdetalhe, itens (lápis, +, modal), fórmulas, exclusão em cascata | Fase 3 | 9 / 0 / 6 | **15** |
 | **Telas por tipo** | Um gabarito por tipo de tela: kanban, gantt, agenda, timeline, fluxo, mapa, mapa mental, galeria, BI (as contagens batem com o banco) | Fase 3 e 4 (arrastar e soltar por último) | 7 / 1 / 0 | **8** |
-| **Segurança e acesso** | Gestão de usuários, grupos e permissões, regra por linha: derivável da configuração de acesso do projeto | Fase 4 | 8 / 11 / 0 | **19** |
+| **Segurança e acesso** | Gestão de usuários, grupos e permissões, regra por linha: derivável da configuração de acesso do projeto | Fase 4 | 8 / 9 / 0 | **17** |
 | **Telas criadas por IA** | Têm código próprio (não são declarativas): a configuração não descreve o comportamento | Fica à mão | 2 / 0 / 0 | **2** |
 | **Rede de proteção do banco** | Garante que o teste só apaga o que criou: faz parte do motor | Fica (é o motor) | 1 / 1 / 0 | **2** |
 
-**Hoje o motor já cobre 35 dos 122 testes (29%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 54 testes. Telas por tipo e segurança exigem gabaritos próprios (27 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
+**Hoje o motor já cobre 46 dos 122 testes (38%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 45 testes. Telas por tipo e segurança exigem gabaritos próprios (25 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
 
 ## Ordem sugerida para o motor ganhar regras
 
@@ -33,7 +33,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 ## Lista completa (um teste por linha)
 
-### Já coberto pelo motor dinâmico (35)
+### Já coberto pelo motor dinâmico (46)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
@@ -65,9 +65,20 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | telas-especiais.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
 | real | telas-especiais.spec.ts | BI /bi---laboratorio: painel abre, atualiza e tem tabela de dados |
 | oracle | clientes.spec.ts | nome da empresa é obrigatório: salvar vazio não cria registro |
+| oracle | clientes.spec.ts | edição e exclusão só do cliente criado pelo teste |
+| oracle | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
 | oracle | departamentos-funcs.spec.ts | nome é obrigatório: salvar vazio não cria registro |
+| oracle | departamentos-funcs.spec.ts | criar func com departamento, editar o cargo e excluir |
 | oracle | departamentos-funcs.spec.ts | campos obrigatórios (nome, e-mail, cargo, data): salvar vazio não cria registro |
+| oracle | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
+| oracle | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
+| oracle | exportar-e-grid.spec.ts | Central de Downloads lista a exportação, baixa o arquivo e exclui |
+| oracle | exportar-e-grid.spec.ts | paginação: 12 clientes com 10 por página (2 páginas), total e página 2 |
 | oracle | exportar-e-grid.spec.ts | ordenação por coluna: crescente e decrescente pelo cabeçalho |
+| oracle | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
+| oracle | exportar-e-grid.spec.ts | Visualizar abre o formulário só para leitura e Cancelar volta sem gravar |
+| oracle | permissoes-por-tela.spec.ts | tela bloqueada some do menu e não abre pelo endereço |
+| oracle | permissoes-por-tela.spec.ts | tela só de leitura: abre e mostra os dados, mas não deixa criar, editar nem excluir |
 | oracle | smoke.spec.ts | todas as telas do menu abrem sem erro |
 | fixture | export.spec.ts | CSV traz todos os 30 clientes (com BOM e ;) |
 | fixture | export.spec.ts | Excel é um arquivo .xlsx válido |
@@ -80,15 +91,12 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | smoke.spec.ts | login do robô funciona e a senha errada é recusada |
 | oracle | smoke.spec.ts | login do robô funciona e a senha errada é recusada |
 
-### Cadastro, edição e exclusão (7)
+### Cadastro, edição e exclusão (4)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | cadastros-gerais.spec.ts | Pedidos (lista): criar para um cliente, editar o status e excluir |
 | oracle | clientes.spec.ts | cadastrar um cliente: grava os dados e a auditoria do robô (criado_por) |
-| oracle | clientes.spec.ts | edição e exclusão só do cliente criado pelo teste |
-| oracle | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
-| oracle | departamentos-funcs.spec.ts | criar func com departamento, editar o cargo e excluir |
 | oracle | pedidos-e-bi.spec.ts | Pedidos (lista): criar para um cliente, editar o status e excluir |
 | fixture | cadastro.spec.ts | cria um cliente, ele aparece na lista e pode ser excluído |
 
@@ -107,29 +115,23 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | fixture | tipos-de-campo.spec.ts | cria com todos os tipos, grava no banco e reabre igual |
 | fixture | tipos-de-campo.spec.ts | desmarcar o booleano e salvar a edição grava falso |
 
-### Grid e filtros (9)
+### Grid e filtros (6)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | telas-especiais.spec.ts | Pedidos (lista): o Administrador vê todos os pedidos (total igual ao banco) e a ação Produtos da linha |
-| oracle | exportar-e-grid.spec.ts | paginação: 12 clientes com 10 por página (2 páginas), total e página 2 |
-| oracle | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
-| oracle | exportar-e-grid.spec.ts | Visualizar abre o formulário só para leitura e Cancelar volta sem gravar |
 | oracle | pedidos-e-bi.spec.ts | Pedidos (lista): o total mostrado é igual ao do banco |
 | fixture | grid.spec.ts | mostra a primeira página com o tamanho configurado no Studio e o total |
 | fixture | grid.spec.ts | paginação leva às 5 linhas restantes |
 | fixture | grid.spec.ts | filtro por nome encontra só o cliente |
 | fixture | grid.spec.ts | botões do topo na ordem da plataforma: Exportar antes de Novo Registro |
 
-### Exportação de dados (8)
+### Exportação de dados (5)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | exportar-e-grid.spec.ts | Excel (.xlsx) é um arquivo válido |
-| oracle | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
 | oracle | exportar-e-grid.spec.ts | Excel (.xlsx) é um arquivo válido |
-| oracle | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
-| oracle | exportar-e-grid.spec.ts | Central de Downloads lista a exportação, baixa o arquivo e exclui |
 | fixture | export.spec.ts | com linhas marcadas exporta só elas |
 | fixture | export.spec.ts | marcar todas pelo cabeçalho e desmarcar |
 | fixture | export.spec.ts | Central de Downloads lista as exportações, baixa e exclui |
@@ -177,7 +179,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | cadastros-gerais.spec.ts | Clientes - Geospatial (mapa): cliente novo com coordenadas entra na contagem do mapa |
 | oracle | pedidos-e-bi.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
 
-### Segurança e acesso (19)
+### Segurança e acesso (17)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
@@ -197,8 +199,6 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | oracle | gestao-de-acesso.spec.ts | a matriz mostra o nível de cada tela para o grupo de teste (Clientes leitura, Departamentos nenhum) |
 | oracle | gestao-de-acesso.spec.ts | mudar a permissão do grupo de teste vale no próximo login e pode ser desfeita |
 | oracle | gestao-de-acesso.spec.ts | as telas de gestão de acesso são só do Administrador (a Funcionária não entra) |
-| oracle | permissoes-por-tela.spec.ts | tela bloqueada some do menu e não abre pelo endereço |
-| oracle | permissoes-por-tela.spec.ts | tela só de leitura: abre e mostra os dados, mas não deixa criar, editar nem excluir |
 | oracle | permissoes-por-tela.spec.ts | telas sem restrição no grupo seguem liberadas (Pedidos abre e lista) |
 
 ### Telas criadas por IA (2)

@@ -72,12 +72,67 @@ export async function installEngine(onStep: (msg: string) => void): Promise<void
   await writeTextFile(await join(root, MARCA), JSON.stringify({ version: ENGINE_VERSION, installedAt: new Date().toISOString() }))
 }
 
-/** DATABASE_URL do .env.local do app exportado (lido pelo PowerShell: a pasta do app pode estar fora do perfil do usuário). */
+export type DbTipo = 'postgres' | 'oracle'
+const PADRAO_PORTA: Record<DbTipo, string> = { postgres: '5432', oracle: '1521' }
+
+/** Tipo de banco do projeto (manifest.dbStack): só PostgreSQL e Oracle têm suporte nos testes. null = ainda sem suporte. */
+export const dbTipoDoProjeto = (dbStack?: string): DbTipo | null => {
+  const s = String(dbStack || '').toLowerCase()
+  return s.startsWith('oracle') ? 'oracle' : s.startsWith('postgres') || s === 'pg' ? 'postgres' : null
+}
+
+const lerPropriedade = (texto: string, chave: string): string => {
+  const linha = texto.split(/\r?\n/).find(l => l.trim().startsWith(chave + '='))
+  return linha ? linha.slice(linha.indexOf('=') + 1).trim() : ''
+}
+const lerVariavel = (texto: string, chave: string): string => lerPropriedade(texto, chave).replace(/^"|"$/g, '')
+
+/**
+ * Conexão que o app exportado usa por conta própria, no formato do motor (postgres://... ou oracle://...), a partir dos arquivos dele:
+ * Java: backend/src/main/resources/application.properties (spring.datasource.*); Node: .env.local (DATABASE_URL, ou DB_CONNECTION_STRING + DB_USER + DB_PASSWORD no Oracle).
+ */
+export function dbUrlDoApp(arquivos: { props?: string; env?: string }): string | null {
+  const enc = encodeURIComponent
+  if (arquivos.props) {
+    const jdbc = lerPropriedade(arquivos.props, 'spring.datasource.url')
+    const user = lerPropriedade(arquivos.props, 'spring.datasource.username')
+    const pass = lerPropriedade(arquivos.props, 'spring.datasource.password')
+    const pg = /^jdbc:postgresql:\/\/([^:/\s]+)(?::(\d+))?\/([^\s?]+)/.exec(jdbc)
+    if (pg) return `postgres://${enc(user)}:${enc(pass)}@${pg[1]}:${pg[2] || '5432'}/${pg[3]}`
+    const ora = /^jdbc:oracle:thin:@(?:\/\/)?([^:/\s]+)(?::(\d+))?\/([^\s?]+)/.exec(jdbc)
+    if (ora) return `oracle://${enc(user)}:${enc(pass)}@${ora[1]}:${ora[2] || '1521'}/${ora[3]}`
+    return null
+  }
+  if (arquivos.env) {
+    const cs = lerVariavel(arquivos.env, 'DB_CONNECTION_STRING')
+    if (cs) {
+      const m = /^(?:\/\/)?([^:/]+)(?::(\d+))?\/(.+)$/.exec(cs)
+      return m ? `oracle://${enc(lerVariavel(arquivos.env, 'DB_USER'))}:${enc(lerVariavel(arquivos.env, 'DB_PASSWORD'))}@${m[1]}:${m[2] || '1521'}/${m[3]}` : null
+    }
+    return lerVariavel(arquivos.env, 'DATABASE_URL') || null
+  }
+  return null
+}
+
+/** Conexão que o app exportado usa (lida pelo PowerShell: a pasta do app pode estar fora do perfil do usuário). null = não achei. */
 export async function readAppDbUrl(appDir: string): Promise<string | null> {
-  const script = `$f = Join-Path '${q(appDir)}' '.env.local'; if (Test-Path -LiteralPath $f) { Get-Content -LiteralPath $f | Where-Object { $_ -match '^DATABASE_URL\\s*=' } | Select-Object -First 1 }`
-  const line = (await powershell(script)).out.trim()
-  const m = /^DATABASE_URL\s*=\s*"?([^"\r\n]+)"?/.exec(line)
-  return m ? m[1].trim() : null
+  const script = `$d = '${q(appDir)}'; foreach ($f in @('backend\\src\\main\\resources\\application.properties', '.env.local', 'frontend\\.env.local')) { $p = Join-Path $d $f; if (Test-Path -LiteralPath $p) { '@@FILE:' + $f; Get-Content -LiteralPath $p } }`
+  const saida = (await powershell(script)).out
+  const arquivos: Record<string, string> = {}
+  for (const bloco of saida.split('@@FILE:').slice(1)) { const i = bloco.indexOf('\n'); arquivos[bloco.slice(0, i).trim()] = bloco.slice(i + 1) }
+  return dbUrlDoApp({ props: arquivos['backend\\src\\main\\resources\\application.properties'], env: arquivos['.env.local'] ?? arquivos['frontend\\.env.local'] })
+}
+
+/** O app é Java (backend/ + frontend/) ou Node (uma pasta)? */
+export async function detectAppKind(appDir: string): Promise<'java' | 'node'> {
+  const r = await powershell(`if ((Test-Path -LiteralPath (Join-Path '${q(appDir)}' 'backend\\pom.xml')) -and (Test-Path -LiteralPath (Join-Path '${q(appDir)}' 'frontend\\package.json'))) { 'JAVA' } else { 'NODE' }`)
+  return r.out.includes('JAVA') ? 'java' : 'node'
+}
+
+/** O JDK está disponível? O portátil que a IDE baixa em .metabuilder\jdk21, ou um Java instalado no sistema. */
+export async function hasJdk(): Promise<boolean> {
+  const r = await powershell(`if (Test-Path -LiteralPath (Join-Path $env:USERPROFILE '.metabuilder\\jdk21\\bin\\java.exe')) { 'OK' } elseif (Get-Command java -ErrorAction SilentlyContinue) { 'OK' } else { 'NO' }`)
+  return r.out.includes('OK')
 }
 
 export interface EngineRunConfig {
@@ -117,11 +172,12 @@ export interface DbSettings {
 
 export const emptyDbSettings = (): DbSettings => ({ mode: 'copy', host: 'localhost', port: '5432', database: '', user: '', password: '', copyConfirmed: false, consentOriginal: false })
 
-export const buildDbUrl = (s: Pick<DbSettings, 'host' | 'port' | 'database' | 'user' | 'password'>): string =>
-  `postgres://${encodeURIComponent(s.user)}:${encodeURIComponent(s.password)}@${s.host.trim()}:${s.port.trim() || '5432'}/${encodeURIComponent(s.database.trim())}`
+/** URL do banco de teste informado: postgres://usuario:senha@host:5432/banco ou oracle://usuario:senha@host:1521/SERVICO (no Oracle o "banco" é o serviço). */
+export const buildDbUrl = (s: Pick<DbSettings, 'host' | 'port' | 'database' | 'user' | 'password'>, tipo: DbTipo = 'postgres'): string =>
+  `${tipo}://${encodeURIComponent(s.user)}:${encodeURIComponent(s.password)}@${s.host.trim()}:${s.port.trim() || PADRAO_PORTA[tipo]}/${encodeURIComponent(s.database.trim())}`
 
 /** host:porta/banco: identifica o banco de um usuário de teste (se o banco muda, o usuário é criado de novo). */
-export const dbKey = (url: string): string => { try { const u = new URL(url); return `${u.hostname}:${u.port || '5432'}${u.pathname}` } catch { return url } }
+export const dbKey = (url: string): string => { try { const u = new URL(url); return `${u.hostname}:${u.port || (url.startsWith('oracle') ? '1521' : '5432')}${u.pathname}` } catch { return url } }
 
 async function settingsFile(slug: string): Promise<string> {
   const { join } = await import('@tauri-apps/api/path')
@@ -160,13 +216,32 @@ export async function runDbTool(action: 'check' | 'prepare' | 'remove' | 'copy',
 
 /** Nome sugerido para a cópia: o do banco original + "_teste". */
 export const suggestCopyName = (url: string): string => {
-  try { return `${decodeURIComponent(new URL(url).pathname.slice(1)).toLowerCase().replace(/[^a-z0-9_]/g, '_')}_teste`.slice(0, 63) } catch { return 'banco_teste' }
+  try {
+    const u = new URL(url)
+    // Oracle: a cópia é outro schema (usuário) no mesmo serviço; Postgres: outro banco
+    const base = url.startsWith('oracle') ? decodeURIComponent(u.username) : decodeURIComponent(u.pathname.slice(1))
+    return `${base.toLowerCase().replace(/[^a-z0-9_]/g, '_')}_teste`.slice(0, 63)
+  } catch { return 'banco_teste' }
 }
 
-/** Script (PowerShell) para o administrador do banco criar a cópia, com os dados do banco original; a senha nunca vai no texto. */
+/** Script para o administrador do banco criar a cópia, com os dados do banco original; a senha nunca vai no texto. */
 export function buildCopyScript(url: string, newName: string): string {
-  let host = 'SERVIDOR', port = '5432', db = 'BANCO', user = 'USUARIO'
-  try { const u = new URL(url); host = u.hostname; port = u.port || '5432'; db = decodeURIComponent(u.pathname.slice(1)); user = decodeURIComponent(u.username) } catch { /* mantém os marcadores */ }
+  let host = 'SERVIDOR', port = url.startsWith('oracle') ? '1521' : '5432', db = 'BANCO', user = 'USUARIO'
+  try { const u = new URL(url); host = u.hostname; port = u.port || port; db = decodeURIComponent(u.pathname.slice(1)); user = decodeURIComponent(u.username) } catch { /* mantém os marcadores */ }
+  if (url.startsWith('oracle')) {
+    const novo = newName.toUpperCase()
+    return [
+      '-- Cópia do schema para os testes automáticos do MetaBuilder (Oracle Data Pump). Rode como administrador do banco; a senha não está aqui.',
+      `-- 1) No servidor, exporte o schema ${user.toUpperCase()}:`,
+      `--    expdp system@//${host}:${port}/${db} schemas=${user.toUpperCase()} directory=DATA_PUMP_DIR dumpfile=${user.toLowerCase()}.dmp logfile=${user.toLowerCase()}_exp.log`,
+      '-- 2) No SQL*Plus / SQL Developer (como administrador), crie o schema de teste:',
+      `CREATE USER ${novo} IDENTIFIED BY "SENHA_DO_TESTE" QUOTA UNLIMITED ON USERS;`,
+      `GRANT CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE PROCEDURE, CREATE TRIGGER TO ${novo};`,
+      '-- 3) Importe trocando o schema:',
+      `--    impdp system@//${host}:${port}/${db} remap_schema=${user.toUpperCase()}:${novo} directory=DATA_PUMP_DIR dumpfile=${user.toLowerCase()}.dmp logfile=${user.toLowerCase()}_imp.log`,
+      `-- Depois, na IDE (Ambiente de Testes > Banco de dados de teste > Uma cópia do banco), informe o servidor, a porta, o serviço "${db}", o usuário "${novo}" e a senha.`,
+    ].join('\n')
+  }
   return [
     '# Cópia do banco para os testes automáticos do MetaBuilder (PostgreSQL). Rode UMA das duas opções.',
     '# A senha não está aqui: defina-a antes, na sessão do PowerShell:  $env:PGPASSWORD = "SUA_SENHA"',

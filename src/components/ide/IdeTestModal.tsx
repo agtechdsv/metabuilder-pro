@@ -9,7 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
 import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
-import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
+import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView, type TestType } from '@/lib/testing/plan'
@@ -138,6 +138,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     readAppDbUrl(appDir).then(u => { setAppDbUrl(u || ''); setAppDbHint(u ? u.replace(/(:\/\/[^:@/]+:)[^@]+@/, '$1***@') : ''); if (u) setCopyName(prev => prev || suggestCopyName(u)) }).catch(() => { setAppDbHint(''); setAppDbUrl('') })
   }, [isOpen, appDir])
 
+  // o banco do projeto (Studio): PostgreSQL ou Oracle; no Oracle a porta padrão é 1521 e o "banco" é o serviço
+  const dbTipo = dbTipoDoProjeto(manifest?.dbStack)
+  useEffect(() => { if (dbTipo === 'oracle') setDbSettings(p => (p.port === '5432' && !p.database ? { ...p, port: '1521' } : p)) }, [dbTipo])
+
   const updateDb = (patch: Partial<DbSettings>) => {
     setDbSettings(prev => { const next = { ...prev, ...patch }; saveDbSettings(projectSlug, next).catch(() => {}); return next })
     setDbResult(null)
@@ -145,7 +149,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   /** Conexão com o banco de teste escolhido (cópia informada ou o banco do próprio app). */
   const resolveDbUrl = async (ds: DbSettings): Promise<string | null> => {
-    if (ds.mode === 'copy') return ds.host.trim() && ds.port.trim() && ds.database.trim() && ds.user.trim() ? buildDbUrl(ds) : null
+    if (ds.mode === 'copy') return ds.host.trim() && ds.port.trim() && ds.database.trim() && ds.user.trim() ? buildDbUrl(ds, dbTipo ?? 'postgres') : null
     return readAppDbUrl(appDir)
   }
 
@@ -352,6 +356,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
     if (types.some(x => x !== 'funcional') && engineMode !== 'managed') { setRunError(t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')); return }
+    // bancos e pilhas: PostgreSQL e Oracle, com app Node ou Java. A pasta e2e do repositório só conhece Postgres + Node.
+    if (!dbTipo) { setRunError(t('ide_tests.err_db_unsupported', 'Os testes automáticos ainda só suportam bancos PostgreSQL e Oracle.')); return }
+    const tipoApp = await detectAppKind(appDir).catch(() => 'node' as const)
+    if (engineMode === 'custom' && (dbTipo === 'oracle' || tipoApp === 'java')) { setRunError(t('ide_tests.err_custom_stack', 'Projetos Oracle e apps com backend Java exigem o motor instalado pela IDE (seção 3).')); return }
+    if (tipoApp === 'java' && !(await hasJdk().catch(() => false))) { setRunError(t('ide_tests.err_jdk', 'O app tem backend Java e a máquina não tem o JDK 21. Rode o app uma vez pela exportação (a IDE oferece baixar o JDK portátil) ou instale o JDK 21.')); return }
     if (engineMode === 'managed') {
       if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
       if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
@@ -756,6 +765,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 {desktop && engineMode === 'managed' && (
                   <IdeTestDb settings={dbSettings} onChange={updateDb} appDbHint={appDbHint} busy={dbBusy} result={dbResult} engineReady={!!engineSt?.installed} disabled={running}
                     authType={manifest?.auth?.type ?? null} onTest={testDb} onPrepare={prepareDb} onRemove={removeRobot}
+                    dbTipo={dbTipo ?? 'postgres'} canAutoCopy={dbTipo === 'postgres'}
                     copyName={copyName} onCopyName={setCopyName} onCreateCopy={createCopy} copyScript={buildCopyScript(appDbUrl, copyName || suggestCopyName(appDbUrl))} />
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

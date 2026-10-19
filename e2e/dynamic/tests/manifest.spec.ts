@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { entrar, entrarComo } from '../lib/login'
 import { criarUsuarioTemporario, removerUsuarioTemporario, valorDaRegra } from '../lib/seguranca'
-import { consultar } from '../lib/db'
+import { comBanco, consultar, nomeDoCampo, nomeDoFiltro } from '../lib/db'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
 import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType } from '../../../src/lib/testing/plan'
@@ -218,14 +218,14 @@ function gravarEstado(slug: string, e: EstadoCrud | undefined) {
 
 /** Tamanho máximo das colunas de texto da tabela (para o valor gerado caber). */
 async function limitesDaTabela(tabela: string): Promise<Record<string, number>> {
-  const r = await consultar(`select column_name, character_maximum_length as n from information_schema.columns where table_name = $1 and table_schema = current_schema() and character_maximum_length is not null`, [tabela])
-  return Object.fromEntries(r.map(x => [String(x.column_name), Number(x.n)]))
+  const cols = await comBanco(d => d.colunas(tabela))
+  return Object.fromEntries(cols.filter((x: any) => x.max_length).map((x: any) => [String(x.column_name).toLowerCase(), Number(x.max_length)]))
 }
 const caber = (txt: string, limite?: number) => (limite && txt.length > limite ? txt.slice(0, limite) : txt)
 
 /** Preenche UM campo do formulário com um valor gerado, pelo tipo do componente na tela. Devolve o que gravou, ou null se o campo não dá para preencher. */
 async function preencherCampo(page: Page, f: ManifestField, n: number, limites: Record<string, number>, marcador?: string): Promise<Preenchido | null> {
-  const campo = page.locator(`[name="${f.column}"]`).first()
+  const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
   if (!(await campo.count())) return null
   if ((await campo.isDisabled()) || (await campo.getAttribute('readonly')) !== null) return null
   const tag = await campo.evaluate(e => e.tagName.toLowerCase())
@@ -257,7 +257,7 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
   }
   if (/int|numeric|decimal|float|double|number/i.test(f.dataType)) { await campo.fill(String(7 + n)); return { tipo: 'numero', esperado: String(7 + n), numero: 7 + n } }
   const texto = marcador ?? (/e-?mail/i.test(f.column) ? `e2e${n}@e2e.com.br` : `E2E texto ${n}`)
-  const valor = caber(texto, limites[f.column])
+  const valor = caber(texto, limites[f.column.toLowerCase()])
   await campo.fill(valor)
   return { tipo: 'texto', esperado: valor }
 }
@@ -276,7 +276,7 @@ function conferirNoBanco(f: ManifestField, esp: Preenchido, noBanco: string | nu
 
 /** A tela, ao reabrir o registro, mostra o que foi gravado? */
 async function conferirNaTela(page: Page, f: ManifestField, esp: Preenchido): Promise<string | null> {
-  const campo = page.locator(`[name="${f.column}"]`).first()
+  const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
   if (esp.tipo === 'bool') return (await campo.isChecked()) ? null : `"${f.label}": a caixa deveria estar marcada`
   const v = await campo.inputValue()
   const ok = esp.tipo === 'data' ? v === esp.esperado
@@ -293,10 +293,22 @@ async function registroExiste(view: ManifestView, id: string): Promise<boolean> 
   return Number((await consultar(`select count(*)::int n from "${view.table}" where "${view.primaryKey}"::text = $1`, [id]))[0].n) > 0
 }
 
-/** Acha a linha com o texto, passando pelas páginas da lista (a linha criada pode não estar na primeira). */
-async function acharLinha(page: Page, texto: string): Promise<Locator | null> {
+/** Lê, como texto, os campos preenchidos de uma linha (achada por uma coluna). As datas voltam como AAAA-MM-DD HH:MM:SS nos dois bancos. */
+async function lerLinha(view: ManifestView, colunaBusca: string, valor: string, preenchidos: Record<string, Preenchido>): Promise<Record<string, string | null>> {
+  return comBanco(async d => {
+    const sel = Object.entries(preenchidos).map(([c, p]) => `${d.txt(d.ident(c), p.tipo)} as ${d.ident(c)}`)
+    const rows = await d.query(`select ${d.txt(d.ident(view.primaryKey))} as ${d.ident('__id')}${sel.length ? ', ' + sel.join(', ') : ''} from ${d.ident(view.table)} where ${d.txt(d.ident(colunaBusca))} = $1`, [valor])
+    return Object.fromEntries(Object.entries(rows[0] ?? {}).map(([k, v]) => [k.toLowerCase(), v == null ? null : String(v)]))
+  })
+}
+
+/**
+ * Acha, na lista, a linha do registro pelo id dele (o link de Visualizar/Editar da linha leva o id), passando pelas páginas: a linha criada pode não estar
+ * na primeira, e a coluna que identifica o registro pode nem aparecer no grid.
+ */
+async function acharLinha(page: Page, id: string): Promise<Locator | null> {
   for (let pagina = 1; pagina <= 20; pagina++) {
-    const linha = page.locator('tbody tr').filter({ hasText: texto }).first()
+    const linha = page.locator('tbody tr').filter({ has: page.locator(`a[href*="${id}"]`) }).first()
     if (await linha.count()) return linha
     const proxima = page.getByRole('link', { name: String(pagina + 1), exact: true })
     if (!(await proxima.count())) return null
@@ -335,7 +347,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           await abrir(page, view.path)
           for (const f of view.filter) {
-            await expect.soft(page.locator(`[name="${f.column}_filter"]`).first(), `filtro "${f.label}" (${f.column}_filter)`).toBeVisible()
+            await expect.soft(page.locator(`[name="${nomeDoFiltro(f.column)}"]`).first(), `filtro "${f.label}" (${f.column}_filter)`).toBeVisible()
           }
           for (const f of view.grid) {
             await expect.soft(page.locator('thead th').filter({ hasText: new RegExp(escapar(f.label), 'i') }).first(), `coluna "${f.label}" no grid`).toBeVisible()
@@ -347,7 +359,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           await abrir(page, `${view.path}/new`)
           for (const f of camposEditaveis(view)) {
-            const campo = page.locator(`[name="${f.column}"]`).first()
+            const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
             await expect.soft(campo, `campo "${f.label}" (${f.column})`).toBeVisible()
             if (!(await campo.count())) continue
             if (f.dataType !== 'boolean') {
@@ -367,7 +379,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           await abrir(page, `${view.path}/new`)
           const digitos = '1234567890123456789'.slice(0, (f.mask as string).split('0').length - 1)
-          const campo = page.locator(`[name="${f.column}"]`).first()
+          const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
           await campo.click()
           await campo.pressSequentially(digitos)
           await expect(campo).toHaveValue(aplicarMascara(digitos, f.mask as string))
@@ -424,20 +436,20 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
       if (t.kind === 'grid_filtro') {
         const campo = view.filter.find(x => x.column === t.field)!
         test(t.title, async ({ page }) => {
-          const [linha] = await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
+          const linha = (await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null limit 30`)).find(r => String(r.v ?? '').trim() !== '')
           test.skip(!linha, 'a tabela não tem dados para filtrar')
           const valor = String(linha.v)
           const busca = (valor.split(/\s+/).find(w => w.length >= 3) ?? valor).slice(0, 20)
           await abrir(page, view.path)
           await aguardarLista(page)
-          const entrada = page.locator(`[name="${campo.column}_filter"]`).first()
+          const entrada = page.locator(`[name="${nomeDoFiltro(campo.column)}"]`).first()
           await entrada.fill(busca)
           await clicarENavegar(page, page.getByRole('button', { name: 'Pesquisar' }).first())
           const linhas = await linhasDoGrid(page)
           expect(linhas.length, `linhas depois de filtrar por "${busca}"`).toBeGreaterThan(0)
           for (const c of linhas) expect.soft(c.join(' ').toLowerCase(), 'linha fora do filtro').toContain(busca.toLowerCase())
           await clicarENavegar(page, page.getByRole('link', { name: 'Limpar' }).or(page.getByRole('button', { name: 'Limpar' })).first())
-          await expect(page.locator(`[name="${campo.column}_filter"]`).first()).toHaveValue('')
+          await expect(page.locator(`[name="${nomeDoFiltro(campo.column)}"]`).first()).toHaveValue('')
         })
       }
 
@@ -507,7 +519,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           test.skip(!escolha, 'nenhuma opção do filtro separa as linhas (todas ou nenhuma)')
           await abrir(page, view.path)
           await aguardarLista(page)
-          await page.locator(`select[name="${campo.column}_filter"]`).selectOption({ label: escolha!.label })
+          await page.locator(`select[name="${nomeDoFiltro(campo.column)}"]`).selectOption({ label: escolha!.label })
           await clicarENavegar(page, page.getByRole('button', { name: 'Pesquisar' }).first())
           expect(await totalMostrado(page), `total com "${escolha!.label}"`).toBe(escolha!.n)
           const idx = await indiceColuna(page, gcol.label)
@@ -529,7 +541,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await page.waitForLoadState('networkidle').catch(() => {})
           const editavel = camposEditaveis(view).find(f => f.dataType !== 'boolean')
           if (editavel) {
-            const campo = page.locator(`[name="${editavel.column}"]`).first()
+            const campo = page.locator(`[name="${nomeDoCampo(editavel.column)}"]`).first()
             await expect(campo).toBeVisible()
             const travado = (await campo.isDisabled()) || (await campo.getAttribute('readonly')) !== null
             expect(travado, `"${editavel.label}" deveria estar travado no modo Visualizar`).toBe(true)
@@ -541,13 +553,13 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
       if (t.kind === 'exportacao_filtrada') {
         const campo = view.filter.find(x => x.column === (campoDeFiltro(view) as ManifestField).column)!
         test(t.title, async ({ page }) => {
-          const [linha] = await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
+          const linha = (await consultar(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null limit 30`)).find(r => String(r.v ?? '').trim() !== '')
           test.skip(!linha, 'a tabela não tem dados para filtrar')
           const busca = (String(linha.v).split(/\s+/).find(w => w.length >= 3) ?? String(linha.v)).slice(0, 20)
           await abrir(page, view.path)
           await aguardarLista(page)
           const todos = await totalMostrado(page)
-          await page.locator(`[name="${campo.column}_filter"]`).first().fill(busca)
+          await page.locator(`[name="${nomeDoFiltro(campo.column)}"]`).first().fill(busca)
           await clicarENavegar(page, page.getByRole('button', { name: 'Pesquisar' }).first())
           const filtrados = await totalMostrado(page)
           expect(filtrados, 'o filtro achou registros').toBeGreaterThan(0)
@@ -612,7 +624,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           await abrir(page, `${view.path}/new`)
           for (const f of camposDeTipo(view)) {
-            const campo = page.locator(`[name="${f.column}"]`).first()
+            const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
             if (!(await campo.count())) { expect.soft(0, `campo "${f.label}" (${f.column}) existe`).toBeGreaterThan(0); continue }
             const tag = await campo.evaluate(e => e.tagName.toLowerCase())
             const tipo = (await campo.getAttribute('type')) ?? ''
@@ -662,7 +674,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await abrir(page, view.path)
           await aguardarTela(page)
           let achados = 0
-          for (const f of view.filter) if (await page.locator(`[name="${f.column}_filter"]`).count()) achados++
+          for (const f of view.filter) if (await page.locator(`[name="${nomeDoFiltro(f.column)}"]`).count()) achados++
           if (achados > 0) expect(achados, 'filtros com nome na tela × filtros configurados').toBe(view.filter.length)
           else {
             // tela sem nomes nos campos (ex.: timeline): confere pela quantidade de listas de seleção
@@ -786,7 +798,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const marcadorCampo = campoMarcador(view)!
           const editaveis = camposDeTipo(view).filter(f => !f.readOnly)
           const limites = await limitesDaTabela(view.table)
-          const marcador = caber(`${RODADA}-${view.slug.replace(/[^a-z0-9]/gi, '').slice(0, 6)}`, limites[marcadorCampo.column])
+          const marcador = caber(`${RODADA}-${view.slug.replace(/[^a-z0-9]/gi, '').slice(0, 6)}`, limites[marcadorCampo.column.toLowerCase()])
           test.skip(!marcador.startsWith(PREFIXO_E2E) || marcador.length < 8, 'a coluna de identificação é curta demais para o prefixo E2E-')
           const estado: EstadoCrud = { marcador, preenchidos: {} }
           gravarEstado(view.slug, estado)
@@ -804,20 +816,19 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
           await page.getByRole('button', { name: 'Criar Registro' }).first().click()
           await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]))[0].n, { message: 'o registro aparece no banco', timeout: 15_000 }).toBe(1)
-          const cols = Object.keys(estado.preenchidos)
-          const [linha] = await consultar(`select "${view.primaryKey}"::text as "__id", ${cols.map(c => `"${c}"::text as "${c}"`).join(', ')} from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador])
+          const linha = await lerLinha(view, marcadorCampo.column, marcador, estado.preenchidos)
           estado.id = String(linha.__id)
           gravarEstado(view.slug, estado)
           // auditoria: se a tabela tem criado_por, o app precisa tê-lo gravado (quem criou o registro)
-          const colunaAuditoria = await consultar(`select 1 from information_schema.columns where table_name = $1 and table_schema = current_schema() and column_name = 'criado_por'`, [view.table])
-          if (colunaAuditoria.length > 0) {
-            const [aud] = await consultar(`select ("criado_por" is not null) as ok from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id])
-            expect.soft(aud.ok, 'auditoria: criado_por gravado no registro criado').toBe(true)
+          const temAuditoria = (await comBanco(d => d.colunas(view.table))).some((c: any) => c.column_name === 'criado_por')
+          if (temAuditoria) {
+            const [aud] = await consultar(`select case when "criado_por" is not null then 1 else 0 end as ok from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id])
+            expect.soft(Number(aud.ok), 'auditoria: criado_por gravado no registro criado').toBe(1)
           }
           for (const f of editaveis) {
             const esp = estado.preenchidos[f.column]
             if (!esp) continue
-            const dif = conferirNoBanco(f, esp, linha[f.column])
+            const dif = conferirNoBanco(f, esp, linha[f.column.toLowerCase()])
             expect.soft(dif, 'campo gravado no banco').toBeNull()
           }
         })
@@ -843,22 +854,21 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
           const marcadorCampo = campoMarcador(view)!
           const limites = await limitesDaTabela(view.table)
-          const novo = caber(`${estado.marcador} ED`, limites[marcadorCampo.column])
+          const novo = caber(`${estado.marcador} ED`, limites[marcadorCampo.column.toLowerCase()])
           test.skip(novo === estado.marcador, 'a coluna de identificação não comporta a alteração')
           expect(await registroExiste(view, estado.id!), 'o registro criado pelo cadastro continua no banco').toBe(true)
           await abrir(page, `${view.path}/${estado.id}`)
-          await page.locator(`[name="${marcadorCampo.column}"]`).first().fill(novo)
+          await page.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).first().fill(novo)
           await page.getByRole('button', { name: 'Salvar Alterações' }).first().click()
           await expect.poll(async () => String((await consultar(`select "${marcadorCampo.column}"::text as v from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id]))[0]?.v), { message: 'a alteração aparece no banco', timeout: 15_000 }).toBe(novo)
           estado.marcador = novo
           estado.preenchidos[marcadorCampo.column] = { tipo: 'texto', esperado: novo }
           gravarEstado(view.slug, estado)
           // só o campo alterado mudou: os demais continuam como foram gravados
-          const cols = Object.keys(estado.preenchidos)
-          const [linha] = await consultar(`select ${cols.map(c => `"${c}"::text as "${c}"`).join(', ')} from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id])
+          const linha = await lerLinha(view, view.primaryKey, estado.id!, estado.preenchidos)
           for (const f of camposDeTipo(view)) {
             const esp = estado.preenchidos[f.column]
-            if (esp) expect.soft(conferirNoBanco(f, esp, linha[f.column]), 'campo depois da edição').toBeNull()
+            if (esp) expect.soft(conferirNoBanco(f, esp, linha[f.column.toLowerCase()]), 'campo depois da edição').toBeNull()
           }
         })
       }
@@ -872,8 +882,8 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const antes = await contar()
           await abrir(page, view.path)
           await aguardarLista(page)
-          const linha = await acharLinha(page, estado.marcador)
-          expect(linha, `a linha "${estado.marcador}" aparece na lista`).not.toBeNull()
+          const linha = await acharLinha(page, estado.id!)
+          expect(linha, `a linha do registro criado (${estado.marcador}) aparece na lista`).not.toBeNull()
           await linha!.locator('button[title="Excluir"], a[title="Excluir"]').first().click()
           await confirmarExclusao(page)
           await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [estado.marcador]))[0].n, { message: 'o registro some do banco', timeout: 15_000 }).toBe(0)
@@ -916,7 +926,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               expect(await pag.locator('thead th').count(), 'a tela bloqueada não mostra a lista').toBe(0)
               expect(await pag.getByText(/TOTAL:\s*\d+/i).count(), 'a tela bloqueada não mostra o total').toBe(0)
               await abrir(pag, `${view.path}/new`)
-              if (marcadorCampo) expect(await pag.locator(`[name="${marcadorCampo.column}"]`).locator('visible=true').count(), 'o formulário não abre pelo endereço').toBe(0)
+              if (marcadorCampo) expect(await pag.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).locator('visible=true').count(), 'o formulário não abre pelo endereço').toBe(0)
             } else {
               expect(menu, 'o menu do grupo de leitura lista a tela').toContain(view.path)
               await aguardarLista(pag)
@@ -927,7 +937,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               // o servidor recusa gravar mesmo se a pessoa forçar o endereço do formulário
               if (marcadorCampo) {
                 await abrir(pag, `${view.path}/new`)
-                const campo = pag.locator(`[name="${marcadorCampo.column}"]`).first()
+                const campo = pag.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).first()
                 if ((await campo.count()) && (await campo.isEnabled())) {
                   await campo.fill(marcador)
                   const criar = pag.getByRole('button', { name: 'Criar Registro' }).first()

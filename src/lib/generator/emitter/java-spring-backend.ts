@@ -170,6 +170,11 @@ function canonicalDbType(rawType: string): string {
   return 'varchar'
 }
 
+/** Import da classe do tipo da chave primária quando ela não é do java.lang (UUID, BigDecimal): Repository, Service e Controller citam o tipo na assinatura. */
+function pkImport(pkType: string): string {
+  return pkType === 'UUID' ? 'import java.util.UUID;' : pkType === 'BigDecimal' ? 'import java.math.BigDecimal;' : ''
+}
+
 /** Retorna os imports Java necessários dado o conjunto de tipos usados */
 function getJavaImports(types: Set<string>): string[] {
   const importMap: Record<string, string> = {
@@ -1084,20 +1089,28 @@ function generateRepositoryInterface(model: ModelNode, ast: AppAST, groupId: str
     `import org.springframework.data.jpa.repository.JpaSpecificationExecutor;`,
     `import org.springframework.stereotype.Repository;`,
     `import java.util.List;`,
-    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
+    (!isComposite ? pkImport(pkType) : ``)
   ].filter(Boolean).join('\n')
 
   const extendsClause = `JpaRepository<${model.name}, ${pkType}>, JpaSpecificationExecutor<${model.name}>`
 
+  // Consulta por chave estrangeira. O Spring Data lê "_" no nome do método como separador de propriedade: findByCLIENTE_ID procura a propriedade CLIENTE
+  // (no Oracle as colunas ficam em MAIÚSCULAS com "_") e o backend nem sobe. Nesses casos a consulta é escrita à mão (@Query) sobre a propriedade da coluna.
+  const precisaQuery = (fk: { fkCamel: string }) => fk.fkCamel.includes('_')
+  const finders = incomingFks.map(fk => precisaQuery(fk)
+    ? `    @Query("select e from ${model.name} e where e.${toCamelCase(fk.fkField)} = :id")\n    Page<${model.name}> findBy${fk.fkCamel}(@Param("id") ${fk.fkJavaType} id, Pageable pageable);`
+    : `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, Pageable pageable);`).join('\n')
+  const importsQuery = incomingFks.some(precisaQuery) ? '\nimport org.springframework.data.jpa.repository.Query;\nimport org.springframework.data.repository.query.Param;' : ''
+
   return `package ${groupId}.repositories;
 
-${imports}
+${imports}${importsQuery}
 
 @Repository
 public interface ${model.name}Repository extends ${extendsClause} {
     Page<${model.name}> findAll(Pageable pageable);
 ${(route && route.gridFields && route.gridFields.length > 0) ? `    Page<${model.name}ListView> findAllProjectedBy(Pageable pageable);` : ''}
-${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJavaType} id, Pageable pageable);`).join('\n')}
+${finders}
 }
 `
 }
@@ -1146,7 +1159,7 @@ function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, ro
     `import org.springframework.data.domain.*;`,
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
-    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``,
+    (!isComposite ? pkImport(pkType) : ``),
     ...cascade.imports
   ].filter(Boolean).join('\n')
 
@@ -1248,7 +1261,7 @@ function generateControllerClass(model: ModelNode, ast: AppAST, groupId: string,
     `import org.springframework.web.bind.annotation.*;`,
     `import java.util.HashMap;`,
     `import java.util.Map;`,
-    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
+    (!isComposite ? pkImport(pkType) : ``)
   ].filter(Boolean).join('\n')
 
   const searchEndpoint = `

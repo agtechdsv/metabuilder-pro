@@ -29,6 +29,8 @@ export interface EngineConfig {
   allowedDbs: string[]
   /** pasta onde o app grava as exportações durante o teste */
   exportDir: string
+  /** porta do backend Java (Spring Boot) dos testes; só vale para apps com backend Java */
+  backendPort: number
 }
 
 const engineRoot = path.join(import.meta.dirname, '..', '..')
@@ -48,7 +50,7 @@ export function loadConfig(): EngineConfig {
   const file = process.env.E2E_CONFIG
   if (file) {
     const j = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<EngineConfig>
-    return { appDir: '', port: 3102, dbUrl: '', user: '', password: '', mode: 'copy', copyConfirmed: false, consentOriginal: false, noAuth: false, allowRemote: false, allowedDbs: [], exportDir, ...j }
+    return { appDir: '', port: 3102, dbUrl: '', user: '', password: '', mode: 'copy', copyConfirmed: false, consentOriginal: false, noAuth: false, allowRemote: false, allowedDbs: [], exportDir, backendPort: 8090, ...j }
   }
   const env = parseEnv(path.join(engineRoot, '.env.real'))
   const val = (k: string, d = '') => process.env[k] ?? env[k] ?? d
@@ -65,6 +67,7 @@ export function loadConfig(): EngineConfig {
     allowRemote: false,
     allowedDbs: val('E2E_REAL_ALLOWED_DBS', 'crm').split(',').map(s => s.trim()).filter(Boolean),
     exportDir,
+    backendPort: Number(val('E2E_JAVA_BACKEND_PORT', '8090')),
   }
 }
 

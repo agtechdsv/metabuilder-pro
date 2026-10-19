@@ -5021,6 +5021,11 @@
     "db_copy_done": "Copy \"{n}\" created ({mb} MB) and already filled in the fields.",
     "db_copy_existed": "The copy \"{n}\" already existed: the fields were filled with it.",
     "int_note": "Integration and security write test data (texts with E2E-, temporary users and groups) to the test database and erase it at the end; the final check confirms nothing existing changed.",
-    "int_needs_managed": "Integration and security write data and only run with the engine installed by the IDE and a confirmed test database (section 3)."
+    "int_needs_managed": "Integration and security write data and only run with the engine installed by the IDE and a confirmed test database (section 3).",
+    "err_db_unsupported": "The automatic tests only support PostgreSQL and Oracle databases for now.",
+    "err_custom_stack": "Oracle projects and apps with a Java backend require the engine installed by the IDE (section 3).",
+    "err_jdk": "The app has a Java backend and this machine has no JDK 21. Run the app once from the export (the IDE offers to download the portable JDK) or install JDK 21.",
+    "db_service": "Service",
+    "db_nocopy_help_script": "In Oracle the copy is another schema of the database: give the script to the database administrator and then enter the copy data here."
   }
 }

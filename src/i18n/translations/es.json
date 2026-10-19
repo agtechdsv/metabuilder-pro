@@ -5109,6 +5109,11 @@
     "db_copy_done": "Copia \"{n}\" creada ({mb} MB) y ya completada en los campos.",
     "db_copy_existed": "La copia \"{n}\" ya existía: los campos se completaron con ella.",
     "int_note": "Integración y seguridad graban datos de prueba (textos con E2E-, usuarios y grupos temporales) en la base de prueba y los borran al final; la comprobación final confirma que nada existente cambió.",
-    "int_needs_managed": "Integración y seguridad graban datos y solo se ejecutan con el motor instalado por el IDE y una base de prueba confirmada (sección 3)."
+    "int_needs_managed": "Integración y seguridad graban datos y solo se ejecutan con el motor instalado por el IDE y una base de prueba confirmada (sección 3).",
+    "err_db_unsupported": "Las pruebas automáticas aún solo soportan bases PostgreSQL y Oracle.",
+    "err_custom_stack": "Los proyectos Oracle y las apps con backend Java exigen el motor instalado por el IDE (sección 3).",
+    "err_jdk": "La app tiene backend Java y esta máquina no tiene JDK 21. Ejecute la app una vez desde la exportación (el IDE ofrece descargar el JDK portátil) o instale JDK 21.",
+    "db_service": "Servicio",
+    "db_nocopy_help_script": "En Oracle la copia es otro esquema de la base: entregue el script al administrador de la base y luego informe aquí los datos de la copia."
   }
 }

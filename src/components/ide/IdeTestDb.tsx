@@ -24,6 +24,9 @@ interface Props {
   onPrepare: () => void
   onRemove: () => void
   /** ajuda para quem ainda não tem a cópia: criar no mesmo servidor ou dar o script ao administrador */
+  /** PostgreSQL ou Oracle (no Oracle o "banco" é o serviço) e se a IDE sabe criar a cópia sozinha (só no Postgres) */
+  dbTipo: 'postgres' | 'oracle'
+  canAutoCopy: boolean
   copyName: string
   onCopyName: (v: string) => void
   onCreateCopy: () => void
@@ -33,12 +36,12 @@ interface Props {
 const input = 'rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 w-full'
 
 /** Banco de dados de teste: uma cópia que o cliente informa (padrão) ou o banco original do app, só com o consentimento dele. */
-export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engineReady, disabled, authType, onTest, onPrepare, onRemove, copyName, onCopyName, onCreateCopy, copyScript }: Props) {
+export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engineReady, disabled, authType, onTest, onPrepare, onRemove, dbTipo, canAutoCopy, copyName, onCopyName, onCreateCopy, copyScript }: Props) {
   const { t } = useI18n()
   const off = disabled || busy !== ''
   const btn = 'rounded-md border border-indigo-500/50 px-2 py-0.5 text-[11px] text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-40'
   const fields: Array<['host' | 'port' | 'database' | 'user' | 'password', string, boolean]> = [
-    ['host', t('ide_tests.db_host', 'Servidor'), false], ['port', t('ide_tests.db_port', 'Porta'), false], ['database', t('ide_tests.db_name', 'Banco'), false],
+    ['host', t('ide_tests.db_host', 'Servidor'), false], ['port', t('ide_tests.db_port', 'Porta'), false], ['database', dbTipo === 'oracle' ? t('ide_tests.db_service', 'Serviço') : t('ide_tests.db_name', 'Banco'), false],
     ['user', t('ide_tests.db_user', 'Usuário'), false], ['password', t('ide_tests.db_pass', 'Senha'), true],
   ]
   const [showScript, setShowScript] = React.useState(false)
@@ -66,10 +69,10 @@ export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engi
           <details className="rounded-lg border border-neutral-700 bg-neutral-900/40 px-3 py-2 text-[11px] text-neutral-300">
             <summary className="cursor-pointer text-neutral-300">{t('ide_tests.db_nocopy', 'Ainda não tem uma cópia?')}</summary>
             <div className="mt-2 space-y-2">
-              <p className="text-neutral-400">{t('ide_tests.db_nocopy_help', 'A IDE pode criar a cópia no mesmo servidor do banco original (precisa da permissão de criar bancos e de ninguém conectado ao original). Se não der, entregue o script ao administrador do banco.')}</p>
+              <p className="text-neutral-400">{!canAutoCopy ? t('ide_tests.db_nocopy_help_script', 'No Oracle a cópia é outro schema do banco: entregue o script ao administrador do banco e, depois, informe aqui os dados da cópia.') : t('ide_tests.db_nocopy_help', 'A IDE pode criar a cópia no mesmo servidor do banco original (precisa da permissão de criar bancos e de ninguém conectado ao original). Se não der, entregue o script ao administrador do banco.')}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <input value={copyName} onChange={e => onCopyName(e.target.value)} disabled={off} title={t('ide_tests.db_copy_name', 'Nome da cópia')} placeholder={t('ide_tests.db_copy_name', 'Nome da cópia')} className={input + ' md:w-56'} />
-                <button onClick={onCreateCopy} disabled={off || !engineReady || !copyName.trim()} className={btn}>{busy === 'copy' ? t('ide_tests.db_copying', 'Criando a cópia...') : t('ide_tests.db_copy_create', 'Criar a cópia automaticamente')}</button>
+                {canAutoCopy && <input value={copyName} onChange={e => onCopyName(e.target.value)} disabled={off} title={t('ide_tests.db_copy_name', 'Nome da cópia')} placeholder={t('ide_tests.db_copy_name', 'Nome da cópia')} className={input + ' md:w-56'} />}
+                {canAutoCopy && <button onClick={onCreateCopy} disabled={off || !engineReady || !copyName.trim()} className={btn}>{busy === 'copy' ? t('ide_tests.db_copying', 'Criando a cópia...') : t('ide_tests.db_copy_create', 'Criar a cópia automaticamente')}</button>}
                 <button onClick={() => setShowScript(v => !v)} className={btn}>{t('ide_tests.db_copy_script', 'Ver script para o administrador')}</button>
               </div>
               {showScript && (

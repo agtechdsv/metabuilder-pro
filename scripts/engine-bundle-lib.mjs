@@ -22,6 +22,8 @@ export const ENGINE_FILES = {
   'e2e/dynamic/lib/db.ts': 'e2e/dynamic/lib/db.ts',
   'e2e/dynamic/lib/guard.ts': 'e2e/dynamic/lib/guard.ts',
   'e2e/dynamic/lib/acesso.mjs': 'e2e/dynamic/lib/acesso.mjs',
+  'e2e/dynamic/lib/banco.mjs': 'e2e/dynamic/lib/banco.mjs',
+  'e2e/dynamic/lib/app.mjs': 'e2e/dynamic/lib/app.mjs',
   'e2e/dynamic/lib/seguranca.ts': 'e2e/dynamic/lib/seguranca.ts',
   'e2e/dynamic/lib/login.ts': 'e2e/dynamic/lib/login.ts',
   'e2e/dynamic/tests/manifest.spec.ts': 'e2e/dynamic/tests/manifest.spec.ts',
