@@ -1,4 +1,28 @@
 {
+  "v1.0.6": {
+    "date": "2026-10-19",
+    "pt": [
+      "Novo Painel de Ambiente de Testes na IDE: execute testes dinâmicos ao vivo ou em segundo plano e gere relatórios completos em HTML interativo e PDF diretamente pelo menu.",
+      "Evolução do Motor de Testes Dinâmico (Fase 2): validações automáticas de telas, grids de dados, fluxos de exportação e visualização clara da tabela de cobertura.",
+      "Gerador Java Aprimorado: suporte nativo a identificadores UUID, filtros avançados por coluna, regras de cascata otimizadas e compatibilidade aprimorada com Tailwind e tipos de dados.",
+      "Integridade e Retenção Segura de Dados: a exclusão de usuários agora preserva com segurança os registros e conteúdos criados, garantindo a rastreabilidade da auditoria.",
+      "Experiência de Uso Refinada: testes executados em janela única de navegador, contraste aprimorado no tema claro e orientações amigáveis para reautorização de permissões de pastas."
+    ],
+    "en": [
+      "New Integrated Test Environment Panel: run dynamic test suites live or in background mode and export rich interactive HTML and PDF reports directly from the menu.",
+      "Advanced Dynamic Testing Engine (Phase 2): automated validation for screen loads, data grids, export flows, and an integrated coverage matrix.",
+      "Enhanced Java Code Generator: native support for UUID identifiers, column-based filtering, improved cascading logic, dates, frontend types, and Tailwind integration.",
+      "Safe Data Retention & Audit Protection: deleting user accounts now safely retains their created records and assets, preserving historical data consistency.",
+      "Streamlined Experience & UI: single browser window during automated runs, enhanced light mode visual contrast, and clear guidance for folder permission reauthorizations."
+    ],
+    "es": [
+      "Nuevo Panel de Entorno de Pruebas en el IDE: ejecute pruebas dinámicas en vivo o en segundo plano y genere reportes interactivos en HTML y PDF desde el menú.",
+      "Evolución del Motor de Pruebas Dinámico (Fase 2): validaciones automáticas para pantallas, grids de datos, exportaciones y matriz detallada de cobertura.",
+      "Generador Java Optimizado: soporte nativo para identificadores UUID, filtros avanzados por columna, cascada optimizada y mejoras en fechas, tipos y Tailwind.",
+      "Gestión Segura y Auditoría de Datos: la eliminación de usuarios ahora preserva los registros y recursos creados, garantizando la integridad histórica del sistema.",
+      "Experiencia de Usuario Mejorada: ejecución de pruebas en una única ventana de navegador, contraste perfeccionado en el tema claro y asistencia clara para reautorización de carpetas."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
