@@ -3,6 +3,7 @@ import path from 'node:path'
 import { CONFIG } from './config'
 import { consultar } from './db'
 import type { TestManifest } from '../../../src/lib/testing/manifestTypes'
+import { campoMarcador, PREFIXO_E2E } from '../../../src/lib/testing/plan'
 
 /**
  * Trava de segurança do motor dinâmico, para qualquer projeto (não conhece tabelas de antemão):
@@ -83,3 +84,25 @@ export function diferencas(antes: Impressao, depois: Impressao): string[] {
 }
 
 export const arquivoBase = (): string => path.join(import.meta.dirname, '..', '..', 'test-results-dynamic', 'baseline.json')
+
+/** Onde o teste de integração pode ter deixado linhas: (tabela, coluna de identificação) dos casos de uso Pesquisa + Cadastro. */
+export function alvosDeLimpeza(m: TestManifest): Array<{ tabela: string; coluna: string }> {
+  const out: Array<{ tabela: string; coluna: string }> = []
+  for (const v of m.views) {
+    const c = v.logicType === 'pesquisa_cadastro' ? campoMarcador(v) : undefined
+    if (c && IDENT.test(v.table) && IDENT.test(c.column) && !out.some(o => o.tabela === v.table && o.coluna === c.column)) out.push({ tabela: v.table, coluna: c.column })
+  }
+  return out
+}
+
+/**
+ * Apaga as linhas geradas pelo teste de integração (texto que começa com "E2E-" na coluna de identificação): sobras de uma rodada interrompida ou de uma falha no meio.
+ * Dá algumas passadas porque uma linha pode depender de outra (chave estrangeira): o erro da primeira tentativa some quando a dependente já foi apagada.
+ */
+export async function limparSobras(alvos: Array<{ tabela: string; coluna: string }>) {
+  for (let passada = 0; passada < 3; passada++) {
+    for (const { tabela, coluna } of alvos) {
+      await consultar(`delete from "${tabela}" where "${coluna}"::text like $1`, [PREFIXO_E2E + '%']).catch(() => {})
+    }
+  }
+}

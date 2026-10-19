@@ -4921,7 +4921,7 @@
     "type_funcional": "Funcional · Búsqueda + Registro",
     "type_funcional_desc": "Todo caso de uso: la pantalla abre. Búsqueda + Registro: lista, formulario, obligatorios, máscaras, total, orden, filtro y exportación",
     "type_integracao": "Integración",
-    "type_integracao_desc": "Registro completo escribiendo en la base de datos de prueba",
+    "type_integracao_desc": "Registro, edición y eliminación con datos generados, grabando en la base de prueba (y borrando al final)",
     "type_seguranca": "Seguridad",
     "type_seguranca_desc": "Permisos, reglas por fila y entradas maliciosas",
     "type_visual": "Responsividad y accesibilidad",
@@ -4954,7 +4954,7 @@
     "subtitle": "Las pruebas nacen de lo que configuró en Studio: un caso de uso nuevo o modificado cambia el plan, sin escribir pruebas.",
     "tab_run": "Ejecutar",
     "tab_history": "Historial",
-    "safety": "Las pruebas se ejecutan en una base de datos de prueba. Hoy el motor solo acepta una base local de la lista permitida y comprueba, al final, que ninguna fila real fue modificada. Ejecutar en la base original solo con su consentimiento (próximamente).",
+    "safety": "Las pruebas se ejecutan en una base de datos de prueba: por defecto, una copia de la base que usted informa. Ejecutar en la base original solo con su consentimiento. El motor comprueba, al final, que ningún dato existente fue modificado.",
     "viewing": "Ejecución del {date} (historial)",
     "rerun": "Ejecutar de nuevo",
     "back_to_plan": "Volver al plan",
@@ -5097,6 +5097,18 @@
     "db_robot_removed": "Usuario de prueba eliminado de la base.",
     "db_err_need_confirm": "Confirme la opción de arriba para continuar.",
     "db_err_need_engine": "Instale primero el motor (arriba).",
-    "db_err_fields": "Complete servidor, puerto, base de datos y usuario."
+    "db_err_fields": "Complete servidor, puerto, base de datos y usuario.",
+    "db_nocopy": "¿Aún no tiene una copia?",
+    "db_nocopy_help": "El IDE puede crear la copia en el mismo servidor de la base original (necesita permiso para crear bases y que nadie esté conectado a la original). Si no es posible, entregue el script al administrador de la base.",
+    "db_copy_name": "Nombre de la copia",
+    "db_copy_create": "Crear la copia automáticamente",
+    "db_copying": "Creando la copia...",
+    "db_copy_script": "Ver script para el administrador",
+    "db_copy_to_clip": "Copiar script",
+    "db_copied": "¡Copiado!",
+    "db_copy_done": "Copia \"{n}\" creada ({mb} MB) y ya completada en los campos.",
+    "db_copy_existed": "La copia \"{n}\" ya existía: los campos se completaron con ella.",
+    "int_note": "La integración graba datos de prueba (texto que empieza con E2E-) en la base de prueba y los borra al final; la comprobación final confirma que nada existente cambió.",
+    "int_needs_managed": "La integración graba datos y solo se ejecuta con el motor instalado por el IDE y una base de prueba confirmada (sección 3)."
   }
 }

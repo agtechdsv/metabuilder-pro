@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aplicarMascara, describeName, isSupportedView, mascaraDePadrao, planView } from '../plan'
+import { aplicarMascara, campoMarcador, describeName, isSupportedView, mascaraDePadrao, planTitle, planView } from '../plan'
 import { eventLine, parseTestEvent, statusFromPlaywright } from '../results'
 import type { ManifestField, ManifestView } from '../manifestTypes'
 
@@ -75,6 +75,18 @@ describe('plano de testes de um caso de uso', () => {
     const p = planView(view({ exportFormats: ['xlsx', 'csv', 'json', 'pdf'] }))
     expect(p.filter(t => t.kind === 'exportacao').map(t => t.format)).toEqual(['xlsx', 'csv', 'json'])
     expect(planView(view({ exportFormats: [] })).some(t => t.kind === 'exportacao')).toBe(false)
+  })
+
+  it('integração: cadastro, reabrir, edição e exclusão só com tipo integração e um campo de texto que identifique o registro', () => {
+    const kinds = (v: ManifestView, types?: ('funcional' | 'integracao')[]) => planView(v, { types }).map(t => t.kind)
+    expect(kinds(view(), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
+    expect(kinds(view())).not.toContain('crud_cadastro')                    // o padrão (funcional) nunca grava
+    expect(kinds(view(), ['funcional', 'integracao'])).toEqual(expect.arrayContaining(['abre', 'lista', 'crud_cadastro', 'crud_exclusao']))
+    // sem campo de texto livre (só número e máscara de padrão): não há como identificar o registro, então não há teste de integração
+    expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('valor', { dataType: 'numeric' }), campo('cnpj', { mask: '00.000.000/0000-00' })] }), ['integracao'])).toEqual([])
+    expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
+    expect(campoMarcador(view())?.column).toBe('nome')
+    expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
   })
 
   it('aplicarMascara: cada 0 consome um dígito e o resto é literal', () => {

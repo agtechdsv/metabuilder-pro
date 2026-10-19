@@ -4833,7 +4833,7 @@
     "type_funcional": "Funcional · Pesquisa + Cadastro",
     "type_funcional_desc": "Todo caso de uso: a tela abre. Pesquisa + Cadastro: lista, formulário, obrigatórios, máscaras, total, ordenação, filtro e exportação",
     "type_integracao": "Integração",
-    "type_integracao_desc": "Cadastro completo gravando no banco de teste",
+    "type_integracao_desc": "Cadastro, edição e exclusão com dados gerados, gravando no banco de teste (e apagando no fim)",
     "type_seguranca": "Segurança",
     "type_seguranca_desc": "Permissões, regras por linha e entradas maliciosas",
     "type_visual": "Responsividade e acessibilidade",
@@ -4866,7 +4866,7 @@
     "subtitle": "Os testes nascem do que você configurou no Studio: um caso de uso novo ou alterado muda o plano, sem escrever teste.",
     "tab_run": "Executar",
     "tab_history": "Histórico",
-    "safety": "Os testes rodam em um banco de teste. Hoje o motor só aceita banco local da lista permitida e confere, no fim, que nenhuma linha real foi alterada. Rodar no banco original só com o seu consentimento (em breve).",
+    "safety": "Os testes rodam em um banco de teste: por padrão, uma cópia do banco, informada por você. Rodar no banco original só com o seu consentimento. O motor confere, no fim, que nenhum dado existente foi alterado.",
     "viewing": "Execução de {date} (histórico)",
     "rerun": "Executar de novo",
     "back_to_plan": "Voltar ao plano",
@@ -5009,6 +5009,18 @@
     "db_robot_removed": "Usuário de teste removido do banco.",
     "db_err_need_confirm": "Confirme a opção acima para continuar.",
     "db_err_need_engine": "Instale o motor antes (acima).",
-    "db_err_fields": "Preencha servidor, porta, banco e usuário."
+    "db_err_fields": "Preencha servidor, porta, banco e usuário.",
+    "db_nocopy": "Ainda não tem uma cópia?",
+    "db_nocopy_help": "A IDE pode criar a cópia no mesmo servidor do banco original (precisa da permissão de criar bancos e de ninguém conectado ao original). Se não der, entregue o script ao administrador do banco.",
+    "db_copy_name": "Nome da cópia",
+    "db_copy_create": "Criar a cópia automaticamente",
+    "db_copying": "Criando a cópia...",
+    "db_copy_script": "Ver script para o administrador",
+    "db_copy_to_clip": "Copiar script",
+    "db_copied": "Copiado!",
+    "db_copy_done": "Cópia \"{n}\" criada ({mb} MB) e já preenchida nos campos.",
+    "db_copy_existed": "A cópia \"{n}\" já existia: os campos foram preenchidos com ela.",
+    "int_note": "A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.",
+    "int_needs_managed": "A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3)."
   }
 }

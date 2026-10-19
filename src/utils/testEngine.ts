@@ -86,7 +86,7 @@ export interface EngineRunConfig {
 }
 
 /** Grava a configuração da rodada (um arquivo por projeto, na pasta do usuário) e devolve o caminho para o E2E_CONFIG. */
-export async function writeEngineConfig(projectSlug: string, cfg: EngineRunConfig & { robotPassword?: string }): Promise<string> {
+export async function writeEngineConfig(projectSlug: string, cfg: EngineRunConfig & { robotPassword?: string; copyName?: string }): Promise<string> {
   const { mkdir, writeTextFile } = await import('@tauri-apps/plugin-fs')
   const { join } = await import('@tauri-apps/api/path')
   const dir = await workDir('config')
@@ -150,10 +150,40 @@ export interface DbToolResult {
 }
 
 /** Roda a ferramenta de banco do motor (e2e/dynamic/db-tool.mjs): check, prepare ou remove. */
-export async function runDbTool(action: 'check' | 'prepare' | 'remove', o: { runnerDir: string; configPath: string; manifestPath: string }): Promise<DbToolResult> {
+export async function runDbTool(action: 'check' | 'prepare' | 'remove' | 'copy', o: { runnerDir: string; configPath: string; manifestPath: string }): Promise<DbToolResult> {
   const script = `Set-Location '${q(o.runnerDir)}'; $env:E2E_CONFIG = '${q(o.configPath)}'; $env:E2E_MANIFEST = '${q(o.manifestPath)}'; node dynamic/db-tool.mjs ${action}`
   const r = await powershell(script)
   const linha = r.out.split(/\r?\n/).find(l => l.includes('@@MB-DB@@'))
   if (!linha) return { ok: false, error: r.out.split('\n').slice(-3).join(' ') || 'A ferramenta de banco não respondeu.' }
   try { return JSON.parse(linha.slice(linha.indexOf('@@MB-DB@@') + 9)) as DbToolResult } catch { return { ok: false, error: 'Resposta ilegível da ferramenta de banco.' } }
+}
+
+/** Nome sugerido para a cópia: o do banco original + "_teste". */
+export const suggestCopyName = (url: string): string => {
+  try { return `${decodeURIComponent(new URL(url).pathname.slice(1)).toLowerCase().replace(/[^a-z0-9_]/g, '_')}_teste`.slice(0, 63) } catch { return 'banco_teste' }
+}
+
+/** Script (PowerShell) para o administrador do banco criar a cópia, com os dados do banco original; a senha nunca vai no texto. */
+export function buildCopyScript(url: string, newName: string): string {
+  let host = 'SERVIDOR', port = '5432', db = 'BANCO', user = 'USUARIO'
+  try { const u = new URL(url); host = u.hostname; port = u.port || '5432'; db = decodeURIComponent(u.pathname.slice(1)); user = decodeURIComponent(u.username) } catch { /* mantém os marcadores */ }
+  return [
+    '# Cópia do banco para os testes automáticos do MetaBuilder (PostgreSQL). Rode UMA das duas opções.',
+    '# A senha não está aqui: defina-a antes, na sessão do PowerShell:  $env:PGPASSWORD = "SUA_SENHA"',
+    '',
+    '# Opção 1 — no mesmo servidor (precisa da permissão CREATEDB e de ninguém conectado ao banco original):',
+    `psql -h ${host} -p ${port} -U ${user} -d postgres -c "CREATE DATABASE \\"${newName}\\" TEMPLATE \\"${db}\\";"`,
+    '',
+    '# Opção 2 — em outro servidor, ou sem permissão para a opção 1 (pg_dump e pg_restore):',
+    `pg_dump -Fc -h ${host} -p ${port} -U ${user} -d ${db} -f ${db}.dump`,
+    `createdb -h NOVO_SERVIDOR -p ${port} -U NOVO_USUARIO ${newName}`,
+    `pg_restore -h NOVO_SERVIDOR -p ${port} -U NOVO_USUARIO -d ${newName} --no-owner --no-privileges ${db}.dump`,
+    '',
+    `# Depois, na IDE (Ambiente de Testes > Banco de dados de teste > Uma cópia do banco), informe o servidor, a porta, o banco "${newName}", o usuário e a senha.`,
+  ].join('\n')
+}
+
+/** Cria a cópia no mesmo servidor do banco original. */
+export async function createDbCopy(o: { runnerDir: string; configPath: string; manifestPath: string }): Promise<DbToolResult & { name?: string; sizeMb?: number; existed?: boolean }> {
+  return runDbTool('copy', o) as Promise<DbToolResult & { name?: string; sizeMb?: number; existed?: boolean }>
 }

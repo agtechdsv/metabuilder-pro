@@ -6,7 +6,7 @@ import { useI18n } from '@/i18n'
 import type { DbSettings } from '@/utils/testEngine'
 
 export interface DbResult { kind: 'ok' | 'warn' | 'err'; text: string }
-export type DbBusy = '' | 'test' | 'prepare' | 'remove'
+export type DbBusy = '' | 'test' | 'prepare' | 'remove' | 'copy'
 
 interface Props {
   settings: DbSettings
@@ -23,12 +23,17 @@ interface Props {
   onTest: () => void
   onPrepare: () => void
   onRemove: () => void
+  /** ajuda para quem ainda não tem a cópia: criar no mesmo servidor ou dar o script ao administrador */
+  copyName: string
+  onCopyName: (v: string) => void
+  onCreateCopy: () => void
+  copyScript: string
 }
 
 const input = 'rounded-lg border border-neutral-700 bg-neutral-800/60 px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-600 w-full'
 
 /** Banco de dados de teste: uma cópia que o cliente informa (padrão) ou o banco original do app, só com o consentimento dele. */
-export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engineReady, disabled, authType, onTest, onPrepare, onRemove }: Props) {
+export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engineReady, disabled, authType, onTest, onPrepare, onRemove, copyName, onCopyName, onCreateCopy, copyScript }: Props) {
   const { t } = useI18n()
   const off = disabled || busy !== ''
   const btn = 'rounded-md border border-indigo-500/50 px-2 py-0.5 text-[11px] text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-40'
@@ -36,6 +41,8 @@ export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engi
     ['host', t('ide_tests.db_host', 'Servidor'), false], ['port', t('ide_tests.db_port', 'Porta'), false], ['database', t('ide_tests.db_name', 'Banco'), false],
     ['user', t('ide_tests.db_user', 'Usuário'), false], ['password', t('ide_tests.db_pass', 'Senha'), true],
   ]
+  const [showScript, setShowScript] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
   const pronto = s.mode === 'copy' ? s.copyConfirmed : s.consentOriginal
 
   return (
@@ -56,6 +63,23 @@ export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engi
               <input key={k} type={secret ? 'password' : 'text'} value={s[k]} onChange={e => onChange({ [k]: e.target.value, copyConfirmed: false } as Partial<DbSettings>)} disabled={off} placeholder={label} title={label} className={input} />
             ))}
           </div>
+          <details className="rounded-lg border border-neutral-700 bg-neutral-900/40 px-3 py-2 text-[11px] text-neutral-300">
+            <summary className="cursor-pointer text-neutral-300">{t('ide_tests.db_nocopy', 'Ainda não tem uma cópia?')}</summary>
+            <div className="mt-2 space-y-2">
+              <p className="text-neutral-400">{t('ide_tests.db_nocopy_help', 'A IDE pode criar a cópia no mesmo servidor do banco original (precisa da permissão de criar bancos e de ninguém conectado ao original). Se não der, entregue o script ao administrador do banco.')}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input value={copyName} onChange={e => onCopyName(e.target.value)} disabled={off} title={t('ide_tests.db_copy_name', 'Nome da cópia')} placeholder={t('ide_tests.db_copy_name', 'Nome da cópia')} className={input + ' md:w-56'} />
+                <button onClick={onCreateCopy} disabled={off || !engineReady || !copyName.trim()} className={btn}>{busy === 'copy' ? t('ide_tests.db_copying', 'Criando a cópia...') : t('ide_tests.db_copy_create', 'Criar a cópia automaticamente')}</button>
+                <button onClick={() => setShowScript(v => !v)} className={btn}>{t('ide_tests.db_copy_script', 'Ver script para o administrador')}</button>
+              </div>
+              {showScript && (
+                <div className="space-y-1">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-black/40 p-2 text-[10px] text-neutral-300">{copyScript}</pre>
+                  <button onClick={() => { navigator.clipboard?.writeText(copyScript).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }).catch(() => {}) }} className={btn}>{copied ? t('ide_tests.db_copied', 'Copiado!') : t('ide_tests.db_copy_to_clip', 'Copiar script')}</button>
+                </div>
+              )}
+            </div>
+          </details>
           <label className="flex items-start gap-2 text-[11px] text-neutral-300 cursor-pointer">
             <input type="checkbox" className="accent-indigo-500 mt-0.5" checked={s.copyConfirmed} disabled={off} onChange={e => onChange({ copyConfirmed: e.target.checked })} />
             {t('ide_tests.db_copy_confirm', 'Confirmo que este banco é uma cópia de teste, e não o banco de produção.')}

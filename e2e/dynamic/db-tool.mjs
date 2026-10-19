@@ -1,6 +1,7 @@
 // Ferramenta de banco do motor de testes (a IDE a chama): testa a conexão com o banco de teste, cria o usuário de teste do app e o remove.
 //   node dynamic/db-tool.mjs check     -> conecta e confere se as tabelas dos casos de uso existem
 //   node dynamic/db-tool.mjs prepare   -> cria o usuário de teste (ou renova a senha dele), com a senha gerada, e o põe no grupo de administração, se houver
+//   node dynamic/db-tool.mjs copy      -> cria, no mesmo servidor, uma cópia do banco (CREATE DATABASE ... TEMPLATE); dbUrl = banco de origem, copyName = nome da cópia
 //   node dynamic/db-tool.mjs remove    -> remove o usuário de teste e o vínculo dele com o grupo
 // Entrada: E2E_CONFIG (JSON com dbUrl e, opcionalmente, robotPassword) e E2E_MANIFEST (manifesto com a configuração de login). Saída: uma linha @@MB-DB@@{json}.
 import crypto from 'node:crypto'
@@ -20,6 +21,26 @@ const action = process.argv[2]
 const limpar = msg => String(msg || '').replace(/(:\/\/[^:@/]+:)[^@]+@/g, '$1***@')
 const id = n => { if (!IDENT.test(String(n))) throw new Error(`nome inválido: ${n}`); return `"${n}"` }
 
+if (action === 'copy') {
+  // a cópia é feita por quem NÃO está conectado ao banco de origem (o Postgres não deixa copiar um banco em uso), por isso antes de abrir a conexão principal
+  const origem = decodeURIComponent(new URL(cfg.dbUrl).pathname.slice(1))
+  const nome = String(cfg.copyName || '').trim()
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(nome)) out({ ok: false, error: 'Nome inválido para a cópia: use letras minúsculas, números e _ (começando por letra).' })
+  if (nome === origem) out({ ok: false, error: 'A cópia precisa ter um nome diferente do banco original.' })
+  const adm = new URL(cfg.dbUrl); adm.pathname = '/postgres'
+  const a = new pg.Client({ connectionString: adm.toString(), connectionTimeoutMillis: 8000 })
+  try { await a.connect() } catch (e) { out({ ok: false, error: limpar(e.message) }) }
+  try {
+    if ((await a.query('select 1 from pg_database where datname = $1', [nome])).rowCount > 0) out({ ok: true, existed: true, name: nome })
+    const tam = Number((await a.query('select pg_database_size($1) as s', [origem])).rows[0].s)
+    await a.query(`create database "${nome}" template "${origem.replace(/"/g, '""')}"`)
+    out({ ok: true, name: nome, sizeMb: Math.round(tam / 1048576) })
+  } catch (e) {
+    const porCodigo = { '55006': 'O banco original está em uso por outro programa (o app, DBeaver...). Feche as conexões com ele e tente de novo, ou use o script para o administrador.', '42501': 'O usuário do banco não tem permissão para criar bancos (CREATEDB). Peça ao administrador do banco ou use o script.' }
+    out({ ok: false, error: porCodigo[e.code] || limpar(e.message) })
+  }
+}
+
 const c = new pg.Client({ connectionString: cfg.dbUrl, connectionTimeoutMillis: 8000 })
 try {
   await c.connect()
@@ -29,11 +50,11 @@ try {
 
 try {
   if (action === 'check') {
-    const versao = (await c.query('select version() as v, current_database() as d')).rows[0]
+    const versao = (await c.query('select version() as v, current_database() as d, pg_size_pretty(pg_database_size(current_database())) as sz')).rows[0]
     const esperadas = manifest ? [...new Set(manifest.views.flatMap(v => [v.table, ...v.details.map(d => d.table)]).filter(Boolean))] : []
     const achadas = new Set((await c.query("select table_name from information_schema.tables where table_schema not in ('pg_catalog','information_schema')")).rows.map(r => r.table_name))
     const faltam = esperadas.filter(t => !achadas.has(t))
-    out({ ok: true, database: versao.d, version: String(versao.v).split(' ').slice(0, 2).join(' '), tables: { expected: esperadas.length, missing: faltam }, authType: manifest?.auth?.type ?? null })
+    out({ ok: true, database: versao.d, size: versao.sz, version: String(versao.v).split(' ').slice(0, 2).join(' '), tables: { expected: esperadas.length, missing: faltam }, authType: manifest?.auth?.type ?? null })
   }
 
   const auth = manifest?.auth

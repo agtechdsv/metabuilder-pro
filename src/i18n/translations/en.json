@@ -4833,7 +4833,7 @@
     "type_funcional": "Functional · Search + Registration",
     "type_funcional_desc": "Every use case: the screen opens. Search + Registration: list, form, required fields, masks, total, sorting, filter and export",
     "type_integracao": "Integration",
-    "type_integracao_desc": "Full registration writing to the test database",
+    "type_integracao_desc": "Registration, edit and deletion with generated data, writing to the test database (and erasing at the end)",
     "type_seguranca": "Security",
     "type_seguranca_desc": "Permissions, row rules and malicious input",
     "type_visual": "Responsiveness and accessibility",
@@ -4866,7 +4866,7 @@
     "subtitle": "Tests are born from what you configured in Studio: a new or changed use case changes the plan, no test writing needed.",
     "tab_run": "Run",
     "tab_history": "History",
-    "safety": "Tests run on a test database. Today the engine only accepts a local database from the allowed list and checks, at the end, that no real row was changed. Running on the original database only with your consent (coming soon).",
+    "safety": "The tests run on a test database: by default, a copy of the database that you provide. Running on the original database only with your consent. The engine checks, at the end, that no existing data was changed.",
     "viewing": "Run of {date} (history)",
     "rerun": "Run again",
     "back_to_plan": "Back to the plan",
@@ -5009,6 +5009,18 @@
     "db_robot_removed": "Test user removed from the database.",
     "db_err_need_confirm": "Confirm the option above to continue.",
     "db_err_need_engine": "Install the engine first (above).",
-    "db_err_fields": "Fill in server, port, database and user."
+    "db_err_fields": "Fill in server, port, database and user.",
+    "db_nocopy": "Don't have a copy yet?",
+    "db_nocopy_help": "The IDE can create the copy on the same server as the original database (needs permission to create databases and nobody connected to the original). If that fails, give the script to the database administrator.",
+    "db_copy_name": "Copy name",
+    "db_copy_create": "Create the copy automatically",
+    "db_copying": "Creating the copy...",
+    "db_copy_script": "View script for the administrator",
+    "db_copy_to_clip": "Copy script",
+    "db_copied": "Copied!",
+    "db_copy_done": "Copy \"{n}\" created ({mb} MB) and already filled in the fields.",
+    "db_copy_existed": "The copy \"{n}\" already existed: the fields were filled with it.",
+    "int_note": "Integration writes test data (text starting with E2E-) to the test database and erases it at the end; the final check confirms nothing existing changed.",
+    "int_needs_managed": "Integration writes data and only runs with the engine installed by the IDE and a confirmed test database (section 3)."
   }
 }

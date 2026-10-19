@@ -2,17 +2,17 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser, Image as ImageIcon, Video as VideoIcon,
+  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser, Image as ImageIcon, Video as VideoIcon, Circle,
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
 import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
-import { buildDbUrl, dbKey, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
+import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
-import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
+import { describeName, isSupportedView, planTitle, planView, type TestType } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
 import { buildReportHtml } from '@/lib/testing/reportHtml'
@@ -57,9 +57,19 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [dbBusy, setDbBusy] = useState<DbBusy>('')
   const [dbResult, setDbResult] = useState<DbResult | null>(null)
   const [appDbHint, setAppDbHint] = useState('')
+  const [appDbUrl, setAppDbUrl] = useState('')
+  const [copyName, setCopyName] = useState('')
   const runnerDir = engineMode === 'managed' ? managedDir : customDir
   const setEngineMode = (m: 'managed' | 'custom') => { setEngineModeState(m); lsSet('mb_tests_engine_mode', m) }
   const [mode, setMode] = useState<TestWatchMode>('internal')
+  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao'); return v.length ? v : ['funcional'] })
+  const toggleType = (id: TestType) => setTypes(prev => {
+    const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    if (next.length === 0) return prev // pelo menos um tipo
+    lsSet('mb_tests_types', next.join(','))
+    return next
+  })
+  const planFor = useCallback((v: ManifestView) => planView(v, { types }), [types])
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
   const [runTotal, setRunTotal] = useState(0)
@@ -100,7 +110,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   const TEST_TYPES = [
     { id: 'funcional', label: t('ide_tests.type_funcional', 'Funcional · Pesquisa + Cadastro'), desc: t('ide_tests.type_funcional_desc', 'Todo caso de uso: a tela abre. Pesquisa + Cadastro: lista, formulário, obrigatórios, máscaras, total, ordenação, filtro e exportação'), available: true },
-    { id: 'integracao', label: t('ide_tests.type_integracao', 'Integração'), desc: t('ide_tests.type_integracao_desc', 'Cadastro completo gravando no banco de teste'), available: false },
+    { id: 'integracao', label: t('ide_tests.type_integracao', 'Integração'), desc: t('ide_tests.type_integracao_desc', 'Cadastro, edição e exclusão com dados gerados, gravando no banco de teste (e apagando no fim)'), available: true },
     { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissões, regras por linha e entradas maliciosas'), available: false },
     { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Tamanhos de tela, contraste e leitor de tela'), available: false },
     { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'Chrome, Firefox e Safari'), available: false },
@@ -124,8 +134,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   // a conexão que o app exportado já usa (com a senha escondida): é o que o modo "banco original" mostra
   useEffect(() => {
-    if (!isOpen || !appDir || !isTauri()) { setAppDbHint(''); return }
-    readAppDbUrl(appDir).then(u => setAppDbHint(u ? u.replace(/(:\/\/[^:@/]+:)[^@]+@/, '$1***@') : '')).catch(() => setAppDbHint(''))
+    if (!isOpen || !appDir || !isTauri()) { setAppDbHint(''); setAppDbUrl(''); return }
+    readAppDbUrl(appDir).then(u => { setAppDbUrl(u || ''); setAppDbHint(u ? u.replace(/(:\/\/[^:@/]+:)[^@]+@/, '$1***@') : ''); if (u) setCopyName(prev => prev || suggestCopyName(u)) }).catch(() => { setAppDbHint(''); setAppDbUrl('') })
   }, [isOpen, appDir])
 
   const updateDb = (patch: Partial<DbSettings>) => {
@@ -150,6 +160,21 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       allowRemote: ds.mode === 'original' && ds.consentOriginal, robotPassword: ds.robot?.password,
     })
     return { ...(await runDbTool(action, { runnerDir, configPath, manifestPath })), dbUrl }
+  }
+
+  /** Cria a cópia no mesmo servidor do banco que o app já usa e preenche os campos com ela. */
+  const createCopy = async () => {
+    if (!manifest || !appDbUrl) { setDbResult({ kind: 'err', text: t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.') }); return }
+    setDbBusy('copy'); setDbResult(null)
+    try {
+      const manifestPath = await writeManifest(manifest)
+      const configPath = await writeEngineConfig(projectSlug, { appDir, dbUrl: appDbUrl, user: '', password: '', mode: 'copy', copyConfirmed: false, consentOriginal: false, noAuth: false, allowRemote: false, copyName: copyName.trim() })
+      const r = await createDbCopy({ runnerDir, configPath, manifestPath })
+      if (!r.ok) { setDbResult({ kind: 'err', text: r.error || '' }); return }
+      const u = new URL(appDbUrl)
+      updateDb({ mode: 'copy', host: u.hostname, port: u.port || '5432', user: decodeURIComponent(u.username), password: decodeURIComponent(u.password), database: r.name || copyName.trim(), copyConfirmed: true, robot: undefined })
+      setDbResult({ kind: 'ok', text: r.existed ? t('ide_tests.db_copy_existed', 'A cópia "{n}" já existia: os campos foram preenchidos com ela.').replace('{n}', r.name || '') : t('ide_tests.db_copy_done', 'Cópia "{n}" criada ({mb} MB) e já preenchida nos campos.').replace('{n}', r.name || '').replace('{mb}', String(r.sizeMb ?? '?')) })
+    } catch (e: any) { setDbResult({ kind: 'err', text: String(e?.message || e) }) } finally { setDbBusy('') }
   }
 
   const testDb = async () => {
@@ -235,7 +260,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       if (!res.ok) throw new Error(json?.error || `Erro ${res.status}`)
       const m = json as TestManifest
       setManifest(m)
-      setSelected(Object.fromEntries(m.views.map(v => [v.slug, planView(v).length > 0])))
+      setSelected(Object.fromEntries(m.views.map(v => [v.slug, planFor(v).length > 0])))
     } catch (e: any) {
       setLoadError(e?.message || t('ide_tests.err_plan', 'Não foi possível gerar o plano.'))
     } finally {
@@ -247,11 +272,13 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   useEffect(() => { if (!isOpen) { setManifest(null); setResults({}); setSummary(null); setRunError(''); setViewing(null); setCompare(null); setTab('run') } }, [isOpen])
 
   const views = manifest?.views ?? []
-  const selectable = useMemo(() => views.filter(v => planView(v).length > 0), [views])
+  const selectable = useMemo(() => views.filter(v => planFor(v).length > 0), [views, planFor])
   const chosen = useMemo(() => selectable.filter(v => selected[v.slug]), [selectable, selected])
-  const plannedCount = useMemo(() => chosen.reduce((n, v) => n + planView(v).length, 0), [chosen])
+  const plannedCount = useMemo(() => chosen.reduce((n, v) => n + planFor(v).length, 0), [chosen, planFor])
 
-  const setAll = (on: boolean) => setSelected(Object.fromEntries(views.map(v => [v.slug, on && planView(v).length > 0])))
+  useEffect(() => { if (manifest) setSelected(prev => Object.fromEntries(manifest.views.map(v => [v.slug, planFor(v).length > 0 && (prev[v.slug] ?? true)]))) }, [types, manifest, planFor])
+
+  const setAll = (on: boolean) => setSelected(Object.fromEntries(views.map(v => [v.slug, on && planFor(v).length > 0])))
 
   const pick = async (kind: 'runner' | 'app') => {
     const dir = await pickFolder()
@@ -283,7 +310,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const buildRun = (meta: NonNullable<typeof runMeta.current>, res: Record<string, Result>, techReport?: string): HistoryRun => {
     const groups: HistoryGroup[] = meta.views.map(v => ({
       slug: v.slug, name: describeName(v), viewTitle: v.title, logicType: v.logicType,
-      rows: planView(v).map(p => {
+      rows: planFor(v).map(p => {
         const r = res[keyOf(describeName(v), p.title)]
         const status: RowStatus = !r || r.status === 'running' ? 'pending' : r.status
         return { ...p, status, ms: r?.ms, error: r?.error, shot: r?.shot, video: r?.video }
@@ -324,6 +351,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
+    if (types.includes('integracao') && engineMode !== 'managed') { setRunError(t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')); return }
     if (engineMode === 'managed') {
       if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
       if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
@@ -351,11 +379,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       const startedAt = new Date()
       const artifactsDir = await artifactsDirFor(runId(startedAt))
       runMeta.current = { startedAt, views: toRun, mode, stopped: false, artifactsDir }
-      setRunTotal(toRun.reduce((n, v) => n + planView(v).length, 0)); setLiveOpen(true)
+      setRunTotal(toRun.reduce((n, v) => n + planFor(v).length, 0)); setLiveOpen(true)
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
-        configPath, browser: browserName, artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
+        configPath, browser: browserName, types, artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
       })
     } catch (e: any) {
       setRunning(false); runMeta.current = null
@@ -388,7 +416,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     const slugs = new Set(r.groups.map(g => g.slug))
     const still = selectable.filter(v => slugs.has(v.slug))
     if (still.length === 0) { setRunError(t('ide_tests.err_rerun_missing', 'Os casos de uso desta execução não existem mais no projeto.')); return }
-    setSelected(Object.fromEntries(views.map(v => [v.slug, slugs.has(v.slug) && planView(v).length > 0])))
+    setSelected(Object.fromEntries(views.map(v => [v.slug, slugs.has(v.slug) && planFor(v).length > 0])))
     run(still)
   }
 
@@ -425,7 +453,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (viewing) return viewing.groups.map(g => ({ name: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ title: r.title, text: planTitle(r, language), status: r.status, ms: r.ms, error: r.error, shot: r.shot })) }))
     return chosen.map(v => ({
       name: describeName(v), logicType: v.logicType,
-      rows: planView(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: p.title, text: planTitle(p, language), status: (r?.status ?? 'pending') as RowStatus, ms: r?.ms, error: r?.error, shot: r?.shot } }),
+      rows: planFor(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: p.title, text: planTitle(p, language), status: (r?.status ?? 'pending') as RowStatus, ms: r?.ms, error: r?.error, shot: r?.shot } }),
     }))
   }
 
@@ -543,7 +571,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
             {/* Segurança */}
             <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 [html:not(.light)_&]:text-amber-400">
               <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-              <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste. Hoje o motor só aceita banco local da lista permitida e confere, no fim, que nenhuma linha real foi alterada. Rodar no banco original só com o seu consentimento (em breve).')}</p>
+              <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste: por padrão, uma cópia do banco, informada por você. Rodar no banco original só com o seu consentimento. O motor confere, no fim, que nenhum dado existente foi alterado.')}</p>
             </div>
 
             {/* Execução aberta do histórico */}
@@ -620,16 +648,28 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               <section>
                 <h3 className={lblSection}>1 · {t('ide_tests.type', 'Tipo de teste')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  {TEST_TYPES.map(tp => (
-                    <div key={tp.id} className={`rounded-xl border px-3 py-2.5 ${tp.available ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-neutral-800 bg-neutral-900/60 opacity-60'}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-white">{tp.label}</span>
-                        {tp.available ? <CheckCircle2 className="w-4 h-4 text-indigo-400" /> : <span className="text-[10px] uppercase tracking-wider text-neutral-500">{t('ide_tests.soon', 'em breve')}</span>}
-                      </div>
-                      <p className="text-xs text-neutral-400 mt-1">{tp.desc}</p>
-                    </div>
-                  ))}
+                  {TEST_TYPES.map(tp => {
+                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao'
+                    const on = escolhivel && types.includes(tp.id as TestType)
+                    return (
+                      <button key={tp.id} type="button" disabled={!tp.available || running} onClick={() => escolhivel && toggleType(tp.id as TestType)}
+                        className={`text-left rounded-xl border px-3 py-2.5 ${on ? 'border-indigo-500/50 bg-indigo-500/10' : tp.available ? 'border-neutral-700 bg-neutral-800/30 hover:bg-neutral-800/60' : 'border-neutral-800 bg-neutral-900/60 opacity-60'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-white">{tp.label}</span>
+                          {on ? <CheckCircle2 className="w-4 h-4 text-indigo-400" /> : !tp.available ? <span className="text-[10px] uppercase tracking-wider text-neutral-500">{t('ide_tests.soon', 'em breve')}</span> : <Circle className="w-4 h-4 text-neutral-600" />}
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-1">{tp.desc}</p>
+                      </button>
+                    )
+                  })}
                 </div>
+                {types.includes('integracao') && (
+                  <p className={`mt-2 text-[11px] ${engineMode === 'managed' ? 'text-neutral-400' : 'text-amber-700 [html:not(.light)_&]:text-amber-400'}`}>
+                    {engineMode === 'managed'
+                      ? t('ide_tests.int_note', 'A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.')
+                      : t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')}
+                  </p>
+                )}
               </section>
 
               {/* 2. Casos de uso */}
@@ -647,7 +687,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 {target.type !== 'project' && <p className="text-sm text-neutral-400">{t('ide_tests.only_project', 'Por enquanto os testes rodam por projeto. Abra um projeto na IDE.')}</p>}
                 <div className="space-y-2">
                   {views.map((v: ManifestView) => {
-                    const plan = planView(v)
+                    const plan = planFor(v)
                     const ok = plan.length > 0
                     const completo = isSupportedView(v)
                     return (
@@ -715,7 +755,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 )}
                 {desktop && engineMode === 'managed' && (
                   <IdeTestDb settings={dbSettings} onChange={updateDb} appDbHint={appDbHint} busy={dbBusy} result={dbResult} engineReady={!!engineSt?.installed} disabled={running}
-                    authType={manifest?.auth?.type ?? null} onTest={testDb} onPrepare={prepareDb} onRemove={removeRobot} />
+                    authType={manifest?.auth?.type ?? null} onTest={testDb} onPrepare={prepareDb} onRemove={removeRobot}
+                    copyName={copyName} onCopyName={setCopyName} onCreateCopy={createCopy} copyScript={buildCopyScript(appDbUrl, copyName || suggestCopyName(appDbUrl))} />
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {(([...(engineMode === 'custom' ? [['runner', t('ide_tests.runner', 'Motor de testes (pasta e2e)'), customDir]] : []), ['app', t('ide_tests.app', 'App exportado a testar'), appDir]]) as ['runner' | 'app', string, string][]).map(([kind, label, value]) => (

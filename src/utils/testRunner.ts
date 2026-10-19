@@ -43,6 +43,8 @@ export interface StartTestRunOptions {
   mode: TestWatchMode
   /** espera entre as ações no modo ao vivo (ms) */
   slowMoMs?: number
+  /** tipos de teste da rodada (funcional lê; integracao grava no banco de teste) */
+  types?: string[]
   /** JSON de configuração do motor instalado (E2E_CONFIG); sem ele vale o modo do repositório (e2e/.env.real) */
   configPath?: string
   /** navegador do motor: chrome ou msedge */
@@ -84,6 +86,7 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
     `$env:E2E_VIEWS = '${q(o.viewSlugs.join(','))}'`,
     `$env:E2E_LIVE_DIR = '${q(liveDir)}'`,
     o.artifactsDir ? `$env:E2E_ARTIFACTS_DIR = '${q(o.artifactsDir)}'` : '',
+    o.types?.length ? `$env:E2E_TYPES = '${o.types.join(',')}'` : '',
     o.configPath ? `$env:E2E_CONFIG = '${q(o.configPath)}'` : '',
     o.browser ? `$env:E2E_BROWSER = '${o.browser}'` : '',
     // instala as dependências e compila o app exportado se ainda não foi feito (ou se o código mudou)

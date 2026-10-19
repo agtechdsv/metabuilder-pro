@@ -11,6 +11,7 @@ export type PlannedKind =
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
   | 'botoes' | 'campos_tipos' | 'abas'
+  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
 
 export interface PlannedTest {
@@ -28,6 +29,10 @@ export interface PlannedTest {
 
 export type PlanLang = 'pt' | 'en' | 'es'
 
+/** Tipos de teste: funcional só LÊ dados; integração GRAVA (cadastro, edição e exclusão com dados gerados) e exige um banco de teste. */
+export type TestType = 'funcional' | 'integracao'
+export interface PlanOptions { types?: TestType[] }
+
 /**
  * Texto do teste no idioma da tela. O `title` (português) é o NOME do teste para o Playwright e a chave dos resultados e do histórico: não muda
  * com o idioma. Só o que aparece na tela (painel, relatório, comparativo) passa por aqui.
@@ -42,6 +47,10 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: the total shown equals the database total',
     grid_ordenacao: p => `grid: sort by "${p.label}" in both directions`,
     grid_filtro: p => `filter by "${p.label}": filters the rows and the Clear button undoes it`,
+    crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
+    crud_reabrir: () => 'registration: reopening the record shows what was saved',
+    crud_edicao: () => 'edit: changing and saving writes only the change',
+    crud_exclusao: () => 'deletion: deleting from the list removes the record',
     grid_paginacao: () => 'grid: pagination respects the chosen page size',
     filtro_opcoes: p => `filter by "${p.label}" option: only the rows of the option appear and Clear undoes it`,
     visualizar: () => 'View: opens the record read-only, without a save button',
@@ -72,6 +81,10 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: el total mostrado es igual al total de la base de datos',
     grid_ordenacao: p => `grid: ordenar por "${p.label}" en ambos sentidos`,
     grid_filtro: p => `filtro de "${p.label}": filtra las filas y el botón Limpiar lo deshace`,
+    crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
+    crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
+    crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
+    crud_exclusao: () => 'eliminación: eliminar desde la lista quita el registro',
     grid_paginacao: () => 'grid: la paginación respeta el tamaño de página elegido',
     filtro_opcoes: p => `filtro de "${p.label}" por opción: solo aparecen las filas de la opción y Limpiar lo deshace`,
     visualizar: () => 'Visualizar: abre el registro solo lectura, sin botón de guardar',
@@ -161,7 +174,33 @@ const TITULO_TIPO: Record<string, string> = {
   tipo_bi: 'BI: o painel abre, atualiza e mostra dados',
 }
 
-export function planView(v: ManifestView): PlannedTest[] {
+/**
+ * Campo de texto que identifica o registro criado pelo teste de integração: o primeiro campo de texto livre, editável e sem máscara de padrão.
+ * É nele que o motor grava o prefixo "E2E-" (a limpeza de sobras só apaga linhas assim) e é por ele que acha a linha no banco.
+ */
+export const campoMarcador = (v: Pick<ManifestView, 'form'>): ManifestField | undefined =>
+  v.form.find(f => !f.isPrimaryKey && !f.readOnly && !f.hasFormula && ehTexto(f) && !mascaraDePadrao(f.mask))
+
+/** Prefixo dos dados gerados pelo teste de integração. */
+export const PREFIXO_E2E = 'E2E-'
+
+/** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com um campo marcador. */
+function planoIntegracao(v: ManifestView): PlannedTest[] {
+  if (v.logicType !== 'pesquisa_cadastro' || !campoMarcador(v)) return []
+  return [
+    { kind: 'crud_cadastro', title: 'cadastro: preencher com dados gerados e salvar grava tudo no banco' },
+    { kind: 'crud_reabrir', title: 'cadastro: reabrir o registro mostra o que foi gravado' },
+    { kind: 'crud_edicao', title: 'edição: alterar e salvar grava só a alteração' },
+    { kind: 'crud_exclusao', title: 'exclusão: excluir pela lista remove o registro' },
+  ]
+}
+
+export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[] {
+  const types = opts.types ?? ['funcional']
+  return [...(types.includes('funcional') ? planoFuncional(v) : []), ...(types.includes('integracao') ? planoIntegracao(v) : [])]
+}
+
+function planoFuncional(v: ManifestView): PlannedTest[] {
   const plano: PlannedTest[] = [{ kind: 'abre', title: 'a tela abre sem erro e mostra o título do caso de uso' }]
   if (!isSupportedView(v)) return plano
 

@@ -8,9 +8,9 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 | Categoria | O que o motor dinâmico fará | Quando | Testes (real / oracle / exemplo) | Total |
 |---|---|---|---|---|
-| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 20 / 5 / 3 | **28** |
+| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 23 / 5 / 3 | **31** |
 | **Autoteste do motor** | Login do robô: o motor confere antes de qualquer teste | Interno ao motor | 1 / 1 / 0 | **2** |
-| **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 4 / 5 / 1 | **10** |
+| **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 1 / 5 / 1 | **7** |
 | **Tipos de campo e opções** | Por tipo: texto, número, data/hora, booleano, opções fixas, relação, autocomplete; o formulário mostra o que está no banco | Fase 2 | 3 / 1 / 6 | **10** |
 | **Grid e filtros** | Tamanho de página do Studio, paginação, ordenação, filtros, Limpar, Visualizar só leitura, total igual ao banco | Fase 2 | 1 / 4 / 4 | **9** |
 | **Exportação de dados** | Formatos liberados no Studio (CSV, JSON, Excel), só o filtrado, só as linhas marcadas, Central de Downloads | Fase 2 | 1 / 4 / 3 | **8** |
@@ -21,7 +21,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | **Telas criadas por IA** | Têm código próprio (não são declarativas): a configuração não descreve o comportamento | Fica à mão | 2 / 0 / 0 | **2** |
 | **Rede de proteção do banco** | Garante que o teste só apaga o que criou: faz parte do motor | Fica (é o motor) | 1 / 1 / 0 | **2** |
 
-**Hoje o motor já cobre 28 dos 122 testes (23%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 57 testes. Telas por tipo e segurança exigem gabaritos próprios (31 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
+**Hoje o motor já cobre 31 dos 122 testes (25%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 54 testes. Telas por tipo e segurança exigem gabaritos próprios (31 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
 
 ## Ordem sugerida para o motor ganhar regras
 
@@ -33,11 +33,14 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 ## Lista completa (um teste por linha)
 
-### Já coberto pelo motor dinâmico (28)
+### Já coberto pelo motor dinâmico (31)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
+| real | clientes-pedidos-itens.spec.ts | edição e exclusão só do cliente criado pelo teste |
+| real | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
 | real | departamentos-funcs.spec.ts | nome é obrigatório: salvar vazio não cria registro |
+| real | departamentos-funcs.spec.ts | criar func com departamento, editar o cargo e excluir |
 | real | departamentos-funcs.spec.ts | campos obrigatórios (nome, e-mail, cargo, data): salvar vazio não cria registro |
 | real | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
 | real | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
@@ -73,14 +76,11 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | smoke.spec.ts | login do robô funciona e a senha errada é recusada |
 | oracle | smoke.spec.ts | login do robô funciona e a senha errada é recusada |
 
-### Cadastro, edição e exclusão (10)
+### Cadastro, edição e exclusão (7)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | cadastros-gerais.spec.ts | Pedidos (lista): criar para um cliente, editar o status e excluir |
-| real | clientes-pedidos-itens.spec.ts | edição e exclusão só do cliente criado pelo teste |
-| real | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
-| real | departamentos-funcs.spec.ts | criar func com departamento, editar o cargo e excluir |
 | oracle | clientes.spec.ts | cadastrar um cliente: grava os dados e a auditoria do robô (criado_por) |
 | oracle | clientes.spec.ts | edição e exclusão só do cliente criado pelo teste |
 | oracle | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
