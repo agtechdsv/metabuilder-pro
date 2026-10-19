@@ -29,7 +29,7 @@ import { aplicarMascara, camposEditaveis, describeName, planView } from '../../.
  */
 async function transmitirTela(ctx: import('@playwright/test').BrowserContext, pagina: Page): Promise<() => Promise<void>> {
   if (process.env.E2E_STREAM !== '1') return async () => {}
-  const dir = path.join(import.meta.dirname, '..', 'live')
+  const dir = process.env.E2E_LIVE_DIR || path.join(import.meta.dirname, '..', 'live')
   fs.mkdirSync(dir, { recursive: true })
   const quadro = path.join(dir, 'frame.jpg')
   const tmp = path.join(dir, 'frame.tmp')

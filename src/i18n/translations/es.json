@@ -5024,6 +5024,12 @@
     "cmp_older": "Ejecución anterior (A)",
     "cmp_newer": "Ejecución más reciente (B)",
     "cmp_all": "Todos",
-    "cmp_empty": "Nada en esta categoría."
+    "cmp_empty": "Nada en esta categoría.",
+    "live_progress": "Probando... {done}/{total}",
+    "live_done": "Terminado: {passed} pasaron, {failed} fallaron",
+    "reset": "Limpiar",
+    "reset_hint": "Limpiar resultados y volver al estado original",
+    "live_collapse": "Contraer",
+    "live_expand": "Expandir"
   }
 }

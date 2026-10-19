@@ -4936,6 +4936,12 @@
     "cmp_older": "Previous run (A)",
     "cmp_newer": "Latest run (B)",
     "cmp_all": "All",
-    "cmp_empty": "Nothing in this category."
+    "cmp_empty": "Nothing in this category.",
+    "live_progress": "Testing... {done}/{total}",
+    "live_done": "Finished: {passed} passed, {failed} failed",
+    "reset": "Clear",
+    "reset_hint": "Clear results and go back to the original state",
+    "live_collapse": "Collapse",
+    "live_expand": "Expand"
   }
 }

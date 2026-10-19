@@ -16,13 +16,18 @@ const REQUIRED = ['playwright.dynamic.config.ts', 'dynamic/tests/manifest.spec.t
 
 /** A pasta é um motor de testes utilizável? Devolve o que falta. */
 export async function checkRunnerDir(runnerDir: string): Promise<{ ok: boolean; missing: string[] }> {
-  const { exists } = await import('@tauri-apps/plugin-fs')
-  const { join } = await import('@tauri-apps/api/path')
-  const missing: string[] = []
-  for (const rel of REQUIRED) {
-    if (!(await exists(await join(runnerDir, ...rel.split('/'))))) missing.push(rel)
-  }
+  // pelo PowerShell (e não pelo plugin de arquivos): o Tauri só libera pastas fora do perfil do usuário na sessão em que foram escolhidas
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const script = `$d = '${q(runnerDir)}'; foreach ($p in @(${REQUIRED.map(r => `'${r}'`).join(',')})) { if (-not (Test-Path -LiteralPath (Join-Path $d $p))) { Write-Output $p } }`
+  const out = await Command.create('powershell', [...PS, script]).execute()
+  const missing = out.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   return { ok: missing.length === 0, missing }
+}
+
+/** Pasta de trabalho do motor dentro do perfil do usuário (sempre liberada): manifesto da rodada e quadros do navegador interno. */
+async function workDir(...parts: string[]): Promise<string> {
+  const { homeDir, join } = await import('@tauri-apps/api/path')
+  return join(await homeDir(), '.metabuilder', 'testes', ...parts)
 }
 
 export type TestWatchMode = 'internal' | 'external' | 'background'
@@ -51,16 +56,19 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
   const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs')
   const { join } = await import('@tauri-apps/api/path')
 
-  const manifestDir = await join(o.runnerDir, 'dynamic', 'manifests')
+  const manifestDir = await workDir('manifests')
   try { await mkdir(manifestDir, { recursive: true }) } catch { /* já existe */ }
   const manifestPath = await join(manifestDir, '_ide.json')
   await writeTextFile(manifestPath, JSON.stringify(o.manifest, null, 2))
+  const liveDir = await workDir('live')
+  try { await mkdir(liveDir, { recursive: true }) } catch { /* já existe */ }
 
   const script = [
     `Set-Location '${q(o.runnerDir)}'`,
     `$env:E2E_MANIFEST = '${q(manifestPath)}'`,
     `$env:E2E_REAL_APP_DIR = '${q(o.appDir)}'`,
     `$env:E2E_VIEWS = '${q(o.viewSlugs.join(','))}'`,
+    `$env:E2E_LIVE_DIR = '${q(liveDir)}'`,
     o.mode === 'external' ? `$env:E2E_HEADED = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     o.mode === 'internal' ? `$env:E2E_STREAM = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     'npx playwright test -c playwright.dynamic.config.ts --timeout=60000',
@@ -94,10 +102,10 @@ export async function openTestReport(runnerDir: string): Promise<void> {
 }
 
 /** Último quadro da tela do navegador (modo "navegador interno"): bytes do JPEG, ou null se ainda não há quadro legível. */
-export async function readLiveFrame(runnerDir: string): Promise<Uint8Array | null> {
+export async function readLiveFrame(): Promise<Uint8Array | null> {
   try {
     const { readFile } = await import('@tauri-apps/plugin-fs')
     const { join } = await import('@tauri-apps/api/path')
-    return await readFile(await join(runnerDir, 'dynamic', 'live', 'frame.jpg'))
+    return await readFile(await join(await workDir('live'), 'frame.jpg'))
   } catch { return null }
 }

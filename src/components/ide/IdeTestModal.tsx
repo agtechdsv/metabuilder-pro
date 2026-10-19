@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon,
+  X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser,
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
@@ -46,6 +46,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [appDir, setAppDir] = useState('')
   const [mode, setMode] = useState<TestWatchMode>('internal')
   const [frameUrl, setFrameUrl] = useState('')
+  const [liveOpen, setLiveOpen] = useState(true)
+  const [runTotal, setRunTotal] = useState(0)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
   const [slow, setSlow] = useState(300)
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState<Record<string, Result>>({})
@@ -191,6 +194,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
       runMeta.current = { startedAt: new Date(), views: toRun, mode, stopped: false }
+      setRunTotal(toRun.reduce((n, v) => n + planView(v).length, 0)); setLiveOpen(true)
+      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
         onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
@@ -203,6 +208,13 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         ? t('ide_tests.err_reauth', 'O Windows pede para autorizar a pasta de novo depois que a IDE é reaberta. Clique em "{runner}" e em "{app}" e escolha as mesmas pastas.').replace('{runner}', t('ide_tests.runner', 'Motor de testes (pasta e2e)')).replace('{app}', t('ide_tests.app', 'App exportado a testar')) + `\n(${msg})`
         : (msg || t('ide_tests.err_start', 'Não foi possível iniciar os testes.')))
     }
+  }
+
+  /** volta a tela ao estado original: sem resultados, sem imagem do navegador e sem mensagens */
+  const resetRun = () => {
+    setResults({}); resultsRef.current = {}; setSummary(null); setViewing(null); setRunError(''); setLogs([]); setRunTotal(0)
+    setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' })
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const stop = async () => { if (runMeta.current) runMeta.current.stopped = true; await handle.current?.stop() }
@@ -225,11 +237,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   // navegador interno: lê o quadro mais recente da tela do teste e mostra no painel
   useEffect(() => {
-    if (!running || mode !== 'internal' || !runnerDir) return
+    if (!running || mode !== 'internal') return
     let alive = true
     let last = 0
     const tick = async () => {
-      const bytes = await readLiveFrame(runnerDir)
+      const bytes = await readLiveFrame()
       if (!alive || !bytes || bytes.length === 0) return
       const sig = bytes.length * 31 + bytes[Math.floor(bytes.length / 2)]
       if (sig === last) return
@@ -239,7 +251,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     }
     const id = setInterval(tick, 250)
     return () => { alive = false; clearInterval(id) }
-  }, [running, mode, runnerDir])
+  }, [running, mode])
   useEffect(() => { if (!isOpen) setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' }) }, [isOpen])
 
   // ---- relatório (da rodada na tela ou da execução aberta do histórico)
@@ -311,7 +323,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {tab === 'history' && (
             <IdeTestHistory runs={history} loading={histLoading} error={histError} dir={histDir} selected={histSel} setSelected={setHistSel}
               onOpen={openRun} onDelete={onDeleteRuns} onCompare={(a, b) => setCompare([a, b])} />
@@ -334,21 +346,39 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               </div>
             )}
 
-            {/* Navegador interno: a execução do teste, dentro do painel */}
-            {!viewing && mode === 'internal' && (running || frameUrl) && (
-              <section>
-                <h3 className={lblSection}>{t('ide_tests.live_view', 'Navegador interno · execução ao vivo')}</h3>
-                <div className="rounded-xl border border-neutral-700 bg-black overflow-hidden">
-                  <div className="flex items-center gap-1.5 px-3 py-2 bg-neutral-800 border-b border-neutral-700">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-400" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    <span className="ml-3 text-[11px] text-neutral-400">{running ? t('ide_tests.live_running', 'Testando... (somente visualização)') : t('ide_tests.live_last', 'Última tela da execução')}</span>
+            {/* Navegador interno: a execução do teste dentro do painel. Fica fixo no topo enquanto a lista de testes rola por baixo. */}
+            {!viewing && mode === 'internal' && (running || frameUrl) && (() => {
+              const done = Object.values(results).filter(r => r.status !== 'running').length
+              const finished = !running && !!summary
+              const bad = (summary?.failed ?? 0) > 0
+              return (
+                <section className="sticky top-0 z-20 -mx-2 px-2 pb-2 bg-neutral-900">
+                  <div className={`rounded-xl border overflow-hidden bg-black ${finished ? (bad ? 'border-red-500/60' : 'border-emerald-500/60') : 'border-neutral-700'}`}>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-800 border-b border-neutral-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-400" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-300">{t('ide_tests.live_view', 'Navegador interno · execução ao vivo')}</span>
+                      <span className={`ml-2 text-[11px] flex items-center gap-1.5 ${finished ? (bad ? 'text-red-300' : 'text-emerald-300') : 'text-neutral-400'}`}>
+                        {running && <Loader2 className="w-3 h-3 animate-spin" />}
+                        {running
+                          ? t('ide_tests.live_progress', 'Testando... {done}/{total}').replace('{done}', String(done)).replace('{total}', String(runTotal))
+                          : finished
+                            ? t('ide_tests.live_done', 'Concluído: {passed} passaram, {failed} falharam').replace('{passed}', String(summary?.passed ?? 0)).replace('{failed}', String(summary?.failed ?? 0))
+                            : t('ide_tests.live_last', 'Última tela da execução')}
+                      </span>
+                      <div className="ml-auto flex items-center gap-1">
+                        {!running && <button onClick={resetRun} title={t('ide_tests.reset_hint', 'Limpar resultados e voltar ao estado original')} className="flex items-center gap-1.5 rounded-lg border border-neutral-600 px-2.5 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700"><Eraser className="w-3.5 h-3.5" /> {t('ide_tests.reset', 'Limpar')}</button>}
+                        <button onClick={() => setLiveOpen(o => !o)} title={liveOpen ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')} className="flex items-center gap-1 rounded-lg border border-neutral-600 px-2.5 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700">
+                          {liveOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} {liveOpen ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')}
+                        </button>
+                      </div>
+                    </div>
+                    {liveOpen && (frameUrl
+                      ? <img src={frameUrl} alt="" className="w-full block max-h-[46vh] object-contain bg-black" />
+                      : <div className="flex items-center justify-center gap-2 h-40 text-sm text-neutral-400"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.live_wait', 'Iniciando o navegador...')}</div>)}
                   </div>
-                  {frameUrl
-                    ? <img src={frameUrl} alt="" className="w-full block" />
-                    : <div className="flex items-center justify-center gap-2 h-56 text-sm text-neutral-400"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.live_wait', 'Iniciando o navegador...')}</div>}
-                </div>
-              </section>
-            )}
+                </section>
+              )
+            })()}
 
             {viewing ? (
               /* resultados da execução aberta: o que foi planejado e o que aconteceu naquela rodada */
@@ -498,6 +528,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 ? <span><b className="text-emerald-400">{summary.passed}</b> {t('ide_tests.passed', 'passaram')} · <b className="text-red-400">{summary.failed}</b> {t('ide_tests.failed', 'falharam')}{summary.skipped ? <> · {summary.skipped} {t('ide_tests.skipped', 'ignorados')}</> : null}</span>
                 : <span>{chosen.length} {t('ide_tests.views_selected', 'caso(s) de uso')} · {plannedCount} {t('ide_tests.tests', 'testes')}</span>}
             </div>
+            {summary && !running && <button onClick={resetRun} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"><Eraser className="w-4 h-4" /> {t('ide_tests.reset', 'Limpar')}</button>}
             {summary && reportButton}
             {running
               ? <button onClick={stop} className="flex items-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 px-4 py-2 text-sm font-bold text-white"><Square className="w-4 h-4" /> {t('ide_tests.stop', 'Parar')}</button>
