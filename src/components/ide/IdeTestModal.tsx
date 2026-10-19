@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, FlaskConical, Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw,
+  X, FlaskConical, Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download,
 } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
@@ -12,6 +12,7 @@ import { checkRunnerDir, openTestReport, startTestRun, type TestRunHandle } from
 import { describeName, isSupportedView, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
+import { buildReportHtml } from '@/lib/testing/reportHtml'
 
 interface Props {
   isOpen: boolean
@@ -63,6 +64,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [runError, setRunError] = useState('')
   const [logs, setLogs] = useState<string[]>([])
   const handle = useRef<TestRunHandle | null>(null)
+  const [reportMenu, setReportMenu] = useState(false)
+  const [report, setReport] = useState<{ mode: 'html' | 'pdf'; html: string } | null>(null)
+  const reportFrame = useRef<HTMLIFrameElement | null>(null)
 
   const projectId = target?.id || ''
 
@@ -134,6 +138,33 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     }
   }
 
+  const showReport = (mode: 'html' | 'pdf') => {
+    setReportMenu(false)
+    const groups = chosen.map(v => ({
+      name: describeName(v), logicType: v.logicType,
+      rows: planView(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: p.title, status: (r?.status ?? 'pending') as TestStatus | 'pending', ms: r?.ms, error: r?.error } }),
+    }))
+    setReport({ mode, html: buildReportHtml({ project: target?.name || '', generatedAt: new Date(), groups, mode }) })
+  }
+
+  const downloadReport = async () => {
+    if (!report) return
+    const name = `relatorio-testes-${(target?.slug || 'projeto')}-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.html`
+    try {
+      if (isTauri()) {
+        const dir = await pickFolder()
+        if (!dir) return
+        const { writeTextFile } = await import('@tauri-apps/plugin-fs')
+        const { join } = await import('@tauri-apps/api/path')
+        await writeTextFile(await join(dir, name), report.html)
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(new Blob([report.html], { type: 'text/html' }))
+        a.download = name; a.click(); URL.revokeObjectURL(a.href)
+      }
+    } catch (e: any) { setRunError(e?.message || 'Não foi possível salvar o relatório.') }
+  }
+
   const stop = async () => { await handle.current?.stop(); setRunning(false) }
 
   if (!isOpen || !target) return null
@@ -154,7 +185,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Segurança */}
-          <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-400">
+          <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 [html:not(.light)_&]:text-amber-400">
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
             <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste. Hoje o motor só aceita banco local da lista permitida e confere, no fim, que nenhuma linha real foi alterada. Rodar no banco original só com o seu consentimento (em breve).')}</p>
           </div>
@@ -271,12 +302,37 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               ? <span><b className="text-emerald-400">{summary.passed}</b> {t('ide_tests.passed', 'passaram')} · <b className="text-red-400">{summary.failed}</b> {t('ide_tests.failed', 'falharam')}{summary.skipped ? <> · {summary.skipped} {t('ide_tests.skipped', 'ignorados')}</> : null}</span>
               : <span>{chosen.length} {t('ide_tests.views_selected', 'caso(s) de uso')} · {plannedCount} {t('ide_tests.tests', 'testes')}</span>}
           </div>
-          {summary && <button onClick={() => openTestReport(runnerDir)} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"><FileText className="w-4 h-4" /> {t('ide_tests.report', 'Abrir relatório')}</button>}
+          {summary && (
+            <div className="relative">
+              <button onClick={() => setReportMenu(m => !m)} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800"><FileText className="w-4 h-4" /> {t('ide_tests.report', 'Abrir relatório')} <ChevronDown className="w-3.5 h-3.5" /></button>
+              {reportMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-72 rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl p-1 z-10">
+                  <button onClick={() => showReport('html')} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">HTML interativo</span><span className="block text-[11px] text-neutral-400">Painel com filtros, busca e grupos por caso de uso</span></button>
+                  <button onClick={() => showReport('pdf')} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">PDF</span><span className="block text-[11px] text-neutral-400">Layout de papel: imprimir ou salvar como PDF</span></button>
+                  <button onClick={() => { setReportMenu(false); openTestReport(runnerDir) }} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">Relatório técnico (Playwright)</span><span className="block text-[11px] text-neutral-400">Com rastros e capturas das falhas</span></button>
+                </div>
+              )}
+            </div>
+          )}
           {running
             ? <button onClick={stop} className="flex items-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 px-4 py-2 text-sm font-bold text-white"><Square className="w-4 h-4" /> {t('ide_tests.stop', 'Parar')}</button>
             : <button onClick={run} disabled={!desktop || plannedCount === 0 || loading} className="flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 px-4 py-2 text-sm font-bold text-white"><Play className="w-4 h-4" /> {t('ide_tests.run', 'Executar testes')}</button>}
         </div>
       </div>
+      {report && (
+        <div className="fixed inset-0 z-[1000001] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-5xl h-[92vh] flex flex-col rounded-2xl bg-neutral-900 border border-neutral-700 overflow-hidden shadow-2xl">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-neutral-800">
+              <FileText className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm font-bold text-white flex-1">{report.mode === 'pdf' ? 'Relatório (PDF)' : 'Relatório de testes'}</span>
+              <button onClick={() => reportFrame.current?.contentWindow?.print()} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"><Printer className="w-4 h-4" /> {report.mode === 'pdf' ? 'Imprimir / Salvar PDF' : 'Imprimir'}</button>
+              <button onClick={downloadReport} className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800"><Download className="w-4 h-4" /> Baixar HTML</button>
+              <button onClick={() => setReport(null)} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
+            </div>
+            <iframe ref={reportFrame} title="Relatório de testes" srcDoc={report.html} sandbox="allow-scripts allow-modals allow-same-origin" className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,8 +1,8 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { entrar } from '../../real/tests/helpers'
-import { realQuery } from '../../real/guard'
+import { realQuery, REAL } from '../../real/guard'
 import type { TestManifest } from '../../../src/lib/testing/manifestTypes'
 import { aplicarMascara, camposEditaveis, describeName, planView } from '../../../src/lib/testing/plan'
 
@@ -19,6 +19,25 @@ import { aplicarMascara, camposEditaveis, describeName, planView } from '../../.
  *
  * Variáveis: E2E_MANIFEST (caminho do manifesto) e E2E_VIEWS (slugs dos casos de uso a testar, separados por vírgula; vazio = todos).
  */
+/**
+ * Uma janela do navegador para a rodada inteira (no modo "ver ao vivo" ela não abre e fecha a cada teste). Entre um teste e outro a sessão é
+ * encerrada (cookies e armazenamento limpos = logout) e o login é refeito, então cada teste continua começando do zero.
+ */
+const test = base.extend<object, { janela: Page }>({
+  janela: [async ({ browser }, use) => {
+    const ctx = await browser.newContext({ baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR' })
+    await use(await ctx.newPage())
+    await ctx.close()
+  }, { scope: 'worker' }],
+  page: async ({ janela }, use) => {
+    janela.removeAllListeners('pageerror')
+    await janela.context().clearCookies()
+    await janela.goto('about:blank')
+    await janela.evaluate(() => { try { localStorage.clear(); sessionStorage.clear() } catch { /* sem armazenamento */ } }).catch(() => {})
+    await use(janela)
+  },
+})
+
 const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname, '..', 'manifests', 'vendas-pg.sample.json')
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
