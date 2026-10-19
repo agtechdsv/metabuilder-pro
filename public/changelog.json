@@ -1,31 +1,4 @@
 {
-  "v1.0.9": {
-    "date": "2026-10-19",
-    "pt": [
-      "Suporte Corporativo Java & Oracle: Compatibilidade nativa com backend Java (Spring) e bancos de dados Oracle, garantindo máxima flexibilidade e facilidade de migração entre PostgreSQL e Oracle.",
-      "Navegação e Ações Contextuais Inteligentes: Novas ações de linha customizadas que permitem abrir telas correlacionadas diretamente filtradas pelo registro selecionado, agilizando o fluxo de trabalho.",
-      "Gestão Interativa de Fluxos e Kanban: Experiência aprimorada com drag-and-drop inteligente em fluxos e cartões Kanban, incluindo proteção contra ciclos e movimentação segura de etapas.",
-      "Controle de Acesso e Governança de Segurança: Gestão abrangente de usuários, grupos e permissões, complementada por regras de segurança granulares por linha.",
-      "Maior Transparência e Rastreabilidade: Relatórios e painéis atualizados com histórico detalhado e justificativas claras para itens ou testes ignorados.",
-      "Consulta Segura em Visualizações Gantt: Novo modo de visualização direta para inspecionar detalhes de registros sem risco de alterações acidentais."
-    ],
-    "en": [
-      "Enterprise Java & Oracle Support: Native compatibility with Java (Spring) backends and Oracle databases, providing enhanced architecture flexibility and smooth migration between PostgreSQL and Oracle.",
-      "Smart Contextual Navigation & Row Actions: New customized row actions that open linked screens pre-filtered by the active record, significantly speeding up user workflows.",
-      "Interactive Kanban & Flow Management: Upgraded drag-and-drop capabilities across process flows and Kanban boards, featuring loop prevention and reliable stage tracking.",
-      "Access Management & Security Governance: Robust centralized control for users, groups, and permissions, paired with fine-grained row-level security policies.",
-      "Enhanced Visibility & Audit Tracking: Dashboards and reporting views now display detailed history and explicit status reasons for skipped operations.",
-      "Safe Inspection on Gantt Views: Quick 'View' action to inspect record details without the risk of unintended edits or data overwrites."
-    ],
-    "es": [
-      "Soporte Empresarial para Java y Oracle: Compatibilidad nativa con backends Java (Spring) y bases de datos Oracle, facilitando la flexibilidad técnica y la migración fluida entre PostgreSQL y Oracle.",
-      "Navegación y Acciones Contextuales Inteligentes: Nuevas acciones de fila personalizadas que permiten abrir pantallas vinculadas prefiltradas por el registro seleccionado, optimizando la productividad.",
-      "Gestión Interactiva de Flujos y Kanban: Experiencia optimizada de arrastrar y soltar en flujos y tableros Kanban, con prevención de bucles y actualización segura de estados.",
-      "Control de Accesos y Seguridad Avanzada: Gestión integral de usuarios, grupos y permisos, fortalecida con políticas de seguridad granulares por fila.",
-      "Mayor Visibilidad y Trazabilidad Operativa: Paneles e informes enriquecidos con registros históricos detallados y motivos explícitos para elementos omitidos.",
-      "Modo de Consulta Segura en Vistas Gantt: Nueva opción de visualización directa para revisar registros sin peligro de modificaciones involuntarias."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
