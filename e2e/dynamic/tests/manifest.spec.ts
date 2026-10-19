@@ -659,6 +659,23 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         })
       }
 
+      if (t.kind === 'acoes_linha') {
+        test(t.title, async ({ page }) => {
+          const acoes = [...new Set(view.buttons.filter(b => b.actionType === 'custom' && b.placement === 'row').map(b => b.label))]
+          for (const rotulo of acoes) {
+            await abrir(page, view.path)
+            await aguardarLista(page)
+            // o primeiro registro da lista: o id vem do endereço do link da linha
+            const hrefs = await page.locator('tbody tr').first().locator('a[href]').evaluateAll(as => as.map(a => a.getAttribute('href') ?? ''))
+            const id = hrefs.map(h => h.split('?')[0].split('/').pop() ?? '').find(x => x && x !== 'new')
+            test.skip(!id, 'a lista está vazia: não há linha para usar a ação')
+            await page.locator('tbody tr').first().locator(`button[title="${rotulo}"]`).click()
+            await expect(page.locator(`iframe[src*="${id}"]`).first(), `a ação "${rotulo}" abre a outra tela em janela, filtrada pelo registro`).toBeVisible({ timeout: 15_000 })
+            await expect.soft(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+          }
+        })
+      }
+
       if (t.kind === 'botoes') {
         test(t.title, async ({ page }) => {
           await abrir(page, view.path)

@@ -10,7 +10,7 @@ export type PlannedKind =
   | 'abre' | 'lista' | 'formulario' | 'mascara' | 'obrigatorios'
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
-  | 'botoes' | 'campos_tipos' | 'abas'
+  | 'botoes' | 'acoes_linha' | 'campos_tipos' | 'abas'
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
@@ -78,6 +78,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     exportacao_marcadas: () => 'export: only the checked rows',
     central_downloads: () => 'Downloads Center: lists the export and downloads the file',
     botoes: () => 'buttons: the buttons configured in Studio are on the screen',
+    acoes_linha: () => 'row actions: each custom action opens the other screen in a window, filtered by the row',
     campos_tipos: () => 'form: each field uses the configured component (text, number, date, options)',
     abas: () => 'tabs: the detail tabs configured in Studio are in the form',
     filtros_tela: () => 'filters: all the use case filters are on the screen',
@@ -126,6 +127,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     exportacao_marcadas: () => 'exportación: solo las filas marcadas',
     central_downloads: () => 'Centro de descargas: lista la exportación y descarga el archivo',
     botoes: () => 'botones: los botones configurados en Studio están en la pantalla',
+    acoes_linha: () => 'acciones de fila: cada acción personalizada abre la otra pantalla en una ventana, filtrada por la fila',
     campos_tipos: () => 'formulario: cada campo usa el componente configurado (texto, número, fecha, opciones)',
     abas: () => 'pestañas: las pestañas de detalle configuradas en Studio están en el formulario',
     filtros_tela: () => 'filtros: todos los filtros del caso de uso están en la pantalla',
@@ -325,6 +327,7 @@ function planoFuncional(v: ManifestView): PlannedTest[] {
     if (v.exportFormats.some(x => x.toLowerCase() === 'csv')) plano.push({ kind: 'central_downloads', title: 'Central de Downloads: lista a exportação e baixa o arquivo' })
   }
   if (v.buttons.length > 0) plano.push({ kind: 'botoes', title: 'botões: os botões configurados no Studio estão na tela' })
+  if (v.logicType === 'pesquisa_cadastro' && v.buttons.some(b => b.actionType === 'custom' && b.placement === 'row')) plano.push({ kind: 'acoes_linha', title: 'ações da linha: cada ação customizada abre a outra tela em janela, filtrada pelo registro' })
   if (camposDeTipo(v).length > 0) plano.push({ kind: 'campos_tipos', title: 'formulário: cada campo usa o componente configurado (texto, número, data, opções)' })
   if (v.details.length > 0) plano.push({ kind: 'abas', title: 'abas: as abas de detalhe configuradas no Studio estão no formulário' })
   return plano
