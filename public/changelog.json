@@ -1,4 +1,28 @@
 {
+  "v1.0.3": {
+    "date": "2026-10-19",
+    "pt": [
+      "Gestão de Acessos mais Segura: Validação inteligente para prevenção de e-mails duplicados e maior precisão no gerenciamento e remoção de vínculos de grupos.",
+      "Formulários Dinâmicos Inteligentes: Detecção e validação automática de campos obrigatórios com suporte a cálculo de fórmulas em tempo real na tela de cadastro.",
+      "Auditoria e Rastreabilidade Reforçadas: Preservação garantida do histórico de alterações, identificando com precisão quem e quando cada registro foi modificado.",
+      "Alta Disponibilidade e Desempenho do Banco de Dados: Otimização profunda nas operações de inserção e atualização, assegurando compatibilidade e velocidade em ambientes corporativos.",
+      "Experiência e Estabilidade Aprimoradas: Ampla bateria de testes cobrindo fluxos críticos de exportação, grids, navegação por abas e controle de permissões."
+    ],
+    "en": [
+      "More Secure Access Management: Smart validation to prevent duplicate emails and enhanced precision when updating or unlinking user groups.",
+      "Intelligent Dynamic Forms: Automatic identification and enforcement of mandatory fields, plus real-time formula evaluation directly on registration screens.",
+      "Enhanced Audit & Traceability: Guaranteed preservation of record modification logs, accurately tracking who updated records and when.",
+      "Enterprise Database Reliability: Deep optimizations for data insert and update workflows, ensuring peak stability across database operations.",
+      "Improved Platform Stability: Comprehensive end-to-end testing coverage across exports, data grids, tabbed navigation, and permission controls."
+    ],
+    "es": [
+      "Gestión de Accesos más Segura: Validación inteligente para prevenir correos duplicados y mayor precisión en la administración y desvinculación de grupos.",
+      "Formularios Dinámicos Inteligentes: Detección y validación automática de campos obligatorios junto con evaluación de fórmulas en tiempo real en pantallas de registro.",
+      "Auditoría y Trazabilidad Reforzadas: Preservación garantizada del historial de modificaciones, identificando con exactitud quién y cuándo actualizó cada registro.",
+      "Confiabilidad de Base de Datos Empresarial: Optimizaciones profundas en las operaciones de inserción y actualización para máxima estabilidad.",
+      "Mayor Estabilidad en la Plataforma: Cobertura exhaustiva de pruebas de extremo a extremo en exportaciones, cuadrículas, navegación por pestañas y permisos."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
