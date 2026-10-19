@@ -1,4 +1,4 @@
-import type { AppAST, ResolvedField, RouteNode, RelationTab } from '../generator/ast'
+import type { AppAST, ModelNode, ResolvedField, RouteNode, RelationTab } from '../generator/ast'
 import { MANIFEST_VERSION, type ManifestAuth, type ManifestDetail, type ManifestField, type ManifestView, type TestManifest } from './manifestTypes'
 
 export * from './manifestTypes'
@@ -45,7 +45,7 @@ const detail = (t: RelationTab): ManifestDetail => ({
   })),
 })
 
-export function manifestView(r: RouteNode): ManifestView {
+export function manifestView(r: RouteNode, model?: ModelNode): ManifestView {
   const raw: any = r.rawLayoutConfig || {}
   return {
     slug: r.viewSlug,
@@ -56,6 +56,11 @@ export function manifestView(r: RouteNode): ManifestView {
     primaryKey: r.primaryKey,
     displayType: r.displayType,
     actionInterface: r.actionInterfaceType || raw.action_interface_type || 'page',
+    tablePerms: { create: model?.canCreate !== false, update: model?.canUpdate !== false, delete: model?.canDelete !== false },
+    ...(model?.rowPolicy?.rules?.length ? { rowPolicy: model.rowPolicy.rules.map(rule => ({
+      column: rule.column, op: rule.op, source: rule.source, ...(rule.attr ? { attr: rule.attr } : {}),
+      ...(rule.bypass ? { bypass: { source: String(rule.bypass.source), ...(rule.bypass.attr ? { attr: rule.bypass.attr } : {}), values: rule.bypass.values.map(String) } } : {}),
+    })) } : {}),
     filter: r.filterFields.map(manifestField),
     grid: r.gridFields.map(manifestField),
     form: r.formFields.map(manifestField),
@@ -77,7 +82,7 @@ export function manifestAuth(ast: AppAST): ManifestAuth {
       access: {
         groupsTable: a.groups.table, groupsPk: a.groups.pk, groupsNameColumn: a.groups.nameCol,
         link: a.link.kind === 'column' ? { kind: 'column', column: a.link.col } : { kind: 'table', table: a.link.table, userColumn: a.link.userCol, roleColumn: a.link.roleCol },
-        permsTable: a.perms.table,
+        permsTable: a.perms.table, permsRoleColumn: a.perms.roleCol, permsViewColumn: a.perms.viewCol, permsLevelColumn: a.perms.levelCol,
       },
     }
   }
@@ -92,6 +97,6 @@ export function buildTestManifest(ast: AppAST, opts: { viewSlugs?: string[]; now
     project: { id: ast.projectId ?? '', name: ast.projectName ?? '', slug: ast.projectSlug ?? '' },
     dbStack: ast.dbStack,
     auth: manifestAuth(ast),
-    views: ast.routes.filter(r => !only || only.has(r.viewSlug)).map(manifestView),
+    views: ast.routes.filter(r => !only || only.has(r.viewSlug)).map(r => manifestView(r, ast.models.find(m => String(m.dbTable).split('.').pop() === String(r.modelTable).split('.').pop()))),
   }
 }

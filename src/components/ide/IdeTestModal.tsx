@@ -62,14 +62,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const runnerDir = engineMode === 'managed' ? managedDir : customDir
   const setEngineMode = (m: 'managed' | 'custom') => { setEngineModeState(m); lsSet('mb_tests_engine_mode', m) }
   const [mode, setMode] = useState<TestWatchMode>('internal')
-  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao'); return v.length ? v : ['funcional'] })
+  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca'); return v.length ? v : ['funcional'] })
   const toggleType = (id: TestType) => setTypes(prev => {
     const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     if (next.length === 0) return prev // pelo menos um tipo
     lsSet('mb_tests_types', next.join(','))
     return next
   })
-  const planFor = useCallback((v: ManifestView) => planView(v, { types }), [types])
+  const planFor = useCallback((v: ManifestView) => planView(v, { types, auth: manifest?.auth }), [types, manifest])
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
   const [runTotal, setRunTotal] = useState(0)
@@ -111,7 +111,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const TEST_TYPES = [
     { id: 'funcional', label: t('ide_tests.type_funcional', 'Funcional · Pesquisa + Cadastro'), desc: t('ide_tests.type_funcional_desc', 'Todo caso de uso: a tela abre. Pesquisa + Cadastro: lista, formulário, obrigatórios, máscaras, total, ordenação, filtro e exportação'), available: true },
     { id: 'integracao', label: t('ide_tests.type_integracao', 'Integração'), desc: t('ide_tests.type_integracao_desc', 'Cadastro, edição e exclusão com dados gerados, gravando no banco de teste (e apagando no fim)'), available: true },
-    { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissões, regras por linha e entradas maliciosas'), available: false },
+    { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissão da tabela, acesso por grupo e regra por linha, conferidos com usuários temporários'), available: true },
     { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Tamanhos de tela, contraste e leitor de tela'), available: false },
     { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'Chrome, Firefox e Safari'), available: false },
     { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Muitos acessos ao mesmo tempo'), available: false },
@@ -351,7 +351,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
-    if (types.includes('integracao') && engineMode !== 'managed') { setRunError(t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')); return }
+    if (types.some(x => x !== 'funcional') && engineMode !== 'managed') { setRunError(t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')); return }
     if (engineMode === 'managed') {
       if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
       if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
@@ -649,7 +649,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 <h3 className={lblSection}>1 · {t('ide_tests.type', 'Tipo de teste')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {TEST_TYPES.map(tp => {
-                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao'
+                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca'
                     const on = escolhivel && types.includes(tp.id as TestType)
                     return (
                       <button key={tp.id} type="button" disabled={!tp.available || running} onClick={() => escolhivel && toggleType(tp.id as TestType)}
@@ -663,7 +663,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     )
                   })}
                 </div>
-                {types.includes('integracao') && (
+                {types.some(x => x !== 'funcional') && (
                   <p className={`mt-2 text-[11px] ${engineMode === 'managed' ? 'text-neutral-400' : 'text-amber-700 [html:not(.light)_&]:text-amber-400'}`}>
                     {engineMode === 'managed'
                       ? t('ide_tests.int_note', 'A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.')

@@ -4835,7 +4835,7 @@
     "type_integracao": "Integration",
     "type_integracao_desc": "Registration, edit and deletion with generated data, writing to the test database (and erasing at the end)",
     "type_seguranca": "Security",
-    "type_seguranca_desc": "Permissions, row rules and malicious input",
+    "type_seguranca_desc": "Table permission, group access and row rule, checked with temporary users",
     "type_visual": "Responsiveness and accessibility",
     "type_visual_desc": "Screen sizes, contrast and screen reader",
     "type_compat": "Compatibility",
@@ -5020,7 +5020,7 @@
     "db_copied": "Copied!",
     "db_copy_done": "Copy \"{n}\" created ({mb} MB) and already filled in the fields.",
     "db_copy_existed": "The copy \"{n}\" already existed: the fields were filled with it.",
-    "int_note": "Integration writes test data (text starting with E2E-) to the test database and erases it at the end; the final check confirms nothing existing changed.",
-    "int_needs_managed": "Integration writes data and only runs with the engine installed by the IDE and a confirmed test database (section 3)."
+    "int_note": "Integration and security write test data (texts with E2E-, temporary users and groups) to the test database and erase it at the end; the final check confirms nothing existing changed.",
+    "int_needs_managed": "Integration and security write data and only run with the engine installed by the IDE and a confirmed test database (section 3)."
   }
 }

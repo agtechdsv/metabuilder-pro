@@ -4923,7 +4923,7 @@
     "type_integracao": "Integración",
     "type_integracao_desc": "Registro, edición y eliminación con datos generados, grabando en la base de prueba (y borrando al final)",
     "type_seguranca": "Seguridad",
-    "type_seguranca_desc": "Permisos, reglas por fila y entradas maliciosas",
+    "type_seguranca_desc": "Permiso de la tabla, acceso por grupo y regla por fila, comprobados con usuarios temporales",
     "type_visual": "Responsividad y accesibilidad",
     "type_visual_desc": "Tamaños de pantalla, contraste y lector de pantalla",
     "type_compat": "Compatibilidad",
@@ -5108,7 +5108,7 @@
     "db_copied": "¡Copiado!",
     "db_copy_done": "Copia \"{n}\" creada ({mb} MB) y ya completada en los campos.",
     "db_copy_existed": "La copia \"{n}\" ya existía: los campos se completaron con ella.",
-    "int_note": "La integración graba datos de prueba (texto que empieza con E2E-) en la base de prueba y los borra al final; la comprobación final confirma que nada existente cambió.",
-    "int_needs_managed": "La integración graba datos y solo se ejecuta con el motor instalado por el IDE y una base de prueba confirmada (sección 3)."
+    "int_note": "Integración y seguridad graban datos de prueba (textos con E2E-, usuarios y grupos temporales) en la base de prueba y los borran al final; la comprobación final confirma que nada existente cambió.",
+    "int_needs_managed": "Integración y seguridad graban datos y solo se ejecutan con el motor instalado por el IDE y una base de prueba confirmada (sección 3)."
   }
 }

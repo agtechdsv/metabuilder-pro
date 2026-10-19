@@ -1,11 +1,13 @@
 import fs from 'node:fs'
+import { limparSegurancaDoBanco } from './lib/seguranca'
 import { arquivoBase, diferencas, impressaoDigital, limparSobras, type Impressao } from './lib/guard'
 
 /** Depois da rodada: a impressão digital das tabelas tem de ser a mesma do início; senão a rodada falha e avisa. */
 export default async function globalTeardown() {
   if (!fs.existsSync(arquivoBase())) return
-  const { tabelas, antes, limpeza = [] } = JSON.parse(fs.readFileSync(arquivoBase(), 'utf8')) as { tabelas: string[]; antes: Impressao; limpeza?: Array<{ tabela: string; coluna: string }> }
+  const { tabelas, antes, limpeza = [], seguranca } = JSON.parse(fs.readFileSync(arquivoBase(), 'utf8')) as { tabelas: string[]; antes: Impressao; limpeza?: Array<{ tabela: string; coluna: string }>; seguranca?: any }
   if (limpeza.length > 0) await limparSobras(limpeza) // o que um teste de integração deixou para trás sai antes da conferência
+  if (seguranca) await limparSegurancaDoBanco(seguranca) // e os usuários e grupos temporários dos testes de segurança
   const difs = diferencas(antes, await impressaoDigital(tabelas))
   if (difs.length > 0) {
     throw new Error(`ATENÇÃO: os dados do banco mudaram durante a rodada (${difs.join('; ')}). Confira o banco de teste antes de rodar de novo.`)

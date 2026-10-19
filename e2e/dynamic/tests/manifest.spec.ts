@@ -1,11 +1,12 @@
 import { test as base, expect, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
-import { entrar } from '../lib/login'
+import { entrar, entrarComo } from '../lib/login'
+import { criarUsuarioTemporario, removerUsuarioTemporario, valorDaRegra } from '../lib/seguranca'
 import { consultar } from '../lib/db'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, type TestType } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -106,8 +107,8 @@ const test = base.extend<object, { contexto: BrowserContext }>({
 
 const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname, '..', 'manifests', 'vendas-pg.sample.json')
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
-/** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste. */
-const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao')
+/** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste; seguranca cria usuários e grupos temporários. */
+const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca')
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -151,6 +152,13 @@ async function totalMostrado(page: Page): Promise<number | null> {
   if (!(await el.count())) return null
   const m = /TOTAL:\s*(\d+)/i.exec(await el.innerText())
   return m ? Number(m[1]) : null
+}
+
+/** O total da lista; uma lista sem nenhuma linha não mostra "TOTAL: n" e conta como 0. */
+async function totalOuZero(page: Page): Promise<number | null> {
+  const total = await totalMostrado(page)
+  if (total !== null) return total
+  return (await linhasDoGrid(page)).length === 0 ? 0 : null
 }
 
 /** Posição da coluna do grid pelo rótulo (o cabeçalho e as células têm a mesma ordem). */
@@ -307,7 +315,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
   test.describe(describeName(view), () => {
     test.beforeEach(async ({ page }) => { await entrar(page) })
 
-    for (const t of planView(view, { types: TIPOS })) {
+    for (const t of planView(view, { types: TIPOS, auth: manifest.auth })) {
       if (t.kind === 'abre') {
         test(t.title, async ({ page }) => {
           const erros: string[] = []
@@ -871,6 +879,121 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [estado.marcador]))[0].n, { message: 'o registro some do banco', timeout: 15_000 }).toBe(0)
           expect(await contar(), 'só o registro criado pelo teste foi excluído').toBe(antes - 1)
           gravarEstado(view.slug, undefined)
+        })
+      }
+
+      // --- segurança: derivada da configuração de acesso do projeto (só com o tipo "seguranca"; cria usuários e grupos temporários e os apaga) ---
+
+      if (t.kind === 'seg_tabela') {
+        test(t.title, async ({ page }) => {
+          const tp = view.tablePerms ?? { create: true, update: true, delete: true }
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const visiveis = (loc: Locator) => loc.locator('visible=true').count()
+          expect((await visiveis(page.getByRole('link', { name: 'Novo Registro' }))) > 0, `"Novo Registro" visível (criar ${tp.create ? 'permitido' : 'proibido'} pelo Studio)`).toBe(tp.create)
+          const linhas = (await linhasDoGrid(page)).length
+          test.skip(linhas === 0, 'a lista está vazia: sem linhas não há ícones de editar e excluir para conferir')
+          expect((await visiveis(page.locator('main [title="Editar"]'))) > 0, `ícone Editar visível (editar ${tp.update ? 'permitido' : 'proibido'} pelo Studio)`).toBe(tp.update)
+          expect((await visiveis(page.locator('main [title="Excluir"]'))) > 0, `ícone Excluir visível (excluir ${tp.delete ? 'permitido' : 'proibido'} pelo Studio)`).toBe(tp.delete)
+        })
+      }
+
+      if (t.kind === 'seg_nivel_nenhum' || t.kind === 'seg_nivel_leitura') {
+        const nivel = t.kind === 'seg_nivel_nenhum' ? 'none' : 'read'
+        test(t.title, async ({ browser }) => {
+          const auth = manifest.auth!
+          const u = await criarUsuarioTemporario(auth, { nivel: { viewSlug: view.slug, nivel } })
+          const marcadorCampo = campoMarcador(view)
+          const marcador = `${RODADA}-forcado`
+          const ctx = await browser.newContext({ baseURL: `http://localhost:${CONFIG.port}`, locale: 'pt-BR', viewport: { width: 1280, height: 800 } })
+          try {
+            const pag = await ctx.newPage()
+            await entrarComo(pag, u.email, u.senha)
+            const menu = (await pag.locator('aside nav a[href^="/"]').evaluateAll(as => as.map(a => (a as HTMLAnchorElement).getAttribute('href')))) as string[]
+            await abrir(pag, view.path)
+            if (nivel === 'none') {
+              expect(menu, 'o menu do grupo sem acesso não lista a tela').not.toContain(view.path)
+              expect(await pag.locator('thead th').count(), 'a tela bloqueada não mostra a lista').toBe(0)
+              expect(await pag.getByText(/TOTAL:\s*\d+/i).count(), 'a tela bloqueada não mostra o total').toBe(0)
+              await abrir(pag, `${view.path}/new`)
+              if (marcadorCampo) expect(await pag.locator(`[name="${marcadorCampo.column}"]`).locator('visible=true').count(), 'o formulário não abre pelo endereço').toBe(0)
+            } else {
+              expect(menu, 'o menu do grupo de leitura lista a tela').toContain(view.path)
+              await aguardarLista(pag)
+              expect(await totalMostrado(pag), 'a lista abre e mostra o total').not.toBeNull()
+              expect(await pag.getByRole('link', { name: 'Novo Registro' }).locator('visible=true').count(), '"Novo Registro" escondido na leitura').toBe(0)
+              expect(await pag.locator('main [title="Editar"]').locator('visible=true').count(), 'ícone Editar escondido na leitura').toBe(0)
+              expect(await pag.locator('main [title="Excluir"]').locator('visible=true').count(), 'ícone Excluir escondido na leitura').toBe(0)
+              // o servidor recusa gravar mesmo se a pessoa forçar o endereço do formulário
+              if (marcadorCampo) {
+                await abrir(pag, `${view.path}/new`)
+                const campo = pag.locator(`[name="${marcadorCampo.column}"]`).first()
+                if ((await campo.count()) && (await campo.isEnabled())) {
+                  await campo.fill(marcador)
+                  const criar = pag.getByRole('button', { name: 'Criar Registro' }).first()
+                  if (await criar.count()) await criar.click()
+                  await pag.waitForTimeout(1500)
+                }
+                const criados = Number((await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]))[0].n)
+                if (criados > 0) await consultar(`delete from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]).catch(() => {})
+                expect(criados, 'o servidor aceitou gravar com acesso só de leitura').toBe(0)
+              }
+            }
+          } finally {
+            await ctx.close()
+            await removerUsuarioTemporario(auth, u)
+          }
+        })
+      }
+
+      if (t.kind === 'seg_linha') {
+        const regra = regraDeLinha(view)!
+        test(t.title, async ({ browser }) => {
+          const auth = manifest.auth!
+          const u = await criarUsuarioTemporario(auth, { grupoSemRestricao: true })
+          const marcadorCampo = campoMarcador(view)
+          const ctx = await browser.newContext({ baseURL: `http://localhost:${CONFIG.port}`, locale: 'pt-BR', viewport: { width: 1280, height: 800 } })
+          try {
+            // linhas que a regra deixa este usuário ver: as que têm, na coluna da regra, o valor dele (sem o dado, a regra nega tudo)
+            const valor = await valorDaRegra(auth, u.id, regra.source, regra.attr)
+            const esperado = async () => valor === null ? 0 : Number((await consultar(`select count(*)::int n from "${view.table}" where "${regra.column}"::text = $1`, [valor]))[0].n)
+            const noBanco = Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
+            const pag = await ctx.newPage()
+            await entrarComo(pag, u.email, u.senha)
+            await abrir(pag, view.path)
+            await aguardarLista(pag)
+            expect(await pag.locator('thead th').count(), 'a lista abriu para o usuário temporário (um grupo sem restrição de tela)').toBeGreaterThan(0)
+            expect(await totalOuZero(pag), `o usuário temporário (fora da exceção) vê só as linhas da regra; a tabela tem ${noBanco}`).toBe(await esperado())
+            if (noBanco > 0) expect(await totalOuZero(pag), 'a regra esconde as linhas de outras pessoas').toBeLessThan(noBanco)
+
+            // com a regra apontando para quem criou o registro: o que o usuário cria, ele passa a ver
+            if (/^(criado_por|created_by)$/i.test(regra.column) && regra.source === 'user.attr' && marcadorCampo) {
+              const antes = await esperado()
+              const marcador = caber(`${RODADA}-linha`, (await limitesDaTabela(view.table))[marcadorCampo.column])
+              await abrir(pag, `${view.path}/new`)
+              const limites = await limitesDaTabela(view.table)
+              const naoPreenchidos: string[] = []
+              let n = 0
+              for (const f of camposDeTipo(view).filter(x => !x.readOnly)) {
+                const p = await preencherCampo(pag, f, ++n, limites, f.column === marcadorCampo.column ? marcador : undefined)
+                if (!p && f.required) naoPreenchidos.push(f.label)
+              }
+              if (process.env.E2E_DEBUG && naoPreenchidos.length) console.log(`[seg_linha ${view.slug}] não preenchidos: ${naoPreenchidos.join(', ')} · url ${pag.url()}`)
+              test.skip(naoPreenchidos.length > 0, `campo(s) obrigatório(s) que o motor ainda não sabe preencher: ${naoPreenchidos.join(', ')}`)
+              await pag.getByRole('button', { name: 'Criar Registro' }).first().click()
+              await expect.poll(async () => Number((await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]))[0].n), { timeout: 15_000 }).toBe(1)
+              await abrir(pag, view.path)
+              await aguardarLista(pag)
+              expect(await pag.locator('thead th').count(), 'a lista abriu depois do cadastro').toBeGreaterThan(0)
+              expect(await totalOuZero(pag), 'o registro criado pelo usuário aparece para ele').toBe(antes + 1)
+              expect(await totalOuZero(pag), 'e continua sem ver as linhas de outras pessoas').toBeLessThan(noBanco + 1)
+            }
+          } finally {
+            await ctx.close()
+            // o que o usuário temporário criou sai antes dele (a auditoria aponta para o usuário)
+            if (marcadorCampo) await consultar(`delete from "${view.table}" where "${marcadorCampo.column}"::text like $1`, [PREFIXO_E2E + '%']).catch(() => {})
+            await removerUsuarioTemporario(auth, u)
+          }
         })
       }
     }

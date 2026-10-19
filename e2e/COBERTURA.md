@@ -8,7 +8,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 | Categoria | O que o motor dinâmico fará | Quando | Testes (real / oracle / exemplo) | Total |
 |---|---|---|---|---|
-| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 23 / 5 / 3 | **31** |
+| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 27 / 5 / 3 | **35** |
 | **Autoteste do motor** | Login do robô: o motor confere antes de qualquer teste | Interno ao motor | 1 / 1 / 0 | **2** |
 | **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 1 / 5 / 1 | **7** |
 | **Tipos de campo e opções** | Por tipo: texto, número, data/hora, booleano, opções fixas, relação, autocomplete; o formulário mostra o que está no banco | Fase 2 | 3 / 1 / 6 | **10** |
@@ -17,11 +17,11 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | **Botões e ações** | Botões do Studio na ordem, ações de linha e ações customizadas (abrir outra tela em modal) | Fase 3 | 3 / 2 / 0 | **5** |
 | **Abas, seções e subdetalhes** | Detalhe como aba ou seção, subdetalhe, itens (lápis, +, modal), fórmulas, exclusão em cascata | Fase 3 | 9 / 0 / 6 | **15** |
 | **Telas por tipo** | Um gabarito por tipo de tela: kanban, gantt, agenda, timeline, fluxo, mapa, mapa mental, galeria, BI (as contagens batem com o banco) | Fase 3 e 4 (arrastar e soltar por último) | 7 / 1 / 0 | **8** |
-| **Segurança e acesso** | Gestão de usuários, grupos e permissões, regra por linha: derivável da configuração de acesso do projeto | Fase 4 | 12 / 11 / 0 | **23** |
+| **Segurança e acesso** | Gestão de usuários, grupos e permissões, regra por linha: derivável da configuração de acesso do projeto | Fase 4 | 8 / 11 / 0 | **19** |
 | **Telas criadas por IA** | Têm código próprio (não são declarativas): a configuração não descreve o comportamento | Fica à mão | 2 / 0 / 0 | **2** |
 | **Rede de proteção do banco** | Garante que o teste só apaga o que criou: faz parte do motor | Fica (é o motor) | 1 / 1 / 0 | **2** |
 
-**Hoje o motor já cobre 31 dos 122 testes (25%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 54 testes. Telas por tipo e segurança exigem gabaritos próprios (31 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
+**Hoje o motor já cobre 35 dos 122 testes (29%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 54 testes. Telas por tipo e segurança exigem gabaritos próprios (27 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
 
 ## Ordem sugerida para o motor ganhar regras
 
@@ -33,11 +33,12 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 ## Lista completa (um teste por linha)
 
-### Já coberto pelo motor dinâmico (31)
+### Já coberto pelo motor dinâmico (35)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | clientes-pedidos-itens.spec.ts | edição e exclusão só do cliente criado pelo teste |
+| real | clientes-pedidos-itens.spec.ts | regra por linha com exceção: Administrador (na lista de exceção) vê clientes de outras pessoas; Funcionária não |
 | real | departamentos-funcs.spec.ts | criar, editar e excluir um departamento (auditoria do robô gravada) |
 | real | departamentos-funcs.spec.ts | nome é obrigatório: salvar vazio não cria registro |
 | real | departamentos-funcs.spec.ts | criar func com departamento, editar o cargo e excluir |
@@ -49,6 +50,9 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | exportar-e-grid.spec.ts | ordenação por coluna: crescente e decrescente pelo cabeçalho |
 | real | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
 | real | exportar-e-grid.spec.ts | Visualizar abre o formulário só para leitura e Cancelar volta sem gravar |
+| real | itens-do-pedido.spec.ts | Funcionária não enxerga o cliente criado pelo robô Administrador (regra por linha) |
+| real | permissoes-por-tela.spec.ts | tela bloqueada some do menu e não abre pelo endereço |
+| real | permissoes-por-tela.spec.ts | tela só de leitura: abre e mostra os dados, mas não deixa criar, editar nem excluir |
 | real | smoke.spec.ts | todas as telas do menu abrem sem erro |
 | real | telas-especiais.spec.ts | Produtos (galeria): um cartão por produto e filtro por categoria |
 | real | telas-especiais.spec.ts | Kanban de tarefas: cartões com ações e filtros por projeto e responsável |
@@ -173,11 +177,10 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | cadastros-gerais.spec.ts | Clientes - Geospatial (mapa): cliente novo com coordenadas entra na contagem do mapa |
 | oracle | pedidos-e-bi.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
 
-### Segurança e acesso (23)
+### Segurança e acesso (19)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
-| real | clientes-pedidos-itens.spec.ts | regra por linha com exceção: Administrador (na lista de exceção) vê clientes de outras pessoas; Funcionária não |
 | real | gestao-de-acesso.spec.ts | a lista mostra os usuários com o grupo que está no banco |
 | real | gestao-de-acesso.spec.ts | criar usuário com grupo, entrar com ele, trocar de grupo, redefinir a senha e excluir |
 | real | gestao-de-acesso.spec.ts | e-mail repetido: o erro aparece na janela e nada é criado |
@@ -185,9 +188,6 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | gestao-de-acesso.spec.ts | a matriz mostra o nível de cada tela para o grupo de teste (Clientes leitura, Departamentos nenhum) |
 | real | gestao-de-acesso.spec.ts | mudar a permissão do grupo de teste vale no próximo login e pode ser desfeita |
 | real | gestao-de-acesso.spec.ts | as telas de gestão de acesso são só do Administrador (a Funcionária não entra) |
-| real | itens-do-pedido.spec.ts | Funcionária não enxerga o cliente criado pelo robô Administrador (regra por linha) |
-| real | permissoes-por-tela.spec.ts | tela bloqueada some do menu e não abre pelo endereço |
-| real | permissoes-por-tela.spec.ts | tela só de leitura: abre e mostra os dados, mas não deixa criar, editar nem excluir |
 | real | permissoes-por-tela.spec.ts | telas sem restrição no grupo seguem liberadas (Produtos abre e lista) |
 | oracle | clientes.spec.ts | Funcionário (sem regra por linha neste projeto) também enxerga os clientes existentes |
 | oracle | gestao-de-acesso.spec.ts | a lista mostra os usuários com o grupo que está no banco |

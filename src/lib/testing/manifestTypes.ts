@@ -23,6 +23,9 @@ export interface ManifestAuth {
     groupsNameColumn: string
     link: { kind: 'column'; column: string } | { kind: 'table'; table: string; userColumn: string; roleColumn: string }
     permsTable: string
+    permsRoleColumn: string
+    permsViewColumn: string
+    permsLevelColumn: string
   }
 }
 
@@ -56,6 +59,15 @@ export interface ManifestDetail {
   subDetails: Array<{ table: string; label: string; foreignKey: string; fields: ManifestField[] }>
 }
 
+/** Regra de acesso por linha do Studio (a tabela só mostra ao usuário as linhas em que `column` é igual ao valor dele), com a exceção por valor ou grupo. */
+export interface ManifestRowRule {
+  column: string
+  op: 'eq' | 'in' | 'related'
+  source: 'user.email' | 'user.name' | 'user.attr'
+  attr?: string
+  bypass?: { source: string; attr?: string; values: string[] }
+}
+
 export interface ManifestView {
   slug: string
   path: string
@@ -65,6 +77,10 @@ export interface ManifestView {
   primaryKey: string
   displayType: string
   actionInterface: string
+  /** o que a tabela permite ao usuário final (Dados & Schemas): criar, editar e excluir */
+  tablePerms?: { create: boolean; update: boolean; delete: boolean }
+  /** regras por linha da tabela; ausente = todos veem todas as linhas */
+  rowPolicy?: ManifestRowRule[]
   filter: ManifestField[]
   grid: ManifestField[]
   form: ManifestField[]

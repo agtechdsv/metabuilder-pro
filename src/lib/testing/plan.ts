@@ -1,4 +1,4 @@
-import type { ManifestField, ManifestView } from './manifestTypes'
+import type { ManifestAuth, ManifestField, ManifestRowRule, ManifestView } from './manifestTypes'
 
 /**
  * Plano de testes de um caso de uso: a lista do que será conferido, derivada do manifesto. É a ÚNICA fonte: o painel da IDE mostra este plano
@@ -12,6 +12,7 @@ export type PlannedKind =
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
   | 'botoes' | 'campos_tipos' | 'abas'
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao'
+  | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
 
 export interface PlannedTest {
@@ -30,8 +31,12 @@ export interface PlannedTest {
 export type PlanLang = 'pt' | 'en' | 'es'
 
 /** Tipos de teste: funcional só LÊ dados; integração GRAVA (cadastro, edição e exclusão com dados gerados) e exige um banco de teste. */
-export type TestType = 'funcional' | 'integracao'
-export interface PlanOptions { types?: TestType[] }
+export type TestType = 'funcional' | 'integracao' | 'seguranca'
+export interface PlanOptions {
+  types?: TestType[]
+  /** configuração de login do projeto (manifest.auth): os testes de segurança por grupo e por linha dependem dela */
+  auth?: ManifestAuth
+}
 
 /**
  * Texto do teste no idioma da tela. O `title` (português) é o NOME do teste para o Playwright e a chave dos resultados e do histórico: não muda
@@ -47,6 +52,10 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: the total shown equals the database total',
     grid_ordenacao: p => `grid: sort by "${p.label}" in both directions`,
     grid_filtro: p => `filter by "${p.label}": filters the rows and the Clear button undoes it`,
+    seg_tabela: () => 'table permissions: New Record, Edit and Delete appear only as Studio allows',
+    seg_nivel_nenhum: () => 'group access "none": the screen disappears from the menu and does not open by address',
+    seg_nivel_leitura: () => 'group access "read": opens and shows the data, but does not allow creating, editing or deleting',
+    seg_linha: () => 'row rule: whoever is not in the exception only sees the rows the rule allows',
     crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
     crud_reabrir: () => 'registration: reopening the record shows what was saved',
     crud_edicao: () => 'edit: changing and saving writes only the change',
@@ -81,6 +90,10 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: el total mostrado es igual al total de la base de datos',
     grid_ordenacao: p => `grid: ordenar por "${p.label}" en ambos sentidos`,
     grid_filtro: p => `filtro de "${p.label}": filtra las filas y el botón Limpiar lo deshace`,
+    seg_tabela: () => 'permisos de la tabla: Nuevo Registro, Editar y Eliminar aparecen solo como Studio lo permite',
+    seg_nivel_nenhum: () => 'acceso "ninguno" al grupo: la pantalla desaparece del menú y no abre por la dirección',
+    seg_nivel_leitura: () => 'acceso "lectura" al grupo: abre y muestra los datos, pero no permite crear, editar ni eliminar',
+    seg_linha: () => 'regla por fila: quien no está en la excepción solo ve las filas que la regla permite',
     crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
     crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
     crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
@@ -184,6 +197,27 @@ export const campoMarcador = (v: Pick<ManifestView, 'form'>): ManifestField | un
 /** Prefixo dos dados gerados pelo teste de integração. */
 export const PREFIXO_E2E = 'E2E-'
 
+/**
+ * Regra por linha que o motor sabe conferir: compara uma coluna com um valor que o motor controla no usuário temporário (id, e-mail, nome ou uma coluna dele).
+ * Regras "related" (a coluna aponta para outra tabela) ficam de fora por enquanto.
+ */
+export const regraDeLinha = (v: Pick<ManifestView, 'rowPolicy'>): ManifestRowRule | undefined =>
+  v.rowPolicy?.find(r => r.op === 'eq' && (r.source !== 'user.attr' || !!r.attr))
+
+/** Testes de segurança derivados da configuração do projeto (criam usuários e grupos temporários no banco de teste e os apagam no fim). */
+function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
+  if (v.logicType !== 'pesquisa_cadastro') return []
+  const out: PlannedTest[] = [{ kind: 'seg_tabela', title: 'permissões da tabela: Novo Registro, Editar e Excluir aparecem só como o Studio permite' }]
+  if (auth?.type === 'database') {
+    if (auth.access) {
+      out.push({ kind: 'seg_nivel_nenhum', title: 'acesso "nenhum" ao grupo: a tela some do menu e não abre pelo endereço' })
+      out.push({ kind: 'seg_nivel_leitura', title: 'acesso "leitura" ao grupo: abre e mostra os dados, mas não deixa criar, editar nem excluir' })
+    }
+    if (regraDeLinha(v)) out.push({ kind: 'seg_linha', title: 'regra por linha: quem não é da exceção só vê as linhas que a regra permite' })
+  }
+  return out
+}
+
 /** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com um campo marcador. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
   if (v.logicType !== 'pesquisa_cadastro' || !campoMarcador(v)) return []
@@ -197,7 +231,11 @@ function planoIntegracao(v: ManifestView): PlannedTest[] {
 
 export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[] {
   const types = opts.types ?? ['funcional']
-  return [...(types.includes('funcional') ? planoFuncional(v) : []), ...(types.includes('integracao') ? planoIntegracao(v) : [])]
+  return [
+    ...(types.includes('funcional') ? planoFuncional(v) : []),
+    ...(types.includes('integracao') ? planoIntegracao(v) : []),
+    ...(types.includes('seguranca') ? planoSeguranca(v, opts.auth) : []),
+  ]
 }
 
 function planoFuncional(v: ManifestView): PlannedTest[] {

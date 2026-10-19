@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aplicarMascara, campoMarcador, describeName, isSupportedView, mascaraDePadrao, planTitle, planView } from '../plan'
+import { aplicarMascara, campoMarcador, regraDeLinha, describeName, isSupportedView, mascaraDePadrao, planTitle, planView } from '../plan'
 import { eventLine, parseTestEvent, statusFromPlaywright } from '../results'
 import type { ManifestField, ManifestView } from '../manifestTypes'
 
@@ -87,6 +87,21 @@ describe('plano de testes de um caso de uso', () => {
     expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
     expect(campoMarcador(view())?.column).toBe('nome')
     expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
+  })
+
+  it('segurança: permissões da tabela sempre; por grupo só com gestão de acesso; por linha só com regra que o motor sabe conferir', () => {
+    const k = (v: ManifestView, auth?: any) => planView(v, { types: ['seguranca'], auth }).map(t => t.kind)
+    expect(k(view())).toEqual(['seg_tabela'])                                        // sem login do tipo banco: só o que a tela mostra
+    const login = { type: 'database', usersTable: 'usuarios' }
+    expect(k(view(), login)).toEqual(['seg_tabela'])
+    expect(k(view(), { ...login, access: { groupsTable: 'perfis' } })).toEqual(['seg_tabela', 'seg_nivel_nenhum', 'seg_nivel_leitura'])
+    const comRegra = view({ rowPolicy: [{ column: 'criado_por', op: 'eq', source: 'user.attr', attr: 'id' }] })
+    expect(k(comRegra, login)).toEqual(['seg_tabela', 'seg_linha'])
+    // regra "related" ou sem o atributo do usuário: o motor ainda não confere
+    expect(regraDeLinha(view({ rowPolicy: [{ column: 'cliente_id', op: 'related', source: 'user.email' }] }))).toBeUndefined()
+    expect(regraDeLinha(view({ rowPolicy: [{ column: 'x', op: 'eq', source: 'user.attr' }] }))).toBeUndefined()
+    expect(k(view({ logicType: 'kanban' }), login)).toEqual([])
+    expect(planView(view(), { types: ['funcional'] }).map(t => t.kind)).not.toContain('seg_tabela') // o padrão nunca cria usuários
   })
 
   it('aplicarMascara: cada 0 consome um dígito e o resto é literal', () => {

@@ -61,6 +61,21 @@ describe('manifesto de testes a partir do projeto', () => {
     expect(v.exportFormats).toEqual(['csv', 'xlsx'])
   })
 
+  it('traz as permissões da tabela e a regra por linha do Studio', async () => {
+    const mundo = world()
+    const { ast } = await loadProjectAst(mundo, { projectId: 'p1', dbStack: 'postgres' })
+    const modelo = ast.models.find(m => m.dbTable === 'clientes')!
+    // padrão: tudo permitido e sem regra por linha
+    const padrao = buildTestManifest(ast).views[0]
+    expect(padrao.tablePerms).toEqual({ create: true, update: true, delete: true })
+    expect(padrao.rowPolicy).toBeUndefined()
+    modelo.canDelete = false
+    modelo.rowPolicy = { rules: [{ id: 'r1', column: 'criado_por', op: 'eq', source: 'user.attr', attr: 'id', bypass: { source: 'user.group', values: ['Administrador'] } }] }
+    const v = buildTestManifest(ast).views[0]
+    expect(v.tablePerms).toEqual({ create: true, update: true, delete: false })
+    expect(v.rowPolicy).toEqual([{ column: 'criado_por', op: 'eq', source: 'user.attr', attr: 'id', bypass: { source: 'user.group', values: ['Administrador'] } }])
+  })
+
   it('pode ser pedido só para alguns casos de uso (pelo slug)', async () => {
     const { ast } = await loadProjectAst(world(), { projectId: 'p1', dbStack: 'postgres' })
     expect(buildTestManifest(ast, { viewSlugs: ['nao-existe'] }).views).toEqual([])
@@ -78,7 +93,7 @@ describe('manifesto de testes a partir do projeto', () => {
       perms: { model: 'P', table: 'mb_role_permissions', pk: 'id', roleCol: 'role_id', viewCol: 'view_slug', levelCol: 'access_level' }, views: [], seed: { roles: [], permissions: [], userRoles: [] },
     } }
     const a = buildTestManifest(comAcesso as any).auth!
-    expect(a.access).toEqual({ groupsTable: 'perfis', groupsPk: 'id', groupsNameColumn: 'nome', link: { kind: 'table', table: 'perfis_usuarios', userColumn: 'usuario_id', roleColumn: 'perfil_id' }, permsTable: 'mb_role_permissions' })
+    expect(a.access).toEqual({ groupsTable: 'perfis', groupsPk: 'id', groupsNameColumn: 'nome', link: { kind: 'table', table: 'perfis_usuarios', userColumn: 'usuario_id', roleColumn: 'perfil_id' }, permsTable: 'mb_role_permissions', permsRoleColumn: 'role_id', permsViewColumn: 'view_slug', permsLevelColumn: 'access_level' })
     expect(a.nameColumn).toBe('nome_completo')
   })
 })
