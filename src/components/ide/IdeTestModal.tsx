@@ -124,17 +124,23 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     setRunError(''); setSummary(null); setResults({}); setLogs([])
     if (!runnerDir) { setRunError('Escolha a pasta do motor de testes (a pasta e2e).'); return }
     if (!appDir) { setRunError('Escolha a pasta do app exportado que será testado.'); return }
-    const chk = await checkRunnerDir(runnerDir)
-    if (!chk.ok) { setRunError(`A pasta do motor de testes está incompleta (falta: ${chk.missing.join(', ')}). Escolha a pasta e2e do projeto e rode npm install nela.`); return }
     setRunning(true)
     try {
+      const chk = await checkRunnerDir(runnerDir)
+      if (!chk.ok) { setRunning(false); setRunError(`A pasta do motor de testes está incompleta (falta: ${chk.missing.join(', ')}). Escolha a pasta e2e do projeto e rode npm install nela.`); return }
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: chosen.map(v => v.slug), live, slowMoMs: slow,
         onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]),
         onClose: code => { setRunning(false); handle.current = null; if (code !== 0 && code !== 1 && code !== null) setRunError(`O motor terminou com erro (código ${code}). Veja o log abaixo.`) },
       })
     } catch (e: any) {
-      setRunning(false); setRunError(e?.message || 'Não foi possível iniciar os testes.')
+      setRunning(false)
+      const msg = String(e?.message || e || '')
+      // o Tauri só libera pastas fora do perfil do usuário durante a sessão em que foram escolhidas: depois de reabrir a IDE é preciso escolher de novo
+      setRunError(/forbidden|scope|not allowed|permission/i.test(msg)
+        ? `O Windows pede para autorizar a pasta de novo depois que a IDE é reaberta. Clique em "${t('ide_tests.runner', 'Motor de testes (pasta e2e)')}" e em "${t('ide_tests.app', 'App exportado a testar')}" e escolha as mesmas pastas.
+(${msg})`
+        : (msg || 'Não foi possível iniciar os testes.'))
     }
   }
 
