@@ -23,6 +23,8 @@ export interface HistoryRun {
   /** a rodada foi interrompida pelo usuário */
   stopped?: boolean
   groups: HistoryGroup[]
+  /** cópia do relatório técnico do Playwright desta execução (caminho do index.html), quando foi guardada */
+  techReport?: string
 }
 
 export const runId = (d: Date): string => {

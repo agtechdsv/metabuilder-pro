@@ -98,9 +98,9 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
 }
 
 /** Abre o relatório HTML da última rodada no navegador padrão. */
-export async function openTestReport(runnerDir: string): Promise<void> {
+export async function openTestReport(runnerDir: string, savedFile?: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
-  const file = `${runnerDir.replace(/[\\/]+$/, '')}\\playwright-report-dynamic\\index.html`
+  const file = savedFile || `${runnerDir.replace(/[\\/]+$/, '')}\\playwright-report-dynamic\\index.html`
   await Command.create('powershell', [...PS, `Start-Process '${q(file)}'`]).execute()
 }
 
@@ -140,4 +140,13 @@ export async function installFfmpeg(runnerDir: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const out = await Command.create('powershell', [...PS, `Set-Location '${q(runnerDir)}'; npx playwright install ffmpeg`]).execute()
   if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao instalar o ffmpeg').trim().split('\n').slice(-3).join(' '))
+}
+
+/** Guarda uma cópia do relatório técnico do Playwright junto das evidências da execução (a próxima rodada sobrescreve o original). Devolve o index.html da cópia. */
+export async function archiveTechReport(runnerDir: string, destDir: string): Promise<string | undefined> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const script = `$s = Join-Path '${q(runnerDir)}' 'playwright-report-dynamic'; if (Test-Path -LiteralPath $s) { New-Item -ItemType Directory -Force -Path '${q(destDir)}' | Out-Null; $d = Join-Path '${q(destDir)}' 'playwright-report'; if (Test-Path -LiteralPath $d) { Remove-Item -Recurse -Force -LiteralPath $d }; Copy-Item -Recurse -Force -LiteralPath $s -Destination $d; Write-Output (Join-Path $d 'index.html') }`
+  const out = await Command.create('powershell', [...PS, script]).execute()
+  const file = out.stdout.trim().split(/\r?\n/).pop()?.trim()
+  return out.code === 0 && file ? file : undefined
 }

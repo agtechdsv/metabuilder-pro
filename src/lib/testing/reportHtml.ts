@@ -74,7 +74,7 @@ export function buildReportHtml(input: ReportInput): string {
 
   const slow = [...allRows].filter(r => r.ms != null).sort((a, b) => (b.ms || 0) - (a.ms || 0)).slice(0, 5)
   const maxMs = Math.max(1, ...slow.map(r => r.ms || 0))
-  const slowest = slow.map(r => `<div class="sl"><div class="slt" title="${esc(r.title)}">${esc(r.title)}</div><div class="slb"><i style="width:${(((r.ms || 0) / maxMs) * 100).toFixed(1)}%"></i></div><div class="slm">${((r.ms || 0) / 1000).toFixed(1)} s</div></div>`).join('')
+  const slowest = slow.map(r => `<div class="sl"><div class="slt" title="${esc(r.title)} · ${esc(r.group)}">${esc(r.title)}<span class="slg">${esc(r.group.split(' (')[0])}</span></div><div class="slb"><i style="width:${(((r.ms || 0) / maxMs) * 100).toFixed(1)}%"></i></div><div class="slm">${((r.ms || 0) / 1000).toFixed(1)} s</div></div>`).join('')
 
   const falhas = allRows.filter(r => r.status === 'failed')
   const failuresHtml = `<section class="box"><h2>${L.failures}${falhas.length ? ` <span class="pill bad">${falhas.length}</span>` : ''}</h2>${falhas.length === 0 ? `<p class="m">${L.no_failures}</p>` : falhas.map(r => `
@@ -121,7 +121,7 @@ h1{margin:0;font-size:22px;letter-spacing:-.01em}h2{margin:0 0 12px;font-size:14
 .n.g,.g{color:var(--ok)}.n.r,.r{color:var(--bad)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:760px){.cols{grid-template-columns:1fr}}
 .pv{display:grid;grid-template-columns:minmax(80px,150px) 1fr 70px;gap:10px;align-items:center;margin:7px 0;font-size:12px}
-.pvn,.slt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pvb,.slb{height:10px;border-radius:99px;background:var(--line);overflow:hidden;display:flex}
+.pvn,.slt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slt{display:flex;flex-direction:column}.slg{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}.pvb,.slb{height:10px;border-radius:99px;background:var(--line);overflow:hidden;display:flex}
 .pvb i{display:block;height:100%}.pvb .p{background:var(--ok)}.pvb .f{background:var(--bad)}.pvb .o{background:#98a2b3}.pvc{text-align:right;font-variant-numeric:tabular-nums}
 .sl{display:grid;grid-template-columns:minmax(80px,1fr) 90px 48px;gap:10px;align-items:center;margin:7px 0;font-size:12px}.slb i{display:block;height:100%;background:var(--acc);border-radius:99px}.slm{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
 .pill{font-size:11px;border-radius:99px;padding:1px 8px;vertical-align:middle}.pill.bad{background:var(--badb);color:var(--bad)}

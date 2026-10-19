@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
@@ -77,7 +77,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [compare, setCompare] = useState<[HistoryRun, HistoryRun] | null>(null)
   // o que a rodada em andamento precisa para ser gravada quando terminar
   const resultsRef = useRef<Record<string, Result>>({})
-  const runMeta = useRef<{ startedAt: Date; views: ManifestView[]; mode: TestWatchMode; stopped: boolean } | null>(null)
+  const runMeta = useRef<{ startedAt: Date; views: ManifestView[]; mode: TestWatchMode; stopped: boolean; artifactsDir: string } | null>(null)
 
   const projectId = target?.id || ''
   const projectSlug = target?.slug || ''
@@ -171,7 +171,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   }
 
   /** Monta o registro da rodada com o plano dos casos de uso rodados e o resultado de cada teste (sem resultado = não executado). */
-  const buildRun = (meta: NonNullable<typeof runMeta.current>, res: Record<string, Result>): HistoryRun => {
+  const buildRun = (meta: NonNullable<typeof runMeta.current>, res: Record<string, Result>, techReport?: string): HistoryRun => {
     const groups: HistoryGroup[] = meta.views.map(v => ({
       slug: v.slug, name: describeName(v), viewTitle: v.title, logicType: v.logicType,
       rows: planView(v).map(p => {
@@ -180,7 +180,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         return { ...p, status, ms: r?.ms, error: r?.error, shot: r?.shot, video: r?.video }
       }),
     }))
-    return { version: 1, id: runId(meta.startedAt), projectId, projectName: target?.name || '', startedAt: meta.startedAt.toISOString(), finishedAt: new Date().toISOString(), mode: meta.mode, stopped: meta.stopped || undefined, groups }
+    return { version: 1, id: runId(meta.startedAt), projectId, projectName: target?.name || '', startedAt: meta.startedAt.toISOString(), finishedAt: new Date().toISOString(), mode: meta.mode, stopped: meta.stopped || undefined, groups, ...(techReport ? { techReport } : {}) }
   }
 
   const finishRun = async (code: number | null) => {
@@ -189,7 +189,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     runMeta.current = null
     if (code !== 0 && code !== 1 && code !== null) setRunError(t('ide_tests.err_exit', 'O motor terminou com erro (código {code}). Veja o log abaixo.').replace('{code}', String(code)))
     if (meta && Object.keys(resultsRef.current).length > 0) {
-      try { await saveRun(projectSlug, buildRun(meta, resultsRef.current)); if (tab === 'history') loadHistory() }
+      try {
+        const techReport = await archiveTechReport(runnerDir, meta.artifactsDir).catch(() => undefined)
+        await saveRun(projectSlug, buildRun(meta, resultsRef.current, techReport)); if (tab === 'history') loadHistory()
+      }
       catch (e: any) { setRunError(`${t('ide_tests.hist_save_err', 'Os testes terminaram, mas não foi possível gravar no histórico.')} (${e?.message || e})`) }
     }
   }
@@ -218,7 +221,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
       const startedAt = new Date()
       const artifactsDir = await artifactsDirFor(runId(startedAt))
-      runMeta.current = { startedAt, views: toRun, mode, stopped: false }
+      runMeta.current = { startedAt, views: toRun, mode, stopped: false, artifactsDir }
       setRunTotal(toRun.reduce((n, v) => n + planView(v).length, 0)); setLiveOpen(true)
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
@@ -335,21 +338,23 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         return
       }
       if (fmt === 'pdf' && !runnerDir) { setReportMsg({ kind: 'err', text: t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).') }); return }
-      const dir = await pickFolder()
-      if (!dir) return
+      const { save } = await import('@tauri-apps/plugin-dialog')
+      const { downloadDir, join } = await import('@tauri-apps/api/path')
+      const filterName = fmt.toUpperCase()
+      const dest = await save({ defaultPath: await join(await downloadDir(), file), filters: [{ name: filterName, extensions: [fmt] }] })
+      if (!dest) return
       const { writeTextFile, mkdir } = await import('@tauri-apps/plugin-fs')
-      const { join } = await import('@tauri-apps/api/path')
       if (fmt === 'pdf') {
         setReportMsg({ kind: 'busy', text: t('ide_tests.pdf_busy', 'Gerando o PDF...') })
         const tmpDir = await workDir('report')
         await mkdir(tmpDir, { recursive: true }).catch(() => {})
         const html = await join(tmpDir, `${report.base}.html`)
         await writeTextFile(html, report.html)
-        await makePdf(runnerDir, html, await join(dir, file))
+        await makePdf(runnerDir, html, dest)
       } else {
-        await writeTextFile(await join(dir, file), fmt === 'json' ? report.json : report.html)
+        await writeTextFile(dest, fmt === 'json' ? report.json : report.html)
       }
-      setReportMsg({ kind: 'ok', text: t('ide_tests.saved_in', 'Salvo em {path}').replace('{path}', await join(dir, file)) })
+      setReportMsg({ kind: 'ok', text: t('ide_tests.saved_in', 'Salvo em {path}').replace('{path}', dest) })
     } catch (e: any) {
       setReportMsg({ kind: 'err', text: `${t('ide_tests.err_save_report', 'Não foi possível salvar o relatório.')} (${e?.message || e})` })
     }
@@ -365,7 +370,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       {reportMenu && (
         <div className="absolute bottom-full right-0 mb-2 w-72 rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl p-1 z-10">
           <button onClick={showReport} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_generic', 'Relatório de testes')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_generic_desc', 'Resumo, gráficos, falhas e todos os testes')}</span></button>
-          {!viewing && <button onClick={() => { setReportMenu(false); openTestReport(runnerDir) }} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_tech', 'Relatório técnico (Playwright)')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_tech_desc', 'Com rastros e capturas das falhas')}</span></button>}
+          {(!viewing || viewing.techReport) && <button onClick={() => { setReportMenu(false); openTestReport(runnerDir, viewing?.techReport) }} className="w-full text-left rounded-lg px-3 py-2 hover:bg-neutral-800"><span className="block text-xs font-semibold text-white">{t('ide_tests.report_tech', 'Relatório técnico (Playwright)')}</span><span className="block text-[11px] text-neutral-400">{t('ide_tests.report_tech_desc', 'Com rastros e capturas das falhas')}</span></button>}
         </div>
       )}
     </div>
