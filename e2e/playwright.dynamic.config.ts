@@ -24,7 +24,7 @@ export default defineConfig({
   globalSetup: './real/global-setup.ts',
   globalTeardown: './real/global-teardown.ts',
   // E2E_HEADED=1 abre o navegador na tela ("ver ao vivo"); E2E_SLOWMO=<ms> espera entre as ações para dar tempo de acompanhar
-  use: { channel: 'chrome', headless: process.env.E2E_HEADED !== '1', launchOptions: { slowMo: Number(process.env.E2E_SLOWMO || 0) }, trace: 'retain-on-failure', screenshot: 'only-on-failure', locale: 'pt-BR', baseURL: `http://localhost:${REAL.port}` },
+  use: { channel: 'chrome', headless: process.env.E2E_HEADED !== '1', launchOptions: { slowMo: Number(process.env.E2E_SLOWMO || 0), args: process.env.E2E_HEADED === '1' ? ['--start-maximized'] : [] }, trace: 'retain-on-failure', screenshot: 'only-on-failure', locale: 'pt-BR', baseURL: `http://localhost:${REAL.port}` },
   projects: [{ name: 'dynamic-pg-node' }],
   webServer: {
     command: `npx next start -p ${REAL.port}`,

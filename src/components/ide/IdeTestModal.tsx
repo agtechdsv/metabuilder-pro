@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, openTestReport, startTestRun, type TestRunHandle } from '@/utils/testRunner'
+import { checkRunnerDir, openTestReport, readLiveFrame, startTestRun, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
 import { describeName, isSupportedView, planView } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
@@ -56,7 +56,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [runnerDir, setRunnerDir] = useState('')
   const [appDir, setAppDir] = useState('')
-  const [live, setLive] = useState(true)
+  const [mode, setMode] = useState<TestWatchMode>('internal')
+  const [frameUrl, setFrameUrl] = useState('')
   const [slow, setSlow] = useState(300)
   const [running, setRunning] = useState(false)
   const [results, setResults] = useState<Record<string, Result>>({})
@@ -129,7 +130,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(`A pasta do motor de testes está incompleta (falta: ${chk.missing.join(', ')}). Escolha a pasta e2e do projeto e rode npm install nela.`); return }
       handle.current = await startTestRun({
-        runnerDir, appDir, manifest, viewSlugs: chosen.map(v => v.slug), live, slowMoMs: slow,
+        runnerDir, appDir, manifest, viewSlugs: chosen.map(v => v.slug), mode, slowMoMs: slow,
         onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]),
         onClose: code => { setRunning(false); handle.current = null; if (code !== 0 && code !== 1 && code !== null) setRunError(`O motor terminou com erro (código ${code}). Veja o log abaixo.`) },
       })
@@ -143,6 +144,25 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         : (msg || 'Não foi possível iniciar os testes.'))
     }
   }
+
+  // navegador interno: lê o quadro mais recente da tela do teste e mostra no painel
+  useEffect(() => {
+    if (!running || mode !== 'internal' || !runnerDir) return
+    let alive = true
+    let last = 0
+    const tick = async () => {
+      const bytes = await readLiveFrame(runnerDir)
+      if (!alive || !bytes || bytes.length === 0) return
+      const sig = bytes.length * 31 + bytes[Math.floor(bytes.length / 2)]
+      if (sig === last) return
+      last = sig
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'image/jpeg' }))
+      setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return url })
+    }
+    const id = setInterval(tick, 250)
+    return () => { alive = false; clearInterval(id) }
+  }, [running, mode, runnerDir])
+  useEffect(() => { if (!isOpen) setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' }) }, [isOpen])
 
   const showReport = (mode: 'html' | 'pdf') => {
     setReportMenu(false)
@@ -195,6 +215,22 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
             <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
             <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste. Hoje o motor só aceita banco local da lista permitida e confere, no fim, que nenhuma linha real foi alterada. Rodar no banco original só com o seu consentimento (em breve).')}</p>
           </div>
+
+          {/* Navegador interno: a execução do teste, dentro do painel */}
+          {mode === 'internal' && (running || frameUrl) && (
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">{t('ide_tests.live_view', 'Navegador interno · execução ao vivo')}</h3>
+              <div className="rounded-xl border border-neutral-700 bg-black overflow-hidden">
+                <div className="flex items-center gap-1.5 px-3 py-2 bg-neutral-800 border-b border-neutral-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="ml-3 text-[11px] text-neutral-400">{running ? t('ide_tests.live_running', 'Testando... (somente visualização)') : t('ide_tests.live_last', 'Última tela da execução')}</span>
+                </div>
+                {frameUrl
+                  ? <img src={frameUrl} alt="Execução do teste" className="w-full block" />
+                  : <div className="flex items-center justify-center gap-2 h-56 text-sm text-neutral-400"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.live_wait', 'Iniciando o navegador...')}</div>}
+              </div>
+            </section>
+          )}
 
           {/* 1. Tipo de teste */}
           <section>
@@ -280,9 +316,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
           <section>
             <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">4 · {t('ide_tests.mode', 'Como acompanhar')}</h3>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => setLive(true)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${live ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}><Eye className="w-4 h-4" /> {t('ide_tests.live', 'Ver ao vivo (abre o navegador)')}</button>
-              <button onClick={() => setLive(false)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${!live ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}><EyeOff className="w-4 h-4" /> {t('ide_tests.background', 'Em segundo plano (mais rápido)')}</button>
-              {live && (
+              {([
+                ['internal', Eye, t('ide_tests.mode_internal', 'Navegador interno (aqui no painel)')],
+                ['external', FolderOpen, t('ide_tests.mode_external', 'Navegador do sistema (abre uma janela)')],
+                ['background', EyeOff, t('ide_tests.background', 'Em segundo plano (mais rápido)')],
+              ] as const).map(([id, Icon, label]) => (
+                <button key={id} onClick={() => setMode(id)} disabled={running} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${mode === id ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}><Icon className="w-4 h-4" /> {label}</button>
+              ))}
+              {mode !== 'background' && (
                 <select value={slow} onChange={e => setSlow(Number(e.target.value))} disabled={running} className="rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-2 text-xs text-neutral-200">
                   <option value={0}>{t('ide_tests.speed_fast', 'Rápido')}</option>
                   <option value={300}>{t('ide_tests.speed_normal', 'Normal')}</option>

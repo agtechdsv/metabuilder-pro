@@ -25,6 +25,8 @@ export async function checkRunnerDir(runnerDir: string): Promise<{ ok: boolean; 
   return { ok: missing.length === 0, missing }
 }
 
+export type TestWatchMode = 'internal' | 'external' | 'background'
+
 export interface StartTestRunOptions {
   runnerDir: string
   /** pasta do app exportado (a que contém package.json e .env.local) */
@@ -32,8 +34,8 @@ export interface StartTestRunOptions {
   manifest: TestManifest
   /** slugs dos casos de uso a testar */
   viewSlugs: string[]
-  /** abrir o navegador na tela, para acompanhar */
-  live: boolean
+  /** como acompanhar: janela do navegador do sistema (external), imagem dentro do painel (internal) ou em segundo plano */
+  mode: TestWatchMode
   /** espera entre as ações no modo ao vivo (ms) */
   slowMoMs?: number
   onEvent: (ev: TestEvent) => void
@@ -59,7 +61,8 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
     `$env:E2E_MANIFEST = '${q(manifestPath)}'`,
     `$env:E2E_REAL_APP_DIR = '${q(o.appDir)}'`,
     `$env:E2E_VIEWS = '${q(o.viewSlugs.join(','))}'`,
-    o.live ? `$env:E2E_HEADED = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
+    o.mode === 'external' ? `$env:E2E_HEADED = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
+    o.mode === 'internal' ? `$env:E2E_STREAM = '1'; $env:E2E_SLOWMO = '${Math.max(0, Math.round(o.slowMoMs ?? 0))}'` : '',
     'npx playwright test -c playwright.dynamic.config.ts --timeout=60000',
   ].filter(Boolean).join('; ')
 
@@ -88,4 +91,13 @@ export async function openTestReport(runnerDir: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const file = `${runnerDir.replace(/[\\/]+$/, '')}\\playwright-report-dynamic\\index.html`
   await Command.create('powershell', [...PS, `Start-Process '${q(file)}'`]).execute()
+}
+
+/** Último quadro da tela do navegador (modo "navegador interno"): bytes do JPEG, ou null se ainda não há quadro legível. */
+export async function readLiveFrame(runnerDir: string): Promise<Uint8Array | null> {
+  try {
+    const { readFile } = await import('@tauri-apps/plugin-fs')
+    const { join } = await import('@tauri-apps/api/path')
+    return await readFile(await join(runnerDir, 'dynamic', 'live', 'frame.jpg'))
+  } catch { return null }
 }

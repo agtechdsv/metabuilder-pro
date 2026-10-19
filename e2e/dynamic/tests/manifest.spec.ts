@@ -23,10 +23,33 @@ import { aplicarMascara, camposEditaveis, describeName, planView } from '../../.
  * Uma janela do navegador para a rodada inteira (no modo "ver ao vivo" ela não abre e fecha a cada teste). Entre um teste e outro a sessão é
  * encerrada (cookies e armazenamento limpos = logout) e o login é refeito, então cada teste continua começando do zero.
  */
+/**
+ * "Navegador interno" da IDE: com E2E_STREAM=1 o navegador roda escondido e cada quadro da tela (screencast do Chrome) é gravado em dynamic/live/frame.jpg;
+ * o painel da IDE lê esse arquivo e mostra a execução dentro dele. Grava num arquivo temporário e renomeia, para o painel nunca ler um quadro pela metade.
+ */
+async function transmitirTela(ctx: import('@playwright/test').BrowserContext, pagina: Page): Promise<() => Promise<void>> {
+  if (process.env.E2E_STREAM !== '1') return async () => {}
+  const dir = path.join(import.meta.dirname, '..', 'live')
+  fs.mkdirSync(dir, { recursive: true })
+  const quadro = path.join(dir, 'frame.jpg')
+  const tmp = path.join(dir, 'frame.tmp')
+  try { fs.rmSync(quadro, { force: true }) } catch { /* nada a limpar */ }
+  const cdp = await ctx.newCDPSession(pagina)
+  cdp.on('Page.screencastFrame', (f: { data: string; sessionId: number }) => {
+    try { fs.writeFileSync(tmp, Buffer.from(f.data, 'base64')); fs.renameSync(tmp, quadro) } catch { /* o painel leu no mesmo instante: o próximo quadro cobre */ }
+    cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {})
+  })
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 60, maxWidth: 1280, maxHeight: 800 })
+  return async () => { await cdp.send('Page.stopScreencast').catch(() => {}) }
+}
+
 const test = base.extend<object, { janela: Page }>({
   janela: [async ({ browser }, use) => {
-    const ctx = await browser.newContext({ baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR' })
-    await use(await ctx.newPage())
+    const ctx = await browser.newContext({ baseURL: `http://localhost:${REAL.port}`, locale: 'pt-BR', ...(process.env.E2E_HEADED === '1' ? { viewport: null } : {}) })
+    const pagina = await ctx.newPage()
+    const parar = await transmitirTela(ctx, pagina)
+    await use(pagina)
+    await parar()
     await ctx.close()
   }, { scope: 'worker' }],
   page: async ({ janela }, use) => {
