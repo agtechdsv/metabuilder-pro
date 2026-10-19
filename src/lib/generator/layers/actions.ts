@@ -472,8 +472,15 @@ export async function getPool() {
 // CHILD RELATION CASCADE HELPERS
 // -----------------------------------------------------------------------------
 
-function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Array<{ table: string; column: string }> {
-  const refs: Array<{ table: string; column: string }> = []
+/** Colunas de auditoria (quem criou / quem alterou): referenciam o usuário, mas NÃO são dependentes dele. */
+const AUDIT_REF_COLUMN = /^(criado_por|atualizado_por|created_by|updated_by|usuario_criacao|usuario_atualizacao|createdby|updatedby)$/i
+
+/**
+ * Tabelas que apontam para este modelo. `audit` = a coluna é de auditoria (criado_por/atualizado_por): ao excluir o usuário o registro que ele
+ * criou deve ficar (com a referência anulada), nunca ser apagado junto. Antes, excluir um usuário apagava tudo o que ele criou ou alterou.
+ */
+export function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Array<{ table: string; column: string; audit: boolean }> {
+  const refs: Array<{ table: string; column: string; audit: boolean }> = []
   const modelTable = (model.dbTable || model.name).toLowerCase()
   const modelName = model.name.toLowerCase()
   const singularTable = modelTable.endsWith('s') ? modelTable.slice(0, -1) : modelTable
@@ -502,7 +509,8 @@ function getReferencingFields(model: ModelNode, allModels: ModelNode[] = []): Ar
 
       if (isRefByTarget || isRefByColName) {
         if (!refs.some(r => r.table.toLowerCase() === otherTable.toLowerCase() && r.column.toLowerCase() === f.dbColumn.toLowerCase())) {
-          refs.push({ table: otherTable, column: f.dbColumn })
+          const auditCols = [(other as any).audit?.columns?.createdBy, (other as any).audit?.columns?.updatedBy].filter(Boolean).map((c: string) => c.toLowerCase())
+          refs.push({ table: otherTable, column: f.dbColumn, audit: AUDIT_REF_COLUMN.test(f.dbColumn) || auditCols.includes(f.dbColumn.toLowerCase()) })
         }
       }
     }
@@ -700,6 +708,7 @@ function generateSupabaseActions(model: ModelNode, allModels: ModelNode[] = []) 
   const pk = model.fields.find((f: FieldNode) => f.isPrimary)?.dbColumn || 'id'
   const childRefs = getReferencingFields(model, allModels)
   const childCleanups = childRefs.map(ref => {
+    if (ref.audit) return `    await supabase.from('${ref.table}').update({ '${ref.column}': null }).eq('${ref.column}', id).catch(() => {})`
     return `    await supabase.from('${ref.table}').delete().eq('${ref.column}', id).catch(() => {})`
   }).join('\n')
 
@@ -828,6 +837,7 @@ function generatePgActions(model: ModelNode, allModels: ModelNode[] = []) {
     const childTableRef = ref.table.includes('.')
       ? ref.table.split('.').map((p: string) => `"${p}"`).join('.')
       : `"${ref.table}"`
+    if (ref.audit) return `    await query('UPDATE ${childTableRef} SET "${ref.column}" = NULL WHERE "${ref.column}" = $1', [id]).catch((e) => console.warn('Aviso ao limpar referências em ${ref.table}:', e?.message))`
     return `    await query('DELETE FROM ${childTableRef} WHERE "${ref.column}" = $1', [id]).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
   }).join('\n')
 
@@ -1011,6 +1021,7 @@ function generateOracleActions(model: ModelNode, allModels: ModelNode[] = []) {
   const accessTable = (model.dbTable || model.name).split('.').pop() as string
   const childRefs = getReferencingFields(model, allModels)
   const childCleanups = childRefs.map(ref => {
+    if (ref.audit) return `    await query('UPDATE "${ref.table}" SET "${ref.column}" = NULL WHERE "${ref.column}" = :id', { id }).catch((e) => console.warn('Aviso ao limpar referências em ${ref.table}:', e?.message))`
     return `    await query('DELETE FROM "${ref.table}" WHERE "${ref.column}" = :id', { id }).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
   }).join('\n')
 
@@ -1136,6 +1147,7 @@ function generateMysqlActions(model: ModelNode, allModels: ModelNode[] = []) {
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
   const childRefs = getReferencingFields(model, allModels)
   const childCleanups = childRefs.map(ref => {
+    if (ref.audit) return `    await query('UPDATE \\\`${ref.table}\\\` SET \\\`${ref.column}\\\` = NULL WHERE \\\`${ref.column}\\\` = ?', [id]).catch((e) => console.warn('Aviso ao limpar referências em ${ref.table}:', e?.message))`
     return `    await query('DELETE FROM \\\`${ref.table}\\\` WHERE \\\`${ref.column}\\\` = ?', [id]).catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
   }).join('\n')
 
@@ -1233,6 +1245,7 @@ function generateSqlServerActions(model: ModelNode, allModels: ModelNode[] = [])
   const allowedColsCode = JSON.stringify(model.fields.map(f => f.dbColumn))
   const childRefs = getReferencingFields(model, allModels)
   const childCleanups = childRefs.map(ref => {
+    if (ref.audit) return `    await pool.request().input('cascade_id', id).query('UPDATE [${ref.table}] SET [${ref.column}] = NULL WHERE [${ref.column}] = @cascade_id').catch((e) => console.warn('Aviso ao limpar referências em ${ref.table}:', e?.message))`
     return `    await pool.request().input('cascade_id', id).query('DELETE FROM [${ref.table}] WHERE [${ref.column}] = @cascade_id').catch((e) => console.warn('Aviso ao limpar dependências em ${ref.table}:', e?.message))`
   }).join('\n')
 

@@ -244,19 +244,19 @@ async function call(path: string, init: RequestInit = {}, params?: Record<string
   return res
 }
 
-export async function apiGet<T>(path: string, params?: Record<string, any>): Promise<T> {
+export async function apiGet<T = any>(path: string, params?: Record<string, any>): Promise<T> {
   return (await call(path, {}, params)).json()
 }
 
-export async function apiPost<T>(path: string, body: any): Promise<T> {
+export async function apiPost<T = any>(path: string, body: any): Promise<T> {
   return (await call(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()
 }
 
-export async function apiPut<T>(path: string, body: any): Promise<T> {
+export async function apiPut<T = any>(path: string, body: any): Promise<T> {
   return (await call(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json()
 }
 
-export async function apiDelete(path: string): Promise<void> {
+export async function apiDelete(path: string): Promise<any> {
   await call(path, { method: 'DELETE' })
 }
 `
@@ -297,8 +297,36 @@ function generateRestActions(model: ModelNode): string {
     }
   }
 
+  // tipo de cada coluna, para converter o que o formulário manda no que a API espera
+  const columnTypes: Record<string, string> = {}
+  for (const f of model.fields) if (!f.dbColumn.includes('.')) columnTypes[f.dbColumn] = (f.dataType || '').toLowerCase().replace(/\(.*\)/, '').trim()
+
   return `'use server'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client'
+
+// Tipo de cada coluna: o formulário manda texto ("199,90", "1.000", "") e a API Spring espera número, null etc.
+const columnTypes: Record<string, string> = ${JSON.stringify(columnTypes)}
+const INTEGER_TYPES = new Set(['integer', 'int', 'int4', 'int8', 'bigint', 'smallint'])
+const NUMERIC_TYPES = new Set([...INTEGER_TYPES, 'number', 'numeric', 'decimal', 'float', 'real', 'double', 'double precision'])
+
+function normalizeBody(body: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {}
+  for (const [k, v] of Object.entries(body ?? {})) {
+    if (k.startsWith('$') || k.startsWith('__rsc') || k.startsWith('_next')) continue
+    if (v === '' || v === undefined) { out[k] = null; continue }
+    if (typeof v === 'string') {
+      const type = columnTypes[k] ?? columnTypes[k.toLowerCase()] ?? ''
+      if (NUMERIC_TYPES.has(type)) {
+        const t = v.trim()
+        const n = Number(t.includes(',') ? t.replace(/\\./g, '').replace(',', '.') : t)
+        out[k] = Number.isNaN(n) ? v : (INTEGER_TYPES.has(type) ? Math.trunc(n) : n)
+        continue
+      }
+    }
+    out[k] = v
+  }
+  return out
+}
 
 // Parâmetros da tela (paginação e ordenação da URL) que não são filtros da API
 const UI_PARAMS = new Set(['page', 'limit', 'size', 'sort', 'sort_by', 'sort_order', 'embedded'])
@@ -337,22 +365,22 @@ export async function get${mn}ByField(field: string, value: any) {
   else if (res && Array.isArray(res.content)) items = res.content
   else if (res && typeof res === 'object') items = [res]
 
-  // Failsafe: se a API retornou mais de 1 registro ou todos os registros, filtra pelo campo solicitado
+  // Só os registros cuja coluna é IGUAL ao valor pedido (a API filtra por "contém" nos textos). Nunca devolve os demais quando não acha nenhum:
+  // uma aba de relacionamento vazia listaria, e o Salvar da tela reatribuiria, registros de outros pais.
   const targetVal = String(value ?? '').trim().toLowerCase()
-  const filtered = items.filter((item: any) => {
+  return items.filter((item: any) => {
     const val = String(item?.[field] ?? item?.[field.toLowerCase()] ?? item?.[field.toUpperCase()] ?? '').trim().toLowerCase()
     return val === targetVal
   })
-  return filtered.length > 0 ? filtered : items
 }
 
 export async function create${mn}(formData: FormData | Record<string, any>) {
-  const body = formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData
+  const body = normalizeBody(formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData)
   return apiPost('${endpoint}', body)
 }
 
 export async function update${mn}(id: string, formData: FormData | Record<string, any>) {
-  const body = formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData
+  const body = normalizeBody(formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData)
   return apiPut(\`${endpoint}/\${id}\`, body)
 }
 
@@ -406,8 +434,10 @@ export default nextConfig
   // tailwind.config.ts
   files.set('frontend/tailwind.config.ts', `import type { Config } from 'tailwindcss'
 
+// mesmo conteúdo do app Node: sem a pasta components/ as classes usadas só nos componentes (galeria, kanban, etc.) não entram no CSS e as telas ficam sem estilo
 const config: Config = {
-  content: ['./src/**/*.{ts,tsx}', './app/**/*.{ts,tsx}'],
+  darkMode: 'class',
+  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}', './components/**/*.{js,ts,jsx,tsx,mdx}', './src/**/*.{ts,tsx}'],
   theme: { extend: {} },
   plugins: [],
 }

@@ -11,6 +11,7 @@
     "project_saved_in": "Projeto salvo em:",
     "title_done_desktop": "Exportação Concluída!",
     "run_dev": "Executar o app (npm run dev)",
+    "run_dev_java": "Executar o app (backend Java + frontend)",
     "dev_started": "O app está subindo em um terminal minimizado (na barra de tarefas; clique nele para ver o log). Os botões abaixo são liberados assim que o app responder.",
     "dev_waiting": "Aguardando o app subir...",
     "access_setup_java_note": "As tabelas de acesso são criadas pelo backend ao subir (db/access-control.sql). Se o usuário do banco não puder criar tabelas, execute esse script no banco com um administrador.",

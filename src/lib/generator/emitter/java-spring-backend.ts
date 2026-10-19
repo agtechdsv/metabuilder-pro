@@ -1,4 +1,5 @@
 import { AppAST, ModelNode, FieldNode, RouteNode, DbType } from '../ast'
+import { getReferencingFields } from '../layers/actions'
 import { javaNeedsAccess, generateJavaAccess, generateGuardedServiceClass, jwtFilterWithUser, auditColumnNames } from './java-spring-access'
 
 /** Segredo aleatório de 256 bits, único por exportação: o app exportado nunca sai com uma chave igual à de outro projeto. */
@@ -48,6 +49,7 @@ export function generateSpringBootBackend(ast: AppAST, files: Map<string, string
 
   // 4. Config: CorsConfig + OpenApiConfig
   files.set(`${basePkg}/config/CorsConfig.java`, generateCorsConfig(ast, groupId))
+  files.set(`${basePkg}/config/JacksonConfig.java`, generateJacksonConfig(groupId))
   if (ast.generateOpenApi !== false) files.set(`${basePkg}/config/OpenApiConfig.java`, generateOpenApiConfig(ast, groupId))
 
   // 5. Por modelo: Entity, Repository, Service, Controller + Specification
@@ -224,9 +226,18 @@ function getPkFieldName(model: ModelNode): string {
   return pkField ? toCamelCase(pkField.dbColumn) : 'id'
 }
 
-/** O @Id é gerado pelo banco (identity)? Só para chaves numéricas: texto/UUID o app informa. */
+/** O @Id é gerado pelo banco (identity)? Só para chaves numéricas. */
 function isGeneratedPk(jt: string): boolean {
   return jt === 'Integer' || jt === 'Long' || jt === 'BigDecimal'
+}
+
+/**
+ * Chave UUID (ou texto com valor padrão no banco, como SYS_GUID()): a entidade gera o UUID ao gravar. Sem isso o Hibernate recusa o cadastro
+ * ("Identifier of entity must be manually assigned before calling persist()"), porque as telas não enviam o id (o banco é quem o cria).
+ * Texto sem valor padrão é chave de negócio (ex.: sigla): continua sendo informada por quem cadastra.
+ */
+function isUuidGeneratedPk(field: FieldNode, jt: string): boolean {
+  return jt === 'UUID' || (jt === 'String' && field.hasDefault === true)
 }
 
 /** Nome da propriedade da relação (@ManyToOne) de uma coluna FK: cliente_id -> cliente */
@@ -628,6 +639,70 @@ public class Application {
 // 5.9 — CorsConfig.java
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * JacksonConfig.java (data e hora tolerantes). Os formulários mandam a data como "2026-10-25" (campo de data) ou "2026-10-25T10:30" (data e hora,
+ * sem segundos nem fuso) mesmo para colunas timestamp: o Jackson, por padrão, só aceita o formato completo com fuso e recusava o cadastro.
+ * Aqui o dia sozinho vale como meia-noite e a hora sem fuso usa o fuso do servidor.
+ */
+function generateJacksonConfig(groupId: string): string {
+  return `package ${groupId}.config;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+
+@Configuration
+public class JacksonConfig {
+
+    @Bean
+    public SimpleModule lenientDateTimeModule() {
+        SimpleModule module = new SimpleModule("LenientDateTime");
+        module.addDeserializer(OffsetDateTime.class, new JsonDeserializer<OffsetDateTime>() {
+            @Override
+            public OffsetDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                String s = p.getValueAsString();
+                if (s == null || s.isBlank()) return null;
+                s = s.trim();
+                try { return OffsetDateTime.parse(s); } catch (DateTimeParseException ignored) { }
+                return parseLocal(s, ctxt).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+            }
+        });
+        module.addDeserializer(LocalDateTime.class, new JsonDeserializer<LocalDateTime>() {
+            @Override
+            public LocalDateTime deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                String s = p.getValueAsString();
+                if (s == null || s.isBlank()) return null;
+                s = s.trim();
+                try { return OffsetDateTime.parse(s).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime(); } catch (DateTimeParseException ignored) { }
+                return parseLocal(s, ctxt);
+            }
+        });
+        return module;
+    }
+
+    /** "2026-10-25T10:30[:00]", "2026-10-25 10:30" ou só "2026-10-25" (meia-noite). */
+    private static LocalDateTime parseLocal(String s, DeserializationContext ctxt) throws IOException {
+        String t = s.replace(' ', 'T');
+        try { return LocalDateTime.parse(t); } catch (DateTimeParseException ignored) { }
+        try { return LocalDate.parse(t).atStartOfDay(); } catch (DateTimeParseException e) {
+            ctxt.reportInputMismatch(LocalDateTime.class, "Data/hora inválida: %s", s);
+            return null;
+        }
+    }
+}
+`
+}
+
 function generateCorsConfig(ast: AppAST, groupId: string): string {
   return `package ${groupId}.config;
 
@@ -797,6 +872,7 @@ function generateEntityClass(model: ModelNode, ast: AppAST, groupId: string): st
     if (isId) {
       out.push(`    @Id`)
       if (isGeneratedPk(jt)) out.push(`    @GeneratedValue(strategy = GenerationType.IDENTITY)`)
+      else if (isUuidGeneratedPk(field, jt)) out.push(`    @GeneratedValue(strategy = GenerationType.UUID)`)
     }
     if (isJson(field)) {
       out.push(`    @JdbcTypeCode(SqlTypes.JSON)`)
@@ -1030,11 +1106,35 @@ ${incomingFks.map(fk => `    Page<${model.name}> findBy${fk.fkCamel}(${fk.fkJava
 // 5.7 — Service.java
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Exclusão em cascata: antes de excluir o registro, apaga as linhas filhas que apontam para ele (como o app Node faz). Sem isso o banco recusa
+ * excluir, por exemplo, um cliente que já tem pedidos. Só para chave simples; devolve o texto Java a colocar no método delete (ou vazio).
+ */
+export function javaCascadeDelete(model: ModelNode, ast: AppAST): { fieldCode: string; imports: string[]; bodyCode: string } {
+  const vazio = { fieldCode: '', imports: [] as string[], bodyCode: '' }
+  if (hasCompositePk(model)) return vazio
+  const refs = getReferencingFields(model, ast.models)
+  if (refs.length === 0) return vazio
+  const q = ast.dbStack === 'mysql' ? '`' : '\\"'
+  const stmts = refs.map(r => {
+    const tabela = r.table.includes('.') ? r.table.split('.').map(p => q + p + q).join('.') : q + r.table + q
+    // coluna de auditoria (criado_por/atualizado_por): o registro fica, só a referência ao usuário excluído é anulada
+    if (r.audit) return `        em.createNativeQuery("UPDATE ${tabela} SET ${q}${r.column}${q} = NULL WHERE ${q}${r.column}${q} = :id").setParameter("id", id).executeUpdate();`
+    return `        em.createNativeQuery("DELETE FROM ${tabela} WHERE ${q}${r.column}${q} = :id").setParameter("id", id).executeUpdate();`
+  })
+  return {
+    fieldCode: '    @PersistenceContext\n    private EntityManager em;\n',
+    imports: ['import jakarta.persistence.EntityManager;', 'import jakarta.persistence.PersistenceContext;', 'import org.springframework.transaction.annotation.Transactional;'],
+    bodyCode: '        // exclui antes as linhas filhas (pedidos de um cliente, etc.), como o app Node\n' + stmts.join('\n') + '\n',
+  }
+}
+
 function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, route?: RouteNode): string {
   if (javaNeedsAccess(ast)) return generateGuardedServiceClass(model, ast, groupId, route)
   const pkType = getPkJavaType(model)
   const isComposite = hasCompositePk(model)
   const incomingFks = getIncomingFks(model, ast)
+  const cascade = javaCascadeDelete(model, ast)
 
   const imports = [
     `import ${groupId}.entities.${model.name};`,
@@ -1046,7 +1146,8 @@ function generateServiceClass(model: ModelNode, ast: AppAST, groupId: string, ro
     `import org.springframework.data.domain.*;`,
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
-    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``
+    (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``,
+    ...cascade.imports
   ].filter(Boolean).join('\n')
 
   return `package ${groupId}.services;
@@ -1058,7 +1159,7 @@ ${imports}
 public class ${model.name}Service {
 
     private final ${model.name}Repository repository;
-
+${cascade.fieldCode}
     public Page<${model.name}> findAll(int page, int size, String sort) {
         Sort s = (sort != null && !sort.isEmpty()) ? Sort.by(sort) : Sort.unsorted();
         return repository.findAll(PageRequest.of(page, size, s));
@@ -1090,8 +1191,8 @@ ${incomingFks.map(fk => `
         return repository.save(entity);
     }
 
-    public void delete(${pkType} id) {
-        repository.deleteById(id);
+${cascade.bodyCode ? '    @Transactional\n' : ''}    public void delete(${pkType} id) {
+${cascade.bodyCode}        repository.deleteById(id);
     }
 
     public Map<String, Object> getAnalyticsSummary() {
@@ -1519,10 +1620,12 @@ function generateSpecificationClass(model: ModelNode, ast: AppAST, groupId: stri
   const isComposite = hasCompositePk(model)
   const pkCols = new Set(getPkFields(model).map(f => f.dbColumn))
 
-  // Usa filterFields da rota se configurados, caso contrário utiliza todos os campos escalares do modelo
-  const filterFields = (route?.filterFields && route.filterFields.filter(f => !f.dbColumn.includes('.')).length > 0)
-    ? route.filterFields.filter(f => !f.dbColumn.includes('.'))
-    : model.fields.filter(f => !f.dbColumn.includes('.'))
+  // Campos de filtro configurados na rota primeiro; DEPOIS todas as outras colunas escalares do modelo. As abas de relacionamento, as listas e as
+  // buscas por campo do frontend usam `?coluna=valor` (ex.: funcionarios?departamento_id=...): sem isso a coluna é ignorada e a API devolve a
+  // tabela inteira (a aba do departamento passava a listar, e o Salvar a reatribuir, funcionários de todos os departamentos).
+  const configured = (route?.filterFields ?? []).filter(f => !f.dbColumn.includes('.'))
+  const configuredCols = new Set(configured.map(f => f.dbColumn))
+  const filterFields = [...configured, ...model.fields.filter(f => !f.dbColumn.includes('.') && !configuredCols.has(f.dbColumn))]
 
   for (const field of filterFields) {
     // o tipo do filtro segue o tipo do atributo da entidade (comparar Long com Integer falha na consulta)

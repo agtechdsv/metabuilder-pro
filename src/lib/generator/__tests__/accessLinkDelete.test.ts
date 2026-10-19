@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import ts from 'typescript'
 import { parseMetaBuilderJSON } from '../parser'
 import { generateNodeProject } from '../emitter/node-project'
+import { generateJavaSpringProject } from '../emitter/java-spring-project'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
@@ -75,6 +76,20 @@ describe('gestão de acesso: trocar o grupo não apaga o vínculo dos outros usu
     expect((await mod.deletePerfisUsuariosWhere({ 'perfil_id; drop table x': 1 })).success).toBe(false)
     expect((await mod.deletePerfisUsuariosWhere({})).success).toBe(false)
     expect(calls).toHaveLength(1)
+  })
+
+  it('Java: trocar o grupo com chave composta apaga só o par (valores na ordem da chave do backend), em vez de recusar', () => {
+    const ast: any = parseMetaBuilderJSON(raw('postgres'), 'postgres', { backendStack: 'java-spring', javaGroupId: 'com.vendas' } as any)
+    const files = generateJavaSpringProject(ast)
+    const frontend = files.get('frontend/app/actions/access-admin.ts')!
+    expect(frontend).toBeTruthy()
+    // a função existe (não é mais "null") e monta "coluna1,coluna2" na ordem das colunas da chave
+    expect(frontend).not.toContain('const linkDeleteWhere: any = null as any')
+    expect(frontend).toContain('const cols: string[] = ["usuario_id","perfil_id"]')
+    expect(frontend).toContain('return deletePerfisUsuarios(cols.map(')
+    // a ordem bate com a de PerfisUsuariosId.parse do backend
+    const id = [...files.entries()].find(([p]) => p.endsWith('entities/PerfisUsuariosId.java'))![1]
+    expect(id).toContain('na ordem: usuario_id, perfil_id')
   })
 
   it('Oracle: o UPDATE grava o que o controle de acesso devolve (com atualizado_por/em), não a lista de colunas de antes', () => {

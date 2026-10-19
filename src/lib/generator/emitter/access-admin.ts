@@ -2,6 +2,7 @@ import type { AppAST } from '../ast'
 import { ACCESS_SLUGS, accessSql, accessStatements } from '../accessAdmin'
 import { getAccessDictionary } from '../accessI18n'
 import { SETUP_SCRIPT } from './access-setup-script'
+import { getPkFields, hasCompositePk } from './java-spring-backend'
 
 /**
  * Gestão de acesso do app exportado (Node.js e frontend do Java Spring): permissões por tela (nenhum / leitura / escrita) e os
@@ -16,6 +17,22 @@ const fileKey = (model: string) => model.toLowerCase().replace(/[^a-zA-Z0-9_]/g,
 /** Troca __CHAVE__ pelo valor (o código gerado usa aspas e "+", nunca template literal: sem escapes). */
 function fill(src: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce((acc, [k, v]) => acc.split(`__${k}__`).join(v), src)
+}
+
+/**
+ * Exclusão do vínculo pelo par usuário + grupo. Node: a ação delete<Modelo>Where. Java com chave composta: a API apaga por "valor1,valor2" na
+ * ordem das colunas da chave (a mesma da classe <Modelo>Id do backend). Java com código próprio por linha: não precisa (null).
+ */
+function linkDeleteWhereExpr(ast: AppAST, a: NonNullable<AppAST['accessAdmin']>): string {
+  const link = a.link
+  if (link.kind !== 'table') return 'null as any'
+  if (ast.backendStack !== 'java-spring') return `delete${link.model}Where`
+  const model = ast.models.find(m => m.name === link.model)
+  if (!model || !hasCompositePk(model)) return 'null as any'
+  const cols = JSON.stringify(getPkFields(model).map(f => f.dbColumn))
+  return "async (f: Record<string, any>) => { const cols: string[] = " + cols + "; const keys = Object.keys(f); const find = (c: string) => keys.find(k => k.toLowerCase() === c.toLowerCase()); " +
+    "if (keys.length !== cols.length || !cols.every(c => find(c))) return { success: false, error: 'Chave da tabela de ligação não confere.' }; " +
+    "return delete" + link.model + "(cols.map(c => String(f[find(c) as string])).join(',')) }"
 }
 
 export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): void {
@@ -38,7 +55,7 @@ export function generateAccessAdmin(ast: AppAST, files: Map<string, string>): vo
     LINK_CREATE: a.link.kind === 'table' ? `create${a.link.model}` : 'null as any',
     LINK_DELETE: a.link.kind === 'table' ? `delete${a.link.model}` : 'null as any',
     // exclusão pelo par usuário + grupo (nunca só pelo código do grupo, que apagaria o vínculo de todos os usuários dele)
-    LINK_DELETE_WHERE: a.link.kind === 'table' && ast.backendStack !== 'java-spring' ? `delete${a.link.model}Where` : 'null as any',
+    LINK_DELETE_WHERE: linkDeleteWhereExpr(ast, a),
     HASH_IMPORT: a.hash === 'bcrypt' ? `import bcrypt from 'bcryptjs'\n` : (a.hash === 'md5' || a.hash === 'sha256') ? `import crypto from 'node:crypto'\n` : '',
     HASH_EXPR:
       a.hash === 'bcrypt' ? 'await bcrypt.hash(pw, 10)'

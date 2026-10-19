@@ -127,8 +127,12 @@ export async function realQuery<T = any>(sql: string, params: unknown[] = []): P
 export const REAL = { user: ORA.user, password: ORA.password, userFunc: ORA.userFunc, passwordFunc: ORA.passwordFunc, userLeitura: ORA.userLeitura, passwordLeitura: ORA.passwordLeitura, appDir: ORA.appDir, port: ORA.port }
 
 /** Linhas que NÃO são do teste, por tabela: precisam ser as mesmas antes e depois da rodada. */
-export async function contagemOriginal(): Promise<Record<string, number>> {
+export async function contagemOriginal(): Promise<Record<string, number | string>> {
   const q = async (sql: string) => Number((await oraQuery(sql))[0].n)
+  // Impressão digital das ligações (chaves estrangeiras) das linhas que NÃO são do teste: contar linhas não percebe quando uma linha real é
+  // RELIGADA a outra (ex.: funcionário movido de departamento por um app que gravou a tela inteira). Qualquer mudança nelas derruba a rodada.
+  const fp = async (tabela: string, cols: string[], onde: string) =>
+    String((await oraQuery(`select nvl(sum(ora_hash(${cols.map(c => `nvl(to_char(t.${c}), '-')`).join(" || '|' || ")})), 0) h from ${tabela} t where ${onde}`))[0].h)
   const cliE2E = `select id from clientes where nome_empresa like '${PREFIXO}%'`
   const pedE2E = `select id from pedidos where cliente_id in (${cliE2E})`
   return {
@@ -146,6 +150,15 @@ export async function contagemOriginal(): Promise<Record<string, number>> {
     perfis: await q(`select count(*) n from perfis where nome not like 'E2E-%'`),
     perfis_usuarios: await q(`select count(*) n from perfis_usuarios where perfil_id in (select id from perfis where nome not like 'E2E-%') and usuario_id in (select id from usuarios where email not like 'e2e_robo%')`),
     permissoes: await q(`select count(*) n from mb_role_permissions where role_id in (select id from perfis where nome not like 'E2E-%')`),
+    fp_clientes: await fp('clientes', ['id', 'nome_empresa'], `nome_empresa not like '${PREFIXO}%'`),
+    fp_pedidos: await fp('pedidos', ['id', 'cliente_id', 'funcionario_id', 'status'], `cliente_id is null or cliente_id not in (${cliE2E})`),
+    fp_itens_pedido: await fp('itens_pedido', ['id', 'pedido_id', 'produto_id'], `pedido_id is null or pedido_id not in (${pedE2E})`),
+    fp_produtos: await fp('produtos', ['id', 'categoria_id', 'nome'], `nome not like '${PREFIXO}%'`),
+    fp_departamentos: await fp('departamentos', ['id', 'nome'], `nome not like '${PREFIXO}%'`),
+    fp_funcionarios: await fp('funcionarios', ['id', 'nome', 'departamento_id'], `nome not like '${PREFIXO}%'`),
+    fp_projetos: await fp('projetos', ['id', 'nome', 'cliente_id', 'gerente_id'], `nome not like '${PREFIXO}%'`),
+    fp_tarefas: await fp('tarefas', ['id', 'titulo', 'projeto_id', 'responsavel_id', 'tarefa_antecessora_id'], `titulo not like '${PREFIXO}%'`),
+    fp_entregas: await fp('entregas', ['id', 'pedido_id', 'motorista_id'], `pedido_id is null or pedido_id not in (${pedE2E})`),
   }
 }
 

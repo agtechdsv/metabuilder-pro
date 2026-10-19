@@ -901,7 +901,9 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
                     >
                       <Play className="w-4 h-4" />
-                      {t('export_modal.run_dev', "Executar o app (npm run dev)")}
+                      {backendStack === 'java-spring'
+                        ? t('export_modal.run_dev_java', "Executar o app (backend Java + frontend)")
+                        : t('export_modal.run_dev', "Executar o app (npm run dev)")}
                     </button>
                   ) : (
                     <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/60 dark:bg-indigo-900/10 p-3 space-y-2.5">

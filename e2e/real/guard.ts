@@ -41,8 +41,19 @@ export const REAL = {
   port: Number(val('E2E_REAL_PORT', '3102')),
 }
 
-/** Lê DATABASE_URL do .env.local do app exportado. */
+/**
+ * Lê a conexão com o banco do app exportado: DATABASE_URL do .env.local (Node) ou, no projeto Java (E2E_REAL_JAVA_DIR),
+ * spring.datasource.url do application.properties do backend (jdbc:postgresql://host:porta/banco).
+ */
 function appDatabaseUrl(): string {
+  const javaDir = process.env.E2E_REAL_JAVA_DIR
+  if (javaDir) {
+    const f = path.join(javaDir, 'backend', 'src', 'main', 'resources', 'application.properties')
+    if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas PG (Java) para ${javaDir} e rode: npm run java:prepare`)
+    const m = /^spring\.datasource\.url\s*=\s*jdbc:(postgresql:\/\/[^\s]+)/m.exec(fs.readFileSync(f, 'utf8'))
+    if (!m) throw new Error('spring.datasource.url (PostgreSQL) não encontrado no application.properties do backend.')
+    return m[1]
+  }
   const f = path.join(REAL.appDir, '.env.local')
   if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas PG para ${REAL.appDir} (IDE > Ejetar para uma pasta) e rode: npm run real:prepare`)
   const m = /^DATABASE_URL\s*=\s*"?([^"\r\n]+)"?/m.exec(fs.readFileSync(f, 'utf8'))
@@ -73,8 +84,12 @@ export async function realQuery<T = any>(sql: string, params: unknown[] = []): P
 }
 
 /** Linhas que NÃO são do teste, por tabela: precisam ser as mesmas antes e depois da rodada. */
-export async function contagemOriginal(): Promise<Record<string, number>> {
+export async function contagemOriginal(): Promise<Record<string, number | string>> {
   const q = async (sql: string) => Number((await realQuery(sql))[0].n)
+  // Impressão digital das ligações (chaves estrangeiras) das linhas que NÃO são do teste: contar linhas não percebe quando uma linha real é
+  // RELIGADA a outra (ex.: funcionário movido de departamento por um app que gravou a tela inteira). Qualquer mudança nelas derruba a rodada.
+  const fp = async (tabela: string, cols: string[], onde: string) =>
+    String((await realQuery(`select coalesce(md5(string_agg(concat_ws('|', ${cols.map(c => `t.${c}::text`).join(', ')}), ',' order by t.id::text)), '') h from ${tabela} t where ${onde}`))[0].h)
   const cliE2E = `select id from clientes where nome_empresa like '${PREFIXO}%'`
   const pedE2E = `select id from pedidos where cliente_id in (${cliE2E})`
   return {
@@ -92,6 +107,15 @@ export async function contagemOriginal(): Promise<Record<string, number>> {
     perfis: await q(`select count(*) n from perfis where nome not like 'E2E-%'`),
     perfis_usuarios: await q(`select count(*) n from perfis_usuarios where perfil_id in (select id from perfis where nome not like 'E2E-%') and usuario_id in (select id from usuarios where email not like 'e2e_robo%')`),
     permissoes: await q(`select count(*) n from mb_role_permissions where role_id in (select id::text from perfis where nome not like 'E2E-%')`),
+    fp_clientes: await fp('clientes', ['id', 'nome_empresa'], `nome_empresa not like '${PREFIXO}%'`),
+    fp_pedidos: await fp('pedidos', ['id', 'cliente_id', 'funcionario_id', 'status'], `cliente_id is null or cliente_id not in (${cliE2E})`),
+    fp_itens_pedido: await fp('itens_pedido', ['id', 'pedido_id', 'produto_id'], `pedido_id is null or pedido_id not in (${pedE2E})`),
+    fp_produtos: await fp('produtos', ['id', 'categoria_id', 'nome'], `nome not like '${PREFIXO}%'`),
+    fp_departamentos: await fp('departamentos', ['id', 'nome'], `nome not like '${PREFIXO}%'`),
+    fp_funcionarios: await fp('funcionarios', ['id', 'nome', 'departamento_id'], `nome not like '${PREFIXO}%'`),
+    fp_projetos: await fp('projetos', ['id', 'nome', 'cliente_id', 'gerente_id'], `nome not like '${PREFIXO}%'`),
+    fp_tarefas: await fp('tarefas', ['id', 'titulo', 'projeto_id', 'responsavel_id', 'tarefa_antecessora_id'], `titulo not like '${PREFIXO}%'`),
+    fp_entregas: await fp('entregas', ['id', 'pedido_id', 'motorista_id'], `pedido_id is null or pedido_id not in (${pedE2E})`),
   }
 }
 

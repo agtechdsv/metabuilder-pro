@@ -866,8 +866,8 @@ ${navCards}
 
   // Suporte a Casos de Uso gerados por IA (AI Builder)
   if (ast.dbStack === 'supabase' || ast.routes.some(r => r.isAiGenerated)) {
-    files.set('utils/supabase/client.ts', `import { createBrowserClient } from '@supabase/ssr'
-
+    // o import do @supabase/ssr só existe quando o banco é o Supabase (nas outras pilhas não é usado e a dependência pode faltar, como no frontend Java)
+    files.set('utils/supabase/client.ts', `${ast.dbStack === 'supabase' ? "import { createBrowserClient } from '@supabase/ssr'\n" : ''}
 // um único cliente por página: telas de IA que guardam o resultado de createClient() nas dependências de um useEffect/useCallback
 // (como o sandbox da plataforma permite) não podem receber um objeto novo a cada render, senão buscam os dados sem parar
 let cachedClient: any

@@ -1940,7 +1940,7 @@ ${liveEffect}
         <div className="flex items-center gap-3">
           {${live ? 'true' : 'false'} && (
             <div className="flex items-center gap-2 text-[9px] font-bold text-neutral-400">
-              {updatedAt && <span className="hidden sm:inline">Atualizado às {new Date(updatedAt).toLocaleTimeString('pt-BR')}</span>}
+              {updatedAt && <span className="hidden sm:inline">Atualizado às {new Date(updatedAt as number).toLocaleTimeString('pt-BR')}</span>}
               {refreshSeconds > 0 && <span className="hidden md:inline" title={'Atualização automática a cada ' + (refreshSeconds >= 3600 ? refreshSeconds / 3600 + ' h' : refreshSeconds >= 60 ? Math.round(refreshSeconds / 60) + ' min' : refreshSeconds + ' s')}>⟳</span>}
               <button type="button" onClick={refreshAll} title="Atualizar agora" className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-indigo-600 transition-all">
                 <RefreshCw className={cn('w-3.5 h-3.5', Object.keys(loadingIds).length > 0 && 'animate-spin')} />

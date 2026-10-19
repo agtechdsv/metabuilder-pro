@@ -1702,6 +1702,7 @@ export function parseMetaBuilderJSON(
       dataType: f.data_type || 'varchar',
       isPrimary: f.is_primary_key || false,
       isRequired: f.is_required || false,
+      hasDefault: f.default_value != null && String(f.default_value).trim() !== '',
       isVisibleInList: f.is_visible_in_list !== false,
       isVisibleInForm: f.is_visible_in_form !== false,
       isSearchable: f.is_searchable !== false,

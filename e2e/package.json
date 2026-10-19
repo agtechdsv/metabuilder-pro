@@ -27,7 +27,14 @@
     "ora:test": "playwright test -c playwright.oracle.config.ts",
     "ora:ui": "playwright test -c playwright.oracle.config.ts --ui",
     "ora:start": "npm run ora:prepare && npm run ora:ui",
-    "ora:run": "npm run ora:prepare && npm run ora:test"
+    "ora:run": "npm run ora:prepare && npm run ora:test",
+    "dyn:test": "playwright test -c playwright.dynamic.config.ts",
+    "dyn:ui": "playwright test -c playwright.dynamic.config.ts --ui",
+    "java:prepare": "node scripts/prepare-java.mjs",
+    "java:test": "playwright test -c playwright.java.config.ts",
+    "java:ui": "playwright test -c playwright.java.config.ts --ui",
+    "java:start": "npm run java:prepare && npm run java:ui",
+    "java:run": "npm run java:prepare && npm run java:test"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

@@ -220,6 +220,7 @@ export interface FieldNode {
   dataType: string             // tipo bruto do banco (varchar, integer, etc.)
   isPrimary: boolean
   isRequired: boolean
+  hasDefault?: boolean         // a coluna tem valor padrão no banco (ex.: gen_random_uuid(), SYS_GUID()): o app não precisa informar
   isVisibleInList: boolean
   isVisibleInForm: boolean
   isSearchable: boolean

@@ -1,0 +1,44 @@
+{
+  "_nota": "AMOSTRA montada à mão a partir do Studio do Vendas PG (caso de uso Clientes), só para validar o motor. O manifesto de verdade é gerado pela IDE (POST /api/test-manifest) e sobrescreve este arquivo.",
+  "version": 1,
+  "generatedAt": "2026-10-19T00:00:00.000Z",
+  "project": { "id": "9f375f92-2f9b-418d-b5b6-9ca4d818010d", "name": "Vendas PG", "slug": "vendas-pg" },
+  "dbStack": "postgres",
+  "views": [
+    {
+      "slug": "clientes",
+      "path": "/clientes",
+      "title": "Clientes",
+      "logicType": "pesquisa_cadastro",
+      "table": "clientes",
+      "primaryKey": "id",
+      "displayType": "list",
+      "actionInterface": "page",
+      "filter": [
+        { "column": "nome_empresa", "label": "Nome Empresa", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "status_lead", "label": "Status Lead", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false }
+      ],
+      "grid": [
+        { "column": "nome_empresa", "label": "Nome Empresa", "dataType": "varchar", "required": true, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "cnpj_cpf", "label": "Cnpj Cpf", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "email_contato", "label": "Email Contato", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "status_lead", "label": "Status Lead", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false }
+      ],
+      "form": [
+        { "column": "nome_empresa", "label": "Nome Empresa", "dataType": "varchar", "required": true, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "cnpj_cpf", "label": "Cnpj Cpf", "dataType": "varchar", "mask": "00.000.000/0000-00", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "email_contato", "label": "Email Contato", "dataType": "varchar", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "endereco", "label": "Endereco", "dataType": "text", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "latitude", "label": "Latitude", "dataType": "numeric", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        { "column": "longitude", "label": "Longitude", "dataType": "numeric", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false },
+        {
+          "column": "status_lead", "label": "Status Lead", "dataType": "varchar", "componentType": "Seleção (Dropdown)", "required": false, "readOnly": false, "isPrimaryKey": false, "hasFormula": false,
+          "options": [{ "value": "Novo", "label": "Novo" }, { "value": "Contactado", "label": "Contactado" }, { "value": "Em Negociação", "label": "Em Negociação" }, { "value": "Fechado Ganho", "label": "Fechado Ganho" }]
+        }
+      ],
+      "buttons": [],
+      "exportFormats": ["xlsx", "csv", "json"],
+      "details": []
+    }
+  ]
+}

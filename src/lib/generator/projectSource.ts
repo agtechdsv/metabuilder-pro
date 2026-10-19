@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseMetaBuilderJSON, type ParseOptions } from './parser'
 import { generateNativeProject } from './emitter'
-import type { BackendStack, DbType, JavaVersion } from './ast'
+import type { AppAST, BackendStack, DbType, JavaVersion } from './ast'
 import { loadAccessAdminInput } from './accessAdminData'
 
 /**
@@ -63,6 +63,18 @@ export async function buildProjectSource(
   supabase: Pick<SupabaseClient, 'from'>,
   input: ProjectSourceInput,
 ): Promise<{ files: Map<string, string>; project: any }> {
+  const { ast, project } = await loadProjectAst(supabase, input)
+  return { files: generateNativeProject(ast), project }
+}
+
+/**
+ * Carrega o projeto do Supabase e devolve o AST (tudo o que o dev configurou, já resolvido). É a primeira metade do motor de geração: a exportação
+ * gera o código a partir dele e o ambiente de testes gera o manifesto de testes a partir dele, sem uma segunda leitura do Supabase.
+ */
+export async function loadProjectAst(
+  supabase: Pick<SupabaseClient, 'from'>,
+  input: ProjectSourceInput,
+): Promise<{ ast: AppAST; project: any }> {
   const { projectId } = input
   if (!projectId) throw new ProjectSourceError('ID do projeto obrigatório', 400)
 
@@ -141,7 +153,7 @@ export async function buildProjectSource(
     supabaseAnonKey: input.supabaseAnonKey || project.supabase_anon_key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   })
 
-  return { files: generateNativeProject(ast), project }
+  return { ast, project }
 }
 
 /** Opções de geração (backend, Java, idioma) no formato do parser: a mesma conversão para projeto e para workspace. */

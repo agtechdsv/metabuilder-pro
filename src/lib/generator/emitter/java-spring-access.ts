@@ -3,7 +3,7 @@ import { tableAccessConfigs } from '../layers/access'
 import { isTableClosed } from '../../rowPolicy/policy'
 import {
   getIncomingFks, getPkFields, getPkJavaType, hasCompositePk, getEffectivePkField,
-  javaParseExpr, toCamelCase, toJavaType,
+  javaParseExpr, toCamelCase, toJavaType, javaCascadeDelete,
 } from './java-spring-backend'
 
 /**
@@ -547,6 +547,7 @@ export function generateGuardedServiceClass(model: ModelNode, ast: AppAST, group
   const pkType = getPkJavaType(model)
   const isComposite = hasCompositePk(model)
   const incomingFks = getIncomingFks(model, ast)
+  const cascade = javaCascadeDelete(model, ast)
   const hasGrid = !!(route && route.gridFields && route.gridFields.length > 0)
   const table = lastSeg(model.dbTable)
   const fields = model.fields.filter(f => !f.dbColumn.includes('.'))
@@ -609,6 +610,7 @@ export function generateGuardedServiceClass(model: ModelNode, ast: AppAST, group
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
     (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``,
+    ...cascade.imports,
   ].filter(Boolean).join('\n')
 
   return `package ${groupId}.services;
@@ -623,7 +625,7 @@ public class ${N}Service {
 
     private final ${N}Repository repository;
     private final AccessEnforcer access;
-
+${cascade.fieldCode}
     /** Linhas que o usuário da requisição pode ver (regras por linha e "bloquear por padrão"). */
     private Specification<${N}> scope() {
         return PolicySpecs.scope(TABLE, access.resolve(TABLE));
@@ -673,8 +675,8 @@ ${hasGrid ? `
         return repository.save(entity);
     }
 
-    public void delete(${pkType} id) {
-        repository.deleteById(id);
+${cascade.bodyCode ? '    @Transactional\n' : ''}    public void delete(${pkType} id) {
+${cascade.bodyCode}        repository.deleteById(id);
     }
 
     public Map<String, Object> getAnalyticsSummary() {

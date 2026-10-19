@@ -11,6 +11,7 @@
     "project_saved_in": "Project saved in:",
     "title_done_desktop": "Export Complete!",
     "run_dev": "Run the app (npm run dev)",
+    "run_dev_java": "Run the app (Java backend + frontend)",
     "dev_started": "The app is starting in a minimized terminal (in the taskbar; click it to see the log). The buttons below are enabled as soon as the app responds.",
     "dev_waiting": "Waiting for the app to start...",
     "access_setup_java_note": "The access tables are created by the backend on startup (db/access-control.sql). If the database user cannot create tables, run that script on the database with an administrator.",

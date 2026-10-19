@@ -13,7 +13,7 @@ import { realQuery, REAL, GRUPO_LEITURA_ID } from '../guard'
 // Versões antigas do app exportado apagavam o vínculo de TODOS os usuários do grupo ao trocar o grupo de um usuário ou excluí-lo
 // (DELETE pela coluna do grupo). Só roda o teste que troca/exclui quando o app já tem a correção (linkDeleteWhere).
 const appCorrigido = (() => {
-  try { return fs.readFileSync(path.join(REAL.appDir, 'app', 'actions', 'access-admin.ts'), 'utf8').includes('linkDeleteWhere') } catch { return false }
+  try { return fs.readFileSync(path.join(REAL.appDir, 'app', 'actions', 'access-admin.ts'), 'utf8').match(/linkDeleteWhere: any = (?!null)/) !== null } catch { return false }
 })()
 const emailTmp = (s: string) => `e2e_robo_tmp_${s}_${RODADA.replace(/\D/g, '')}@metabuilder.local`
 const janela = (page: Page) => page.getByRole('dialog').last()
