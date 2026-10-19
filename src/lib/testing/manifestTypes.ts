@@ -69,6 +69,8 @@ export interface ManifestRowRule {
   op: 'eq' | 'in' | 'related'
   source: 'user.email' | 'user.name' | 'user.attr'
   attr?: string
+  /** só em 'related': a coluna aponta para a linha de `table` (coluna `key`) cuja coluna `column` é igual ao valor do usuário */
+  related?: { table: string; key: string; column: string }
   bypass?: { source: string; attr?: string; values: string[] }
 }
 
@@ -85,6 +87,8 @@ export interface ManifestView {
   tablePerms?: { create: boolean; update: boolean; delete: boolean }
   /** regras por linha da tabela; ausente = todos veem todas as linhas */
   rowPolicy?: ManifestRowRule[]
+  /** kanban: a coluna da tabela que define em que coluna do quadro o cartão fica (arrastar o cartão a muda) */
+  kanbanGroupColumn?: string
   filter: ManifestField[]
   grid: ManifestField[]
   form: ManifestField[]

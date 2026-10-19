@@ -5,7 +5,7 @@ import { entrar, entrarComo } from '../lib/login'
 import { criarUsuarioTemporario, removerUsuarioTemporario, valorDaRegra } from '../lib/seguranca'
 import * as acesso from '../lib/acesso.mjs'
 import { unico } from '../lib/seguranca'
-import { comBanco, consultar, nomeDoCampo, nomeDoFiltro } from '../lib/db'
+import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/db'
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
@@ -945,6 +945,82 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         })
       }
 
+      // --- kanban: arrastar um cartão para outra coluna grava a coluna nova (a linha volta ao que era no fim) ---
+
+      if (t.kind === 'kanban_mover') {
+        test(t.title, async ({ page }) => {
+          test.skip(dialeto() !== 'postgres', 'devolver a linha ao que era (sem a auditoria do gatilho) só está implementado para Postgres')
+          const grupo = view.kanbanGroupColumn!
+          const pk = view.primaryKey
+          const total = Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
+          test.skip(total > 5000, 'a tabela é grande demais para guardar uma cópia e devolver a linha ao que era')
+          // a tabela como estava, em JSON (mantém a precisão exata de datas e números): a linha movida volta inteira, inclusive a auditoria de quem/quando gravou
+          const foto = async () => new Map<string, Record<string, unknown>>((await consultar(`select "${pk}"::text as id, to_jsonb(t) as j from "${view.table}" t`)).map(r => [String(r.id), r.j as Record<string, unknown>]))
+          const originais = await foto()
+          const valores = [...new Set([...originais.values()].map(j => String(j[grupo] ?? '')).filter(Boolean))]
+          test.skip(valores.length < 2, 'precisa de pelo menos dois valores diferentes na coluna do quadro para arrastar o cartão')
+          try {
+            await abrir(page, view.path)
+            await aguardarTela(page)
+            const colunas = page.locator('main div.w-80')
+            const titulo = async (c: Locator) => ((await c.locator('h3').first().innerText()).trim())
+            const largura = page.viewportSize()!.width
+            // origem: a primeira coluna com cartão; destino: a coluna vizinha que cabe na tela junto com ela (título igual a um valor da coluna no banco)
+            let origem: Locator | null = null
+            let iOrigem = -1
+            for (let i = 0; i < await colunas.count(); i++) if ((await colunas.nth(i).locator('div.cursor-grab').count()) > 0) { origem = colunas.nth(i); iOrigem = i; break }
+            test.skip(!origem, 'o quadro não mostra nenhum cartão')
+            await origem!.scrollIntoViewIfNeeded()
+            const tituloOrigem = await titulo(origem!)
+            let destino: Locator | null = null
+            for (const i of [iOrigem + 1, iOrigem - 1, iOrigem + 2, iOrigem - 2]) {
+              if (i < 0 || i >= await colunas.count()) continue
+              const c = colunas.nth(i)
+              const caixa = await c.boundingBox()
+              const tt = await titulo(c)
+              if (caixa && caixa.x >= 0 && caixa.x + caixa.width <= largura && valores.some(v => v.toLowerCase() === tt.toLowerCase())) { destino = c; break }
+            }
+            test.skip(!destino, 'nenhuma coluna vizinha cabe na tela com o título de um valor da coluna no banco')
+            const tituloDestino = await titulo(destino!)
+            const esperadoDestino = valores.find(v => v.toLowerCase() === tituloDestino.toLowerCase())!
+            const cartao = origem!.locator('div.cursor-grab').first()
+            await cartao.scrollIntoViewIfNeeded()
+            const de = (await cartao.boundingBox())!
+            const para = (await destino!.boundingBox())!
+            await page.mouse.move(de.x + de.width / 2, de.y + de.height / 2)
+            await page.mouse.down()
+            await page.mouse.move(de.x + de.width / 2 + 12, de.y + de.height / 2 + 12, { steps: 4 }) // passa do limite de 8px que ativa o arraste
+            await page.mouse.move(para.x + para.width / 2, de.y + de.height / 2, { steps: 25 })
+            await page.mouse.up()
+            // exatamente uma linha mudou de coluna, e foi para a coluna onde o cartão foi solto
+            const mudadas = async () => [...(await foto())].filter(([id, j]) => String(j[grupo] ?? '') !== String(originais.get(id)![grupo] ?? ''))
+            await expect.poll(async () => (await mudadas()).length, { message: 'uma linha mudou de coluna no banco', timeout: 15_000 }).toBe(1)
+            const [idMovida, movida] = (await mudadas())[0]
+            expect(String(movida[grupo]), `o cartão foi gravado na coluna onde foi solto ("${esperadoDestino}", vinda de "${tituloOrigem}")`).toBe(esperadoDestino)
+            expect(String(originais.get(idMovida)![grupo]).toLowerCase(), 'e saiu da coluna de onde foi arrastado').toBe(tituloOrigem.toLowerCase())
+            // depois de recarregar, o cartão continua na coluna nova
+            await abrir(page, view.path)
+            await aguardarTela(page)
+            const nova = page.locator('main div.w-80').filter({ has: page.locator('h3', { hasText: new RegExp(`^${escapar(tituloDestino)}$`, 'i') }) }).first()
+            expect.soft(await nova.locator('div.cursor-grab').count(), 'cartões na coluna de destino depois de recarregar').toBeGreaterThan(0)
+          } finally {
+            // devolve ao que era o que o arraste mudou (mesmo se o teste falhou no meio). O gatilho de auditoria da tabela (atualizado_em) é desligado
+            // só durante a devolução, senão a própria devolução marcaria a linha de novo.
+            const atuais = await foto()
+            const aDevolver = [...atuais].filter(([id, j]) => originais.has(id) && JSON.stringify(j) !== JSON.stringify(originais.get(id)))
+            if (aDevolver.length > 0) await comBanco(async d => {
+              await d.query('begin')
+              try {
+                await d.query(`alter table "${view.table}" disable trigger user`)
+                for (const [id, j] of aDevolver) await d.query(`update "${view.table}" t set (${Object.keys(j).map(c => `"${c}"`).join(', ')}) = (select ${Object.keys(j).map(c => `r."${c}"`).join(', ')} from jsonb_populate_record(null::"${view.table}", $2::jsonb) r) where t."${pk}"::text = $1`, [id, JSON.stringify(originais.get(id))])
+                await d.query(`alter table "${view.table}" enable trigger user`)
+                await d.query('commit')
+              } catch (e) { await d.query('rollback').catch(() => {}); throw e }
+            })
+          }
+        })
+      }
+
       // --- segurança: derivada da configuração de acesso do projeto (só com o tipo "seguranca"; cria usuários e grupos temporários e os apaga) ---
 
       if (t.kind === 'seg_tabela') {
@@ -1019,7 +1095,11 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           try {
             // linhas que a regra deixa este usuário ver: as que têm, na coluna da regra, o valor dele (sem o dado, a regra nega tudo)
             const valor = await valorDaRegra(auth, u.id, regra.source, regra.attr)
-            const esperado = async () => valor === null ? 0 : Number((await consultar(`select count(*)::int n from "${view.table}" where "${regra.column}"::text = $1`, [valor]))[0].n)
+            const rel = regra.op === 'related' ? regra.related! : null
+            // 'related': a coluna aponta para uma linha de outra tabela cuja coluna é igual ao valor do usuário
+            const esperado = async () => valor === null ? 0 : Number((await consultar(rel
+              ? `select count(*)::int n from "${view.table}" where "${regra.column}" in (select "${rel.key}" from "${rel.table}" where "${rel.column}"::text = $1)`
+              : `select count(*)::int n from "${view.table}" where "${regra.column}"::text = $1`, [valor]))[0].n)
             const noBanco = Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
             const pag = await ctx.newPage()
             await entrarComo(pag, u.email, u.senha)

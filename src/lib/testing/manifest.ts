@@ -56,11 +56,12 @@ export function manifestView(r: RouteNode, model?: ModelNode): ManifestView {
     logicType: String(r.logicType),
     table: r.modelTable,
     primaryKey: r.primaryKey,
+    ...(r.logicType === 'kanban' ? { kanbanGroupColumn: r.kanbanGroupField || 'status' } : {}),
     displayType: r.displayType,
     actionInterface: r.actionInterfaceType || raw.action_interface_type || 'page',
     tablePerms: { create: model?.canCreate !== false, update: model?.canUpdate !== false, delete: model?.canDelete !== false },
     ...(model?.rowPolicy?.rules?.length ? { rowPolicy: model.rowPolicy.rules.map(rule => ({
-      column: rule.column, op: rule.op, source: rule.source, ...(rule.attr ? { attr: rule.attr } : {}),
+      column: rule.column, op: rule.op, source: rule.source, ...(rule.attr ? { attr: rule.attr } : {}), ...(rule.related ? { related: { table: rule.related.table, key: rule.related.key, column: rule.related.column } } : {}),
       ...(rule.bypass ? { bypass: { source: String(rule.bypass.source), ...(rule.bypass.attr ? { attr: rule.bypass.attr } : {}), values: rule.bypass.values.map(String) } } : {}),
     })) } : {}),
     filter: r.filterFields.map(manifestField),

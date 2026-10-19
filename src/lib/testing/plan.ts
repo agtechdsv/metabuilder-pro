@@ -11,7 +11,7 @@ export type PlannedKind =
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
   | 'botoes' | 'campos_tipos' | 'abas'
-  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao'
+  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
@@ -68,6 +68,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
     crud_reabrir: () => 'registration: reopening the record shows what was saved',
     crud_edicao: () => 'edit: changing and saving writes only the change',
+    kanban_mover: () => 'kanban: dragging a card to another column saves the new column in the database (and the card goes back afterwards)',
     crud_exclusao: () => 'deletion: deleting from the list removes the record',
     grid_paginacao: () => 'grid: pagination respects the chosen page size',
     filtro_opcoes: p => `filter by "${p.label}" option: only the rows of the option appear and Clear undoes it`,
@@ -114,6 +115,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
     crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
     crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
+    kanban_mover: () => 'kanban: arrastrar una tarjeta a otra columna guarda la nueva columna en la base de datos (y la tarjeta vuelve después)',
     crud_exclusao: () => 'eliminación: eliminar desde la lista quita el registro',
     grid_paginacao: () => 'grid: la paginación respeta el tamaño de página elegido',
     filtro_opcoes: p => `filtro de "${p.label}" por opción: solo aparecen las filas de la opción y Limpiar lo deshace`,
@@ -216,10 +218,10 @@ export const PREFIXO_E2E = 'E2E-'
 
 /**
  * Regra por linha que o motor sabe conferir: compara uma coluna com um valor que o motor controla no usuário temporário (id, e-mail, nome ou uma coluna dele).
- * Regras "related" (a coluna aponta para outra tabela) ficam de fora por enquanto.
+ * Vale também para "related" (a coluna aponta para uma linha de outra tabela cuja coluna é igual ao valor do usuário). A lista de valores ("in") fica de fora.
  */
 export const regraDeLinha = (v: Pick<ManifestView, 'rowPolicy'>): ManifestRowRule | undefined =>
-  v.rowPolicy?.find(r => r.op === 'eq' && (r.source !== 'user.attr' || !!r.attr))
+  v.rowPolicy?.find(r => (r.op === 'eq' || (r.op === 'related' && !!r.related)) && (r.source !== 'user.attr' || !!r.attr))
 
 /** Gestão de acesso (Usuários, Grupos, Permissões de Telas): só quando o app a tem (o projeto liga a opção) e o login é pelo banco. */
 function planoAcesso(auth?: ManifestAuth): PlannedTest[] {
@@ -253,6 +255,7 @@ function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
 
 /** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com pelo menos um campo editável. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
+  if (v.logicType === 'kanban') return v.kanbanGroupColumn ? [{ kind: 'kanban_mover', title: 'kanban: arrastar um cartão para outra coluna grava a nova coluna no banco (e o cartão volta depois)' }] : []
   // com campo de texto, o registro é marcado com E2E-; sem ele (só listas, datas, números...), o motor o identifica pelo id novo e o anota num diário para limpar
   if (v.logicType !== 'pesquisa_cadastro' || camposDeTipo(v).every(f => f.readOnly)) return []
   return [

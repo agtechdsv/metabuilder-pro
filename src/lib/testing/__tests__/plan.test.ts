@@ -87,6 +87,7 @@ describe('plano de testes de um caso de uso', () => {
     // sem nenhum campo editável (tudo somente leitura) não há o que preencher
     expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('total', { readOnly: true })] }), ['integracao'])).toEqual([])
     expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
+    expect(kinds(view({ logicType: 'kanban', kanbanGroupColumn: 'status' }), ['integracao'])).toEqual(['kanban_mover'])
     expect(campoMarcador(view())?.column).toBe('nome')
     expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
   })
@@ -99,8 +100,10 @@ describe('plano de testes de um caso de uso', () => {
     expect(k(view(), { ...login, access: { groupsTable: 'perfis' } })).toEqual(['seg_tabela', 'seg_nivel_nenhum', 'seg_nivel_leitura'])
     const comRegra = view({ rowPolicy: [{ column: 'criado_por', op: 'eq', source: 'user.attr', attr: 'id' }] })
     expect(k(comRegra, login)).toEqual(['seg_tabela', 'seg_linha'])
-    // regra "related" ou sem o atributo do usuário: o motor ainda não confere
+    // regra "related" sem a tabela relacionada, ou sem o atributo do usuário: o motor não confere
     expect(regraDeLinha(view({ rowPolicy: [{ column: 'cliente_id', op: 'related', source: 'user.email' }] }))).toBeUndefined()
+    // "related" completa: conferida
+    expect(regraDeLinha(view({ rowPolicy: [{ column: 'cliente_id', op: 'related', source: 'user.email', related: { table: 'clientes', key: 'id', column: 'email' } }] }))?.op).toBe('related')
     expect(regraDeLinha(view({ rowPolicy: [{ column: 'x', op: 'eq', source: 'user.attr' }] }))).toBeUndefined()
     expect(k(view({ logicType: 'kanban' }), login)).toEqual([])
     expect(planView(view(), { types: ['funcional'] }).map(t => t.kind)).not.toContain('seg_tabela') // o padrão nunca cria usuários
