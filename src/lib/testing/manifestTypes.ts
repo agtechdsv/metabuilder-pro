@@ -26,6 +26,10 @@ export interface ManifestAuth {
     permsRoleColumn: string
     permsViewColumn: string
     permsLevelColumn: string
+    /** as três telas de gestão de acesso do app exportado (usuários, grupos, permissões de telas) */
+    screens: { users: { slug: string; path: string }; groups: { slug: string; path: string }; permissions: { slug: string; path: string } }
+    /** textos das telas (botões, ícones, colunas) nos três idiomas de geração: o motor casa por qualquer um deles, sem depender do idioma do app */
+    labels: Record<string, string[]>
   }
 }
 

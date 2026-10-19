@@ -122,3 +122,28 @@ export async function limparSobras(alvos: Array<{ tabela: string; coluna: string
     }
   })
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Diário dos registros criados pelo teste de integração em telas SEM campo de texto para marcar com E2E-
+// ---------------------------------------------------------------------------------------------------------------------
+
+interface Anotacao { tabela: string; pk: string; id: string }
+const arquivoDiario = () => path.join(import.meta.dirname, '..', '..', '.apps', 'crud-journal.json')
+const lerDiario = (): Anotacao[] => { try { return JSON.parse(fs.readFileSync(arquivoDiario(), 'utf8')) as Anotacao[] } catch { return [] } }
+const gravarDiario = (a: Anotacao[]) => { fs.mkdirSync(path.dirname(arquivoDiario()), { recursive: true }); fs.writeFileSync(arquivoDiario(), JSON.stringify(a)) }
+
+/** Anota o registro recém-criado: se o teste cair antes de excluí-lo, a próxima limpeza (ou a do fim da rodada) o apaga pelo id. */
+export function anotarCriado(tabela: string, pk: string, id: string) { gravarDiario([...lerDiario().filter(x => x.id !== id || x.tabela !== tabela), { tabela, pk, id }]) }
+export function riscarCriado(tabela: string, id: string) { gravarDiario(lerDiario().filter(x => !(x.tabela === tabela && x.id === id))) }
+
+/** Apaga o que o diário ainda lista (sobras). Uma linha que depende de outra pode exigir mais de uma passada. */
+export async function limparDiario() {
+  const itens = lerDiario().filter(x => IDENT.test(x.tabela) && IDENT.test(x.pk))
+  if (itens.length === 0) return
+  await comBanco(async d => {
+    for (let passada = 0; passada < 3; passada++) {
+      for (const x of itens) await d.query(`delete from "${x.tabela}" where "${x.pk}"::text = $1`, [x.id]).catch(() => {})
+    }
+  })
+  gravarDiario([])
+}

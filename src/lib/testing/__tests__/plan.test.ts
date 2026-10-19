@@ -82,8 +82,10 @@ describe('plano de testes de um caso de uso', () => {
     expect(kinds(view(), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
     expect(kinds(view())).not.toContain('crud_cadastro')                    // o padrão (funcional) nunca grava
     expect(kinds(view(), ['funcional', 'integracao'])).toEqual(expect.arrayContaining(['abre', 'lista', 'crud_cadastro', 'crud_exclusao']))
-    // sem campo de texto livre (só número e máscara de padrão): não há como identificar o registro, então não há teste de integração
-    expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('valor', { dataType: 'numeric' }), campo('cnpj', { mask: '00.000.000/0000-00' })] }), ['integracao'])).toEqual([])
+    // sem campo de texto livre (só número e máscara de padrão): o registro é identificado pelo id novo, então também há teste de integração
+    expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('valor', { dataType: 'numeric' }), campo('cnpj', { mask: '00.000.000/0000-00' })] }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
+    // sem nenhum campo editável (tudo somente leitura) não há o que preencher
+    expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('total', { readOnly: true })] }), ['integracao'])).toEqual([])
     expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
     expect(campoMarcador(view())?.column).toBe('nome')
     expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
@@ -102,6 +104,17 @@ describe('plano de testes de um caso de uso', () => {
     expect(regraDeLinha(view({ rowPolicy: [{ column: 'x', op: 'eq', source: 'user.attr' }] }))).toBeUndefined()
     expect(k(view({ logicType: 'kanban' }), login)).toEqual([])
     expect(planView(view(), { types: ['funcional'] }).map(t => t.kind)).not.toContain('seg_tabela') // o padrão nunca cria usuários
+  })
+
+  it('gestão de acesso: oito testes só no tipo segurança, só com login pelo banco e gestão de acesso ligada', () => {
+    const acesso = view({ slug: '__gestao_acesso', logicType: 'gestao_acesso', table: '' })
+    const auth = { type: 'database', usersTable: 'usuarios', access: { groupsTable: 'perfis' } } as any
+    expect(planView(acesso, { types: ['seguranca'], auth }).map(t => t.kind)).toEqual([
+      'acesso_abre', 'acesso_usuarios_lista', 'acesso_usuario_ciclo', 'acesso_email_repetido', 'acesso_grupo_ciclo', 'acesso_permissoes_matriz', 'acesso_permissao_ciclo', 'acesso_so_admin'])
+    expect(planView(acesso, { types: ['funcional'], auth })).toEqual([])                       // nem "a tela abre": não é um caso de uso do Studio
+    expect(planView(acesso, { types: ['integracao'], auth })).toEqual([])
+    expect(planView(acesso, { types: ['seguranca'], auth: { type: 'database' } as any })).toEqual([]) // sem gestão de acesso no app
+    expect(isSupportedView(acesso)).toBe(true)
   })
 
   it('aplicarMascara: cada 0 consome um dígito e o resto é literal', () => {

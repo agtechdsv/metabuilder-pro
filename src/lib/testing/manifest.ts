@@ -1,3 +1,5 @@
+import { ACCESS_SLUGS } from '../generator/accessAdmin'
+import { getAccessDictionary, type AccessDictionary } from '../generator/accessI18n'
 import type { AppAST, ModelNode, ResolvedField, RouteNode, RelationTab } from '../generator/ast'
 import { MANIFEST_VERSION, type ManifestAuth, type ManifestDetail, type ManifestField, type ManifestView, type TestManifest } from './manifestTypes'
 
@@ -71,6 +73,16 @@ export function manifestView(r: RouteNode, model?: ModelNode): ManifestView {
 }
 
 /** Manifesto de um projeto (ou só dos casos de uso pedidos, pelo slug). Telas do sistema (login, downloads, gestão de acesso) não entram. */
+const LABEL_KEYS: Array<keyof AccessDictionary> = [
+  'users_title', 'groups_title', 'perms_title', 'create_user', 'create_group', 'save', 'reset_password', 'delete', 'rename', 'name_optional',
+  'level_none', 'level_read', 'level_write', 'col_email', 'col_group',
+]
+/** Os textos das telas de gestão de acesso nos três idiomas de geração (sem repetir): o idioma do app exportado não precisa ser conhecido. */
+function accessLabels(): Record<string, string[]> {
+  const dicts = ['pt', 'en', 'es'].map(l => getAccessDictionary(l))
+  return Object.fromEntries(LABEL_KEYS.map(k => [k, [...new Set(dicts.map(d => String(d[k])))]]))
+}
+
 /** Configuração de login do projeto (a mesma que o gerador usa), no formato do manifesto. */
 export function manifestAuth(ast: AppAST): ManifestAuth {
   const c = ast.authConfig
@@ -83,10 +95,26 @@ export function manifestAuth(ast: AppAST): ManifestAuth {
         groupsTable: a.groups.table, groupsPk: a.groups.pk, groupsNameColumn: a.groups.nameCol,
         link: a.link.kind === 'column' ? { kind: 'column', column: a.link.col } : { kind: 'table', table: a.link.table, userColumn: a.link.userCol, roleColumn: a.link.roleCol },
         permsTable: a.perms.table, permsRoleColumn: a.perms.roleCol, permsViewColumn: a.perms.viewCol, permsLevelColumn: a.perms.levelCol,
+        screens: {
+          users: { slug: ACCESS_SLUGS.users, path: `/${ACCESS_SLUGS.users}` },
+          groups: { slug: ACCESS_SLUGS.groups, path: `/${ACCESS_SLUGS.groups}` },
+          permissions: { slug: ACCESS_SLUGS.permissions, path: `/${ACCESS_SLUGS.permissions}` },
+        },
+        labels: accessLabels(),
       },
     }
   }
   return { type, usersTable: c?.tableName, emailColumn: c?.emailColumn, passwordColumn: c?.passwordColumn, hash: (c?.hashFormat || 'bcrypt').toLowerCase() }
+}
+
+/** Slug do caso de uso sintético da gestão de acesso (não existe no Studio: o app exportado o ganha quando a opção está ligada). */
+export const GESTAO_ACESSO_SLUG = '__gestao_acesso'
+
+function gestaoDeAcesso(): ManifestView {
+  return {
+    slug: GESTAO_ACESSO_SLUG, path: `/${ACCESS_SLUGS.users}`, title: 'Gestão de acesso', logicType: 'gestao_acesso', table: '', primaryKey: 'id', displayType: 'list',
+    actionInterface: 'page', filter: [], grid: [], form: [], buttons: [], exportFormats: [], details: [],
+  }
 }
 
 export function buildTestManifest(ast: AppAST, opts: { viewSlugs?: string[]; now?: Date } = {}): TestManifest {
@@ -97,6 +125,9 @@ export function buildTestManifest(ast: AppAST, opts: { viewSlugs?: string[]; now
     project: { id: ast.projectId ?? '', name: ast.projectName ?? '', slug: ast.projectSlug ?? '' },
     dbStack: ast.dbStack,
     auth: manifestAuth(ast),
-    views: ast.routes.filter(r => !only || only.has(r.viewSlug)).map(r => manifestView(r, ast.models.find(m => String(m.dbTable).split('.').pop() === String(r.modelTable).split('.').pop()))),
+    views: [
+      ...ast.routes.filter(r => !only || only.has(r.viewSlug)).map(r => manifestView(r, ast.models.find(m => String(m.dbTable).split('.').pop() === String(r.modelTable).split('.').pop()))),
+      ...(ast.accessAdmin && (!only || only.has(GESTAO_ACESSO_SLUG)) ? [gestaoDeAcesso()] : []),
+    ],
   }
 }

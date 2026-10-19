@@ -13,6 +13,7 @@ export type PlannedKind =
   | 'botoes' | 'campos_tipos' | 'abas'
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
+  | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
 
 export interface PlannedTest {
@@ -52,6 +53,14 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: the total shown equals the database total',
     grid_ordenacao: p => `grid: sort by "${p.label}" in both directions`,
     grid_filtro: p => `filter by "${p.label}": filters the rows and the Clear button undoes it`,
+    acesso_abre: () => 'access management: the Users, Groups and Screen Permissions screens open for the Administrator',
+    acesso_usuarios_lista: () => 'users: the list shows each user with the group that is in the database',
+    acesso_usuario_ciclo: () => 'users: create with group, sign in, change group, reset password and delete (without touching other users)',
+    acesso_email_repetido: () => 'users: a repeated e-mail shows the error in the window and creates nothing',
+    acesso_grupo_ciclo: () => 'groups: create, rename and delete a group',
+    acesso_permissoes_matriz: () => 'permissions: the matrix shows each group and each screen',
+    acesso_permissao_ciclo: () => 'permissions: changing a group level is saved and can be undone',
+    acesso_so_admin: () => 'access management screens are only for the Administrator (a user without admin rights does not get in)',
     seg_tabela: () => 'table permissions: New Record, Edit and Delete appear only as Studio allows',
     seg_nivel_nenhum: () => 'group access "none": the screen disappears from the menu and does not open by address',
     seg_nivel_leitura: () => 'group access "read": opens and shows the data, but does not allow creating, editing or deleting',
@@ -90,6 +99,14 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     grid_total: () => 'grid: el total mostrado es igual al total de la base de datos',
     grid_ordenacao: p => `grid: ordenar por "${p.label}" en ambos sentidos`,
     grid_filtro: p => `filtro de "${p.label}": filtra las filas y el botón Limpiar lo deshace`,
+    acesso_abre: () => 'gestión de acceso: las pantallas Usuarios, Grupos y Permisos de pantallas abren para el Administrador',
+    acesso_usuarios_lista: () => 'usuarios: la lista muestra cada usuario con el grupo que está en la base de datos',
+    acesso_usuario_ciclo: () => 'usuarios: crear con grupo, entrar, cambiar de grupo, restablecer la contraseña y eliminar (sin tocar a otros usuarios)',
+    acesso_email_repetido: () => 'usuarios: un correo repetido muestra el error en la ventana y no crea nada',
+    acesso_grupo_ciclo: () => 'grupos: crear, renombrar y eliminar un grupo',
+    acesso_permissoes_matriz: () => 'permisos: la matriz muestra cada grupo y cada pantalla',
+    acesso_permissao_ciclo: () => 'permisos: cambiar el nivel de un grupo se guarda y se puede deshacer',
+    acesso_so_admin: () => 'las pantallas de gestión de acceso son solo del Administrador (un usuario sin permisos de administrador no entra)',
     seg_tabela: () => 'permisos de la tabla: Nuevo Registro, Editar y Eliminar aparecen solo como Studio lo permite',
     seg_nivel_nenhum: () => 'acceso "ninguno" al grupo: la pantalla desaparece del menú y no abre por la dirección',
     seg_nivel_leitura: () => 'acceso "lectura" al grupo: abre y muestra los datos, pero no permite crear, editar ni eliminar',
@@ -130,7 +147,7 @@ export const TIPO_TELA: Record<string, PlannedKind> = {
   scheduler: 'tipo_agenda', mapa_mental: 'tipo_mapa_mental', map: 'tipo_mapa', analytics: 'tipo_bi',
 }
 /** Tipos de tela com gabarito (lista, formulário, grid, exportação, ou a regra própria do tipo). Os demais (telas de IA) têm só "a tela abre". */
-export const SUPPORTED_LOGIC_TYPES = ['pesquisa_cadastro', ...Object.keys(TIPO_TELA)]
+export const SUPPORTED_LOGIC_TYPES = ['pesquisa_cadastro', 'gestao_acesso', ...Object.keys(TIPO_TELA)]
 export const isSupportedView = (v: Pick<ManifestView, 'logicType'>): boolean => SUPPORTED_LOGIC_TYPES.includes(v.logicType)
 
 /** Nome do grupo de testes de um caso de uso (o "describe" do Playwright). */
@@ -204,8 +221,24 @@ export const PREFIXO_E2E = 'E2E-'
 export const regraDeLinha = (v: Pick<ManifestView, 'rowPolicy'>): ManifestRowRule | undefined =>
   v.rowPolicy?.find(r => r.op === 'eq' && (r.source !== 'user.attr' || !!r.attr))
 
+/** Gestão de acesso (Usuários, Grupos, Permissões de Telas): só quando o app a tem (o projeto liga a opção) e o login é pelo banco. */
+function planoAcesso(auth?: ManifestAuth): PlannedTest[] {
+  if (auth?.type !== 'database' || !auth.access) return []
+  return [
+    { kind: 'acesso_abre', title: 'gestão de acesso: as telas Usuários, Grupos e Permissões de Telas abrem para o Administrador' },
+    { kind: 'acesso_usuarios_lista', title: 'usuários: a lista mostra cada usuário com o grupo que está no banco' },
+    { kind: 'acesso_usuario_ciclo', title: 'usuários: criar com grupo, entrar, trocar de grupo, redefinir a senha e excluir (sem mexer nos outros)' },
+    { kind: 'acesso_email_repetido', title: 'usuários: e-mail repetido mostra o erro na janela e nada é criado' },
+    { kind: 'acesso_grupo_ciclo', title: 'grupos: criar, renomear e excluir um grupo' },
+    { kind: 'acesso_permissoes_matriz', title: 'permissões: a matriz mostra cada grupo e cada tela' },
+    { kind: 'acesso_permissao_ciclo', title: 'permissões: mudar o nível de um grupo grava e pode ser desfeito' },
+    { kind: 'acesso_so_admin', title: 'as telas de gestão de acesso são só do Administrador (quem não é admin não entra)' },
+  ]
+}
+
 /** Testes de segurança derivados da configuração do projeto (criam usuários e grupos temporários no banco de teste e os apagam no fim). */
 function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
+  if (v.logicType === 'gestao_acesso') return planoAcesso(auth)
   if (v.logicType !== 'pesquisa_cadastro') return []
   const out: PlannedTest[] = [{ kind: 'seg_tabela', title: 'permissões da tabela: Novo Registro, Editar e Excluir aparecem só como o Studio permite' }]
   if (auth?.type === 'database') {
@@ -218,9 +251,10 @@ function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
   return out
 }
 
-/** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com um campo marcador. */
+/** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com pelo menos um campo editável. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
-  if (v.logicType !== 'pesquisa_cadastro' || !campoMarcador(v)) return []
+  // com campo de texto, o registro é marcado com E2E-; sem ele (só listas, datas, números...), o motor o identifica pelo id novo e o anota num diário para limpar
+  if (v.logicType !== 'pesquisa_cadastro' || camposDeTipo(v).every(f => f.readOnly)) return []
   return [
     { kind: 'crud_cadastro', title: 'cadastro: preencher com dados gerados e salvar grava tudo no banco' },
     { kind: 'crud_reabrir', title: 'cadastro: reabrir o registro mostra o que foi gravado' },
@@ -239,6 +273,7 @@ export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[]
 }
 
 function planoFuncional(v: ManifestView): PlannedTest[] {
+  if (v.logicType === 'gestao_acesso') return [] // a gestão de acesso só tem testes no tipo segurança
   const plano: PlannedTest[] = [{ kind: 'abre', title: 'a tela abre sem erro e mostra o título do caso de uso' }]
   if (!isSupportedView(v)) return plano
 

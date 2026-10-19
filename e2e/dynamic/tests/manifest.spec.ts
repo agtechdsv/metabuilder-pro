@@ -3,7 +3,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { entrar, entrarComo } from '../lib/login'
 import { criarUsuarioTemporario, removerUsuarioTemporario, valorDaRegra } from '../lib/seguranca'
+import * as acesso from '../lib/acesso.mjs'
+import { unico } from '../lib/seguranca'
 import { comBanco, consultar, nomeDoCampo, nomeDoFiltro } from '../lib/db'
+import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
 import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType } from '../../../src/lib/testing/plan'
@@ -291,6 +294,34 @@ async function conferirNaTela(page: Page, f: ManifestField, esp: Preenchido): Pr
 /** O registro criado pelo cadastro ainda está no banco? Se não, as etapas seguintes falham logo, com a causa, em vez de esperar o tempo limite da tela. */
 async function registroExiste(view: ManifestView, id: string): Promise<boolean> {
   return Number((await consultar(`select count(*)::int n from "${view.table}" where "${view.primaryKey}"::text = $1`, [id]))[0].n) > 0
+}
+
+/** Os ids da tabela (para achar o registro novo quando não há campo de texto para marcar). null se a tabela é grande demais para isso. */
+async function idsDaTabela(view: ManifestView): Promise<Set<string> | null> {
+  if (Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n) > 20_000) return null
+  return new Set((await consultar(`select "${view.primaryKey}"::text as id from "${view.table}"`)).map(r => String(r.id)))
+}
+
+/**
+ * Muda UM campo já preenchido do formulário de edição (o que dá para mudar com segurança: texto, número, data ou outra opção da lista) e devolve o que ficou esperado.
+ * Usado nas telas sem campo de texto marcador, onde a edição não pode mexer no identificador.
+ */
+async function editarUmCampo(page: Page, view: ManifestView, estado: EstadoCrud, limites: Record<string, number>): Promise<{ coluna: string; novo: Preenchido } | null> {
+  const ordem = ['texto', 'numero', 'data', 'opcao']
+  const candidatos = Object.entries(estado.preenchidos).sort((a, b) => ordem.indexOf(a[1].tipo) - ordem.indexOf(b[1].tipo)).filter(([, p]) => ordem.includes(p.tipo))
+  for (const [coluna, p] of candidatos) {
+    const campo = page.locator(`[name="${nomeDoCampo(coluna)}"]`).first()
+    if (!(await campo.count()) || (await campo.isDisabled())) continue
+    if (p.tipo === 'texto') { const v = caber(`${p.esperado} ED`, limites[coluna.toLowerCase()]); if (v === p.esperado) continue; await campo.fill(v); return { coluna, novo: { tipo: 'texto', esperado: v } } }
+    if (p.tipo === 'numero') { const n = (p.numero ?? 0) + 1; await campo.fill(String(n)); return { coluna, novo: { tipo: 'numero', esperado: String(n), numero: n } } }
+    if (p.tipo === 'data') { await campo.fill('2026-10-26'); return { coluna, novo: { tipo: 'data', esperado: '2026-10-26' } } }
+    if (p.tipo === 'opcao') {
+      const outras = (await campo.locator('option').evaluateAll(os => os.map(o => (o as HTMLOptionElement).value).filter(v => v !== ''))).filter(v => v !== p.esperado)
+      if (outras.length === 0) continue
+      await campo.selectOption(outras[0]); return { coluna, novo: { tipo: 'opcao', esperado: outras[0] } }
+    }
+  }
+  return null
 }
 
 /** Lê, como texto, os campos preenchidos de uma linha (achada por uma coluna). As datas voltam como AAAA-MM-DD HH:MM:SS nos dois bancos. */
@@ -795,11 +826,13 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
 
       if (t.kind === 'crud_cadastro') {
         test(t.title, async ({ page }) => {
-          const marcadorCampo = campoMarcador(view)!
+          const marcadorCampo = campoMarcador(view) // sem ele (telas só com listas, datas e números), o registro é achado pelo id novo
           const editaveis = camposDeTipo(view).filter(f => !f.readOnly)
           const limites = await limitesDaTabela(view.table)
-          const marcador = caber(`${RODADA}-${view.slug.replace(/[^a-z0-9]/gi, '').slice(0, 6)}`, limites[marcadorCampo.column.toLowerCase()])
-          test.skip(!marcador.startsWith(PREFIXO_E2E) || marcador.length < 8, 'a coluna de identificação é curta demais para o prefixo E2E-')
+          const marcador = marcadorCampo ? caber(`${RODADA}-${view.slug.replace(/[^a-z0-9]/gi, '').slice(0, 6)}`, limites[marcadorCampo.column.toLowerCase()]) : ''
+          test.skip(!!marcadorCampo && (!marcador.startsWith(PREFIXO_E2E) || marcador.length < 8), 'a coluna de identificação é curta demais para o prefixo E2E-')
+          const idsAntes = marcadorCampo ? null : await idsDaTabela(view)
+          test.skip(!marcadorCampo && idsAntes === null, 'a tabela é grande demais para identificar o registro criado pelo id')
           const estado: EstadoCrud = { marcador, preenchidos: {} }
           gravarEstado(view.slug, estado)
 
@@ -807,17 +840,26 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const naoPreenchidos: string[] = []
           let n = 0
           for (const f of editaveis) {
-            const p = await preencherCampo(page, f, ++n, limites, f.column === marcadorCampo.column ? marcador : undefined)
+            const p = await preencherCampo(page, f, ++n, limites, marcadorCampo && f.column === marcadorCampo.column ? marcador : undefined)
             if (p) estado.preenchidos[f.column] = p
             else if (f.required) naoPreenchidos.push(f.label)
           }
           test.skip(naoPreenchidos.length > 0, `campo(s) obrigatório(s) que o motor ainda não sabe preencher: ${naoPreenchidos.join(', ')}`)
+          test.skip(Object.keys(estado.preenchidos).length === 0, 'o motor não soube preencher nenhum campo desta tela')
           if (process.env.E2E_DEBUG) console.log(`[crud ${view.slug}] preenchido: ${JSON.stringify(estado.preenchidos)}`)
 
           await page.getByRole('button', { name: 'Criar Registro' }).first().click()
-          await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]))[0].n, { message: 'o registro aparece no banco', timeout: 15_000 }).toBe(1)
-          const linha = await lerLinha(view, marcadorCampo.column, marcador, estado.preenchidos)
+          let linha: Record<string, string | null>
+          if (marcadorCampo) {
+            await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [marcador]))[0].n, { message: 'o registro aparece no banco', timeout: 15_000 }).toBe(1)
+            linha = await lerLinha(view, marcadorCampo.column, marcador, estado.preenchidos)
+          } else {
+            const novos = async () => [...((await idsDaTabela(view)) ?? [])].filter(id => !idsAntes!.has(id))
+            await expect.poll(async () => (await novos()).length, { message: 'um registro novo aparece no banco', timeout: 15_000 }).toBe(1)
+            linha = await lerLinha(view, view.primaryKey, (await novos())[0], estado.preenchidos)
+          }
           estado.id = String(linha.__id)
+          anotarCriado(view.table, view.primaryKey, estado.id) // se o teste cair antes de excluir, a limpeza apaga pelo id
           gravarEstado(view.slug, estado)
           // auditoria: se a tabela tem criado_por, o app precisa tê-lo gravado (quem criou o registro)
           const temAuditoria = (await comBanco(d => d.colunas(view.table))).some((c: any) => c.column_name === 'criado_por')
@@ -852,17 +894,28 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           const estado = lerEstado(view.slug) as EstadoCrud
           test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
-          const marcadorCampo = campoMarcador(view)!
+          const marcadorCampo = campoMarcador(view)
           const limites = await limitesDaTabela(view.table)
-          const novo = caber(`${estado.marcador} ED`, limites[marcadorCampo.column.toLowerCase()])
-          test.skip(novo === estado.marcador, 'a coluna de identificação não comporta a alteração')
           expect(await registroExiste(view, estado.id!), 'o registro criado pelo cadastro continua no banco').toBe(true)
           await abrir(page, `${view.path}/${estado.id}`)
-          await page.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).first().fill(novo)
+          let coluna: string
+          let novo: Preenchido
+          if (marcadorCampo) {
+            // o campo que identifica o registro muda: o sufixo " ED" mostra na lista e no banco
+            const v = caber(`${estado.marcador} ED`, limites[marcadorCampo.column.toLowerCase()])
+            test.skip(v === estado.marcador, 'a coluna de identificação não comporta a alteração')
+            await page.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).first().fill(v)
+            coluna = marcadorCampo.column; novo = { tipo: 'texto', esperado: v }
+          } else {
+            const r = await editarUmCampo(page, view, estado, limites)
+            test.skip(!r, 'nenhum campo preenchido pode ser alterado com segurança')
+            coluna = r!.coluna; novo = r!.novo
+          }
           await page.getByRole('button', { name: 'Salvar Alterações' }).first().click()
-          await expect.poll(async () => String((await consultar(`select "${marcadorCampo.column}"::text as v from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id]))[0]?.v), { message: 'a alteração aparece no banco', timeout: 15_000 }).toBe(novo)
-          estado.marcador = novo
-          estado.preenchidos[marcadorCampo.column] = { tipo: 'texto', esperado: novo }
+          const campoDef = camposDeTipo(view).find(f => f.column === coluna)!
+          await expect.poll(async () => conferirNoBanco(campoDef, novo, (await lerLinha(view, view.primaryKey, estado.id!, { [coluna]: novo }))[coluna.toLowerCase()]), { message: 'a alteração aparece no banco', timeout: 15_000 }).toBeNull()
+          if (marcadorCampo) estado.marcador = novo.esperado
+          estado.preenchidos[coluna] = novo
           gravarEstado(view.slug, estado)
           // só o campo alterado mudou: os demais continuam como foram gravados
           const linha = await lerLinha(view, view.primaryKey, estado.id!, estado.preenchidos)
@@ -877,17 +930,17 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           const estado = lerEstado(view.slug) as EstadoCrud
           test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
-          const marcadorCampo = campoMarcador(view)!
           const contar = async () => Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
           const antes = await contar()
           await abrir(page, view.path)
           await aguardarLista(page)
           const linha = await acharLinha(page, estado.id!)
-          expect(linha, `a linha do registro criado (${estado.marcador}) aparece na lista`).not.toBeNull()
+          expect(linha, `a linha do registro criado (${estado.marcador || estado.id}) aparece na lista`).not.toBeNull()
           await linha!.locator('button[title="Excluir"], a[title="Excluir"]').first().click()
           await confirmarExclusao(page)
-          await expect.poll(async () => (await consultar(`select count(*)::int n from "${view.table}" where "${marcadorCampo.column}"::text = $1`, [estado.marcador]))[0].n, { message: 'o registro some do banco', timeout: 15_000 }).toBe(0)
+          await expect.poll(async () => registroExiste(view, estado.id!), { message: 'o registro some do banco', timeout: 15_000 }).toBe(false)
           expect(await contar(), 'só o registro criado pelo teste foi excluído').toBe(antes - 1)
+          riscarCriado(view.table, estado.id!)
           gravarEstado(view.slug, undefined)
         })
       }
@@ -1005,6 +1058,220 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             await removerUsuarioTemporario(auth, u)
           }
         })
+      }
+
+      // --- gestão de acesso do app (Usuários, Grupos, Permissões de Telas): só com o tipo "seguranca" e a gestão de acesso ligada ---
+
+      if (t.kind.startsWith('acesso_')) {
+        const auth = manifest.auth!
+        const ac = auth.access!
+        const rotulo = (k: string) => new RegExp(`^(${(ac.labels[k] ?? [k]).map(escapar).join('|')})$`, 'i')
+        const porTitulo = (k: string, el = 'button') => (ac.labels[k] ?? [k]).map(v => `${el}[title="${v}"]`).join(', ')
+        const confirmar = /excluir|delete|eliminar|confirmar|confirm|^sim$|^yes$|^sí$/i
+        const janela = (p: Page) => p.getByRole('dialog').last()
+        const novoContexto = (browser: import('@playwright/test').Browser) => browser.newContext({ baseURL: `http://localhost:${CONFIG.port}`, locale: 'pt-BR', viewport: { width: 1280, height: 800 } })
+
+        if (t.kind === 'acesso_abre') {
+          test(t.title, async ({ page }) => {
+            for (const [chave, tela] of [['users_title', ac.screens.users], ['groups_title', ac.screens.groups], ['perms_title', ac.screens.permissions]] as const) {
+              await abrir(page, tela.path)
+              await aguardarTela(page)
+              await expect.soft(page.getByText(rotulo(chave)).first(), `título da tela ${tela.path}`).toBeVisible()
+              await expect.soft(page.getByText(/Application error|Erro ao carregar/i), `erro em ${tela.path}`).toHaveCount(0)
+            }
+          })
+        }
+
+        if (t.kind === 'acesso_usuarios_lista') {
+          test(t.title, async ({ page }) => {
+            const usuarios = await comBanco(d => acesso.usuariosReais(d, auth, 5))
+            test.skip(usuarios.length === 0, 'a tabela de usuários está vazia')
+            await abrir(page, ac.screens.users.path)
+            await aguardarTela(page)
+            for (const u of usuarios) {
+              const linha = page.locator('tbody tr').filter({ hasText: u.email })
+              await expect.soft(linha, `usuário ${u.email} na lista`).toHaveCount(1)
+              const grupo = await comBanco(d => acesso.grupoDoUsuario(d, auth, u.id))
+              if (grupo && (await linha.count()) === 1) await expect.soft(linha.locator('select'), `grupo de ${u.email}`).toHaveValue(grupo)
+            }
+          })
+        }
+
+        if (t.kind === 'acesso_usuario_ciclo') {
+          test(t.title, async ({ page, browser }) => {
+            const grupos = (await comBanco(d => acesso.listarGrupos(d, auth))).filter((g: any) => !/^E2E-/i.test(String(g.nome)))
+            test.skip(grupos.length < 2, 'precisa de pelo menos dois grupos (que não sejam de teste) para trocar o grupo do usuário')
+            const [g1, g2] = grupos
+            const email = `e2e_seg_${unico()}@metabuilder.local`
+            const antesOutros = await comBanco(d => acesso.vinculosDeOutros(d, auth))
+            let uid: string | undefined
+            try {
+              await abrir(page, ac.screens.users.path)
+              await aguardarTela(page)
+              await page.getByRole('button', { name: rotulo('create_user') }).click()
+              const j = janela(page)
+              await j.getByPlaceholder(rotulo('name_optional')).fill('E2E Usuário Temporário')
+              await j.locator('input[type="email"]').fill(email)
+              await j.locator('input[type="password"]').fill('Senha-Inicial-1')
+              await j.locator('select').selectOption({ label: g1.nome })
+              await j.getByRole('button', { name: rotulo('save') }).click()
+              await expect.poll(async () => (await comBanco(d => acesso.usuarioPorEmail(d, auth, email))) ?? '', { message: 'o usuário aparece no banco', timeout: 15_000 }).not.toBe('')
+              uid = (await comBanco(d => acesso.usuarioPorEmail(d, auth, email))) as string
+              const hash = await comBanco(d => acesso.lerHashDoUsuario(d, auth, uid!))
+              expect(String(hash), 'a senha é gravada em hash, nunca em texto').not.toBe('Senha-Inicial-1')
+              expect(acesso.confereSenha(auth.hash, 'Senha-Inicial-1', hash), 'o hash confere com a senha informada').toBe(true)
+              expect(await comBanco(d => acesso.grupoDoUsuario(d, auth, uid!)), 'grupo escolhido ao criar').toBe(g1.id)
+
+              // o usuário novo consegue entrar
+              const ctx = await novoContexto(browser)
+              try { const p2 = await ctx.newPage(); await entrarComo(p2, email, 'Senha-Inicial-1') } finally { await ctx.close() }
+
+              // trocar de grupo pela lista
+              await abrir(page, ac.screens.users.path)
+              await aguardarTela(page)
+              const linha = page.locator('tbody tr').filter({ hasText: email })
+              await linha.locator('select').selectOption({ label: g2.nome })
+              await expect.poll(async () => await comBanco(d => acesso.grupoDoUsuario(d, auth, uid!)), { message: 'o grupo novo aparece no banco', timeout: 15_000 }).toBe(g2.id)
+
+              // redefinir a senha: a nova vale, a antiga não
+              await linha.locator(porTitulo('reset_password')).first().click()
+              const j2 = janela(page)
+              const senhas = j2.locator('input[type="password"]')
+              await senhas.nth(0).fill('Senha-Nova-2')
+              await senhas.nth(1).fill('Senha-Nova-2')
+              await j2.getByRole('button', { name: rotulo('save') }).click()
+              await expect.poll(async () => acesso.confereSenha(auth.hash, 'Senha-Nova-2', await comBanco(d => acesso.lerHashDoUsuario(d, auth, uid!))), { message: 'a senha nova vale', timeout: 15_000 }).toBe(true)
+              const ctx2 = await novoContexto(browser)
+              try {
+                const velho = await ctx2.newPage()
+                await velho.goto('/login')
+                await velho.locator('input[name="email"]').fill(email)
+                await velho.locator('input[name="password"]').fill('Senha-Inicial-1')
+                await velho.locator('button[type="submit"]').click()
+                await velho.waitForTimeout(2000)
+                expect(velho.url(), 'a senha antiga já não entra').toMatch(/\/login/)
+              } finally { await ctx2.close() }
+
+              // excluir pela janela de confirmação do app
+              await abrir(page, ac.screens.users.path)
+              await aguardarTela(page)
+              await page.locator('tbody tr').filter({ hasText: email }).locator(porTitulo('delete')).first().click()
+              await janela(page).getByRole('button', { name: confirmar }).last().click()
+              await expect.poll(async () => (await comBanco(d => acesso.usuarioPorEmail(d, auth, email))) ?? '', { message: 'o usuário some do banco', timeout: 15_000 }).toBe('')
+              expect(await comBanco(d => acesso.grupoDoUsuario(d, auth, uid!)), 'o vínculo com o grupo também some').toBeNull()
+              // trocar de grupo e excluir um usuário não pode ter mexido no vínculo de ninguém mais
+              expect(await comBanco(d => acesso.vinculosDeOutros(d, auth)), 'vínculos dos outros usuários').toBe(antesOutros)
+            } finally {
+              if (uid) await comBanco(d => acesso.apagarUsuario(d, auth, uid!)).catch(() => {})
+            }
+          })
+        }
+
+        if (t.kind === 'acesso_email_repetido') {
+          test(t.title, async ({ page }) => {
+            const existente = CONFIG.user || (await comBanco(d => acesso.usuariosReais(d, auth, 1)))[0]?.email
+            test.skip(!existente, 'não há e-mail existente para repetir')
+            const contar = async () => Number((await consultar(`select count(*)::int n from ${auth.usersTable}`))[0].n)
+            await abrir(page, ac.screens.users.path)
+            await aguardarTela(page)
+            const antes = await contar()
+            await page.getByRole('button', { name: rotulo('create_user') }).click()
+            const j = janela(page)
+            await j.getByPlaceholder(rotulo('name_optional')).fill('E2E Repetido') // com nome, para o erro vir do e-mail repetido e não do nome vazio
+            await j.locator('input[type="email"]').fill(existente)
+            await j.locator('input[type="password"]').fill('Qualquer-Senha-1')
+            await j.getByRole('button', { name: rotulo('save') }).click()
+            await page.waitForTimeout(1500)
+            const depois = await contar()
+            if (depois > antes && auth.nameColumn) await consultar(`delete from ${auth.usersTable} where ${auth.nameColumn} = $1`, ['E2E Repetido']).catch(() => {})
+            expect(depois, 'nenhum usuário foi criado com o e-mail repetido').toBe(antes)
+            await expect(janela(page).getByRole('button', { name: rotulo('save') }), 'a janela continua aberta, com o erro dentro').toBeVisible()
+          })
+        }
+
+        if (t.kind === 'acesso_grupo_ciclo') {
+          test(t.title, async ({ page }) => {
+            const nome = `E2E-Perm-${unico()} UI`
+            const existe = async (n: string) => (await comBanco(d => acesso.listarGrupos(d, auth))).some((g: any) => g.nome === n)
+            try {
+              await abrir(page, ac.screens.groups.path)
+              await aguardarTela(page)
+              await page.getByRole('button', { name: rotulo('create_group') }).click()
+              await janela(page).getByRole('textbox').fill(nome)
+              await janela(page).getByRole('button', { name: rotulo('save') }).click()
+              await expect.poll(() => existe(nome), { message: 'o grupo aparece no banco', timeout: 15_000 }).toBe(true)
+
+              await abrir(page, ac.screens.groups.path)
+              await aguardarTela(page)
+              const linha = page.locator('tbody tr').filter({ hasText: nome })
+              await expect(linha, 'o grupo na lista').toHaveCount(1)
+              await linha.locator(porTitulo('rename')).first().click()
+              const novoNome = nome + ' B'
+              await janela(page).getByRole('textbox').fill(novoNome)
+              await janela(page).getByRole('button', { name: rotulo('save') }).click()
+              await expect.poll(() => existe(novoNome), { message: 'o novo nome aparece no banco', timeout: 15_000 }).toBe(true)
+
+              await abrir(page, ac.screens.groups.path)
+              await aguardarTela(page)
+              await page.locator('tbody tr').filter({ hasText: novoNome }).locator(porTitulo('delete')).first().click()
+              await janela(page).getByRole('button', { name: confirmar }).last().click()
+              await expect.poll(() => existe(novoNome), { message: 'o grupo some do banco', timeout: 15_000 }).toBe(false)
+            } finally {
+              await comBanco(async d => { for (const g of (await acesso.listarGrupos(d, auth)).filter((x: any) => String(x.nome).startsWith(nome))) await acesso.apagarGrupo(d, auth, g.id).catch(() => {}) }).catch(() => {})
+            }
+          })
+        }
+
+        if (t.kind === 'acesso_permissoes_matriz') {
+          test(t.title, async ({ page }) => {
+            const grupos = (await comBanco(d => acesso.listarGrupos(d, auth))).slice(0, 4)
+            await abrir(page, ac.screens.permissions.path)
+            await aguardarTela(page)
+            const cabecalho = await page.locator('thead th').allInnerTexts()
+            for (const g of grupos) expect.soft(cabecalho.some(c => norm(c).includes(norm(g.nome))), `grupo "${g.nome}" no cabeçalho da matriz`).toBe(true) // a tela mostra os nomes em maiúsculas (estilo): compara sem diferenciar
+            for (const v of manifest.views.filter(x => x.logicType !== 'gestao_acesso' && x.path).slice(0, 6)) {
+              await expect.soft(page.locator('td p').filter({ hasText: new RegExp(`^${escapar(v.path)}$`) }).first(), `tela ${v.path} na matriz`).toBeVisible()
+            }
+          })
+        }
+
+        if (t.kind === 'acesso_permissao_ciclo') {
+          test(t.title, async ({ page }) => {
+            const alvo = manifest.views.find(x => x.logicType === 'pesquisa_cadastro')
+            test.skip(!alvo, 'sem caso de uso para mudar a permissão')
+            const u = await criarUsuarioTemporario(auth, { grupoSemRestricao: true })
+            try {
+              const nomeGrupo = String((await comBanco(d => acesso.listarGrupos(d, auth))).find((g: any) => g.id === u.grupoId)?.nome)
+              await abrir(page, ac.screens.permissions.path)
+              await aguardarTela(page)
+              // a coluna do grupo de teste é achada pelo NOME no cabeçalho (nunca por posição: um clique no grupo errado alteraria um grupo de verdade)
+              const coluna = (await page.locator('thead th').allInnerTexts()).findIndex(c => norm(c).includes(norm(nomeGrupo)))
+              expect(coluna, `coluna do grupo ${nomeGrupo} na matriz`).toBeGreaterThan(0)
+              const linha = page.locator('tbody tr').filter({ has: page.locator('td p', { hasText: new RegExp(`^${escapar(alvo!.path)}$`) }) })
+              const celula = linha.locator('td').nth(coluna)
+              await celula.locator('button', { hasText: rotulo('level_none') }).click()
+              await expect.poll(async () => await comBanco(d => acesso.nivelDoGrupo(d, auth, u.grupoId!, alvo!.slug)), { message: 'o nível "nenhum" aparece no banco', timeout: 15_000 }).toBe('none')
+              await celula.locator('button', { hasText: rotulo('level_write') }).click()
+              await expect.poll(async () => (await comBanco(d => acesso.nivelDoGrupo(d, auth, u.grupoId!, alvo!.slug))) ?? 'write', { message: 'o nível volta a escrita', timeout: 15_000 }).toBe('write')
+            } finally { await removerUsuarioTemporario(auth, u) }
+          })
+        }
+
+        if (t.kind === 'acesso_so_admin') {
+          test(t.title, async ({ browser }) => {
+            const u = await criarUsuarioTemporario(auth, { grupoSemRestricao: true })
+            const ctx = await novoContexto(browser)
+            try {
+              const pag = await ctx.newPage()
+              await entrarComo(pag, u.email, u.senha)
+              for (const [tela, botao] of [[ac.screens.users.path, 'create_user'], [ac.screens.groups.path, 'create_group'], [ac.screens.permissions.path, 'level_none']] as const) {
+                await abrir(pag, tela)
+                await aguardarTela(pag)
+                await expect.soft(pag.getByRole('button', { name: rotulo(botao) }), `quem não é admin não vê o botão "${botao}" em ${tela}`).toHaveCount(0)
+              }
+            } finally { await ctx.close(); await removerUsuarioTemporario(auth, u) }
+          })
+        }
       }
     }
   })

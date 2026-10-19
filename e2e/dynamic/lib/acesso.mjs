@@ -132,3 +132,57 @@ export async function limparSeguranca(d, auth) {
     for (const g of grupos) await apagarGrupo(d, auth, g.id).catch(() => {})
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Conferências das telas de gestão de acesso (só leem, exceto apagar o que o próprio teste criou)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const usuarioPorEmail = (d, auth, email) => usuarioPor(d, auth, email)
+
+/** Id do grupo do usuário (vínculo em tabela ou coluna do próprio usuário); null = sem grupo. */
+export async function grupoDoUsuario(d, auth, userId) {
+  const link = auth.access?.link
+  if (link?.kind === 'table') return (await d.query(`select ${d.ident(link.roleColumn)}::text as g from ${d.ident(link.table)} where ${d.ident(link.userColumn)}::text = $1`, [userId]))[0]?.g ?? null
+  if (link?.kind === 'column') return (await d.query(`select ${d.ident(link.column)}::text as g from ${d.ident(auth.usersTable)} where ${d.ident(auth.usersPk || 'id')}::text = $1`, [userId]))[0]?.g ?? null
+  return null
+}
+
+/** Os grupos do projeto: [{ id, nome }]. */
+export async function listarGrupos(d, auth) {
+  const ac = auth.access
+  return d.query(`select ${d.ident(ac.groupsPk)}::text as id, ${d.ident(ac.groupsNameColumn)}::text as nome from ${d.ident(ac.groupsTable)}`)
+}
+
+/** Usuários de verdade (fora os temporários e o robô do motor), para conferir a lista da tela. */
+export async function usuariosReais(d, auth, limite = 5) {
+  const todos = await d.query(`select ${d.ident(auth.usersPk || 'id')}::text as id, ${d.ident(auth.emailColumn)}::text as email from ${d.ident(auth.usersTable)}`)
+  return todos.filter(u => !/^e2e_(seg_|motor)/i.test(String(u.email))).slice(0, limite)
+}
+
+/** Resumo do vínculo usuário-grupo de TODOS os usuários que não são temporários: não pode mudar quando se troca o grupo de um usuário ou se exclui um. */
+export async function vinculosDeOutros(d, auth) {
+  const link = auth.access?.link
+  let rows = []
+  if (link?.kind === 'table') {
+    rows = await d.query(`select ${d.ident('u')}.${d.ident(auth.emailColumn)}::text as email, l.${d.ident(link.roleColumn)}::text as g from ${d.ident(link.table)} l join ${d.ident(auth.usersTable)} u on u.${d.ident(auth.usersPk || 'id')} = l.${d.ident(link.userColumn)}`)
+  } else if (link?.kind === 'column') {
+    rows = await d.query(`select ${d.ident(auth.emailColumn)}::text as email, ${d.ident(link.column)}::text as g from ${d.ident(auth.usersTable)}`)
+  }
+  return JSON.stringify(rows.filter(r => !/^e2e_seg_/i.test(String(r.email))).map(r => `${r.email}|${r.g}`).sort())
+}
+
+export async function lerHashDoUsuario(d, auth, userId) {
+  return (await d.query(`select ${d.ident(auth.passwordColumn)}::text as h from ${d.ident(auth.usersTable)} where ${d.ident(auth.usersPk || 'id')}::text = $1`, [userId]))[0]?.h ?? null
+}
+
+/** A senha confere com o hash gravado (no formato do projeto)? */
+export function confereSenha(formato, senha, hash) {
+  const f = String(formato || 'bcrypt').toLowerCase()
+  return f === 'bcrypt' ? bcrypt.compareSync(senha, String(hash)) : hashSenha(f, senha) === hash
+}
+
+/** Nível gravado do grupo numa tela (none, read, write); null = sem linha (a tela segue o padrão). */
+export async function nivelDoGrupo(d, auth, groupId, viewSlug) {
+  const ac = auth.access
+  return (await d.query(`select ${d.ident(ac.permsLevelColumn)}::text as n from ${d.ident(ac.permsTable)} where ${d.ident(ac.permsRoleColumn)}::text = $1 and ${d.ident(ac.permsViewColumn)} = $2`, [groupId, viewSlug]))[0]?.n ?? null
+}

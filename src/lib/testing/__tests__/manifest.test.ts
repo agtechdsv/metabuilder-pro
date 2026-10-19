@@ -93,7 +93,16 @@ describe('manifesto de testes a partir do projeto', () => {
       perms: { model: 'P', table: 'mb_role_permissions', pk: 'id', roleCol: 'role_id', viewCol: 'view_slug', levelCol: 'access_level' }, views: [], seed: { roles: [], permissions: [], userRoles: [] },
     } }
     const a = buildTestManifest(comAcesso as any).auth!
-    expect(a.access).toEqual({ groupsTable: 'perfis', groupsPk: 'id', groupsNameColumn: 'nome', link: { kind: 'table', table: 'perfis_usuarios', userColumn: 'usuario_id', roleColumn: 'perfil_id' }, permsTable: 'mb_role_permissions', permsRoleColumn: 'role_id', permsViewColumn: 'view_slug', permsLevelColumn: 'access_level' })
+    expect(a.access).toMatchObject({ groupsTable: 'perfis', groupsPk: 'id', groupsNameColumn: 'nome', link: { kind: 'table', table: 'perfis_usuarios', userColumn: 'usuario_id', roleColumn: 'perfil_id' }, permsTable: 'mb_role_permissions', permsRoleColumn: 'role_id', permsViewColumn: 'view_slug', permsLevelColumn: 'access_level' })
+    // as telas de gestão de acesso e os textos delas nos três idiomas (o app exportado pode estar em qualquer um)
+    expect(a.access!.screens.users).toEqual({ slug: 'acesso-usuarios', path: '/acesso-usuarios' })
+    expect(a.access!.labels.create_user).toEqual(expect.arrayContaining(['Criar Usuário', 'Create User']))
+    expect(a.access!.labels.level_none.length).toBeGreaterThanOrEqual(2)
+    // com a gestão de acesso, o manifesto ganha o caso de uso sintético; sem ela, não
+    const m = buildTestManifest(comAcesso as any)
+    expect(m.views.map(v => v.slug)).toContain('__gestao_acesso')
+    expect(m.views.find(v => v.slug === '__gestao_acesso')).toMatchObject({ logicType: 'gestao_acesso', path: '/acesso-usuarios' })
+    expect(buildTestManifest(comLogin as any).views.map(v => v.slug)).not.toContain('__gestao_acesso')
     expect(a.nameColumn).toBe('nome_completo')
   })
 })
