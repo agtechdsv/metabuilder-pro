@@ -3,8 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { entrar } from '../../real/tests/helpers'
 import { realQuery, REAL } from '../../real/guard'
-import type { TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposEditaveis, describeName, planView } from '../../../src/lib/testing/plan'
+import type { ManifestField, TestManifest } from '../../../src/lib/testing/manifestTypes'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, describeName, ehData, planView } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -123,6 +123,12 @@ async function aguardarLista(page: Page) {
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {})
   await page.getByText(/Conectando ao banco/i).first().waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {})
   await page.getByText(/TOTAL:\s*\d+/i).first().waitFor({ timeout: 15_000 }).catch(() => {})
+}
+
+/** Telas que não são lista (kanban, mapa, BI...): não têm "TOTAL: n"; espera a rede assentar e as mensagens de carregamento sumirem. */
+async function aguardarTela(page: Page) {
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {})
+  await page.getByText(/Conectando ao banco|Carregando/i).first().waitFor({ state: 'hidden', timeout: 15_000 }).catch(() => {})
 }
 
 /**
@@ -331,6 +337,318 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             expect(r.buf.subarray(0, 2).toString('latin1'), 'um .xlsx é um zip (começa com PK)').toBe('PK')
             expect(r.buf.length).toBeGreaterThan(1000)
           }
+        })
+      }
+
+      // ---------------------------------------------------------------------------------------------------------------------
+      // Fase 3 (só leitura)
+      // ---------------------------------------------------------------------------------------------------------------------
+
+      if (t.kind === 'grid_paginacao') {
+        test(t.title, async ({ page }) => {
+          const noBanco = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const seletor = page.locator('main select').last()
+          const rotulos = await seletor.locator('option').allInnerTexts()
+          const tamanhos = rotulos.map(r => ({ r, n: Number(/\d+/.exec(r)?.[0]) })).filter(x => x.n > 0).sort((a, b) => a.n - b.n)
+          expect(tamanhos.length, 'o seletor de linhas por página tem opções').toBeGreaterThan(0)
+          const menor = tamanhos[0]
+          const antes = page.url()
+          await seletor.selectOption({ label: menor.r })
+          await page.waitForURL(u => u.href !== antes, { timeout: 8_000 }).catch(() => {})
+          await aguardarLista(page)
+          expect(await totalMostrado(page), 'o total não muda com o tamanho da página').toBe(noBanco)
+          expect((await linhasDoGrid(page)).length, `linhas com ${menor.n} por página`).toBe(Math.min(menor.n, noBanco))
+          if (noBanco > menor.n) {
+            await clicarENavegar(page, page.getByRole('link', { name: '2', exact: true }))
+            expect((await linhasDoGrid(page)).length, 'linhas da página 2').toBe(Math.min(menor.n, noBanco - menor.n))
+          }
+        })
+      }
+
+      if (t.kind === 'filtro_opcoes') {
+        const campo = view.filter.find(x => x.column === t.field)!
+        const gcol = view.grid.find(x => x.column === t.field)!
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          let escolha: { label: string; n: number } | undefined
+          for (const o of campo.options ?? []) {
+            const n = Number((await realQuery(`select count(*) n from ${view.table} where ${campo.column}::text = $1`, [o.value]))[0].n)
+            if (n > 0 && n < total) { escolha = { label: o.label, n }; break }
+          }
+          test.skip(!escolha, 'nenhuma opção do filtro separa as linhas (todas ou nenhuma)')
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          await page.locator(`select[name="${campo.column}_filter"]`).selectOption({ label: escolha!.label })
+          await clicarENavegar(page, page.getByRole('button', { name: 'Pesquisar' }).first())
+          expect(await totalMostrado(page), `total com "${escolha!.label}"`).toBe(escolha!.n)
+          const idx = await indiceColuna(page, gcol.label)
+          expect(idx, `coluna "${gcol.label}"`).toBeGreaterThanOrEqual(0)
+          for (const c of await linhasDoGrid(page)) expect.soft(norm(c[idx]), 'linha de outra opção').toContain(norm(escolha!.label))
+          await clicarENavegar(page, page.getByRole('link', { name: 'Limpar' }).or(page.getByRole('button', { name: 'Limpar' })).first())
+          expect(await totalMostrado(page), 'Limpar volta ao total').toBe(total)
+        })
+      }
+
+      if (t.kind === 'visualizar') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const icone = page.locator('main a[title="Visualizar"]').first()
+          test.skip(!(await icone.count()), 'sem registros para visualizar')
+          await icone.click()
+          await page.waitForURL(/mode=view/, { timeout: 8_000 })
+          await page.waitForLoadState('networkidle').catch(() => {})
+          const editavel = camposEditaveis(view).find(f => f.dataType !== 'boolean')
+          if (editavel) {
+            const campo = page.locator(`[name="${editavel.column}"]`).first()
+            await expect(campo).toBeVisible()
+            const travado = (await campo.isDisabled()) || (await campo.getAttribute('readonly')) !== null
+            expect(travado, `"${editavel.label}" deveria estar travado no modo Visualizar`).toBe(true)
+          }
+          await expect(page.getByRole('button', { name: /Salvar Alterações|Criar Registro/ })).toHaveCount(0)
+        })
+      }
+
+      if (t.kind === 'exportacao_filtrada') {
+        const campo = view.filter.find(x => x.column === (campoDeFiltro(view) as ManifestField).column)!
+        test(t.title, async ({ page }) => {
+          const [linha] = await realQuery(`select ${campo.column}::text as v from ${view.table} where ${campo.column} is not null and ${campo.column}::text <> '' limit 1`)
+          test.skip(!linha, 'a tabela não tem dados para filtrar')
+          const busca = (String(linha.v).split(/\s+/).find(w => w.length >= 3) ?? String(linha.v)).slice(0, 20)
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const todos = await totalMostrado(page)
+          await page.locator(`[name="${campo.column}_filter"]`).first().fill(busca)
+          await clicarENavegar(page, page.getByRole('button', { name: 'Pesquisar' }).first())
+          const filtrados = await totalMostrado(page)
+          expect(filtrados, 'o filtro achou registros').toBeGreaterThan(0)
+          const r = await baixar(page, /csv/i)
+          const csv = lerCsv(r.buf.toString('utf8'))
+          expect(csv.registros, `linhas do CSV × total filtrado (o banco inteiro tem ${todos})`).toBe(filtrados)
+        })
+      }
+
+      if (t.kind === 'exportacao_marcadas') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const marcas = page.locator('tbody input[type="checkbox"]')
+          test.skip((await marcas.count()) < 2, 'menos de 2 linhas para marcar')
+          await marcas.nth(0).check()
+          await marcas.nth(1).check()
+          await expect(page.getByRole('button', { name: /^Exportar.*\(2\)/ })).toBeVisible()
+          const r = await baixar(page, /json/i)
+          expect((JSON.parse(r.buf.toString('utf8')) as unknown[]).length, 'itens exportados × linhas marcadas').toBe(2)
+          await page.locator('thead input[type="checkbox"]').check()
+          const total = await marcas.count()
+          await expect(page.getByRole('button', { name: new RegExp(`^Exportar.*\\(${total}\\)`) })).toBeVisible()
+          await page.locator('thead input[type="checkbox"]').uncheck()
+          await expect(page.getByRole('button', { name: /^Exportar/ }).first()).not.toContainText('(')
+        })
+      }
+
+      if (t.kind === 'central_downloads') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const r = await baixar(page, /csv/i)
+          const base = r.name.replace(/-\d{4}-\d{2}-\d{2}\.csv$/i, '')
+          await abrir(page, '/downloads')
+          const arquivos = page.getByText(new RegExp(`^${escapar(base)}-\\d{8}-\\d{6}-[0-9a-f]{4}\\.csv$`))
+          await expect(arquivos.first(), `a Central de Downloads lista a exportação de ${base}`).toBeVisible()
+          const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('a[title="Baixar"]').first().click()])
+          const conteudo = fs.readFileSync((await dl.path())!).toString('utf8')
+          expect(lerCsv(conteudo).cabecalho.length, 'o arquivo baixado tem cabeçalho').toBeGreaterThan(0)
+        })
+      }
+
+      if (t.kind === 'botoes') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarLista(page)
+          const linhas = (await linhasDoGrid(page)).length
+          for (const b of view.buttons) {
+            const nome = new RegExp(`^${escapar(b.label)}`, 'i')
+            if (b.actionType === 'export') await expect.soft(page.getByRole('button', { name: nome }).first(), `botão "${b.label}"`).toBeVisible()
+            else if (b.actionType === 'search') await expect.soft(page.getByRole('button', { name: nome }).first(), `botão "${b.label}"`).toBeVisible()
+            else if (b.actionType === 'clear') await expect.soft(page.getByRole('link', { name: nome }).or(page.getByRole('button', { name: nome })).first(), `botão "${b.label}"`).toBeVisible()
+            else if (linhas > 0 && ['view', 'edit', 'delete'].includes(b.actionType)) {
+              expect.soft(await page.locator(`main [title="${b.label}"]`).count(), `ícone "${b.label}" nas linhas`).toBeGreaterThan(0)
+            }
+          }
+        })
+      }
+
+      if (t.kind === 'campos_tipos') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, `${view.path}/new`)
+          for (const f of camposDeTipo(view)) {
+            const campo = page.locator(`[name="${f.column}"]`).first()
+            if (!(await campo.count())) { expect.soft(0, `campo "${f.label}" (${f.column}) existe`).toBeGreaterThan(0); continue }
+            const tag = await campo.evaluate(e => e.tagName.toLowerCase())
+            const tipo = (await campo.getAttribute('type')) ?? ''
+            if (f.options?.length) {
+              expect.soft(tag, `"${f.label}" com opções é uma lista de seleção`).toBe('select')
+              if (tag === 'select') expect.soft(await campo.locator('option').count(), `opções de "${f.label}"`).toBeGreaterThanOrEqual(f.options.length)
+            } else if (f.dataType === 'boolean') {
+              expect.soft(tipo, `"${f.label}" é uma caixa de marcar`).toBe('checkbox')
+            } else if (ehData(f)) {
+              expect.soft(['date', 'datetime-local', 'time'], `"${f.label}" usa o seletor de data`).toContain(tipo)
+            } else if (/select/i.test(f.componentType || '')) {
+              expect.soft(tag, `"${f.label}" é uma lista de seleção`).toBe('select')
+            } else if (/int|numeric|decimal|float|double|number/i.test(f.dataType)) {
+              expect.soft(['number', 'text'], `"${f.label}" é um campo numérico`).toContain(tipo)
+            } else {
+              expect.soft(['input', 'textarea', 'select'], `"${f.label}" é um campo de entrada`).toContain(tag)
+            }
+          }
+        })
+      }
+
+      if (t.kind === 'abas') {
+        test(t.title, async ({ page }) => {
+          const [reg] = await realQuery(`select ${view.primaryKey}::text as id from ${view.table} limit 1`)
+          test.skip(!reg, 'a tabela não tem registros para abrir')
+          await abrir(page, `${view.path}/${reg.id}`)
+          for (const d of view.details) {
+            const nome = new RegExp(`^${escapar(d.label)}$`, 'i')
+            if (d.displayMode === 'tab') {
+              const aba = page.getByRole('button', { name: nome }).first()
+              await expect.soft(aba, `aba "${d.label}"`).toBeVisible()
+              if (await aba.count()) {
+                await aba.click()
+                await expect.soft(page.getByText(/Application error|Erro ao carregar/i), `erro ao abrir a aba "${d.label}"`).toHaveCount(0)
+              }
+            } else {
+              await expect.soft(page.getByText(nome).first(), `seção "${d.label}"`).toBeVisible()
+            }
+          }
+        })
+      }
+
+      // --- gabaritos por tipo de tela (todos só leem) ---
+
+      if (t.kind === 'filtros_tela') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          let achados = 0
+          for (const f of view.filter) if (await page.locator(`[name="${f.column}_filter"]`).count()) achados++
+          if (achados > 0) expect(achados, 'filtros com nome na tela × filtros configurados').toBe(view.filter.length)
+          else {
+            // tela sem nomes nos campos (ex.: timeline): confere pela quantidade de listas de seleção
+            const listas = view.filter.filter(f => f.options?.length || /select|autocomplete/i.test(f.componentType || '') || /uuid/i.test(f.dataType)).length
+            expect(await page.locator('main select').count(), 'listas de filtro na tela').toBeGreaterThanOrEqual(Math.min(listas, 1))
+          }
+        })
+      }
+
+      if (t.kind === 'tipo_galeria') {
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.locator('main img'), 'um cartão (imagem) por registro').toHaveCount(total)
+        })
+      }
+
+      if (t.kind === 'tipo_kanban') {
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          const cartoes = await page.locator('main button[title="Detalhes"]').count()
+          const mais = Number(/CARREGAR MAIS\s+(\d+)/i.exec(await page.locator('main').innerText())?.[1] ?? 0)
+          expect(cartoes + mais, `cartões na tela (${cartoes}) + a carregar (${mais}) × registros da tabela`).toBe(total)
+        })
+      }
+
+      if (t.kind === 'tipo_fluxo') {
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.locator('.react-flow')).toBeVisible()
+          await expect(page.getByText(new RegExp(`${total} ETAPAS`, 'i')).first(), `"${total} ETAPAS" na tela`).toBeVisible()
+        })
+      }
+
+      if (t.kind === 'tipo_timeline') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.locator('button[title="Atualizar Dados"], button:has-text("Atualizar Dados")').first()).toBeVisible()
+          await page.locator('button[title="Atualizar Dados"], button:has-text("Atualizar Dados")').first().click()
+          await page.waitForLoadState('networkidle').catch(() => {})
+          await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+        })
+      }
+
+      if (t.kind === 'tipo_gantt') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.getByRole('button', { name: /^Hoje$/i })).toBeVisible()
+          for (const tam of ['Pequeno', 'Normal', 'Grande']) await expect.soft(page.locator(`main button[title="${tam}"]`).first(), `tamanho "${tam}"`).toBeVisible()
+          const linhas = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          if (linhas > 0) expect(await page.locator('main [title="Editar"]').count(), 'ações de linha (Editar)').toBeGreaterThan(0)
+        })
+      }
+
+      if (t.kind === 'tipo_agenda') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.getByText(/de 20\d\d/i).first()).toBeVisible()
+          const texto = async () => (await page.locator('main').innerText()).replace(/\s+/g, ' ')
+          const mes = await texto()
+          await page.getByRole('button', { name: 'Semana', exact: true }).click()
+          const semana = await texto()
+          await page.getByRole('button', { name: 'Dia', exact: true }).click()
+          const dia = await texto()
+          expect(new Set([mes, semana, dia]).size, 'mês, semana e dia mostram coisas diferentes').toBe(3)
+          await page.getByRole('button', { name: 'Mês', exact: true }).click()
+          await expect(page.getByText('DOM').first()).toBeVisible()
+        })
+      }
+
+      if (t.kind === 'tipo_mapa_mental') {
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.getByText(new RegExp(`${total} REGISTROS`, 'i')).first(), `"${total} REGISTROS" na tela`).toBeVisible()
+        })
+      }
+
+      if (t.kind === 'tipo_mapa') {
+        test(t.title, async ({ page }) => {
+          const total = Number((await realQuery(`select count(*) n from ${view.table}`))[0].n)
+          const lat = view.form.find(f => /^lat/i.test(f.column))?.column
+          const lng = view.form.find(f => /^(lng|lon)/i.test(f.column))?.column
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.locator('.leaflet-container')).toBeVisible()
+          await expect(page.getByText(new RegExp(`REGISTROS \\(${total}\\)`, 'i')).first(), `"REGISTROS (${total})"`).toBeVisible()
+          if (lat && lng) {
+            const comGps = Number((await realQuery(`select count(*) n from ${view.table} where ${lat} is not null and ${lng} is not null`))[0].n)
+            await expect(page.getByText(new RegExp(`${comGps} DE ${total} REGISTROS COM COORDENADAS`, 'i')).first()).toBeVisible()
+          }
+        })
+      }
+
+      if (t.kind === 'tipo_bi') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path)
+          await aguardarTela(page)
+          await expect(page.getByRole('button', { name: 'Atualizar agora' })).toBeVisible()
+          await expect(page.getByRole('button', { name: 'Organizar Dashboard' })).toBeVisible()
+          await page.getByRole('button', { name: 'Atualizar agora' }).click()
+          await page.waitForLoadState('networkidle').catch(() => {})
+          await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+          expect(await page.locator('tbody tr').count(), 'linhas na tabela de dados').toBeGreaterThan(0)
         })
       }
     }

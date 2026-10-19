@@ -8,39 +8,55 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 
 | Categoria | O que o motor dinâmico fará | Quando | Testes (real / oracle / exemplo) | Total |
 |---|---|---|---|---|
-| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos), campos do formulário, obrigatórios, máscaras, total do grid, ordenação, filtro de texto e exportação CSV/JSON/Excel | Pronto | 4 / 5 / 3 | **12** |
+| **Já coberto pelo motor dinâmico** | A tela abre (todos os tipos); formulário, obrigatórios, máscaras e tipos de campo; grid (total, ordenação, filtro de texto e por opção, paginação, Visualizar); exportação (CSV, JSON, Excel, só o filtrado, só o marcado, Central de Downloads); botões e abas; um gabarito por tipo de tela (galeria, kanban, fluxo, timeline, gantt, agenda, mapa mental, mapa, BI) | Pronto (Postgres + Node) | 20 / 5 / 3 | **28** |
 | **Autoteste do motor** | Login do robô: o motor confere antes de qualquer teste | Interno ao motor | 1 / 1 / 0 | **2** |
 | **Cadastro, edição e exclusão** | Preencher com dados válidos gerados por tipo de campo, salvar, reabrir igual, editar, excluir, auditoria (criado_por) | Fase 2 (precisa de banco de teste) | 4 / 5 / 1 | **10** |
 | **Tipos de campo e opções** | Por tipo: texto, número, data/hora, booleano, opções fixas, relação, autocomplete; o formulário mostra o que está no banco | Fase 2 | 3 / 1 / 6 | **10** |
-| **Grid e filtros** | Tamanho de página do Studio, paginação, ordenação, filtros, Limpar, Visualizar só leitura, total igual ao banco | Fase 2 | 4 / 4 / 4 | **12** |
-| **Exportação de dados** | Formatos liberados no Studio (CSV, JSON, Excel), só o filtrado, só as linhas marcadas, Central de Downloads | Fase 2 | 4 / 4 / 3 | **11** |
-| **Botões e ações** | Botões do Studio na ordem, ações de linha e ações customizadas (abrir outra tela em modal) | Fase 3 | 4 / 2 / 0 | **6** |
+| **Grid e filtros** | Tamanho de página do Studio, paginação, ordenação, filtros, Limpar, Visualizar só leitura, total igual ao banco | Fase 2 | 1 / 4 / 4 | **9** |
+| **Exportação de dados** | Formatos liberados no Studio (CSV, JSON, Excel), só o filtrado, só as linhas marcadas, Central de Downloads | Fase 2 | 1 / 4 / 3 | **8** |
+| **Botões e ações** | Botões do Studio na ordem, ações de linha e ações customizadas (abrir outra tela em modal) | Fase 3 | 3 / 2 / 0 | **5** |
 | **Abas, seções e subdetalhes** | Detalhe como aba ou seção, subdetalhe, itens (lápis, +, modal), fórmulas, exclusão em cascata | Fase 3 | 9 / 0 / 6 | **15** |
-| **Telas por tipo** | Um gabarito por tipo de tela: kanban, gantt, agenda, timeline, fluxo, mapa, mapa mental, galeria, BI (as contagens batem com o banco) | Fase 3 e 4 (arrastar e soltar por último) | 16 / 1 / 0 | **17** |
+| **Telas por tipo** | Um gabarito por tipo de tela: kanban, gantt, agenda, timeline, fluxo, mapa, mapa mental, galeria, BI (as contagens batem com o banco) | Fase 3 e 4 (arrastar e soltar por último) | 7 / 1 / 0 | **8** |
 | **Segurança e acesso** | Gestão de usuários, grupos e permissões, regra por linha: derivável da configuração de acesso do projeto | Fase 4 | 12 / 11 / 0 | **23** |
 | **Telas criadas por IA** | Têm código próprio (não são declarativas): a configuração não descreve o comportamento | Fica à mão | 2 / 0 / 0 | **2** |
 | **Rede de proteção do banco** | Garante que o teste só apaga o que criou: faz parte do motor | Fica (é o motor) | 1 / 1 / 0 | **2** |
 
-**Hoje o motor já cobre 12 dos 122 testes (10%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 64 testes. Telas por tipo e segurança exigem gabaritos próprios (40 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
+**Hoje o motor já cobre 28 dos 122 testes (23%).** As regras que faltam (cadastro, campos por tipo, paginação e demais comportamentos do grid, exportação do filtrado e do marcado, botões, abas) cobrem mais 57 testes. Telas por tipo e segurança exigem gabaritos próprios (31 testes). Ficam à mão: telas de IA (2) e a rede de proteção (2).
 
 ## Ordem sugerida para o motor ganhar regras
 
-1. **Feito:** a tela abre (todos os tipos), total do grid, ordenação, filtro de texto e exportação CSV/JSON/Excel. Falta: paginação, filtro por lista de opções, Visualizar só leitura, exportar só o filtrado ou o marcado e a Central de Downloads.
-2. **Cadastro, edição e exclusão com dados gerados** (fase 2): exige o banco de teste do cliente e a limpeza por prefixo.
-3. **Campos por tipo, botões, abas e subdetalhes** (fase 3): usa o manifesto que já traz tipo, máscara, opções, abas e botões.
-4. **Gabarito por tipo de tela** (kanban, gantt, agenda, timeline, fluxo, mapa, mapa mental, galeria, BI) e depois as interações de arrastar e soltar.
+1. **Feito (só leitura):** tela abre, formulário, tipos de campo, obrigatórios, máscaras, grid completo (total, ordenação, filtros, paginação, Visualizar), exportação completa, botões, abas e um gabarito por tipo de tela, no Postgres + Node.
+2. **Entrega do motor ao cliente e banco de teste do cliente:** copiar o motor para a pasta do usuário e tela de conexão da cópia do banco, com consentimento para o banco original.
+3. **Cadastro, edição e exclusão com dados gerados:** exige o item 2 e a limpeza por prefixo.
+4. **Falta nos gabaritos por tipo de tela:** arrastar e soltar (kanban, gantt, fluxo) e as ações das linhas (abrir outra tela em janela).
 5. **Segurança** gerada da configuração de acesso do projeto (grupos, permissões por tela, regras por linha).
 
 ## Lista completa (um teste por linha)
 
-### Já coberto pelo motor dinâmico (12)
+### Já coberto pelo motor dinâmico (28)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | departamentos-funcs.spec.ts | nome é obrigatório: salvar vazio não cria registro |
 | real | departamentos-funcs.spec.ts | campos obrigatórios (nome, e-mail, cargo, data): salvar vazio não cria registro |
+| real | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
+| real | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
+| real | exportar-e-grid.spec.ts | Central de Downloads lista a exportação, baixa o arquivo e exclui |
+| real | exportar-e-grid.spec.ts | paginação: 12 clientes com 10 por página (2 páginas), total e página 2 |
 | real | exportar-e-grid.spec.ts | ordenação por coluna: crescente e decrescente pelo cabeçalho |
+| real | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
+| real | exportar-e-grid.spec.ts | Visualizar abre o formulário só para leitura e Cancelar volta sem gravar |
 | real | smoke.spec.ts | todas as telas do menu abrem sem erro |
+| real | telas-especiais.spec.ts | Produtos (galeria): um cartão por produto e filtro por categoria |
+| real | telas-especiais.spec.ts | Kanban de tarefas: cartões com ações e filtros por projeto e responsável |
+| real | telas-especiais.spec.ts | Tarefas - Fluxo (fluxograma): mostra o diagrama e o total de etapas igual ao banco |
+| real | telas-especiais.spec.ts | Pedidos - Timeline: tela com os filtros (sem nome de campo: pela ordem Cliente, Funcionário), tamanhos e atualização de dados |
+| real | telas-especiais.spec.ts | Projetos (gantt): filtros, botão Hoje e ação Tarefas da linha |
+| real | telas-especiais.spec.ts | Entregas (agenda): mês atual, troca entre Mês, Semana e Dia |
+| real | telas-especiais.spec.ts | Empresa (mapa mental): um item por departamento |
+| real | telas-especiais.spec.ts | Clientes - Geospatial (mapa): total de registros e quantos têm coordenadas, iguais ao banco |
+| real | telas-especiais.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
+| real | telas-especiais.spec.ts | BI /bi---laboratorio: painel abre, atualiza e tem tabela de dados |
 | oracle | clientes.spec.ts | nome da empresa é obrigatório: salvar vazio não cria registro |
 | oracle | departamentos-funcs.spec.ts | nome é obrigatório: salvar vazio não cria registro |
 | oracle | departamentos-funcs.spec.ts | campos obrigatórios (nome, e-mail, cargo, data): salvar vazio não cria registro |
@@ -87,13 +103,10 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | fixture | tipos-de-campo.spec.ts | cria com todos os tipos, grava no banco e reabre igual |
 | fixture | tipos-de-campo.spec.ts | desmarcar o booleano e salvar a edição grava falso |
 
-### Grid e filtros (12)
+### Grid e filtros (9)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
-| real | exportar-e-grid.spec.ts | paginação: 12 clientes com 10 por página (2 páginas), total e página 2 |
-| real | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
-| real | exportar-e-grid.spec.ts | Visualizar abre o formulário só para leitura e Cancelar volta sem gravar |
 | real | telas-especiais.spec.ts | Pedidos (lista): o Administrador vê todos os pedidos (total igual ao banco) e a ação Produtos da linha |
 | oracle | exportar-e-grid.spec.ts | paginação: 12 clientes com 10 por página (2 páginas), total e página 2 |
 | oracle | exportar-e-grid.spec.ts | filtro de Status Lead e botão Limpar |
@@ -104,14 +117,11 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | fixture | grid.spec.ts | filtro por nome encontra só o cliente |
 | fixture | grid.spec.ts | botões do topo na ordem da plataforma: Exportar antes de Novo Registro |
 
-### Exportação de dados (11)
+### Exportação de dados (8)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
-| real | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
 | real | exportar-e-grid.spec.ts | Excel (.xlsx) é um arquivo válido |
-| real | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
-| real | exportar-e-grid.spec.ts | Central de Downloads lista a exportação, baixa o arquivo e exclui |
 | oracle | exportar-e-grid.spec.ts | CSV e JSON trazem só o que está filtrado na tela, com as colunas da grid |
 | oracle | exportar-e-grid.spec.ts | Excel (.xlsx) é um arquivo válido |
 | oracle | exportar-e-grid.spec.ts | com linhas marcadas, exporta só elas; marcar todas e desmarcar |
@@ -120,14 +130,13 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | fixture | export.spec.ts | marcar todas pelo cabeçalho e desmarcar |
 | fixture | export.spec.ts | Central de Downloads lista as exportações, baixa e exclui |
 
-### Botões e ações (6)
+### Botões e ações (5)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
 | real | agenda-gantt-kanban.spec.ts | Projetos (gantt): a ação Tarefas da linha abre as tarefas do projeto |
 | real | departamentos-funcs.spec.ts | a ação Funcionários da linha abre a lista de funcionários do departamento |
 | real | itens-do-pedido.spec.ts | ícones da linha na ordem da plataforma e as ações Produtos e Pedidos abrem janela |
-| real | telas-especiais.spec.ts | Projetos (gantt): filtros, botão Hoje e ação Tarefas da linha |
 | oracle | clientes.spec.ts | ícones da linha: Visualizar, Editar e Excluir, nessa ordem |
 | oracle | departamentos-funcs.spec.ts | a ação Funcionários da linha abre a lista de funcionários do departamento |
 
@@ -151,7 +160,7 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | fixture | relacoes.spec.ts | editar um pedido e salvar mantém a hora e grava a alteração |
 | fixture | relacoes.spec.ts | cria o cliente já com contato e pedido preenchidos antes de o mestre existir |
 
-### Telas por tipo (17)
+### Telas por tipo (8)
 
 | Suíte | Arquivo | Teste |
 |---|---|---|
@@ -162,15 +171,6 @@ Gerado em 2026-10-19 pelo inventário da pasta `e2e`. São **122 testes** escrit
 | real | cadastros-gerais.spec.ts | Produtos (galeria): criar com categoria e preço, editar e excluir pela galeria |
 | real | cadastros-gerais.spec.ts | Empresa (mapa mental): novo departamento aparece no mapa e o nome pode ser editado |
 | real | cadastros-gerais.spec.ts | Clientes - Geospatial (mapa): cliente novo com coordenadas entra na contagem do mapa |
-| real | telas-especiais.spec.ts | Produtos (galeria): um cartão por produto e filtro por categoria |
-| real | telas-especiais.spec.ts | Kanban de tarefas: cartões com ações e filtros por projeto e responsável |
-| real | telas-especiais.spec.ts | Tarefas - Fluxo (fluxograma): mostra o diagrama e o total de etapas igual ao banco |
-| real | telas-especiais.spec.ts | Pedidos - Timeline: tela com os filtros (sem nome de campo: pela ordem Cliente, Funcionário), tamanhos e atualização de dados |
-| real | telas-especiais.spec.ts | Entregas (agenda): mês atual, troca entre Mês, Semana e Dia |
-| real | telas-especiais.spec.ts | Empresa (mapa mental): um item por departamento |
-| real | telas-especiais.spec.ts | Clientes - Geospatial (mapa): total de registros e quantos têm coordenadas, iguais ao banco |
-| real | telas-especiais.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
-| real | telas-especiais.spec.ts | BI /bi---laboratorio: painel abre, atualiza e tem tabela de dados |
 | oracle | pedidos-e-bi.spec.ts | BI /bi---pedidos: painel abre, atualiza e tem tabela de dados |
 
 ### Segurança e acesso (23)

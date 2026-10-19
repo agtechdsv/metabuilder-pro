@@ -31,9 +31,33 @@ describe('plano de testes de um caso de uso', () => {
     expect(p.filter(t => t.kind === 'mascara').map(t => t.field)).toEqual(['cnpj'])
   })
 
-  it('tipos de tela sem gabarito completo ganham só "a tela abre"', () => {
-    expect(isSupportedView(view({ logicType: 'kanban' }))).toBe(false)
-    expect(planView(view({ logicType: 'kanban' })).map(t => t.kind)).toEqual(['abre'])
+  it('telas criadas por IA (personalizado) ganham só "a tela abre"', () => {
+    expect(isSupportedView(view({ logicType: 'personalizado' }))).toBe(false)
+    expect(planView(view({ logicType: 'personalizado' })).map(t => t.kind)).toEqual(['abre'])
+  })
+
+  it('cada tipo de tela especial ganha o seu gabarito, e os filtros só se houver filtro', () => {
+    const k = (logicType: string, filter: ManifestField[] = []) => planView(view({ logicType, filter })).map(t => t.kind)
+    expect(k('kanban')).toEqual(['abre', 'tipo_kanban'])
+    expect(k('gantt', [campo('projeto_id')])).toEqual(['abre', 'tipo_gantt', 'filtros_tela'])
+    expect(k('scheduler')).toEqual(['abre', 'tipo_agenda'])
+    expect(k('map')).toContain('tipo_mapa')
+    expect(isSupportedView(view({ logicType: 'analytics' }))).toBe(true)
+  })
+
+  it('Pesquisa + Cadastro (fase 3): paginação, Visualizar, botões e tipos de campo; filtro por opção, exportação, abas só se houver o que conferir', () => {
+    const base = planView(view({ buttons: [{ id: 'export', label: 'Exportar Dados', actionType: 'export', placement: 'header' }] })).map(t => t.kind)
+    expect(base).toEqual(expect.arrayContaining(['grid_paginacao', 'visualizar', 'botoes', 'campos_tipos']))
+    for (const k of ['filtro_opcoes', 'exportacao_marcadas', 'central_downloads', 'abas']) expect(base).not.toContain(k)
+
+    const opcoes = [{ value: 'a', label: 'A' }]
+    const rico = planView(view({
+      grid: [campo('nome', { label: 'Nome' }), campo('status', { label: 'Status', options: opcoes })],
+      filter: [campo('nome', { label: 'Nome' }), campo('status', { label: 'Status', options: opcoes })],
+      exportFormats: ['csv'], details: [{ table: 'pedidos', label: 'Pedidos', foreignKey: 'cliente_id', displayMode: 'tab', fields: [], subDetails: [] }],
+    }))
+    expect(rico.map(t => t.kind)).toEqual(expect.arrayContaining(['filtro_opcoes', 'exportacao_filtrada', 'exportacao_marcadas', 'central_downloads', 'abas']))
+    expect(rico.find(t => t.kind === 'filtro_opcoes')?.field).toBe('status')
   })
 
   it('grid: total sempre; ordenação e filtro só com campo de texto (o filtro também precisa estar no grid)', () => {
