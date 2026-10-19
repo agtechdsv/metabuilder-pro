@@ -1,4 +1,31 @@
 {
+  "v1.0.5": {
+    "date": "2026-10-19",
+    "pt": [
+      "Novo Painel de Ambiente de Testes na IDE: Execute planos de testes dinâmicos em tempo real ou em segundo plano com visibilidade completa de execução.",
+      "Relatórios de Teste Avançados e Interativos: Exporte resultados detalhados diretamente em HTML interativo e PDF, com tabela de cobertura e validações dinâmicas de telas, grids e exportação de dados.",
+      "Geração de Código Java Reforçada: Suporte aprimorado para identificadores UUID, filtros por coluna, operações em cascata, tratamento robusto de datas e estilos modernos com Tailwind.",
+      "Maior Integridade e Governança de Dados: Registros e históricos criados por usuários agora são preservados com segurança na auditoria, mesmo após a exclusão da conta do autor.",
+      "Conectividade e Auditoria Oracle Otimizadas: Maior confiabilidade e estabilidade para bancos Oracle, garantindo o rastreamento preciso de atualizações e cálculos dinâmicos de fórmulas em cadastros.",
+      "Melhorias Visuais e de Usabilidade: Contraste e legibilidade aprimorados no tema claro, além de execução fluida de baterias de testes em uma única janela do navegador."
+    ],
+    "en": [
+      "New Test Environment Panel in the IDE: Run dynamic test suites live or in the background with full operational visibility.",
+      "Advanced & Interactive Test Reports: Export detailed results directly to interactive HTML and PDF, featuring coverage tables and automated validations for screens, data grids, and exports.",
+      "Enhanced Java Code Generation: Extended support for UUID keys, column-level filtering, cascade operations, precise date handling, and optimized Tailwind styling.",
+      "Strengthened Data Integrity & Governance: Historical records and user-created data are now safely preserved in audit logs even after a user account is removed.",
+      "Optimized Oracle Database Reliability: Enhanced support for Oracle environments, ensuring exact audit timestamp tracking on updates and dynamic formula evaluations on forms.",
+      "Refined Visuals & Usability: Improved contrast and readability in Light Theme, paired with a unified single-window browser runner for smoother test executions."
+    ],
+    "es": [
+      "Nuevo Panel de Entorno de Pruebas en el IDE: Ejecute planes de pruebas dinámicos en tiempo real o en segundo plano con control total del proceso.",
+      "Informes de Pruebas Avanzados e Interactivos: Exporte resultados detallados en HTML interactivo y PDF, con tablas de cobertura y validaciones automáticas de pantallas, tablas y exportación de datos.",
+      "Generación de Código Java Mejorada: Soporte optimizado para identificadores UUID, filtros por columna, operaciones en cascada, manejo preciso de fechas y estilos modernos con Tailwind.",
+      "Mayor Integridad y Gobernanza de Datos: Los registros y contenidos creados se conservan de forma segura para auditoría, incluso tras eliminar la cuenta del usuario creador.",
+      "Conectividad y Auditoría Oracle Optimizadas: Mayor confiabilidad en bases de datos Oracle, garantizando el rastreo exacto de actualizaciones y cálculo dinámico de fórmulas en formularios.",
+      "Experiencia Visual y Usabilidad Pulidas: Mejoras de contraste y legibilidad en el tema claro, junto con una ejecución ágil de pruebas en una única ventana de navegador."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
