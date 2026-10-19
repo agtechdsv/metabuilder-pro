@@ -764,6 +764,13 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           for (const tam of ['Pequeno', 'Normal', 'Grande']) await expect.soft(page.locator(`main button[title="${tam}"]`).first(), `tamanho "${tam}"`).toBeVisible()
           const linhas = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
           if (linhas > 0) expect(await page.locator('main [title="Editar"]').count(), 'ações de linha (Editar)').toBeGreaterThan(0)
+          // ação de linha "Visualizar": abre o registro (em janela ou em outra página) sem gravar nada
+          if (linhas > 0 && (await page.locator('main [title="Visualizar"]').count()) > 0) {
+            const antes = page.url()
+            await page.locator('main [title="Visualizar"]').first().click()
+            await expect.poll(async () => page.url() !== antes || (await page.locator('.fixed.inset-0, [role="dialog"]').count()) > 0, { message: 'Visualizar abre o registro (janela ou página)', timeout: 10_000 }).toBe(true)
+            await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+          }
         })
       }
 
