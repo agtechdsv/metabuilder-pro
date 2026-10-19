@@ -18,11 +18,13 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report-dynamic', open: 'never' }]],
+  // o relator da IDE escreve uma linha por teste (começou/terminou) para o painel "Ambiente de Testes" mostrar o andamento ao vivo
+  reporter: [['list'], ['./dynamic/ide-reporter.ts'], ['html', { outputFolder: 'playwright-report-dynamic', open: 'never' }]],
   outputDir: 'test-results-dynamic',
   globalSetup: './real/global-setup.ts',
   globalTeardown: './real/global-teardown.ts',
-  use: { channel: 'chrome', headless: true, trace: 'retain-on-failure', screenshot: 'only-on-failure', locale: 'pt-BR', baseURL: `http://localhost:${REAL.port}` },
+  // E2E_HEADED=1 abre o navegador na tela ("ver ao vivo"); E2E_SLOWMO=<ms> espera entre as ações para dar tempo de acompanhar
+  use: { channel: 'chrome', headless: process.env.E2E_HEADED !== '1', launchOptions: { slowMo: Number(process.env.E2E_SLOWMO || 0) }, trace: 'retain-on-failure', screenshot: 'only-on-failure', locale: 'pt-BR', baseURL: `http://localhost:${REAL.port}` },
   projects: [{ name: 'dynamic-pg-node' }],
   webServer: {
     command: `npx next start -p ${REAL.port}`,

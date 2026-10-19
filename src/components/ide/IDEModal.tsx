@@ -19,6 +19,7 @@ import { IDEGitModals } from './IDEGitModals'
 import { IDEFileActionModals } from './IDEFileActionModals'
 import { IDEGitSettingsModal } from './IDEGitSettingsModal'
 import { IdeEjectModal } from './IdeEjectModal'
+import { IdeTestModal } from './IdeTestModal'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 export interface IDEModalProps {
@@ -77,6 +78,8 @@ export function IDEModal({
   // escolhas da tela Ejetar & Sincronizar levadas para o Ejetar (gerar uma vez numa pasta)
   const [ejectPrefill, setEjectPrefill] = useState<Partial<ExportDefaults> | undefined>(undefined)
   const ejectFinishedRef = React.useRef<(() => void) | undefined>(undefined)
+  // Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio)
+  const [showTests, setShowTests] = useState(false)
   if (!isOpen || !target) {
     return (
       <IDEMinimizedBar
@@ -139,6 +142,7 @@ export function IDEModal({
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
             onEject={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setShowNativeExport(true) }}
+            onOpenTests={() => setShowTests(true)}
             showConsole={consoleState.showConsole}
             setShowConsole={consoleState.setShowConsole}
             showSidebar={showSidebar}
@@ -333,6 +337,9 @@ export function IDEModal({
         projectSlug={target?.slug || ''}
         onResetProject={handleResetProjectToCleanState}
       />
+
+      {/* Ambiente de Testes: testes gerados a partir do que o dev configurou no Studio */}
+      <IdeTestModal isOpen={showTests} onClose={() => setShowTests(false)} target={target} />
 
       {/* Ejetar: gera o código final uma vez, na pasta escolhida (mesmo motor e mesmas opções do Ejetar & Sincronizar) */}
       <IdeEjectModal

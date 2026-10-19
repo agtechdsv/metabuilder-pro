@@ -44,6 +44,8 @@ export interface IDEHeaderProps {
   /** abre o Ejetar (gerar uma vez numa pasta) já com o que foi escolhido na tela de sincronização */
   /** onFinished: chamado quando a exportação termina (a tela de sincronização então se fecha; ao cancelar ela continua aberta) */
   onEject: (prefill: ExportDefaults, onFinished?: () => void) => void
+  /** abre o Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio) */
+  onOpenTests?: () => void
   showConsole: boolean
   setShowConsole: React.Dispatch<React.SetStateAction<boolean>>
   showSidebar: boolean
@@ -695,6 +697,7 @@ export function IDEHeader({
   handleShowLogs,
   setShowGitSettings,
   onEject,
+  onOpenTests,
   showConsole,
   setShowConsole,
   showSidebar,
@@ -931,6 +934,17 @@ export function IDEHeader({
 
           {/* Tema e idioma (valem para todas as janelas do app) */}
           <IdeThemeLanguage />
+
+          {/* Ambiente de Testes */}
+          {onOpenTests && (
+            <button
+              onClick={onOpenTests}
+              className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg transition-colors border border-neutral-700"
+              title={t('ide_tests.open', 'Ambiente de Testes')}
+            >
+              <FlaskConical className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Console toggle button */}
           <button
