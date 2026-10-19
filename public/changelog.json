@@ -1,28 +1,4 @@
 {
-  "v1.0.4": {
-    "date": "2026-10-19",
-    "pt": [
-      "Novo Painel de Ambiente de Testes: Monitore e execute planos de testes dinâmicos em tempo real ou em segundo plano, com relatórios detalhados integrados diretamente à IDE.",
-      "Aprimoramentos na Geração de Aplicações Java: Suporte avançado a identificadores UUID, filtros inteligentes por coluna, operações em cascata aprimoradas e interface modernizada com Tailwind CSS.",
-      "Maior Confiabilidade e Suporte ao Banco Oracle: Otimização em fluxos de atualização com garantia de rastreabilidade de auditoria e cálculo dinâmico de fórmulas em páginas de cadastro.",
-      "Proteção e Integridade de Dados Reforçada: A exclusão de usuários agora preserva com segurança os registros e históricos gerados por eles, evitando perdas acidentais de dados.",
-      "Gestão de Acessos mais Segura: Validação preventiva que bloqueia e-mails duplicados e assegura o preenchimento de campos obrigatórios em formulários."
-    ],
-    "en": [
-      "New Test Environment Panel: Monitor and run dynamic manifest-based test plans in real-time or background mode, complete with detailed reporting directly inside the IDE.",
-      "Java Application Generator Enhancements: Advanced support for UUID identifiers, column-level filtering, optimized cascade operations, and sleek UI layouts with Tailwind CSS.",
-      "Robust Oracle Database Support: Seamless update executions with persistent audit trails and dynamic formula evaluations on registration pages.",
-      "Strengthened Data Integrity & Safety: Deleting user accounts now safely preserves existing data and business records created by them, preventing accidental data loss.",
-      "Enhanced User Management: Proactive validation preventing duplicate email registrations and ensuring accurate completion of mandatory fields."
-    ],
-    "es": [
-      "Nuevo Panel de Entorno de Pruebas: Supervise y ejecute planes de pruebas dinámicos en tiempo real o en segundo plano, con informes detallados directamente en el IDE.",
-      "Mejoras en la Generación de Proyectos Java: Soporte avanzado para identificadores UUID, filtros inteligentes por columna, operaciones en cascada optimizadas y diseño visual moderno con Tailwind CSS.",
-      "Mayor Robustez y Soporte para Oracle: Optimización en procesos de actualización con auditoría automática garantizada y cálculo de fórmulas dinámicas en formularios de registro.",
-      "Integridad y Protección de Datos Reforzada: La eliminación de usuarios ahora preserva con seguridad los registros históricos creados por ellos, evitando pérdidas accidentales.",
-      "Gestión de Accesos Optimizada: Validación inteligente que previene correos electrónicos duplicados y garantiza la obligatoriedad de campos críticos en los formularios."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
