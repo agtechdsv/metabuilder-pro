@@ -16,6 +16,8 @@ export interface TestEvent {
   ms?: number
   /** primeiras linhas do erro, quando falhou */
   error?: string
+  /** por que o teste foi pulado (o motivo que o próprio teste informou) */
+  reason?: string
   /** arquivos de evidência da falha (captura da tela e vídeo), quando o motor os gravou */
   shot?: string
   video?: string

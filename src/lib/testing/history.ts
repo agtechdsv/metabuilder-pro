@@ -8,7 +8,7 @@ import type { TestStatus } from './results'
 export type RowStatus = TestStatus | 'pending'
 
 /** Um teste do plano com o resultado da rodada (o plano vem junto para o texto poder ser mostrado em qualquer idioma). */
-export interface HistoryRow extends PlannedTest { status: RowStatus; ms?: number; error?: string; shot?: string; video?: string }
+export interface HistoryRow extends PlannedTest { status: RowStatus; ms?: number; error?: string; reason?: string; shot?: string; video?: string }
 export interface HistoryGroup { slug: string; name: string; viewTitle: string; logicType: string; rows: HistoryRow[] }
 
 export interface HistoryRun {

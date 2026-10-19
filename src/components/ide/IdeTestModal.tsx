@@ -27,7 +27,7 @@ interface Props {
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
 }
 
-interface Result { status: TestStatus; ms?: number; error?: string; shot?: string; video?: string }
+interface Result { status: TestStatus; ms?: number; error?: string; reason?: string; shot?: string; video?: string }
 const keyOf = (group: string, title: string) => `${group}||${title}`
 
 const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
@@ -317,7 +317,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       rows: planFor(v).map(p => {
         const r = res[keyOf(describeName(v), p.title)]
         const status: RowStatus = !r || r.status === 'running' ? 'pending' : r.status
-        return { ...p, status, ms: r?.ms, error: r?.error, shot: r?.shot, video: r?.video }
+        return { ...p, status, ms: r?.ms, error: r?.error, reason: r?.reason, shot: r?.shot, video: r?.video }
       }),
     }))
     return { version: 1, id: runId(meta.startedAt), projectId, projectName: target?.name || '', startedAt: meta.startedAt.toISOString(), finishedAt: new Date().toISOString(), mode: meta.mode, stopped: meta.stopped || undefined, groups, ...(techReport ? { techReport } : {}) }
@@ -341,7 +341,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (ev.t === 'done') { setSummary({ total: ev.total ?? 0, passed: ev.passed ?? 0, failed: ev.failed ?? 0, skipped: ev.skipped ?? 0 }); return }
     if (!ev.group || !ev.title) return
     const k = keyOf(ev.group, ev.title)
-    const r: Result = ev.t === 'begin' ? { status: 'running' } : { status: ev.status || 'failed', ms: ev.ms, error: ev.error, shot: ev.shot, video: ev.video }
+    const r: Result = ev.t === 'begin' ? { status: 'running' } : { status: ev.status || 'failed', ms: ev.ms, error: ev.error, reason: ev.reason, shot: ev.shot, video: ev.video }
     resultsRef.current = { ...resultsRef.current, [k]: r }
     setResults(prev => ({ ...prev, [k]: r }))
   }, [])
@@ -416,7 +416,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   // abrir uma execução do histórico: a tela mostra os resultados como no fim de uma rodada
   const openRun = (r: HistoryRun) => {
     const res: Record<string, Result> = {}
-    for (const g of r.groups) for (const row of g.rows) if (row.status !== 'pending') res[keyOf(g.name, row.title)] = { status: row.status as TestStatus, ms: row.ms, error: row.error, shot: row.shot, video: row.video }
+    for (const g of r.groups) for (const row of g.rows) if (row.status !== 'pending') res[keyOf(g.name, row.title)] = { status: row.status as TestStatus, ms: row.ms, error: row.error, reason: row.reason, shot: row.shot, video: row.video }
     const tt = runTotals(r)
     setResults(res); setSummary({ total: tt.total, passed: tt.passed, failed: tt.failed, skipped: tt.other }); setViewing(r); setRunError(''); setTab('run')
   }
@@ -459,7 +459,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   // ---- relatório (da rodada na tela ou da execução aberta do histórico)
   type GroupData = { name: string; logicType: string; rows: { title: string; text: string; status: RowStatus; ms?: number; error?: string; shot?: string }[] }
   const currentGroups = (): GroupData[] => {
-    if (viewing) return viewing.groups.map(g => ({ name: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ title: r.title, text: planTitle(r, language), status: r.status, ms: r.ms, error: r.error, shot: r.shot })) }))
+    if (viewing) return viewing.groups.map(g => ({ name: g.name, logicType: g.logicType, rows: g.rows.map(r => ({ title: r.title, text: planTitle(r, language), status: r.status, ms: r.ms, error: r.error, reason: r.reason, shot: r.shot })) }))
     return chosen.map(v => ({
       name: describeName(v), logicType: v.logicType,
       rows: planFor(v).map(p => { const r = results[keyOf(describeName(v), p.title)]; return { title: p.title, text: planTitle(p, language), status: (r?.status ?? 'pending') as RowStatus, ms: r?.ms, error: r?.error, shot: r?.shot } }),
@@ -645,6 +645,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                             <span className={p.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{p.status === 'failed' && evidence(p.shot, p.video, planTitle(p, language))}
                             {p.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(p.ms / 1000).toFixed(1)}s</span>}
                           </div>
+                          {p.status === 'skipped' && p.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{p.reason}</p>}
                           {p.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{p.error}</pre>}
                         </li>
                       ))}
@@ -718,6 +719,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                                     <span className={r?.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{r?.status === 'failed' && evidence(r.shot, r.video, planTitle(p, language))}
                                     {r?.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(r.ms / 1000).toFixed(1)}s</span>}
                                   </div>
+                                  {r?.status === 'skipped' && r.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{r.reason}</p>}
                                   {r?.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{r.error}</pre>}
                                 </li>
                               )
