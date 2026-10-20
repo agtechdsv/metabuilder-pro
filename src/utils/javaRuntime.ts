@@ -9,12 +9,14 @@
 export type JavaSource = 'portable' | 'path' | 'none'
 
 const PS = ['-NoProfile', '-NonInteractive', '-Command']
+/** O console do PowerShell do Windows usa a página de código OEM; sem isto, acentos na saída (caminhos, textos de .env) chegam como bytes inválidos e o Tauri recusa decodificar. */
+const UTF8 = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; '
 
 /** Onde há um Java: o JDK portátil da IDE, o do PATH, ou nenhum. */
 export async function detectJava(): Promise<JavaSource> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const script = "$p = Join-Path $env:USERPROFILE '.metabuilder\\jdk21\\bin\\java.exe'; if (Test-Path $p) { 'PORTABLE' } elseif (Get-Command java -ErrorAction SilentlyContinue) { 'PATH' } else { 'NONE' }"
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   const v = String(out.stdout || '').trim()
   return v.includes('PORTABLE') ? 'portable' : v.includes('PATH') ? 'path' : 'none'
 }
@@ -36,7 +38,7 @@ export async function installPortableJdk(): Promise<boolean> {
     'Rename-Item -Path $extracted.FullName -NewName "jdk21"',
     'if (Test-Path (Join-Path $dir "jdk21\\bin\\java.exe")) { exit 0 } else { exit 2 }',
   ].join('; ')
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   return out.code === 0
 }
 

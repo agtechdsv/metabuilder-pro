@@ -9,6 +9,8 @@ import type { TestManifest } from '@/lib/testing/manifestTypes'
 import { parseTestEvent, type TestEvent } from '@/lib/testing/results'
 
 const PS = ['-NoProfile', '-NonInteractive', '-Command']
+/** O console do PowerShell do Windows usa a página de código OEM; sem isto, acentos na saída (caminhos, textos de .env) chegam como bytes inválidos e o Tauri recusa decodificar. */
+const UTF8 = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; '
 const q = (s: string) => s.replace(/'/g, "''")
 
 /** Arquivos que a pasta do motor precisa ter. */
@@ -19,7 +21,7 @@ export async function checkRunnerDir(runnerDir: string): Promise<{ ok: boolean; 
   // pelo PowerShell (e não pelo plugin de arquivos): o Tauri só libera pastas fora do perfil do usuário na sessão em que foram escolhidas
   const { Command } = await import('@tauri-apps/plugin-shell')
   const script = `$d = '${q(runnerDir)}'; foreach ($p in @(${REQUIRED.map(r => `'${r}'`).join(',')})) { if (-not (Test-Path -LiteralPath (Join-Path $d $p))) { Write-Output $p } }`
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   const missing = out.stdout.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   return { ok: missing.length === 0, missing }
 }
@@ -98,7 +100,7 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
     'npx playwright test -c playwright.dynamic.config.ts --timeout=60000',
   ].filter(Boolean).join('; ')
 
-  const cmd = Command.create('powershell', [...PS, script])
+  const cmd = Command.create('powershell', [...PS, UTF8 + script])
   const onLine = (line: string) => {
     const ev = parseTestEvent(line)
     if (ev) o.onEvent(ev)
@@ -113,7 +115,7 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
   return {
     // taskkill /T encerra o PowerShell e tudo o que ele abriu (npx, node, navegador)
     stop: async () => {
-      try { await Command.create('powershell', [...PS, `taskkill /PID ${child.pid} /T /F`]).execute() } catch { /* já terminou */ }
+      try { await Command.create('powershell', [...PS, UTF8 + `taskkill /PID ${child.pid} /T /F`]).execute() } catch { /* já terminou */ }
     },
   }
 }
@@ -122,7 +124,7 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
 export async function openTestReport(runnerDir: string, savedFile?: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const file = savedFile || `${runnerDir.replace(/[\\/]+$/, '')}\\playwright-report-dynamic\\index.html`
-  await Command.create('powershell', [...PS, `Start-Process '${q(file)}'`]).execute()
+  await Command.create('powershell', [...PS, UTF8 + `Start-Process '${q(file)}'`]).execute()
 }
 
 /** Último quadro da tela do navegador (modo "navegador interno"): bytes do JPEG, ou null se ainda não há quadro legível. */
@@ -141,7 +143,7 @@ export async function readLiveFrame(): Promise<Uint8Array | null> {
 export async function makePdf(runnerDir: string, htmlPath: string, pdfPath: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const script = `Set-Location '${q(runnerDir)}'; node dynamic/make-pdf.mjs '${q(htmlPath)}' '${q(pdfPath)}'`
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao gerar o PDF').trim().split('\n').slice(-3).join(' '))
 }
 
@@ -152,14 +154,14 @@ export async function makePdf(runnerDir: string, htmlPath: string, pdfPath: stri
 export async function hasFfmpeg(): Promise<boolean> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const script = `$r = if ($env:PLAYWRIGHT_BROWSERS_PATH -and $env:PLAYWRIGHT_BROWSERS_PATH -ne '0') { $env:PLAYWRIGHT_BROWSERS_PATH } else { Join-Path $env:LOCALAPPDATA 'ms-playwright' }; if (Get-ChildItem -Path $r -Directory -Filter 'ffmpeg-*' -ErrorAction SilentlyContinue | Where-Object { Get-ChildItem $_.FullName -Filter 'ffmpeg*' -ErrorAction SilentlyContinue }) { 'OK' } else { 'MISSING' }`
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   return out.stdout.includes('OK')
 }
 
 /** Baixa o ffmpeg do Playwright (só depois de o usuário aceitar). */
 export async function installFfmpeg(runnerDir: string): Promise<void> {
   const { Command } = await import('@tauri-apps/plugin-shell')
-  const out = await Command.create('powershell', [...PS, `Set-Location '${q(runnerDir)}'; npx playwright install ffmpeg`]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + `Set-Location '${q(runnerDir)}'; npx playwright install ffmpeg`]).execute()
   if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao instalar o ffmpeg').trim().split('\n').slice(-3).join(' '))
 }
 
@@ -167,7 +169,7 @@ export async function installFfmpeg(runnerDir: string): Promise<void> {
 export async function archiveTechReport(runnerDir: string, destDir: string): Promise<string | undefined> {
   const { Command } = await import('@tauri-apps/plugin-shell')
   const script = `$s = Join-Path '${q(runnerDir)}' 'playwright-report-dynamic'; if (Test-Path -LiteralPath $s) { New-Item -ItemType Directory -Force -Path '${q(destDir)}' | Out-Null; $d = Join-Path '${q(destDir)}' 'playwright-report'; if (Test-Path -LiteralPath $d) { Remove-Item -Recurse -Force -LiteralPath $d }; Copy-Item -Recurse -Force -LiteralPath $s -Destination $d; Write-Output (Join-Path $d 'index.html') }`
-  const out = await Command.create('powershell', [...PS, script]).execute()
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   const file = out.stdout.trim().split(/\r?\n/).pop()?.trim()
   return out.code === 0 && file ? file : undefined
 }

@@ -6,6 +6,8 @@
 import { workDir } from '@/utils/testRunner'
 
 const PS = ['-NoProfile', '-NonInteractive', '-Command']
+/** O console do PowerShell do Windows usa a página de código OEM; sem isto, acentos na saída (caminhos, textos de .env) chegam como bytes inválidos e o Tauri recusa decodificar. */
+const UTF8 = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; '
 const q = (s: string) => s.replace(/'/g, "''")
 const MARCA = '.mb-engine.json'
 
@@ -34,7 +36,7 @@ export async function engineStatus(): Promise<EngineStatus> {
 
 async function powershell(script: string): Promise<{ code: number | null; out: string }> {
   const { Command } = await import('@tauri-apps/plugin-shell')
-  const r = await Command.create('powershell', [...PS, script]).execute()
+  const r = await Command.create('powershell', [...PS, UTF8 + script]).execute()
   return { code: r.code, out: `${r.stdout}\n${r.stderr}`.trim() }
 }
 
@@ -116,7 +118,7 @@ export function dbUrlDoApp(arquivos: { props?: string; env?: string }): string |
 
 /** Conexão que o app exportado usa (lida pelo PowerShell: a pasta do app pode estar fora do perfil do usuário). null = não achei. */
 export async function readAppDbUrl(appDir: string): Promise<string | null> {
-  const script = `$d = '${q(appDir)}'; foreach ($f in @('backend\\src\\main\\resources\\application.properties', '.env.local', 'frontend\\.env.local')) { $p = Join-Path $d $f; if (Test-Path -LiteralPath $p) { '@@FILE:' + $f; Get-Content -LiteralPath $p } }`
+  const script = `$d = '${q(appDir)}'; foreach ($f in @('backend\\src\\main\\resources\\application.properties', '.env.local', 'frontend\\.env.local')) { $p = Join-Path $d $f; if (Test-Path -LiteralPath $p) { '@@FILE:' + $f; Get-Content -LiteralPath $p -Encoding UTF8 } }`
   const saida = (await powershell(script)).out
   const arquivos: Record<string, string> = {}
   for (const bloco of saida.split('@@FILE:').slice(1)) { const i = bloco.indexOf('\n'); arquivos[bloco.slice(0, i).trim()] = bloco.slice(i + 1) }
@@ -188,7 +190,8 @@ export async function loadDbSettings(slug: string): Promise<DbSettings> {
   try {
     const { exists, readTextFile } = await import('@tauri-apps/plugin-fs')
     const f = await settingsFile(slug)
-    if (await exists(f)) return { ...emptyDbSettings(), ...(JSON.parse(await readTextFile(f)) as Partial<DbSettings>) }
+    // a escolha de rodar no banco original (e o consentimento) não é lembrada: toda vez que o painel abre, começa na cópia do banco
+    if (await exists(f)) return { ...emptyDbSettings(), ...(JSON.parse(await readTextFile(f)) as Partial<DbSettings>), mode: 'copy', consentOriginal: false }
   } catch { /* arquivo ilegível: começa do zero */ }
   return emptyDbSettings()
 }
