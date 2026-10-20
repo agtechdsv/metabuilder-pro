@@ -119,7 +119,8 @@ export function useProjectExport() {
     javaGroupId?: string,
     javaPort?: number,
     accessAdmin?: boolean,
-    javaOptions?: Record<string, unknown>
+    javaOptions?: Record<string, unknown>,
+    cleanBefore?: boolean
   ) => {
     if (!isTauri()) {
       // o código fonte é gerado pela IDE Desktop (grava na pasta, instala, executa); o navegador não baixa mais ZIP
@@ -209,6 +210,27 @@ export function useProjectExport() {
         if (!selectedDir || typeof selectedDir !== 'string') {
           setDownloadModal(null)
           return
+        }
+
+        // limpar a pasta antes (opção da modal): confirma vendo o que será apagado; só pasta que parece um app exportado; nada de raiz de disco nem pasta comum do usuário
+        if (cleanBefore) {
+          const { isSafeToClean, planCleanup, cleanFolder, confirmMessage } = await import('@/utils/cleanExportFolder')
+          const { homeDir } = await import('@tauri-apps/api/path')
+          const abortar = (msg: string) => { toast(msg, 'error'); setDownloadModal(null) }
+          if (!isSafeToClean(selectedDir, await homeDir().catch(() => ''))) { abortar(t('export_modal.clean_unsafe', 'Esta pasta não pode ser limpa.')); return }
+          const plano = await planCleanup(selectedDir)
+          if (!plano) { abortar(t('export_modal.clean_failed', 'Não foi possível limpar a pasta. Nada foi exportado.')); return }
+          if (plano.existe && plano.arquivos > 0) {
+            if (!plano.exportado) { abortar(t('export_modal.clean_not_app', 'A pasta tem outros arquivos e não parece um app exportado.')); return }
+            const { ask } = await import('@tauri-apps/plugin-dialog')
+            const ok = await ask(confirmMessage(selectedDir, plano, t('export_modal.clean_message', 'Vão ser apagados {count} arquivo(s) de: {dir}. {entries}. Ficam: {kept}.')), {
+              title: t('export_modal.clean_title', 'Limpar a pasta antes de exportar?'), kind: 'warning',
+              okLabel: t('export_modal.clean_ok', 'Limpar e exportar'), cancelLabel: t('export_modal.clean_cancel', 'Cancelar'),
+            })
+            if (!ok) { setDownloadModal(null); return }
+            setDownloadModal(prev => prev ? { ...prev, phase: 'processing', progress: 100, statusMessage: t('export_modal.clean_running', 'Limpando a pasta...') } : prev)
+            if (!(await cleanFolder(selectedDir))) { abortar(t('export_modal.clean_failed', 'Não foi possível limpar a pasta. Nada foi exportado.')); return }
+          }
         }
 
         // grava e instala com a modal travada em "processando": não volta para a configuração enquanto isso

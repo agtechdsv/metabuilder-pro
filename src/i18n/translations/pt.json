@@ -109,7 +109,17 @@
     "open_folder": "Abrir Pasta",
     "done_btn": "Concluído",
     "close": "Fechar",
-    "default_error": "Ocorreu um erro ao gerar o arquivo de código fonte."
+    "default_error": "Ocorreu um erro ao gerar o arquivo de código fonte.",
+    "clean_before": "Limpar a pasta antes de exportar (mantém node_modules)",
+    "clean_before_hint": "Apaga o que já está na pasta, para não sobrar tela de um caso de uso que você apagou. Mantém node_modules, .git, .next e target. Você confirma antes, vendo o que será apagado.",
+    "clean_title": "Limpar a pasta antes de exportar?",
+    "clean_message": "Vão ser apagados {count} arquivo(s) de:\n{dir}\n\nPastas e arquivos: {entries}\n\nFicam: {kept}.\n\nOs arquivos da exportação são gravados em seguida. Isso não pode ser desfeito.",
+    "clean_ok": "Limpar e exportar",
+    "clean_cancel": "Cancelar",
+    "clean_running": "Limpando a pasta...",
+    "clean_unsafe": "Esta pasta não pode ser limpa (é a raiz de um disco, a sua pasta de usuário ou uma pasta comum como Downloads ou Documentos). Escolha a pasta do app.",
+    "clean_not_app": "A pasta tem outros arquivos e não parece um app exportado (sem package.json nem backend/pom.xml). Não limpei nem exportei: escolha uma pasta vazia ou a de um app exportado.",
+    "clean_failed": "Não foi possível limpar a pasta. Nada foi exportado."
   },
   "access_admin": {
     "workspace_note": "Aplicada aos projetos do workspace que usam o login por banco de dados. ",

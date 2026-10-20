@@ -39,7 +39,8 @@ interface ProjectExportModalProps {
     javaGroupId?: string,
     javaPort?: number,
     accessAdmin?: boolean,
-    javaOptions?: Record<string, unknown>
+    javaOptions?: Record<string, unknown>,
+    cleanBefore?: boolean
   ) => void
   exportModels: any[]
 }
@@ -101,6 +102,8 @@ export function ProjectExportModal({
   const [exportAuthHash, setExportAuthHash] = useState(defaults.authHash || 'Bcrypt')
   // exporta também os casos de uso Usuários, Grupos de Acesso e Permissões de Telas (e aplica as permissões no app)
   const [exportAccessAdmin, setExportAccessAdmin] = useState(prefill.accessAdmin === true)
+  // limpar a pasta antes de gravar a exportação (nunca vem marcado: apaga arquivos)
+  const [cleanBefore, setCleanBefore] = useState(false)
 
   const handleOpenFolder = async (dir: string, fileFullPath: string) => {
     try {
@@ -266,7 +269,8 @@ export function ProjectExportModal({
             generateOpenApi: javaOpts.swagger,
             generateReadme: javaOpts.readme,
           }
-        : undefined
+        : undefined,
+      cleanBefore
     )
   }
 
@@ -817,6 +821,14 @@ LDAP_SEARCH_FILTER="(sAMAccountName={{username}})"`}
                   </div>
                 </div>
               )}
+
+              <label className="flex items-start gap-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/40 px-4 py-3 cursor-pointer">
+                <input type="checkbox" checked={cleanBefore} onChange={e => setCleanBefore(e.target.checked)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+                <span className="text-xs">
+                  <span className="block font-bold text-neutral-900 dark:text-white">{t('export_modal.clean_before', 'Limpar a pasta antes de exportar (mantém node_modules)')}</span>
+                  <span className="block mt-0.5 text-neutral-500 dark:text-neutral-400">{t('export_modal.clean_before_hint', 'Apaga o que já está na pasta. Você confirma antes, vendo o que será apagado.')}</span>
+                </span>
+              </label>
 
               <div className="flex gap-2.5 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <button

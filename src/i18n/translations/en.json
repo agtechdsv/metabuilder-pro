@@ -109,7 +109,17 @@
     "open_folder": "Open Folder",
     "done_btn": "Done",
     "close": "Close",
-    "default_error": "An error occurred while generating the source code file."
+    "default_error": "An error occurred while generating the source code file.",
+    "clean_before": "Clean the folder before exporting (keeps node_modules)",
+    "clean_before_hint": "Deletes what is already in the folder, so no screen of a use case you deleted is left behind. Keeps node_modules, .git, .next and target. You confirm first, seeing what will be deleted.",
+    "clean_title": "Clean the folder before exporting?",
+    "clean_message": "{count} file(s) will be deleted from:\n{dir}\n\nFolders and files: {entries}\n\nKept: {kept}.\n\nThe export files are written right after. This cannot be undone.",
+    "clean_ok": "Clean and export",
+    "clean_cancel": "Cancel",
+    "clean_running": "Cleaning the folder...",
+    "clean_unsafe": "This folder cannot be cleaned (it is a disk root, your user folder or a common folder such as Downloads or Documents). Choose the app folder.",
+    "clean_not_app": "The folder has other files and does not look like an exported app (no package.json or backend/pom.xml). I neither cleaned nor exported: choose an empty folder or an exported app folder.",
+    "clean_failed": "The folder could not be cleaned. Nothing was exported."
   },
   "access_admin": {
     "workspace_note": "Applied to the workspace projects that use database sign-in. ",

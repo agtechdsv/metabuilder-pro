@@ -109,7 +109,17 @@
     "open_folder": "Abrir Carpeta",
     "done_btn": "Listo",
     "close": "Cerrar",
-    "default_error": "Ocurrió un error al generar el archivo de código fuente."
+    "default_error": "Ocurrió un error al generar el archivo de código fuente.",
+    "clean_before": "Limpiar la carpeta antes de exportar (mantiene node_modules)",
+    "clean_before_hint": "Borra lo que ya está en la carpeta, para que no quede la pantalla de un caso de uso que usted eliminó. Mantiene node_modules, .git, .next y target. Usted confirma antes, viendo lo que se borrará.",
+    "clean_title": "¿Limpiar la carpeta antes de exportar?",
+    "clean_message": "Se borrarán {count} archivo(s) de:\n{dir}\n\nCarpetas y archivos: {entries}\n\nQuedan: {kept}.\n\nLos archivos de la exportación se graban enseguida. Esto no se puede deshacer.",
+    "clean_ok": "Limpiar y exportar",
+    "clean_cancel": "Cancelar",
+    "clean_running": "Limpiando la carpeta...",
+    "clean_unsafe": "Esta carpeta no se puede limpiar (es la raíz de un disco, su carpeta de usuario o una carpeta común como Descargas o Documentos). Elija la carpeta de la aplicación.",
+    "clean_not_app": "La carpeta tiene otros archivos y no parece una aplicación exportada (sin package.json ni backend/pom.xml). No limpié ni exporté: elija una carpeta vacía o la de una aplicación exportada.",
+    "clean_failed": "No se pudo limpiar la carpeta. No se exportó nada."
   },
   "access_admin": {
     "workspace_note": "Aplicada a los proyectos del workspace que usan inicio de sesión por base de datos. ",
