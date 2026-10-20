@@ -1,28 +1,4 @@
 {
-  "v1.0.12": {
-    "date": "2026-10-20",
-    "pt": [
-      "Configuração Rápida de Ambientes de Teste: Sugestão automática e inteligente dos parâmetros de conexão para cópias de banco de dados (PostgreSQL e Oracle), reduzindo o tempo de setup.",
-      "Painel de Testes com Interface Mais Limpa e Focada: Novas seções recolhíveis, opção para ocultar scripts e layout otimizado para acompanhar execuções ao vivo sem distrações.",
-      "Maior Estabilidade e Suporte a Caracteres Especiais: Leitura de arquivos de configuração (.env) e execução de comandos totalmente compatíveis com UTF-8, eliminando falhas de conexão causadas por acentuação.",
-      "Segurança Aprimorada nas Rotinas de Validação: O painel agora direciona automaticamente os testes para a réplica do banco de dados, protegendo sua base principal.",
-      "Experiência Unificada para Testes Ponta a Ponta: Instalação simplificada e integrada do motor de testes diretamente pela IDE, eliminando passos manuais de configuração."
-    ],
-    "en": [
-      "Streamlined Test Environment Setup: Smart auto-fill for database replica connections (PostgreSQL and Oracle), drastically cutting down setup time.",
-      "Cleaner and More Focused Test Dashboard: Collapsible sections, a script-hiding toggle, and an enhanced visual layout for distraction-free live test monitoring.",
-      "Enhanced Stability and Special Character Support: Full UTF-8 support for .env configuration files and terminal outputs, preventing connection test errors caused by accented characters.",
-      "Safer Validation Workflows: The test panel now automatically opens on the database copy by default, keeping your primary database protected.",
-      "Seamless End-to-End Testing Experience: Unified and hassle-free test engine installation built right into the IDE, eliminating manual folder setups."
-    ],
-    "es": [
-      "Configuración Ágil de Entornos de Prueba: Sugerencia inteligente y automática de parámetros de conexión para réplicas de bases de datos (PostgreSQL y Oracle), acelerando la preparación de pruebas.",
-      "Panel de Pruebas Más Limpio y Enfocado: Nuevas secciones plegables, botón para ocultar scripts y una interfaz optimizada para monitorear ejecuciones en vivo sin distracciones.",
-      "Mayor Estabilidad y Compatibilidad con Caracteres Especiales: Lectura de archivos .env y comandos de terminal totalmente compatibles con UTF-8, evitando fallos de conexión por tildes y caracteres especiales.",
-      "Validaciones Más Seguras: El panel de pruebas ahora se abre de forma predeterminada en la copia de la base de datos, protegiendo su entorno principal.",
-      "Experiencia Unificada para Pruebas E2E: Motor de pruebas instalado e integrado directamente desde el IDE, eliminando configuraciones manuales de carpetas."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
