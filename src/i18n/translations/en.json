@@ -4885,7 +4885,7 @@
     "type_compat": "Compatibility",
     "type_compat_desc": "The screen opens, lists the database total and shows the form on Chrome, Firefox and Safari (WebKit)",
     "type_carga": "Performance and load",
-    "type_carga_desc": "Many simultaneous accesses",
+    "type_carga_desc": "Opening time of each screen and 20 simultaneous accesses (read only)",
     "err_plan": "Could not generate the plan.",
     "hist_err": "Could not read the history.",
     "err_exit": "The engine ended with an error (code {code}). See the log below.",

@@ -10,7 +10,7 @@ import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT, LIMITES_CARGA } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -116,7 +116,7 @@ const navegadorInstalado = (motor: 'firefox' | 'webkit') => { try { return fs.ex
 const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname, '..', 'manifests', 'vendas-pg.sample.json')
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
 /** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste; seguranca cria usuários e grupos temporários. */
-const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat')
+const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga')
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -459,6 +459,39 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             } finally { await proprio?.close().catch(() => {}) }
           })
         }
+      }
+
+      if (t.kind === 'carga_abertura') {
+        test(t.title, async ({ page }) => {
+          const tempos: number[] = []
+          for (let i = 0; i < 3; i++) {
+            const ini = Date.now()
+            const resp = await page.goto(view.path)
+            expect(resp?.status() ?? 0, `HTTP de ${view.path}`).toBeLessThan(400)
+            await page.waitForLoadState('networkidle').catch(() => {})
+            await expect(page.locator('main').first()).toBeVisible()
+            tempos.push(Date.now() - ini)
+          }
+          const mediana = [...tempos].sort((a, b) => a - b)[1]
+          test.info().annotations.push({ type: 'aviso', description: `exercitado: tempos ${tempos.join(' / ')} ms (limite ${LIMITES_CARGA.aberturaMs} ms)` })
+          expect(mediana, `mediana de abertura de ${view.path} (ms)`).toBeLessThanOrEqual(LIMITES_CARGA.aberturaMs)
+        })
+      }
+
+      if (t.kind === 'carga_simultaneos') {
+        test(t.title, async ({ page }) => {
+          await abrir(page, view.path) // garante a sessão aberta: os acessos abaixo usam os mesmos cookies
+          const lote = await Promise.all(Array.from({ length: LIMITES_CARGA.simultaneos }, async () => {
+            const ini = Date.now()
+            const r = await page.request.get(view.path, { timeout: 30_000 }).catch(() => null)
+            return { status: r?.status() ?? 0, ms: Date.now() - ini }
+          }))
+          const ordenados = lote.map(x => x.ms).sort((a, b) => a - b)
+          const p95 = ordenados[Math.ceil(ordenados.length * 0.95) - 1]
+          test.info().annotations.push({ type: 'aviso', description: `exercitado: ${lote.length} acessos, mais lento ${ordenados[ordenados.length - 1]} ms, p95 ${p95} ms (limite ${LIMITES_CARGA.p95Ms} ms)` })
+          expect(lote.filter(x => x.status === 0 || x.status >= 400).map(x => x.status), 'acessos com erro (0 = sem resposta)').toEqual([])
+          expect(p95, 'p95 do tempo de resposta (ms)').toBeLessThanOrEqual(LIMITES_CARGA.p95Ms)
+        })
       }
 
       if (t.kind === 'abre') {

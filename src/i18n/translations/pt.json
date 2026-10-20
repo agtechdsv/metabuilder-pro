@@ -4885,7 +4885,7 @@
     "type_compat": "Compatibilidade",
     "type_compat_desc": "A tela abre, lista o total do banco e mostra o formulário em Chrome, Firefox e Safari (WebKit)",
     "type_carga": "Desempenho e carga",
-    "type_carga_desc": "Muitos acessos ao mesmo tempo",
+    "type_carga_desc": "Tempo de abertura de cada tela e 20 acessos ao mesmo tempo (só leitura)",
     "err_plan": "Não foi possível gerar o plano.",
     "hist_err": "Não foi possível ler o histórico.",
     "err_exit": "O motor terminou com erro (código {code}). Veja o log abaixo.",

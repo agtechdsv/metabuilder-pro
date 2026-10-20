@@ -12,6 +12,12 @@ const view = (over: Partial<ManifestView> = {}): ManifestView => ({
 })
 
 describe('plano de testes de um caso de uso', () => {
+  it('Desempenho e carga: abertura e acessos simultâneos, só no tipo carga', () => {
+    expect(planView(view(), { types: ['funcional'] }).some(t => t.kind.startsWith('carga_'))).toBe(false)
+    expect(planView(view(), { types: ['carga'] }).map(t => t.kind)).toEqual(['carga_abertura', 'carga_simultaneos'])
+    expect(planView(view({ logicType: 'gestao_acesso' }), { types: ['carga'] })).toEqual([])
+  })
+
   it('Compatibilidade: um teste por navegador, só no tipo compat, e a gestão de acesso fica de fora', () => {
     expect(planView(view(), { types: ['funcional'] }).some(t => t.kind.startsWith('compat_'))).toBe(false)
     const compat = planView(view(), { types: ['compat'] })

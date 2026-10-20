@@ -4973,7 +4973,7 @@
     "type_compat": "Compatibilidad",
     "type_compat_desc": "La pantalla abre, lista el total de la base y muestra el formulario en Chrome, Firefox y Safari (WebKit)",
     "type_carga": "Rendimiento y carga",
-    "type_carga_desc": "Muchos accesos al mismo tiempo",
+    "type_carga_desc": "Tiempo de apertura de cada pantalla y 20 accesos simultáneos (solo lectura)",
     "err_plan": "No se pudo generar el plan.",
     "hist_err": "No se pudo leer el historial.",
     "err_exit": "El motor terminó con error (código {code}). Vea el registro abajo.",
