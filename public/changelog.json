@@ -1,26 +1,23 @@
 {
-  "v1.0.12": {
+  "v1.0.13": {
     "date": "2026-10-20",
     "pt": [
-      "Configuração Rápida de Ambientes de Teste: Sugestão automática e inteligente dos parâmetros de conexão para cópias de banco de dados (PostgreSQL e Oracle), reduzindo o tempo de setup.",
-      "Painel de Testes com Interface Mais Limpa e Focada: Novas seções recolhíveis, opção para ocultar scripts e layout otimizado para acompanhar execuções ao vivo sem distrações.",
-      "Maior Estabilidade e Suporte a Caracteres Especiais: Leitura de arquivos de configuração (.env) e execução de comandos totalmente compatíveis com UTF-8, eliminando falhas de conexão causadas por acentuação.",
-      "Segurança Aprimorada nas Rotinas de Validação: O painel agora direciona automaticamente os testes para a réplica do banco de dados, protegendo sua base principal.",
-      "Experiência Unificada para Testes Ponta a Ponta: Instalação simplificada e integrada do motor de testes diretamente pela IDE, eliminando passos manuais de configuração."
+      "Lançamento Oficial dos Ambientes de Testes: Conheça nossa nova página dedicada (/features/testing), agora disponível na Home e no menu de Desenvolvedores em três idiomas, com todos os 6 tipos de ambientes prontos para uso.",
+      "Configuração Automática de Banco de Dados para Testes: Agilize a preparação de seus testes com o preenchimento inteligente e automático dos parâmetros de conexão (PostgreSQL e Oracle) diretamente da aplicação selecionada.",
+      "Formulários de Teste Dinâmicos e Inteligentes: As sugestões de conexão agora se adaptam dinamicamente ao trocar de app, preservando com total segurança qualquer informação personalizada já digitada.",
+      "Planos de Teste com Gestão de Acessos Integrada: Maior fidelidade nas validações com a inclusão automática de regras de permissão e perfis administrativos para os usuários de teste."
     ],
     "en": [
-      "Streamlined Test Environment Setup: Smart auto-fill for database replica connections (PostgreSQL and Oracle), drastically cutting down setup time.",
-      "Cleaner and More Focused Test Dashboard: Collapsible sections, a script-hiding toggle, and an enhanced visual layout for distraction-free live test monitoring.",
-      "Enhanced Stability and Special Character Support: Full UTF-8 support for .env configuration files and terminal outputs, preventing connection test errors caused by accented characters.",
-      "Safer Validation Workflows: The test panel now automatically opens on the database copy by default, keeping your primary database protected.",
-      "Seamless End-to-End Testing Experience: Unified and hassle-free test engine installation built right into the IDE, eliminating manual folder setups."
+      "Official Launch of Testing Environments: Discover our new dedicated page (/features/testing), now available on the Home page and Developer menu in three languages, with all 6 environment types fully enabled.",
+      "Automated Database Setup for Testing: Speed up validation workflows with smart pre-filling of database connection credentials (PostgreSQL and Oracle) pulled directly from your application.",
+      "Dynamic and Adaptive Test Configurations: Connection suggestions now update seamlessly when switching applications, safely preserving any custom values you have already entered.",
+      "Integrated Access Management in Test Plans: Enjoy more accurate test scenarios with automatic incorporation of permission structures and administrative privileges for test users."
     ],
     "es": [
-      "Configuración Ágil de Entornos de Prueba: Sugerencia inteligente y automática de parámetros de conexión para réplicas de bases de datos (PostgreSQL y Oracle), acelerando la preparación de pruebas.",
-      "Panel de Pruebas Más Limpio y Enfocado: Nuevas secciones plegables, botón para ocultar scripts y una interfaz optimizada para monitorear ejecuciones en vivo sin distracciones.",
-      "Mayor Estabilidad y Compatibilidad con Caracteres Especiales: Lectura de archivos .env y comandos de terminal totalmente compatibles con UTF-8, evitando fallos de conexión por tildes y caracteres especiales.",
-      "Validaciones Más Seguras: El panel de pruebas ahora se abre de forma predeterminada en la copia de la base de datos, protegiendo su entorno principal.",
-      "Experiencia Unificada para Pruebas E2E: Motor de pruebas instalado e integrado directamente desde el IDE, eliminando configuraciones manuales de carpetas."
+      "Lanzamiento Oficial de Entornos de Pruebas: Conozca nuestra nueva página dedicada (/features/testing), disponible en la Home y en el menú de Desarrolladores en tres idiomas, con los 6 tipos de entornos completamente disponibles.",
+      "Configuración Automática de Bases de Datos para Pruebas: Acelere la preparación de sus pruebas con el autorrelleno inteligente de conexiones (PostgreSQL y Oracle) obtenido directamente de su aplicación.",
+      "Formularios de Pruebas Dinámicos y Flexibles: Las sugerencias de conexión ahora se adaptan automáticamente al cambiar de aplicación, preservando de forma segura cualquier dato personalizado introducido.",
+      "Gestión de Accesos Integrada en Planes de Pruebas: Mayor precisión en sus validaciones gracias a la inclusión automática de esquemas de permisos y roles administrativos para los usuarios de prueba."
     ]
   },
   "v1.0.0": {
