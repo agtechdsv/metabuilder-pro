@@ -61,7 +61,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [appAccess, setAppAccess] = useState<boolean | null>(null)
   const runnerDir = managedDir
   const [mode, setMode] = useState<TestWatchMode>('internal')
-  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga'); return v.length ? v : ['funcional'] })
+  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga' || x === 'visual'); return v.length ? v : ['funcional'] })
   const toggleType = (id: TestType) => setTypes(prev => {
     const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     if (next.length === 0) return prev // pelo menos um tipo
@@ -122,7 +122,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Tempo de abertura de cada tela e 20 acessos ao mesmo tempo (só leitura)'), available: true },
     { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissão da tabela, acesso por grupo e regra por linha, conferidos com usuários temporários'), available: true },
     { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'A tela abre, lista o total do banco e mostra o formulário em Chrome, Firefox e Safari (WebKit)'), available: true },
-    { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Tamanhos de tela, contraste e leitor de tela'), available: false },
+    { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Celular, tablet e computador sem rolagem horizontal; idioma, títulos, imagens, botões e campos com nome para leitor de tela'), available: true },
   ]
 
   // lembra a pasta do app exportado (de cada projeto)
@@ -718,7 +718,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 {secOpen.type && <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {TEST_TYPES.map(tp => {
-                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca' || tp.id === 'compat' || tp.id === 'carga'
+                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca' || tp.id === 'compat' || tp.id === 'carga' || tp.id === 'visual'
                     const on = escolhivel && types.includes(tp.id as TestType)
                     return (
                       <button key={tp.id} type="button" disabled={!tp.available || running} onClick={() => escolhivel && toggleType(tp.id as TestType)}

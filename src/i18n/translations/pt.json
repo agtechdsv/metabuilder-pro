@@ -4881,7 +4881,7 @@
     "type_seguranca": "Segurança",
     "type_seguranca_desc": "Permissão da tabela, acesso por grupo e regra por linha, conferidos com usuários temporários",
     "type_visual": "Responsividade e acessibilidade",
-    "type_visual_desc": "Tamanhos de tela, contraste e leitor de tela",
+    "type_visual_desc": "Celular, tablet e computador sem rolagem horizontal; idioma, títulos, imagens, botões e campos com nome para leitor de tela",
     "type_compat": "Compatibilidade",
     "type_compat_desc": "A tela abre, lista o total do banco e mostra o formulário em Chrome, Firefox e Safari (WebKit)",
     "type_carga": "Desempenho e carga",

@@ -10,7 +10,7 @@ import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT, LIMITES_CARGA } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT, LIMITES_CARGA, TELAS_VISUAL } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -116,7 +116,7 @@ const navegadorInstalado = (motor: 'firefox' | 'webkit') => { try { return fs.ex
 const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname, '..', 'manifests', 'vendas-pg.sample.json')
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
 /** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste; seguranca cria usuários e grupos temporários. */
-const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga')
+const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga' || x === 'visual')
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -459,6 +459,64 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             } finally { await proprio?.close().catch(() => {}) }
           })
         }
+      }
+
+      if (t.kind === 'visual_responsivo') {
+        test(t.title, async ({ page }) => {
+          const achados: string[] = []
+          for (const tela of TELAS_VISUAL) {
+            await page.setViewportSize({ width: tela.width, height: tela.height })
+            await abrir(page, view.path)
+            await expect(page.locator('main').first(), `conteúdo visível no ${tela.nome}`).toBeVisible()
+            const m = await page.evaluate(() => ({ rolagem: document.documentElement.scrollWidth, janela: window.innerWidth }))
+            // 2 px de folga: arredondamentos de zoom e de borda
+            if (m.rolagem > m.janela + 2) achados.push(`${tela.nome} (${tela.width}px): a página rola na horizontal (${m.rolagem}px de conteúdo para ${m.janela}px de janela)`)
+          }
+          expect(achados.length, achados.join(' | ')).toBe(0)
+        })
+      }
+
+      if (t.kind === 'visual_acessibilidade') {
+        test(t.title, async ({ page }) => {
+          const telas = [{ rota: view.path, nome: 'tela' }, ...(view.logicType === 'pesquisa_cadastro' && isSupportedView(view) ? [{ rota: `${view.path}/new`, nome: 'formulário novo' }] : [])]
+          const achados: string[] = []
+          for (const tela of telas) {
+            await abrir(page, tela.rota)
+            await aguardarTela(page)
+            const r = await page.evaluate(() => {
+              const visivel = (el: Element) => { const r = (el as HTMLElement).getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' }
+              const texto = (el: Element) => (el.textContent || '').replace(/\s+/g, ' ').trim()
+              const nomeDe = (el: Element): string => {
+                const aria = el.getAttribute('aria-label')?.trim(); if (aria) return aria
+                const por = el.getAttribute('aria-labelledby'); if (por) { const t = por.split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() || '').join(' ').trim(); if (t) return t }
+                const t = texto(el); if (t) return t
+                const titulo = el.getAttribute('title')?.trim(); if (titulo) return titulo
+                const img = el.querySelector('img[alt]'); if (img && img.getAttribute('alt')?.trim()) return img.getAttribute('alt')!.trim()
+                const svgT = el.querySelector('svg title'); if (svgT && svgT.textContent?.trim()) return svgT.textContent.trim()
+                return ''
+              }
+              const campoComNome = (el: Element) => {
+                if (nomeDe(el) && !el.matches('button, a, [role=button]')) return true
+                const id = el.getAttribute('id'); if (id && document.querySelector('label[for="' + CSS.escape(id) + '"]')) return true
+                if (el.closest('label')) return true
+                return false
+              }
+              const descr = (el: Element) => el.tagName.toLowerCase() + (el.getAttribute('name') ? `[name=${el.getAttribute('name')}]` : '') + (el.id ? '#' + el.id : '') + (texto(el) ? ` "${texto(el).slice(0, 30)}"` : '')
+              const sem: string[] = []
+              const semAlt = [...document.querySelectorAll('img')].filter(i => visivel(i) && !i.hasAttribute('alt')).map(descr)
+              const semNomeBotao = [...document.querySelectorAll('button, a[href], [role=button]')].filter(e => visivel(e) && !nomeDe(e)).map(descr)
+              const semRotulo = [...document.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea')].filter(e => visivel(e) && !campoComNome(e)).map(descr)
+              return { lang: document.documentElement.lang, titulo: document.title.trim(), h1: [...document.querySelectorAll('h1')].filter(visivel).length, semAlt, semNomeBotao, semRotulo, sem }
+            })
+            if (!r.lang) achados.push(`${tela.nome}: <html> sem o atributo lang`)
+            if (!r.titulo) achados.push(`${tela.nome}: a página não tem título (<title>)`)
+            if (r.h1 !== 1) achados.push(`${tela.nome}: ${r.h1} título(s) principal(is) h1 (esperado 1)`)
+            for (const x of r.semAlt.slice(0, 5)) achados.push(`${tela.nome}: imagem sem texto alternativo: ${x}`)
+            for (const x of r.semNomeBotao.slice(0, 5)) achados.push(`${tela.nome}: botão ou link sem nome para leitor de tela: ${x}`)
+            for (const x of r.semRotulo.slice(0, 5)) achados.push(`${tela.nome}: campo sem rótulo: ${x}`)
+          }
+          expect(achados.length, achados.join(' | ')).toBe(0)
+        })
       }
 
       if (t.kind === 'carga_abertura') {

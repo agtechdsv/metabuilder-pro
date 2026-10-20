@@ -4881,7 +4881,7 @@
     "type_seguranca": "Security",
     "type_seguranca_desc": "Table permission, group access and row rule, checked with temporary users",
     "type_visual": "Responsiveness and accessibility",
-    "type_visual_desc": "Screen sizes, contrast and screen reader",
+    "type_visual_desc": "Phone, tablet and desktop without horizontal scroll; language, titles, images, buttons and fields with a name for screen readers",
     "type_compat": "Compatibility",
     "type_compat_desc": "The screen opens, lists the database total and shows the form on Chrome, Firefox and Safari (WebKit)",
     "type_carga": "Performance and load",

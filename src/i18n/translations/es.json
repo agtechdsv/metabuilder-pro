@@ -4969,7 +4969,7 @@
     "type_seguranca": "Seguridad",
     "type_seguranca_desc": "Permiso de la tabla, acceso por grupo y regla por fila, comprobados con usuarios temporales",
     "type_visual": "Responsividad y accesibilidad",
-    "type_visual_desc": "Tamaños de pantalla, contraste y lector de pantalla",
+    "type_visual_desc": "Celular, tableta y computadora sin desplazamiento horizontal; idioma, títulos, imágenes, botones y campos con nombre para lectores de pantalla",
     "type_compat": "Compatibilidad",
     "type_compat_desc": "La pantalla abre, lista el total de la base y muestra el formulario en Chrome, Firefox y Safari (WebKit)",
     "type_carga": "Rendimiento y carga",

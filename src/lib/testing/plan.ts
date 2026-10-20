@@ -15,6 +15,7 @@ export type PlannedKind =
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'compat_chrome' | 'compat_firefox' | 'compat_webkit'
   | 'carga_abertura' | 'carga_simultaneos'
+  | 'visual_responsivo' | 'visual_acessibilidade'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
 
@@ -34,7 +35,14 @@ export interface PlannedTest {
 export type PlanLang = 'pt' | 'en' | 'es'
 
 /** Tipos de teste: funcional só LÊ dados; integração GRAVA (cadastro, edição e exclusão com dados gerados) e exige um banco de teste. */
-export type TestType = 'funcional' | 'integracao' | 'seguranca' | 'compat' | 'carga'
+export type TestType = 'funcional' | 'integracao' | 'seguranca' | 'compat' | 'carga' | 'visual'
+
+/** Tamanhos de tela do tipo Responsividade e acessibilidade: celular, tablet e computador. */
+export const TELAS_VISUAL = [
+  { nome: 'celular', width: 375, height: 812 },
+  { nome: 'tablet', width: 768, height: 1024 },
+  { nome: 'computador', width: 1280, height: 800 },
+] as const
 
 /** Limites do tipo Desempenho e carga (valem para o app local de teste, não para produção). */
 export const LIMITES_CARGA = { aberturaMs: 5000, simultaneos: 20, p95Ms: 10000 } as const
@@ -77,6 +85,8 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     seg_nivel_nenhum: () => 'group access "none": the screen disappears from the menu and does not open by address',
     seg_nivel_leitura: () => 'group access "read": opens and shows the data, but does not allow creating, editing or deleting',
     seg_linha: () => 'row rule: whoever is not in the exception only sees the rows the rule allows',
+    visual_responsivo: () => 'responsive: on phone, tablet and desktop sizes the screen shows no horizontal page scroll and keeps its content visible',
+    visual_acessibilidade: () => 'accessibility: page language and title, one main heading, images with alternative text, and buttons, links and fields with a name for screen readers',
     carga_abertura: () => 'performance: the screen loads within the time limit (median of 3 loads)',
     carga_simultaneos: () => 'load: 20 simultaneous accesses to the screen, all answered without error and within the time limit',
     compat_chrome: () => 'Chrome: the screen opens, lists the same total as the database and shows the new form',
@@ -132,6 +142,8 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     seg_nivel_nenhum: () => 'acceso "ninguno" al grupo: la pantalla desaparece del menú y no abre por la dirección',
     seg_nivel_leitura: () => 'acceso "lectura" al grupo: abre y muestra los datos, pero no permite crear, editar ni eliminar',
     seg_linha: () => 'regla por fila: quien no está en la excepción solo ve las filas que la regla permite',
+    visual_responsivo: () => 'responsivo: en celular, tableta y computadora la pantalla no tiene desplazamiento horizontal de la página y mantiene su contenido visible',
+    visual_acessibilidade: () => 'accesibilidad: idioma y título de la página, un encabezado principal, imágenes con texto alternativo, y botones, enlaces y campos con nombre para lectores de pantalla',
     carga_abertura: () => 'rendimiento: la pantalla carga dentro del límite de tiempo (mediana de 3 cargas)',
     carga_simultaneos: () => 'carga: 20 accesos simultáneos a la pantalla, todos respondidos sin error y dentro del límite de tiempo',
     compat_chrome: () => 'Chrome: la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
@@ -308,6 +320,16 @@ export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[]
     ...(types.includes('seguranca') ? planoSeguranca(v, opts.auth) : []),
     ...(types.includes('compat') ? planoCompat(v) : []),
     ...(types.includes('carga') ? planoCarga(v) : []),
+    ...(types.includes('visual') ? planoVisual(v) : []),
+  ]
+}
+
+/** Responsividade e acessibilidade: a tela em três tamanhos e a leitura dela por tecnologia assistiva. Só lê dados. */
+function planoVisual(v: ManifestView): PlannedTest[] {
+  if (v.logicType === 'gestao_acesso') return []
+  return [
+    { kind: 'visual_responsivo', title: `responsividade: celular, tablet e computador sem rolagem horizontal da página e com o conteúdo visível` },
+    { kind: 'visual_acessibilidade', title: 'acessibilidade: idioma e título da página, um título principal, imagens com texto alternativo e botões, links e campos com nome para leitor de tela' },
   ]
 }
 
