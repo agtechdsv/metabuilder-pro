@@ -471,12 +471,90 @@ function safeEvalMath(expr: string): number {
   const sanitized = expr.replace(/[^0-9+\\-*/(). ]/g, '')
   if (!sanitized) return 0
   try {
-    const result = new Function('"use strict"; return (' + sanitized + ')')()
+    let result: any
+    try {
+      result = evalArithmetic(sanitized)
+    } catch {
+      // fora do caso simples (potência, zero à esquerda...): o mesmo cálculo de antes
+      result = new Function('"use strict"; return (' + sanitized + ')')()
+    }
     const num = Number(result)
     return isNaN(num) ? 0 : num
   } catch {
     return 0
   }
+}
+
+// + - * / e parênteses, com a precedência do JavaScript; lança erro diante de qualquer coisa fora disso (o chamador usa o caminho antigo)
+function evalArithmetic(s: string): number {
+  const n = s.length
+  let i = 0
+  const fail = (): never => { throw new Error('fora do caso simples') }
+  const ws = () => { while (i < n && s[i] === ' ') i++ }
+  const primary = (): number => {
+    ws()
+    if (s[i] === '(') {
+      i++
+      const v = sum()
+      ws()
+      if (s[i] !== ')') fail()
+      i++
+      return v
+    }
+    const start = i
+    while (i < n && ((s[i] >= '0' && s[i] <= '9') || s[i] === '.')) i++
+    const tok = s.slice(start, i)
+    if (!tok || tok === '.' || tok.split('.').length > 2 || (tok.length > 1 && tok[0] === '0' && tok[1] !== '.')) fail()
+    return Number(tok)
+  }
+  const unary = (): number => {
+    ws()
+    const c = s[i]
+    if (c === '-' || c === '+') {
+      if (s[i + 1] === c) fail() // "--" e "++" são operadores de outro tipo no JavaScript
+      i++
+      const v = unary()
+      return c === '-' ? -v : v
+    }
+    return primary()
+  }
+  const product = (): number => {
+    let v = unary()
+    for (;;) {
+      ws()
+      const c = s[i]
+      if (c !== '*' && c !== '/') return v
+      if (s[i + 1] === c) fail() // potência e comentário: caminho antigo
+      i++
+      const r = unary()
+      v = c === '*' ? v * r : v / r
+    }
+  }
+  const sum = (): number => {
+    let v = product()
+    for (;;) {
+      ws()
+      const c = s[i]
+      if (c !== '+' && c !== '-') return v
+      if (s[i + 1] === c) fail()
+      i++
+      const r = product()
+      v = c === '+' ? v + r : v - r
+    }
+  }
+  const total = sum()
+  ws()
+  if (i < n) fail()
+  return total
+}
+
+// as expressões das fórmulas são as mesmas para todas as linhas: compila cada RegExp uma vez só
+const rowRegexCache = new Map<string, RegExp>()
+const keyRelevanceCache = new Map<string, Map<string, boolean>>()
+function rowRegex(source: string): RegExp {
+  let r = rowRegexCache.get(source)
+  if (!r) { r = new RegExp(source, 'gi'); rowRegexCache.set(source, r) }
+  return r
 }
 
 function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula?: boolean): number {
@@ -489,7 +567,19 @@ function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula
   }
 
   try {
-    const rowKeys = Object.keys(row)
+    // só as colunas que aparecem na fórmula (pelo nome inteiro ou pelo nome curto) podem ser trocadas: as outras não mudam nada
+    let relevance = keyRelevanceCache.get(fieldExpr)
+    if (!relevance) { relevance = new Map<string, boolean>(); keyRelevanceCache.set(fieldExpr, relevance) }
+    const rowKeys: string[] = []
+    for (const k of Object.keys(row)) {
+      let relevant = relevance.get(k)
+      if (relevant === undefined) {
+        const exprLow = fieldExpr.toLowerCase()
+        relevant = !!k && !k.includes('__label') && (exprLow.includes(k.toLowerCase()) || exprLow.includes((k.includes('.') ? k.split('.').pop()! : k).toLowerCase()))
+        relevance.set(k, relevant)
+      }
+      if (relevant) rowKeys.push(k)
+    }
     let expr = fieldExpr
     const sortedKeys = [...rowKeys].sort((a, b) => b.length - a.length)
 
@@ -497,7 +587,7 @@ function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula
       if (!key || key.includes('__label')) continue
       const val = Number(row[key]) || 0
       const escaped = key.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&')
-      expr = expr.replace(new RegExp(escaped, 'gi'), String(val))
+      expr = expr.replace(rowRegex(escaped), String(val))
     }
 
     for (const key of sortedKeys) {
@@ -505,7 +595,7 @@ function evaluateRowValue(fieldExpr: string, row: Record<string, any>, isFormula
       if (!short || short.includes('__label')) continue
       const val = Number(row[key]) || 0
       const escaped = short.replace(/[-\\/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&')
-      expr = expr.replace(new RegExp('\\\\b' + escaped + '\\\\b', 'gi'), String(val))
+      expr = expr.replace(rowRegex('\\\\b' + escaped + '\\\\b'), String(val))
     }
 
     return safeEvalMath(expr)
@@ -601,52 +691,46 @@ function buildDenormalizedRows(
       const targetData = tablesData[targetTbl] || []
       const nextRows: any[] = []
 
+      // índice da tabela alvo por chave (uma passada), em vez de varrê-la inteira para cada linha; e o enriquecimento de cada linha alvo é montado uma vez só
+      const index = new Map<string, any[]>()
+      for (const item of targetData) {
+        const k = String(item[targetCol] ?? item[targetCol.toLowerCase()] ?? item.id)
+        const bucket = index.get(k)
+        if (bucket) bucket.push(item)
+        else index.set(k, [item])
+      }
+      const prepared = new Map<any, { keys: Array<[string, string]>; displayVal: string }>()
+      const merge = (row: Record<string, any>, match: any, overwrite: boolean) => {
+        let p = prepared.get(match)
+        if (!p) {
+          p = { keys: Object.keys(match).map((k): [string, string] => [k, targetTbl + '.' + k.toLowerCase()]), displayVal: findRowDisplayValue(match) }
+          prepared.set(match, p)
+        }
+        const enriched: Record<string, any> = { ...row }
+        for (const [k, pk] of p.keys) {
+          const v = match[k]
+          enriched[pk] = v
+          if (overwrite || enriched[k] === undefined) enriched[k] = v
+        }
+        if (p.displayVal) {
+          enriched[targetTbl + '__label'] = p.displayVal
+          enriched[sourceCol + '__label'] = p.displayVal
+          enriched[sourceTbl + '.' + sourceCol + '__label'] = p.displayVal
+        }
+        return enriched
+      }
+
       for (const row of currentRows) {
-        const val = row[\`\${sourceTbl}.\${sourceCol.toLowerCase()}\`] ?? row[sourceCol] ?? row[sourceCol.toLowerCase()]
+        const val = row[sourceTbl + '.' + sourceCol.toLowerCase()] ?? row[sourceCol] ?? row[sourceCol.toLowerCase()]
+        const matches = val != null ? index.get(String(val)) : undefined
 
-        const matches = val != null
-          ? targetData.filter(item => {
-              const itemVal = item[targetCol] ?? item[targetCol.toLowerCase()] ?? item.id
-              return String(itemVal) === String(val)
-            })
-          : []
-
-        if (matches.length === 0) {
+        if (!matches || matches.length === 0) {
           nextRows.push(row)
         } else if (matches.length === 1) {
-          const match = matches[0]
-          const enriched = { ...row }
-          const displayVal = findRowDisplayValue(match)
-
-          for (const [k, v] of Object.entries(match)) {
-            const kl = k.toLowerCase()
-            enriched[\`\${targetTbl}.\${kl}\`] = v
-            if (enriched[k] === undefined) enriched[k] = v
-          }
-          if (displayVal) {
-            enriched[\`\${targetTbl}__label\`] = displayVal
-            enriched[\`\${sourceCol}__label\`] = displayVal
-            enriched[\`\${sourceTbl}.\${sourceCol}__label\`] = displayVal
-          }
-          nextRows.push(enriched)
+          nextRows.push(merge(row, matches[0], false))
         } else {
           // 1:N (ex: pedido -> itens_pedido)
-          for (const match of matches) {
-            const enriched = { ...row }
-            const displayVal = findRowDisplayValue(match)
-
-            for (const [k, v] of Object.entries(match)) {
-              const kl = k.toLowerCase()
-              enriched[\`\${targetTbl}.\${kl}\`] = v
-              enriched[k] = v
-            }
-            if (displayVal) {
-              enriched[\`\${targetTbl}__label\`] = displayVal
-              enriched[\`\${sourceCol}__label\`] = displayVal
-              enriched[\`\${sourceTbl}.\${sourceCol}__label\`] = displayVal
-            }
-            nextRows.push(enriched)
-          }
+          for (const match of matches) nextRows.push(merge(row, match, true))
         }
       }
 
