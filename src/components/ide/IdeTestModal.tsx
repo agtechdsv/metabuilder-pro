@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { checkRunnerDir, clearLiveFrame, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
 import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appHasAccessAdmin, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
@@ -71,6 +71,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const planFor = useCallback((v: ManifestView) => planView(v, { types, auth: manifest?.auth }), [types, manifest])
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
+  // só lê quadros do navegador depois que o quadro da execução anterior foi apagado (senão a imagem velha aparece nos primeiros instantes)
+  const [liveGate, setLiveGate] = useState(false)
   const [secOpen, setSecOpen] = useState<Record<'type' | 'scope' | 'where', boolean>>({ type: true, scope: true, where: true })
   const [runTotal, setRunTotal] = useState(0)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -392,6 +394,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (tipoApp === 'java' && !(await hasJdk().catch(() => false))) { setRunError(t('ide_tests.err_jdk', 'O app tem backend Java e a máquina não tem o JDK 21. Rode o app uma vez pela exportação (a IDE oferece baixar o JDK portátil) ou instale o JDK 21.')); return }
     if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
     if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
+    setLiveGate(false)
     setRunning(true)
     try {
       let configPath: string | undefined
@@ -417,6 +420,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       setRunTotal(toRun.reduce((n, v) => n + planFor(v).length, 0)); setLiveOpen(true)
       setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' })
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+      await clearLiveFrame()
+      setLiveGate(true)
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
         configPath, browser: browserName, types, artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
@@ -464,7 +469,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   // navegador interno: lê o quadro mais recente da tela do teste e mostra no painel
   useEffect(() => {
-    if (!running || mode !== 'internal') return
+    if (!running || mode !== 'internal' || !liveGate) return
     let alive = true
     let last = 0
     const tick = async () => {
@@ -478,7 +483,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     }
     const id = setInterval(tick, 250)
     return () => { alive = false; clearInterval(id) }
-  }, [running, mode])
+  }, [running, mode, liveGate])
   useEffect(() => { if (!isOpen) setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' }) }, [isOpen])
 
   // ---- evidências da falha (captura de tela e vídeo)

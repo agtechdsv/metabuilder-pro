@@ -127,6 +127,15 @@ export async function openTestReport(runnerDir: string, savedFile?: string): Pro
   await Command.create('powershell', [...PS, UTF8 + `Start-Process '${q(file)}'`]).execute()
 }
 
+/** Apaga o quadro da execução anterior e só devolve quando ele já sumiu (o painel espera por isto antes de começar a ler quadros). */
+export async function clearLiveFrame(): Promise<void> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const { mkdir } = await import('@tauri-apps/plugin-fs')
+  const liveDir = await workDir('live')
+  try { await mkdir(liveDir, { recursive: true }) } catch { /* já existe */ }
+  try { await Command.create('powershell', [...PS, UTF8 + `Remove-Item -LiteralPath (Join-Path '${q(liveDir)}' 'frame.jpg') -Force -ErrorAction SilentlyContinue`]).execute() } catch { /* sem o quadro antigo ou sem permissão: segue */ }
+}
+
 /** Último quadro da tela do navegador (modo "navegador interno"): bytes do JPEG, ou null se ainda não há quadro legível. */
 export async function readLiveFrame(): Promise<Uint8Array | null> {
   try {
