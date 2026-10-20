@@ -4883,7 +4883,7 @@
     "type_visual": "Responsiveness and accessibility",
     "type_visual_desc": "Screen sizes, contrast and screen reader",
     "type_compat": "Compatibility",
-    "type_compat_desc": "Chrome, Firefox and Safari",
+    "type_compat_desc": "The screen opens, lists the database total and shows the form on Chrome, Firefox and Safari (WebKit)",
     "type_carga": "Performance and load",
     "type_carga_desc": "Many simultaneous accesses",
     "err_plan": "Could not generate the plan.",
@@ -5065,6 +5065,11 @@
     "err_db_unsupported": "The automatic tests only support PostgreSQL and Oracle databases for now.",
     "err_jdk": "The app has a Java backend and this machine has no JDK 21. Run the app once from the export (the IDE offers to download the portable JDK) or install JDK 21.",
     "db_service": "Service",
-    "db_nocopy_help_script": "In Oracle the copy is another schema of the database: give the script to the database administrator and then enter the copy data here."
+    "db_nocopy_help_script": "In Oracle the copy is another schema of the database: give the script to the database administrator and then enter the copy data here.",
+    "compat_err": "Could not download Firefox and WebKit.",
+    "compat_ask_title": "Also test on Firefox and Safari?",
+    "compat_ask_body": "To test on Firefox and Safari (WebKit), Playwright needs to download those two browsers (about 150 MB each, from the internet, to your user Playwright folder). Nothing is installed on the system and they do not replace your browser. Without them only Chrome is tested and the other tests are skipped.",
+    "compat_ask_yes": "Download and run",
+    "compat_ask_no": "Run with Chrome only"
   }
 }

@@ -12,6 +12,14 @@ const view = (over: Partial<ManifestView> = {}): ManifestView => ({
 })
 
 describe('plano de testes de um caso de uso', () => {
+  it('Compatibilidade: um teste por navegador, só no tipo compat, e a gestão de acesso fica de fora', () => {
+    expect(planView(view(), { types: ['funcional'] }).some(t => t.kind.startsWith('compat_'))).toBe(false)
+    const compat = planView(view(), { types: ['compat'] })
+    expect(compat.map(t => t.kind)).toEqual(['compat_chrome', 'compat_firefox', 'compat_webkit'])
+    expect(new Set(compat.map(t => t.title)).size).toBe(3)
+    expect(planView(view({ logicType: 'gestao_acesso' }), { types: ['compat'] })).toEqual([])
+  })
+
   it('Pesquisa + Cadastro: lista e formulário sempre; obrigatórios só se há campo obrigatório', () => {
     const p = planView(view())
     expect(p.map(t => t.kind)).toContain('obrigatorios')

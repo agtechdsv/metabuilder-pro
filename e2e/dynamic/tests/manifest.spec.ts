@@ -1,4 +1,4 @@
-import { test as base, expect, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { test as base, expect, firefox, webkit, type Browser, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
 import { entrar, entrarComo } from '../lib/login'
@@ -10,7 +10,7 @@ import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -35,6 +35,7 @@ async function transmitirTela(ctx: BrowserContext, pagina: Page): Promise<() => 
   fs.mkdirSync(dir, { recursive: true })
   const quadro = path.join(dir, 'frame.jpg')
   const tmp = path.join(dir, 'frame.tmp')
+  if (pagina.context().browser()?.browserType().name() !== 'chromium') return async () => {} // o espelho da tela usa o protocolo do Chrome: Firefox e WebKit ficam sem ele
   const cdp = await ctx.newCDPSession(pagina)
   cdp.on('Page.screencastFrame', (f: { data: string; sessionId: number }) => {
     try { fs.writeFileSync(tmp, Buffer.from(f.data, 'base64')); fs.renameSync(tmp, quadro) } catch { /* o painel leu no mesmo instante: o próximo quadro cobre */ }
@@ -109,10 +110,13 @@ const test = base.extend<object, { contexto: BrowserContext }>({
   },
 })
 
+/** O navegador foi baixado pelo Playwright? (Firefox e WebKit só existem depois de o usuário autorizar o download no painel.) */
+const navegadorInstalado = (motor: 'firefox' | 'webkit') => { try { return fs.existsSync({ firefox, webkit }[motor].executablePath()) } catch { return false } }
+
 const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname, '..', 'manifests', 'vendas-pg.sample.json')
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
 /** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste; seguranca cria usuários e grupos temporários. */
-const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca')
+const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat')
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -420,6 +424,43 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
     test.beforeEach(async ({ page }) => { await entrar(page) })
 
     for (const t of planView(view, { types: TIPOS, auth: manifest.auth })) {
+      if (t.kind === 'compat_chrome' || t.kind === 'compat_firefox' || t.kind === 'compat_webkit') {
+        const nav = NAVEGADORES_COMPAT.find(n => n.kind === t.kind)!
+        {
+          test(t.title, async ({ page }) => {
+            // o Chrome é o da máquina (canal); Firefox e WebKit só existem depois de o usuário autorizar o download no painel
+            test.skip(nav.motor !== 'chromium' && !navegadorInstalado(nav.motor), `${nav.nome} não está instalado (o painel baixa o navegador quando você autoriza)`)
+            // Chrome: a página do teste. Firefox e WebKit: navegador próprio (a configuração fixa o canal do Chrome), com o login refeito nele
+            let proprio: Browser | undefined
+            let pg = page
+            if (nav.motor !== 'chromium') {
+              proprio = await { firefox, webkit }[nav.motor].launch({ channel: undefined, headless: process.env.E2E_HEADED !== '1', slowMo: Number(process.env.E2E_SLOWMO || 0) })
+              pg = await (await proprio.newContext({ baseURL: `http://localhost:${CONFIG.port}`, locale: 'pt-BR', viewport: { width: 1280, height: 800 } })).newPage()
+              await entrar(pg)
+            }
+            try {
+              const erros: string[] = []
+              pg.on('pageerror', e => erros.push(e.message.slice(0, 200)))
+              const resp = await pg.goto(view.path)
+              expect(resp?.status() ?? 0, `HTTP de ${view.path}`).toBeLessThan(400)
+              await pg.waitForLoadState('networkidle').catch(() => {})
+              await expect(pg.locator('main').first()).toBeVisible()
+              const texto = await pg.locator('body').innerText()
+              expect(texto).not.toMatch(/Application error|Internal Server Error|Unhandled Runtime Error|Erro ao carregar/i)
+              expect(texto.toLowerCase(), `o título "${view.title}" aparece na tela`).toContain(view.title.toLowerCase())
+              if (view.logicType === 'pesquisa_cadastro' && isSupportedView(view)) {
+                await aguardarLista(pg)
+                const noBanco = Number((await consultar(`select count(*) n from ${view.table}`))[0].n)
+                expect(await totalMostrado(pg), `total da tela × linhas da tabela ${view.table}`).toBe(noBanco)
+                await abrir(pg, `${view.path}/new`)
+                for (const f of camposEditaveis(view)) await expect.soft(pg.locator(`[name="${nomeDoCampo(f.column)}"]`).first(), `campo "${f.label}" (${f.column})`).toBeVisible()
+              }
+              expect(erros, 'erros de JavaScript na página').toEqual([])
+            } finally { await proprio?.close().catch(() => {}) }
+          })
+        }
+      }
+
       if (t.kind === 'abre') {
         test(t.title, async ({ page }) => {
           const erros: string[] = []

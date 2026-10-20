@@ -182,3 +182,21 @@ export async function archiveTechReport(runnerDir: string, destDir: string): Pro
   const file = out.stdout.trim().split(/\r?\n/).pop()?.trim()
   return out.code === 0 && file ? file : undefined
 }
+
+/**
+ * O tipo Compatibilidade roda também no Firefox e no WebKit (o motor do Safari). Os dois são navegadores do Playwright (cerca de 150 MB cada, baixados
+ * para a pasta do Playwright do usuário). Verifica na mesma pasta onde o Playwright os instala.
+ */
+export async function hasCompatBrowsers(): Promise<boolean> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const script = `$r = if ($env:PLAYWRIGHT_BROWSERS_PATH -and $env:PLAYWRIGHT_BROWSERS_PATH -ne '0') { $env:PLAYWRIGHT_BROWSERS_PATH } else { Join-Path $env:LOCALAPPDATA 'ms-playwright' }; if ((Get-ChildItem -Path $r -Directory -Filter 'firefox-*' -ErrorAction SilentlyContinue) -and (Get-ChildItem -Path $r -Directory -Filter 'webkit-*' -ErrorAction SilentlyContinue)) { 'OK' } else { 'MISSING' }`
+  const out = await Command.create('powershell', [...PS, UTF8 + script]).execute()
+  return out.stdout.includes('OK')
+}
+
+/** Baixa o Firefox e o WebKit do Playwright (só depois de o usuário aceitar). */
+export async function installCompatBrowsers(runnerDir: string): Promise<void> {
+  const { Command } = await import('@tauri-apps/plugin-shell')
+  const out = await Command.create('powershell', [...PS, UTF8 + `Set-Location '${q(runnerDir)}'; npx playwright install firefox webkit`]).execute()
+  if (out.code !== 0) throw new Error((out.stderr || out.stdout || 'falha ao instalar o Firefox e o WebKit').trim().split('\n').slice(-3).join(' '))
+}

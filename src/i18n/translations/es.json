@@ -4971,7 +4971,7 @@
     "type_visual": "Responsividad y accesibilidad",
     "type_visual_desc": "Tamaños de pantalla, contraste y lector de pantalla",
     "type_compat": "Compatibilidad",
-    "type_compat_desc": "Chrome, Firefox y Safari",
+    "type_compat_desc": "La pantalla abre, lista el total de la base y muestra el formulario en Chrome, Firefox y Safari (WebKit)",
     "type_carga": "Rendimiento y carga",
     "type_carga_desc": "Muchos accesos al mismo tiempo",
     "err_plan": "No se pudo generar el plan.",
@@ -5153,6 +5153,11 @@
     "err_db_unsupported": "Las pruebas automáticas aún solo soportan bases PostgreSQL y Oracle.",
     "err_jdk": "La app tiene backend Java y esta máquina no tiene JDK 21. Ejecute la app una vez desde la exportación (el IDE ofrece descargar el JDK portátil) o instale JDK 21.",
     "db_service": "Servicio",
-    "db_nocopy_help_script": "En Oracle la copia es otro esquema de la base: entregue el script al administrador de la base y luego informe aquí los datos de la copia."
+    "db_nocopy_help_script": "En Oracle la copia es otro esquema de la base: entregue el script al administrador de la base y luego informe aquí los datos de la copia.",
+    "compat_err": "No se pudo descargar Firefox y WebKit.",
+    "compat_ask_title": "¿Probar también en Firefox y Safari?",
+    "compat_ask_body": "Para probar en Firefox y Safari (WebKit), Playwright necesita descargar esos dos navegadores (unos 150 MB cada uno, de internet, a la carpeta de Playwright de su usuario). No se instala nada en el sistema y no reemplazan su navegador. Sin ellos solo se prueba Chrome y las otras pruebas quedan omitidas.",
+    "compat_ask_yes": "Descargar y ejecutar",
+    "compat_ask_no": "Ejecutar solo con Chrome"
   }
 }

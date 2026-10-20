@@ -13,6 +13,7 @@ export type PlannedKind =
   | 'botoes' | 'acoes_linha' | 'campos_tipos' | 'abas'
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar' | 'detalhe_adicionar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
+  | 'compat_chrome' | 'compat_firefox' | 'compat_webkit'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
 
@@ -32,7 +33,14 @@ export interface PlannedTest {
 export type PlanLang = 'pt' | 'en' | 'es'
 
 /** Tipos de teste: funcional só LÊ dados; integração GRAVA (cadastro, edição e exclusão com dados gerados) e exige um banco de teste. */
-export type TestType = 'funcional' | 'integracao' | 'seguranca'
+export type TestType = 'funcional' | 'integracao' | 'seguranca' | 'compat'
+
+/** Navegadores do tipo Compatibilidade: o Chrome já vem com a IDE; Firefox e WebKit (o motor do Safari) são baixados pelo Playwright, só com a permissão do usuário. */
+export const NAVEGADORES_COMPAT = [
+  { kind: 'compat_chrome', nome: 'Chrome', motor: 'chromium' },
+  { kind: 'compat_firefox', nome: 'Firefox', motor: 'firefox' },
+  { kind: 'compat_webkit', nome: 'Safari (WebKit)', motor: 'webkit' },
+] as const
 export interface PlanOptions {
   types?: TestType[]
   /** configuração de login do projeto (manifest.auth): os testes de segurança por grupo e por linha dependem dela */
@@ -65,6 +73,9 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     seg_nivel_nenhum: () => 'group access "none": the screen disappears from the menu and does not open by address',
     seg_nivel_leitura: () => 'group access "read": opens and shows the data, but does not allow creating, editing or deleting',
     seg_linha: () => 'row rule: whoever is not in the exception only sees the rows the rule allows',
+    compat_chrome: () => 'Chrome: the screen opens, lists the same total as the database and shows the new form',
+    compat_firefox: () => 'Firefox: the screen opens, lists the same total as the database and shows the new form',
+    compat_webkit: () => 'Safari (WebKit): the screen opens, lists the same total as the database and shows the new form',
     crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
     crud_reabrir: () => 'registration: reopening the record shows what was saved',
     crud_edicao: () => 'edit: changing and saving writes only the change',
@@ -115,6 +126,9 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     seg_nivel_nenhum: () => 'acceso "ninguno" al grupo: la pantalla desaparece del menú y no abre por la dirección',
     seg_nivel_leitura: () => 'acceso "lectura" al grupo: abre y muestra los datos, pero no permite crear, editar ni eliminar',
     seg_linha: () => 'regla por fila: quien no está en la excepción solo ve las filas que la regla permite',
+    compat_chrome: () => 'Chrome: la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
+    compat_firefox: () => 'Firefox: la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
+    compat_webkit: () => 'Safari (WebKit): la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
     crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
     crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
     crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
@@ -284,7 +298,14 @@ export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[]
     ...(types.includes('funcional') ? planoFuncional(v) : []),
     ...(types.includes('integracao') ? planoIntegracao(v) : []),
     ...(types.includes('seguranca') ? planoSeguranca(v, opts.auth) : []),
+    ...(types.includes('compat') ? planoCompat(v) : []),
   ]
+}
+
+/** Compatibilidade: a mesma verificação enxuta (abre, total da lista e formulário novo) em cada navegador. Só lê dados. */
+function planoCompat(v: ManifestView): PlannedTest[] {
+  if (v.logicType === 'gestao_acesso') return []
+  return NAVEGADORES_COMPAT.map(n => ({ kind: n.kind, title: `compatibilidade (${n.nome}): a tela abre sem erro${v.logicType === 'pesquisa_cadastro' && isSupportedView(v) ? ', lista o total do banco e mostra o formulário novo' : ' e mostra o título'}` }))
 }
 
 function planoFuncional(v: ManifestView): PlannedTest[] {

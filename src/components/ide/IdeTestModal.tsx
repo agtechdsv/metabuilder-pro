@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
-import { checkRunnerDir, clearLiveFrame, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
+import { checkRunnerDir, clearLiveFrame, archiveTechReport, hasFfmpeg, installFfmpeg, hasCompatBrowsers, installCompatBrowsers, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
 import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appHasAccessAdmin, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
@@ -61,7 +61,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [appAccess, setAppAccess] = useState<boolean | null>(null)
   const runnerDir = managedDir
   const [mode, setMode] = useState<TestWatchMode>('internal')
-  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca'); return v.length ? v : ['funcional'] })
+  const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat'); return v.length ? v : ['funcional'] })
   const toggleType = (id: TestType) => setTypes(prev => {
     const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     if (next.length === 0) return prev // pelo menos um tipo
@@ -91,6 +91,11 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [ffmpegErr, setFfmpegErr] = useState('')
   const [askFfmpeg, setAskFfmpeg] = useState<{ only?: ManifestView[] } | null>(null)
   const ffmpegSkipped = useRef(false)
+  // compatibilidade: Firefox e WebKit são baixados só com o aceite do usuário
+  const [compatBr, setCompatBr] = useState<'unknown' | 'ok' | 'missing' | 'installing'>('unknown')
+  const [compatErr, setCompatErr] = useState('')
+  const [askCompat, setAskCompat] = useState<{ only?: ManifestView[] } | null>(null)
+  const compatSkipped = useRef(false)
   const [reportMsg, setReportMsg] = useState<{ kind: 'busy' | 'ok' | 'err'; text: string } | null>(null)
   const [media, setMedia] = useState<{ kind: 'image' | 'video'; url: string; title: string } | null>(null)
   const reportFrame = useRef<HTMLIFrameElement | null>(null)
@@ -116,7 +121,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     { id: 'integracao', label: t('ide_tests.type_integracao', 'Integração'), desc: t('ide_tests.type_integracao_desc', 'Cadastro, edição e exclusão com dados gerados, gravando no banco de teste (e apagando no fim)'), available: true },
     { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Muitos acessos ao mesmo tempo'), available: false },
     { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissão da tabela, acesso por grupo e regra por linha, conferidos com usuários temporários'), available: true },
-    { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'Chrome, Firefox e Safari'), available: false },
+    { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'A tela abre, lista o total do banco e mostra o formulário em Chrome, Firefox e Safari (WebKit)'), available: true },
     { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Tamanhos de tela, contraste e leitor de tela'), available: false },
   ]
 
@@ -263,6 +268,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   useEffect(() => {
     if (!isOpen || !isTauri()) return
     hasFfmpeg().then(ok => setFfmpeg(ok ? 'ok' : 'missing')).catch(() => setFfmpeg('unknown'))
+    hasCompatBrowsers().then(ok => setCompatBr(ok ? 'ok' : 'missing')).catch(() => setCompatBr('unknown'))
   }, [isOpen])
 
   /** Baixa o ffmpeg (a pasta do motor é onde está o Playwright que sabe instalá-lo). */
@@ -271,6 +277,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     setFfmpeg('installing'); setFfmpegErr('')
     try { await installFfmpeg(runnerDir); const ok = await hasFfmpeg(); setFfmpeg(ok ? 'ok' : 'missing'); return ok }
     catch (e: any) { setFfmpeg('missing'); setFfmpegErr(`${t('ide_tests.ffmpeg_err', 'Não foi possível baixar o ffmpeg.')} (${e?.message || e})`); return false }
+  }
+
+  /** Baixa o Firefox e o WebKit (a pasta do motor é onde está o Playwright que sabe instalá-los). */
+  const enableCompat = async (): Promise<boolean> => {
+    if (!runnerDir) { setCompatErr(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return false }
+    setCompatBr('installing'); setCompatErr('')
+    try { await installCompatBrowsers(runnerDir); const ok = await hasCompatBrowsers(); setCompatBr(ok ? 'ok' : 'missing'); return ok }
+    catch (e: any) { setCompatBr('missing'); setCompatErr(`${t('ide_tests.compat_err', 'Não foi possível baixar o Firefox e o WebKit.')} (${e?.message || e})`); return false }
   }
 
   const loadManifest = useCallback(async () => {
@@ -389,6 +403,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
+    // compatibilidade: sem o Firefox e o WebKit, pergunta antes de baixar (ou roda só com o Chrome: os outros testes ficam "pulados")
+    if (!skipAsk && mode !== 'external' && types.includes('compat') && compatBr === 'missing' && !compatSkipped.current) { setAskCompat({ only }); return }
     // bancos e pilhas: PostgreSQL e Oracle, com app Node ou Java
     if (!dbTipo) { setRunError(t('ide_tests.err_db_unsupported', 'Os testes automáticos ainda só suportam bancos PostgreSQL e Oracle.')); return }
     const tipoApp = await detectAppKind(appDir).catch(() => 'node' as const)
@@ -702,7 +718,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                 {secOpen.type && <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {TEST_TYPES.map(tp => {
-                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca'
+                    const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca' || tp.id === 'compat'
                     const on = escolhivel && types.includes(tp.id as TestType)
                     return (
                       <button key={tp.id} type="button" disabled={!tp.available || running} onClick={() => escolhivel && toggleType(tp.id as TestType)}
@@ -909,6 +925,20 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               <button onClick={() => { setReport(null); setReportMsg(null); setDownloadMenu(false) }} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800"><X className="w-4 h-4" /></button>
             </div>
             <iframe ref={reportFrame} title={t('ide_tests.report_title', 'Relatório de testes')} srcDoc={report.html} sandbox="allow-scripts allow-modals allow-same-origin" className="flex-1 w-full bg-white" />
+          </div>
+        </div>
+      )}
+
+      {askCompat && (
+        <div className="fixed inset-0 z-[1000004] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-neutral-900 border border-neutral-700 p-5 shadow-2xl space-y-3">
+            <h3 className="text-sm font-bold text-white">{t('ide_tests.compat_ask_title', 'Testar também no Firefox e no Safari?')}</h3>
+            <p className="text-xs text-neutral-300">{t('ide_tests.compat_ask_body', 'Para testar no Firefox e no Safari (WebKit), o Playwright precisa baixar esses dois navegadores (cerca de 150 MB cada, da internet, para a pasta do Playwright do seu usuário). Nada é instalado no sistema e eles não substituem o seu navegador. Sem eles, só o Chrome é testado e os outros testes ficam como pulados.')}</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={async () => { const a = askCompat; setAskCompat(null); await enableCompat(); run(a.only, true) }} className="rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-xs font-bold text-white">{t('ide_tests.compat_ask_yes', 'Baixar e executar')}</button>
+              <button onClick={() => { const a = askCompat; setAskCompat(null); compatSkipped.current = true; run(a.only, true) }} className="rounded-lg border border-neutral-600 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800">{t('ide_tests.compat_ask_no', 'Executar só com o Chrome')}</button>
+            </div>
+            {compatErr && <p className="text-[11px] text-red-300">{compatErr}</p>}
           </div>
         </div>
       )}
