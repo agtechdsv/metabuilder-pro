@@ -80,6 +80,8 @@ export async function startTestRun(o: StartTestRunOptions): Promise<TestRunHandl
   try { await mkdir(liveDir, { recursive: true }) } catch { /* já existe */ }
 
   const script = [
+    // o quadro da execução anterior não pode aparecer no painel como se fosse desta
+    `Remove-Item -LiteralPath (Join-Path '${q(liveDir)}' 'frame.jpg') -Force -ErrorAction SilentlyContinue`,
     `Set-Location '${q(o.runnerDir)}'`,
     `$env:E2E_MANIFEST = '${q(manifestPath)}'`,
     `$env:E2E_REAL_APP_DIR = '${q(o.appDir)}'`,

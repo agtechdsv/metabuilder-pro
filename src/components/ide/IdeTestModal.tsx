@@ -44,10 +44,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
-  const [customDir, setRunnerDir] = useState('')
   const [appDir, setAppDir] = useState('')
-  // motor: instalado pela IDE (padrão) ou a pasta e2e do repositório (avançado); o que roda é sempre `runnerDir`
-  const [engineMode, setEngineModeState] = useState<'managed' | 'custom'>('managed')
+  // o motor é sempre o instalado pela IDE (pasta do motor em `managedDir`)
   const [managedDir, setManagedDir] = useState('')
   const [engineSt, setEngineSt] = useState<EngineStatus | null>(null)
   const [engineBusy, setEngineBusy] = useState<'' | 'files' | 'npm'>('')
@@ -59,8 +57,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [appDbHint, setAppDbHint] = useState('')
   const [appDbUrl, setAppDbUrl] = useState('')
   const [copyName, setCopyName] = useState('')
-  const runnerDir = engineMode === 'managed' ? managedDir : customDir
-  const setEngineMode = (m: 'managed' | 'custom') => { setEngineModeState(m); lsSet('mb_tests_engine_mode', m) }
+  const runnerDir = managedDir
   const [mode, setMode] = useState<TestWatchMode>('internal')
   const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca'); return v.length ? v : ['funcional'] })
   const toggleType = (id: TestType) => setTypes(prev => {
@@ -72,6 +69,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const planFor = useCallback((v: ManifestView) => planView(v, { types, auth: manifest?.auth }), [types, manifest])
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
+  const [secOpen, setSecOpen] = useState<Record<'type' | 'scope' | 'where', boolean>>({ type: true, scope: true, where: true })
   const [runTotal, setRunTotal] = useState(0)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [slow, setSlow] = useState(300)
@@ -117,15 +115,12 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Muitos acessos ao mesmo tempo'), available: false },
   ]
 
-  // lembra a pasta do motor (vale para todos os projetos) e a do app exportado (de cada projeto)
+  // lembra a pasta do app exportado (de cada projeto)
   useEffect(() => {
     if (!isOpen) return
-    setRunnerDir(lsGet('mb_tests_runner_dir'))
     setAppDir(lsGet(`mb_tests_app_dir_${projectId}`))
     setDbResult(null)
     if (isTauri()) loadDbSettings(projectSlug).then(setDbSettings).catch(() => {})
-    // quem já usava a pasta e2e continua nela; quem nunca escolheu começa pelo motor instalado pela IDE
-    setEngineModeState((lsGet('mb_tests_engine_mode') as 'managed' | 'custom') || (lsGet('mb_tests_runner_dir') ? 'custom' : 'managed'))
     if (!isTauri()) return
     engineE2eDir().then(setManagedDir).catch(() => {})
     engineStatus().then(setEngineSt).catch(() => setEngineSt(null))
@@ -244,7 +239,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   /** Baixa o ffmpeg (a pasta do motor é onde está o Playwright que sabe instalá-lo). */
   const enableVideo = async (): Promise<boolean> => {
-    if (!runnerDir) { setFfmpegErr(t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).')); return false }
+    if (!runnerDir) { setFfmpegErr(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return false }
     setFfmpeg('installing'); setFfmpegErr('')
     try { await installFfmpeg(runnerDir); const ok = await hasFfmpeg(); setFfmpeg(ok ? 'ok' : 'missing'); return ok }
     catch (e: any) { setFfmpeg('missing'); setFfmpegErr(`${t('ide_tests.ffmpeg_err', 'Não foi possível baixar o ffmpeg.')} (${e?.message || e})`); return false }
@@ -284,10 +279,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
   const setAll = (on: boolean) => setSelected(Object.fromEntries(views.map(v => [v.slug, on && planFor(v).length > 0])))
 
-  const pick = async (kind: 'runner' | 'app') => {
+  const pick = async () => {
     const dir = await pickFolder()
     if (!dir) return
-    if (kind === 'runner') { setRunnerDir(dir); lsSet('mb_tests_runner_dir', dir) } else { setAppDir(dir); lsSet(`mb_tests_app_dir_${projectId}`, dir) }
+    setAppDir(dir); lsSet(`mb_tests_app_dir_${projectId}`, dir)
   }
 
   // ---- histórico
@@ -351,44 +346,39 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     const toRun = only ?? chosen
     setViewing(null); setRunError(''); setSummary(null); setResults({}); setLogs([]); resultsRef.current = {}
     if (toRun.length === 0) { setRunError(t('ide_tests.err_none', 'Nenhum caso de uso para testar.')); return }
-    if (!runnerDir) { setRunError(t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).')); return }
+    if (!runnerDir) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
     if (!appDir) { setRunError(t('ide_tests.err_app', 'Escolha a pasta do app exportado que será testado.')); return }
     // vídeo das falhas: se falta o ffmpeg, pergunta uma vez (a menos que o usuário já tenha dito para não perguntar mais)
     if (!skipAsk && mode !== 'external' && ffmpeg === 'missing' && !ffmpegSkipped.current && lsGet('mb_tests_ffmpeg_never') !== '1') { setAskFfmpeg({ only }); return }
-    if (types.some(x => x !== 'funcional') && engineMode !== 'managed') { setRunError(t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')); return }
-    // bancos e pilhas: PostgreSQL e Oracle, com app Node ou Java. A pasta e2e do repositório só conhece Postgres + Node.
+    // bancos e pilhas: PostgreSQL e Oracle, com app Node ou Java
     if (!dbTipo) { setRunError(t('ide_tests.err_db_unsupported', 'Os testes automáticos ainda só suportam bancos PostgreSQL e Oracle.')); return }
     const tipoApp = await detectAppKind(appDir).catch(() => 'node' as const)
-    if (engineMode === 'custom' && (dbTipo === 'oracle' || tipoApp === 'java')) { setRunError(t('ide_tests.err_custom_stack', 'Projetos Oracle e apps com backend Java exigem o motor instalado pela IDE (seção 3).')); return }
     if (tipoApp === 'java' && !(await hasJdk().catch(() => false))) { setRunError(t('ide_tests.err_jdk', 'O app tem backend Java e a máquina não tem o JDK 21. Rode o app uma vez pela exportação (a IDE oferece baixar o JDK portátil) ou instale o JDK 21.')); return }
-    if (engineMode === 'managed') {
-      if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
-      if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
-    }
+    if (!engineSt?.installed) { setRunError(t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.')); return }
+    if (!(dbSettings.mode === 'copy' ? dbSettings.copyConfirmed : dbSettings.consentOriginal)) { setRunError(t('ide_tests.db_err_need_confirm', 'Confirme a opção acima para continuar.')); return }
     setRunning(true)
     try {
       let configPath: string | undefined
-      if (engineMode === 'managed') {
-        const dbUrl = await resolveDbUrl(dbSettings)
-        if (!dbUrl) { setRunning(false); setRunError(dbSettings.mode === 'copy' ? t('ide_tests.db_err_fields', 'Preencha servidor, porta, banco e usuário.') : t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
-        let robot = dbSettings.robot && dbSettings.robot.forDb === dbKey(dbUrl) ? dbSettings.robot : undefined
-        let noAuth = manifest.auth?.type === 'none'
-        if (!robot && !noAuth) {
-          const prep = await prepareRobot(dbSettings)
-          if (!prep.ok) { setRunning(false); setRunError(`${t('ide_tests.db_fail', 'Não foi possível conectar:')} ${prep.error}`); return }
-          robot = prep.robot; noAuth = !!prep.noAuth
-        }
-        configPath = await writeEngineConfig(projectSlug, {
-          appDir, dbUrl, user: robot?.user ?? '', password: robot?.password ?? '', mode: dbSettings.mode, copyConfirmed: dbSettings.copyConfirmed,
-          consentOriginal: dbSettings.consentOriginal, noAuth, allowRemote: dbSettings.mode === 'original' && dbSettings.consentOriginal,
-        })
+      const dbUrl = await resolveDbUrl(dbSettings)
+      if (!dbUrl) { setRunning(false); setRunError(dbSettings.mode === 'copy' ? t('ide_tests.db_err_fields', 'Preencha servidor, porta, banco e usuário.') : t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
+      let robot = dbSettings.robot && dbSettings.robot.forDb === dbKey(dbUrl) ? dbSettings.robot : undefined
+      let noAuth = manifest.auth?.type === 'none'
+      if (!robot && !noAuth) {
+        const prep = await prepareRobot(dbSettings)
+        if (!prep.ok) { setRunning(false); setRunError(`${t('ide_tests.db_fail', 'Não foi possível conectar:')} ${prep.error}`); return }
+        robot = prep.robot; noAuth = !!prep.noAuth
       }
+      configPath = await writeEngineConfig(projectSlug, {
+        appDir, dbUrl, user: robot?.user ?? '', password: robot?.password ?? '', mode: dbSettings.mode, copyConfirmed: dbSettings.copyConfirmed,
+        consentOriginal: dbSettings.consentOriginal, noAuth, allowRemote: dbSettings.mode === 'original' && dbSettings.consentOriginal,
+      })
       const chk = await checkRunnerDir(runnerDir)
       if (!chk.ok) { setRunning(false); setRunError(t('ide_tests.err_incomplete', 'A pasta do motor de testes está incompleta (falta: {missing}). Escolha a pasta e2e do projeto e rode npm install nela.').replace('{missing}', chk.missing.join(', '))); return }
       const startedAt = new Date()
       const artifactsDir = await artifactsDirFor(runId(startedAt))
       runMeta.current = { startedAt, views: toRun, mode, stopped: false, artifactsDir }
       setRunTotal(toRun.reduce((n, v) => n + planFor(v).length, 0)); setLiveOpen(true)
+      setFrameUrl(old => { if (old) URL.revokeObjectURL(old); return '' })
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
@@ -399,10 +389,16 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       const msg = String(e?.message || e || '')
       // o Tauri só libera pastas fora do perfil do usuário durante a sessão em que foram escolhidas: depois de reabrir a IDE é preciso escolher de novo
       setRunError(/forbidden|scope|not allowed|permission/i.test(msg)
-        ? t('ide_tests.err_reauth', 'O Windows pede para autorizar a pasta de novo depois que a IDE é reaberta. Clique em "{runner}" e em "{app}" e escolha as mesmas pastas.').replace('{runner}', t('ide_tests.runner', 'Motor de testes (pasta e2e)')).replace('{app}', t('ide_tests.app', 'App exportado a testar')) + `\n(${msg})`
+        ? t('ide_tests.err_reauth', 'O Windows pede para autorizar a pasta de novo depois que a IDE é reaberta. Clique em "{app}" e escolha a mesma pasta.').replace('{app}', t('ide_tests.app', 'App exportado a testar')) + `\n(${msg})`
         : (msg || t('ide_tests.err_start', 'Não foi possível iniciar os testes.')))
     }
   }
+
+  const secToggle = (k: 'type' | 'scope' | 'where') => (
+    <button type="button" onClick={() => setSecOpen(o => ({ ...o, [k]: !o[k] }))} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200">
+      {secOpen[k] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} {secOpen[k] ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')}
+    </button>
+  )
 
   /** volta a tela ao estado original: sem resultados, sem imagem do navegador e sem mensagens */
   const resetRun = () => {
@@ -503,7 +499,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         a.download = file; a.click(); URL.revokeObjectURL(a.href)
         return
       }
-      if (fmt === 'pdf' && !runnerDir) { setReportMsg({ kind: 'err', text: t('ide_tests.err_runner', 'Escolha a pasta do motor de testes (a pasta e2e).') }); return }
+      if (fmt === 'pdf' && !runnerDir) { setReportMsg({ kind: 'err', text: t('ide_tests.engine_hint', 'Instale o motor de testes na seção 3 antes de executar.') }); return }
       const { save } = await import('@tauri-apps/plugin-dialog')
       const { downloadDir, join } = await import('@tauri-apps/api/path')
       const filterName = fmt.toUpperCase()
@@ -621,7 +617,10 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     </div>
                     {liveOpen && (frameUrl
                       ? <img src={frameUrl} alt="" className="w-full block max-h-[46vh] object-contain bg-black" />
-                      : <div className="flex items-center justify-center gap-2 h-40 text-sm text-neutral-400"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.live_wait', 'Iniciando o navegador...')}</div>)}
+                      : <div className="flex flex-col items-center justify-center gap-3 h-56 bg-white text-sm text-neutral-600">
+                          <img src="/logo-white-v2.jpg" alt="MetaBuilder PRO" className="h-28 w-28 object-contain" />
+                          <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.live_wait', 'Iniciando o navegador...')}</span>
+                        </div>)}
                   </div>
                 </section>
               )
@@ -656,7 +655,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
             ) : (<>
               {/* 1. Tipo de teste */}
               <section>
-                <h3 className={lblSection}>1 · {t('ide_tests.type', 'Tipo de teste')}</h3>
+                <div className="flex items-center gap-3"><h3 className={`${lblSection} mr-auto`}>1 · {t('ide_tests.type', 'Tipo de teste')}</h3>{secToggle('type')}</div>
+                {secOpen.type && <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {TEST_TYPES.map(tp => {
                     const escolhivel = tp.id === 'funcional' || tp.id === 'integracao' || tp.id === 'seguranca'
@@ -674,12 +674,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                   })}
                 </div>
                 {types.some(x => x !== 'funcional') && (
-                  <p className={`mt-2 text-[11px] ${engineMode === 'managed' ? 'text-neutral-400' : 'text-amber-700 [html:not(.light)_&]:text-amber-400'}`}>
-                    {engineMode === 'managed'
-                      ? t('ide_tests.int_note', 'A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.')
-                      : t('ide_tests.int_needs_managed', 'A integração grava dados e só roda com o motor instalado pela IDE e um banco de teste confirmado (seção 3).')}
-                  </p>
+                  <p className="mt-2 text-[11px] text-neutral-400">{t('ide_tests.int_note', 'A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.')}</p>
                 )}
+                </>}
               </section>
 
               {/* 2. Casos de uso */}
@@ -691,7 +688,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                   <button onClick={loadManifest} disabled={loading || running} className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40">
                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> {t('ide_tests.reload', 'Atualizar plano')}
                   </button>
+                  {secToggle('scope')}
                 </div>
+                {secOpen.scope && <>
                 {loading && <p className="text-sm text-neutral-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('ide_tests.loading', 'Gerando o plano a partir do projeto...')}</p>}
                 {loadError && <p className="text-sm text-red-400">{loadError}</p>}
                 {target.type !== 'project' && <p className="text-sm text-neutral-400">{t('ide_tests.only_project', 'Por enquanto os testes rodam por projeto. Abra um projeto na IDE.')}</p>}
@@ -730,20 +729,19 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     )
                   })}
                 </div>
+                </>}
               </section>
 
               {/* 3. Onde rodar */}
               <section>
-                <h3 className={lblSection}>3 · {t('ide_tests.where', 'Onde rodar')}</h3>
+                <div className="flex items-center gap-3"><h3 className={`${lblSection} mr-auto`}>3 · {t('ide_tests.where', 'Onde rodar')}</h3>{secToggle('where')}</div>
+                {secOpen.where && <>
                 {desktop && (
                   <div className="mb-3 rounded-xl border border-neutral-700 bg-neutral-800/40 px-4 py-3 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-semibold text-white mr-2">{t('ide_tests.engine_title', 'Motor de testes')}</span>
-                      {([['managed', t('ide_tests.engine_managed', 'Instalado pela IDE (recomendado)')], ['custom', t('ide_tests.engine_custom', 'Pasta e2e do projeto (avançado)')]] as const).map(([id, label]) => (
-                        <button key={id} onClick={() => setEngineMode(id)} disabled={running} className={`rounded-lg border px-2.5 py-1 text-[11px] ${engineMode === id ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300' : 'border-neutral-700 text-neutral-400'}`}>{label}</button>
-                      ))}
                     </div>
-                    {engineMode === 'managed' && (
+                    {(
                       <div className="flex flex-wrap items-center gap-2 text-[11px]">
                         {engineBusy
                           ? <span className="flex items-center gap-1.5 text-neutral-400"><Loader2 className="w-3 h-3 animate-spin" /> {engineBusy === 'files' ? t('ide_tests.engine_installing_files', 'Gravando os arquivos do motor...') : t('ide_tests.engine_installing_npm', 'Instalando as dependências (npm install, pode levar um minuto)...')}</span>
@@ -764,24 +762,23 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     {engineErr && <p className="text-[11px] text-red-300 whitespace-pre-wrap">{engineErr}</p>}
                   </div>
                 )}
-                {desktop && engineMode === 'managed' && (
+                {desktop && (
                   <IdeTestDb settings={dbSettings} onChange={updateDb} appDbHint={appDbHint} busy={dbBusy} result={dbResult} engineReady={!!engineSt?.installed} disabled={running}
                     authType={manifest?.auth?.type ?? null} onTest={testDb} onPrepare={prepareDb} onRemove={removeRobot}
                     dbTipo={dbTipo ?? 'postgres'} canAutoCopy={dbTipo === 'postgres'}
                     copyName={copyName} onCopyName={setCopyName} onCreateCopy={createCopy} copyScript={buildCopyScript(appDbUrl, copyName || suggestCopyName(appDbUrl))} />
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {(([...(engineMode === 'custom' ? [['runner', t('ide_tests.runner', 'Motor de testes (pasta e2e)'), customDir]] : []), ['app', t('ide_tests.app', 'App exportado a testar'), appDir]]) as ['runner' | 'app', string, string][]).map(([kind, label, value]) => (
-                    <div key={kind}>
-                      <p className="text-xs text-neutral-400 mb-1">{label}</p>
-                      <button onClick={() => pick(kind)} disabled={running || !desktop} className="w-full flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 px-3 py-2 text-left text-xs disabled:opacity-50">
-                        <FolderOpen className="w-4 h-4 text-neutral-400 shrink-0" />
-                        <span className={`truncate ${value ? 'text-neutral-200' : 'text-neutral-500'}`}>{value || t('ide_tests.pick', 'Escolher pasta...')}</span>
-                      </button>
-                    </div>
-                  ))}
+                  <div>
+                    <p className="text-xs text-neutral-400 mb-1">{t('ide_tests.app', 'App exportado a testar')}</p>
+                    <button onClick={() => pick()} disabled={running || !desktop} className="w-full flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800/60 hover:bg-neutral-800 px-3 py-2 text-left text-xs disabled:opacity-50">
+                      <FolderOpen className="w-4 h-4 text-neutral-400 shrink-0" />
+                      <span className={`truncate ${appDir ? 'text-neutral-200' : 'text-neutral-500'}`}>{appDir || t('ide_tests.pick', 'Escolher pasta...')}</span>
+                    </button>
+                  </div>
                 </div>
                 {!desktop && <p className="text-xs text-neutral-500 mt-2">{t('ide_tests.desktop_only', 'Rodar os testes só funciona na IDE Desktop.')}</p>}
+                </>}
               </section>
 
               {/* 4. Modo */}

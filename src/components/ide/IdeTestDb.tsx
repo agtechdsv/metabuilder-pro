@@ -73,7 +73,7 @@ export function IdeTestDb({ settings: s, onChange, appDbHint, busy, result, engi
               <div className="flex flex-wrap items-center gap-2">
                 {canAutoCopy && <input value={copyName} onChange={e => onCopyName(e.target.value)} disabled={off} title={t('ide_tests.db_copy_name', 'Nome da cópia')} placeholder={t('ide_tests.db_copy_name', 'Nome da cópia')} className={input + ' md:w-56'} />}
                 {canAutoCopy && <button onClick={onCreateCopy} disabled={off || !engineReady || !copyName.trim()} className={btn}>{busy === 'copy' ? t('ide_tests.db_copying', 'Criando a cópia...') : t('ide_tests.db_copy_create', 'Criar a cópia automaticamente')}</button>}
-                <button onClick={() => setShowScript(v => !v)} className={btn}>{t('ide_tests.db_copy_script', 'Ver script para o administrador')}</button>
+                <button onClick={() => setShowScript(v => !v)} className={btn}>{showScript ? t('ide_tests.db_copy_script_hide', 'Ocultar script para o administrador') : t('ide_tests.db_copy_script', 'Ver script para o administrador')}</button>
               </div>
               {showScript && (
                 <div className="space-y-1">
