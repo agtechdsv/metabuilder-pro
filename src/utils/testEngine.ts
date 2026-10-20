@@ -125,6 +125,12 @@ export async function readAppDbUrl(appDir: string): Promise<string | null> {
   return dbUrlDoApp({ props: arquivos['backend\\src\\main\\resources\\application.properties'], env: arquivos['.env.local'] ?? arquivos['frontend\\.env.local'] })
 }
 
+/** O app foi exportado com a gestão de acesso (telas Usuários, Grupos e Permissões)? Vale para Node (app/) e Java (frontend/app/). */
+export async function appHasAccessAdmin(appDir: string): Promise<boolean> {
+  const r = await powershell(`$d = '${q(appDir)}'; if ((Test-Path -LiteralPath (Join-Path $d 'app\\(protected)\\acesso-usuarios')) -or (Test-Path -LiteralPath (Join-Path $d 'frontend\\app\\(protected)\\acesso-usuarios'))) { 'SIM' } else { 'NAO' }`)
+  return r.out.includes('SIM')
+}
+
 /** O app é Java (backend/ + frontend/) ou Node (uma pasta)? */
 export async function detectAppKind(appDir: string): Promise<'java' | 'node'> {
   const r = await powershell(`if ((Test-Path -LiteralPath (Join-Path '${q(appDir)}' 'backend\\pom.xml')) -and (Test-Path -LiteralPath (Join-Path '${q(appDir)}' 'frontend\\package.json'))) { 'JAVA' } else { 'NODE' }`)

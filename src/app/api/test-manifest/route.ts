@@ -23,7 +23,13 @@ export async function POST(request: Request) {
       backendStack: payload.backendStack,
       authStrategy: payload.authStrategy,
     }
-    const { ast } = await loadProjectAst(supabase, input)
+    // o app exportado tem a gestão de acesso (Usuários, Grupos e Permissões de Telas)? Então o plano inclui os grupos e os testes dela.
+    // Se o projeto não permite (login que não é por banco), cai para o plano sem ela.
+    let ast
+    if (payload.accessAdmin === true) {
+      try { ast = (await loadProjectAst(supabase, { ...input, accessAdmin: true })).ast } catch (e) { if (!(e instanceof ProjectSourceError)) throw e }
+    }
+    if (!ast) ast = (await loadProjectAst(supabase, input)).ast
     const viewSlugs = Array.isArray(payload.viewSlugs) ? payload.viewSlugs.map(String) : undefined
     return NextResponse.json(buildTestManifest(ast, { viewSlugs }))
   } catch (err: any) {

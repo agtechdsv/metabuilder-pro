@@ -9,7 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 import { isTauri } from '@/utils/tauriUtils'
 import { pickFolder } from '@/utils/exportToFolder'
 import { checkRunnerDir, archiveTechReport, hasFfmpeg, installFfmpeg, makePdf, openTestReport, readLiveFrame, startTestRun, workDir, writeManifest, type TestRunHandle, type TestWatchMode } from '@/utils/testRunner'
-import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
+import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appHasAccessAdmin, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { describeName, isSupportedView, planTitle, planView, type TestType } from '@/lib/testing/plan'
@@ -57,6 +57,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [appDbHint, setAppDbHint] = useState('')
   const [appDbUrl, setAppDbUrl] = useState('')
   const [copyName, setCopyName] = useState('')
+  // o app exportado tem a gestão de acesso? (null = ainda verificando). Muda o plano: grupos, usuário de teste no grupo de administração e os testes dela.
+  const [appAccess, setAppAccess] = useState<boolean | null>(null)
   const runnerDir = managedDir
   const [mode, setMode] = useState<TestWatchMode>('internal')
   const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca'); return v.length ? v : ['funcional'] })
@@ -261,14 +263,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   }
 
   const loadManifest = useCallback(async () => {
-    if (!target || target.type !== 'project') return
+    if (!target || target.type !== 'project' || appAccess === null) return
     setLoading(true); setLoadError('')
     try {
       const { data: { session } } = await createClient().auth.getSession()
       const res = await fetch('/api/test-manifest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
-        body: JSON.stringify({ projectId: target.id }),
+        body: JSON.stringify({ projectId: target.id, accessAdmin: appAccess }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || `Erro ${res.status}`)
@@ -280,9 +282,20 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [target, t])
+  }, [target, t, appAccess])
+
+  // verifica na pasta do app exportado se a gestão de acesso foi exportada; sem pasta (ou fora da IDE Desktop) vale "não"
+  useEffect(() => {
+    if (!isOpen) return
+    if (!appDir || !isTauri()) { setAppAccess(false); return }
+    let alive = true
+    appHasAccessAdmin(appDir).then(v => { if (alive) setAppAccess(v) }).catch(() => { if (alive) setAppAccess(false) })
+    return () => { alive = false }
+  }, [isOpen, appDir])
 
   useEffect(() => { if (isOpen && !manifest) loadManifest() }, [isOpen, manifest, loadManifest])
+  // trocou de app (com ou sem gestão de acesso): o plano muda, então gera de novo
+  useEffect(() => { if (manifest && appAccess !== null && !!manifest.auth?.access !== appAccess) loadManifest() }, [appAccess]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!isOpen) { setManifest(null); setResults({}); setSummary(null); setRunError(''); setViewing(null); setCompare(null); setTab('run') } }, [isOpen])
 
   const views = manifest?.views ?? []
@@ -376,7 +389,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       let configPath: string | undefined
       const dbUrl = await resolveDbUrl(dbSettings)
       if (!dbUrl) { setRunning(false); setRunError(dbSettings.mode === 'copy' ? t('ide_tests.db_err_fields', 'Preencha servidor, porta, banco e usuário.') : t('ide_tests.err_dburl', 'Não encontrei DATABASE_URL no .env.local do app exportado.')); return }
-      let robot = dbSettings.robot && dbSettings.robot.forDb === dbKey(dbUrl) ? dbSettings.robot : undefined
+      // o usuário de teste salvo vale se for deste banco e, quando o app tem gestão de acesso, se já foi posto num grupo (senão prepara de novo)
+      let robot = dbSettings.robot && dbSettings.robot.forDb === dbKey(dbUrl) && !(manifest.auth?.access && !dbSettings.robot.group) ? dbSettings.robot : undefined
       let noAuth = manifest.auth?.type === 'none'
       if (!robot && !noAuth) {
         const prep = await prepareRobot(dbSettings)
