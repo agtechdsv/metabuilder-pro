@@ -10,12 +10,13 @@ export default function TestingFeaturePage() {
   const { t } = useI18n()
 
   const types = [
+    // ordem pelo uso no mercado: funcional, integração, desempenho, segurança, compatibilidade, responsividade e acessibilidade
     { icon: <Play className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_functional_title'), desc: t('marketing_v2.features.testing.type_functional_desc') },
     { icon: <Database className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_integration_title'), desc: t('marketing_v2.features.testing.type_integration_desc') },
-    { icon: <Users className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_security_title'), desc: t('marketing_v2.features.testing.type_security_desc') },
-    { icon: <Smartphone className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_responsive_title'), desc: t('marketing_v2.features.testing.type_responsive_desc') },
-    { icon: <Globe className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_compat_title'), desc: t('marketing_v2.features.testing.type_compat_desc') },
     { icon: <Gauge className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_load_title'), desc: t('marketing_v2.features.testing.type_load_desc') },
+    { icon: <Users className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_security_title'), desc: t('marketing_v2.features.testing.type_security_desc') },
+    { icon: <Globe className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_compat_title'), desc: t('marketing_v2.features.testing.type_compat_desc') },
+    { icon: <Smartphone className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_responsive_title'), desc: t('marketing_v2.features.testing.type_responsive_desc') },
   ]
 
   return (
