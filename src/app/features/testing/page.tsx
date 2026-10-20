@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { FlaskConical, ShieldCheck, Database, Layers, Eye, FileText, ArrowLeft, Play, Users, Cpu } from 'lucide-react'
+import { FlaskConical, ShieldCheck, Database, Layers, Eye, FileText, ArrowLeft, Play, Users, Cpu, Smartphone, Globe, Gauge } from 'lucide-react'
 import Link from 'next/link'
 import { BottomCta } from '@/components/landing/BottomCta'
 import { useI18n } from '@/i18n/I18nContext'
@@ -13,6 +13,9 @@ export default function TestingFeaturePage() {
     { icon: <Play className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_functional_title'), desc: t('marketing_v2.features.testing.type_functional_desc') },
     { icon: <Database className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_integration_title'), desc: t('marketing_v2.features.testing.type_integration_desc') },
     { icon: <Users className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_security_title'), desc: t('marketing_v2.features.testing.type_security_desc') },
+    { icon: <Smartphone className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_responsive_title'), desc: t('marketing_v2.features.testing.type_responsive_desc') },
+    { icon: <Globe className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_compat_title'), desc: t('marketing_v2.features.testing.type_compat_desc') },
+    { icon: <Gauge className="w-5 h-5" />, title: t('marketing_v2.features.testing.type_load_title'), desc: t('marketing_v2.features.testing.type_load_desc') },
   ]
 
   return (

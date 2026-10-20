@@ -1864,7 +1864,7 @@
         "tech_desc": "El plan sale de la configuración: formulario, obligatorios, máscaras, grilla, filtros, exportación, pestañas, permisos y reglas de acceso. Usted ejecuta todo desde el IDE Desktop, sobre la aplicación que exportó.",
         "tag_nocode": "Cero código de prueba",
         "tag_safe": "Datos protegidos",
-        "types_title": "Tres tipos de prueba, elegidos por usted",
+        "types_title": "Seis tipos de prueba, elegidos por usted",
         "types_desc": "Marque lo que quiere ejecutar y ejecute. Los tipos se pueden combinar en la misma ejecución.",
         "type_functional_title": "Funcional",
         "type_functional_desc": "La pantalla abre, el formulario y los campos obligatorios, las máscaras, el total de la lista, el orden, los filtros, la exportación (CSV, JSON, Excel), las pestañas y un guion propio para cada tipo de pantalla. Solo lee datos.",
@@ -1881,7 +1881,13 @@
         "block4_title": "Informe, historial y comparación",
         "block4_desc": "Cada ejecución se convierte en un informe en PDF, HTML o JSON, con las pruebas más lentas y las evidencias de las fallas. El historial guarda las ejecuciones y permite comparar dos de ellas.",
         "footer_title": "Confianza en cada entrega.",
-        "footer_desc": "Genere la aplicación, ejecute las pruebas y entregue sabiendo qué se comprobó. Las pruebas acompañan su proyecto: cuando el Studio cambia, el plan cambia con él."
+        "footer_desc": "Genere la aplicación, ejecute las pruebas y entregue sabiendo qué se comprobó. Las pruebas acompañan su proyecto: cuando el Studio cambia, el plan cambia con él.",
+        "type_responsive_title": "Responsividad y accesibilidad",
+        "type_responsive_desc": "Tamaños de pantalla, contraste y lector de pantalla.",
+        "type_compat_title": "Compatibilidad",
+        "type_compat_desc": "Chrome, Firefox y Safari.",
+        "type_load_title": "Rendimiento y carga",
+        "type_load_desc": "Muchos accesos al mismo tiempo."
       }
     },
     "use_cases_page": {

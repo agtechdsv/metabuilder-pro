@@ -1777,7 +1777,7 @@
         "tech_desc": "The plan comes from the configuration: form, required fields, masks, grid, filters, export, tabs, permissions and access rules. You run everything from the Desktop IDE, on the app you exported.",
         "tag_nocode": "Zero test code",
         "tag_safe": "Protected data",
-        "types_title": "Three test types, chosen by you",
+        "types_title": "Six test types, chosen by you",
         "types_desc": "Tick what you want to run and execute. The types can be combined in the same run.",
         "type_functional_title": "Functional",
         "type_functional_desc": "The screen opens, the form and required fields, masks, list totals, sorting, filters, export (CSV, JSON, Excel), tabs and a dedicated script for each screen type. Read-only.",
@@ -1794,7 +1794,13 @@
         "block4_title": "Report, history and comparison",
         "block4_desc": "Each run becomes a report in PDF, HTML or JSON, with the slowest tests and the failure evidence. The history keeps the runs and lets you compare two of them.",
         "footer_title": "Confidence in every delivery.",
-        "footer_desc": "Generate the app, run the tests and deliver knowing what was checked. The tests follow your project: when the Studio changes, the plan changes with it."
+        "footer_desc": "Generate the app, run the tests and deliver knowing what was checked. The tests follow your project: when the Studio changes, the plan changes with it.",
+        "type_responsive_title": "Responsiveness and accessibility",
+        "type_responsive_desc": "Screen sizes, contrast and screen reader.",
+        "type_compat_title": "Compatibility",
+        "type_compat_desc": "Chrome, Firefox and Safari.",
+        "type_load_title": "Performance and load",
+        "type_load_desc": "Many simultaneous accesses."
       }
     },
     "use_cases_page": {
