@@ -1,26 +1,26 @@
 {
-  "v1.0.10": {
-    "date": "2026-10-19",
+  "v1.0.11": {
+    "date": "2026-10-20",
     "pt": [
-      "Ações Customizadas em Testes Funcionais: Agora é possível navegar e abrir telas complementares pré-filtradas pelo registro selecionado durante a execução de testes.",
-      "Construtor de Fluxos e Testes de Integração Aprimorado: Nova experiência visual para conexão de etapas com validação automática contra ciclos e maior precisão no encadeamento de fluxos.",
-      "Maior Rastreabilidade de Testes: Visualize claramente o motivo de testes pulados diretamente no painel, histórico e relatórios de execução.",
-      "Ação Rápida de Visualização no Gantt: Visualize registros de forma segura diretamente da visão Gantt sem risco de alterações acidentais.",
-      "Compatibilidade Avançada com Banco de Dados Oracle: Aprimoramento nas políticas de segurança em nível de linha e sincronização otimizada de cenários de uso corporativos."
+      "Nova Interface do Painel de Testes: navegação mais limpa e produtiva com seções retráteis organizadas e a nova opção de ocultar scripts durante a execução.",
+      "Transição Visual Fluida nos Testes: exibição aprimorada com fixação de logo até a renderização do primeiro quadro ao vivo.",
+      "Instalação Nativa de Testes E2E: configuração simplificada do motor de testes diretamente pela IDE, eliminando a dependência de pastas manuais no projeto.",
+      "Maior Compatibilidade com Bancos Oracle: refinamento nos filtros de segurança em nível de linha (RLS), aceitando aliases em subconsultas de forma mais flexível.",
+      "Aprimoramento na Replicação de Casos de Uso: sincronização mais robusta de relações, enumerações e prioridades de tarefas entre ambientes PostgreSQL e Oracle."
     ],
     "en": [
-      "Custom Row Actions in Functional Tests: Navigate seamlessly to targeted screens pre-filtered by the selected record during test execution.",
-      "Enhanced Integration Test Flow Builder: Improved visual experience for linking steps with automatic cycle detection and robust workflow chaining.",
-      "Transparent Test Reporting: Clearly inspect skip reasons for bypassed test cases across dashboards, history logs, and reports.",
-      "Safe Preview in Gantt Views: View complete record details directly from Gantt charts without triggering accidental updates.",
-      "Expanded Oracle Database Compatibility: Smoother row-level security policy support and optimized enterprise use case synchronization."
+      "Enhanced Testing Panel Interface: cleaner, more productive navigation with collapsible sections and a new option to hide scripts during execution.",
+      "Smooth Visual Feedback in Live Tests: improved experience with persistent logo display until the first live frame is rendered.",
+      "Seamless E2E Test Setup: integrated testing engine directly installed via the IDE, removing manual folder configurations.",
+      "Extended Oracle Database Compatibility: advanced row-level security (RLS) filter enhancements for flexible subquery aliasing in Oracle.",
+      "Optimized Use Case Synchronization: improved accuracy when replicating task priorities, enumerations, and relationships between PostgreSQL and Oracle."
     ],
     "es": [
-      "Acciones Personalizadas en Pruebas Funcionales: Ahora es posible navegar y abrir pantallas vinculadas prefiltradas según el registro seleccionado durante las pruebas.",
-      "Constructor de Flujos de Integración Optimizado: Nueva experiencia visual para conectar etapas con prevención automática de ciclos y mayor solidez en los flujos.",
-      "Mayor Transparencia en Reportes de Pruebas: Consulte el motivo exacto de las pruebas omitidas directamente en el panel, historial y reportes.",
-      "Vista Rápida Segura en Gráficos Gantt: Abra y consulte registros directamente desde la vista Gantt sin riesgo de guardados o modificaciones accidentales.",
-      "Compatibilidad Avanzada con Oracle: Mejoras en las políticas de seguridad a nivel de fila y sincronización optimizada de casos de uso empresariales."
+      "Nueva Interfaz del Panel de Pruebas: navegación más limpia y organizada con secciones plegables y un nuevo botón para ocultar scripts durante la ejecución.",
+      "Transición Visual Fluida en Pruebas: experiencia mejorada con logotipo fijo hasta la carga del primer cuadro en vivo.",
+      "Configuración Nativa de Pruebas E2E: integración directa del motor de pruebas a través del IDE, eliminando la necesidad de carpetas manuales.",
+      "Mayor Compatibilidad con Bases de Datos Oracle: mejoras avanzadas en las políticas de seguridad a nivel de fila (RLS), admitiendo alias en subconsultas con mayor flexibilidad.",
+      "Sincronización Optimizada de Casos de Uso: mayor consistencia al replicar relaciones, enumeraciones y prioridades de tareas entre entornos PostgreSQL y Oracle."
     ]
   },
   "v1.0.0": {
