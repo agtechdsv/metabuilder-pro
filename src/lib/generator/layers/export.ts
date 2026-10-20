@@ -180,7 +180,7 @@ ${filterCode}
 `
 }
 
-const ROW_SELECT = `'use client'
+const ROW_SELECT = (t: { select_all: string; select_row: string }) => `'use client'
 
 import React from 'react'
 
@@ -189,6 +189,7 @@ export function SelectAllBox() {
   return (
     <input
       type="checkbox"
+      aria-label={${JSON.stringify(t.select_all)}}
       className="rounded-md border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
       onChange={e => {
         const table = e.currentTarget.closest('table')
@@ -205,6 +206,7 @@ export function RowSelectBox({ value }: { value: string | number }) {
     <input
       type="checkbox"
       data-mb-row-select=""
+      aria-label={${JSON.stringify(t.select_row)}}
       value={String(value)}
       className="rounded-md border-neutral-300 dark:border-neutral-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
       onChange={() => window.dispatchEvent(new Event('mb-selection'))}
@@ -400,7 +402,7 @@ ${entries.join('\n')}
   files.set('app/api/export/[slug]/route.ts', API_ROUTE(guard, authOn ? 'user.email' : "''"))
 
   const l = dict.list as any
-  files.set('components/RowSelect.tsx', ROW_SELECT)
+  files.set('components/RowSelect.tsx', ROW_SELECT({ select_all: l.select_all, select_row: l.select_row }))
   files.set('components/ExportMenu.tsx', EXPORT_MENU({
     title: l.export_format_title, xlsx: l.export_xlsx, csv: l.export_csv, json: l.export_json, failed: l.export_failed,
   }))

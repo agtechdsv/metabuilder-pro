@@ -470,6 +470,19 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             await expect(page.locator('main').first(), `conteúdo visível no ${tela.nome}`).toBeVisible()
             const m = await page.evaluate(() => ({ rolagem: document.documentElement.scrollWidth, janela: window.innerWidth }))
             // 2 px de folga: arredondamentos de zoom e de borda
+            // no celular o menu é uma gaveta: começa fechada, o botão do cabeçalho abre e fecha
+            if (tela.width < 768) {
+              const botao = page.locator('button[aria-expanded]').first()
+              const gaveta = page.locator('aside').first()
+              if (!(await botao.count())) achados.push(`${tela.nome}: sem o botão que abre o menu`)
+              else {
+                if (await gaveta.isVisible()) achados.push(`${tela.nome}: o menu começa aberto e cobre a tela`)
+                await botao.click()
+                if (!(await gaveta.isVisible())) achados.push(`${tela.nome}: o botão não abriu o menu`)
+                await botao.click({ force: true }).catch(() => {})
+                await expect.poll(() => gaveta.isVisible(), { message: `${tela.nome}: o botão fecha o menu`, timeout: 3000 }).toBe(false).catch(() => achados.push(`${tela.nome}: o botão não fechou o menu`))
+              }
+            }
             if (m.rolagem > m.janela + 2) achados.push(`${tela.nome} (${tela.width}px): a página rola na horizontal (${m.rolagem}px de conteúdo para ${m.janela}px de janela)`)
           }
           expect(achados.length, achados.join(' | ')).toBe(0)
@@ -488,6 +501,7 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               const texto = (el: Element) => (el.textContent || '').replace(/\s+/g, ' ').trim()
               const nomeDe = (el: Element): string => {
                 const aria = el.getAttribute('aria-label')?.trim(); if (aria) return aria
+                const alt = el.getAttribute('alt')?.trim(); if (alt) return alt
                 const por = el.getAttribute('aria-labelledby'); if (por) { const t = por.split(/\s+/).map(id => document.getElementById(id)?.textContent?.trim() || '').join(' ').trim(); if (t) return t }
                 const t = texto(el); if (t) return t
                 const titulo = el.getAttribute('title')?.trim(); if (titulo) return titulo
@@ -499,9 +513,10 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
                 if (nomeDe(el) && !el.matches('button, a, [role=button]')) return true
                 const id = el.getAttribute('id'); if (id && document.querySelector('label[for="' + CSS.escape(id) + '"]')) return true
                 if (el.closest('label')) return true
+                if (el.getAttribute('placeholder')?.trim()) return true // o navegador usa o placeholder como nome quando não há rótulo
                 return false
               }
-              const descr = (el: Element) => el.tagName.toLowerCase() + (el.getAttribute('name') ? `[name=${el.getAttribute('name')}]` : '') + (el.id ? '#' + el.id : '') + (texto(el) ? ` "${texto(el).slice(0, 30)}"` : '')
+              const descr = (el: Element) => el.tagName.toLowerCase() + (el.getAttribute('name') ? `[name=${el.getAttribute('name')}]` : '') + (el.id ? '#' + el.id : '') + (el.getAttribute('type') ? `[type=${el.getAttribute('type')}]` : '') + (el.getAttribute('href') ? `[href=${el.getAttribute('href')!.slice(0, 40)}]` : '') + (el.getAttribute('placeholder') ? `[placeholder=${el.getAttribute('placeholder')}]` : '') + (texto(el) ? ` "${texto(el).slice(0, 30)}"` : '')
               const sem: string[] = []
               const semAlt = [...document.querySelectorAll('img')].filter(i => visivel(i) && !i.hasAttribute('alt')).map(descr)
               const semNomeBotao = [...document.querySelectorAll('button, a[href], [role=button]')].filter(e => visivel(e) && !nomeDe(e)).map(descr)

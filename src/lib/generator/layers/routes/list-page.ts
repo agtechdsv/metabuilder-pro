@@ -390,6 +390,8 @@ ${rowButtonsHtml}
         <div className="flex items-center gap-2">
           <Link
             href={page > 1 ? makeQuery({ page: page - 1 }) : '#'}
+            aria-label="${dict.list.prev_page}"
+            aria-disabled={page <= 1}
             className={"p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all " + (page <= 1 ? "opacity-30 pointer-events-none" : "")}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -411,6 +413,8 @@ ${rowButtonsHtml}
 
           <Link
             href={page < totalPages ? makeQuery({ page: page + 1 }) : '#'}
+            aria-label="${dict.list.next_page}"
+            aria-disabled={page >= totalPages}
             className={"p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all " + (page >= totalPages ? "opacity-30 pointer-events-none" : "")}
           >
             <ChevronRight className="w-4 h-4" />

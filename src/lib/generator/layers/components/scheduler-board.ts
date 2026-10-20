@@ -479,6 +479,7 @@ export function DynamicScheduler({
             <button
               type="button"
               onClick={() => navigate('prev')}
+              aria-label="Período anterior"
               className="p-1.5 hover:bg-white dark:hover:bg-neutral-900 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-90 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -493,6 +494,7 @@ export function DynamicScheduler({
             <button
               type="button"
               onClick={() => navigate('next')}
+              aria-label="Próximo período"
               className="p-1.5 hover:bg-white dark:hover:bg-neutral-900 rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-90 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />

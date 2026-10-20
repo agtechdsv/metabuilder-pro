@@ -1,6 +1,7 @@
 import { RouteNode, AppAST, AnalyticsWidget } from '../../ast'
 import { renderGridCellValue, toPascalCase } from './helpers'
 import { biEngineEnabled } from '../bi-engine'
+import { getGeneratorDictionary } from '../../i18n'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Analytics / Dashboard BI Page Generator (Server-Side Aggregation)
@@ -9,6 +10,7 @@ import { biEngineEnabled } from '../bi-engine'
 export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
   // Com SQL direto no banco, os widgets são agregados no banco pelo motor de BI (app/actions/bi.ts)
   const useBiEngine = biEngineEnabled(ast)
+  const dict = getGeneratorDictionary(ast.targetLanguage)
   const mn = route.modelName
   const mnLower = mn.toLowerCase()
   const widgets = route.analyticsConfig?.widgets || []
@@ -976,7 +978,7 @@ ${useBiEngine ? '        seriesData={seriesData}\n        prevData={prevData}\n 
                 <thead>
                   <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
                     <th className="w-12 px-6 py-4">
-                      <input type="checkbox" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                      <input type="checkbox" aria-label="${dict.list.select_all}" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
                     </th>
 ${thCells}
                     <th className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap text-right">
@@ -995,7 +997,7 @@ ${thCells}
                     paginatedData.map((item: any, idx: number) => (
                       <tr key={idx} className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors">
                         <td className="w-12 px-6 py-4">
-                          <input type="checkbox" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                          <input type="checkbox" aria-label="${dict.list.select_row}" className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
                         </td>
 ${tdCells}
                         <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -1038,6 +1040,7 @@ ${tdCells}
               <div className="flex items-center gap-1">
                 <Link
                   href={makeQuery({ page: Math.max(1, page - 1) })}
+                  aria-label="${dict.list.prev_page}"
                   className={"p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 transition-all " + (page <= 1 ? 'opacity-30 pointer-events-none' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800')}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -1057,6 +1060,7 @@ ${tdCells}
                 })}
                 <Link
                   href={makeQuery({ page: Math.min(totalPages, page + 1) })}
+                  aria-label="${dict.list.next_page}"
                   className={"p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 transition-all " + (page >= totalPages ? 'opacity-30 pointer-events-none' : 'hover:bg-neutral-100 dark:hover:bg-neutral-800')}
                 >
                   <ChevronRight className="w-4 h-4" />

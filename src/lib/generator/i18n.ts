@@ -6,6 +6,7 @@ export interface GeneratorDictionary {
     use_case: string
     access: string
     toggle_theme: string
+    toggle_menu: string
     user_default: string
     logout: string
     logout_short: string
@@ -45,6 +46,10 @@ export interface GeneratorDictionary {
     show: string
     lines: string
     total: string
+    prev_page: string
+    next_page: string
+    select_all: string
+    select_row: string
     search: string
     clear: string
     new_record: string
@@ -128,6 +133,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       use_case: 'CASO DE USO',
       access: 'ACESSAR',
       toggle_theme: 'Alternar Tema',
+      toggle_menu: 'Abrir ou fechar o menu',
       user_default: 'Usuário',
       logout: 'Sair do Sistema',
       logout_short: 'Sair',
@@ -167,6 +173,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       show: 'Exibir',
       lines: 'Linhas',
       total: 'Total:',
+      prev_page: 'Página anterior',
+      next_page: 'Próxima página',
+      select_all: 'Selecionar todas as linhas',
+      select_row: 'Selecionar linha',
       search: 'Pesquisar',
       clear: 'Limpar',
       new_record: 'Novo Registro',
@@ -248,6 +258,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       use_case: 'USE CASE',
       access: 'ACCESS',
       toggle_theme: 'Toggle Theme',
+      toggle_menu: 'Open or close the menu',
       user_default: 'User',
       logout: 'Log out',
       logout_short: 'Exit',
@@ -287,6 +298,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       show: 'Show',
       lines: 'Lines',
       total: 'Total:',
+      prev_page: 'Previous page',
+      next_page: 'Next page',
+      select_all: 'Select all rows',
+      select_row: 'Select row',
       search: 'Search',
       clear: 'Clear',
       new_record: 'New Record',
@@ -368,6 +383,7 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       use_case: 'CASO DE USO',
       access: 'ACCEDER',
       toggle_theme: 'Cambiar Tema',
+      toggle_menu: 'Abrir o cerrar el menú',
       user_default: 'Usuario',
       logout: 'Cerrar Sesión',
       logout_short: 'Salir',
@@ -407,6 +423,10 @@ const DICTIONARIES: Record<GeneratorLanguage, GeneratorDictionary> = {
       show: 'Mostrar',
       lines: 'Líneas',
       total: 'Total:',
+      prev_page: 'Página anterior',
+      next_page: 'Página siguiente',
+      select_all: 'Seleccionar todas las filas',
+      select_row: 'Seleccionar fila',
       search: 'Buscar',
       clear: 'Limpiar',
       new_record: 'Nuevo Registro',

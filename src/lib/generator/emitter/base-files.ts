@@ -495,9 +495,14 @@ interface AppSidebarProps {
   navItems: NavItem[]
   isCollapsed: boolean
   setIsCollapsed: (v: boolean) => void
+  /** celular: o menu vira uma gaveta sobre a tela (fechada = escondida), em vez de uma coluna ao lado do conteúdo */
+  isMobile?: boolean
 }
 
-export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, setIsCollapsed }: AppSidebarProps) {
+export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed: collapsedState, setIsCollapsed, isMobile = false }: AppSidebarProps) {
+  // na gaveta do celular o menu aberto mostra os nomes completos (nunca a versão só de ícones)
+  const isCollapsed = collapsedState && !isMobile
+  const hidden = isMobile && collapsedState
   const pathname = usePathname()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
   const [clientUser, setClientUser] = useState<any>(null)
@@ -592,6 +597,7 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
         key={item.id}
         href={href}
         target={item.type === 'link' ? '_blank' : undefined}
+        onClick={() => { if (isMobile) setIsCollapsed(true) }}
         className={\`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative
           \${active
             ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
@@ -613,8 +619,9 @@ export function AppSidebar({ projectName, projectSlug, navItems, isCollapsed, se
 
   return (
     <aside
-      style={{ width: isCollapsed ? 80 : 288, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
-      className={\`sticky top-0 h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 z-[100] flex flex-col shrink-0 \${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}\`}
+      style={isMobile ? { width: 288, transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1), visibility 0.3s' } : { width: isCollapsed ? 80 : 288, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)' }}
+      aria-hidden={hidden || undefined}
+      className={\`\${isMobile ? \`fixed inset-y-0 left-0 \${hidden ? '-translate-x-full invisible' : 'translate-x-0 shadow-2xl'}\` : 'sticky top-0'} h-screen bg-white/80 dark:bg-black/40 backdrop-blur-xl border-r border-neutral-200/50 dark:border-white/5 z-[100] flex flex-col shrink-0 \${isCollapsed ? 'overflow-visible' : 'overflow-hidden'}\`}
     >
       <div className="h-16 flex items-center px-6 border-b border-neutral-200/50 dark:border-white/5 shrink-0">
         <Link href="/" className="flex items-center gap-3 group relative">
@@ -671,6 +678,15 @@ const PROJECT_NAME = '${ast.projectName}'
 
 function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  // celular (até 767 px): o menu é uma gaveta sobre a tela e começa fechada
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const apply = () => { setIsMobile(mq.matches); if (mq.matches) setIsCollapsed(true) }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isIframe, setIsIframe] = useState(false)
@@ -723,11 +739,15 @@ function ProtectedLayoutContent({ children }: { children: React.ReactNode }) {
         navItems={NAV_ITEMS as any}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
+        isMobile={isMobile}
       />
+      {isMobile && !isCollapsed && <div className="fixed inset-0 z-[95] bg-black/40" onClick={() => setIsCollapsed(true)} aria-hidden="true" />}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-neutral-200/50 dark:border-white/5 bg-white/80 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-[90] flex items-center px-6 gap-4">
+        <header className="h-16 border-b border-neutral-200/50 dark:border-white/5 bg-white/80 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-[90] flex items-center px-3 sm:px-6 gap-2 sm:gap-4">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label="${d.nav.toggle_menu}"
+            aria-expanded={!isCollapsed}
             className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400 hover:text-indigo-600 transition-all hover:scale-105 active:scale-95"
           >
             {isCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
