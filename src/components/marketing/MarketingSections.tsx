@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -595,6 +595,21 @@ export function MarketingSections() {
                       {t('marketing_v2.features.logs.hero_desc') || 'Monitore o tráfego do túnel local em tempo real, execuções de processos BPM e mutações SQL de forma ultra rápida.'}
                    </p>
                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
+                   </div>
+                </div>
+             </Link>
+
+             <Link href="/features/testing" className="group lg:col-span-3 p-8 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 transition-all duration-500 flex flex-col md:flex-row items-start gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shrink-0 shadow-inner border border-neutral-200 dark:border-neutral-800 group-hover:scale-110 transition-transform duration-500">
+                   <FlaskConical className="w-7 h-7 text-indigo-500" />
+                </div>
+                <div>
+                   <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.navbar.testing')}</h3>
+                   <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+                      {t('marketing_v2.features.testing.hero_desc')}
+                   </p>
+                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
                       {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
                    </div>
                 </div>

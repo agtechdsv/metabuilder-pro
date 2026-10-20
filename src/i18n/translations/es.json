@@ -1464,7 +1464,8 @@
       "infrastructure": "Infraestructura",
       "ide_desktop": "IDE de Escritorio (Pro)",
       "git_architecture": "Arquitectura Git",
-      "ai_studio": "AI Studio"
+      "ai_studio": "AI Studio",
+      "testing": "Entorno de Pruebas"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",
@@ -1854,6 +1855,33 @@
         "eject_table_row_lockin": "Lock-in",
         "eject_table_row_lockin_node": "Cero Lock-in (Código abierto estándar)",
         "eject_table_row_lockin_java": "Cero Lock-in (Maven + Spring estándar)"
+      },
+      "testing": {
+        "hero_title": "Entorno de Pruebas.",
+        "hero_title_highlight": "Nace de su Studio.",
+        "hero_desc": "Cada caso de uso configurado en el Studio genera su propio plan de pruebas automáticas, sin escribir una línea de prueba. ¿Creó o cambió un caso de uso? El plan cambia solo.",
+        "tech_title": "Del Studio a la prueba, sin código",
+        "tech_desc": "El plan sale de la configuración: formulario, obligatorios, máscaras, grilla, filtros, exportación, pestañas, permisos y reglas de acceso. Usted ejecuta todo desde el IDE Desktop, sobre la aplicación que exportó.",
+        "tag_nocode": "Cero código de prueba",
+        "tag_safe": "Datos protegidos",
+        "types_title": "Tres tipos de prueba, elegidos por usted",
+        "types_desc": "Marque lo que quiere ejecutar y ejecute. Los tipos se pueden combinar en la misma ejecución.",
+        "type_functional_title": "Funcional",
+        "type_functional_desc": "La pantalla abre, el formulario y los campos obligatorios, las máscaras, el total de la lista, el orden, los filtros, la exportación (CSV, JSON, Excel), las pestañas y un guion propio para cada tipo de pantalla. Solo lee datos.",
+        "type_integration_title": "Integración",
+        "type_integration_desc": "Alta, reabrir, edición y eliminación con datos generados, comprobados en la base campo por campo. Todo lo que la prueba crea se borra al final, y los restos de una ejecución interrumpida se limpian en la siguiente.",
+        "type_security_title": "Seguridad",
+        "type_security_desc": "Permisos de la tabla, acceso por grupo (ninguno, lectura), regla de acceso por fila y las pantallas de usuarios, grupos y permisos. Usa usuarios y grupos temporales, borrados al final.",
+        "block1_title": "Su base de datos queda protegida",
+        "block1_desc": "Las pruebas se ejecutan en una copia de la base: el IDE crea la copia en el mismo servidor (PostgreSQL) o entrega el script al administrador. La base original solo se usa con su consentimiento. Al final, el motor comprueba que ningún dato existente cambió.",
+        "block2_title": "PostgreSQL y Oracle, Node y Java",
+        "block2_desc": "El motor prueba la aplicación exportada en las dos pilas: Node y Java Spring, contra PostgreSQL u Oracle. La base de prueba se inyecta en la aplicación sin tocar el código exportado.",
+        "block3_title": "Siga en vivo",
+        "block3_desc": "Vea el navegador de prueba dentro del panel del IDE mientras hace clic, completa y comprueba. Cuando una prueba falla, se guarda la captura de pantalla y se puede activar el video de la falla.",
+        "block4_title": "Informe, historial y comparación",
+        "block4_desc": "Cada ejecución se convierte en un informe en PDF, HTML o JSON, con las pruebas más lentas y las evidencias de las fallas. El historial guarda las ejecuciones y permite comparar dos de ellas.",
+        "footer_title": "Confianza en cada entrega.",
+        "footer_desc": "Genere la aplicación, ejecute las pruebas y entregue sabiendo qué se comprobó. Las pruebas acompañan su proyecto: cuando el Studio cambia, el plan cambia con él."
       }
     },
     "use_cases_page": {

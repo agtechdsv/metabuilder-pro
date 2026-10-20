@@ -1377,7 +1377,8 @@
       "infrastructure": "Infrastructure",
       "ide_desktop": "Desktop IDE (Pro)",
       "git_architecture": "Git Architecture",
-      "ai_studio": "AI Studio"
+      "ai_studio": "AI Studio",
+      "testing": "Test Environment"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -1767,6 +1768,33 @@
         "eject_table_row_lockin": "Lock-in",
         "eject_table_row_lockin_node": "Zero Lock-in (Standard open source)",
         "eject_table_row_lockin_java": "Zero Lock-in (Standard Maven + Spring)"
+      },
+      "testing": {
+        "hero_title": "Test Environment.",
+        "hero_title_highlight": "Born from your Studio.",
+        "hero_desc": "Every use case configured in the Studio generates its own automated test plan, without writing a single line of test code. Created or changed a use case? The plan changes by itself.",
+        "tech_title": "From Studio to test, no code",
+        "tech_desc": "The plan comes from the configuration: form, required fields, masks, grid, filters, export, tabs, permissions and access rules. You run everything from the Desktop IDE, on the app you exported.",
+        "tag_nocode": "Zero test code",
+        "tag_safe": "Protected data",
+        "types_title": "Three test types, chosen by you",
+        "types_desc": "Tick what you want to run and execute. The types can be combined in the same run.",
+        "type_functional_title": "Functional",
+        "type_functional_desc": "The screen opens, the form and required fields, masks, list totals, sorting, filters, export (CSV, JSON, Excel), tabs and a dedicated script for each screen type. Read-only.",
+        "type_integration_title": "Integration",
+        "type_integration_desc": "Create, reopen, edit and delete with generated data, checked in the database field by field. Everything the test creates is deleted at the end, and leftovers from an interrupted run are cleaned on the next one.",
+        "type_security_title": "Security",
+        "type_security_desc": "Table permissions, group access (none, read-only), row-level access rules and the users, groups and permissions screens. Uses temporary users and groups, deleted at the end.",
+        "block1_title": "Your database stays protected",
+        "block1_desc": "Tests run on a copy of the database: the IDE creates the copy on the same server (PostgreSQL) or hands the script to the administrator. The original database is only used with your consent. At the end, the engine checks that no existing data changed.",
+        "block2_title": "PostgreSQL and Oracle, Node and Java",
+        "block2_desc": "The engine tests the exported app on both stacks: Node and Java Spring, against PostgreSQL or Oracle. The test database is injected into the app without touching the exported code.",
+        "block3_title": "Watch it live",
+        "block3_desc": "See the test browser inside the IDE panel as it clicks, fills in and checks. When a test fails, the screenshot is kept, and failure video can be turned on.",
+        "block4_title": "Report, history and comparison",
+        "block4_desc": "Each run becomes a report in PDF, HTML or JSON, with the slowest tests and the failure evidence. The history keeps the runs and lets you compare two of them.",
+        "footer_title": "Confidence in every delivery.",
+        "footer_desc": "Generate the app, run the tests and deliver knowing what was checked. The tests follow your project: when the Studio changes, the plan changes with it."
       }
     },
     "use_cases_page": {

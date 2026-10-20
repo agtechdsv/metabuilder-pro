@@ -1377,7 +1377,8 @@
       "infrastructure": "Infraestrutura",
       "ide_desktop": "IDE Desktop (Pro)",
       "git_architecture": "Arquitetura Git",
-      "ai_studio": "AI Studio"
+      "ai_studio": "AI Studio",
+      "testing": "Ambiente de Testes"
     },
     "hero": {
       "badge": "A Engine de Software do Futuro",
@@ -1767,6 +1768,33 @@
         "eject_table_row_lockin": "Lock-in",
         "eject_table_row_lockin_node": "Zero Lock-in (Código aberto padrão)",
         "eject_table_row_lockin_java": "Zero Lock-in (Maven + Spring padrão)"
+      },
+      "testing": {
+        "hero_title": "Ambiente de Testes.",
+        "hero_title_highlight": "Nasce do seu Studio.",
+        "hero_desc": "Cada caso de uso configurado no Studio gera o seu próprio plano de testes automáticos, sem escrever uma linha de teste. Criou ou alterou um caso de uso? O plano muda sozinho.",
+        "tech_title": "Do Studio ao teste, sem código",
+        "tech_desc": "O plano vem da configuração: formulário, obrigatórios, máscaras, grid, filtros, exportação, abas, permissões e regras de acesso. Você roda tudo de dentro da IDE Desktop, no app que exportou.",
+        "tag_nocode": "Zero código de teste",
+        "tag_safe": "Dados protegidos",
+        "types_title": "Três tipos de teste, escolhidos por você",
+        "types_desc": "Marque o que quer rodar e execute. Os tipos podem ser combinados na mesma rodada.",
+        "type_functional_title": "Funcional",
+        "type_functional_desc": "A tela abre, o formulário e os campos obrigatórios, as máscaras, o total da lista, a ordenação, os filtros, a exportação (CSV, JSON, Excel), as abas e um roteiro próprio para cada tipo de tela. Só lê dados.",
+        "type_integration_title": "Integração",
+        "type_integration_desc": "Cadastro, reabrir, edição e exclusão com dados gerados, conferidos no banco campo a campo. Tudo que o teste cria é apagado no fim, e as sobras de uma rodada interrompida são limpas na próxima.",
+        "type_security_title": "Segurança",
+        "type_security_desc": "Permissões da tabela, acesso por grupo (nenhum, leitura), regra de acesso por linha e as telas de usuários, grupos e permissões. Usa usuários e grupos temporários, apagados no fim.",
+        "block1_title": "Seu banco fica protegido",
+        "block1_desc": "Os testes rodam numa cópia do banco: a IDE cria a cópia no mesmo servidor (PostgreSQL) ou entrega o script ao administrador. O banco original só é usado com o seu consentimento. No fim, o motor confere que nenhum dado existente mudou.",
+        "block2_title": "PostgreSQL e Oracle, Node e Java",
+        "block2_desc": "O motor testa o app exportado nas duas pilhas: Node e Java Spring, contra PostgreSQL ou Oracle. O banco de teste é injetado no app, sem mexer no código exportado.",
+        "block3_title": "Acompanhe ao vivo",
+        "block3_desc": "Veja o navegador de teste dentro do painel da IDE enquanto ele clica, preenche e confere. Quando um teste falha, a captura de tela fica guardada, e o vídeo da falha pode ser ativado.",
+        "block4_title": "Relatório, histórico e comparação",
+        "block4_desc": "Cada rodada vira um relatório em PDF, HTML ou JSON, com os testes mais lentos e as evidências das falhas. O histórico guarda as execuções e permite comparar duas delas.",
+        "footer_title": "Confiança em cada entrega.",
+        "footer_desc": "Gere o app, rode os testes e entregue sabendo o que foi conferido. Os testes acompanham o seu projeto: quando o Studio muda, o plano muda junto."
       }
     },
     "use_cases_page": {

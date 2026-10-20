@@ -107,6 +107,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
     '/features/source-code',
     '/features/sync-resolution',
     '/features/logs',
+    '/features/testing',
     '/features/speed',
     '/features/integration',
     '/features/use-cases',
@@ -332,6 +333,20 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                     >
                       <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.logs')}</span>
                       {isItemActive('/features/logs') && <ActiveIndicator />}
+                    </Link>
+
+                    {/* Ambiente de Testes */}
+                    <Link
+                      href="/features/testing"
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
+                        isItemActive('/features/testing')
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black"
+                          : "font-bold hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      )}
+                    >
+                      <span className="bg-gradient-to-r from-blue-600 to-emerald-600 dark:from-blue-400 dark:to-emerald-400 bg-clip-text text-transparent">{t('marketing_v2.navbar.testing')}</span>
+                      {isItemActive('/features/testing') && <ActiveIndicator />}
                     </Link>
 
                     {/* Agilidade */}
