@@ -1,26 +1,26 @@
 {
-  "v1.0.11": {
+  "v1.0.12": {
     "date": "2026-10-20",
     "pt": [
-      "Nova Interface do Painel de Testes: navegação mais limpa e produtiva com seções retráteis organizadas e a nova opção de ocultar scripts durante a execução.",
-      "Transição Visual Fluida nos Testes: exibição aprimorada com fixação de logo até a renderização do primeiro quadro ao vivo.",
-      "Instalação Nativa de Testes E2E: configuração simplificada do motor de testes diretamente pela IDE, eliminando a dependência de pastas manuais no projeto.",
-      "Maior Compatibilidade com Bancos Oracle: refinamento nos filtros de segurança em nível de linha (RLS), aceitando aliases em subconsultas de forma mais flexível.",
-      "Aprimoramento na Replicação de Casos de Uso: sincronização mais robusta de relações, enumerações e prioridades de tarefas entre ambientes PostgreSQL e Oracle."
+      "Configuração Rápida de Ambientes de Teste: Sugestão automática e inteligente dos parâmetros de conexão para cópias de banco de dados (PostgreSQL e Oracle), reduzindo o tempo de setup.",
+      "Painel de Testes com Interface Mais Limpa e Focada: Novas seções recolhíveis, opção para ocultar scripts e layout otimizado para acompanhar execuções ao vivo sem distrações.",
+      "Maior Estabilidade e Suporte a Caracteres Especiais: Leitura de arquivos de configuração (.env) e execução de comandos totalmente compatíveis com UTF-8, eliminando falhas de conexão causadas por acentuação.",
+      "Segurança Aprimorada nas Rotinas de Validação: O painel agora direciona automaticamente os testes para a réplica do banco de dados, protegendo sua base principal.",
+      "Experiência Unificada para Testes Ponta a Ponta: Instalação simplificada e integrada do motor de testes diretamente pela IDE, eliminando passos manuais de configuração."
     ],
     "en": [
-      "Enhanced Testing Panel Interface: cleaner, more productive navigation with collapsible sections and a new option to hide scripts during execution.",
-      "Smooth Visual Feedback in Live Tests: improved experience with persistent logo display until the first live frame is rendered.",
-      "Seamless E2E Test Setup: integrated testing engine directly installed via the IDE, removing manual folder configurations.",
-      "Extended Oracle Database Compatibility: advanced row-level security (RLS) filter enhancements for flexible subquery aliasing in Oracle.",
-      "Optimized Use Case Synchronization: improved accuracy when replicating task priorities, enumerations, and relationships between PostgreSQL and Oracle."
+      "Streamlined Test Environment Setup: Smart auto-fill for database replica connections (PostgreSQL and Oracle), drastically cutting down setup time.",
+      "Cleaner and More Focused Test Dashboard: Collapsible sections, a script-hiding toggle, and an enhanced visual layout for distraction-free live test monitoring.",
+      "Enhanced Stability and Special Character Support: Full UTF-8 support for .env configuration files and terminal outputs, preventing connection test errors caused by accented characters.",
+      "Safer Validation Workflows: The test panel now automatically opens on the database copy by default, keeping your primary database protected.",
+      "Seamless End-to-End Testing Experience: Unified and hassle-free test engine installation built right into the IDE, eliminating manual folder setups."
     ],
     "es": [
-      "Nueva Interfaz del Panel de Pruebas: navegación más limpia y organizada con secciones plegables y un nuevo botón para ocultar scripts durante la ejecución.",
-      "Transición Visual Fluida en Pruebas: experiencia mejorada con logotipo fijo hasta la carga del primer cuadro en vivo.",
-      "Configuración Nativa de Pruebas E2E: integración directa del motor de pruebas a través del IDE, eliminando la necesidad de carpetas manuales.",
-      "Mayor Compatibilidad con Bases de Datos Oracle: mejoras avanzadas en las políticas de seguridad a nivel de fila (RLS), admitiendo alias en subconsultas con mayor flexibilidad.",
-      "Sincronización Optimizada de Casos de Uso: mayor consistencia al replicar relaciones, enumeraciones y prioridades de tareas entre entornos PostgreSQL y Oracle."
+      "Configuración Ágil de Entornos de Prueba: Sugerencia inteligente y automática de parámetros de conexión para réplicas de bases de datos (PostgreSQL y Oracle), acelerando la preparación de pruebas.",
+      "Panel de Pruebas Más Limpio y Enfocado: Nuevas secciones plegables, botón para ocultar scripts y una interfaz optimizada para monitorear ejecuciones en vivo sin distracciones.",
+      "Mayor Estabilidad y Compatibilidad con Caracteres Especiales: Lectura de archivos .env y comandos de terminal totalmente compatibles con UTF-8, evitando fallos de conexión por tildes y caracteres especiales.",
+      "Validaciones Más Seguras: El panel de pruebas ahora se abre de forma predeterminada en la copia de la base de datos, protegiendo su entorno principal.",
+      "Experiencia Unificada para Pruebas E2E: Motor de pruebas instalado e integrado directamente desde el IDE, eliminando configuraciones manuales de carpetas."
     ]
   },
   "v1.0.0": {
