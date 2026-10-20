@@ -35,6 +35,15 @@ describe('backend Java: import do tipo da chave primária', () => {
     }
   })
 
+  it('com regra de acesso (serviço "guardado"), a chave NUMBER também importa java.math.BigDecimal no Service', () => {
+    const j = raw() as any
+    j.models[0].row_policy = { rules: [{ id: 'r1', column: 'MENSAGEM', op: 'eq', source: 'user.email' }] }
+    const guarded = generateJavaSpringProject(parseMetaBuilderJSON({ ...j, auth_config: { auth_type: 'database', table_name: 'clientes', email_column: 'nome', password_column: 'nome' } }, 'oracle', { backendStack: 'java-spring', javaGroupId: 'com.vendas', jwtEnabled: true } as any))
+    const svc = guarded.get('backend/src/main/java/com/vendas/services/LOGSService.java')!
+    expect(svc).toContain('AccessEnforcer')
+    expect(svc).toContain('import java.math.BigDecimal;')
+  })
+
   it('chave UUID continua importando UUID e a inteira (java.lang) não importa nada a mais', () => {
     expect(src('repositories', 'ClientesRepository')).toContain('import java.util.UUID;')
     expect(src('repositories', 'ContadoresRepository')).not.toMatch(/import java\.(math|util\.UUID)/)

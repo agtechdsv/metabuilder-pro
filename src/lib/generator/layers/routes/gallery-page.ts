@@ -631,7 +631,7 @@ export function generateGalleryClient(route: RouteNode): string {
             : item
         ))
       } else {
-        const res = await create${mn}(formData)
+        const res: any = await create${mn}(formData)
         if (res) setDataList(prev => [res, ...prev])
       }
       setIsModalOpen(false)

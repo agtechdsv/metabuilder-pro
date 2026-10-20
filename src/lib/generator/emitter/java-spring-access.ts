@@ -610,6 +610,7 @@ export function generateGuardedServiceClass(model: ModelNode, ast: AppAST, group
     `import org.springframework.stereotype.Service;`,
     `import java.util.*;`,
     (!isComposite && pkType === 'UUID') ? `import java.util.UUID;` : ``,
+    (!isComposite && pkType === 'BigDecimal') ? `import java.math.BigDecimal;` : ``,
     ...cascade.imports,
   ].filter(Boolean).join('\n')
 

@@ -429,7 +429,7 @@ export function generateKanbanClient(route: RouteNode): string {
           String(item.${pk} || item.id) === recordId ? { ...item, ...payload } : item
         ))
       } else {
-        const res = await create${mn}(payload)
+        const res: any = await create${mn}(payload)
         if (res) setDataList(prev => [res, ...prev])
       }
       setIsModalOpen(false)

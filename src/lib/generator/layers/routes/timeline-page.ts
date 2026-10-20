@@ -720,7 +720,7 @@ ${hasRelationTabs ? route.relationTabs.map(tab => `      get${tab.relatedModelNa
             : item
         ))
       } else {
-        const res = await create${mn}(formData)
+        const res: any = await create${mn}(formData)
         if (res) {
           savedMasterId = res.${route.primaryKey} || res.id
           setDataList(prev => [res, ...prev])

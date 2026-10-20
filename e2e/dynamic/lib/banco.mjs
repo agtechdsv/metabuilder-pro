@@ -26,7 +26,7 @@ export function traduzirParaOracle(sql, params = []) {
     return parte
       .replace(/\$(\d+)/g, (_m, n) => { binds['b' + n] = params[Number(n) - 1]; return ':b' + n })
       .replace(/"([A-Za-z_][A-Za-z0-9_$]*)"/g, (_m, id) => `"${id.toUpperCase()}"`)
-      .replace(/("[^"]+"|\b[A-Za-z_][A-Za-z0-9_.$]*)::text\b/g, 'to_char($1)')
+      .replace(/((?:(?:"[^"]+"|\b[A-Za-z_][A-Za-z0-9_$]*)\.)*(?:"[^"]+"|\b[A-Za-z_][A-Za-z0-9_$]*))::text\b/g, 'to_char($1)')
       .replace(/::\w+/g, '')
       .replace(/\bnow\(\)/gi, 'systimestamp')
   }).join('').replace(/\blimit\s+(\d+)\s*$/i, 'fetch first $1 rows only')

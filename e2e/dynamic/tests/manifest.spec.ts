@@ -4,6 +4,7 @@ import path from 'node:path'
 import { entrar, entrarComo } from '../lib/login'
 import { criarUsuarioTemporario, removerUsuarioTemporario, valorDaRegra } from '../lib/seguranca'
 import * as acesso from '../lib/acesso.mjs'
+import { detectarApp } from '../lib/app.mjs'
 import { unico } from '../lib/seguranca'
 import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/db'
 import { anotarCriado, riscarCriado } from '../lib/guard'
@@ -862,8 +863,13 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         test(t.title, async ({ page }) => {
           await abrir(page, view.path)
           await aguardarTela(page)
-          await expect(page.getByRole('button', { name: 'Atualizar agora' })).toBeVisible()
           await expect(page.getByRole('button', { name: 'Organizar Dashboard' })).toBeVisible()
+          // o BI exportado em Java não tem atualização manual nem automática (o botão "Atualizar agora" fica desligado no modelo Java): só o app Node a tem
+          if (detectarApp(CONFIG.appDir).pilha === 'java') {
+            await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+            return
+          }
+          await expect(page.getByRole('button', { name: 'Atualizar agora' })).toBeVisible()
           await page.getByRole('button', { name: 'Atualizar agora' }).click()
           await page.waitForLoadState('networkidle').catch(() => {})
           await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)

@@ -499,7 +499,7 @@ ${route.relationTabs.map(tab => `      get${tab.relatedModelName}ByField('${tab.
         setUpdatedNode({ id: recordId, data: payload })
         setRefreshTrigger(prev => prev + 1)
       } else {
-        const res = await create${mn}(payload)
+        const res: any = await create${mn}(payload)
         if (res) {
           setDataList(prev => [res, ...prev])
           setRefreshTrigger(prev => prev + 1)

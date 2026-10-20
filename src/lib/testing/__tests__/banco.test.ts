@@ -12,6 +12,12 @@ describe('adaptador de banco do motor (Postgres e Oracle)', () => {
     expect(lerUrl('oracle://crm:a%40b@192.168.0.201/FREEPDB1')).toMatchObject({ tipo: 'oracle', host: '192.168.0.201', porta: '1521', banco: 'FREEPDB1', usuario: 'crm', senha: 'a@b' })
   })
 
+  it('::text com prefixo de tabela ou apelido vira to_char(prefixo.coluna), nunca prefixo.to_char(coluna)', () => {
+    const t = traduzirParaOracle('select u."email"::text as email, l."perfil_id"::text as g from "perfis_usuarios" l join "usuarios" u on u."id" = l."usuario_id"', [])
+    expect(t.texto).toContain('to_char(u."EMAIL") as email')
+    expect(t.texto).toContain('to_char(l."PERFIL_ID") as g')
+  })
+
   it('traduz $1, identificadores, ::text, outros casts, now() e limit para o Oracle', () => {
     const t = traduzirParaOracle('select "id"::text as "__id", count(*)::int n, now() from "clientes" where "nome"::text like $1 and "x" = $2 and "y" = $1 limit 5', ['E2E-%', 7])
     expect(t.texto).toBe('select to_char("ID") as "__ID", count(*) n, systimestamp from "CLIENTES" where to_char("NOME") like :b1 and "X" = :b2 and "Y" = :b1 fetch first 5 rows only')
