@@ -62,7 +62,7 @@ export interface ManifestDetail {
   foreignKey: string
   displayMode: 'tab' | 'inline'
   fields: ManifestField[]
-  subDetails: Array<{ table: string; label: string; foreignKey: string; fields: ManifestField[] }>
+  subDetails: Array<{ table: string; primaryKey?: string; label: string; foreignKey: string; fields: ManifestField[] }>
 }
 
 /** Regra de acesso por linha do Studio (a tabela só mostra ao usuário as linhas em que `column` é igual ao valor dele), com a exceção por valor ou grupo. */

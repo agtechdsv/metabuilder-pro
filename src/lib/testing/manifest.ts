@@ -42,6 +42,7 @@ const detail = (t: RelationTab): ManifestDetail => ({
   fields: (t.formFields?.length ? t.formFields : t.gridFields).map(manifestField),
   subDetails: (t.subDetails || []).map((s: any) => ({
     table: String(s.relatedTable ?? ''),
+    ...((((s.formFields?.length ? s.formFields : s.gridFields) || []).find((f: any) => f.isPrimaryKey)) ? { primaryKey: String((((s.formFields?.length ? s.formFields : s.gridFields) || []).find((f: any) => f.isPrimaryKey)).dbColumn) } : {}),
     label: String(s.label ?? s.relatedModelName ?? ''),
     foreignKey: String(s.foreignKey ?? ''),
     fields: ((s.formFields?.length ? s.formFields : s.gridFields) || []).map(manifestField),

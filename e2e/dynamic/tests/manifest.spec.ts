@@ -1021,7 +1021,10 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const estado = lerEstado(view.slug) as EstadoCrud
           test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
           estado.filhos = estado.filhos ?? []
+          // a linha nova é a última com cada campo visível (as linhas que já existem têm os mesmos nomes)
+          const ultimo = (nome: string) => page.locator(`[name="${nome}"]`).locator('visible=true').last()
           let feitas = 0
+          const exercitado: string[] = []
           const motivos: string[] = []
           for (const d of detalhesPreenchiveis(view)) {
             const pkFilho = d.primaryKey ?? 'id'
@@ -1037,8 +1040,6 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               motivos.push(`aba "${d.label}": sem o botão +; botões visíveis: ${[...new Set(botoes)].join(' / ')}`); continue
             }
             await mais.click()
-            // a linha nova é a última com cada campo visível (as linhas que já existem têm os mesmos nomes)
-            const ultimo = (nome: string) => page.locator(`[name="${nome}"]`).locator('visible=true').last()
             const limites = await limitesDaTabela(d.table)
             const editaveis = d.fields.filter(f => !f.readOnly && !f.hasFormula && !f.isPrimaryKey && f.column.toLowerCase() !== d.foreignKey.toLowerCase())
             const preenchidos: Array<[ManifestField, Preenchido]> = []
@@ -1062,8 +1063,48 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             const chaveDoPai = String((await consultar(`select "${d.foreignKey}"::text as v from "${d.table}" where "${pkFilho}"::text = $1`, [novoId]))[0]?.v ?? '')
             expect(chaveDoPai, `aba "${d.label}": a linha nova guarda a chave do pai`).toBe(estado.id)
             feitas++
+            exercitado.push(`aba ${d.label}`)
+
+            // sub-detalhe (ex.: itens do pedido dentro do pedido): expande a linha nova da aba, adiciona um item com o + e salva
+            for (const sd of d.subDetails ?? []) {
+              const pkSub = sd.primaryKey ?? 'id'
+              const editaveisSub = sd.fields.filter(f => !f.readOnly && !f.hasFormula && !f.isPrimaryKey && f.column.toLowerCase() !== sd.foreignKey.toLowerCase())
+              if (editaveisSub.length === 0) continue
+              const idsSub = async () => new Set((await consultar(`select "${pkSub}"::text as id from "${sd.table}" where "${sd.foreignKey}"::text = $1`, [novoId])).map(r => String(r.id)))
+              const antesSub = await idsSub()
+              await abrir(page, `${view.path}/${estado.id}`)
+              await page.getByRole('button', { name: d.label, exact: true }).first().click()
+              await page.locator('button[title="Expandir / Recolher"]').locator('visible=true').first().click()
+              const maisSub = page.locator('button[title="Adicionar"]').locator('visible=true').first()
+              if (!(await maisSub.count())) { motivos.push(`sub-aba "${sd.label}": sem o botão + dentro da linha`); continue }
+              await maisSub.click()
+              const limitesSub = await limitesDaTabela(sd.table)
+              const feitosSub: Array<[ManifestField, Preenchido]> = []
+              const faltouSub: string[] = []
+              let k = 0
+              for (const f of editaveisSub) {
+                const p = await preencherCampo(page, f, ++k, limitesSub, undefined, ultimo)
+                if (p) feitosSub.push([f, p]); else if (f.required) faltouSub.push(f.label)
+              }
+              if (faltouSub.length > 0 || feitosSub.length === 0) { motivos.push(`sub-aba "${sd.label}": ${faltouSub.length ? 'campo(s) obrigatório(s) que o motor ainda não sabe preencher (' + faltouSub.join(', ') + ')' : 'nenhum campo preenchível'}`); continue }
+              await page.getByRole('button', { name: 'Salvar Alterações' }).last().click()
+              await expect.poll(async () => (await idsSub()).size, { message: `um item novo em "${sd.label}" aparece no banco`, timeout: 15_000 }).toBe(antesSub.size + 1)
+              const itemId = [...(await idsSub())].find(id => !antesSub.has(id))!
+              anotarCriado(sd.table, pkSub, itemId)
+              estado.filhos.push({ tabela: sd.table, pk: pkSub, fk: sd.foreignKey, id: itemId })
+              gravarEstado(view.slug, estado)
+              for (const [f, p] of feitosSub) {
+                const noBanco = String((await consultar(`select "${f.column}"::text as v from "${sd.table}" where "${pkSub}"::text = $1`, [itemId]))[0]?.v ?? '')
+                expect.soft(conferirNoBanco(f, p, noBanco), `sub-aba "${sd.label}": campo gravado`).toBeNull()
+              }
+              expect(String((await consultar(`select "${sd.foreignKey}"::text as v from "${sd.table}" where "${pkSub}"::text = $1`, [itemId]))[0]?.v ?? ''), `sub-aba "${sd.label}": o item novo guarda a chave da linha da aba`).toBe(novoId)
+              feitas++
+              exercitado.push(`sub-aba ${sd.label}`)
+            }
           }
           test.skip(feitas === 0, motivos.join(' | ') || 'nenhuma aba de detalhe pôde receber uma linha')
+          // passou, mas parte das abas não foi exercitada: o painel mostra o aviso (não passa em silêncio)
+          test.info().annotations.push({ type: 'aviso', description: (motivos.length > 0 ? 'cobertura parcial: ' + motivos.join(' | ') + '. ' : '') + 'exercitado: ' + exercitado.join(', ') })
         })
       }
 

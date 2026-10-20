@@ -686,7 +686,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                             <span className={p.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{p.status === 'failed' && evidence(p.shot, p.video, planTitle(p, language))}
                             {p.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(p.ms / 1000).toFixed(1)}s</span>}
                           </div>
-                          {p.status === 'skipped' && p.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{p.reason}</p>}
+                          {(p.status === 'skipped' || p.status === 'passed') && p.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{p.reason}</p>}
                           {p.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{p.error}</pre>}
                         </li>
                       ))}
@@ -760,7 +760,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                                     <span className={r?.status === 'failed' ? 'text-red-300' : 'text-neutral-300'}>{planTitle(p, language)}</span>{r?.status === 'failed' && evidence(r.shot, r.video, planTitle(p, language))}
                                     {r?.ms != null && <span className="ml-auto text-neutral-500 tabular-nums">{(r.ms / 1000).toFixed(1)}s</span>}
                                   </div>
-                                  {r?.status === 'skipped' && r.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{r.reason}</p>}
+                                  {(r?.status === 'skipped' || r?.status === 'passed') && r.reason && <p className="mt-0.5 ml-6 text-[11px] text-neutral-500">{r.reason}</p>}
                                   {r?.error && <pre className="mt-1 ml-6 whitespace-pre-wrap text-[11px] text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{r.error}</pre>}
                                 </li>
                               )
