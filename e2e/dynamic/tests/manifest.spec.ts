@@ -10,7 +10,7 @@ import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -207,7 +207,7 @@ function lerCsv(texto: string): { cabecalho: string; registros: number } {
 const RODADA = PREFIXO_E2E + new Date().toISOString().replace(/[-:T]/g, '').slice(2, 12) // E2E-2610191430
 
 interface Preenchido { tipo: 'texto' | 'texto-mascara' | 'numero-mascara' | 'numero' | 'data' | 'data-hora' | 'hora' | 'bool' | 'opcao'; esperado: string; numero?: number }
-interface EstadoCrud { marcador: string; id?: string; preenchidos: Record<string, Preenchido>; criouEm?: number }
+interface EstadoCrud { marcador: string; id?: string; preenchidos: Record<string, Preenchido>; criouEm?: number; filhos?: Array<{ tabela: string; pk: string; fk: string; id: string }> }
 /**
  * O estado entre as etapas (cadastro → reabrir → edição → exclusão) fica em arquivo, não na memória: quando um teste falha o Playwright reinicia o
  * processo de teste e a memória se perde, e as etapas seguintes ficariam sem saber qual registro foi criado.
@@ -228,8 +228,8 @@ async function limitesDaTabela(tabela: string): Promise<Record<string, number>> 
 const caber = (txt: string, limite?: number) => (limite && txt.length > limite ? txt.slice(0, limite) : txt)
 
 /** Preenche UM campo do formulário com um valor gerado, pelo tipo do componente na tela. Devolve o que gravou, ou null se o campo não dá para preencher. */
-async function preencherCampo(page: Page, f: ManifestField, n: number, limites: Record<string, number>, marcador?: string): Promise<Preenchido | null> {
-  const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
+async function preencherCampo(page: Page, f: ManifestField, n: number, limites: Record<string, number>, marcador?: string, alvo?: (nome: string) => Locator): Promise<Preenchido | null> {
+  const campo = alvo ? alvo(nomeDoCampo(f.column)) : page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
   if (!(await campo.count())) return null
   if ((await campo.isDisabled()) || (await campo.getAttribute('readonly')) !== null) return null
   const tag = await campo.evaluate(e => e.tagName.toLowerCase())
@@ -246,8 +246,8 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
   if (tipo === 'time') { await campo.fill('12:00'); return { tipo: 'hora', esperado: '12:00' } }
   if (tipo === 'number') { await campo.fill(String(7 + n)); return { tipo: 'numero', esperado: String(7 + n), numero: 7 + n } }
   if (tag !== 'input' && tag !== 'textarea') return null
-  // máscara de padrão (CPF, CNPJ, telefone...): digita os dígitos e a tela formata
-  if (mascaraDePadrao(f.mask)) {
+  // máscara de padrão (CPF, CNPJ, telefone...): digita os dígitos e a tela formata. Em campo numérico, "0.000" e "0.000,00" são máscaras de número (milhar e centavos), tratadas abaixo
+  if (mascaraDePadrao(f.mask) && !(f.mask && /^0[0.,]*0$/.test(f.mask) && /int|numeric|decimal|float|double|number/i.test(f.dataType))) {
     const digitos = '1234567890123456789'.slice(0, (f.mask as string).split('0').length - 1)
     await campo.click(); await campo.pressSequentially(digitos)
     return { tipo: 'texto-mascara', esperado: digitos }
@@ -1016,6 +1016,57 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         })
       }
 
+      if (t.kind === 'detalhe_adicionar') {
+        test(t.title, async ({ page }) => {
+          const estado = lerEstado(view.slug) as EstadoCrud
+          test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
+          estado.filhos = estado.filhos ?? []
+          let feitas = 0
+          const motivos: string[] = []
+          for (const d of detalhesPreenchiveis(view)) {
+            const pkFilho = d.primaryKey ?? 'id'
+            const idsDoPai = async () => new Set((await consultar(`select "${pkFilho}"::text as id from "${d.table}" where "${d.foreignKey}"::text = $1`, [estado.id!])).map(r => String(r.id)))
+            const antes = await idsDoPai()
+            await abrir(page, `${view.path}/${estado.id}`)
+            await page.getByRole('button', { name: d.label, exact: true }).first().click()
+            // aba vazia: botão com texto ("Adicionar Pedidos"); depois que já há linha, o ícone + (title "Adicionar")
+            const porTexto = page.locator('button').filter({ hasText: /^\s*(Adicionar|Add|Agregar)/i }).locator('visible=true').first()
+            const mais = (await porTexto.count()) ? porTexto : page.locator('button[title="Adicionar"]').locator('visible=true').first()
+            if (!(await mais.count())) {
+              const botoes = await page.locator('button').locator('visible=true').evaluateAll(bs => bs.map(b => ((b.getAttribute('title') || b.textContent || '').trim()).slice(0, 30)).filter(Boolean))
+              motivos.push(`aba "${d.label}": sem o botão +; botões visíveis: ${[...new Set(botoes)].join(' / ')}`); continue
+            }
+            await mais.click()
+            // a linha nova é a última com cada campo visível (as linhas que já existem têm os mesmos nomes)
+            const ultimo = (nome: string) => page.locator(`[name="${nome}"]`).locator('visible=true').last()
+            const limites = await limitesDaTabela(d.table)
+            const editaveis = d.fields.filter(f => !f.readOnly && !f.hasFormula && !f.isPrimaryKey && f.column.toLowerCase() !== d.foreignKey.toLowerCase())
+            const preenchidos: Array<[ManifestField, Preenchido]> = []
+            const faltou: string[] = []
+            let n = 0
+            for (const f of editaveis) {
+              const p = await preencherCampo(page, f, ++n, limites, undefined, ultimo)
+              if (p) preenchidos.push([f, p]); else if (f.required) faltou.push(f.label)
+            }
+            if (faltou.length > 0 || preenchidos.length === 0) { motivos.push(`aba "${d.label}": ${faltou.length ? 'campo(s) obrigatório(s) que o motor ainda não sabe preencher (' + faltou.join(', ') + ')' : 'nenhum campo preenchível'}`); continue }
+            await page.getByRole('button', { name: 'Salvar Alterações' }).last().click()
+            await expect.poll(async () => (await idsDoPai()).size, { message: `uma linha nova na aba "${d.label}" aparece no banco`, timeout: 15_000 }).toBe(antes.size + 1)
+            const novoId = [...(await idsDoPai())].find(id => !antes.has(id))!
+            anotarCriado(d.table, pkFilho, novoId) // se a exclusão do pai não levar o filho, a limpeza o apaga pelo id
+            estado.filhos.push({ tabela: d.table, pk: pkFilho, fk: d.foreignKey, id: novoId })
+            gravarEstado(view.slug, estado)
+            for (const [f, p] of preenchidos) {
+              const noBanco = String((await consultar(`select "${f.column}"::text as v from "${d.table}" where "${pkFilho}"::text = $1`, [novoId]))[0]?.v ?? '')
+              expect.soft(conferirNoBanco(f, p, noBanco), `aba "${d.label}": campo gravado`).toBeNull()
+            }
+            const chaveDoPai = String((await consultar(`select "${d.foreignKey}"::text as v from "${d.table}" where "${pkFilho}"::text = $1`, [novoId]))[0]?.v ?? '')
+            expect(chaveDoPai, `aba "${d.label}": a linha nova guarda a chave do pai`).toBe(estado.id)
+            feitas++
+          }
+          test.skip(feitas === 0, motivos.join(' | ') || 'nenhuma aba de detalhe pôde receber uma linha')
+        })
+      }
+
       if (t.kind === 'crud_exclusao') {
         test(t.title, async ({ page }) => {
           const estado = lerEstado(view.slug) as EstadoCrud
@@ -1030,6 +1081,11 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await confirmarExclusao(page)
           await expect.poll(async () => registroExiste(view, estado.id!), { message: 'o registro some do banco', timeout: 15_000 }).toBe(false)
           expect(await contar(), 'só o registro criado pelo teste foi excluído').toBe(antes - 1)
+          // as linhas que as abas ganharam saem junto com o pai (cascata), sem deixar filho sem pai
+          for (const f of estado.filhos ?? []) {
+            expect(Number((await consultar(`select count(*)::int n from "${f.tabela}" where "${f.pk}"::text = $1`, [f.id]))[0].n), `a linha da aba "${f.tabela}" saiu junto com o registro`).toBe(0)
+            riscarCriado(f.tabela, f.id)
+          }
           riscarCriado(view.table, estado.id!)
           gravarEstado(view.slug, undefined)
         })

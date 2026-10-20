@@ -1,4 +1,4 @@
-import type { ManifestAuth, ManifestField, ManifestRowRule, ManifestView } from './manifestTypes'
+import type { ManifestAuth, ManifestDetail, ManifestField, ManifestRowRule, ManifestView } from './manifestTypes'
 
 /**
  * Plano de testes de um caso de uso: a lista do que será conferido, derivada do manifesto. É a ÚNICA fonte: o painel da IDE mostra este plano
@@ -11,7 +11,7 @@ export type PlannedKind =
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
   | 'botoes' | 'acoes_linha' | 'campos_tipos' | 'abas'
-  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar'
+  | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar' | 'detalhe_adicionar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
@@ -68,6 +68,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registration: filling in generated data and saving writes everything to the database',
     crud_reabrir: () => 'registration: reopening the record shows what was saved',
     crud_edicao: () => 'edit: changing and saving writes only the change',
+    detalhe_adicionar: () => 'tabs: adding a row in each detail tab and saving writes it with the parent key, and deleting the parent takes the rows with it',
     fluxo_conectar: () => 'flow: dragging a step only moves it; linking two steps saves the previous step in the database; a link that would make a loop is refused (and the steps go back afterwards)',
     kanban_mover: () => 'kanban: dragging a card to another column saves the new column in the database (and the card goes back afterwards)',
     crud_exclusao: () => 'deletion: deleting from the list removes the record',
@@ -117,6 +118,7 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     crud_cadastro: () => 'registro: llenar con datos generados y guardar graba todo en la base de datos',
     crud_reabrir: () => 'registro: reabrir el registro muestra lo que se guardó',
     crud_edicao: () => 'edición: cambiar y guardar graba solo el cambio',
+    detalhe_adicionar: () => 'pestañas: agregar una fila en cada pestaña de detalle y guardar la graba con la clave del padre, y eliminar el padre se lleva las filas',
     fluxo_conectar: () => 'flujo: arrastrar una etapa solo la mueve; unir dos etapas guarda la etapa anterior en la base de datos; una unión que cree un ciclo se rechaza (y las etapas vuelven después)',
     kanban_mover: () => 'kanban: arrastrar una tarjeta a otra columna guarda la nueva columna en la base de datos (y la tarjeta vuelve después)',
     crud_exclusao: () => 'eliminación: eliminar desde la lista quita el registro',
@@ -257,6 +259,10 @@ function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
   return out
 }
 
+/** Abas de detalhe em que o teste consegue adicionar uma linha: têm pelo menos um campo editável além da chave do pai, da chave primária e dos campos calculados. */
+export const detalhesPreenchiveis = (v: Pick<ManifestView, 'details'>): ManifestDetail[] =>
+  (v.details || []).filter(d => d.fields.some(f => !f.readOnly && !f.hasFormula && !f.isPrimaryKey && f.column.toLowerCase() !== d.foreignKey.toLowerCase()))
+
 /** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com pelo menos um campo editável. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
   if (v.logicType === 'blueprint') return v.blueprintPredecessorColumn ? [{ kind: 'fluxo_conectar', title: 'fluxo: arrastar uma etapa só a move; ligar duas etapas grava a etapa anterior no banco; ligação que formaria um ciclo é recusada (e as etapas voltam depois)' }] : []
@@ -267,6 +273,7 @@ function planoIntegracao(v: ManifestView): PlannedTest[] {
     { kind: 'crud_cadastro', title: 'cadastro: preencher com dados gerados e salvar grava tudo no banco' },
     { kind: 'crud_reabrir', title: 'cadastro: reabrir o registro mostra o que foi gravado' },
     { kind: 'crud_edicao', title: 'edição: alterar e salvar grava só a alteração' },
+    ...(detalhesPreenchiveis(v).length > 0 ? [{ kind: 'detalhe_adicionar' as const, title: 'abas: adicionar uma linha em cada aba de detalhe e salvar grava com a chave do pai; excluir o pai leva as linhas junto' }] : []),
     { kind: 'crud_exclusao', title: 'exclusão: excluir pela lista remove o registro' },
   ]
 }

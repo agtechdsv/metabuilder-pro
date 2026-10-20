@@ -59,6 +59,8 @@ async function abrirOracle(url) {
   db.fetchAsString = [db.CLOB]
   const u = lerUrl(url)
   const conn = await db.getConnection({ user: u.usuario, password: u.senha, connectString: `${u.host}:${u.porta}/${u.banco}` })
+  // formato da sessão do motor igual ao do Postgres: ponto decimal e datas em ISO (senão to_char devolve '15,5' e '25/10/26 12:00:00,000000' conforme o idioma do servidor)
+  await conn.execute("alter session set nls_numeric_characters = '.,' nls_date_format = 'YYYY-MM-DD HH24:MI:SS' nls_timestamp_format = 'YYYY-MM-DD HH24:MI:SS.FF6' nls_timestamp_tz_format = 'YYYY-MM-DD HH24:MI:SS.FF6 TZH:TZM'")
   const rodar = async (texto, binds = {}, extra = {}) => conn.execute(texto, binds, { outFormat: db.OUT_FORMAT_OBJECT, autoCommit: true, ...extra })
   return {
     dialect: 'oracle',

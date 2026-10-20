@@ -86,6 +86,10 @@ describe('plano de testes de um caso de uso', () => {
     expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('valor', { dataType: 'numeric' }), campo('cnpj', { mask: '00.000.000/0000-00' })] }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
     // sem nenhum campo editável (tudo somente leitura) não há o que preencher
     expect(kinds(view({ form: [campo('id', { isPrimaryKey: true }), campo('total', { readOnly: true })] }), ['integracao'])).toEqual([])
+    // com uma aba de detalhe editável, o plano ganha o teste das abas (entre a edição e a exclusão)
+    expect(kinds(view({ details: [{ table: 'itens', label: 'Itens', foreignKey: 'pedido_id', displayMode: 'tab', subDetails: [], fields: [campo('pedido_id'), campo('qtd', { dataType: 'integer' })] }] as any }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'detalhe_adicionar', 'crud_exclusao'])
+    // aba só com a chave do pai e campo calculado: nada a preencher
+    expect(kinds(view({ details: [{ table: 'itens', label: 'Itens', foreignKey: 'pedido_id', displayMode: 'tab', subDetails: [], fields: [campo('pedido_id'), campo('total', { readOnly: true })] }] as any }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
     expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
     expect(kinds(view({ logicType: 'kanban', kanbanGroupColumn: 'status' }), ['integracao'])).toEqual(['kanban_mover'])
     expect(kinds(view({ logicType: 'blueprint', blueprintPredecessorColumn: 'predecessor_id' }), ['integracao'])).toEqual(['fluxo_conectar'])

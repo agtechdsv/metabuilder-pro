@@ -56,6 +56,8 @@ export interface ManifestButton { id: string; label: string; actionType: string;
 
 export interface ManifestDetail {
   table: string
+  /** coluna da chave primária da tabela da aba (para achar e limpar as linhas que o teste cria) */
+  primaryKey?: string
   label: string
   foreignKey: string
   displayMode: 'tab' | 'inline'

@@ -35,6 +35,7 @@ export function manifestField(f: ResolvedField): ManifestField {
 
 const detail = (t: RelationTab): ManifestDetail => ({
   table: t.relatedTable,
+  ...(((t.gridFields || []).concat(t.formFields || [])).find(f => f.isPrimaryKey) ? { primaryKey: ((t.gridFields || []).concat(t.formFields || [])).find(f => f.isPrimaryKey)!.dbColumn } : {}),
   label: t.label,
   foreignKey: t.foreignKey,
   displayMode: t.displayMode,
