@@ -137,6 +137,21 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const dbTipo = dbTipoDoProjeto(manifest?.dbStack)
   useEffect(() => { if (dbTipo === 'oracle') setDbSettings(p => (p.port === '5432' && !p.database ? { ...p, port: '1521' } : p)) }, [dbTipo])
 
+  // sugere a conexão da cópia a partir da conexão do app (mesmo servidor, porta e, no Postgres, o mesmo usuário e senha), com o nome sugerido para a cópia.
+  // Só preenche o que está vazio e não grava em disco: o que o usuário digitar ou já tiver salvo vale mais.
+  useEffect(() => {
+    if (!appDbUrl || !dbTipo) return
+    let u: URL
+    try { u = new URL(appDbUrl) } catch { return }
+    setDbSettings(prev => {
+      if (prev.mode !== 'copy' || prev.user || prev.password || prev.database) return prev
+      const base = { ...prev, host: u.hostname || prev.host, port: u.port || prev.port }
+      // no Oracle a cópia é outro esquema (outro usuário): sugere só o servidor, a porta e o serviço
+      if (dbTipo === 'oracle') return { ...base, database: decodeURIComponent(u.pathname.replace(/^\//, '')) }
+      return { ...base, database: copyName || suggestCopyName(appDbUrl), user: decodeURIComponent(u.username), password: decodeURIComponent(u.password) }
+    })
+  }, [appDbUrl, dbTipo, copyName, dbSettings.mode, dbSettings.user, dbSettings.password, dbSettings.database])
+
   const updateDb = (patch: Partial<DbSettings>) => {
     setDbSettings(prev => { const next = { ...prev, ...patch }; saveDbSettings(projectSlug, next).catch(() => {}); return next })
     setDbResult(null)

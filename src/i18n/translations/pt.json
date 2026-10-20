@@ -5007,7 +5007,7 @@
     "db_err_need_engine": "Instale o motor antes (acima).",
     "db_err_fields": "Preencha servidor, porta, banco e usuário.",
     "db_nocopy": "Ainda não tem uma cópia?",
-    "db_nocopy_help": "A IDE pode criar a cópia no mesmo servidor do banco original (precisa da permissão de criar bancos e de ninguém conectado ao original). Se não der, entregue o script ao administrador do banco.",
+    "db_nocopy_help": "A IDE pode criar a cópia no mesmo servidor do banco original, usando a conexão do app (precisa da permissão de criar bancos e de ninguém conectado ao original). Os campos acima já vêm sugeridos com ela; ao criar, ficam confirmados. Se não der, entregue o script ao administrador do banco.",
     "db_copy_name": "Nome da cópia",
     "db_copy_create": "Criar a cópia automaticamente",
     "db_copying": "Criando a cópia...",

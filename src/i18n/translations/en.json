@@ -5007,7 +5007,7 @@
     "db_err_need_engine": "Install the engine first (above).",
     "db_err_fields": "Fill in server, port, database and user.",
     "db_nocopy": "Don't have a copy yet?",
-    "db_nocopy_help": "The IDE can create the copy on the same server as the original database (needs permission to create databases and nobody connected to the original). If that fails, give the script to the database administrator.",
+    "db_nocopy_help": "The IDE can create the copy on the same server as the original database, using the app's connection (needs permission to create databases and nobody connected to the original). The fields above are already suggested from it; once created, they are confirmed. If that fails, give the script to the database administrator.",
     "db_copy_name": "Copy name",
     "db_copy_create": "Create the copy automatically",
     "db_copying": "Creating the copy...",

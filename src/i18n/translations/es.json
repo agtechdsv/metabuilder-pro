@@ -5095,7 +5095,7 @@
     "db_err_need_engine": "Instale primero el motor (arriba).",
     "db_err_fields": "Complete servidor, puerto, base de datos y usuario.",
     "db_nocopy": "¿Aún no tiene una copia?",
-    "db_nocopy_help": "El IDE puede crear la copia en el mismo servidor de la base original (necesita permiso para crear bases y que nadie esté conectado a la original). Si no es posible, entregue el script al administrador de la base.",
+    "db_nocopy_help": "El IDE puede crear la copia en el mismo servidor de la base original, usando la conexión de la aplicación (necesita permiso para crear bases y que nadie esté conectado a la original). Los campos de arriba ya vienen sugeridos con ella; al crear, quedan confirmados. Si no es posible, entregue el script al administrador de la base.",
     "db_copy_name": "Nombre de la copia",
     "db_copy_create": "Crear la copia automáticamente",
     "db_copying": "Creando la copia...",
