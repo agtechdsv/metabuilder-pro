@@ -249,14 +249,14 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
   // máscara de padrão (CPF, CNPJ, telefone...): digita os dígitos e a tela formata. Em campo numérico, "0.000" e "0.000,00" são máscaras de número (milhar e centavos), tratadas abaixo
   if (mascaraDePadrao(f.mask) && !(f.mask && /^0[0.,]*0$/.test(f.mask) && /int|numeric|decimal|float|double|number/i.test(f.dataType))) {
     const digitos = '1234567890123456789'.slice(0, (f.mask as string).split('0').length - 1)
-    await campo.click(); await campo.pressSequentially(digitos)
+    await campo.click(); await campo.press('Control+A'); await campo.press('Delete'); await campo.pressSequentially(digitos)
     return { tipo: 'texto-mascara', esperado: digitos }
   }
   // máscara numérica (0.000,00 / 0.000): os dígitos entram como centavos
   if (f.mask && /^0[0.,]*0$/.test(f.mask) && /int|numeric|decimal|float|double|number/i.test(f.dataType)) {
     const casas = f.mask.includes(',') ? f.mask.split(',')[1].length : 0
     const digitos = String(1250 + n * 100)
-    await campo.click(); await campo.pressSequentially(casas ? digitos : String(7 + n))
+    await campo.click(); await campo.press('Control+A'); await campo.press('Delete'); await campo.pressSequentially(casas ? digitos : String(7 + n))
     return { tipo: 'numero-mascara', esperado: casas ? digitos : String(7 + n), numero: casas ? Number(digitos) / 10 ** casas : 7 + n }
   }
   if (/int|numeric|decimal|float|double|number/i.test(f.dataType)) { await campo.fill(String(7 + n)); return { tipo: 'numero', esperado: String(7 + n), numero: 7 + n } }
@@ -1100,6 +1100,81 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               expect(String((await consultar(`select "${sd.foreignKey}"::text as v from "${sd.table}" where "${pkSub}"::text = $1`, [itemId]))[0]?.v ?? ''), `sub-aba "${sd.label}": o item novo guarda a chave da linha da aba`).toBe(novoId)
               feitas++
               exercitado.push(`sub-aba ${sd.label}`)
+
+              // os três caminhos do item dentro da linha da aba: lápis (janela "Editar"), "Abrir Modal" (janela "Novo") e lixeira. O Salvar da tela grava.
+              const abrirItens = async () => {
+                await abrir(page, `${view.path}/${estado.id}`)
+                await page.getByRole('button', { name: d.label, exact: true }).first().click()
+                await page.locator('button[title="Expandir / Recolher"]').locator('visible=true').first().click()
+              }
+              const camadas = page.locator('div[class*="fixed"][class*="inset-0"]')
+              const alvoJanela = (nome: string) => camadas.last().locator(`[name="${nome}"]`).first()
+              const salvarTela = () => page.getByRole('button', { name: 'Salvar Alterações' }).last().click()
+              const salvarJanela = async () => { await camadas.last().getByRole('button', { name: 'Salvar Alterações' }).click(); await expect(camadas, 'a janela fecha depois de salvar').toHaveCount(0, { timeout: 10_000 }) }
+              const valorNoBanco = async (f: ManifestField, id: string) => String((await consultar(`select "${f.column}"::text as v from "${sd.table}" where "${pkSub}"::text = $1`, [id]))[0]?.v ?? '')
+
+              // 1) lápis: troca um campo do item na janela, e o Salvar da tela grava
+              await abrirItens()
+              const lapis = page.locator('button[title="Editar Item"]').locator('visible=true').first()
+              if (!(await lapis.count())) motivos.push(`sub-aba "${sd.label}": sem o lápis (Editar Item)`)
+              else {
+                await lapis.click()
+                let editado: [ManifestField, Preenchido] | null = null
+                for (const f of editaveisSub) { const p = await preencherCampo(page, f, 50, limitesSub, undefined, alvoJanela); if (p) { editado = [f, p]; break } }
+                if (!editado) motivos.push(`sub-aba "${sd.label}": o lápis abriu, mas nenhum campo pôde ser alterado`)
+                else {
+                  await salvarJanela()
+                  await salvarTela()
+                  const [fe, pe] = editado
+                  await expect.poll(async () => conferirNoBanco(fe, pe, await valorNoBanco(fe, itemId)), { message: `lápis: "${fe.label}" alterado aparece no banco`, timeout: 15_000 }).toBeNull()
+                  exercitado.push(`lápis do item`)
+                }
+              }
+
+              // 2) Abrir Modal: cadastra um item novo na janela, e o Salvar da tela grava
+              await abrirItens()
+              const abrirModal = page.locator('button[title="Abrir Modal"]').locator('visible=true').last()
+              if (!(await abrirModal.count())) motivos.push(`sub-aba "${sd.label}": sem o botão Abrir Modal`)
+              else {
+                const antesModal = await idsSub()
+                await abrirModal.click()
+                const feitosModal: Array<[ManifestField, Preenchido]> = []
+                let kk = 60
+                for (const f of editaveisSub) { const p = await preencherCampo(page, f, ++kk, limitesSub, undefined, alvoJanela); if (p) feitosModal.push([f, p]) }
+                await salvarJanela()
+                await salvarTela()
+                try {
+                  await expect.poll(async () => (await idsSub()).size, { message: 'Abrir Modal: o item novo aparece no banco', timeout: 15_000 }).toBe(antesModal.size + 1)
+                } catch (e) {
+                  const linhas = await consultar(`select * from "${sd.table}" where "${sd.foreignKey}"::text = $1`, [novoId])
+                  throw new Error(`${(e as Error).message}
+linhas de "${sd.table}" do pedido ${novoId} (antes: ${antesModal.size}): ${JSON.stringify(linhas)}`)
+                }
+                const idModal = [...(await idsSub())].find(id => !antesModal.has(id))!
+                anotarCriado(sd.table, pkSub, idModal)
+                estado.filhos.push({ tabela: sd.table, pk: pkSub, fk: sd.foreignKey, id: idModal })
+                gravarEstado(view.slug, estado)
+                for (const [f, p] of feitosModal) expect.soft(conferirNoBanco(f, p, await valorNoBanco(f, idModal)), `Abrir Modal: "${f.label}" gravado`).toBeNull()
+                exercitado.push('Abrir Modal')
+              }
+
+              // 3) lixeira: exclui um item pela aba, e o Salvar da tela grava (o outro item continua)
+              await abrirItens()
+              const lixeira = page.locator('button[title="Excluir Item"]').locator('visible=true').first()
+              if (!(await lixeira.count())) motivos.push(`sub-aba "${sd.label}": sem a lixeira (Excluir Item)`)
+              else {
+                const antesLixo = await idsSub()
+                await lixeira.click()
+                await confirmarExclusao(page)
+                await salvarTela()
+                await expect.poll(async () => (await idsSub()).size, { message: 'lixeira: o item excluído some do banco', timeout: 15_000 }).toBe(antesLixo.size - 1)
+                const depoisLixo = await idsSub()
+                const sumiu = [...antesLixo].find(id => !depoisLixo.has(id))!
+                riscarCriado(sd.table, sumiu)
+                estado.filhos = (estado.filhos ?? []).filter(x => x.id !== sumiu)
+                gravarEstado(view.slug, estado)
+                exercitado.push('lixeira do item')
+              }
             }
           }
           test.skip(feitas === 0, motivos.join(' | ') || 'nenhuma aba de detalhe pôde receber uma linha')

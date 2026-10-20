@@ -395,12 +395,12 @@ export async function get${mn}ByField(field: string, value: any) {
 
 export async function create${mn}(formData: FormData | Record<string, any>) {
   const body = normalizeBody(formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData)
-  return apiPost('${endpoint}', body)
+  return rowsWithCases(await apiPost('${endpoint}', body))
 }
 
 export async function update${mn}(id: string, formData: FormData | Record<string, any>) {
   const body = normalizeBody(formData instanceof FormData ? Object.fromEntries(formData.entries()) : formData)
-  return apiPut(\`${endpoint}/\${id}\`, body)
+  return rowsWithCases(await apiPut(\`${endpoint}/\${id}\`, body))
 }
 
 export async function delete${mn}(id: string) {

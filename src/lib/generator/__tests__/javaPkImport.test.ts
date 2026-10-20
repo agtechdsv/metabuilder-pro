@@ -49,6 +49,9 @@ describe('backend Java: import do tipo da chave primária', () => {
     expect(act).toBeDefined()
     expect(act).toContain('const BOTH_CASES = true')
     expect(act).toContain('rowsWithCases(')
+    // criar e atualizar também: a tela lê o id do que o servidor devolve (res.id) para saber que o registro já foi gravado; sem isso o Salvar da tela grava o item de novo
+    expect(act).toMatch(/return rowsWithCases\(await apiPost\(/)
+    expect(act).toMatch(/return rowsWithCases\(await apiPut\(/)
   })
 
   it('Postgres: o mesmo código existe, desligado (as colunas já vêm em minúsculas)', () => {
