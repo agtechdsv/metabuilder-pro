@@ -41,7 +41,7 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>, jw
 
   // 6. REST Actions para cada modelo (substituem as Server Actions de banco)
   for (const model of ast.models) {
-    let actionContent = generateRestActions(model)
+    let actionContent = generateRestActions(model, ast.dbStack === 'oracle')
     // gestão de acesso: quem só tem leitura nas telas da tabela não grava (o servidor do frontend recusa antes de chamar a API)
     if (ast.accessAdmin) actionContent = applyWriteGuard(actionContent, model)
     const fileKeys = new Set<string>()
@@ -266,7 +266,7 @@ export async function apiDelete(path: string): Promise<any> {
 // REST Actions por modelo (Seção 4.4 do plano)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function generateRestActions(model: ModelNode): string {
+function generateRestActions(model: ModelNode, oracle = false): string {
   const mn = model.name
   const endpoint = `/api/${model.dbTable}`
 
@@ -331,6 +331,25 @@ function normalizeBody(body: Record<string, any>): Record<string, any> {
 // Parâmetros da tela (paginação e ordenação da URL) que não são filtros da API
 const UI_PARAMS = new Set(['page', 'limit', 'size', 'sort', 'sort_by', 'sort_order', 'embedded'])
 
+// No Oracle a API Spring devolve as colunas em MAIÚSCULAS (ID, PRIORIDADE) e várias telas leem \`item.id\` em minúsculas (quadros, gantt, mapa...).
+// Cada linha ganha as duas grafias, como o acesso direto ao Oracle do app Node já faz.
+const BOTH_CASES = ${oracle}
+function withCases<T>(r: T): T {
+  if (!BOTH_CASES || !r || typeof r !== 'object' || Array.isArray(r)) return r
+  const o: Record<string, any> = { ...(r as any) }
+  for (const [k, v] of Object.entries(r as any)) {
+    if (!(k.toLowerCase() in o)) o[k.toLowerCase()] = v
+    if (!(k.toUpperCase() in o)) o[k.toUpperCase()] = v
+  }
+  return o as T
+}
+function rowsWithCases(x: any): any {
+  if (!BOTH_CASES) return x
+  if (Array.isArray(x)) return x.map(withCases)
+  if (x && Array.isArray(x.content)) return { ...x, content: x.content.map(withCases) }
+  return withCases(x)
+}
+
 export async function get${mn}List(opts?: { page?: number; limit?: number; search?: string; filters?: Record<string, any> }) {
   const query: Record<string, any> = {}
   if (opts?.filters) {
@@ -340,22 +359,22 @@ export async function get${mn}List(opts?: { page?: number; limit?: number; searc
   }
   // página pedida explicitamente: devolve só ela (a API Spring conta as páginas a partir de 0)
   if (opts?.page != null) {
-    return apiGet('${endpoint}', { ...query, page: Math.max(0, opts.page - 1), size: opts.limit ?? 50 })
+    return rowsWithCases(await apiGet('${endpoint}', { ...query, page: Math.max(0, opts.page - 1), size: opts.limit ?? 50 }))
   }
   // sem página: traz todos os registros (as telas paginam e ordenam no servidor do Next; a API devolve 50 por página por padrão)
   const all: any[] = []
   for (let page = 0; page < 200; page++) {
     const res: any = await apiGet('${endpoint}', { ...query, page, size: 500 })
-    if (Array.isArray(res)) return res
+    if (Array.isArray(res)) return rowsWithCases(res)
     all.push(...(res?.content ?? []))
     const totalPages = res?.page?.totalPages ?? res?.totalPages ?? 1
     if (page + 1 >= totalPages) break
   }
-  return all
+  return rowsWithCases(all)
 }
 
 export async function get${mn}ById(id: string) {
-  return apiGet(\`${endpoint}/\${id}\`)
+  return rowsWithCases(await apiGet(\`${endpoint}/\${id}\`))
 }
 
 export async function get${mn}ByField(field: string, value: any) {
@@ -371,7 +390,7 @@ export async function get${mn}ByField(field: string, value: any) {
   return items.filter((item: any) => {
     const val = String(item?.[field] ?? item?.[field.toLowerCase()] ?? item?.[field.toUpperCase()] ?? '').trim().toLowerCase()
     return val === targetVal
-  })
+  }).map(withCases)
 }
 
 export async function create${mn}(formData: FormData | Record<string, any>) {

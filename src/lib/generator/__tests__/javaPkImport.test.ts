@@ -44,6 +44,19 @@ describe('backend Java: import do tipo da chave primária', () => {
     expect(svc).toContain('import java.math.BigDecimal;')
   })
 
+  it('Oracle: as ações do frontend devolvem as linhas com as colunas nas duas grafias (ID e id), senão quadros e gantt montam o id "undefined"', () => {
+    const act = files.get('frontend/app/actions/logs.ts') ?? files.get('frontend/app/actions/LOGS.ts') ?? [...files.entries()].find(([k]) => /frontend\/app\/actions\/logs\.ts$/i.test(k))?.[1]
+    expect(act).toBeDefined()
+    expect(act).toContain('const BOTH_CASES = true')
+    expect(act).toContain('rowsWithCases(')
+  })
+
+  it('Postgres: o mesmo código existe, desligado (as colunas já vêm em minúsculas)', () => {
+    const pgFiles = generateJavaSpringProject(parseMetaBuilderJSON(raw(), 'postgres', { backendStack: 'java-spring', javaGroupId: 'com.vendas' } as any))
+    const act = [...pgFiles.entries()].find(([k]) => /frontend\/app\/actions\/logs\.ts$/i.test(k))?.[1]
+    expect(act).toContain('const BOTH_CASES = false')
+  })
+
   it('chave UUID continua importando UUID e a inteira (java.lang) não importa nada a mais', () => {
     expect(src('repositories', 'ClientesRepository')).toContain('import java.util.UUID;')
     expect(src('repositories', 'ContadoresRepository')).not.toMatch(/import java\.(math|util\.UUID)/)
