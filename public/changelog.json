@@ -1,4 +1,28 @@
 {
+  "v1.0.11": {
+    "date": "2026-10-20",
+    "pt": [
+      "Nova Interface do Painel de Testes: navegação mais limpa e produtiva com seções retráteis organizadas e a nova opção de ocultar scripts durante a execução.",
+      "Transição Visual Fluida nos Testes: exibição aprimorada com fixação de logo até a renderização do primeiro quadro ao vivo.",
+      "Instalação Nativa de Testes E2E: configuração simplificada do motor de testes diretamente pela IDE, eliminando a dependência de pastas manuais no projeto.",
+      "Maior Compatibilidade com Bancos Oracle: refinamento nos filtros de segurança em nível de linha (RLS), aceitando aliases em subconsultas de forma mais flexível.",
+      "Aprimoramento na Replicação de Casos de Uso: sincronização mais robusta de relações, enumerações e prioridades de tarefas entre ambientes PostgreSQL e Oracle."
+    ],
+    "en": [
+      "Enhanced Testing Panel Interface: cleaner, more productive navigation with collapsible sections and a new option to hide scripts during execution.",
+      "Smooth Visual Feedback in Live Tests: improved experience with persistent logo display until the first live frame is rendered.",
+      "Seamless E2E Test Setup: integrated testing engine directly installed via the IDE, removing manual folder configurations.",
+      "Extended Oracle Database Compatibility: advanced row-level security (RLS) filter enhancements for flexible subquery aliasing in Oracle.",
+      "Optimized Use Case Synchronization: improved accuracy when replicating task priorities, enumerations, and relationships between PostgreSQL and Oracle."
+    ],
+    "es": [
+      "Nueva Interfaz del Panel de Pruebas: navegación más limpia y organizada con secciones plegables y un nuevo botón para ocultar scripts durante la ejecución.",
+      "Transición Visual Fluida en Pruebas: experiencia mejorada con logotipo fijo hasta la carga del primer cuadro en vivo.",
+      "Configuración Nativa de Pruebas E2E: integración directa del motor de pruebas a través del IDE, eliminando la necesidad de carpetas manuales.",
+      "Mayor Compatibilidad con Bases de Datos Oracle: mejoras avanzadas en las políticas de seguridad a nivel de fila (RLS), admitiendo alias en subconsultas con mayor flexibilidad.",
+      "Sincronización Optimizada de Casos de Uso: mayor consistencia al replicar relaciones, enumeraciones y prioridades de tareas entre entornos PostgreSQL y Oracle."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
