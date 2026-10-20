@@ -1,23 +1,14 @@
 {
-  "v1.0.13": {
+  "v1.0.14": {
     "date": "2026-10-20",
     "pt": [
-      "Lançamento Oficial dos Ambientes de Testes: Conheça nossa nova página dedicada (/features/testing), agora disponível na Home e no menu de Desenvolvedores em três idiomas, com todos os 6 tipos de ambientes prontos para uso.",
-      "Configuração Automática de Banco de Dados para Testes: Agilize a preparação de seus testes com o preenchimento inteligente e automático dos parâmetros de conexão (PostgreSQL e Oracle) diretamente da aplicação selecionada.",
-      "Formulários de Teste Dinâmicos e Inteligentes: As sugestões de conexão agora se adaptam dinamicamente ao trocar de app, preservando com total segurança qualquer informação personalizada já digitada.",
-      "Planos de Teste com Gestão de Acessos Integrada: Maior fidelidade nas validações com a inclusão automática de regras de permissão e perfis administrativos para os usuários de teste."
+      "Atualização de versão e melhorias gerais."
     ],
     "en": [
-      "Official Launch of Testing Environments: Discover our new dedicated page (/features/testing), now available on the Home page and Developer menu in three languages, with all 6 environment types fully enabled.",
-      "Automated Database Setup for Testing: Speed up validation workflows with smart pre-filling of database connection credentials (PostgreSQL and Oracle) pulled directly from your application.",
-      "Dynamic and Adaptive Test Configurations: Connection suggestions now update seamlessly when switching applications, safely preserving any custom values you have already entered.",
-      "Integrated Access Management in Test Plans: Enjoy more accurate test scenarios with automatic incorporation of permission structures and administrative privileges for test users."
+      "Version update and general improvements."
     ],
     "es": [
-      "Lanzamiento Oficial de Entornos de Pruebas: Conozca nuestra nueva página dedicada (/features/testing), disponible en la Home y en el menú de Desarrolladores en tres idiomas, con los 6 tipos de entornos completamente disponibles.",
-      "Configuración Automática de Bases de Datos para Pruebas: Acelere la preparación de sus pruebas con el autorrelleno inteligente de conexiones (PostgreSQL y Oracle) obtenido directamente de su aplicación.",
-      "Formularios de Pruebas Dinámicos y Flexibles: Las sugerencias de conexión ahora se adaptan automáticamente al cambiar de aplicación, preservando de forma segura cualquier dato personalizado introducido.",
-      "Gestión de Accesos Integrada en Planes de Pruebas: Mayor precisión en sus validaciones gracias a la inclusión automática de esquemas de permisos y roles administrativos para los usuarios de prueba."
+      "Actualización de versión y mejoras generales."
     ]
   },
   "v1.0.0": {
