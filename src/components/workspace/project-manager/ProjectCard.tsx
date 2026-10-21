@@ -58,6 +58,9 @@ export function ProjectCard({
   onDelete
 }: ProjectCardProps) {
   const { t } = useI18n()
+  // só depois de montar: o servidor não sabe se está no desktop, e decidir isso no render gera diferença de HTML (erro de hidratação)
+  const [desktop, setDesktop] = React.useState(false)
+  React.useEffect(() => { setDesktop(isTauri()) }, [])
 
   return (
     <div
@@ -170,7 +173,7 @@ export function ProjectCard({
                     </ProGate>
 
                     {/* 4. Ambiente de Testes (roda na IDE Desktop) */}
-                    {onOpenTests && isTauri() && (
+                    {onOpenTests && desktop && (
                       <button
                         className="p-2 text-amber-500 hover:text-amber-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                         title={t('ide_tests.open', 'Ambiente de Testes')}

@@ -18,13 +18,13 @@ export default function IDELocalPage() {
     const type = p.get('type') === 'workspace' ? 'workspace' : 'project'
     const id = p.get('id')
     const slug = p.get('slug')
-    if (id && slug) openRef.current({ type, id, name: p.get('name') || slug, slug }, { detached: true })
+    if (id && slug) Promise.resolve(openRef.current({ type, id, name: p.get('name') || slug, slug }, { detached: true })).catch(err => console.error('IDE Local: não foi possível abrir', err))
 
     let unlisten: (() => void) | undefined
     let cancelled = false
     import('@tauri-apps/api/event')
       .then(({ listen }) => listen<IDETarget>(IDE_LOCAL_OPEN_EVENT, (e) => {
-        if (e.payload?.id && e.payload?.slug) openRef.current(e.payload, { detached: true })
+        if (e.payload?.id && e.payload?.slug) Promise.resolve(openRef.current(e.payload, { detached: true })).catch(err => console.error('IDE Local: não foi possível abrir', err))
       }))
       .then((fn) => { if (cancelled) fn(); else unlisten = fn })
       .catch(() => {})

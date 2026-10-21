@@ -103,6 +103,9 @@ export function ProjectManager({
   const searchParams = useSearchParams()
   const { openPreview } = usePreview()
   const { openIDE } = useIDE()
+  // só depois de montar: o servidor não sabe se está no desktop, e decidir isso no render gera diferença de HTML (erro de hidratação, React #418)
+  const [desktop, setDesktop] = useState(false)
+  useEffect(() => { setDesktop(isTauri()) }, [])
   // Ambiente de Testes aberto direto pelo card do projeto
   const [testsTarget, setTestsTarget] = useState<{ type: 'project'; id: string; name: string; slug: string } | null>(null)
   const pathname = usePathname()
@@ -417,7 +420,7 @@ export function ProjectManager({
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full shadow-[0_-2px_10px_rgba(79,70,229,0.5)]" />
           )}
         </button>
-        {isTauri() && (
+        {desktop && (
           <>
             <button
               onClick={() => setActiveTab('tunnel')}
