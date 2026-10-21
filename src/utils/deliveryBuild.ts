@@ -46,6 +46,10 @@ robocopy "$b\\.next\\standalone" "$o" @flags | Out-Null; if ($LASTEXITCODE -ge 8
 robocopy "$b\\.next\\static" "$o\\.next\\static" @flags | Out-Null; if ($LASTEXITCODE -ge 8) { exit 1 }
 if (Test-Path "$b\\public") { robocopy "$b\\public" "$o\\public" @flags | Out-Null; if ($LASTEXITCODE -ge 8) { exit 1 } }
 ${withScripts ? `foreach ($d in @('scripts', 'db')) { if (Test-Path "$b\\$d") { robocopy "$b\\$d" "$o\\$d" @flags | Out-Null; if ($LASTEXITCODE -ge 8) { exit 1 } } }\n` : ''}Remove-Item -Recurse -Force "$o\\node_modules\\@img" -ErrorAction SilentlyContinue
+# o Next copia para o pacote arquivos de código-fonte que "rastreou" e mapas de origem (que embutem o código): o app roda sem eles, e um pacote compilado não deve levá-los
+$o = (Get-Item -LiteralPath $o).FullName
+Get-ChildItem -LiteralPath $o -Recurse -File -ErrorAction SilentlyContinue | Where-Object { @('.ts', '.tsx', '.map') -contains $_.Extension -and -not $_.FullName.StartsWith("$o\\node_modules\\") -and $_.Name -notlike '*.d.ts' } | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -LiteralPath $o -Directory | Where-Object { @('node_modules', '.next', 'scripts', 'db', 'public') -notcontains $_.Name -and -not (Get-ChildItem -LiteralPath $_.FullName -Recurse -File -ErrorAction SilentlyContinue) } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 if (-not (Test-Path "$o\\server.js")) { exit 2 }
 exit 0`
 

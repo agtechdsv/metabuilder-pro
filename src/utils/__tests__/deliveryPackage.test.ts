@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { DeliveryFiles } from '../delivery'
+import { ASSEMBLE_NEXT } from '../deliveryBuild'
 import { compiledReadme, detectProjectInfo, filesForCopyKind, hasDockerPack, isDeployFile, kindFolder, startScripts } from '../deliveryPackage'
 
 const nodeFiles = (): DeliveryFiles => new Map<string, Uint8Array | string>([
@@ -114,5 +115,26 @@ describe('Pacote compilado: manual', () => {
     expect(m).toContain('iniciar-frontend.cmd')
     expect(m).toContain('FREEPDB1')
     expect(m).not.toContain('scripts/setup-access.mjs')
+  })
+})
+
+describe('Pacote compilado: montagem', () => {
+  const ps = ASSEMBLE_NEXT('C:\build', 'C:\pacote', true)
+
+  it('tira do pacote o código-fonte que o Next rastreou e os mapas de origem (fora do node_modules)', () => {
+    expect(ps).toContain("'.ts', '.tsx', '.map'")
+    expect(ps).toContain('node_modules')
+    expect(ps).toContain("*.d.ts") // tipos de dependências ficam
+    expect(ps).toContain('Remove-Item')
+  })
+
+  it('tira o sharp nativo (um pacote serve para Windows e Linux) e confere que o server.js existe', () => {
+    expect(ps).toContain('@img')
+    expect(ps).toContain('server.js')
+  })
+
+  it('só o app Node leva scripts/ e db/ (tabelas de acesso)', () => {
+    expect(ps).toContain("@('scripts', 'db')")
+    expect(ASSEMBLE_NEXT('C:\b', 'C:\o', false)).not.toContain("@('scripts', 'db')")
   })
 })
