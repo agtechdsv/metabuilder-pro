@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { aplicarMascara, campoMarcador, regraDeLinha, describeName, isSupportedView, mascaraDePadrao, planTitle, planView } from '../plan'
+import { aplicarMascara, cargaGrava, normalizarCarga, campoMarcador, regraDeLinha, describeName, isSupportedView, mascaraDePadrao, planTitle, planView } from '../plan'
 import { eventLine, parseTestEvent, statusFromPlaywright } from '../results'
 import type { ManifestField, ManifestView } from '../manifestTypes'
 
@@ -18,10 +18,26 @@ describe('plano de testes de um caso de uso', () => {
     expect(planView(view({ logicType: 'gestao_acesso' }), { types: ['visual'] })).toEqual([])
   })
 
-  it('Desempenho e carga: abertura e acessos simultâneos, só no tipo carga', () => {
+  it('Desempenho e carga: abertura sempre; leitura, gravação e mistura conforme o dev escolhe, com a quantidade de usuários', () => {
     expect(planView(view(), { types: ['funcional'] }).some(t => t.kind.startsWith('carga_'))).toBe(false)
-    expect(planView(view(), { types: ['carga'] }).map(t => t.kind)).toEqual(['carga_abertura', 'carga_simultaneos'])
+    expect(planView(view(), { types: ['carga'] }).map(t => t.kind)).toEqual(['carga_abertura', 'carga_leitura']) // padrão: 10 usuários, só leitura
+    const todos = planView(view(), { types: ['carga'], carga: { users: 100, modos: ['leitura', 'gravacao', 'mistura'] } })
+    expect(todos.map(t => t.kind)).toEqual(['carga_abertura', 'carga_leitura', 'carga_gravacao', 'carga_mistura'])
+    expect(todos.filter(t => t.users).every(t => t.users === 100 && t.title.includes('100'))).toBe(true)
+    expect(planView(view(), { types: ['carga'], carga: { users: 100, modos: ['gravacao'] } }).map(t => t.kind)).toEqual(['carga_abertura', 'carga_gravacao'])
+    // gravação e mistura só em Pesquisa + Cadastro; mistura precisa de ao menos 2 usuários
+    expect(planView(view({ logicType: 'kanban' }), { types: ['carga'], carga: { modos: ['gravacao', 'mistura'] } }).map(t => t.kind)).toEqual(['carga_abertura'])
+    expect(planView(view(), { types: ['carga'], carga: { users: 1, modos: ['mistura'] } }).map(t => t.kind)).toEqual(['carga_abertura'])
     expect(planView(view({ logicType: 'gestao_acesso' }), { types: ['carga'] })).toEqual([])
+  })
+
+  it('carga: quantidade e modos sempre válidos, e só gravação/mistura gravam no banco', () => {
+    expect(normalizarCarga()).toEqual({ users: 10, modos: ['leitura'] })
+    expect(normalizarCarga({ users: 0, modos: [] })).toEqual({ users: 10, modos: ['leitura'] })
+    expect(normalizarCarga({ users: 99999 }).users).toBe(500)
+    expect(normalizarCarga({ users: 3.6 }).users).toBe(4)
+    expect(cargaGrava({ modos: ['leitura'] })).toBe(false)
+    expect(cargaGrava({ modos: ['leitura', 'mistura'] })).toBe(true)
   })
 
   it('Compatibilidade: um teste por navegador, só no tipo compat, e a gestão de acesso fica de fora', () => {

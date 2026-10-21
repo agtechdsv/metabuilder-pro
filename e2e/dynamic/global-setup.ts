@@ -12,7 +12,9 @@ export default async function globalSetup() {
   const tabelas = tabelasDoManifesto(m)
   // teste de integração: sobras de uma rodada anterior interrompida saem antes de guardar a impressão digital (a rodada começa limpa)
   const tipos = (process.env.E2E_TYPES || '').split(',')
-  const gravaDados = tipos.includes('integracao') || tipos.includes('seguranca')
+  // a carga só grava quando o dev escolheu o modo gravação ou mistura
+  const cargaGrava = tipos.includes('carga') && (process.env.E2E_CARGA_MODOS || '').split(',').some(m => m.trim() === 'gravacao' || m.trim() === 'mistura')
+  const gravaDados = tipos.includes('integracao') || tipos.includes('seguranca') || cargaGrava
   const limpeza = gravaDados ? alvosDeLimpeza(m) : []
   if (limpeza.length > 0) await limparSobras(limpeza)
   if (gravaDados) await limparDiario() // registros criados sem marcador por uma rodada interrompida

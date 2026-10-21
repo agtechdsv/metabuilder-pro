@@ -4885,7 +4885,7 @@
     "type_compat": "Compatibility",
     "type_compat_desc": "The screen opens, lists the database total and shows the form on Chrome, Firefox and Safari (WebKit)",
     "type_carga": "Performance and load",
-    "type_carga_desc": "Opening time of each screen and 20 simultaneous accesses (read only)",
+    "type_carga_desc": "Opening time of each screen and N simultaneous users: reading, writing or both together (you choose)",
     "err_plan": "Could not generate the plan.",
     "hist_err": "Could not read the history.",
     "err_exit": "The engine ended with an error (code {code}). See the log below.",
@@ -5070,6 +5070,12 @@
     "compat_ask_title": "Also test on Firefox and Safari?",
     "compat_ask_body": "To test on Firefox and Safari (WebKit), Playwright needs to download those two browsers (about 150 MB each, from the internet, to your user Playwright folder). Nothing is installed on the system and they do not replace your browser. Without them only Chrome is tested and the other tests are skipped.",
     "compat_ask_yes": "Download and run",
-    "compat_ask_no": "Run with Chrome only"
+    "compat_ask_no": "Run with Chrome only",
+    "carga_users": "Simultaneous users",
+    "carga_users_max": "from 1 to",
+    "carga_modo_leitura": "Read",
+    "carga_modo_gravacao": "Write",
+    "carga_modo_mistura": "Mixed",
+    "carga_modos_desc": "Read: everyone opens the screen at the same time. Write: everyone saves a record at the same time (E2E- data, deleted at the end; Search + Form only). Mixed: half save, half read. Pick one, two or all three."
   }
 }

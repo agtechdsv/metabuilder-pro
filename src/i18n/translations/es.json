@@ -4973,7 +4973,7 @@
     "type_compat": "Compatibilidad",
     "type_compat_desc": "La pantalla abre, lista el total de la base y muestra el formulario en Chrome, Firefox y Safari (WebKit)",
     "type_carga": "Rendimiento y carga",
-    "type_carga_desc": "Tiempo de apertura de cada pantalla y 20 accesos simultáneos (solo lectura)",
+    "type_carga_desc": "Tiempo de apertura de cada pantalla y N usuarios simultáneos: leyendo, escribiendo o ambos juntos (usted elige)",
     "err_plan": "No se pudo generar el plan.",
     "hist_err": "No se pudo leer el historial.",
     "err_exit": "El motor terminó con error (código {code}). Vea el registro abajo.",
@@ -5158,6 +5158,12 @@
     "compat_ask_title": "¿Probar también en Firefox y Safari?",
     "compat_ask_body": "Para probar en Firefox y Safari (WebKit), Playwright necesita descargar esos dos navegadores (unos 150 MB cada uno, de internet, a la carpeta de Playwright de su usuario). No se instala nada en el sistema y no reemplazan su navegador. Sin ellos solo se prueba Chrome y las otras pruebas quedan omitidas.",
     "compat_ask_yes": "Descargar y ejecutar",
-    "compat_ask_no": "Ejecutar solo con Chrome"
+    "compat_ask_no": "Ejecutar solo con Chrome",
+    "carga_users": "Usuarios simultáneos",
+    "carga_users_max": "de 1 a",
+    "carga_modo_leitura": "Lectura",
+    "carga_modo_gravacao": "Escritura",
+    "carga_modo_mistura": "Mixta",
+    "carga_modos_desc": "Lectura: todos abren la pantalla a la vez. Escritura: todos guardan un registro a la vez (datos E2E-, borrados al final; solo Búsqueda + Formulario). Mixta: la mitad guarda y la mitad lee. Elija una, dos o las tres."
   }
 }

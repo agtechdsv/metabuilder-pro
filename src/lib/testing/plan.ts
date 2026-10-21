@@ -14,7 +14,7 @@ export type PlannedKind =
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar' | 'detalhe_adicionar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'compat_chrome' | 'compat_firefox' | 'compat_webkit'
-  | 'carga_abertura' | 'carga_simultaneos'
+  | 'carga_abertura' | 'carga_leitura' | 'carga_gravacao' | 'carga_mistura'
   | 'visual_responsivo' | 'visual_acessibilidade'
   | 'acesso_abre' | 'acesso_usuarios_lista' | 'acesso_usuario_ciclo' | 'acesso_email_repetido' | 'acesso_grupo_ciclo' | 'acesso_permissoes_matriz' | 'acesso_permissao_ciclo' | 'acesso_so_admin'
   | 'filtros_tela' | 'tipo_galeria' | 'tipo_kanban' | 'tipo_fluxo' | 'tipo_timeline' | 'tipo_gantt' | 'tipo_agenda' | 'tipo_mapa_mental' | 'tipo_mapa' | 'tipo_bi'
@@ -30,6 +30,8 @@ export interface PlannedTest {
   /** rótulo do campo e máscara (entram no texto traduzido do teste) */
   label?: string
   mask?: string
+  /** usuários simultâneos (testes de carga) */
+  users?: number
 }
 
 export type PlanLang = 'pt' | 'en' | 'es'
@@ -45,7 +47,22 @@ export const TELAS_VISUAL = [
 ] as const
 
 /** Limites do tipo Desempenho e carga (valem para o app local de teste, não para produção). */
-export const LIMITES_CARGA = { aberturaMs: 5000, simultaneos: 20, p95Ms: 10000 } as const
+export const LIMITES_CARGA = { aberturaMs: 5000, p95Ms: 10000, gravacaoP95Ms: 15000 } as const
+
+/** O que a carga mede: só leitura, só gravação ou os dois juntos (metade dos usuários grava, metade lê). O dev escolhe quais e quantos usuários. */
+export type CargaModo = 'leitura' | 'gravacao' | 'mistura'
+export interface CargaOpcoes { users: number; modos: CargaModo[] }
+export const CARGA_MODOS: CargaModo[] = ['leitura', 'gravacao', 'mistura']
+export const CARGA_PADRAO: CargaOpcoes = { users: 10, modos: ['leitura'] }
+export const CARGA_MAX_USERS = 500
+/** Valores seguros: pelo menos 1 usuário (no máximo 500) e pelo menos um modo. */
+export function normalizarCarga(c?: Partial<CargaOpcoes> | null): CargaOpcoes {
+  const users = Math.min(CARGA_MAX_USERS, Math.max(1, Math.round(Number(c?.users) || CARGA_PADRAO.users)))
+  const modos = CARGA_MODOS.filter(m => (c?.modos ?? CARGA_PADRAO.modos).includes(m))
+  return { users, modos: modos.length > 0 ? modos : [...CARGA_PADRAO.modos] }
+}
+/** A carga grava no banco de teste? (gravação ou mistura): precisa das mesmas travas da Integração. */
+export const cargaGrava = (c?: Partial<CargaOpcoes> | null): boolean => normalizarCarga(c).modos.some(m => m !== 'leitura')
 
 /** Navegadores do tipo Compatibilidade: o Chrome já vem com a IDE; Firefox e WebKit (o motor do Safari) são baixados pelo Playwright, só com a permissão do usuário. */
 export const NAVEGADORES_COMPAT = [
@@ -57,6 +74,8 @@ export interface PlanOptions {
   types?: TestType[]
   /** configuração de login do projeto (manifest.auth): os testes de segurança por grupo e por linha dependem dela */
   auth?: ManifestAuth
+  /** quantos usuários e quais modos o tipo Desempenho e carga usa (padrão: 10 usuários, só leitura) */
+  carga?: Partial<CargaOpcoes>
 }
 
 /**
@@ -88,7 +107,9 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     visual_responsivo: () => 'responsive: on phone, tablet and desktop sizes the screen shows no horizontal page scroll and keeps its content visible',
     visual_acessibilidade: () => 'accessibility: page language and title, one main heading, images with alternative text, and buttons, links and fields with a name for screen readers',
     carga_abertura: () => 'performance: the screen loads within the time limit (median of 3 loads)',
-    carga_simultaneos: () => 'load: 20 simultaneous accesses to the screen, all answered without error and within the time limit',
+    carga_leitura: p => `read load: ${p.users} simultaneous accesses to the screen, all answered without error and within the time limit`,
+    carga_gravacao: p => `write load: ${p.users} simultaneous registrations, all saved in the database, without error and within the time limit`,
+    carga_mistura: p => `mixed load: ${p.users} simultaneous users (half saving, half reading), no errors and within the time limit`,
     compat_chrome: () => 'Chrome: the screen opens, lists the same total as the database and shows the new form',
     compat_firefox: () => 'Firefox: the screen opens, lists the same total as the database and shows the new form',
     compat_webkit: () => 'Safari (WebKit): the screen opens, lists the same total as the database and shows the new form',
@@ -145,7 +166,9 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     visual_responsivo: () => 'responsivo: en celular, tableta y computadora la pantalla no tiene desplazamiento horizontal de la página y mantiene su contenido visible',
     visual_acessibilidade: () => 'accesibilidad: idioma y título de la página, un encabezado principal, imágenes con texto alternativo, y botones, enlaces y campos con nombre para lectores de pantalla',
     carga_abertura: () => 'rendimiento: la pantalla carga dentro del límite de tiempo (mediana de 3 cargas)',
-    carga_simultaneos: () => 'carga: 20 accesos simultáneos a la pantalla, todos respondidos sin error y dentro del límite de tiempo',
+    carga_leitura: p => `carga de lectura: ${p.users} accesos simultáneos a la pantalla, todos respondidos sin error y dentro del límite de tiempo`,
+    carga_gravacao: p => `carga de escritura: ${p.users} registros simultáneos, todos guardados en la base, sin error y dentro del límite de tiempo`,
+    carga_mistura: p => `carga mixta: ${p.users} usuarios simultáneos (mitad guardando, mitad leyendo), sin errores y dentro del límite de tiempo`,
     compat_chrome: () => 'Chrome: la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
     compat_firefox: () => 'Firefox: la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
     compat_webkit: () => 'Safari (WebKit): la pantalla abre, lista el mismo total de la base y muestra el formulario nuevo',
@@ -319,7 +342,7 @@ export function planView(v: ManifestView, opts: PlanOptions = {}): PlannedTest[]
     ...(types.includes('integracao') ? planoIntegracao(v) : []),
     ...(types.includes('seguranca') ? planoSeguranca(v, opts.auth) : []),
     ...(types.includes('compat') ? planoCompat(v) : []),
-    ...(types.includes('carga') ? planoCarga(v) : []),
+    ...(types.includes('carga') ? planoCarga(v, normalizarCarga(opts.carga)) : []),
     ...(types.includes('visual') ? planoVisual(v) : []),
   ]
 }
@@ -333,13 +356,19 @@ function planoVisual(v: ManifestView): PlannedTest[] {
   ]
 }
 
-/** Desempenho e carga: tempo de abertura da tela e vários acessos ao mesmo tempo. Só lê dados. */
-function planoCarga(v: ManifestView): PlannedTest[] {
+/**
+ * Desempenho e carga: tempo de abertura da tela (1 usuário) e, nos modos que o dev escolheu, N usuários ao mesmo tempo: só lendo, só gravando
+ * (cadastros pela mesma chamada que o formulário faz) ou metade gravando e metade lendo. Gravação e mistura só em Pesquisa + Cadastro.
+ */
+function planoCarga(v: ManifestView, carga: CargaOpcoes): PlannedTest[] {
   if (v.logicType === 'gestao_acesso') return []
-  return [
-    { kind: 'carga_abertura', title: `desempenho: a tela abre em até ${LIMITES_CARGA.aberturaMs / 1000} s (mediana de 3 aberturas)` },
-    { kind: 'carga_simultaneos', title: `carga: ${LIMITES_CARGA.simultaneos} acessos simultâneos à tela, todos respondidos sem erro em até ${LIMITES_CARGA.p95Ms / 1000} s` },
-  ]
+  const n = carga.users
+  const out: PlannedTest[] = [{ kind: 'carga_abertura', title: `desempenho: a tela abre em até ${LIMITES_CARGA.aberturaMs / 1000} s (mediana de 3 aberturas)` }]
+  if (carga.modos.includes('leitura')) out.push({ kind: 'carga_leitura', users: n, title: `carga de leitura: ${n} acessos simultâneos à tela, todos respondidos sem erro em até ${LIMITES_CARGA.p95Ms / 1000} s` })
+  const cadastra = v.logicType === 'pesquisa_cadastro' && isSupportedView(v) && !camposDeTipo(v).every(f => f.readOnly)
+  if (cadastra && carga.modos.includes('gravacao')) out.push({ kind: 'carga_gravacao', users: n, title: `carga de gravação: ${n} cadastros simultâneos, todos gravados no banco, sem erro e em até ${LIMITES_CARGA.gravacaoP95Ms / 1000} s` })
+  if (cadastra && carga.modos.includes('mistura') && n >= 2) out.push({ kind: 'carga_mistura', users: n, title: `carga mista: ${n} usuários ao mesmo tempo (metade gravando, metade lendo), sem erro e dentro do limite de tempo` })
+  return out
 }
 
 /** Compatibilidade: a mesma verificação enxuta (abre, total da lista e formulário novo) em cada navegador. Só lê dados. */

@@ -10,7 +10,7 @@ import { comBanco, consultar, dialeto, nomeDoCampo, nomeDoFiltro } from '../lib/
 import { anotarCriado, riscarCriado } from '../lib/guard'
 import { CONFIG } from '../lib/config'
 import type { ManifestField, ManifestView, TestManifest } from '../../../src/lib/testing/manifestTypes'
-import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT, LIMITES_CARGA, TELAS_VISUAL } from '../../../src/lib/testing/plan'
+import { aplicarMascara, camposDeTipo, camposEditaveis, campoDeFiltro, campoMarcador, describeName, ehData, mascaraDePadrao, planView, PREFIXO_E2E, regraDeLinha, type TestType, detalhesPreenchiveis, isSupportedView, NAVEGADORES_COMPAT, LIMITES_CARGA, TELAS_VISUAL, normalizarCarga } from '../../../src/lib/testing/plan'
 
 /**
  * Testes DINÂMICOS: não há um teste escrito por caso de uso. Este arquivo lê o manifesto (o que o dev configurou no Studio) e gera os testes de cada
@@ -117,6 +117,8 @@ const MANIFEST_PATH = process.env.E2E_MANIFEST || path.join(import.meta.dirname,
 const manifest: TestManifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
 /** Tipos de teste desta rodada (E2E_TYPES): funcional só lê; integracao grava no banco de teste; seguranca cria usuários e grupos temporários. */
 const TIPOS = (process.env.E2E_TYPES || 'funcional').split(',').map(x => x.trim()).filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga' || x === 'visual')
+/** Desempenho e carga: quantos usuários simultâneos e quais modos (E2E_CARGA_USERS, E2E_CARGA_MODOS = leitura,gravacao,mistura). */
+const CARGA = normalizarCarga({ users: Number(process.env.E2E_CARGA_USERS), modos: (process.env.E2E_CARGA_MODOS || '').split(',').map(x => x.trim()).filter((x): x is 'leitura' | 'gravacao' | 'mistura' => x === 'leitura' || x === 'gravacao' || x === 'mistura') })
 const escolhidos = (process.env.E2E_VIEWS || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -419,11 +421,77 @@ async function confirmarExclusao(page: Page) {
   await page.getByRole('button', { name: /excluir|confirmar/i }).last().click({ timeout: 4000 }).catch(() => {})
 }
 
+/** Um acesso de leitura medido: status e tempo (0 = sem resposta). */
+async function lerEmCarga(page: Page, rota: string): Promise<{ status: number; ms: number }> {
+  const ini = Date.now()
+  const r = await page.request.get(rota, { timeout: 60_000 }).catch(() => null)
+  return { status: r?.status() ?? 0, ms: Date.now() - ini }
+}
+function resumirCarga(lote: Array<{ status: number; ms: number }>) {
+  const tempos = lote.map(x => x.ms).sort((a, b) => a - b)
+  return { p95: tempos.length ? tempos[Math.max(0, Math.ceil(tempos.length * 0.95) - 1)] : 0, maximo: tempos.length ? tempos[tempos.length - 1] : 0, ruins: lote.filter(x => x.status === 0 || x.status >= 400).map(x => x.status) }
+}
+
+/**
+ * Gravação em carga: UM cadastro de verdade pela tela (o usuário 0) mostra a chamada que o formulário faz; os demais usuários repetem essa mesma chamada ao mesmo
+ * tempo, cada um com o seu texto de identificação (E2E-...-n) e, nos e-mails, uma variação, para não esbarrar em chave única. Tudo que nasceu é apagado no fim.
+ */
+async function prepararGravacaoEmCarga(page: Page, view: ManifestView) {
+  const marcadorCampo = campoMarcador(view)
+  test.skip(!marcadorCampo, 'a tela não tem campo de texto para identificar os registros da carga')
+  const editaveis = camposDeTipo(view).filter(f => !f.readOnly)
+  const limites = await limitesDaTabela(view.table)
+  const limite = limites[marcadorCampo!.column.toLowerCase()]
+  const base = `${RODADA}-c${view.slug.replace(/[^a-z0-9]/gi, '').slice(0, 4)}`
+  const marcador = caber(base, limite ? limite - 5 : undefined) // folga para o "-n" de cada usuário
+  test.skip(!marcador.startsWith(PREFIXO_E2E) || marcador.length < 8, 'a coluna de identificação é curta demais para o prefixo E2E- e o número do usuário')
+  const col = marcadorCampo!.column
+  const contar = async () => Number((await consultar(`select count(*)::int n from "${view.table}" where "${col}"::text like $1`, [marcador + '%']))[0].n)
+  const idsCriados = async () => (await consultar(`select "${view.primaryKey}"::text as id from "${view.table}" where "${col}"::text like $1`, [marcador + '%'])).map(r => String(r.id))
+  const limpar = async () => {
+    const ids = await idsCriados().catch(() => [] as string[])
+    for (const id of ids) anotarCriado(view.table, view.primaryKey, id)
+    await comBanco(async d => {
+      for (let passada = 0; passada < 3; passada++) await d.query(`delete from "${view.table}" where "${col}"::text like $1`, [marcador + '%']).catch(() => {})
+    })
+    for (const id of ids) riscarCriado(view.table, id)
+  }
+
+  try {
+    await abrir(page, `${view.path}/new`)
+    const preenchidos: Record<string, Preenchido> = {}
+    const naoPreenchidos: string[] = []
+    let n = 0
+    for (const f of editaveis) {
+      const p = await preencherCampo(page, f, ++n, limites, f.column === col ? marcador : undefined)
+      if (p) preenchidos[f.column] = p
+      else if (f.required) naoPreenchidos.push(f.label)
+    }
+    test.skip(naoPreenchidos.length > 0, `campo(s) obrigatório(s) que o motor ainda não sabe preencher: ${naoPreenchidos.join(', ')}`)
+    const esperada = page.waitForRequest(r => r.method() === 'POST' && (r.postData() ?? '').includes(marcador), { timeout: 20_000 })
+    await page.getByRole('button', { name: 'Criar Registro' }).first().click()
+    const req = await esperada
+    await expect.poll(contar, { message: 'o cadastro do preparo aparece no banco', timeout: 15_000 }).toBe(1)
+
+    const corpo = (req.postDataBuffer() ?? Buffer.from('')).toString('utf8')
+    const headers = Object.fromEntries(Object.entries(await req.allHeaders()).filter(([k]) => !/^(host|content-length|cookie|connection)$/i.test(k) && !k.startsWith(':')))
+    const emails = Object.values(preenchidos).filter(p => p.tipo === 'texto' && p.esperado.includes('@')).map(p => p.esperado)
+    const gravar = async (i: number): Promise<{ status: number; ms: number }> => {
+      let c = corpo.split(marcador).join(`${marcador}-${i}`)
+      for (const e of emails) c = c.split(e).join(e.replace('@', `u${i}@`))
+      const ini = Date.now()
+      const r = await page.request.post(req.url(), { headers, data: Buffer.from(c, 'utf8'), maxRedirects: 0, timeout: 120_000 }).catch(() => null)
+      return { status: r?.status() ?? 0, ms: Date.now() - ini }
+    }
+    return { gravar, contar, limpar }
+  } catch (e) { await limpar(); throw e }
+}
+
 for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhidos.includes(v.slug))) {
   test.describe(describeName(view), () => {
     test.beforeEach(async ({ page }) => { await entrar(page) })
 
-    for (const t of planView(view, { types: TIPOS, auth: manifest.auth })) {
+    for (const t of planView(view, { types: TIPOS, auth: manifest.auth, carga: CARGA })) {
       if (t.kind === 'compat_chrome' || t.kind === 'compat_firefox' || t.kind === 'compat_webkit') {
         const nav = NAVEGADORES_COMPAT.find(n => n.kind === t.kind)!
         {
@@ -551,19 +619,46 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
         })
       }
 
-      if (t.kind === 'carga_simultaneos') {
+      if (t.kind === 'carga_leitura') {
         test(t.title, async ({ page }) => {
+          test.setTimeout(180_000)
           await abrir(page, view.path) // garante a sessão aberta: os acessos abaixo usam os mesmos cookies
-          const lote = await Promise.all(Array.from({ length: LIMITES_CARGA.simultaneos }, async () => {
-            const ini = Date.now()
-            const r = await page.request.get(view.path, { timeout: 30_000 }).catch(() => null)
-            return { status: r?.status() ?? 0, ms: Date.now() - ini }
-          }))
-          const ordenados = lote.map(x => x.ms).sort((a, b) => a - b)
-          const p95 = ordenados[Math.ceil(ordenados.length * 0.95) - 1]
-          test.info().annotations.push({ type: 'aviso', description: `exercitado: ${lote.length} acessos, mais lento ${ordenados[ordenados.length - 1]} ms, p95 ${p95} ms (limite ${LIMITES_CARGA.p95Ms} ms)` })
-          expect(lote.filter(x => x.status === 0 || x.status >= 400).map(x => x.status), 'acessos com erro (0 = sem resposta)').toEqual([])
-          expect(p95, 'p95 do tempo de resposta (ms)').toBeLessThanOrEqual(LIMITES_CARGA.p95Ms)
+          const lote = await Promise.all(Array.from({ length: CARGA.users }, () => lerEmCarga(page, view.path)))
+          const r = resumirCarga(lote)
+          test.info().annotations.push({ type: 'aviso', description: `exercitado: ${lote.length} acessos de leitura, mais lento ${r.maximo} ms, p95 ${r.p95} ms (limite ${LIMITES_CARGA.p95Ms} ms)` })
+          expect(r.ruins, 'acessos com erro (0 = sem resposta)').toEqual([])
+          expect(r.p95, 'p95 do tempo de resposta (ms)').toBeLessThanOrEqual(LIMITES_CARGA.p95Ms)
+        })
+      }
+
+      if (t.kind === 'carga_gravacao' || t.kind === 'carga_mistura') {
+        test(t.title, async ({ page }) => {
+          test.setTimeout(300_000)
+          const mista = t.kind === 'carga_mistura'
+          const leitores = mista ? Math.floor(CARGA.users / 2) : 0
+          const gravadores = CARGA.users - leitores
+          const prep = await prepararGravacaoEmCarga(page, view)
+          try {
+            const lote = await Promise.all([
+              ...Array.from({ length: gravadores }, (_, i) => prep.gravar(i + 1)),
+              ...Array.from({ length: leitores }, () => lerEmCarga(page, view.path)),
+            ])
+            const gravacoes = lote.slice(0, gravadores)
+            const leituras = lote.slice(gravadores)
+            const g = resumirCarga(gravacoes)
+            const l = resumirCarga(leituras)
+            // o registro do preparo (usuário 0) mais um por gravador
+            const esperados = gravadores + 1
+            const gravados = await expect.poll(() => prep.contar(), { message: 'registros gravados no banco', timeout: 30_000 }).toBe(esperados).then(() => esperados).catch(async () => prep.contar())
+            test.info().annotations.push({ type: 'aviso', description: `exercitado: ${gravadores} gravações (mais lenta ${g.maximo} ms, p95 ${g.p95} ms, limite ${LIMITES_CARGA.gravacaoP95Ms} ms)${leitores ? `, ${leitores} leituras (p95 ${l.p95} ms)` : ''}; ${gravados} registro(s) no banco de ${esperados}` })
+            expect(g.ruins, 'gravações com erro (0 = sem resposta)').toEqual([])
+            expect(gravados, 'registros gravados no banco × esperados').toBe(esperados)
+            expect(g.p95, 'p95 do tempo de gravação (ms)').toBeLessThanOrEqual(LIMITES_CARGA.gravacaoP95Ms)
+            if (leitores) {
+              expect(l.ruins, 'leituras com erro (0 = sem resposta)').toEqual([])
+              expect(l.p95, 'p95 do tempo de leitura (ms)').toBeLessThanOrEqual(LIMITES_CARGA.p95Ms)
+            }
+          } finally { await prep.limpar() }
         })
       }
 

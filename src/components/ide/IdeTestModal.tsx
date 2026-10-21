@@ -12,7 +12,7 @@ import { checkRunnerDir, clearLiveFrame, archiveTechReport, hasFfmpeg, installFf
 import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appHasAccessAdmin, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
-import { describeName, isSupportedView, planTitle, planView, type TestType } from '@/lib/testing/plan'
+import { CARGA_MAX_USERS, cargaGrava, describeName, isSupportedView, normalizarCarga, planTitle, planView, type CargaModo, type CargaOpcoes, type TestType } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
 import { buildReportHtml } from '@/lib/testing/reportHtml'
@@ -62,13 +62,18 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const runnerDir = managedDir
   const [mode, setMode] = useState<TestWatchMode>('internal')
   const [types, setTypes] = useState<TestType[]>(() => { const v = lsGet('mb_tests_types').split(',').filter((x): x is TestType => x === 'funcional' || x === 'integracao' || x === 'seguranca' || x === 'compat' || x === 'carga' || x === 'visual'); return v.length ? v : ['funcional'] })
+  // Desempenho e carga: quantos usuários simultâneos e o que medir (leitura, gravação, mistura); lembrado entre as aberturas
+  const [carga, setCarga] = useState<CargaOpcoes>(() => { try { return normalizarCarga(JSON.parse(lsGet('mb_tests_carga') || '{}')) } catch { return normalizarCarga() } })
+  const changeCarga = (next: Partial<CargaOpcoes>) => setCarga(prev => { const n = normalizarCarga({ ...prev, ...next }); lsSet('mb_tests_carga', JSON.stringify(n)); return n })
+  const toggleCargaModo = (m: CargaModo) => changeCarga({ modos: carga.modos.includes(m) ? (carga.modos.length > 1 ? carga.modos.filter(x => x !== m) : carga.modos) : [...carga.modos, m] })
+  const [cargaUsersText, setCargaUsersText] = useState(() => String(carga.users))
   const toggleType = (id: TestType) => setTypes(prev => {
     const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     if (next.length === 0) return prev // pelo menos um tipo
     lsSet('mb_tests_types', next.join(','))
     return next
   })
-  const planFor = useCallback((v: ManifestView) => planView(v, { types, auth: manifest?.auth }), [types, manifest])
+  const planFor = useCallback((v: ManifestView) => planView(v, { types, auth: manifest?.auth, carga }), [types, manifest, carga])
   const [frameUrl, setFrameUrl] = useState('')
   const [liveOpen, setLiveOpen] = useState(true)
   // só lê quadros do navegador depois que o quadro da execução anterior foi apagado (senão a imagem velha aparece nos primeiros instantes)
@@ -119,7 +124,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     // ordem pelo uso no mercado (e não por estar pronto): funcional, integração, desempenho, segurança, compatibilidade, responsividade e acessibilidade
     { id: 'funcional', label: t('ide_tests.type_funcional', 'Funcional · Pesquisa + Cadastro'), desc: t('ide_tests.type_funcional_desc', 'Todo caso de uso: a tela abre. Pesquisa + Cadastro: lista, formulário, obrigatórios, máscaras, total, ordenação, filtro e exportação'), available: true },
     { id: 'integracao', label: t('ide_tests.type_integracao', 'Integração'), desc: t('ide_tests.type_integracao_desc', 'Cadastro, edição e exclusão com dados gerados, gravando no banco de teste (e apagando no fim)'), available: true },
-    { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Tempo de abertura de cada tela e 20 acessos ao mesmo tempo (só leitura)'), available: true },
+    { id: 'carga', label: t('ide_tests.type_carga', 'Desempenho e carga'), desc: t('ide_tests.type_carga_desc', 'Tempo de abertura de cada tela e N usuários ao mesmo tempo: lendo, gravando ou os dois juntos (você escolhe)'), available: true },
     { id: 'seguranca', label: t('ide_tests.type_seguranca', 'Segurança'), desc: t('ide_tests.type_seguranca_desc', 'Permissão da tabela, acesso por grupo e regra por linha, conferidos com usuários temporários'), available: true },
     { id: 'compat', label: t('ide_tests.type_compat', 'Compatibilidade'), desc: t('ide_tests.type_compat_desc', 'A tela abre, lista o total do banco e mostra o formulário em Chrome, Firefox e Safari (WebKit)'), available: true },
     { id: 'visual', label: t('ide_tests.type_visual', 'Responsividade e acessibilidade'), desc: t('ide_tests.type_visual_desc', 'Celular, tablet e computador sem rolagem horizontal; idioma, títulos, imagens, botões e campos com nome para leitor de tela'), available: true },
@@ -441,7 +446,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
       setLiveGate(true)
       handle.current = await startTestRun({
         runnerDir, appDir, manifest, viewSlugs: toRun.map(v => v.slug), mode, slowMoMs: slow,
-        configPath, browser: browserName, types, artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
+        configPath, browser: browserName, types, ...(types.includes('carga') ? { cargaUsers: carga.users, cargaModos: carga.modos } : {}), artifactsDir, onEvent, onLog: l => setLogs(x => [...x.slice(-199), l]), onClose: code => { finishRun(code) },
       })
     } catch (e: any) {
       setRunning(false); runMeta.current = null
@@ -732,7 +737,28 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                     )
                   })}
                 </div>
-                {types.some(x => x !== 'funcional') && (
+                {types.includes('carga') && (
+                  <div className="mt-3 rounded-xl border border-neutral-700 bg-neutral-800/30 px-3 py-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <label className="flex items-center gap-2 text-xs font-semibold text-white">
+                        {t('ide_tests.carga_users', 'Usuários simultâneos')}
+                        <input type="number" min={1} max={CARGA_MAX_USERS} value={cargaUsersText} disabled={running}
+                          onChange={e => setCargaUsersText(e.target.value)}
+                          onBlur={() => { changeCarga({ users: Number(cargaUsersText) }); setCargaUsersText(String(normalizarCarga({ users: Number(cargaUsersText) }).users)) }}
+                          className="w-20 rounded-lg bg-neutral-900 border border-neutral-600 px-2 py-1 text-xs text-white" />
+                        <span className="text-[10px] font-normal text-neutral-400">{t('ide_tests.carga_users_max', 'de 1 a')} {CARGA_MAX_USERS}</span>
+                      </label>
+                      {([['leitura', t('ide_tests.carga_modo_leitura', 'Leitura')], ['gravacao', t('ide_tests.carga_modo_gravacao', 'Gravação')], ['mistura', t('ide_tests.carga_modo_mistura', 'Mistura')]] as Array<[CargaModo, string]>).map(([m, label]) => (
+                        <label key={m} className="flex items-center gap-1.5 text-xs text-neutral-200 cursor-pointer">
+                          <input type="checkbox" checked={carga.modos.includes(m)} disabled={running} onChange={() => toggleCargaModo(m)} className="accent-indigo-500" />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-neutral-400">{t('ide_tests.carga_modos_desc', 'Leitura: todos abrem a tela ao mesmo tempo. Gravação: todos cadastram um registro ao mesmo tempo (dados E2E-, apagados no fim; só Pesquisa + Cadastro). Mistura: metade grava e metade lê. Escolha um, dois ou os três.')}</p>
+                  </div>
+                )}
+                {(types.some(x => x === 'integracao' || x === 'seguranca') || (types.includes('carga') && cargaGrava(carga))) && (
                   <p className="mt-2 text-[11px] text-neutral-400">{t('ide_tests.int_note', 'A integração grava dados de teste (texto começando com E2E-) no banco de teste e os apaga no fim; a conferência final confirma que nada existente mudou.')}</p>
                 )}
                 </>}
