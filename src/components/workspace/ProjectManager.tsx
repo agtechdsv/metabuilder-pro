@@ -25,6 +25,7 @@ import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSynced
 
 import { Project } from './project-manager/types'
 import { ProjectCard } from './project-manager/ProjectCard'
+import { IdeTestModal } from '@/components/ide/IdeTestModal'
 import { ProjectFormDrawer, ProjectFormData } from './project-manager/ProjectFormDrawer'
 import { ProjectDeleteModal } from './project-manager/ProjectDeleteModal'
 import { WorkspacePortalModal } from './project-manager/WorkspacePortalModal'
@@ -102,6 +103,8 @@ export function ProjectManager({
   const searchParams = useSearchParams()
   const { openPreview } = usePreview()
   const { openIDE } = useIDE()
+  // Ambiente de Testes aberto direto pelo card do projeto
+  const [testsTarget, setTestsTarget] = useState<{ type: 'project'; id: string; name: string; slug: string } | null>(null)
   const pathname = usePathname()
   const { t } = useI18n()
   const { toast } = useToast()
@@ -505,6 +508,7 @@ export function ProjectManager({
                   setShowDesktopModal(true)
                 }}
                 onOpenIDE={p => openIDE({ type: 'project', id: p.id, name: p.name, slug: p.slug })}
+                onOpenTests={p => setTestsTarget({ type: 'project', id: p.id, name: p.name, slug: p.slug })}
                 onTogglePortal={p => toggleProjectPortal(p)}
                 onToggleActive={p => toggleActive(p)}
                 onEdit={p => openDrawer(p)}
@@ -561,6 +565,8 @@ export function ProjectManager({
       />
 
       {/* Modal de Exclusão */}
+      <IdeTestModal isOpen={!!testsTarget} onClose={() => setTestsTarget(null)} target={testsTarget} />
+
       <ProjectDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   Monitor,
   FolderGit2,
+  FlaskConical,
   Database,
   Loader2,
   AlertTriangle
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { ProGate } from '@/components/ui/ProGate'
 import { Project } from './types'
+import { isTauri } from '@/utils/tauriUtils'
 
 interface ProjectCardProps {
   project: Project
@@ -32,6 +34,8 @@ interface ProjectCardProps {
   onOpenPreview: (url: string, title: string) => void
   onOpenDesktopModal: (project: Project) => void
   onOpenIDE: (project: Project) => void
+  /** abre o Ambiente de Testes do projeto (o mesmo da IDE Local) */
+  onOpenTests?: (project: Project) => void
   onTogglePortal: (project: Project) => void
   onToggleActive: (project: Project) => void
   onEdit: (project: Project) => void
@@ -47,6 +51,7 @@ export function ProjectCard({
   onOpenPreview,
   onOpenDesktopModal,
   onOpenIDE,
+  onOpenTests,
   onTogglePortal,
   onToggleActive,
   onEdit,
@@ -163,6 +168,21 @@ export function ProjectCard({
                         <FolderGit2 className="w-4 h-4" />
                       </button>
                     </ProGate>
+
+                    {/* 4. Ambiente de Testes (roda na IDE Desktop) */}
+                    {onOpenTests && isTauri() && (
+                      <button
+                        className="p-2 text-amber-500 hover:text-amber-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                        title={t('ide_tests.open', 'Ambiente de Testes')}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onOpenTests(project)
+                        }}
+                      >
+                        <FlaskConical className="w-4 h-4" />
+                      </button>
+                    )}
 
                   </>
                 )}
