@@ -8,18 +8,19 @@
  */
 
 export type DeliveryFormat = 'folder' | 'zip'
-export type DeliverySource = 'folder' | 'studio'
+/** O que a Entrega gera: código-fonte limpo, pacote Docker ou pacote compilado (sem Docker). Pode escolher mais de um. */
+export type DeliveryKind = 'source' | 'docker' | 'compiled'
 
 export interface DeliveryOptions {
-  source: DeliverySource
+  kinds: DeliveryKind[]
   format: DeliveryFormat
-  /** leva o .env.local e o application.properties como estão (com os segredos). Padrão: não. */
+  /** leva o .env.local e o application.properties como estão (com os segredos). Padrão: não. Só vale para código-fonte e Docker: o pacote compilado nunca leva segredos. */
   includeSecrets: boolean
   /** só no formato pasta: apaga o que já está na pasta de destino (com confirmação e travas) antes de gravar */
   cleanBefore: boolean
 }
 
-export const DEFAULT_DELIVERY: DeliveryOptions = { source: 'folder', format: 'folder', includeSecrets: false, cleanBefore: false }
+export const DEFAULT_DELIVERY: DeliveryOptions = { kinds: ['source'], format: 'folder', includeSecrets: false, cleanBefore: false }
 
 /** Pastas de trabalho e de compilação: nunca entram na entrega, em qualquer nível. */
 export const DELIVERY_EXCLUDED_DIRS = ['.git', '.metabuilder', '.trash', 'node_modules', '.next', 'target'] as const

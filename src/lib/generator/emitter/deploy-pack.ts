@@ -557,7 +557,9 @@ O servidor só precisa do ambiente de execução: ${java ? '**JRE 21** e **Node.
 
 ### B1. Pacote compilado (recomendado): o servidor não precisa de npm${java ? ', Maven' : ''} nem de internet
 
-Compile uma vez numa máquina de build **do mesmo sistema do servidor** (Linux para Linux, Windows para Windows: o Next.js leva arquivos que dependem do sistema) e envie só o resultado.
+Na IDE Local do MetaBuilder, o botão **Entrega → Pacote compilado** faz tudo isto sozinho (compila, monta a pasta, gera os scripts de início e este manual). O passo a passo abaixo é o mesmo trabalho feito à mão.
+
+Compile uma vez numa máquina de build **do mesmo sistema do servidor** (Linux para Linux, Windows para Windows) e envie só o resultado.
 
 ${buildPack}
 

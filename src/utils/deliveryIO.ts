@@ -2,7 +2,7 @@
  * Leitura e gravação da Entrega e das pastas do projeto (IDE Desktop). A parte de regras (o que entra, segredos) está em delivery.ts.
  * Pastas fora da pasta pessoal só são acessíveis depois de escolhidas no seletor de pastas do sistema (recursive: true libera a pasta).
  */
-import { applyDelivery, DELIVERY_EXCLUDED_DIRS, type DeliveryFiles, type DeliveryOptions } from './delivery'
+import { DELIVERY_EXCLUDED_DIRS, type DeliveryFiles } from './delivery'
 
 const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
 const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* sem armazenamento */ } }
@@ -21,6 +21,16 @@ export async function folderHasApp(dir: string): Promise<boolean> {
     const { exists } = await import('@tauri-apps/plugin-fs')
     const { join } = await import('@tauri-apps/api/path')
     return (await exists(await join(dir, 'package.json'))) || (await exists(await join(dir, 'frontend', 'package.json')))
+  } catch { return false }
+}
+
+/** A pasta tem o pacote de produção (Dockerfile e compose de produção)? Projetos sincronizados antes dele existir não têm. */
+export async function folderHasDockerPack(dir: string): Promise<boolean> {
+  try {
+    const { exists } = await import('@tauri-apps/plugin-fs')
+    const { join } = await import('@tauri-apps/api/path')
+    if (!(await exists(await join(dir, 'docker-compose.prod.yml')))) return false
+    return (await exists(await join(dir, 'Dockerfile'))) || (await exists(await join(dir, 'frontend', 'Dockerfile')))
   } catch { return false }
 }
 
@@ -122,8 +132,6 @@ export async function revealPath(p: string): Promise<void> {
   } catch { /* sem o plugin: o caminho aparece na tela */ }
 }
 
-export interface DeliveryResult { destination: string; count: number; skipped: string[]; sanitized: string[]; format: DeliveryOptions['format'] }
-
 export interface DeliveryLabels {
   cleanTitle: string
   cleanMessage: string
@@ -135,35 +143,21 @@ export interface DeliveryLabels {
 }
 
 /**
- * Entrega os arquivos: escolhe o destino (pasta ou ZIP), limpa a pasta antes se o dev pediu (com confirmação e travas), aplica as regras da entrega
- * (sem arquivos de trabalho, sem segredos) e grava. null = o dev cancelou a escolha. Lança Error com a mensagem para a tela.
+ * Limpa a pasta de destino antes da entrega (com travas e confirmação mostrando o que será apagado). false = o dev cancelou.
+ * Lança Error com a mensagem para a tela quando a pasta não pode ser limpa.
  */
-export async function deliverFiles(files: DeliveryFiles, opts: DeliveryOptions, ctx: { projectId: string; slug: string; labels: DeliveryLabels; onPhase?: (msg: string) => void }): Promise<DeliveryResult | null> {
-  let destination: string | null
-  if (opts.format === 'zip') {
-    destination = await pickDestinationZip(`${ctx.slug || 'app'}-entrega.zip`)
-  } else {
-    destination = await pickDestinationFolder()
+export async function confirmAndClean(destination: string, labels: DeliveryLabels): Promise<boolean> {
+  const { isSafeToClean, planCleanup, cleanFolder, confirmMessage } = await import('./cleanExportFolder')
+  const { homeDir } = await import('@tauri-apps/api/path')
+  const { ask } = await import('@tauri-apps/plugin-dialog')
+  if (!isSafeToClean(destination, await homeDir().catch(() => ''))) throw new Error(labels.cleanUnsafe)
+  const plano = await planCleanup(destination)
+  if (!plano) throw new Error(labels.cleanFailed)
+  if (plano.existe && plano.arquivos > 0) {
+    if (!plano.exportado) throw new Error(labels.cleanNotApp)
+    const ok = await ask(confirmMessage(destination, plano, labels.cleanMessage), { title: labels.cleanTitle, kind: 'warning', okLabel: labels.cleanOk, cancelLabel: labels.cleanCancel })
+    if (!ok) return false
+    if (!(await cleanFolder(destination))) throw new Error(labels.cleanFailed)
   }
-  if (!destination) return null
-
-  if (opts.format === 'folder' && opts.cleanBefore) {
-    const { isSafeToClean, planCleanup, cleanFolder, confirmMessage } = await import('./cleanExportFolder')
-    const { homeDir } = await import('@tauri-apps/api/path')
-    const { ask } = await import('@tauri-apps/plugin-dialog')
-    if (!isSafeToClean(destination, await homeDir().catch(() => ''))) throw new Error(ctx.labels.cleanUnsafe)
-    const plano = await planCleanup(destination)
-    if (!plano) throw new Error(ctx.labels.cleanFailed)
-    if (plano.existe && plano.arquivos > 0) {
-      if (!plano.exportado) throw new Error(ctx.labels.cleanNotApp)
-      const ok = await ask(confirmMessage(destination, plano, ctx.labels.cleanMessage), { title: ctx.labels.cleanTitle, kind: 'warning', okLabel: ctx.labels.cleanOk, cancelLabel: ctx.labels.cleanCancel })
-      if (!ok) return null
-      if (!(await cleanFolder(destination))) throw new Error(ctx.labels.cleanFailed)
-    }
-  }
-
-  const r = applyDelivery(files, { includeSecrets: opts.includeSecrets })
-  const count = opts.format === 'zip' ? await writeFilesToZip(r.files, destination) : await writeFilesToFolder(r.files, destination)
-  if (opts.format === 'folder') rememberDeliveryFolder(ctx.projectId, destination)
-  return { destination, count, skipped: r.skipped, sanitized: r.sanitized, format: opts.format }
+  return true
 }
