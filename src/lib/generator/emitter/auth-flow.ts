@@ -564,7 +564,7 @@ export async function GET(request: Request) {
 import type { NextRequest } from 'next/server'
 import { verifySession } from '@/lib/session'
 
-const PUBLIC_PATHS = ['/login', '/api/login']
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/health']
 ${hasAccess ? `// telas do app (mais longas primeiro: "/clientes-geospatial" antes de "/clientes")\nconst ACCESS_ROUTES: Array<{ path: string; slug: string }> = ${JSON.stringify(accessRoutes)}\n` : ''}
 
 export async function proxy(request: NextRequest) {

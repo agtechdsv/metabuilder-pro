@@ -1,6 +1,7 @@
 import { AppAST } from '../ast'
 import { generateJavaFrontend } from './java-spring-frontend'
-import { generateSpringBootBackend, generateRootReadme, randomJwtSecret } from './java-spring-backend'
+import { generateSpringBootBackend, generateRootReadme, randomJwtSecret, generateBackendDockerfile } from './java-spring-backend'
+import { addJavaDeployPack } from './deploy-pack'
 import { assertPolicySupported } from '../layers/access'
 import { accessSql } from '../accessAdmin'
 import { MAVEN_WRAPPER_FILES } from '../mavenWrapper.generated'
@@ -27,6 +28,9 @@ export function generateJavaSpringProject(ast: AppAST): Map<string, string> {
 
   // BLOCO 2 — Backend Spring Boot
   generateSpringBootBackend(ast, files, jwtSecret)
+
+  // Pacote de produção: Dockerfiles, compose com HTTPS, .env.example, rota de saúde e guia DEPLOY.md
+  addJavaDeployPack(ast, files, generateBackendDockerfile(ast))
 
   // Script das tabelas de acesso: é do banco do backend, então fica na raiz (e não dentro do frontend)
   if (ast.accessAdmin) {

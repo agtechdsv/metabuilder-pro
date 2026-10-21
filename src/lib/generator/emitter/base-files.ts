@@ -191,7 +191,8 @@ export function generateBaseFiles(ast: AppAST, files: Map<string, string>) {
 
   // next.config.js (Next.js 14 não suporta .ts aqui)
   files.set('next.config.js', `/** @type {import('next').NextConfig} */
-const nextConfig = {};
+// MB_STANDALONE=1 só no build do Docker (veja o Dockerfile): gera a imagem enxuta. "next start" e o desenvolvimento seguem iguais.
+const nextConfig = process.env.MB_STANDALONE === '1' ? { output: 'standalone' } : {};
 
 module.exports = nextConfig;
 `)

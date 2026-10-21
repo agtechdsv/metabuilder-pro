@@ -7,6 +7,7 @@ import { generateComponents } from '../layers/components'
 import { generateBaseFiles } from './base-files'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
 import { generateAccessAdmin, addSetupScript } from './access-admin'
+import { addNodeDeployPack } from './deploy-pack'
 
 /**
  * node-project.ts
@@ -37,6 +38,9 @@ export function generateNodeProject(ast: AppAST): Map<string, string> {
 
   // 4. Página de Downloads
   generateDownloadsPage(ast, files)
+
+  // 5. Pacote de produção: Dockerfile, compose com HTTPS, .env.example, rota de saúde e guia DEPLOY.md
+  addNodeDeployPack(ast, files)
 
   return files
 }

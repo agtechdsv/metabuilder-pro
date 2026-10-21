@@ -202,7 +202,8 @@ async function userClaims(): Promise<Record<string, unknown>> {
   const claimsExpr = withUser ? 'await userClaims()' : '{}'
   return `import { SignJWT } from 'jose'
 ${userImports}
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+// API_URL é lida ao SUBIR o app (dá para trocar sem recompilar); NEXT_PUBLIC_API_URL fica como alternativa de desenvolvimento (é gravada na compilação)
+const API_BASE = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 ${userBlock}
 // A API Spring só aceita chamadas com um JWT assinado com o segredo compartilhado (JWT_SECRET, em .env.local).
 // Só o servidor do frontend conhece esse segredo: as chamadas partem das ações do servidor, nunca do navegador.
@@ -441,7 +442,9 @@ function generateFrontendConfigFiles(ast: AppAST, files: Map<string, string>): v
   files.set('frontend/next.config.ts', `import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Frontend chama Spring Boot via NEXT_PUBLIC_API_URL
+  // MB_STANDALONE=1 só no build do Docker (veja o Dockerfile): gera a imagem enxuta. \`next start\` e o desenvolvimento seguem iguais.
+  ...(process.env.MB_STANDALONE === '1' ? { output: 'standalone' as const } : {}),
+  // O servidor do frontend chama o Spring Boot pela URL de API_URL (ou NEXT_PUBLIC_API_URL em desenvolvimento)
   async rewrites() {
     return []
   },
@@ -484,11 +487,11 @@ function generateFrontendReadme(ast: AppAST): string {
 
   return `<div align="center">
 
-# 💻 ${ast.projectName} — Frontend Web (Next.js 14)
+# 💻 ${ast.projectName} — Frontend Web (Next.js 16)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-14%20App%20Router-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 14" />
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/Next.js-16%20App%20Router-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS" />
   <img src="https://img.shields.io/badge/Architecture-REST%20Client-blueviolet?style=for-the-badge" alt="REST Client" />
@@ -518,7 +521,7 @@ O arquivo \`.env.local\` já é gerado pré-configurado para apontar para o back
 NEXT_PUBLIC_API_URL=http://localhost:${port}
 \`\`\`
 
-> 💡 **Em produção:** Altere \`NEXT_PUBLIC_API_URL\` para a URL pública do seu backend (ex: \`https://api.seudominio.com\`).
+> 💡 **Em produção:** defina a variável de ambiente \`API_URL\` com o endereço do seu backend (ex.: \`https://api.seudominio.com\` ou, no Docker Compose, \`http://backend:${port}\`). Ela é lida ao subir o app: trocar o endereço **não exige recompilar**. \`NEXT_PUBLIC_API_URL\` é só para desenvolvimento (é gravada na compilação).
 
 ---
 
@@ -597,15 +600,20 @@ const data = await apiClient.get('/api/clientes?page=0&size=20')
 ### Opção 1: Vercel (Recomendado)
 A Vercel oferece deploy zero-config para Next.js:
 1. Conecte seu repositório Git à plataforma Vercel.
-2. Defina a variável de ambiente: \`NEXT_PUBLIC_API_URL=https://sua-api.com\`.
+2. Defina a variável de ambiente: \`API_URL=https://sua-api.com\` (junto com \`JWT_SECRET\` e \`MB_SESSION_SECRET\`).
 3. O build e deploy serão automáticos.
 
 ### Opção 2: Container Docker
-Para rodar em cluster Kubernetes ou VPS tradicional:
+O projeto traz um \`Dockerfile\` (imagem enxuta, usuário sem privilégios, health check em \`/api/health\`). O jeito mais simples é o Docker Compose da raiz, que sobe backend, frontend e HTTPS:
+\`\`\`bash
+docker compose -f docker-compose.prod.yml up -d --build   # na raiz do projeto, depois de preencher o .env
+\`\`\`
+Ou só esta imagem, apontando para o seu backend:
 \`\`\`bash
 docker build -t ${ast.projectSlug}-frontend:latest .
-docker run -p 3000:3000 ${ast.projectSlug}-frontend:latest
+docker run -p 3000:3000 -e API_URL=https://sua-api.com -e JWT_SECRET=... -e MB_SESSION_SECRET=... ${ast.projectSlug}-frontend:latest
 \`\`\`
+Veja o \`DEPLOY.md\` na raiz do projeto para os três caminhos de produção.
 
 ---
 
