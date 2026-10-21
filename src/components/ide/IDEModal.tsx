@@ -19,6 +19,8 @@ import { IDEGitModals } from './IDEGitModals'
 import { IDEFileActionModals } from './IDEFileActionModals'
 import { IDEGitSettingsModal } from './IDEGitSettingsModal'
 import { IdeEjectModal } from './IdeEjectModal'
+import { IdeDeliveryModal } from './IdeDeliveryModal'
+import type { DeliveryOptions } from '@/utils/delivery'
 import { IdeTestModal } from './IdeTestModal'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
@@ -80,6 +82,9 @@ export function IDEModal({
   const ejectFinishedRef = React.useRef<(() => void) | undefined>(undefined)
   // Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio)
   const [showTests, setShowTests] = useState(false)
+  // Entrega: janela de opções e, quando o código vem do Studio, as opções que seguem para a geração
+  const [showDelivery, setShowDelivery] = useState(false)
+  const [deliveryOpts, setDeliveryOpts] = useState<DeliveryOptions | null>(null)
   if (!isOpen || !target) {
     return (
       <IDEMinimizedBar
@@ -141,7 +146,8 @@ export function IDEModal({
             isPulling={git.isPulling}
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
-            onEject={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setShowNativeExport(true) }}
+            onEject={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setDeliveryOpts(null); setShowNativeExport(true) }}
+            onDelivery={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setShowDelivery(true) }}
             onOpenTests={() => setShowTests(true)}
             showConsole={consoleState.showConsole}
             setShowConsole={consoleState.setShowConsole}
@@ -352,6 +358,15 @@ export function IDEModal({
         }}
         target={target}
         prefill={ejectPrefill}
+        delivery={deliveryOpts}
+      />
+
+      {/* Entrega: cópia limpa do app (sem Git, ramos nem segredos), em pasta ou ZIP */}
+      <IdeDeliveryModal
+        isOpen={showDelivery}
+        onClose={() => { setShowDelivery(false); ejectFinishedRef.current = undefined }}
+        target={target}
+        onGenerateFromStudio={opts => { setDeliveryOpts(opts); setShowDelivery(false); setShowNativeExport(true) }}
       />
     </div>
   )

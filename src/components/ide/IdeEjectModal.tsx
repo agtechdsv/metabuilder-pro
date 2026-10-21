@@ -5,6 +5,7 @@ import { ProjectExportModal } from '@/components/workspace/project-manager/Proje
 import { useProjectExport } from '@/components/workspace/project-manager/useProjectExport'
 import { WorkspaceExportModal } from '@/components/workspace/WorkspaceExportModal'
 import type { Project, ExportDefaults } from '@/components/workspace/project-manager/types'
+import type { DeliveryOptions } from '@/utils/delivery'
 
 interface IdeEjectModalProps {
   isOpen: boolean
@@ -13,6 +14,8 @@ interface IdeEjectModalProps {
   target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
   /** escolhas já feitas na tela Ejetar & Sincronizar */
   prefill?: Partial<ExportDefaults>
+  /** gerar como Entrega (cópia limpa) em vez de ejetar um app para rodar */
+  delivery?: DeliveryOptions | null
 }
 
 /**
@@ -20,8 +23,9 @@ interface IdeEjectModalProps {
  * sem o vínculo de sincronização. Usa o mesmo motor e a mesma tela de opções (banco, login, gestão de acesso, backend Java...)
  * que o resto da exportação; depois de gerar, cuida do npm install, das tabelas de acesso, de rodar o app e do VS Code.
  */
-export function IdeEjectModal({ isOpen, onClose, target, prefill }: IdeEjectModalProps) {
-  const { downloadModal, setDownloadModal, exportModels, openExportModal, handleStartExport } = useProjectExport()
+export function IdeEjectModal({ isOpen, onClose, target, prefill, delivery }: IdeEjectModalProps) {
+  const { downloadModal, setDownloadModal, exportModels, openExportModal, handleStartExport, setDelivery } = useProjectExport()
+  useEffect(() => { setDelivery(isOpen ? delivery ?? null : null) }, [isOpen, delivery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // abre já com o que o projeto tem configurado (banco e login)
   useEffect(() => {

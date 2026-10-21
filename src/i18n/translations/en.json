@@ -5077,5 +5077,32 @@
     "carga_modo_gravacao": "Write",
     "carga_modo_mistura": "Mixed",
     "carga_modos_desc": "Read: everyone opens the screen at the same time. Write: everyone saves a record at the same time (E2E- data, deleted at the end; Search + Form only). Mixed: half save, half read. Pick one, two or all three."
+  },
+  "delivery": {
+    "button": "Delivery…",
+    "title": "Delivery",
+    "subtitle": "A clean copy of the app to hand over or publish: no Git, no sync branches and no secrets.",
+    "source": "Where the code comes from",
+    "source_folder": "From the project folder (with my edits)",
+    "source_folder_missing": "The project folder has no code yet. Use Sync Repository first.",
+    "source_studio": "Generated now by Studio (without my edits)",
+    "source_studio_hint": "Opens the database, login and backend options before generating.",
+    "format": "Format",
+    "format_folder": "Folder",
+    "secrets": "Also include secrets (.env.local and application.properties passwords)",
+    "secrets_hint": "Unchecked (recommended): .env.local is left out and becomes a .env.example with names only; in Java, passwords and keys become environment variables.",
+    "reading": "Reading the project folder files...",
+    "writing": "Generating the delivery...",
+    "done": "Delivery generated.",
+    "files": "file(s)",
+    "sanitized": "Secrets handled in",
+    "reveal": "Show in Explorer",
+    "close": "Close",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "generate": "Generate delivery",
+    "tests_use_sync": "Sync folder",
+    "tests_use_delivery": "Last delivery",
+    "tests_auto": "Project folder chosen automatically."
   }
 }

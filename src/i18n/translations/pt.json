@@ -5077,5 +5077,32 @@
     "carga_modo_gravacao": "Gravação",
     "carga_modo_mistura": "Mistura",
     "carga_modos_desc": "Leitura: todos abrem a tela ao mesmo tempo. Gravação: todos cadastram um registro ao mesmo tempo (dados E2E-, apagados no fim; só Pesquisa + Cadastro). Mistura: metade grava e metade lê. Escolha um, dois ou os três."
+  },
+  "delivery": {
+    "button": "Entrega…",
+    "title": "Entrega",
+    "subtitle": "Uma cópia limpa do app para entregar ou publicar: sem Git, sem ramos de sincronização e sem os segredos.",
+    "source": "De onde vem o código",
+    "source_folder": "Da pasta do projeto (com as minhas edições)",
+    "source_folder_missing": "A pasta do projeto ainda não tem o código. Use Sincronizar Repositório primeiro.",
+    "source_studio": "Gerado agora pelo Studio (sem as minhas edições)",
+    "source_studio_hint": "Abre as opções de banco, login e backend antes de gerar.",
+    "format": "Formato",
+    "format_folder": "Pasta",
+    "secrets": "Levar também os segredos (.env.local e senhas do application.properties)",
+    "secrets_hint": "Desmarcado (recomendado): o .env.local fica de fora e vira um .env.example só com os nomes; no Java, senha e chaves viram variáveis de ambiente.",
+    "reading": "Lendo os arquivos da pasta do projeto...",
+    "writing": "Gerando a entrega...",
+    "done": "Entrega gerada.",
+    "files": "arquivo(s)",
+    "sanitized": "Segredos tratados em",
+    "reveal": "Mostrar no Explorador",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "continue": "Continuar",
+    "generate": "Gerar entrega",
+    "tests_use_sync": "Pasta do Sincronizar",
+    "tests_use_delivery": "Última Entrega",
+    "tests_auto": "Pasta do projeto escolhida automaticamente."
   }
 }

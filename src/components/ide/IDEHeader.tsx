@@ -44,6 +44,8 @@ export interface IDEHeaderProps {
   /** abre o Ejetar (gerar uma vez numa pasta) já com o que foi escolhido na tela de sincronização */
   /** onFinished: chamado quando a exportação termina (a tela de sincronização então se fecha; ao cancelar ela continua aberta) */
   onEject: (prefill: ExportDefaults, onFinished?: () => void) => void
+  /** Entrega: cópia limpa do app (sem Git nem segredos), em pasta ou ZIP */
+  onDelivery: (prefill: ExportDefaults, onFinished?: () => void) => void
   /** abre o Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio) */
   onOpenTests?: () => void
   showConsole: boolean
@@ -697,6 +699,7 @@ export function IDEHeader({
   handleShowLogs,
   setShowGitSettings,
   onEject,
+  onDelivery,
   onOpenTests,
   showConsole,
   setShowConsole,
@@ -796,11 +799,11 @@ export function IDEHeader({
     }
   }
 
-  // Ejetar para uma pasta: gera o código final uma vez (sem Git nem vínculo) com o que foi escolhido nesta tela
+  // Entrega: cópia limpa do app (sem Git nem vínculo) com o que foi escolhido nesta tela
   const ejectToFolder = () => {
-    // a tela de sincronização continua aberta por baixo: cancelar o Ejetar volta para ela
+    // a tela de sincronização continua aberta por baixo: cancelar a Entrega volta para ela
     const isJava = activeTab === 'java'
-    onEject({
+    onDelivery({
       backendStack: isJava ? 'java-spring' : 'nodejs',
       ...(isJava ? {
         javaGroupId: javaConfig.groupId,
@@ -1174,7 +1177,7 @@ export function IDEHeader({
                     className="flex items-center gap-2 px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-200 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Package className="w-4 h-4" />
-                    {t('access_admin.eject_to_folder', "Ejetar para uma pasta…")}
+                    {t('delivery.button', 'Entrega…')}
                   </button>
                   <button
                     onClick={confirmSync}

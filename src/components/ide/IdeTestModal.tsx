@@ -12,6 +12,7 @@ import { checkRunnerDir, clearLiveFrame, archiveTechReport, hasFfmpeg, installFf
 import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appHasAccessAdmin, detectAppKind, hasJdk, suggestCopyName, detectBrowser, emptyDbSettings, engineE2eDir, engineStatus, installEngine, loadDbSettings, readAppDbUrl, runDbTool, saveDbSettings, writeEngineConfig, type DbSettings, type EngineStatus } from '@/utils/testEngine'
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
+import { suggestAppFolders, type AppFolderSuggestion } from '@/utils/deliveryIO'
 import { CARGA_MAX_USERS, cargaGrava, describeName, isSupportedView, normalizarCarga, planTitle, planView, type CargaModo, type CargaOpcoes, type TestType } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
@@ -45,6 +46,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [appDir, setAppDir] = useState('')
+  // pastas do projeto com um app pronto (a do Sincronizar e a da última Entrega): a primeira vira a pasta de teste quando o dev ainda não escolheu
+  const [folderSuggestions, setFolderSuggestions] = useState<AppFolderSuggestion[]>([])
+  const [appDirAuto, setAppDirAuto] = useState(false)
   // o motor é sempre o instalado pela IDE (pasta do motor em `managedDir`)
   const [managedDir, setManagedDir] = useState('')
   const [engineSt, setEngineSt] = useState<EngineStatus | null>(null)
@@ -133,7 +137,14 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   // lembra a pasta do app exportado (de cada projeto)
   useEffect(() => {
     if (!isOpen) return
-    setAppDir(lsGet(`mb_tests_app_dir_${projectId}`))
+    const saved = lsGet(`mb_tests_app_dir_${projectId}`)
+    setAppDir(saved); setAppDirAuto(false)
+    if (isTauri() && projectSlug) {
+      suggestAppFolders(projectId, projectSlug).then(list => {
+        setFolderSuggestions(list)
+        if (!saved && list.length > 0) { setAppDir(list[0].dir); setAppDirAuto(true) }
+      }).catch(() => setFolderSuggestions([]))
+    }
     setDbResult(null)
     if (isTauri()) loadDbSettings(projectSlug).then(setDbSettings).catch(() => {})
     if (!isTauri()) return
@@ -340,8 +351,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const pick = async () => {
     const dir = await pickFolder()
     if (!dir) return
-    setAppDir(dir); lsSet(`mb_tests_app_dir_${projectId}`, dir)
+    setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir)
   }
+  const useSuggested = (dir: string) => { setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir) }
 
   // ---- histórico
   const loadHistory = useCallback(async () => {
@@ -860,6 +872,17 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                       <FolderOpen className="w-4 h-4 text-neutral-400 shrink-0" />
                       <span className={`truncate ${appDir ? 'text-neutral-200' : 'text-neutral-500'}`}>{appDir || t('ide_tests.pick', 'Escolher pasta...')}</span>
                     </button>
+                    {(folderSuggestions.length > 0 || appDirAuto) && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {folderSuggestions.map(sg => (
+                          <button key={sg.dir} type="button" disabled={running || sg.dir === appDir} onClick={() => useSuggested(sg.dir)} title={sg.dir}
+                            className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${sg.dir === appDir ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-200' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>
+                            {sg.kind === 'sync' ? t('delivery.tests_use_sync', 'Pasta do Sincronizar') : t('delivery.tests_use_delivery', 'Última Entrega')}
+                          </button>
+                        ))}
+                        {appDirAuto && <span className="text-[10px] text-neutral-500">{t('delivery.tests_auto', 'Pasta do projeto escolhida automaticamente.')}</span>}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {!desktop && <p className="text-xs text-neutral-500 mt-2">{t('ide_tests.desktop_only', 'Rodar os testes só funciona na IDE Desktop.')}</p>}
