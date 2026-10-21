@@ -1,5 +1,6 @@
 'use client'
 
+import { folderKeyOf, projectRelDir } from '@/utils/folderKey'
 import React from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronLeft, ChevronRight, X, Save, CopyCheck } from 'lucide-react'
@@ -153,7 +154,7 @@ export function IDEEditorArea({
                 >
                   <span
                     className={`mr-2 truncate max-w-[200px] ${isDirty(path) ? 'italic text-amber-200' : ''}`}
-                    title={path.replace(`AGTech/MetaBuilderPRO/${target?.slug}/`, '')}
+                    title={path.replace(`${projectRelDir(folderKeyOf(target))}/`, '')}
                   >
                     {path.split('/').pop()}
                   </span>

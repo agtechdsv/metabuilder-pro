@@ -4581,7 +4581,7 @@
     "project_card_tooltips": {
       "access_published": "Acceder a versión publicada",
       "generate_desktop": "Generar App Desktop Nativa",
-      "ide_local": "IDE Local (Expulsar & Sincronizar)",
+      "ide_local": "IDE Local (Sincronizar)",
       "export_source": "Exportar Código Fuente (Next.js)",
       "ai_builder": "Configuración AI Builder",
       "edit_project": "Editar Proyecto",
@@ -4594,7 +4594,7 @@
       "discarding": "Descartando...",
       "confirm_merge": "Confirmar Merge",
       "confirming": "Confirmando...",
-      "eject_sync": "Expulsar & Sincronizar",
+      "eject_sync": "Sincronizar",
       "syncing": "Sincronizando...",
       "new_branch": "+ Nueva Branch...",
       "branches_group": "Branches",
@@ -4664,7 +4664,7 @@
       "save_all": "Guardar Todo"
     },
     "eject_modal": {
-      "title": "Configuración de Eject y Sincronización",
+      "title": "Configuración de Sincronización",
       "subtitle": "Configure los parámetros del stack, componentes y arquitectura del backend",
       "target_lang_title": "Idioma de Generación",
       "target_lang_tooltip": "Idioma del código generado",
@@ -5172,7 +5172,7 @@
     "subtitle": "Una copia limpia de la app para entregar o publicar: sin Git, sin ramas de sincronización y sin secretos.",
     "source": "De dónde viene el código",
     "source_folder": "De la carpeta del proyecto (con mis ediciones)",
-    "source_folder_missing": "La carpeta del proyecto aún no tiene el código. Use Sincronizar Repositorio primero.",
+    "source_folder_missing": "La carpeta del proyecto aún no tiene el código. Use Sincronizar primero.",
     "source_studio": "Generado ahora por el Studio (sin mis ediciones)",
     "source_studio_hint": "Abre las opciones de base, login y backend antes de generar.",
     "format": "Formato",
@@ -5191,6 +5191,16 @@
     "generate": "Generar entrega",
     "tests_use_sync": "Carpeta de Sincronizar",
     "tests_use_delivery": "Última entrega",
-    "tests_auto": "Carpeta del proyecto elegida automáticamente."
+    "tests_auto": "Carpeta del proyecto elegida automáticamente.",
+    "button_title": "Genera una copia limpia del proyecto sincronizado (sin Git ni secretos), en carpeta o ZIP",
+    "button_disabled": "Sincronice el proyecto primero para generar la Entrega",
+    "source_now": "Vale lo que está en la carpeta ahora, incluso lo que aún no se confirmó (commit).",
+    "git_no_remote_hint": "Sin repositorio remoto, su repositorio es solo local: cada dev tiene el suyo. Para combinar el trabajo de varios devs, la empresa necesita un repositorio remoto (GitHub, GitLab, Azure DevOps, Gitea...). Configure la URL y el token arriba."
+  },
+  "ide_folder": {
+    "title": "Carpeta del proyecto en uso",
+    "message": "La carpeta de este proyecto en este equipo fue creada por el login {email}. Para trabajar sin mezclar con su código, use su propia carpeta. Es solo suya, con historial y cambios propios.",
+    "own": "Usar mi carpeta",
+    "shared": "Usar la misma carpeta"
   }
 }

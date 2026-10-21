@@ -140,6 +140,12 @@ export class LocalSyncManager {
     this.projectDir = `AGTech/MetaBuilderPRO/${this.projectSlug}`;
   }
 
+  /** Quem assina os commits do dev (o login do MetaBuilder). Sem identidade, o nome genérico de sempre. */
+  private author = { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+  public setAuthor(name: string, email: string) {
+    if (name.trim() && email.trim()) this.author = { name: name.trim(), email: email.trim() }
+  }
+
   public async getConfiguredBranches() {
     const configManager = new GitConfigManager(this.projectSlug);
     const config = await configManager.getConfig();
@@ -309,7 +315,7 @@ export class LocalSyncManager {
       dir: this.projectDir,
       ours: sandbox,
       theirs: upstream,
-      author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
+      author: this.author,
       abortOnConflict: false
     });
 
@@ -340,7 +346,7 @@ export class LocalSyncManager {
       dir: this.projectDir,
       ours: local,
       theirs: sandbox,
-      author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
+      author: this.author,
       fastForward: true
     });
 
@@ -549,7 +555,7 @@ export class LocalSyncManager {
           fs: tauriFsAdapter,
           dir: this.projectDir,
           message,
-          author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+          author: this.author
         });
       }
     }
@@ -677,7 +683,7 @@ export class LocalSyncManager {
         fs: tauriFsAdapter,
         dir: this.projectDir,
         message,
-        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' }
+        author: this.author
       });
     }
 
@@ -709,7 +715,7 @@ export class LocalSyncManager {
         url: remoteUrl,
         ref: branchName,
         singleBranch: true,
-        author: { name: 'MetaBuilder Dev', email: 'dev@metabuilder.app' },
+        author: this.author,
         onAuth: () => ({ username: token })
       });
     }

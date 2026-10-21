@@ -3,22 +3,21 @@
 import React, { useEffect, useState } from 'react'
 import { Package, X, Loader2, CheckCircle2, AlertTriangle, FolderOpen } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
-import { DEFAULT_DELIVERY, type DeliveryFormat, type DeliveryOptions, type DeliverySource } from '@/utils/delivery'
+import { DEFAULT_DELIVERY, type DeliveryFormat, type DeliveryOptions } from '@/utils/delivery'
+import { folderKeyOf } from '@/utils/folderKey'
 import { deliverFiles, folderHasApp, readFolderFiles, revealPath, syncFolderPath, type DeliveryLabels, type DeliveryResult } from '@/utils/deliveryIO'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
-  target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
-  /** a entrega gerada pelo Studio passa pela tela de opções da exportação (banco, login, backend): quem abre decide como seguir */
-  onGenerateFromStudio: (opts: DeliveryOptions) => void
+  target: { type: 'project' | 'workspace'; id: string; name: string; slug: string; folderKey?: string } | null
 }
 
 /**
- * Entrega: uma cópia limpa do app (sem .git, ramos, .metabuilder, dependências nem segredos), em pasta ou ZIP. O código vem da pasta do projeto
- * (com as edições do dev) ou é gerado agora pelo Studio. Diferente do Sincronizar, não deixa nenhum vínculo com o repositório.
+ * Entrega: uma cópia limpa do projeto SINCRONIZADO (sem .git, ramos, .metabuilder, dependências nem segredos), em pasta ou ZIP. O código vem da pasta
+ * do projeto, com as edições do dev. Diferente do Sincronizar, não deixa nenhum vínculo com o repositório.
  */
-export function IdeDeliveryModal({ isOpen, onClose, target, onGenerateFromStudio }: Props) {
+export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
   const { t } = useI18n()
   const [opts, setOpts] = useState<DeliveryOptions>(DEFAULT_DELIVERY)
   const [folder, setFolder] = useState<{ dir: string; hasApp: boolean } | null>(null)
@@ -30,14 +29,13 @@ export function IdeDeliveryModal({ isOpen, onClose, target, onGenerateFromStudio
     if (!isOpen || !target) return
     setPhase('idle'); setMessage(''); setResult(null)
     let alive = true
-    syncFolderPath(target.slug).then(async dir => {
+    syncFolderPath(folderKeyOf(target)).then(async dir => {
       const hasApp = await folderHasApp(dir)
       if (!alive) return
       setFolder({ dir, hasApp })
-      setOpts(o => ({ ...o, source: hasApp ? 'folder' : 'studio' }))
     }).catch(() => { if (alive) setFolder(null) })
     return () => { alive = false }
-  }, [isOpen, target?.id, target?.slug])
+  }, [isOpen, target?.id, target?.slug, target?.folderKey])
 
   if (!isOpen || !target) return null
 
@@ -51,12 +49,10 @@ export function IdeDeliveryModal({ isOpen, onClose, target, onGenerateFromStudio
     cleanFailed: t('export_modal.clean_failed', 'Não foi possível limpar a pasta. Nada foi exportado.'),
   }
 
-  const setSource = (source: DeliverySource) => setOpts(o => ({ ...o, source }))
   const setFormat = (format: DeliveryFormat) => setOpts(o => ({ ...o, format, cleanBefore: format === 'zip' ? false : o.cleanBefore }))
   const running = phase === 'running'
 
   const generate = async () => {
-    if (opts.source === 'studio') { onGenerateFromStudio(opts); return }
     if (!folder?.hasApp) return
     setPhase('running'); setMessage(t('delivery.reading', 'Lendo os arquivos da pasta do projeto...')); setResult(null)
     try {
@@ -87,21 +83,10 @@ export function IdeDeliveryModal({ isOpen, onClose, target, onGenerateFromStudio
         <div className="px-5 py-4 space-y-4">
           <section>
             <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2">{t('delivery.source', 'De onde vem o código')}</p>
-            <div className="grid gap-2">
-              <button type="button" disabled={running || !folder?.hasApp} onClick={() => setSource('folder')} className={radio(opts.source === 'folder')}>
-                <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border ${opts.source === 'folder' ? 'border-indigo-400 bg-indigo-500' : 'border-neutral-500'}`} />
-                <span>
-                  <span className="block text-sm font-semibold text-white">{t('delivery.source_folder', 'Da pasta do projeto (com as minhas edições)')}</span>
-                  <span className="block text-[11px] text-neutral-400 break-all">{folder?.hasApp ? folder.dir : t('delivery.source_folder_missing', 'A pasta do projeto ainda não tem o código. Use Sincronizar Repositório primeiro.')}</span>
-                </span>
-              </button>
-              <button type="button" disabled={running} onClick={() => setSource('studio')} className={radio(opts.source === 'studio')}>
-                <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border ${opts.source === 'studio' ? 'border-indigo-400 bg-indigo-500' : 'border-neutral-500'}`} />
-                <span>
-                  <span className="block text-sm font-semibold text-white">{t('delivery.source_studio', 'Gerado agora pelo Studio (sem as minhas edições)')}</span>
-                  <span className="block text-[11px] text-neutral-400">{t('delivery.source_studio_hint', 'Abre as opções de banco, login e backend antes de gerar.')}</span>
-                </span>
-              </button>
+            <div className="rounded-xl border border-neutral-700 bg-neutral-800/40 px-3 py-3">
+              <span className="block text-sm font-semibold text-white">{t('delivery.source_folder', 'Da pasta do projeto (com as minhas edições)')}</span>
+              <span className="block text-[11px] text-neutral-400 break-all">{folder?.hasApp ? folder.dir : t('delivery.source_folder_missing', 'A pasta do projeto ainda não tem o código. Use Sincronizar primeiro.')}</span>
+              <span className="block text-[11px] text-neutral-500 mt-1">{t('delivery.source_now', 'Vale o que está na pasta agora, inclusive o que ainda não foi commitado.')}</span>
             </div>
           </section>
 
@@ -152,8 +137,8 @@ export function IdeDeliveryModal({ isOpen, onClose, target, onGenerateFromStudio
 
         <div className="flex items-center justify-end gap-3 px-5 pb-5">
           <button onClick={onClose} disabled={running} className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white disabled:opacity-40">{phase === 'done' ? t('delivery.close', 'Fechar') : t('delivery.cancel', 'Cancelar')}</button>
-          <button onClick={generate} disabled={running || (opts.source === 'folder' && !folder?.hasApp)} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
-            <Package className="w-4 h-4" />{opts.source === 'studio' ? t('delivery.continue', 'Continuar') : t('delivery.generate', 'Gerar entrega')}
+          <button onClick={generate} disabled={running || !folder?.hasApp} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
+            <Package className="w-4 h-4" />{t('delivery.generate', 'Gerar entrega')}
           </button>
         </div>
       </div>

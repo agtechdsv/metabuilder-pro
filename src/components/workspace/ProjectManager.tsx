@@ -565,7 +565,8 @@ export function ProjectManager({
       />
 
       {/* Modal de Exclusão */}
-      <IdeTestModal isOpen={!!testsTarget} onClose={() => setTestsTarget(null)} target={testsTarget} />
+      {/* mesmo invólucro da IDE Local (.ide-skin): é ele que faz o modal seguir o tema claro/escuro escolhido */}
+      <div className="ide-skin contents"><IdeTestModal isOpen={!!testsTarget} onClose={() => setTestsTarget(null)} target={testsTarget} /></div>
 
       <ProjectDeleteModal
         isOpen={isDeleteModalOpen}

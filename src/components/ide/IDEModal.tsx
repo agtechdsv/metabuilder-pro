@@ -1,5 +1,6 @@
 'use client'
 
+import { folderKeyOf } from '@/utils/folderKey'
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LocalSyncManager } from '@/utils/localSyncManager'
@@ -18,18 +19,16 @@ import { IDECommitModal } from './IDECommitModal'
 import { IDEGitModals } from './IDEGitModals'
 import { IDEFileActionModals } from './IDEFileActionModals'
 import { IDEGitSettingsModal } from './IDEGitSettingsModal'
-import { IdeEjectModal } from './IdeEjectModal'
 import { IdeDeliveryModal } from './IdeDeliveryModal'
-import type { DeliveryOptions } from '@/utils/delivery'
+import { folderHasApp, syncFolderPath } from '@/utils/deliveryIO'
 import { IdeTestModal } from './IdeTestModal'
-import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 export interface IDEModalProps {
   isOpen: boolean
   isMinimized: boolean
   setIsMinimized: (val: boolean) => void
   closeIDE: () => void
-  target: { type: 'project' | 'workspace'; id: string; name: string; slug: string } | null
+  target: { type: 'project' | 'workspace'; id: string; name: string; slug: string; folderKey?: string } | null
   syncManager: LocalSyncManager | null
   showSidebar: boolean
   setShowSidebar: React.Dispatch<React.SetStateAction<boolean>>
@@ -78,13 +77,19 @@ export function IDEModal({
   consoleState
 }: IDEModalProps) {
   // escolhas da tela Ejetar & Sincronizar levadas para o Ejetar (gerar uma vez numa pasta)
-  const [ejectPrefill, setEjectPrefill] = useState<Partial<ExportDefaults> | undefined>(undefined)
-  const ejectFinishedRef = React.useRef<(() => void) | undefined>(undefined)
   // Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio)
   const [showTests, setShowTests] = useState(false)
-  // Entrega: janela de opções e, quando o código vem do Studio, as opções que seguem para a geração
+  // Entrega: janela de opções; só liga depois de sincronizar (a pasta do projeto tem o código) e sem merge pendente
   const [showDelivery, setShowDelivery] = useState(false)
-  const [deliveryOpts, setDeliveryOpts] = useState<DeliveryOptions | null>(null)
+  const [hasSyncedApp, setHasSyncedApp] = useState(false)
+  const deliveryFolder = folderKeyOf(target)
+  React.useEffect(() => {
+    if (!deliveryFolder) { setHasSyncedApp(false); return }
+    let alive = true
+    syncFolderPath(deliveryFolder).then(dir => folderHasApp(dir)).then(ok => { if (alive) setHasSyncedApp(ok) }).catch(() => { if (alive) setHasSyncedApp(false) })
+    return () => { alive = false }
+  }, [deliveryFolder, git.isSyncing, git.isConfirming, git.sandboxMode, isOpen])
+  const deliveryReady = hasSyncedApp && !git.sandboxMode
   if (!isOpen || !target) {
     return (
       <IDEMinimizedBar
@@ -146,8 +151,8 @@ export function IDEModal({
             isPulling={git.isPulling}
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
-            onEject={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setDeliveryOpts(null); setShowNativeExport(true) }}
-            onDelivery={(prefill, onFinished) => { ejectFinishedRef.current = onFinished; setEjectPrefill(prefill); setShowDelivery(true) }}
+            onDelivery={() => setShowDelivery(true)}
+            deliveryReady={deliveryReady}
             onOpenTests={() => setShowTests(true)}
             showConsole={consoleState.showConsole}
             setShowConsole={consoleState.setShowConsole}
@@ -340,34 +345,15 @@ export function IDEModal({
       <IDEGitSettingsModal
         isOpen={git.showGitSettings}
         onClose={() => git.setShowGitSettings(false)}
-        projectSlug={target?.slug || ''}
+        projectSlug={folderKeyOf(target) || ''}
         onResetProject={handleResetProjectToCleanState}
       />
 
       {/* Ambiente de Testes: testes gerados a partir do que o dev configurou no Studio */}
       <IdeTestModal isOpen={showTests} onClose={() => setShowTests(false)} target={target} />
 
-      {/* Ejetar: gera o código final uma vez, na pasta escolhida (mesmo motor e mesmas opções do Ejetar & Sincronizar) */}
-      <IdeEjectModal
-        isOpen={showNativeExport}
-        onClose={(finished) => {
-          setShowNativeExport(false)
-          // terminou: fecha também a tela de sincronização; cancelou: ela continua aberta
-          if (finished) ejectFinishedRef.current?.()
-          ejectFinishedRef.current = undefined
-        }}
-        target={target}
-        prefill={ejectPrefill}
-        delivery={deliveryOpts}
-      />
-
       {/* Entrega: cópia limpa do app (sem Git, ramos nem segredos), em pasta ou ZIP */}
-      <IdeDeliveryModal
-        isOpen={showDelivery}
-        onClose={() => { setShowDelivery(false); ejectFinishedRef.current = undefined }}
-        target={target}
-        onGenerateFromStudio={opts => { setDeliveryOpts(opts); setShowDelivery(false); setShowNativeExport(true) }}
-      />
+      <IdeDeliveryModal isOpen={showDelivery} onClose={() => setShowDelivery(false)} target={target} />
     </div>
   )
 }

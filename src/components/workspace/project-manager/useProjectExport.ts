@@ -1,12 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { DownloadModalState, ExportDefaults, Project } from './types'
-import type { DeliveryOptions } from '@/utils/delivery'
 
 /** Pergunta sim/não: usa o diálogo nativo do desktop (o confirm() do navegador pode nem aparecer no webview). */
 export async function askUser(message: string): Promise<boolean> {
@@ -21,9 +20,6 @@ export async function askUser(message: string): Promise<boolean> {
 export function useProjectExport() {
   const [downloadModal, setDownloadModal] = useState<DownloadModalState | null>(null)
   const [exportModels, setExportModels] = useState<any[]>([])
-  // Entrega: quando definida, o ZIP gerado não vira um app instalado: vira uma cópia limpa (sem arquivos de trabalho nem segredos), em pasta ou ZIP
-  const deliveryRef = useRef<DeliveryOptions | null>(null)
-  const setDelivery = (d: DeliveryOptions | null) => { deliveryRef.current = d }
   const { toast } = useToast()
   const { t } = useI18n()
 
@@ -202,29 +198,6 @@ export function useProjectExport() {
       let offset = 0
       for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.length }
 
-      // Entrega: grava a cópia limpa (pasta ou ZIP) e para por aqui: sem npm install, sem tabelas de acesso, sem abrir o VS Code
-      const delivery = deliveryRef.current
-      if (delivery && isTauri()) {
-        setDownloadModal(prev => prev ? { ...prev, phase: 'processing', progress: 100, statusMessage: t('delivery.writing', 'Gerando a entrega...') } : prev)
-        const { zipBytesToFiles, deliverFiles } = await import('@/utils/deliveryIO')
-        const files = await zipBytesToFiles(merged)
-        const r = await deliverFiles(files, { ...delivery, cleanBefore: delivery.cleanBefore || cleanBefore === true }, {
-          projectId, slug: fileName.replace(/-source-code\.zip$/, ''),
-          labels: {
-            cleanTitle: t('export_modal.clean_title', 'Limpar a pasta antes de exportar?'),
-            cleanMessage: t('export_modal.clean_message', 'Vão ser apagados {count} arquivo(s) de: {dir}. {entries}. Ficam: {kept}.'),
-            cleanOk: t('export_modal.clean_ok', 'Limpar e exportar'), cleanCancel: t('export_modal.clean_cancel', 'Cancelar'),
-            cleanUnsafe: t('export_modal.clean_unsafe', 'Esta pasta não pode ser limpa.'),
-            cleanNotApp: t('export_modal.clean_not_app', 'A pasta tem outros arquivos e não parece um app exportado.'),
-            cleanFailed: t('export_modal.clean_failed', 'Não foi possível limpar a pasta. Nada foi exportado.'),
-          },
-        })
-        if (!r) { setDownloadModal(null); return }
-        toast(`${t('delivery.done', 'Entrega gerada.')} ${r.count} ${t('delivery.files', 'arquivo(s)')}`, 'success')
-        setDownloadModal({ open: true, phase: 'done', fileName, progress: 100, savedPath: r.destination, savedDir: r.format === 'zip' ? r.destination.replace(/[\\/][^\\/]*$/, '') : r.destination, projectId })
-        return
-      }
-
       if (isTauri()) {
         const { open } = await import('@tauri-apps/plugin-dialog')
         const { writeFile, mkdir } = await import('@tauri-apps/plugin-fs')
@@ -384,7 +357,6 @@ export function useProjectExport() {
     setDownloadModal,
     exportModels,
     openExportModal,
-    handleStartExport,
-    setDelivery
+    handleStartExport
   }
 }

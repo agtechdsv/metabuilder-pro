@@ -1,3 +1,4 @@
+import { folderKeyOf, projectRelDir } from '@/utils/folderKey'
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { homeDir } from '@tauri-apps/api/path'
@@ -41,7 +42,7 @@ export function useIDEServer({
 
   const getProjectPath = async () => {
     const home = await homeDir()
-    return `${home.replace(/\\/g, '/')}/AGTech/MetaBuilderPRO/${target!.slug}`
+    return `${home.replace(/\\/g, '/')}/${projectRelDir(folderKeyOf(target))}`
   }
 
   const handleCheckNode = async (retryAction: () => void): Promise<boolean> => {

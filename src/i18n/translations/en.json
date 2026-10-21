@@ -4493,7 +4493,7 @@
     "project_card_tooltips": {
       "access_published": "Access published version",
       "generate_desktop": "Generate Native Desktop App",
-      "ide_local": "Local IDE (Eject & Sync)",
+      "ide_local": "Local IDE (Sync)",
       "export_source": "Export Source Code (Next.js)",
       "ai_builder": "AI Builder Settings",
       "edit_project": "Edit Project",
@@ -4506,7 +4506,7 @@
       "discarding": "Discarding...",
       "confirm_merge": "Confirm Merge",
       "confirming": "Confirming...",
-      "eject_sync": "Eject & Sync",
+      "eject_sync": "Sync",
       "syncing": "Syncing...",
       "new_branch": "+ New Branch...",
       "branches_group": "Branches",
@@ -4576,7 +4576,7 @@
       "save_all": "Save All"
     },
     "eject_modal": {
-      "title": "Eject & Sync Configuration",
+      "title": "Sync Configuration",
       "subtitle": "Configure stack parameters, components and backend architecture",
       "target_lang_title": "Generation Language",
       "target_lang_tooltip": "Generated source code language",
@@ -5084,7 +5084,7 @@
     "subtitle": "A clean copy of the app to hand over or publish: no Git, no sync branches and no secrets.",
     "source": "Where the code comes from",
     "source_folder": "From the project folder (with my edits)",
-    "source_folder_missing": "The project folder has no code yet. Use Sync Repository first.",
+    "source_folder_missing": "The project folder has no code yet. Use Sync first.",
     "source_studio": "Generated now by Studio (without my edits)",
     "source_studio_hint": "Opens the database, login and backend options before generating.",
     "format": "Format",
@@ -5103,6 +5103,16 @@
     "generate": "Generate delivery",
     "tests_use_sync": "Sync folder",
     "tests_use_delivery": "Last delivery",
-    "tests_auto": "Project folder chosen automatically."
+    "tests_auto": "Project folder chosen automatically.",
+    "button_title": "Generates a clean copy of the synced project (no Git, no secrets), as a folder or ZIP",
+    "button_disabled": "Sync the project first to generate the Delivery",
+    "source_now": "Uses what is in the folder right now, including what was not committed yet.",
+    "git_no_remote_hint": "Without a remote repository, your repository is local only: each dev has their own. To merge the work of several devs, the company needs a remote repository (GitHub, GitLab, Azure DevOps, Gitea...). Set the URL and token above."
+  },
+  "ide_folder": {
+    "title": "Project folder in use",
+    "message": "This project folder on this computer was created by the login {email}. To work without mixing with their code, use your own folder. It is yours only, with its own history and changes.",
+    "own": "Use my folder",
+    "shared": "Use the same folder"
   }
 }

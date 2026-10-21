@@ -1,3 +1,4 @@
+import { folderKeyOf, projectRelDir } from '@/utils/folderKey'
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { LocalSyncManager } from '@/utils/localSyncManager'
@@ -248,7 +249,7 @@ export function useIDEGit({
         setBranches(branches)
         setSelectedBranch(currentBranch)
         if (target) {
-          const configManager = new GitConfigManager(target.slug)
+          const configManager = new GitConfigManager(folderKeyOf(target))
           const config = await configManager.getConfig()
           const sandboxBranch = config.branchSandbox || 'sync-sandbox'
           setSandboxMode(currentBranch === sandboxBranch)
@@ -285,7 +286,7 @@ export function useIDEGit({
     if (!syncManager || !target) return
     setIsPushing(true)
     try {
-      const configManager = new GitConfigManager(target.slug)
+      const configManager = new GitConfigManager(folderKeyOf(target))
       const config = await configManager.getConfig()
       if (!config.remoteUrl || !config.accessToken) {
         toast('Configure a URL e o Token do GitHub nas Configurações Git primeiro.', 'error')
@@ -305,7 +306,7 @@ export function useIDEGit({
     if (!syncManager || !target) return
     setIsPulling(true)
     try {
-      const configManager = new GitConfigManager(target.slug)
+      const configManager = new GitConfigManager(folderKeyOf(target))
       const config = await configManager.getConfig()
       if (!config.remoteUrl || !config.accessToken) {
         toast('Configure a URL e o Token do GitHub nas Configurações Git primeiro.', 'error')
@@ -362,7 +363,7 @@ export function useIDEGit({
         setDiffOriginalContent(originalContent)
 
         let localContent = ''
-        const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${firstFile}` : firstFile
+        const fullPath = target ? `${projectRelDir(folderKeyOf(target))}/${firstFile}` : firstFile
         if (fileContents[fullPath] !== undefined) {
           localContent = fileContents[fullPath]
         } else {

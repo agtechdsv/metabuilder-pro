@@ -1,5 +1,6 @@
 'use client'
 
+import { folderKeyOf } from '@/utils/folderKey'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, FlaskConical, Play, Square, Loader2, CheckCircle2, FolderOpen, Eye, EyeOff, ShieldAlert, FileText, RefreshCw, ChevronDown, Printer, Download, RotateCcw, History as HistoryIcon, ChevronUp, Eraser, Image as ImageIcon, Video as VideoIcon, Circle,
@@ -140,7 +141,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     const saved = lsGet(`mb_tests_app_dir_${projectId}`)
     setAppDir(saved); setAppDirAuto(false)
     if (isTauri() && projectSlug) {
-      suggestAppFolders(projectId, projectSlug).then(list => {
+      suggestAppFolders(projectId, folderKeyOf(target) || projectSlug).then(list => {
         setFolderSuggestions(list)
         if (!saved && list.length > 0) { setAppDir(list[0].dir); setAppDirAuto(true) }
       }).catch(() => setFolderSuggestions([]))

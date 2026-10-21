@@ -166,6 +166,11 @@ export function IDEGitSettingsModal({ isOpen, onClose, projectSlug, onResetProje
                         placeholder="https://github.com/usuario/repositorio.git"
                         className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-mono"
                       />
+                      {!(config.remoteUrl || '').trim() && (
+                        <p className="mt-2 text-[11px] leading-relaxed text-amber-300/90">
+                          {t('delivery.git_no_remote_hint', 'Sem repositório remoto, o seu repositório é só local: cada dev tem o seu. Para mesclar o trabalho de vários devs, a empresa precisa de um repositório remoto (GitHub, GitLab, Azure DevOps, Gitea...). Configure a URL e o token acima.')}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-300 mb-1.5">Personal Access Token (PAT)</label>

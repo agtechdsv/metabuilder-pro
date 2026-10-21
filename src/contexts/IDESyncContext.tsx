@@ -18,12 +18,16 @@ import { registerEntityPath, updateEntityCache, parseEntitySource } from '@/comp
 import * as tauriFs from '@tauri-apps/plugin-fs'
 import { BaseDirectory } from '@tauri-apps/api/path'
 import { IDEModal } from '@/components/ide/IDEModal'
+import { folderKeyOf } from '@/utils/folderKey'
+import { claimFolder, currentDevIdentity, resolveFolderKey } from '@/utils/projectIdentity'
 
 export interface IDETarget {
   type: 'project' | 'workspace'
   id: string
   name: string
   slug: string
+  /** pasta do projeto na IDE Local quando não é o slug (pasta própria do dev; veja utils/projectIdentity) */
+  folderKey?: string
 }
 
 export type { FileNode, UndoAction }
@@ -57,9 +61,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
   // Injected specialized hooks
   const consoleState = useIDEConsole()
-  const fsState = useIDEFileSystem({ targetSlug: target?.slug })
+  const fsState = useIDEFileSystem({ targetSlug: folderKeyOf(target) || undefined })
   const monacoRef = useRef<any>(null)
-  const tabsState = useIDETabs({ targetSlug: target?.slug, monacoRef })
+  const tabsState = useIDETabs({ targetSlug: folderKeyOf(target) || undefined, monacoRef })
 
   const gitState = useIDEGit({
     target,
@@ -73,7 +77,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   })
 
   const fileOps = useIDEFileOperations({
-    targetSlug: target?.slug,
+    targetSlug: folderKeyOf(target) || undefined,
     fileTree: fsState.fileTree,
     loadFileTree: fsState.loadFileTree,
     setOpenFiles: tabsState.setOpenFiles,
@@ -283,13 +287,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   // Local Sync initialization
   useEffect(() => {
     if (isOpen && target && isTauri()) {
-      const manager = new LocalSyncManager(target.id, target.slug)
+      const folder = folderKeyOf(target)
+      const manager = new LocalSyncManager(target.id, folder)
       setSyncManager(manager)
+      // os commits do dev levam o nome e o e-mail do login; a pasta registra de quem é (sem tomar a de outro login)
+      const dev = currentDevIdentity()
+      dev.then(d => { if (d) manager.setAuthor(d.name, d.email) })
       manager.initLocalProject().then(async () => {
+        const d = await dev
+        if (d) await claimFolder(folder, d)
         const { branches, currentBranch } = await manager.getBranches()
         gitState.setBranches(branches)
         gitState.setSelectedBranch(currentBranch)
-        const configManager = new GitConfigManager(target.slug)
+        const configManager = new GitConfigManager(folder)
         const config = await configManager.getConfig()
         const sandboxBranch = config.branchSandbox || 'sync-sandbox'
 
@@ -340,13 +350,22 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setIsMinimizedState(value)
   }
 
-  const openIDEHere = (newTarget: IDETarget, opts?: { detached?: boolean }) => {
+  const openIDEHere = async (rawTarget: IDETarget, opts?: { detached?: boolean }) => {
     if (!isTauri()) {
       toast('A IDE Local está disponível apenas no Desktop App', 'error')
       return
     }
+    // a pasta do projeto é a do slug, ou a própria do dev quando a padrão já é de outro login do MetaBuilder neste computador
+    const newTarget: IDETarget = rawTarget.type === 'project' && !rawTarget.folderKey
+      ? { ...rawTarget, folderKey: await resolveFolderKey(rawTarget, await currentDevIdentity(), {
+          title: t('ide_folder.title', 'Pasta do projeto em uso'),
+          message: email => t('ide_folder.message', 'A pasta deste projeto neste computador foi criada pelo login {email}. Para trabalhar sem misturar com o código dele, use a sua própria pasta. Ela é só sua, com histórico e alterações próprios.').replace('{email}', email),
+          own: t('ide_folder.own', 'Usar a minha pasta'),
+          shared: t('ide_folder.shared', 'Usar a mesma pasta'),
+        }) }
+      : rawTarget
     // Trocando de projeto com a IDE já aberta: começa limpo
-    if (target && target.slug !== newTarget.slug) {
+    if (target && folderKeyOf(target) !== folderKeyOf(newTarget)) {
       fsState.resetFileSystem()
       tabsState.resetTabs()
       gitState.resetGit()

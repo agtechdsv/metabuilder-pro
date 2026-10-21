@@ -4493,7 +4493,7 @@
     "project_card_tooltips": {
       "access_published": "Acessar versão publicada",
       "generate_desktop": "Gerar App Desktop Nativo",
-      "ide_local": "IDE Local (Ejetar & Sincronizar)",
+      "ide_local": "IDE Local (Sincronizar)",
       "export_source": "Exportar Código Fonte (Next.js)",
       "ai_builder": "Configurações AI Builder",
       "edit_project": "Editar Projeto",
@@ -4506,7 +4506,7 @@
       "discarding": "Descartando...",
       "confirm_merge": "Confirmar Merge",
       "confirming": "Confirmando...",
-      "eject_sync": "Ejetar & Sincronizar",
+      "eject_sync": "Sincronizar",
       "syncing": "Sincronizando...",
       "new_branch": "+ Nova Branch...",
       "branches_group": "Branches",
@@ -4576,7 +4576,7 @@
       "save_all": "Salvar Todos"
     },
     "eject_modal": {
-      "title": "Configuração de Eject & Sincronização",
+      "title": "Configuração de Sincronização",
       "subtitle": "Configure os parâmetros da stack, componentes e arquitetura do backend",
       "target_lang_title": "Idioma de Geração",
       "target_lang_tooltip": "Idioma do código gerado",
@@ -5084,7 +5084,7 @@
     "subtitle": "Uma cópia limpa do app para entregar ou publicar: sem Git, sem ramos de sincronização e sem os segredos.",
     "source": "De onde vem o código",
     "source_folder": "Da pasta do projeto (com as minhas edições)",
-    "source_folder_missing": "A pasta do projeto ainda não tem o código. Use Sincronizar Repositório primeiro.",
+    "source_folder_missing": "A pasta do projeto ainda não tem o código. Use Sincronizar primeiro.",
     "source_studio": "Gerado agora pelo Studio (sem as minhas edições)",
     "source_studio_hint": "Abre as opções de banco, login e backend antes de gerar.",
     "format": "Formato",
@@ -5103,6 +5103,16 @@
     "generate": "Gerar entrega",
     "tests_use_sync": "Pasta do Sincronizar",
     "tests_use_delivery": "Última Entrega",
-    "tests_auto": "Pasta do projeto escolhida automaticamente."
+    "tests_auto": "Pasta do projeto escolhida automaticamente.",
+    "button_title": "Gera uma cópia limpa do projeto sincronizado (sem Git nem segredos), em pasta ou ZIP",
+    "button_disabled": "Sincronize o projeto primeiro para poder gerar a Entrega",
+    "source_now": "Vale o que está na pasta agora, inclusive o que ainda não foi commitado.",
+    "git_no_remote_hint": "Sem repositório remoto, o seu repositório é só local: cada dev tem o seu. Para mesclar o trabalho de vários devs, a empresa precisa de um repositório remoto (GitHub, GitLab, Azure DevOps, Gitea...). Configure a URL e o token acima."
+  },
+  "ide_folder": {
+    "title": "Pasta do projeto em uso",
+    "message": "A pasta deste projeto neste computador foi criada pelo login {email}. Para trabalhar sem misturar com o código dele, use a sua própria pasta. Ela é só sua, com histórico e alterações próprios.",
+    "own": "Usar a minha pasta",
+    "shared": "Usar a mesma pasta"
   }
 }

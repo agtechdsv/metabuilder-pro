@@ -70,6 +70,7 @@ html.light .ide-skin .hover\:bg-neutral-800:hover:not(.ide-dark *) { background-
 html.light .ide-skin .hover\:bg-neutral-700:hover:not(.ide-dark *) { background-color: #d4d4d8; }
 html.light .ide-skin .hover\:bg-neutral-700\/60:hover:not(.ide-dark *) { background-color: #e4e4e7; }
 html.light .ide-skin .hover\:bg-neutral-800\/60:hover:not(.ide-dark *) { background-color: #ececee; }
+html.light .ide-skin .hover\:bg-neutral-800\/70:hover:not(.ide-dark *) { background-color: #e8e8eb; }
 html.light .ide-skin .hover\:bg-neutral-800\/50:hover:not(.ide-dark *) { background-color: #f4f4f5; }
 html.light .ide-skin .hover\:bg-neutral-800\/20:hover:not(.ide-dark *) { background-color: #f4f4f5; }
 html.light .ide-skin .hover\:bg-\[\#252526\]:hover:not(.ide-dark *) { background-color: #e9e9ec; }

@@ -1,5 +1,6 @@
 'use client'
 
+import { folderKeyOf, projectRelDir } from '@/utils/folderKey'
 import React, { useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -96,7 +97,7 @@ export function IDECommitModal({
       setDiffOriginalContent(originalContent)
 
       let localContent = ''
-      const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${filepath}` : filepath
+      const fullPath = target ? `${projectRelDir(folderKeyOf(target))}/${filepath}` : filepath
       if (fileContents[fullPath] !== undefined) {
         localContent = fileContents[fullPath]
       } else {
@@ -174,7 +175,7 @@ export function IDECommitModal({
         })
 
         const originalContent = await syncManager.getFileHeadContent(filepath, targetRef)
-        const fullPath = target ? `AGTech/MetaBuilderPRO/${target.slug}/${filepath}` : filepath
+        const fullPath = target ? `${projectRelDir(folderKeyOf(target))}/${filepath}` : filepath
         if (fileContents[fullPath] !== undefined) {
           setFileContents(prev => ({ ...prev, [fullPath]: originalContent }))
           setOriginalFileContents(prev => ({ ...prev, [fullPath]: originalContent }))
@@ -241,7 +242,7 @@ export function IDECommitModal({
       setOriginalFileContents(prev => {
         const next = { ...prev }
         Object.keys(next).forEach(path => {
-          const relPath = target ? path.replace(`AGTech/MetaBuilderPRO/${target.slug}/`, '') : path
+          const relPath = target ? path.replace(`${projectRelDir(folderKeyOf(target))}/`, '') : path
           if (fileContents[path] !== undefined && selectedCommitFiles.has(relPath)) {
             next[path] = fileContents[path]
           }
@@ -531,7 +532,7 @@ export function IDECommitModal({
                                 try {
                                   await syncManager?.saveFileLocalContent(currentFile, val)
                                   const fullPath = target
-                                    ? `AGTech/MetaBuilderPRO/${target.slug}/${currentFile}`
+                                    ? `${projectRelDir(folderKeyOf(target))}/${currentFile}`
                                     : currentFile
                                   setFileContents(prev => {
                                     if (prev[fullPath] !== undefined) {

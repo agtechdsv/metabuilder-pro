@@ -43,9 +43,10 @@ export interface IDEHeaderProps {
   setShowGitSettings: (show: boolean) => void
   /** abre o Ejetar (gerar uma vez numa pasta) já com o que foi escolhido na tela de sincronização */
   /** onFinished: chamado quando a exportação termina (a tela de sincronização então se fecha; ao cancelar ela continua aberta) */
-  onEject: (prefill: ExportDefaults, onFinished?: () => void) => void
-  /** Entrega: cópia limpa do app (sem Git nem segredos), em pasta ou ZIP */
-  onDelivery: (prefill: ExportDefaults, onFinished?: () => void) => void
+  /** Entrega: cópia limpa do projeto sincronizado (sem Git nem segredos), em pasta ou ZIP */
+  onDelivery: () => void
+  /** o projeto já foi sincronizado (a pasta tem o código)? Sem isso a Entrega fica desabilitada */
+  deliveryReady: boolean
   /** abre o Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio) */
   onOpenTests?: () => void
   showConsole: boolean
@@ -698,8 +699,8 @@ export function IDEHeader({
   isPulling,
   handleShowLogs,
   setShowGitSettings,
-  onEject,
   onDelivery,
+  deliveryReady,
   onOpenTests,
   showConsole,
   setShowConsole,
@@ -799,25 +800,6 @@ export function IDEHeader({
     }
   }
 
-  // Entrega: cópia limpa do app (sem Git nem vínculo) com o que foi escolhido nesta tela
-  const ejectToFolder = () => {
-    // a tela de sincronização continua aberta por baixo: cancelar a Entrega volta para ela
-    const isJava = activeTab === 'java'
-    onDelivery({
-      backendStack: isJava ? 'java-spring' : 'nodejs',
-      ...(isJava ? {
-        javaGroupId: javaConfig.groupId,
-        javaPort: javaConfig.port,
-        javaOptions: {
-          jwt: javaConfig.jwt, migrations: javaConfig.migrations, tests: javaConfig.testService || javaConfig.testController,
-          docker: javaConfig.dockerfile || javaConfig.dockerCompose, env: javaConfig.envExample, swagger: javaConfig.swagger, readme: javaConfig.readme,
-        },
-      } : {}),
-      accessAdmin: accessAdmin && loginMode === 'project',
-      ...(loginMode === 'none' || loginMode === 'ldap' ? { authStrategy: loginMode } : {}),
-    }, () => setIsSyncModalOpen(false))
-  }
-
   const activeTabDef = TABS.find(t => t.id === activeTab)!
   const canSync = activeTab === 'nodejs' || activeTab === 'java'
 
@@ -860,14 +842,27 @@ export function IDEHeader({
               </button>
             </>
           ) : (
+            <>
+            <button
+              onClick={onDelivery}
+              disabled={!deliveryReady || isSyncing}
+              title={deliveryReady
+                ? t('delivery.button_title', 'Gera uma cópia limpa do projeto sincronizado (sem Git nem segredos), em pasta ou ZIP')
+                : t('delivery.button_disabled', 'Sincronize o projeto primeiro para poder gerar a Entrega')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors border border-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Package className="w-3.5 h-3.5" />
+              {t('delivery.title', 'Entrega')}
+            </button>
             <button
               onClick={() => setIsSyncModalOpen(true)}
               disabled={isSyncing}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
             >
               <DownloadCloud className="w-3.5 h-3.5" />
-              {isSyncing ? t('workspace_components.ide_local.syncing', 'Sincronizando...') : t('workspace_components.ide_local.eject_sync', 'Ejetar & Sincronizar')}
+              {isSyncing ? t('workspace_components.ide_local.syncing', 'Sincronizando...') : t('workspace_components.ide_local.eject_sync', 'Sincronizar')}
             </button>
+            </>
           )}
 
           <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-8">
@@ -1009,7 +1004,7 @@ export function IDEHeader({
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">
-                      {t('workspace_components.eject_modal.title', 'Configuração de Eject & Sincronização')}
+                      {t('workspace_components.eject_modal.title', 'Configuração de Sincronização')}
                     </h2>
                     <p className="text-xs text-neutral-400">
                       {t('workspace_components.eject_modal.subtitle', 'Configure os parâmetros da stack, componentes e arquitetura do backend')}
@@ -1170,14 +1165,6 @@ export function IDEHeader({
                     className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
                   >
                     {t('workspace_components.ide_local.cancel', 'Cancelar')}
-                  </button>
-                  <button
-                    onClick={ejectToFolder}
-                    disabled={!canSync}
-                    className="flex items-center gap-2 px-4 py-2 border border-neutral-700 hover:bg-neutral-800 text-neutral-200 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Package className="w-4 h-4" />
-                    {t('delivery.button', 'Entrega…')}
                   </button>
                   <button
                     onClick={confirmSync}
