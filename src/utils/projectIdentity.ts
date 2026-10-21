@@ -7,6 +7,7 @@
  * e oferece uma pasta própria (<slug>--<início do id do login>).
  */
 import type { IDETargetLike } from './folderKey'
+import { getPickedFolder } from './projectFolders'
 
 export interface DevIdentity { id: string; email: string; name: string }
 
@@ -89,6 +90,9 @@ export async function claimFolder(folderKey: string, dev: DevIdentity): Promise<
  * Descobre qual pasta este login usa neste projeto. Pergunta (uma vez por login e projeto) quando a pasta padrão é de outro login.
  */
 export async function resolveFolderKey(target: IDETargetLike, dev: DevIdentity | null, labels: { title: string; message: (ownerEmail: string) => string; own: string; shared: string }): Promise<string> {
+  // a pasta que este login escolheu para o projeto (seletor de pasta) vale mais que qualquer regra
+  const escolhida = getPickedFolder(dev?.id ?? 'anon', target.id)
+  if (escolhida) return escolhida
   if (!dev) return target.slug
   const owner = await readFolderOwner(target.slug)
   const prev = lsGet(choiceKey(dev.id, target.id)) as 'own' | 'shared' | ''

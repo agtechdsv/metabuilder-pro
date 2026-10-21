@@ -20,6 +20,7 @@ import { BaseDirectory } from '@tauri-apps/api/path'
 import { IDEModal } from '@/components/ide/IDEModal'
 import { folderKeyOf } from '@/utils/folderKey'
 import { claimFolder, currentDevIdentity, resolveFolderKey } from '@/utils/projectIdentity'
+import { setPickedFolder, writeProjectMarker } from '@/utils/projectFolders'
 
 export interface IDETarget {
   type: 'project' | 'workspace'
@@ -295,6 +296,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       dev.then(d => { if (d) manager.setAuthor(d.name, d.email) })
       manager.initLocalProject().then(async () => {
         const d = await dev
+        await writeProjectMarker(folder, target.id, target.slug)
         if (d) await claimFolder(folder, d)
         const { branches, currentBranch } = await manager.getBranches()
         gitState.setBranches(branches)
@@ -380,6 +382,14 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     setTarget(newTarget)
     setIsOpen(true)
     setIsMinimizedState(false)
+  }
+
+  /** Troca para outra pasta do mesmo projeto (uma por pilha, uma cópia de teste...): guarda a escolha deste login e reabre a IDE nela. */
+  const switchFolder = async (name: string) => {
+    if (!target) return
+    const dev = await currentDevIdentity()
+    setPickedFolder(dev?.id ?? 'anon', target.id, name)
+    await openIDEHere({ ...target, folderKey: name }, { detached: isDetached })
   }
 
   const openIDE = async (newTarget: IDETarget) => {
@@ -473,6 +483,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
             monacoRef={monacoRef}
             handleMonacoBeforeMount={handleMonacoBeforeMount}
             handleResetProjectToCleanState={handleResetProjectToCleanState}
+            onSwitchFolder={switchFolder}
             fs={fsState}
             fileOps={fileOps}
             tabs={tabsState}

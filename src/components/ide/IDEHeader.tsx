@@ -13,6 +13,10 @@ import { useI18n } from '@/i18n'
 import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
 import { IdeThemeLanguage } from './IdeThemeLanguage'
+import { IDEFolderSwitcher, NewFolderDialog, StackMismatchDialog } from './IDEFolderSwitcher'
+import { useToast } from '@/components/ui/Toast'
+import { folderKeyOf } from '@/utils/folderKey'
+import { detectFolderStack, listProjectFolders, suggestFolderName, type Pilha } from '@/utils/projectFolders'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 const GEN_LANGUAGES = [
@@ -45,6 +49,10 @@ export interface IDEHeaderProps {
   /** onFinished: chamado quando a exportação termina (a tela de sincronização então se fecha; ao cancelar ela continua aberta) */
   /** Entrega: cópia limpa do projeto sincronizado (sem Git nem segredos), em pasta ou ZIP */
   onDelivery: () => void
+  /** troca para outra pasta do mesmo projeto (uma por pilha, uma cópia de teste...) */
+  onSwitchFolder: (name: string) => void | Promise<void>
+  /** apaga os arquivos e o histórico Git local da pasta atual */
+  onResetProject: () => Promise<void>
   /** o projeto já foi sincronizado (a pasta tem o código)? Sem isso a Entrega fica desabilitada */
   deliveryReady: boolean
   /** abre o Ambiente de Testes (testes gerados a partir do que o dev configurou no Studio) */
@@ -700,6 +708,8 @@ export function IDEHeader({
   handleShowLogs,
   setShowGitSettings,
   onDelivery,
+  onSwitchFolder,
+  onResetProject,
   deliveryReady,
   onOpenTests,
   showConsole,
@@ -771,7 +781,26 @@ export function IDEHeader({
   const [loginMode, setLoginMode] = useState<LoginMode>('project')
   const detected = useDetectedSetup(target, isSyncModalOpen)
 
-  const confirmSync = () => {
+  // Pasta de outra pilha: sincronizar aqui misturaria Node e Java. Oferece uma pasta nova (principal), limpar a atual ou cancelar.
+  const [mismatch, setMismatch] = useState<{ current: Pilha; wanted: Pilha; suggestion: string } | null>(null)
+  const [newFolderFor, setNewFolderFor] = useState<{ wanted: Pilha; suggestion: string } | null>(null)
+  const { toast } = useToast()
+
+  const confirmSync = async () => {
+    if (target.type === 'project') {
+      const wanted: Pilha = activeTab === 'java' ? 'java' : 'node'
+      const current = await detectFolderStack(folderKeyOf(target)).catch(() => 'desconhecida' as const)
+      if ((current === 'node' || current === 'java') && current !== wanted) {
+        const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
+        setIsSyncModalOpen(false)
+        setMismatch({ current, wanted, suggestion: suggestFolderName(target.slug, wanted, [...taken, folderKeyOf(target)]) })
+        return
+      }
+    }
+    runSync()
+  }
+
+  const runSync = () => {
     setIsSyncModalOpen(false)
     const withAccess = accessAdmin && loginMode === 'project' && (target.type === 'workspace' || detected?.auth?.type === 'database')
     const authStrategy = loginMode === 'none' || loginMode === 'ldap' ? loginMode : undefined
@@ -864,6 +893,8 @@ export function IDEHeader({
             </button>
             </>
           )}
+
+          <IDEFolderSwitcher target={target} onSwitch={onSwitchFolder} refreshKey={isSyncing} />
 
           <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-8">
             <div className="px-2 bg-neutral-800 text-neutral-400 border-r border-neutral-700 flex items-center h-full">
@@ -1180,6 +1211,42 @@ export function IDEHeader({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Pilha trocada: a pasta é de uma pilha e o dev vai sincronizar a outra */}
+      {mismatch && !newFolderFor && (
+        <StackMismatchDialog
+          current={mismatch.current}
+          wanted={mismatch.wanted}
+          suggestion={mismatch.suggestion}
+          onCancel={() => setMismatch(null)}
+          onOtherFolder={() => setNewFolderFor({ wanted: mismatch.wanted, suggestion: mismatch.suggestion })}
+          onClean={async () => {
+            const { ask } = await import('@tauri-apps/plugin-dialog')
+            const ok = await ask(t('ide_folder.mismatch_clean_confirm', 'Isso apaga TODOS os arquivos e o histórico Git local da pasta atual. Não dá para desfazer. Continuar?'), {
+              title: t('ide_folder.mismatch_clean', 'Limpar esta pasta e sincronizar aqui'), kind: 'warning',
+              okLabel: t('ide_folder.mismatch_clean_ok', 'Limpar'), cancelLabel: t('ide_folder.cancel', 'Cancelar'),
+            })
+            if (!ok) return
+            setMismatch(null)
+            await onResetProject()
+            toast(t('ide_folder.after_clean', 'Pasta limpa. Clique em Sincronizar para continuar.'), 'success')
+            setIsSyncModalOpen(true)
+          }}
+        />
+      )}
+      {newFolderFor && (
+        <NewFolderDialog
+          target={target}
+          initialName={newFolderFor.suggestion}
+          onCancel={() => setNewFolderFor(null)}
+          onConfirm={async (name) => {
+            setNewFolderFor(null); setMismatch(null)
+            await onSwitchFolder(name)
+            toast(t('ide_folder.after_switch', 'Agora na pasta {name}. Clique em Sincronizar para continuar.').replace('{name}', name), 'success')
+            setIsSyncModalOpen(true)
+          }}
+        />
+      )}
     </div>
   )
 }

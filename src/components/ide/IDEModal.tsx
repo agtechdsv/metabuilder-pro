@@ -42,6 +42,8 @@ export interface IDEModalProps {
   monacoRef: React.MutableRefObject<any>
   handleMonacoBeforeMount: (monaco: any) => void
   handleResetProjectToCleanState: () => Promise<void>
+  /** troca para outra pasta do mesmo projeto */
+  onSwitchFolder: (name: string) => void | Promise<void>
   fs: ReturnType<typeof useIDEFileSystem>
   fileOps: ReturnType<typeof useIDEFileOperations>
   tabs: ReturnType<typeof useIDETabs>
@@ -69,6 +71,7 @@ export function IDEModal({
   monacoRef,
   handleMonacoBeforeMount,
   handleResetProjectToCleanState,
+  onSwitchFolder,
   fs,
   fileOps,
   tabs,
@@ -153,6 +156,8 @@ export function IDEModal({
             handleShowLogs={git.handleShowLogs}
             setShowGitSettings={git.setShowGitSettings}
             onDelivery={() => setShowDelivery(true)}
+            onSwitchFolder={onSwitchFolder}
+            onResetProject={handleResetProjectToCleanState}
             deliveryReady={deliveryReady}
             onOpenTests={() => setShowTests(true)}
             showConsole={consoleState.showConsole}
