@@ -356,14 +356,19 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
       return
     }
     // a pasta do projeto é a do slug, ou a própria do dev quando a padrão já é de outro login do MetaBuilder neste computador
-    const newTarget: IDETarget = rawTarget.type === 'project' && !rawTarget.folderKey
-      ? { ...rawTarget, folderKey: await resolveFolderKey(rawTarget, await currentDevIdentity(), {
+    // Se algo der errado ao descobrir a pasta, a IDE abre do mesmo jeito (na pasta do slug): nunca fica em branco
+    let newTarget: IDETarget = rawTarget
+    if (rawTarget.type === 'project' && !rawTarget.folderKey) {
+      try {
+        const folderKey = await resolveFolderKey(rawTarget, await currentDevIdentity(), {
           title: t('ide_folder.title', 'Pasta do projeto em uso'),
           message: email => t('ide_folder.message', 'A pasta deste projeto neste computador foi criada pelo login {email}. Para trabalhar sem misturar com o código dele, use a sua própria pasta. Ela é só sua, com histórico e alterações próprios.').replace('{email}', email),
           own: t('ide_folder.own', 'Usar a minha pasta'),
           shared: t('ide_folder.shared', 'Usar a mesma pasta'),
-        }) }
-      : rawTarget
+        })
+        newTarget = { ...rawTarget, folderKey }
+      } catch (e) { console.warn('Pasta do projeto: usando a padrão', e) }
+    }
     // Trocando de projeto com a IDE já aberta: começa limpo
     if (target && folderKeyOf(target) !== folderKeyOf(newTarget)) {
       fsState.resetFileSystem()

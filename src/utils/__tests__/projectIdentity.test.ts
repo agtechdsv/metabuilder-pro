@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideFolder, ownFolderKey } from '../projectIdentity'
+import { decideFolder, ownFolderKey, withTimeout } from '../projectIdentity'
 import { folderKeyOf, projectRelDir } from '../folderKey'
 
 const dono = { userId: 'user-a', email: 'a@x.com', createdAt: '2026-10-20' }
@@ -26,5 +26,17 @@ describe('pasta do projeto na IDE Local: de quem é', () => {
     expect(folderKeyOf({ slug: 'vendas-pg', folderKey: 'vendas-pg--9de76b47' })).toBe('vendas-pg--9de76b47')
     expect(folderKeyOf(null)).toBe('')
     expect(projectRelDir('vendas-pg')).toBe('AGTech/MetaBuilderPRO/vendas-pg')
+  })
+})
+
+describe('abrir a IDE nunca fica esperando o login ou a pasta', () => {
+  it('uma operação que trava devolve o valor padrão depois do limite (a IDE abre do mesmo jeito)', async () => {
+    const trava = new Promise<string>(() => { /* nunca termina */ })
+    expect(await withTimeout(trava, 20, 'padrão')).toBe('padrão')
+  })
+
+  it('uma operação que falha também devolve o padrão, e a que termina a tempo devolve o seu valor', async () => {
+    expect(await withTimeout(Promise.reject(new Error('rede')), 1000, 'padrão')).toBe('padrão')
+    expect(await withTimeout(Promise.resolve('login'), 1000, 'padrão')).toBe('login')
   })
 })

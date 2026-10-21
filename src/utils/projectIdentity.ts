@@ -12,18 +12,30 @@ export interface DevIdentity { id: string; email: string; name: string }
 
 export interface FolderOwner { userId: string; email: string; createdAt: string }
 
-/** O login atual do MetaBuilder: id, e-mail e nome (o nome assina os commits). null = não consegui ler. */
+/** Espera no máximo `ms`: se a operação travar (rede, trava de sessão do navegador), segue com `fallback` em vez de deixar a IDE em branco. */
+export function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise<T>(resolve => {
+    const t = setTimeout(() => resolve(fallback), ms)
+    p.then(v => { clearTimeout(t); resolve(v) }, () => { clearTimeout(t); resolve(fallback) })
+  })
+}
+
+/**
+ * O login atual do MetaBuilder: id, e-mail e nome (o nome assina os commits). null = não consegui ler (nunca trava a abertura da IDE).
+ * Lê a sessão LOCAL (sem chamada de rede e sem esperar a trava do login que as outras janelas do app disputam).
+ */
 export async function currentDevIdentity(): Promise<DevIdentity | null> {
-  try {
+  const ler = async (): Promise<DevIdentity | null> => {
     const { createClient } = await import('@/utils/supabase/client')
-    const { data } = await createClient().auth.getUser()
-    const u = data?.user
+    const { data } = await createClient().auth.getSession()
+    const u = data?.session?.user
     if (!u) return null
     const email = u.email || ''
     const meta = (u.user_metadata || {}) as Record<string, unknown>
     const name = String(meta.full_name || meta.name || '').trim() || email.split('@')[0] || 'Dev'
     return { id: u.id, email, name }
-  } catch { return null }
+  }
+  return withTimeout(ler(), 2500, null)
 }
 
 /** Pasta própria do dev: o mesmo projeto, outro nome de pasta. */
@@ -49,7 +61,11 @@ const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } cat
 
 const ownerFile = (folderKey: string) => `AGTech/MetaBuilderPRO/${folderKey}/.git/mb-owner.json`
 
-export async function readFolderOwner(folderKey: string): Promise<FolderOwner | null> {
+export function readFolderOwner(folderKey: string): Promise<FolderOwner | null> {
+  return withTimeout(lerDono(folderKey), 2500, null)
+}
+
+async function lerDono(folderKey: string): Promise<FolderOwner | null> {
   try {
     const fs = await import('@tauri-apps/plugin-fs')
     const { BaseDirectory } = await import('@tauri-apps/api/path')
