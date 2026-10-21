@@ -90,17 +90,7 @@ export function IDEModal({
     return () => { alive = false }
   }, [deliveryFolder, git.isSyncing, git.isConfirming, git.sandboxMode, isOpen])
   const deliveryReady = hasSyncedApp && !git.sandboxMode
-  if (!isOpen || !target) {
-    return (
-      <IDEMinimizedBar
-        isMinimized={isMinimized}
-        target={target}
-        setIsMinimized={setIsMinimized}
-        closeIDE={closeIDE}
-      />
-    )
-  }
-
+  // Hooks SEMPRE antes do return antecipado abaixo: a IDE pode abrir depois de já estar montada fechada, e hook depois de return muda a ordem (React #310)
   // Lista plana de todos os caminhos de arquivo na árvore (para Ctrl+Click)
   const allFilePaths = React.useMemo(() => {
     const paths: string[] = []
@@ -113,6 +103,17 @@ export function IDEModal({
     flatten(fs.fileTree)
     return paths
   }, [fs.fileTree])
+
+  if (!isOpen || !target) {
+    return (
+      <IDEMinimizedBar
+        isMinimized={isMinimized}
+        target={target}
+        setIsMinimized={setIsMinimized}
+        closeIDE={closeIDE}
+      />
+    )
+  }
 
   return (
     <div className="ide-skin contents">
