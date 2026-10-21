@@ -1,31 +1,4 @@
 {
-  "v1.0.16": {
-    "date": "2026-10-21",
-    "pt": [
-      "Nova Suíte Completa de Testes Automatizados: execute facilmente testes de compatibilidade multi-navegador (Chrome, Firefox, Safari), acessibilidade e testes de carga avançados com múltiplos usuários simultâneos.",
-      "Super Desempenho no Módulo de BI: ganho de performance expressivo com redução no tempo de processamento de 25s para apenas 4s sob alta concorrência.",
-      "Novo Fluxo de Entrega Segura: exporte seu projeto pronto para produção em pasta ou arquivo ZIP totalmente limpo, livre de arquivos Git e dados sensíveis.",
-      "Exportação Inteligente com Travas de Segurança: opção de limpeza prévia da pasta de destino com preservação automática de dependências e confirmação detalhada.",
-      "Melhorias de Usabilidade Mobile e Acessibilidade: novo menu gaveta intuitivo em dispositivos móveis e suporte nativo a leitores de tela em seletores e agendadores.",
-      "Acesso Rápido no Workspace: acesse diretamente o Ambiente de Testes a partir do card do seu projeto."
-    ],
-    "en": [
-      "Comprehensive Automated Testing Suite: easily run multi-browser compatibility tests (Chrome, Firefox, Safari), accessibility checks, and advanced load tests with concurrent users.",
-      "High-Performance BI Processing: major performance leap reducing processing times from 25s down to 4s under high concurrent traffic.",
-      "New Production-Ready Delivery Feature: export clean project builds to a folder or ZIP file, automatically stripped of Git history and sensitive secrets.",
-      "Smart Export with Safety Guards: option to safely clean destination folders prior to export while preserving dependencies and critical files.",
-      "Enhanced Mobile Usability & Accessibility: brand-new drawer navigation for mobile devices and native screen reader support for paginators, pickers, and schedulers.",
-      "Quick-Access Testing from Workspace: launch the Test Environment directly from any project card."
-    ],
-    "es": [
-      "Nueva Suite Integral de Pruebas Automatizadas: ejecute fácilmente pruebas de compatibilidad en múltiples navegadores (Chrome, Firefox, Safari), accesibilidad y pruebas de carga con usuarios simultáneos.",
-      "Alto Rendimiento en el Módulo de BI: notable mejora de velocidad, reduciendo tiempos de procesamiento de 25s a solo 4s bajo alta concurrencia.",
-      "Nueva Función de Entrega Segura: exporte proyectos listos para producción en carpeta limpia o archivo ZIP, sin historiales de Git ni credenciales sensibles.",
-      "Exportación Inteligente con Protección de Datos: opción de limpieza previa del directorio de destino preservando dependencias y archivos esenciales.",
-      "Mejoras de Usabilidad Móvil y Accesibilidad: nuevo menú desplegable para móviles y soporte nativo para lectores de pantalla en selectores y planificadores.",
-      "Acceso Rápido desde el Workspace: abra el Entorno de Pruebas directamente desde la tarjeta de cada proyecto."
-    ]
-  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
