@@ -382,38 +382,139 @@ export function deployGuide(ast: AppAST, stack: 'node' | 'java'): string {
 | \`API_URL\` (frontend) | Endereço do backend, lido ao subir (o compose já define \`http://backend:${port}\`). Trocar não exige recompilar. |`
     : `| ${dbVars} | Conexão com o banco ${dbWord} |
 | \`MB_SESSION_SECRET\` | Assina a sessão de login. Mínimo 32 caracteres. Com várias instâncias, o MESMO valor em todas. |`
-  const winRun = java
-    ? `**Backend (JDK 21):**
-\`\`\`powershell
+  const slug = slugOf(ast)
+  const nodeVars = oracle ? '`DB_CONNECTION_STRING`, `DB_USER`, `DB_PASSWORD`, `MB_SESSION_SECRET`' : '`DATABASE_URL`, `MB_SESSION_SECRET`'
+  const ldap = ast.authConfig?.authType === 'ldap'
+
+  // Caminho B1: pacote compilado. O servidor só executa; quem compila é uma máquina de build do mesmo sistema.
+  const frontDir = java ? 'frontend' : '.'
+  const backendPack = java
+    ? `**Backend** (JDK 21 na máquina de build):
+\`\`\`bash
 cd backend
-.\\mvnw.cmd -DskipTests package
-$env:SPRING_DATASOURCE_URL = "..."; $env:SPRING_DATASOURCE_USERNAME = "..."; $env:SPRING_DATASOURCE_PASSWORD = "..."; $env:JWT_SECRET = "..."
-java -jar target\\*.jar
+./mvnw -DskipTests package        # Windows: .\\mvnw.cmd -DskipTests package
 \`\`\`
-**Frontend (Node.js 22 LTS):**
-\`\`\`powershell
-cd frontend
+Envie **apenas o arquivo \`backend/target/<nome>.jar\`**: é um arquivo só e roda em qualquer sistema. No servidor: \`java -jar <nome>.jar\`, com \`SPRING_DATASOURCE_URL\`, \`SPRING_DATASOURCE_USERNAME\`, \`SPRING_DATASOURCE_PASSWORD\` e \`JWT_SECRET\` definidos no ambiente (porta ${port}).
+
+`
+    : ''
+  const packVars = java
+    ? '`API_URL` (endereço do backend, ex.: `http://localhost:' + port + '`), `JWT_SECRET` (o mesmo do backend), `MB_SESSION_SECRET`'
+    : nodeVars
+  // só o app Node tem scripts/ e db/ (as tabelas de acesso do Java são o db/access-control.sql da raiz do projeto)
+  const scriptsRow = java ? '' : '| `scripts/` e `db/` (só para criar as tabelas de acesso) | `scripts/` e `db/` |'
+  const buildPack = `${backendPack}**${java ? 'Frontend' : 'App'}** (Node.js 22 na máquina de build):
+\`\`\`bash
+${java ? 'cd frontend\n' : ''}npm ci
+MB_STANDALONE=1 npm run build      # PowerShell: $env:MB_STANDALONE = "1"; npm run build
+\`\`\`
+Monte a pasta do pacote e envie ao servidor:
+
+| Copiar (${java ? 'de \`frontend/\`' : 'da raiz do projeto'}) | Para dentro do pacote |
+|---|---|
+| o **conteúdo** de \`.next/standalone/\` | a raiz do pacote |
+| \`.next/static/\` | \`.next/static/\` |
+| \`public/\` (se existir) | \`public/\` |
+${scriptsRow}
+No servidor, dentro da pasta do pacote: \`node server.js\`, com \`PORT=3000\`, \`HOSTNAME=0.0.0.0\` e ${packVars} definidos no ambiente.`
+  const buildOnServer = java
+    ? `Envie a Entrega inteira. No servidor (com **JDK 21**, **Node.js 22 LTS** e acesso ao npm e ao Maven Central):
+\`\`\`bash
+cd backend && ./mvnw -DskipTests package && cd ..
+cd frontend && npm ci && npm run build
+\`\`\`
+Depois suba o backend (\`java -jar backend/target/<nome>.jar\`) e o frontend (\`npm start\` dentro de \`frontend/\`), com as variáveis do ambiente definidas.`
+    : `Envie a Entrega inteira. No servidor (com **Node.js 22 LTS** e acesso ao npm):
+\`\`\`bash
 npm ci
 npm run build
-$env:API_URL = "http://localhost:${port}"; $env:JWT_SECRET = "..."; $env:MB_SESSION_SECRET = "..."
 npm start
-\`\`\``
-    : `**Node.js 22 LTS:**
-\`\`\`powershell
-npm ci
-npm run build
-$env:${oracle ? 'DB_CONNECTION_STRING' : 'DATABASE_URL'} = "..."; ${oracle ? '$env:DB_USER = "..."; $env:DB_PASSWORD = "..."; ' : ''}$env:MB_SESSION_SECRET = "..."
-npm start
-\`\`\``
+\`\`\`
+com ${nodeVars} definidos no ambiente.`
+  const systemd = java
+    ? `\`/etc/systemd/system/${slug}-backend.service\`:
+\`\`\`ini
+[Unit]
+Description=${name} (backend)
+After=network.target
+
+[Service]
+User=${slug}
+WorkingDirectory=/opt/${slug}
+EnvironmentFile=/etc/${slug}-backend.env
+ExecStart=/usr/bin/java -jar /opt/${slug}/<nome>.jar
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+\`\`\`
+\`/etc/systemd/system/${slug}-frontend.service\`:
+\`\`\`ini
+[Unit]
+Description=${name} (frontend)
+After=network.target ${slug}-backend.service
+
+[Service]
+User=${slug}
+WorkingDirectory=/opt/${slug}/frontend
+EnvironmentFile=/etc/${slug}-frontend.env
+Environment=PORT=3000 HOSTNAME=0.0.0.0
+ExecStart=/usr/bin/node server.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+\`\`\`
+Os arquivos \`/etc/${slug}-*.env\` têm uma variável por linha (\`NOME=valor\`, sem aspas) e permissão só do dono (\`chmod 600\`). Depois: \`systemctl daemon-reload && systemctl enable --now ${slug}-backend ${slug}-frontend\`.`
+    : `\`/etc/systemd/system/${slug}.service\`:
+\`\`\`ini
+[Unit]
+Description=${name}
+After=network.target
+
+[Service]
+User=${slug}
+WorkingDirectory=/opt/${slug}
+EnvironmentFile=/etc/${slug}.env
+Environment=PORT=3000 HOSTNAME=0.0.0.0
+ExecStart=/usr/bin/node server.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+\`\`\`
+O arquivo \`/etc/${slug}.env\` tem uma variável por linha (\`NOME=valor\`, sem aspas) e permissão só do dono (\`chmod 600\`). Depois: \`systemctl daemon-reload && systemctl enable --now ${slug}\`.`
   const nssm = java
-    ? `1. Baixe o [NSSM](https://nssm.cc) e instale os dois serviços: o backend (\`java -jar backend\\target\\<arquivo>.jar\`) e o frontend (\`node frontend\\node_modules\\next\\dist\\bin\\next start -p 3000\`, com a pasta \`frontend\` como diretório).
-2. Em cada serviço, informe as variáveis de ambiente na aba *Environment* (nunca em arquivo no repositório).`
-    : `1. Baixe o [NSSM](https://nssm.cc) e instale o serviço: \`nssm install ${slugOf(ast)} "C:\\Program Files\\nodejs\\node.exe" "node_modules\\next\\dist\\bin\\next" start -p 3000\`, com a pasta do app como diretório.
-2. Informe as variáveis de ambiente na aba *Environment* do serviço (nunca em arquivo no repositório).`
+    ? `1. Baixe o [NSSM](https://nssm.cc) e instale **dois serviços**: o backend (\`java.exe -jar <nome>.jar\`, com a pasta do jar como diretório) e o frontend (\`node.exe server.js\`, com a pasta \`frontend\` do pacote como diretório).
+2. Em cada serviço, informe as variáveis na aba *Environment* (nunca em arquivo no repositório). No frontend inclua \`PORT=3000\` e \`HOSTNAME=0.0.0.0\`.`
+    : `1. Baixe o [NSSM](https://nssm.cc) e instale o serviço: \`nssm install ${slug} "C:\\Program Files\\nodejs\\node.exe" server.js\`, com a pasta do pacote como diretório.
+2. Informe as variáveis na aba *Environment* do serviço (nunca em arquivo no repositório). Inclua \`PORT=3000\` e \`HOSTNAME=0.0.0.0\`.`
+
+  const tiRows = [
+    `| Servidor | Linux x64 ou Windows Server, com acesso para o dev instalar e atualizar o app | Roda ${java ? 'o backend e o frontend' : 'o app'} |`,
+    `| Software | **Docker Engine com Compose v2**, ou, sem Docker, ${java ? '**Node.js 22 LTS** e **JRE/JDK 21**' : '**Node.js 22 LTS**'} | Caminhos A e B deste guia |`,
+    `| Banco ${dbWord} | Endereço, porta${oracle ? ', **nome do serviço** (o do PDB, ex.: \`FREEPDB1\`)' : ' e nome do banco'} | O app usa o banco que já existe |`,
+    `| Usuário do banco | Um usuário **exclusivo do app**, com leitura e escrita nas tabelas do app${ast.accessAdmin ? ' e, só na primeira vez, permissão de criar as tabelas de acesso (CREATE TABLE)' : ''} | O app não cria o esquema. Nunca use o administrador do banco |`,
+    '| Rede: entrada | Portas **80 e 443** do servidor liberadas para os usuários (ou só a do balanceador) | Acesso ao app e emissão do certificado |',
+    `| Rede: servidor → banco | Liberar ${oracle ? 'a **1521** (ou a porta do listener)' : 'a **5432** (ou a porta do banco)'} do servidor do app para o banco | ${java ? 'Só o backend consulta o banco' : 'O app consulta o banco'} |`,
+    `| Rede: saída | Internet liberada **só durante a instalação** (Docker Hub, npm${java ? ', Maven Central' : ''}). Com o pacote compilado (B1), nem isso | Baixar as dependências |`,
+    '| Domínio e HTTPS | Um endereço (ex.: `app.empresa.com.br`) apontando para o servidor, ou o certificado da empresa se o HTTPS for do balanceador | Acesso seguro |',
+    `| Segredos | Um cofre ou local protegido para o \`.env\` ou as variáveis, com permissão só do usuário do serviço | Chave de sessão${java ? ', JWT' : ''} e senha do banco |`,
+    ...(ldap ? ['| Login corporativo (LDAP/AD) | URL do servidor LDAP, base DN, conta de serviço para consulta e filtro de usuário | O login valida no diretório da empresa |'] : []),
+    '| Operação | Backup do banco e do volume de exportações; quem acompanha o `/api/health`; janela para atualizações | Continuidade |',
+  ].join('\n')
 
   return `# Subindo ${name} em produção
 
-> Gerado pelo MetaBuilder PRO. Este guia cobre três caminhos: **Docker Compose** (o mais simples), **Windows Server sem Docker** e **Kubernetes ou nuvem**. O banco de dados (${dbWord}) é o da sua empresa: nada aqui cria ou apaga o banco.
+> Gerado pelo MetaBuilder PRO. Este guia cobre três caminhos: **Docker Compose** (o mais simples), **sem Docker (Linux ou Windows Server)** e **Kubernetes ou nuvem**. O banco de dados (${dbWord}) é o da sua empresa: nada aqui cria ou apaga o banco.
+
+## O que o TI do cliente precisa providenciar
+
+Envie esta lista ao TI **antes** da subida: cada item evita um atraso no dia.
+
+| Item | O que providenciar | Por quê |
+|---|---|---|
+${tiRows}
 
 ## O que acompanha o projeto
 
@@ -450,15 +551,31 @@ docker compose -f docker-compose.prod.yml logs -f
 - **Atualizar:** coloque o código novo na pasta e rode o \`up -d --build\` de novo.
 - **Dados:** as exportações ficam no volume \`exports\`. Faça backup dele junto com o do banco.
 
-## Caminho B — Windows Server sem Docker
+## Caminho B — Sem Docker (Linux ou Windows Server)
 
-${winRun}
+O servidor só precisa do ambiente de execução: ${java ? '**JRE 21** e **Node.js 22 LTS**' : '**Node.js 22 LTS**'}. Há duas formas de levar o app até lá.
 
-Para o app subir sozinho com o servidor e reiniciar se cair, instale-o como serviço do Windows:
+### B1. Pacote compilado (recomendado): o servidor não precisa de npm${java ? ', Maven' : ''} nem de internet
+
+Compile uma vez numa máquina de build **do mesmo sistema do servidor** (Linux para Linux, Windows para Windows: o Next.js leva arquivos que dependem do sistema) e envie só o resultado.
+
+${buildPack}
+
+### B2. Compilar no próprio servidor
+
+${buildOnServer}
+
+### Subir sozinho com o servidor
+
+**Linux (systemd):**
+
+${systemd}
+
+**Windows Server (serviço do Windows):**
 
 ${nssm}
 
-Coloque na frente um proxy com HTTPS (IIS com ARR, ou o Caddy para Windows) apontando para a porta 3000.
+Coloque na frente um proxy com HTTPS (Caddy, nginx, ou IIS com ARR no Windows) apontando para a porta 3000.
 
 ## Caminho C — Kubernetes ou nuvem
 

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { parseMetaBuilderJSON } from '../parser'
 import { generateJavaSpringProject } from '../emitter/java-spring-project'
 import { generateNodeProject } from '../emitter/node-project'
+import { deployGuide } from '../emitter/deploy-pack'
 
 /**
  * Pacote de produção de cada entrega (Node e Java, Postgres e Oracle): Dockerfile, compose com HTTPS, .env.example, rota de saúde e DEPLOY.md.
@@ -145,4 +146,57 @@ describe('pacote de produção: Java', () => {
       })
     })
   }
+})
+
+describe('guia de produção (DEPLOY.md): o que o TI do cliente providencia e como subir sem Docker', () => {
+  const ast = (db: 'postgres' | 'oracle', stack: 'node' | 'java') =>
+    parseMetaBuilderJSON(raw(db === 'oracle'), db, stack === 'java' ? ({ backendStack: 'java-spring', javaGroupId: 'com.vendas' } as any) : ({ backendStack: 'nodejs' } as any))
+
+  it('tem a seção do TI do cliente, com o banco, a porta e o formato certos de cada pilha', () => {
+    const pg = deployGuide(ast('postgres', 'node'), 'node')
+    const ora = deployGuide(ast('oracle', 'java'), 'java')
+    for (const g of [pg, ora]) {
+      expect(g).toContain('## O que o TI do cliente precisa providenciar')
+      expect(g).toContain('Usuário do banco')
+      expect(g).toContain('exclusivo do app')
+    }
+    expect(pg).toContain('5432')
+    expect(pg).not.toContain('nome do serviço')
+    expect(ora).toContain('1521')
+    expect(ora).toContain('nome do serviço')
+    expect(ora).toContain('JRE/JDK 21')
+    expect(pg).not.toContain('JRE/JDK 21')
+  })
+
+  it('o login por LDAP só aparece na lista do TI quando o projeto usa LDAP', () => {
+    const base = ast('postgres', 'node')
+    expect(deployGuide(base, 'node')).not.toContain('Login corporativo (LDAP/AD)')
+    expect(deployGuide({ ...base, authConfig: { ...(base.authConfig as any), authType: 'ldap' } } as any, 'node')).toContain('Login corporativo (LDAP/AD)')
+  })
+
+  it('sem Docker: pacote compilado (B1) e compilar no servidor (B2), para Linux e Windows', () => {
+    for (const [db, stack] of [['postgres', 'node'], ['oracle', 'node'], ['postgres', 'java'], ['oracle', 'java']] as const) {
+      const g = deployGuide(ast(db, stack), stack)
+      expect(g, `${db}/${stack}`).toContain('## Caminho B — Sem Docker (Linux ou Windows Server)')
+      expect(g).toContain('### B1. Pacote compilado')
+      expect(g).toContain('### B2. Compilar no próprio servidor')
+      expect(g).toContain('MB_STANDALONE=1 npm run build')
+      expect(g).toContain('.next/standalone/')
+      expect(g).toContain('systemd')
+      expect(g).toContain('NSSM')
+      expect(g).toContain('node server.js')
+    }
+  })
+
+  it('Node leva scripts/ e db/ (tabelas de acesso); Java leva o jar do backend e não tem scripts/ no frontend', () => {
+    const node = deployGuide(ast('postgres', 'node'), 'node')
+    const jv = deployGuide(ast('postgres', 'java'), 'java')
+    expect(node).toContain('`scripts/` e `db/`')
+    expect(node).not.toContain('backend/target')
+    expect(jv).not.toContain('`scripts/` e `db/`')
+    expect(jv).toContain('backend/target/<nome>.jar')
+    expect(jv).toContain('vendas-backend.service')
+    expect(jv).toContain('vendas-frontend.service')
+    expect(jv).toContain('API_URL')
+  })
 })
