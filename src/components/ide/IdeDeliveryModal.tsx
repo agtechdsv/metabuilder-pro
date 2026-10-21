@@ -136,7 +136,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
                     <span className="flex-1">
                       <span className="flex items-center gap-2 text-sm font-semibold text-white"><span className="text-indigo-300">{k.icon}</span>{k.title}</span>
                       <span className="block text-[11px] text-neutral-400 mt-0.5">{k.desc}</span>
-                      {k.disabled && <span className="block text-[11px] text-amber-300 mt-1">{k.note}</span>}
+                      {k.disabled && <span className="block text-[11px] text-amber-700 [html:not(.light)_&]:text-amber-300 mt-1">{k.note}</span>}
                     </span>
                   </button>
                 )
@@ -183,18 +183,18 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
               {log.length > 0 && <pre className="max-h-28 overflow-hidden rounded-lg bg-neutral-950 px-2 py-1.5 text-[10px] leading-snug text-neutral-400 whitespace-pre-wrap break-all">{log.join('\n')}</pre>}
             </div>
           )}
-          {phase === 'error' && <p className="flex items-start gap-2 text-xs text-red-300"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span className="break-words">{error}</span></p>}
+          {phase === 'error' && <p className="flex items-start gap-2 text-xs text-red-700 [html:not(.light)_&]:text-red-300"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span className="break-words">{error}</span></p>}
           {phase === 'done' && result && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-100 space-y-1.5">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-900 [html:not(.light)_&]:text-emerald-100 space-y-1.5">
               <p className="flex items-center gap-2 font-bold"><CheckCircle2 className="w-4 h-4" />{t('delivery.done', 'Entrega gerada.')}</p>
-              <ul className="space-y-0.5 text-emerald-200/90">
+              <ul className="space-y-0.5 text-emerald-900 [html:not(.light)_&]:text-emerald-200/90">
                 {result.kinds.map(k => (
                   <li key={k.kind}>• {kindLabel(k.kind)}{k.folder ? ` → ${k.folder}/` : ''}{k.count !== null ? ` (${k.count} ${t('delivery.files', 'arquivo(s)')})` : ''}</li>
                 ))}
               </ul>
-              <p className="break-all text-emerald-200/80">{result.destination}</p>
-              {result.sanitized.length > 0 && <p className="text-emerald-200/80">{t('delivery.sanitized', 'Segredos tratados em')}: {result.sanitized.join(', ')}</p>}
-              <button onClick={() => revealPath(result.destination)} className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500/10"><FolderOpen className="w-3.5 h-3.5" />{t('delivery.reveal', 'Mostrar no Explorador')}</button>
+              <p className="break-all text-emerald-900/80 [html:not(.light)_&]:text-emerald-200/80">{result.destination}</p>
+              {result.sanitized.length > 0 && <p className="text-emerald-900/80 [html:not(.light)_&]:text-emerald-200/80">{t('delivery.sanitized', 'Segredos tratados em')}: {result.sanitized.join(', ')}</p>}
+              <button onClick={() => revealPath(result.destination)} className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-emerald-700/40 [html:not(.light)_&]:border-emerald-400/40 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500/10"><FolderOpen className="w-3.5 h-3.5" />{t('delivery.reveal', 'Mostrar no Explorador')}</button>
             </div>
           )}
         </div>
