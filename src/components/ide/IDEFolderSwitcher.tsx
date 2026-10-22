@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { FolderTree, ChevronDown, Plus, Check, X, AlertTriangle, Loader2 } from 'lucide-react'
+import { FolderTree, ChevronDown, Plus, Check, X, AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
 import {
-  baseFolderPath, detectFolderStack, folderOwner, listProjectFolders, otherStack, suggestFolderName, validateFolderName,
+  baseFolderPath, deleteProjectFolder, detectFolderStack, folderOwner, listProjectFolders, otherStack, suggestFolderName, validateFolderName,
   type FolderNameError, type Pilha, type PilhaDaPasta, type ProjectFolderInfo,
 } from '@/utils/projectFolders'
 
@@ -87,6 +88,8 @@ export function IDEFolderSwitcher({ target, onSwitch, refreshKey }: { target: Ta
   const [folders, setFolders] = useState<ProjectFolderInfo[]>([])
   const [currentStack, setCurrentStack] = useState<PilhaDaPasta>('desconhecida')
   const [creating, setCreating] = useState(false)
+  const [removing, setRemoving] = useState('')
+  const { toast } = useToast()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -101,6 +104,23 @@ export function IDEFolderSwitcher({ target, onSwitch, refreshKey }: { target: Ta
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [])
+
+  const apagar = async (name: string) => {
+    if (removing) return
+    const { ask } = await import('@tauri-apps/plugin-dialog')
+    const ok = await ask(t('ide_folder.delete_confirm', 'Isso apaga a pasta {name} inteira: arquivos, histórico Git local e a própria pasta. Não dá para desfazer. Continuar?').replace('{name}', name), {
+      title: t('ide_folder.delete_title', 'Apagar pasta'), kind: 'warning',
+      okLabel: t('ide_folder.delete_ok', 'Apagar'), cancelLabel: t('ide_folder.cancel', 'Cancelar'),
+    })
+    if (!ok) return
+    setRemoving(name)
+    try {
+      const erro = await deleteProjectFolder(name, target.id, target.slug)
+      if (erro) { toast(t('ide_folder.delete_failed', 'Não foi possível apagar a pasta {name}. Feche programas que a estejam usando e tente de novo.').replace('{name}', name), 'error'); return }
+      setFolders(l => l.filter(f => f.name !== name))
+      toast(t('ide_folder.delete_done', 'Pasta {name} apagada.').replace('{name}', name), 'success')
+    } finally { setRemoving('') }
+  }
 
   const lista = folders.some(f => f.name === current) ? folders : [{ name: current, stack: currentStack }, ...folders]
   const sugestao = suggestFolderName(target.slug, otherStack(currentStack) as Pilha | null, lista.map(f => f.name))
@@ -118,12 +138,20 @@ export function IDEFolderSwitcher({ target, onSwitch, refreshKey }: { target: Ta
         <div className="absolute left-0 mt-1 w-64 z-[100000] rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl overflow-hidden">
           <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">{t('ide_folder.switcher_label', 'Pastas deste projeto')}</p>
           {lista.map(f => (
-            <button key={f.name} onClick={() => { setOpen(false); if (f.name !== current) onSwitch(f.name) }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-neutral-200 hover:bg-neutral-800">
-              <span className="w-3.5">{f.name === current && <Check className="w-3.5 h-3.5 text-indigo-400" />}</span>
-              <span className="flex-1 font-mono truncate">{f.name}</span>
-              {stackLabel(t, f.stack) && <span className="rounded bg-neutral-800 px-1.5 text-[10px] text-neutral-400">{stackLabel(t, f.stack)}</span>}
-            </button>
+            <div key={f.name} className="flex items-center hover:bg-neutral-800">
+              <button onClick={() => { setOpen(false); if (f.name !== current) onSwitch(f.name) }}
+                className="flex-1 min-w-0 flex items-center gap-2 pl-3 pr-1 py-2 text-xs text-left text-neutral-200">
+                <span className="w-3.5">{f.name === current && <Check className="w-3.5 h-3.5 text-indigo-400" />}</span>
+                <span className="flex-1 font-mono truncate">{f.name}</span>
+                {stackLabel(t, f.stack) && <span className="rounded bg-neutral-800 px-1.5 text-[10px] text-neutral-400">{stackLabel(t, f.stack)}</span>}
+              </button>
+              <button onClick={() => apagar(f.name)} disabled={f.name === current || !!removing}
+                title={f.name === current ? t('ide_folder.delete_current', 'A pasta aberta não pode ser apagada. Troque para outra pasta primeiro.') : t('ide_folder.delete_title', 'Apagar pasta')}
+                aria-label={`${t('ide_folder.delete_title', 'Apagar pasta')} ${f.name}`}
+                className="px-2 py-2 text-neutral-500 hover:text-red-500 disabled:opacity-30 disabled:hover:text-neutral-500 disabled:cursor-not-allowed">
+                {removing === f.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           ))}
           <button onClick={() => { setOpen(false); setCreating(true) }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left font-semibold text-indigo-300 hover:bg-neutral-800 border-t border-neutral-800">
             <Plus className="w-3.5 h-3.5" />{t('ide_folder.new_folder', 'Nova pasta…')}

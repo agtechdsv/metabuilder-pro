@@ -5167,6 +5167,12 @@
     "mismatch_clean_confirm": "This deletes ALL files and the local Git history of the current folder. This cannot be undone. Continue?",
     "mismatch_clean_ok": "Clean",
     "after_clean": "Folder cleaned. Click Sync to continue.",
-    "after_switch": "Now in folder {name}. Click Sync to continue."
+    "after_switch": "Now in folder {name}. Click Sync to continue.",
+    "delete_title": "Delete folder",
+    "delete_ok": "Delete",
+    "delete_confirm": "This deletes the whole {name} folder: files, local Git history and the folder itself. This cannot be undone. Continue?",
+    "delete_done": "Folder {name} deleted.",
+    "delete_failed": "Could not delete the folder {name}. Close programs that may be using it and try again.",
+    "delete_current": "The open folder cannot be deleted. Switch to another folder first."
   }
 }

@@ -5167,6 +5167,12 @@
     "mismatch_clean_confirm": "Isso apaga TODOS os arquivos e o histórico Git local da pasta atual. Não dá para desfazer. Continuar?",
     "mismatch_clean_ok": "Limpar",
     "after_clean": "Pasta limpa. Clique em Sincronizar para continuar.",
-    "after_switch": "Agora na pasta {name}. Clique em Sincronizar para continuar."
+    "after_switch": "Agora na pasta {name}. Clique em Sincronizar para continuar.",
+    "delete_title": "Apagar pasta",
+    "delete_ok": "Apagar",
+    "delete_confirm": "Isso apaga a pasta {name} inteira: arquivos, histórico Git local e a própria pasta. Não dá para desfazer. Continuar?",
+    "delete_done": "Pasta {name} apagada.",
+    "delete_failed": "Não foi possível apagar a pasta {name}. Feche programas que a estejam usando e tente de novo.",
+    "delete_current": "A pasta aberta não pode ser apagada. Troque para outra pasta primeiro."
   }
 }

@@ -128,6 +128,20 @@ export async function listProjectFolders(projectId: string, slug: string): Promi
   } catch { return [] }
 }
 
+/**
+ * Apaga a pasta inteira (arquivos, histórico Git e a própria pasta). Só apaga uma pasta deste projeto (marcador ou nome do slug),
+ * com nome válido e dentro da base fixa; qualquer outra coisa é recusada. Devolve null se apagou ou o motivo da recusa.
+ */
+export async function deleteProjectFolder(folderName: string, projectId: string, slug: string): Promise<'invalid' | 'not_mine' | 'failed' | null> {
+  if (validateFolderName(folderName) !== null || folderName !== folderName.trim()) return 'invalid'
+  if ((await folderOwner(folderName, projectId, slug)) !== 'this') return 'not_mine'
+  try {
+    const fs = await import('@tauri-apps/plugin-fs')
+    await fs.remove(`${BASE_REL_DIR}/${folderName}`, { baseDir: fs.BaseDirectory.Home, recursive: true })
+    return null
+  } catch { return 'failed' }
+}
+
 /** De quem é a pasta com esse nome (livre se não existe). */
 export async function folderOwner(folderName: string, projectId: string, slug: string): Promise<Dono> {
   try {

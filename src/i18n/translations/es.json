@@ -5255,6 +5255,12 @@
     "mismatch_clean_confirm": "Esto borra TODOS los archivos y el historial Git local de la carpeta actual. No se puede deshacer. ¿Continuar?",
     "mismatch_clean_ok": "Limpiar",
     "after_clean": "Carpeta limpia. Haga clic en Sincronizar para continuar.",
-    "after_switch": "Ahora en la carpeta {name}. Haga clic en Sincronizar para continuar."
+    "after_switch": "Ahora en la carpeta {name}. Haga clic en Sincronizar para continuar.",
+    "delete_title": "Borrar carpeta",
+    "delete_ok": "Borrar",
+    "delete_confirm": "Esto borra toda la carpeta {name}: archivos, historial Git local y la propia carpeta. No se puede deshacer. ¿Continuar?",
+    "delete_done": "Carpeta {name} borrada.",
+    "delete_failed": "No se pudo borrar la carpeta {name}. Cierre los programas que la usen e inténtelo de nuevo.",
+    "delete_current": "La carpeta abierta no se puede borrar. Cambie a otra carpeta primero."
   }
 }
