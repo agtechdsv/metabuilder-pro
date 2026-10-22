@@ -7,6 +7,7 @@ import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 import { PreviewProvider } from '@/contexts/PreviewContext'
 import { IDESyncProvider } from '@/contexts/IDESyncContext'
+import { AskDialogHost } from '@/components/ui/AskDialogHost'
 
 export function Providers({ 
   children,
@@ -25,6 +26,7 @@ export function Providers({
                 <ProgressBarProvider />
                 <AutoUpdater />
                 <GlobalDesktopListener />
+                <AskDialogHost />
                 {children}
               </IDESyncProvider>
             </PreviewProvider>

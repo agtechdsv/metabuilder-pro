@@ -73,8 +73,8 @@ export interface BuildCtx {
 async function ensureJdk(ctx: BuildCtx): Promise<void> {
   const { detectJava, installPortableJdk } = await import('./javaRuntime')
   if ((await detectJava()) !== 'none') return
-  const { ask } = await import('@tauri-apps/plugin-dialog')
-  const ok = await ask(ctx.labels.jdkAsk, { title: ctx.labels.jdkTitle, kind: 'info', okLabel: ctx.labels.jdkInstall, cancelLabel: ctx.labels.jdkCancel })
+  const { askDialog } = await import('./askDialog')
+  const ok = await askDialog(ctx.labels.jdkAsk, { title: ctx.labels.jdkTitle, kind: 'info', okLabel: ctx.labels.jdkInstall, cancelLabel: ctx.labels.jdkCancel })
   if (!ok) throw new Error(ctx.labels.jdkFailed)
   if (!(await installPortableJdk())) throw new Error(ctx.labels.jdkFailed)
 }

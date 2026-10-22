@@ -14,6 +14,7 @@ import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
 import { IdeThemeLanguage } from './IdeThemeLanguage'
 import { IDEFolderSwitcher, NewFolderDialog, StackMismatchDialog } from './IDEFolderSwitcher'
+import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
 import { detectFolderStack, listProjectFolders, suggestFolderName, type Pilha } from '@/utils/projectFolders'
@@ -1221,8 +1222,7 @@ export function IDEHeader({
           onCancel={() => setMismatch(null)}
           onOtherFolder={() => setNewFolderFor({ wanted: mismatch.wanted, suggestion: mismatch.suggestion })}
           onClean={async () => {
-            const { ask } = await import('@tauri-apps/plugin-dialog')
-            const ok = await ask(t('ide_folder.mismatch_clean_confirm', 'Isso apaga TODOS os arquivos e o histórico Git local da pasta atual. Não dá para desfazer. Continuar?'), {
+            const ok = await askDialog(t('ide_folder.mismatch_clean_confirm', 'Isso apaga TODOS os arquivos e o histórico Git local da pasta atual. Não dá para desfazer. Continuar?'), {
               title: t('ide_folder.mismatch_clean', 'Limpar esta pasta e sincronizar aqui'), kind: 'warning',
               okLabel: t('ide_folder.mismatch_clean_ok', 'Limpar'), cancelLabel: t('ide_folder.cancel', 'Cancelar'),
             })

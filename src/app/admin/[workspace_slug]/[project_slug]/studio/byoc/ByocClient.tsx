@@ -7,6 +7,7 @@ import { ByocEditor } from '@/components/studio/ByocEditor'
 import { useToast } from '@/components/ui/Toast'
 import { isTauri } from '@/utils/tauriUtils'
 import { useI18n } from '@/i18n/I18nContext'
+import { askDialog } from '@/utils/askDialog'
 
 export function ByocClient({ projectId }: { projectId: string }) {
   const [components, setComponents] = useState<any[]>([])
@@ -72,7 +73,7 @@ export default function MeuNovoComponente(props: any) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deseja realmente excluir este componente? Ele não será mais exportado.')) return
+    if (!(await askDialog('Deseja realmente excluir este componente? Ele não será mais exportado.', { title: 'MetaBuilder PRO', kind: 'warning', okLabel: 'Excluir', cancelLabel: 'Cancelar' }))) return
     
     const { error } = await supabase.from('ui_custom_components').delete().eq('id', id)
     if (error) {

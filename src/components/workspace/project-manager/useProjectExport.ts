@@ -2,19 +2,15 @@
 
 import { useState } from 'react'
 import { isTauri } from '@/utils/tauriUtils'
+import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { createClient } from '@/utils/supabase/client'
 import { DownloadModalState, ExportDefaults, Project } from './types'
 
-/** Pergunta sim/não: usa o diálogo nativo do desktop (o confirm() do navegador pode nem aparecer no webview). */
+/** Pergunta sim/não com o modal do app (o confirm() do navegador pode nem aparecer no webview do desktop). */
 export async function askUser(message: string): Promise<boolean> {
-  try {
-    const { ask } = await import('@tauri-apps/plugin-dialog')
-    return await ask(message, { title: 'MetaBuilder PRO', kind: 'info' })
-  } catch {
-    return confirm(message)
-  }
+  return askDialog(message, { title: 'MetaBuilder PRO', kind: 'info' })
 }
 
 export function useProjectExport() {
@@ -222,8 +218,7 @@ export function useProjectExport() {
           if (!plano) { abortar(t('export_modal.clean_failed', 'Não foi possível limpar a pasta. Nada foi exportado.')); return }
           if (plano.existe && plano.arquivos > 0) {
             if (!plano.exportado) { abortar(t('export_modal.clean_not_app', 'A pasta tem outros arquivos e não parece um app exportado.')); return }
-            const { ask } = await import('@tauri-apps/plugin-dialog')
-            const ok = await ask(confirmMessage(selectedDir, plano, t('export_modal.clean_message', 'Vão ser apagados {count} arquivo(s) de: {dir}. {entries}. Ficam: {kept}.')), {
+            const ok = await askDialog(confirmMessage(selectedDir, plano, t('export_modal.clean_message', 'Vão ser apagados {count} arquivo(s) de: {dir}. {entries}. Ficam: {kept}.')), {
               title: t('export_modal.clean_title', 'Limpar a pasta antes de exportar?'), kind: 'warning',
               okLabel: t('export_modal.clean_ok', 'Limpar e exportar'), cancelLabel: t('export_modal.clean_cancel', 'Cancelar'),
             })

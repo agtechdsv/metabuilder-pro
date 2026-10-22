@@ -149,13 +149,13 @@ export interface DeliveryLabels {
 export async function confirmAndClean(destination: string, labels: DeliveryLabels): Promise<boolean> {
   const { isSafeToClean, planCleanup, cleanFolder, confirmMessage } = await import('./cleanExportFolder')
   const { homeDir } = await import('@tauri-apps/api/path')
-  const { ask } = await import('@tauri-apps/plugin-dialog')
+  const { askDialog } = await import('./askDialog')
   if (!isSafeToClean(destination, await homeDir().catch(() => ''))) throw new Error(labels.cleanUnsafe)
   const plano = await planCleanup(destination)
   if (!plano) throw new Error(labels.cleanFailed)
   if (plano.existe && plano.arquivos > 0) {
     if (!plano.exportado) throw new Error(labels.cleanNotApp)
-    const ok = await ask(confirmMessage(destination, plano, labels.cleanMessage), { title: labels.cleanTitle, kind: 'warning', okLabel: labels.cleanOk, cancelLabel: labels.cleanCancel })
+    const ok = await askDialog(confirmMessage(destination, plano, labels.cleanMessage), { title: labels.cleanTitle, kind: 'warning', okLabel: labels.cleanOk, cancelLabel: labels.cleanCancel })
     if (!ok) return false
     if (!(await cleanFolder(destination))) throw new Error(labels.cleanFailed)
   }

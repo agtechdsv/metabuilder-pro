@@ -355,7 +355,8 @@
     "open_drawer": "Abrir Gaveta",
     "open_modal": "Abrir Modal",
     "select": "Selecione...",
-    "yes": "Sim"
+    "yes": "Sim",
+    "ok": "OK"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",

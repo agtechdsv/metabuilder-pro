@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { FolderTree, ChevronDown, Plus, Check, X, AlertTriangle, Loader2, Trash2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
 import {
@@ -107,8 +108,7 @@ export function IDEFolderSwitcher({ target, onSwitch, refreshKey }: { target: Ta
 
   const apagar = async (name: string) => {
     if (removing) return
-    const { ask } = await import('@tauri-apps/plugin-dialog')
-    const ok = await ask(t('ide_folder.delete_confirm', 'Isso apaga a pasta {name} inteira: arquivos, histórico Git local e a própria pasta. Não dá para desfazer. Continuar?').replace('{name}', name), {
+    const ok = await askDialog(t('ide_folder.delete_confirm', 'Isso apaga a pasta {name} inteira: arquivos, histórico Git local e a própria pasta. Não dá para desfazer. Continuar?').replace('{name}', name), {
       title: t('ide_folder.delete_title', 'Apagar pasta'), kind: 'warning',
       okLabel: t('ide_folder.delete_ok', 'Apagar'), cancelLabel: t('ide_folder.cancel', 'Cancelar'),
     })

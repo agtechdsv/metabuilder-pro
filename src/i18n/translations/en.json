@@ -355,7 +355,8 @@
     "open_drawer": "Open Drawer",
     "open_modal": "Open Modal",
     "select": "Select...",
-    "yes": "Yes"
+    "yes": "Yes",
+    "ok": "OK"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",

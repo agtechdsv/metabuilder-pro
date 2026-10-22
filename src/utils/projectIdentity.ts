@@ -100,8 +100,8 @@ export async function resolveFolderKey(target: IDETargetLike, dev: DevIdentity |
   if (decision === 'ask') {
     let own = true
     try {
-      const { ask } = await import('@tauri-apps/plugin-dialog')
-      own = await ask(labels.message(owner?.email || '?'), { title: labels.title, kind: 'info', okLabel: labels.own, cancelLabel: labels.shared })
+      const { askDialog } = await import('./askDialog')
+      own = await askDialog(labels.message(owner?.email || '?'), { title: labels.title, kind: 'info', okLabel: labels.own, cancelLabel: labels.shared })
     } catch { /* sem diálogo: o mais seguro é a pasta própria */ }
     lsSet(choiceKey(dev.id, target.id), own ? 'own' : 'shared')
     decision = own ? 'own' : 'default'

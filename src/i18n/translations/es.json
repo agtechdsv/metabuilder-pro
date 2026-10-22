@@ -441,7 +441,8 @@
     "open_drawer": "Abrir Panel Lateral",
     "open_modal": "Abrir Modal",
     "select": "Seleccione...",
-    "yes": "Sí"
+    "yes": "Sí",
+    "ok": "Aceptar"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
