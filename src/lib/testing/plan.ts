@@ -54,8 +54,9 @@ export type CargaModo = 'leitura' | 'gravacao' | 'mistura'
 export interface CargaOpcoes { users: number; modos: CargaModo[] }
 export const CARGA_MODOS: CargaModo[] = ['leitura', 'gravacao', 'mistura']
 export const CARGA_PADRAO: CargaOpcoes = { users: 10, modos: ['leitura'] }
-export const CARGA_MAX_USERS = 500
-/** Valores seguros: pelo menos 1 usuário (no máximo 500) e pelo menos um modo. */
+/** Acima disto um único app no computador do dev começa a perder conexões (medido: 300 simultâneos passam, 400 já falham): o teste passaria a medir o limite da máquina de teste, não o do app. */
+export const CARGA_MAX_USERS = 300
+/** Valores seguros: pelo menos 1 usuário (no máximo 300) e pelo menos um modo. */
 export function normalizarCarga(c?: Partial<CargaOpcoes> | null): CargaOpcoes {
   const users = Math.min(CARGA_MAX_USERS, Math.max(1, Math.round(Number(c?.users) || CARGA_PADRAO.users)))
   const modos = CARGA_MODOS.filter(m => (c?.modos ?? CARGA_PADRAO.modos).includes(m))

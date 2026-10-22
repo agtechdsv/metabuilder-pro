@@ -34,7 +34,7 @@ describe('plano de testes de um caso de uso', () => {
   it('carga: quantidade e modos sempre válidos, e só gravação/mistura gravam no banco', () => {
     expect(normalizarCarga()).toEqual({ users: 10, modos: ['leitura'] })
     expect(normalizarCarga({ users: 0, modos: [] })).toEqual({ users: 10, modos: ['leitura'] })
-    expect(normalizarCarga({ users: 99999 }).users).toBe(500)
+    expect(normalizarCarga({ users: 99999 }).users).toBe(300)
     expect(normalizarCarga({ users: 3.6 }).users).toBe(4)
     expect(cargaGrava({ modos: ['leitura'] })).toBe(false)
     expect(cargaGrava({ modos: ['leitura', 'mistura'] })).toBe(true)
