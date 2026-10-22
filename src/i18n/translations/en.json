@@ -4108,7 +4108,9 @@
       "remove_modal_desc1": "Are you sure you want to remove this domain?",
       "remove_modal_desc2": "Your {target} will stop responding on it immediately.",
       "remove_modal_cancel": "Cancel",
-      "remove_modal_confirm": "Yes, Remove"
+      "remove_modal_confirm": "Yes, Remove",
+      "verify_title": "Confirm that you own the domain",
+      "verify_desc": "In the domain DNS panel, create this TXT record and then click Link again (DNS may take a few minutes)."
     },
     "iclub": {
       "loading": "Loading iClub panel...",

@@ -16,6 +16,8 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   const [selectedTargetId, setSelectedTargetId] = useState<string>('')
   const [domain, setDomain] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  // prova de domínio: o TXT que o cliente precisa criar no DNS antes de o vínculo valer
+  const [txtPedido, setTxtPedido] = useState<{ name: string; value: string } | null>(null)
   const { toast } = useToast()
 
   const [transferModal, setTransferModal] = useState({
@@ -56,6 +58,11 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 428 && data.requiresVerification) {
+          setTxtPedido({ name: data.txtName, value: data.txtValue })
+          setIsLoading(false)
+          return
+        }
         if (response.status === 409 && data.requiresTransfer) {
           setIsLoading(false)
           setTransferModal({
@@ -69,6 +76,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
         throw new Error(data.error || 'Erro ao vincular domínio')
       }
 
+      setTxtPedido(null)
       toast(t('client_views.whitelabel.bind_success_toast', 'Domínio vinculado com sucesso! Siga as instruções de DNS.'), 'success')
       
       // Update local state temporarily to reflect the DB change without a page reload
@@ -242,6 +250,17 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                         {t('client_views.whitelabel.bind_btn', 'Vincular')}
                       </button>
                     </div>
+                    {txtPedido && (
+                      <div className="mt-4 rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-500/10 p-4 text-xs text-amber-700 dark:text-amber-400">
+                        <p className="font-bold mb-2">{t('client_views.whitelabel.verify_title', 'Confirme que o domínio é seu')}</p>
+                        <p className="mb-3">{t('client_views.whitelabel.verify_desc', 'No painel de DNS do domínio, crie este registro TXT e depois clique em Vincular de novo (o DNS pode levar alguns minutos).')}</p>
+                        <div className="bg-white dark:bg-neutral-900 rounded-lg p-3 font-mono text-neutral-700 dark:text-neutral-300 space-y-2 break-all">
+                          <div><span className="text-neutral-400 block">{t('client_views.whitelabel.dns_type', 'TIPO')}</span><strong>TXT</strong></div>
+                          <div><span className="text-neutral-400 block">{t('client_views.whitelabel.dns_name', 'NOME')}</span><strong>{txtPedido.name}</strong></div>
+                          <div><span className="text-neutral-400 block">{t('client_views.whitelabel.dns_value', 'VALOR/DESTINO')}</span><strong>{txtPedido.value}</strong></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

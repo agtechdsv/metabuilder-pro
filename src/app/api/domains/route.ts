@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { dominioReservado, txtConfere, txtNome, txtValor } from '@/lib/domainVerification'
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,21 @@ export async function POST(req: Request) {
       if (projectError || !project) return NextResponse.json({ error: 'Project not found or access denied' }, { status: 403 })
     } else {
       return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
+    }
+
+    // 1.5 O domínio precisa ser de quem vincula: nada do sistema e, fora do desenvolvimento, um registro TXT no DNS do domínio com o valor deste vínculo
+    const dominio = String(domain).trim().toLowerCase()
+    if (dominioReservado(dominio)) return NextResponse.json({ error: 'Este domínio é reservado e não pode ser vinculado.' }, { status: 400 })
+    const segredo = process.env.DOMAIN_VERIFY_SECRET || process.env.VERCEL_API_TOKEN
+    if (!segredo) {
+      if (process.env.NODE_ENV !== 'development') return NextResponse.json({ error: 'Verificação de domínio não configurada no servidor (DOMAIN_VERIFY_SECRET).' }, { status: 500 })
+    } else if (!(await txtConfere(dominio, targetId, segredo))) {
+      const nome = txtNome(dominio)
+      const valor = txtValor(dominio, targetId, segredo)
+      return NextResponse.json({
+        requiresVerification: true, txtName: nome, txtValue: valor,
+        error: `Para provar que o domínio é seu, crie no DNS dele um registro TXT com o nome ${nome} e o valor ${valor}. Depois clique em Vincular de novo.`,
+      }, { status: 428 })
     }
 
     // 2. Find ALL mappings in the DB to detect conflicts

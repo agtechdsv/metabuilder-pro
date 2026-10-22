@@ -4184,7 +4184,9 @@
       "remove_modal_desc1": "¿Está seguro de que desea eliminar este dominio?",
       "remove_modal_desc2": "Su {target} dejará de responder en él de inmediato.",
       "remove_modal_cancel": "Cancelar",
-      "remove_modal_confirm": "Sí, Eliminar"
+      "remove_modal_confirm": "Sí, Eliminar",
+      "verify_title": "Confirme que el dominio es suyo",
+      "verify_desc": "En el panel DNS del dominio, cree este registro TXT y luego haga clic en Vincular de nuevo (el DNS puede tardar unos minutos)."
     },
     "iclub": {
       "loading": "Cargando panel de iClub...",
