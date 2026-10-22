@@ -1,5 +1,6 @@
 import { isTauri } from './tauriUtils';
 import * as tauriFs from '@tauri-apps/plugin-fs';
+import { gitignoreCompleto } from './gitignoreDefaults'
 import { BaseDirectory, join } from '@tauri-apps/api/path';
 import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
@@ -181,7 +182,7 @@ export class LocalSyncManager {
       
       // Create an initial commit so we have a HEAD, preventing branching errors
       await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
-      const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
+      const defaultGitIgnore = gitignoreCompleto('');
       await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
       
       await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
@@ -200,7 +201,7 @@ export class LocalSyncManager {
       } catch {
         // Repo exists but no commits yet (maybe it crashed halfway previously)
         await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.metabuilder`, 'Initialized by MetaBuilder PRO');
-        const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
+        const defaultGitIgnore = gitignoreCompleto('');
         await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
         
         await git.add({ fs: tauriFsAdapter, dir: this.projectDir, filepath: '.metabuilder' });
@@ -242,9 +243,11 @@ export class LocalSyncManager {
     // SAFETY MEASURE: If .gitignore was deleted by a previous abortSync, drop it back in.
     // This prevents isomorphic-git from attempting to stat 50k files in node_modules over IPC,
     // which causes ERR_INSUFFICIENT_RESOURCES and crashes the sync.
+    // (e acrescenta as regras padrão que faltam, como target/ do Java, sem apagar o que o dev escreveu)
     try {
-      const defaultGitIgnore = `node_modules\n.next\n.vscode\n.DS_Store\n*.log\n.env*\n`;
-      await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, defaultGitIgnore);
+      let atual = ''
+      try { atual = (await tauriFsAdapter.promises.readFile(`${this.projectDir}/.gitignore`, 'utf8')) as string } catch { /* foi apagado */ }
+      await tauriFsAdapter.promises.writeFile(`${this.projectDir}/.gitignore`, gitignoreCompleto(atual));
     } catch(e) {}
     
     const { local, upstream } = await this.getConfiguredBranches();

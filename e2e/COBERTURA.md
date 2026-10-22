@@ -12,13 +12,21 @@ Apps sincronizados pela IDE em `~\AGTech\MetaBuilderPRO`: `vendas-pg-node`, `ven
 |---|---|---|
 | vendas-pg-node | Postgres (cópia `crm_copy`) | 178 de 178 passaram, banco intacto |
 | vendas-pg-java | Postgres (cópia `crm_copy`) | 178 de 178 passaram, banco intacto |
-| vendas-ora-node | Oracle `crm@192.168.0.201/FREEPDB1` (modo original, com consentimento) | 172 de 178; as 6 falhas estão explicadas abaixo; banco intacto |
-| vendas-ora-java | Oracle `crm@192.168.0.201/FREEPDB1` (modo original, com consentimento) | 172 de 178; as mesmas 6 falhas; banco intacto |
+| vendas-ora-node | Oracle `crm@192.168.0.201/FREEPDB1` (modo original, com consentimento) | 178 de 178 passaram, banco intacto (depois de sincronizar de novo com a correção do gerador) |
+| vendas-ora-java | Oracle `crm@192.168.0.201/FREEPDB1` (modo original, com consentimento) | 178 de 178 passaram, banco intacto (depois de sincronizar de novo com a correção do gerador) |
 
-As 6 falhas do Oracle (iguais em Node e Java):
+Na primeira rodada do Oracle houve 6 falhas por app, todas resolvidas:
 
-- **2 eram do motor** (fórmulas: o nome da tabela vem em maiúsculas no Oracle). Corrigido; Clientes e Pedidos passaram em `vendas-ora-node` depois do ajuste (38 de 38 no subconjunto). Em `vendas-ora-java` o mesmo ajuste ainda não foi rodado.
-- **4 são um erro real do gerador, achado pelas regras novas:** na edição de Tarefas (Kanban e Fluxo) de um app Oracle, a lista da "Tarefa Antecessora" saía vazia (a relação de uma coluna com a própria tabela era descartada porque `TAREFA_ANTECESSORA_ID` está em maiúsculas), e salvar a edição apagava a tarefa antecessora. Corrigido em `detail-page.ts`, com teste (`detailSelfRelation.test.ts`, que falha sem a correção). Os apps sincronizados antes da correção ainda têm o erro: precisam de novo Sincronizar depois do deploy da web para a bateria do Oracle ficar 100% verde.
+- **2 eram do motor** (fórmulas: o nome da tabela vem em maiúsculas no Oracle). Corrigido no motor.
+- **4 eram um erro real do gerador, achado pelas regras novas:** na edição de Tarefas (Kanban e Fluxo) de um app Oracle, a lista da "Tarefa Antecessora" saía vazia (a relação de uma coluna com a própria tabela era descartada porque `TAREFA_ANTECESSORA_ID` está em maiúsculas), e salvar a edição apagava a tarefa antecessora. Corrigido em `detail-page.ts`, com teste (`detailSelfRelation.test.ts`, que falha sem a correção). Confirmado: depois de sincronizar de novo os dois apps Oracle, a bateria passou inteira.
+
+## Arquivos antigos removidos (2026-10-22)
+
+Com a bateria verde nos 4 apps, foram removidos os 18 arquivos que estavam 100% cobertos (continuam no histórico do Git):
+`real/tests`: clientes-pedidos-itens, departamentos-funcs, exportar-e-grid, gestao-de-acesso, permissoes-por-tela, agenda-gantt-kanban, aba-do-cliente.
+`oracle/tests`: clientes, departamentos-funcs, exportar-e-grid, permissoes-por-tela, pedidos-e-bi, gestao-de-acesso.
+`tests` (exemplo): export, tipos-de-campo, cadastro, grid, relacoes.
+Ficam os arquivos que ainda têm algo que o dinâmico não afirma (telas de IA, rede de proteção, login do robô, autocomplete e os testes de itens do pedido que dependem de um campo autocomplete): `itens-do-pedido`, `cadastros-gerais`, `telas-especiais`, `smoke` (real e oracle), `rede-de-protecao` (real e oracle) e `autocomplete`. Nesses arquivos os testes já cobertos pelo dinâmico continuam lá; podem ser podados depois, um a um.
 
 Ressalvas: o manifesto de telas usado é o de 20/10 (o do site exige login), acrescido das listas de relação e das fórmulas lidas do próprio app sincronizado, porque as credenciais do Studio não estão nesta máquina; o painel da IDE gera esses campos sozinho. Nenhum projeto de referência tem campo Autocomplete, então a regra de autocomplete não foi escrita (não entrego teste sem validar).
 
@@ -26,7 +34,7 @@ Ressalvas: o manifesto de telas usado é o de 20/10 (o do site exige login), acr
 
 | Situação | Testes | O que significa |
 |---|---|---|
-| **Coberto** | 114 | o dinâmico afirma o mesmo comportamento e passou em Postgres (Node e Java) e em Oracle (com a ressalva acima): pode sair, com a sua aprovação |
+| **Coberto** | 114 | o dinâmico afirma o mesmo comportamento e passou em Postgres e Oracle (Node e Java). Os arquivos inteiramente cobertos já foram removidos (seção acima) |
 | **Parcial** | 0 | cobre a maior parte, mas falta um detalhe que o teste antigo afirmava: fica |
 | **Falta** | 2 | sem regra equivalente no dinâmico: fica |
 | **Fica à mão** | 6 | é o motor (login, rede de proteção) ou tela criada por IA com código próprio |
