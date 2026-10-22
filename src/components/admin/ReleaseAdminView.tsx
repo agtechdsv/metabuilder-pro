@@ -144,10 +144,13 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
         })
       })
 
-      const data = await response.json()
+      // o servidor pode responder com uma página de erro (ex.: 504 por tempo esgotado): não é JSON
+      const texto = await response.text()
+      let data: any = {}
+      try { data = JSON.parse(texto) } catch { /* resposta sem JSON */ }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro desconhecido ao gerar release')
+        throw new Error(data.error || (response.status === 504 ? 'O servidor demorou mais de 5 minutos e foi interrompido (504). Veja os logs da Vercel: costuma ser a chamada do Gemini ou do GitHub parada.' : `Erro ao gerar release (HTTP ${response.status}).`))
       }
 
       setStatus('success')

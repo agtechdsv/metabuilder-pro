@@ -12,7 +12,9 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
   const token = process.env.GITHUB_PAT
   if (!token) throw new Error('GITHUB_PAT is not defined in environment variables.')
 
+  // sem prazo, uma chamada parada deixa a função esperando até o limite da Vercel (300 s) e a tela recebe um 504 sem JSON
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/${endpoint}`, {
+    signal: AbortSignal.timeout(30_000),
     ...options,
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -149,8 +151,10 @@ Commits da Versão:
 ${safeContent}
 `
 
+            // as notas por IA são um extra: se o Gemini demorar, a release segue com o texto de reserva (sem esperar os 300 s da função)
             const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
               method: 'POST',
+              signal: AbortSignal.timeout(45_000),
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -178,6 +182,8 @@ ${safeContent}
             }
           } catch (aiErr) {
             console.error('Erro na chamada do Gemini. Usando fallback.', aiErr)
+            const resumo = contentToTranslate.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0 && !/^chore: bump version/i.test(l)).slice(0, 5)
+            if (generateReleaseNotes && resumo.length > 0) parsedChangelog.pt = resumo
             // Se falhar e tiver texto manual, usamos as primeiras linhas
             if (!generateReleaseNotes && releaseNotes) {
               parsedChangelog.pt = releaseNotes.split('\n').filter((l: string) => l.trim().length > 0).slice(0, 5)
