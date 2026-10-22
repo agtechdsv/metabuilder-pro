@@ -52,6 +52,8 @@ export interface IDEHeaderProps {
   onDelivery: () => void
   /** troca para outra pasta do mesmo projeto (uma por pilha, uma cópia de teste...) */
   onSwitchFolder: (name: string) => void | Promise<void>
+  /** pasta cujo Sync local já está pronto: a sincronização que espera uma troca de pasta segue quando bate com a aberta */
+  syncReadyFolder: string
   /** apaga os arquivos e o histórico Git local da pasta atual */
   onResetProject: () => Promise<void>
   /** o projeto já foi sincronizado (a pasta tem o código)? Sem isso a Entrega fica desabilitada */
@@ -710,6 +712,7 @@ export function IDEHeader({
   setShowGitSettings,
   onDelivery,
   onSwitchFolder,
+  syncReadyFolder,
   onResetProject,
   deliveryReady,
   onOpenTests,
@@ -787,7 +790,29 @@ export function IDEHeader({
   const [newFolderFor, setNewFolderFor] = useState<{ wanted: Pilha; suggestion: string; first?: boolean } | null>(null)
   const { toast } = useToast()
 
+  // Sincronizar numa pasta nova (renomeada ou criada agora): troca de pasta e continua sozinho quando o Sync local da nova pasta estiver pronto
+  const pendingSync = useRef<string | null>(null)
+  const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const syncAfterSwitch = async (name: string, message: string) => {
+    pendingSync.current = name
+    if (pendingTimer.current) clearTimeout(pendingTimer.current)
+    // se a nova pasta não ficar pronta, devolve o controle ao dev (abre o modal de novo, como antes)
+    pendingTimer.current = setTimeout(() => {
+      if (pendingSync.current === name) { pendingSync.current = null; setIsSyncModalOpen(true) }
+    }, 30000)
+    await onSwitchFolder(name)
+    toast(message, 'success')
+  }
+  useEffect(() => {
+    if (pendingSync.current && syncReadyFolder === pendingSync.current && folderKeyOf(target) === pendingSync.current) {
+      pendingSync.current = null
+      if (pendingTimer.current) clearTimeout(pendingTimer.current)
+      runSync()
+    }
+  }, [syncReadyFolder, folderKeyOf(target)]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const confirmSync = async () => {
+    pendingSync.current = null
     if (target.type === 'project') {
       const wanted: Pilha = activeTab === 'java' ? 'java' : 'node'
       const current = await detectFolderStack(folderKeyOf(target)).catch(() => 'desconhecida' as const)
@@ -805,9 +830,7 @@ export function IDEHeader({
         const novo = suggestFolderName(target.slug, wanted, taken.filter(n => n.toLowerCase() !== nomeAtual.toLowerCase()))
         if (await renameProjectFolder(nomeAtual, novo, target.id, target.slug)) {
           setIsSyncModalOpen(false)
-          await onSwitchFolder(novo)
-          toast(t('ide_folder.after_rename', 'Pasta renomeada para {name}. Clique em Sincronizar para continuar.').replace('{name}', novo), 'success')
-          setIsSyncModalOpen(true)
+          await syncAfterSwitch(novo, t('ide_folder.after_rename', 'Pasta renomeada para {name}. Continuando a sincronização...').replace('{name}', novo))
           return
         }
       }
@@ -1264,9 +1287,7 @@ export function IDEHeader({
             const first = newFolderFor.first
             setNewFolderFor(null); setMismatch(null)
             if (first && name === folderKeyOf(target)) { runSync(); return }
-            await onSwitchFolder(name)
-            toast(t('ide_folder.after_switch', 'Agora na pasta {name}. Clique em Sincronizar para continuar.').replace('{name}', name), 'success')
-            setIsSyncModalOpen(true)
+            await syncAfterSwitch(name, t('ide_folder.after_switch', 'Agora na pasta {name}. Continuando a sincronização...').replace('{name}', name))
           }}
         />
       )}

@@ -59,6 +59,8 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const [isDetached, setIsDetached] = useState(false)
   const [target, setTarget] = useState<IDETarget | null>(null)
   const [syncManager, setSyncManager] = useState<LocalSyncManager | null>(null)
+  /** pasta cujo Sync local já terminou de iniciar (a Entrega/Sincronizar que espera a troca de pasta só segue quando isto bate com a pasta aberta) */
+  const [syncReadyFolder, setSyncReadyFolder] = useState('')
 
   // Injected specialized hooks
   const consoleState = useIDEConsole()
@@ -290,11 +292,13 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
     if (isOpen && target && isTauri()) {
       const folder = folderKeyOf(target)
       const manager = new LocalSyncManager(target.id, folder)
+      setSyncReadyFolder('')
       setSyncManager(manager)
       // os commits do dev levam o nome e o e-mail do login; a pasta registra de quem é (sem tomar a de outro login)
       const dev = currentDevIdentity()
       dev.then(d => { if (d) manager.setAuthor(d.name, d.email) })
       manager.initLocalProject().then(async () => {
+       try {
         const d = await dev
         await writeProjectMarker(folder, target.id, target.slug)
         if (d) await claimFolder(folder, d)
@@ -307,6 +311,9 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
 
         gitState.setSandboxMode(currentBranch === sandboxBranch)
         await fsState.loadFileTree()
+       } finally {
+        setSyncReadyFolder(folder)
+       }
       })
     }
   }, [isOpen, target])
@@ -485,6 +492,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
             handleMonacoBeforeMount={handleMonacoBeforeMount}
             handleResetProjectToCleanState={handleResetProjectToCleanState}
             onSwitchFolder={switchFolder}
+            syncReadyFolder={syncReadyFolder}
             fs={fsState}
             fileOps={fileOps}
             tabs={tabsState}

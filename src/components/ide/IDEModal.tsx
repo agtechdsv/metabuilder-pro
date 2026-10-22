@@ -44,6 +44,8 @@ export interface IDEModalProps {
   handleResetProjectToCleanState: () => Promise<void>
   /** troca para outra pasta do mesmo projeto */
   onSwitchFolder: (name: string) => void | Promise<void>
+  /** pasta cujo Sync local já está pronto */
+  syncReadyFolder: string
   fs: ReturnType<typeof useIDEFileSystem>
   fileOps: ReturnType<typeof useIDEFileOperations>
   tabs: ReturnType<typeof useIDETabs>
@@ -72,6 +74,7 @@ export function IDEModal({
   handleMonacoBeforeMount,
   handleResetProjectToCleanState,
   onSwitchFolder,
+  syncReadyFolder,
   fs,
   fileOps,
   tabs,
@@ -157,6 +160,7 @@ export function IDEModal({
             setShowGitSettings={git.setShowGitSettings}
             onDelivery={() => setShowDelivery(true)}
             onSwitchFolder={onSwitchFolder}
+            syncReadyFolder={syncReadyFolder}
             onResetProject={handleResetProjectToCleanState}
             deliveryReady={deliveryReady}
             onOpenTests={() => setShowTests(true)}
