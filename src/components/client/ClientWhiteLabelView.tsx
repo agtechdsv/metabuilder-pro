@@ -18,6 +18,20 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   const [domain, setDomain] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   // prova de domínio: o TXT que o cliente precisa criar no DNS antes de o vínculo valer
+  // "Verificar agora": o resultado da última conferência do DNS (null = ainda não conferiu)
+  const [verificacao, setVerificacao] = useState<{ ready: boolean; dnsOk: boolean | null; verified: boolean | null } | null>(null)
+  const [verificando, setVerificando] = useState(false)
+  const verificarAgora = async () => {
+    if (!selectedTarget?.custom_domain) return
+    setVerificando(true)
+    try {
+      const r = await fetch(`/api/domains?domain=${encodeURIComponent(selectedTarget.custom_domain)}&targetId=${selectedTarget.id}&targetType=${targetType}`)
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || 'Erro ao verificar')
+      setVerificacao(d)
+    } catch (e: any) { toast(e.message, 'error') }
+    setVerificando(false)
+  }
   const [txtPedido, setTxtPedido] = useState<{ name: string; value: string } | null>(null)
   const { toast } = useToast()
 
@@ -185,6 +199,15 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                         {selectedTarget.custom_domain}
                       </p>
                     </div>
+                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={verificarAgora}
+                      disabled={verificando || isLoading}
+                      className="px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {t('client_views.whitelabel.check_btn', 'Verificar agora')}
+                    </button>
                     <button
                       onClick={handleRemoveDomainClick}
                       disabled={isLoading}
@@ -193,7 +216,17 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                       {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       {t('client_views.whitelabel.remove_btn', 'Remover')}
                     </button>
+                    </div>
                   </div>
+                  {verificacao && (
+                    <p className={`text-xs font-semibold ${verificacao.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {verificacao.ready
+                        ? t('client_views.whitelabel.check_ok', 'Tudo certo: o DNS aponta para a plataforma e o domínio está verificado. O HTTPS é ativado automaticamente.')
+                        : verificacao.dnsOk === null
+                          ? t('client_views.whitelabel.check_unknown', 'Não foi possível conferir agora. Tente de novo em instantes.')
+                          : t('client_views.whitelabel.check_wait', 'Ainda não está apontando. Confira o registro de DNS abaixo e aguarde a propagação (de alguns minutos a algumas horas).')}
+                    </p>
+                  )}
 
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />

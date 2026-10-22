@@ -161,6 +161,48 @@ export async function POST(req: Request) {
   }
 }
 
+/**
+ * Verificar agora: o DNS do domínio já aponta para a plataforma? Responde com o que a Vercel enxerga (configuração do DNS e domínio verificado).
+ * Só vale para um domínio que está vinculado a um projeto/portal do próprio usuário.
+ */
+export async function GET(req: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const domain = (searchParams.get('domain') || '').trim().toLowerCase()
+    const targetId = searchParams.get('targetId')
+    const targetType = searchParams.get('targetType')
+    if (!domain || !targetId || (targetType !== 'workspace' && targetType !== 'project')) {
+      return NextResponse.json({ error: 'Missing domain, targetId or targetType' }, { status: 400 })
+    }
+
+    // o domínio precisa estar vinculado a este destino (que o usuário enxerga)
+    const { data: alvo } = await supabase.from(targetType === 'workspace' ? 'workspaces' : 'projects').select('id, custom_domain').eq('id', targetId).single()
+    if (!alvo || String(alvo.custom_domain || '').toLowerCase() !== domain) {
+      return NextResponse.json({ error: 'Domain not linked to this target' }, { status: 403 })
+    }
+
+    const token = process.env.VERCEL_API_TOKEN
+    const projectId = process.env.VERCEL_PROJECT_ID
+    if (!token || !projectId) return NextResponse.json({ error: 'Vercel configuration missing on server' }, { status: 500 })
+    const headers = { Authorization: `Bearer ${token}` }
+
+    const [cfg, proj] = await Promise.all([
+      fetch(`https://api.vercel.com/v6/domains/${domain}/config`, { headers, signal: AbortSignal.timeout(15_000) }).then(r => r.json()).catch(() => null),
+      fetch(`https://api.vercel.com/v9/projects/${projectId}/domains/${domain}`, { headers, signal: AbortSignal.timeout(15_000) }).then(r => r.json()).catch(() => null),
+    ])
+    const dnsOk = cfg ? cfg.misconfigured === false : null
+    const verified = proj ? proj.verified === true : null
+    return NextResponse.json({ dnsOk, verified, ready: dnsOk === true && verified === true })
+  } catch (error: any) {
+    console.error('Check domain error:', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const supabase = await createClient()

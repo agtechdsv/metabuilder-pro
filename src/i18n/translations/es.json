@@ -4190,7 +4190,11 @@
       "guide_1": "Cree el registro de arriba en el panel DNS del dominio y mantenga los que ya existen (correo, por ejemplo).",
       "guide_2": "Si su DNS usa Cloudflare, deje este registro como \"solo DNS\" (nube gris), sin el proxy activado.",
       "guide_3": "Espere la propagación: de unos minutos a unas horas. El HTTPS se activa automáticamente.",
-      "guide_4": "Abra su dominio en el navegador: debe aparecer la pantalla de inicio de sesión de su proyecto. Si no abre después de un día, revise el nombre y el valor del registro."
+      "guide_4": "Abra su dominio en el navegador: debe aparecer la pantalla de inicio de sesión de su proyecto. Si no abre después de un día, revise el nombre y el valor del registro.",
+      "check_btn": "Verificar ahora",
+      "check_ok": "Todo bien: el DNS apunta a la plataforma y el dominio está verificado. El HTTPS se activa automáticamente.",
+      "check_unknown": "No se pudo verificar ahora. Inténtelo de nuevo en unos instantes.",
+      "check_wait": "Todavía no apunta. Revise el registro DNS de abajo y espere la propagación (de unos minutos a unas horas)."
     },
     "iclub": {
       "loading": "Cargando panel de iClub...",

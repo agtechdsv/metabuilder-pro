@@ -4114,7 +4114,11 @@
       "guide_1": "Create the record above in the domain DNS panel and keep the existing ones (email, for example).",
       "guide_2": "If your DNS uses Cloudflare, leave this record as \"DNS only\" (grey cloud), with the proxy off.",
       "guide_3": "Wait for propagation: from a few minutes to a few hours. HTTPS is enabled automatically.",
-      "guide_4": "Open your domain in the browser: your project login screen should appear. If it does not open after a day, check the record name and value."
+      "guide_4": "Open your domain in the browser: your project login screen should appear. If it does not open after a day, check the record name and value.",
+      "check_btn": "Check now",
+      "check_ok": "All good: DNS points to the platform and the domain is verified. HTTPS is enabled automatically.",
+      "check_unknown": "Could not check right now. Try again in a moment.",
+      "check_wait": "Not pointing yet. Check the DNS record below and wait for propagation (a few minutes to a few hours)."
     },
     "iclub": {
       "loading": "Loading iClub panel...",
