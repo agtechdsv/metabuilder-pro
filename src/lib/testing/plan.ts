@@ -10,7 +10,7 @@ export type PlannedKind =
   | 'abre' | 'lista' | 'formulario' | 'mascara' | 'obrigatorios'
   | 'grid_total' | 'grid_ordenacao' | 'grid_filtro' | 'exportacao'
   | 'grid_paginacao' | 'filtro_opcoes' | 'visualizar' | 'exportacao_filtrada' | 'exportacao_marcadas' | 'central_downloads'
-  | 'botoes' | 'acoes_linha' | 'campos_tipos' | 'abas'
+  | 'botoes' | 'acoes_linha' | 'campos_tipos' | 'abas' | 'formulas'
   | 'crud_cadastro' | 'crud_reabrir' | 'crud_edicao' | 'crud_exclusao' | 'kanban_mover' | 'fluxo_conectar' | 'detalhe_adicionar'
   | 'seg_tabela' | 'seg_nivel_nenhum' | 'seg_nivel_leitura' | 'seg_linha'
   | 'compat_chrome' | 'compat_firefox' | 'compat_webkit'
@@ -119,16 +119,17 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     detalhe_adicionar: () => 'tabs: adding a row in each detail tab and saving writes it with the parent key, and deleting the parent takes the rows with it',
     fluxo_conectar: () => 'flow: dragging a step only moves it; linking two steps saves the previous step in the database; a link that would make a loop is refused (and the steps go back afterwards)',
     kanban_mover: () => 'kanban: dragging a card to another column saves the new column in the database (and the card goes back afterwards)',
-    crud_exclusao: () => 'deletion: deleting from the list removes the record',
+    crud_exclusao: p => (/lista/.test(p.title) ? 'deletion: deleting from the list removes the record' : "deletion: deleting the created record removes it from the database (with the screen's own button when it has one)"),
     grid_paginacao: () => 'grid: pagination respects the chosen page size',
     filtro_opcoes: p => `filter by "${p.label}" option: only the rows of the option appear and Clear undoes it`,
     visualizar: () => 'View: opens the record read-only, without a save button',
     exportacao_filtrada: () => 'export: only what is filtered on the screen',
     exportacao_marcadas: () => 'export: only the checked rows',
-    central_downloads: () => 'Downloads Center: lists the export and downloads the file',
-    botoes: () => 'buttons: the buttons configured in Studio are on the screen',
+    central_downloads: () => 'Downloads Center: lists the export, downloads the file and deletes it',
+    formulas: () => 'Studio formulas: the totals calculated on screen equal the ones calculated from the data',
+    botoes: () => 'buttons: the buttons configured in Studio are on the screen, in the platform order',
     acoes_linha: () => 'row actions: each custom action opens the other screen in a window, filtered by the row',
-    campos_tipos: () => 'form: each field uses the configured component (text, number, date, options)',
+    campos_tipos: () => 'form: each field uses the configured component (text, number, date, options) and the lists bring what is in the database',
     abas: () => 'tabs: the detail tabs configured in Studio are in the form',
     filtros_tela: () => 'filters: all the use case filters are on the screen',
     tipo_galeria: () => 'gallery: one card per record, equal to the database',
@@ -178,16 +179,17 @@ const PLAN_TEXT: Record<Exclude<PlanLang, 'pt'>, Record<string, (p: PlannedTest)
     detalhe_adicionar: () => 'pestañas: agregar una fila en cada pestaña de detalle y guardar la graba con la clave del padre, y eliminar el padre se lleva las filas',
     fluxo_conectar: () => 'flujo: arrastrar una etapa solo la mueve; unir dos etapas guarda la etapa anterior en la base de datos; una unión que cree un ciclo se rechaza (y las etapas vuelven después)',
     kanban_mover: () => 'kanban: arrastrar una tarjeta a otra columna guarda la nueva columna en la base de datos (y la tarjeta vuelve después)',
-    crud_exclusao: () => 'eliminación: eliminar desde la lista quita el registro',
+    crud_exclusao: p => (/lista/.test(p.title) ? 'eliminación: eliminar desde la lista quita el registro' : 'eliminación: eliminar el registro creado lo quita de la base de datos (con el botón de la propia pantalla, cuando lo tiene)'),
     grid_paginacao: () => 'grid: la paginación respeta el tamaño de página elegido',
     filtro_opcoes: p => `filtro de "${p.label}" por opción: solo aparecen las filas de la opción y Limpiar lo deshace`,
     visualizar: () => 'Visualizar: abre el registro solo lectura, sin botón de guardar',
     exportacao_filtrada: () => 'exportación: solo lo que está filtrado en la pantalla',
     exportacao_marcadas: () => 'exportación: solo las filas marcadas',
-    central_downloads: () => 'Centro de descargas: lista la exportación y descarga el archivo',
-    botoes: () => 'botones: los botones configurados en Studio están en la pantalla',
+    central_downloads: () => 'Centro de descargas: lista la exportación, descarga el archivo y lo elimina',
+    formulas: () => 'fórmulas de Studio: los totales calculados en pantalla son iguales a los calculados a partir de los datos',
+    botoes: () => 'botones: los botones configurados en Studio están en la pantalla, en el orden de la plataforma',
     acoes_linha: () => 'acciones de fila: cada acción personalizada abre la otra pantalla en una ventana, filtrada por la fila',
-    campos_tipos: () => 'formulario: cada campo usa el componente configurado (texto, número, fecha, opciones)',
+    campos_tipos: () => 'formulario: cada campo usa el componente configurado (texto, número, fecha, opciones) y las listas traen lo que está en la base de datos',
     abas: () => 'pestañas: las pestañas de detalle configuradas en Studio están en el formulario',
     filtros_tela: () => 'filtros: todos los filtros del caso de uso están en la pantalla',
     tipo_galeria: () => 'galería: una tarjeta por registro, igual a la base de datos',
@@ -320,18 +322,27 @@ function planoSeguranca(v: ManifestView, auth?: ManifestAuth): PlannedTest[] {
 export const detalhesPreenchiveis = (v: Pick<ManifestView, 'details'>): ManifestDetail[] =>
   (v.details || []).filter(d => d.fields.some(f => !f.readOnly && !f.hasFormula && !f.isPrimaryKey && f.column.toLowerCase() !== d.foreignKey.toLowerCase()))
 
+/** Alguma aba (ou item dentro da aba) tem campo com fórmula do Studio (ex.: Total Item e Total Pedido). */
+export const temFormulaNaAba = (v: Pick<ManifestView, 'details'>): boolean =>
+  (v.details || []).some(d => d.fields.some(f => f.formula?.length) || (d.subDetails || []).some(s => s.fields.some(f => f.formula?.length)))
+
+/** Telas por tipo que também têm formulário próprio (/<tela>/new e /<tela>/<id>): cadastro, reabrir, edição e exclusão valem para elas como para a lista. */
+export const TIPOS_COM_FORMULARIO = ['galeria', 'kanban', 'blueprint', 'timeline', 'gantt', 'scheduler', 'mapa_mental', 'map']
+
 /** Testes de integração (gravam no banco de teste): cadastro, reabrir, edição e exclusão com dados gerados. Só para Pesquisa + Cadastro com pelo menos um campo editável. */
 function planoIntegracao(v: ManifestView): PlannedTest[] {
-  if (v.logicType === 'blueprint') return v.blueprintPredecessorColumn ? [{ kind: 'fluxo_conectar', title: 'fluxo: arrastar uma etapa só a move; ligar duas etapas grava a etapa anterior no banco; ligação que formaria um ciclo é recusada (e as etapas voltam depois)' }] : []
-  if (v.logicType === 'kanban') return v.kanbanGroupColumn ? [{ kind: 'kanban_mover', title: 'kanban: arrastar um cartão para outra coluna grava a nova coluna no banco (e o cartão volta depois)' }] : []
+  // a regra de gravação própria do tipo: ligar etapas (fluxo) e arrastar cartão (kanban)
+  const proprio: PlannedTest[] = v.logicType === 'blueprint' ? (v.blueprintPredecessorColumn ? [{ kind: 'fluxo_conectar', title: 'fluxo: arrastar uma etapa só a move; ligar duas etapas grava a etapa anterior no banco; ligação que formaria um ciclo é recusada (e as etapas voltam depois)' }] : []) : v.logicType === 'kanban' ? (v.kanbanGroupColumn ? [{ kind: 'kanban_mover', title: 'kanban: arrastar um cartão para outra coluna grava a nova coluna no banco (e o cartão volta depois)' }] : []) : []
+  if (v.logicType !== 'pesquisa_cadastro' && !TIPOS_COM_FORMULARIO.includes(v.logicType)) return proprio
   // com campo de texto, o registro é marcado com E2E-; sem ele (só listas, datas, números...), o motor o identifica pelo id novo e o anota num diário para limpar
-  if (v.logicType !== 'pesquisa_cadastro' || camposDeTipo(v).every(f => f.readOnly)) return []
+  if (camposDeTipo(v).every(f => f.readOnly)) return proprio
   return [
     { kind: 'crud_cadastro', title: 'cadastro: preencher com dados gerados e salvar grava tudo no banco' },
     { kind: 'crud_reabrir', title: 'cadastro: reabrir o registro mostra o que foi gravado' },
     { kind: 'crud_edicao', title: 'edição: alterar e salvar grava só a alteração' },
-    ...(detalhesPreenchiveis(v).length > 0 ? [{ kind: 'detalhe_adicionar' as const, title: 'abas: adicionar uma linha em cada aba de detalhe e salvar grava com a chave do pai; excluir o pai leva as linhas junto' }] : []),
-    { kind: 'crud_exclusao', title: 'exclusão: excluir pela lista remove o registro' },
+    ...(v.logicType === 'pesquisa_cadastro' && detalhesPreenchiveis(v).length > 0 ? [{ kind: 'detalhe_adicionar' as const, title: 'abas: adicionar uma linha em cada aba de detalhe e salvar grava com a chave do pai; excluir o pai leva as linhas junto' }] : []),
+    { kind: 'crud_exclusao', title: v.logicType === 'pesquisa_cadastro' ? 'exclusão: excluir pela lista remove o registro' : 'exclusão: excluir o registro criado remove do banco (pelo botão da própria tela, quando ela tem um)' },
+    ...proprio,
   ]
 }
 
@@ -421,11 +432,12 @@ function planoFuncional(v: ManifestView): PlannedTest[] {
   if (v.exportFormats.some(x => ['csv', 'json'].includes(x.toLowerCase()))) {
     if (fil) plano.push({ kind: 'exportacao_filtrada', title: 'exportação: só o que está filtrado na tela' })
     plano.push({ kind: 'exportacao_marcadas', title: 'exportação: só as linhas marcadas' })
-    if (v.exportFormats.some(x => x.toLowerCase() === 'csv')) plano.push({ kind: 'central_downloads', title: 'Central de Downloads: lista a exportação e baixa o arquivo' })
+    if (v.exportFormats.some(x => x.toLowerCase() === 'csv')) plano.push({ kind: 'central_downloads', title: 'Central de Downloads: lista a exportação, baixa o arquivo e exclui' })
   }
-  if (v.buttons.length > 0) plano.push({ kind: 'botoes', title: 'botões: os botões configurados no Studio estão na tela' })
+  if (v.buttons.length > 0) plano.push({ kind: 'botoes', title: 'botões: os botões configurados no Studio estão na tela, na ordem da plataforma' })
   if (v.logicType === 'pesquisa_cadastro' && v.buttons.some(b => b.actionType === 'custom' && b.placement === 'row')) plano.push({ kind: 'acoes_linha', title: 'ações da linha: cada ação customizada abre a outra tela em janela, filtrada pelo registro' })
-  if (camposDeTipo(v).length > 0) plano.push({ kind: 'campos_tipos', title: 'formulário: cada campo usa o componente configurado (texto, número, data, opções)' })
+  if (camposDeTipo(v).length > 0) plano.push({ kind: 'campos_tipos', title: 'formulário: cada campo usa o componente configurado (texto, número, data, opções) e as listas trazem o que está no banco' })
+  if (temFormulaNaAba(v)) plano.push({ kind: 'formulas', title: 'fórmulas do Studio: os totais calculados na tela são iguais aos calculados a partir dos dados' })
   if (v.details.length > 0) plano.push({ kind: 'abas', title: 'abas: as abas de detalhe configuradas no Studio estão no formulário' })
   return plano
 }

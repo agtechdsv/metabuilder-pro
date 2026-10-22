@@ -126,9 +126,15 @@ describe('plano de testes de um caso de uso', () => {
     expect(kinds(view({ details: [{ table: 'itens', label: 'Itens', foreignKey: 'pedido_id', displayMode: 'tab', subDetails: [], fields: [campo('pedido_id'), campo('qtd', { dataType: 'integer' })] }] as any }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'detalhe_adicionar', 'crud_exclusao'])
     // aba só com a chave do pai e campo calculado: nada a preencher
     expect(kinds(view({ details: [{ table: 'itens', label: 'Itens', foreignKey: 'pedido_id', displayMode: 'tab', subDetails: [], fields: [campo('pedido_id'), campo('total', { readOnly: true })] }] as any }), ['integracao'])).toEqual(['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao'])
-    expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual([])
-    expect(kinds(view({ logicType: 'kanban', kanbanGroupColumn: 'status' }), ['integracao'])).toEqual(['kanban_mover'])
-    expect(kinds(view({ logicType: 'blueprint', blueprintPredecessorColumn: 'predecessor_id' }), ['integracao'])).toEqual(['fluxo_conectar'])
+    // telas por tipo com formulário próprio (kanban, fluxo, galeria, gantt, agenda, timeline, mapa, mapa mental) também cadastram, reabrem, editam e excluem
+    const crud = ['crud_cadastro', 'crud_reabrir', 'crud_edicao', 'crud_exclusao']
+    expect(kinds(view({ logicType: 'kanban' }), ['integracao'])).toEqual(crud)
+    expect(kinds(view({ logicType: 'kanban', kanbanGroupColumn: 'status' }), ['integracao'])).toEqual([...crud, 'kanban_mover'])
+    expect(kinds(view({ logicType: 'blueprint', blueprintPredecessorColumn: 'predecessor_id' }), ['integracao'])).toEqual([...crud, 'fluxo_conectar'])
+    for (const tipo of ['galeria', 'gantt', 'scheduler', 'timeline', 'mapa_mental', 'map']) expect(kinds(view({ logicType: tipo }), ['integracao']), tipo).toEqual(crud)
+    expect(kinds(view({ logicType: 'analytics' }), ['integracao']), 'BI não tem formulário').toEqual([])
+    // a regra de abas continua só na lista (as telas por tipo não têm as abas da lista)
+    expect(kinds(view({ logicType: 'galeria', details: [{ table: 'itens', label: 'Itens', foreignKey: 'pedido_id', displayMode: 'tab', subDetails: [], fields: [campo('pedido_id'), campo('qtd', { dataType: 'integer' })] }] }), ['integracao'])).toEqual(crud)
     expect(campoMarcador(view())?.column).toBe('nome')
     expect(planTitle({ kind: 'crud_edicao', title: 'x' }, 'en')).toBe('edit: changing and saving writes only the change')
   })

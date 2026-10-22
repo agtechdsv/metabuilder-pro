@@ -11,6 +11,23 @@ export * from './manifestTypes'
  * o app exportado deve ter. Os testes são gerados a partir dele: um caso de uso novo ou alterado no Studio muda o manifesto, e os testes o acompanham.
  */
 
+/** Campo Autocomplete do Studio: a mesma leitura que o gerador faz (tabela, colunas, mínimo de caracteres, texto de busca). */
+function manifestAutocomplete(f: ResolvedField): ManifestField['autocomplete'] {
+  if (f.isPrimaryKey) return undefined
+  const c: any = f.config || {}
+  const comp = c.form_config?.component || c.component || {}
+  const tipo = String(comp.type || c.type || '').toLowerCase()
+  if (!['autocomplete', 'autocomplete (busca dinâmica)', 'autocomplete (busca dinamica)'].includes(tipo)) return undefined
+  const rel = c.relation || {}
+  const tabela = String(comp.rel_table || rel.targetTable || c.rel_table || (String(f.dbColumn || '').endsWith('_id') ? String(f.dbColumn).slice(0, -3) + 's' : ''))
+  const label = String(comp.rel_label || rel.displayColumn || c.rel_label || '')
+  if (!tabela || !label) return undefined
+  return {
+    table: tabela.split('.').pop() || '', labelColumn: label, valueColumn: String(comp.rel_value || rel.valueColumn || c.rel_value || 'id'),
+    minChars: Number(comp.min_chars ?? 2) || 2, ...(comp.search_placeholder ? { placeholder: String(comp.search_placeholder) } : {}),
+  }
+}
+
 const pick = (c: any, ...keys: string[]) => { for (const k of keys) if (c?.[k] !== undefined && c?.[k] !== null && c?.[k] !== '') return c[k]; return undefined }
 
 export function manifestField(f: ResolvedField): ManifestField {
@@ -19,6 +36,8 @@ export function manifestField(f: ResolvedField): ManifestField {
   const options = Array.isArray(c.options) && c.options.length > 0
     ? c.options.map((o: any) => ({ value: String(o.value ?? o), label: String(o.label ?? o.value ?? o) }))
     : undefined
+  const bruto = c.formulaTokens ?? c.formula_tokens ?? c.content?.formula_tokens
+  const tokens = (Array.isArray(bruto) ? bruto : []).filter((t: any) => t && typeof t.type === 'string').map((t: any) => ({ type: t.type, value: String(t.value ?? ''), ...(t.label ? { label: String(t.label) } : {}) }))
   return {
     column: f.dbColumn,
     label: f.label,
@@ -29,7 +48,10 @@ export function manifestField(f: ResolvedField): ManifestField {
     readOnly: Boolean(c.readOnly || c.readonly || c.content?.readOnly || c.content?.readonly),
     isPrimaryKey: Boolean(f.isPrimaryKey),
     hasFormula: Array.isArray(c.formulaTokens) ? c.formulaTokens.length > 0 : Array.isArray(c.formula_tokens) ? c.formula_tokens.length > 0 : false,
+    ...(tokens.length > 0 ? { formula: tokens } : {}),
     ...(options ? { options } : {}),
+    ...(c.relation?.targetTable && c.relation?.displayColumn ? { relation: { table: String(c.relation.targetTable).split('.').pop() || '', valueColumn: String(c.relation.valueColumn || 'id'), displayColumn: String(c.relation.displayColumn) } } : {}),
+    ...(manifestAutocomplete(f) ? { autocomplete: manifestAutocomplete(f) } : {}),
   }
 }
 

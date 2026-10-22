@@ -35,6 +35,9 @@ export interface ManifestAuth {
 
 export interface ManifestOption { value: string; label: string }
 
+/** Uma peça de fórmula do Studio: número, operador, função (SOMA...), texto ou campo (value = "coluna" ou "tabela.coluna" para as linhas de uma aba). */
+export interface ManifestFormulaToken { type: 'number' | 'operator' | 'function' | 'string' | 'field'; value: string; label?: string }
+
 export interface ManifestField {
   /** nome da coluna no banco (é também o `name` do campo no app exportado) */
   column: string
@@ -49,7 +52,13 @@ export interface ManifestField {
   readOnly: boolean
   isPrimaryKey: boolean
   hasFormula: boolean
+  /** as peças da fórmula (só quando hasFormula) */
+  formula?: ManifestFormulaToken[]
   options?: ManifestOption[]
+  /** campo de relação: a lista do formulário traz as linhas desta tabela (valor = valueColumn, texto = displayColumn) */
+  relation?: { table: string; valueColumn: string; displayColumn: string }
+  /** campo Autocomplete (busca dinâmica no servidor): tabela, colunas, mínimo de caracteres e texto do campo de busca */
+  autocomplete?: { table: string; labelColumn: string; valueColumn: string; minChars: number; placeholder?: string }
 }
 
 export interface ManifestButton { id: string; label: string; actionType: string; placement?: string }

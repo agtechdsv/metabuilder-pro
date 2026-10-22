@@ -673,7 +673,8 @@ export function generateDetailPage(route: RouteNode, targetLang?: string, mode: 
       targetTable = base.endsWith('s') ? base : (base + 's')
     }
 
-    if (targetTable && targetTable.toLowerCase() === table.toLowerCase() && !f.dbColumn.endsWith('_id')) {
+    // relação com a própria tabela só vale numa chave estrangeira (coluna terminada em _id; no Oracle as colunas são MAIÚSCULAS: TAREFA_ANTECESSORA_ID)
+    if (targetTable && targetTable.toLowerCase() === table.toLowerCase() && !f.dbColumn.toLowerCase().endsWith('_id')) {
       targetTable = null
     }
 

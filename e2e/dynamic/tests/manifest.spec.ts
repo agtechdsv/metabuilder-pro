@@ -248,7 +248,7 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
   }
   if (tipo === 'checkbox') { await campo.check(); return { tipo: 'bool', esperado: 'true' } }
   if (tipo === 'date') { await campo.fill('2026-10-25'); return { tipo: 'data', esperado: '2026-10-25' } }
-  if (tipo === 'datetime-local') { await campo.fill('2026-10-25T12:00'); return { tipo: 'data-hora', esperado: '2026-10-25' } }
+  if (tipo === 'datetime-local') { await campo.fill('2026-10-25T12:00'); return { tipo: 'data-hora', esperado: '2026-10-25T12:00' } }
   if (tipo === 'time') { await campo.fill('12:00'); return { tipo: 'hora', esperado: '12:00' } }
   if (tipo === 'number') { await campo.fill(String(7 + n)); return { tipo: 'numero', esperado: String(7 + n), numero: 7 + n } }
   if (tag !== 'input' && tag !== 'textarea') return null
@@ -261,7 +261,7 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
   // máscara numérica (0.000,00 / 0.000): os dígitos entram como centavos
   if (f.mask && /^0[0.,]*0$/.test(f.mask) && /int|numeric|decimal|float|double|number/i.test(f.dataType)) {
     const casas = f.mask.includes(',') ? f.mask.split(',')[1].length : 0
-    const digitos = String(1250 + n * 100)
+    const digitos = String((12 + n) * 100) // valor inteiro: uma coluna integer com máscara de centavos guarda só a parte inteira
     await campo.click(); await campo.press('Control+A'); await campo.press('Delete'); await campo.pressSequentially(casas ? digitos : String(7 + n))
     return { tipo: 'numero-mascara', esperado: casas ? digitos : String(7 + n), numero: casas ? Number(digitos) / 10 ** casas : 7 + n }
   }
@@ -275,7 +275,7 @@ async function preencherCampo(page: Page, f: ManifestField, n: number, limites: 
 /** O que está no banco confere com o que o teste preencheu? Devolve a descrição da diferença, ou null se confere. */
 function conferirNoBanco(f: ManifestField, esp: Preenchido, noBanco: string | null): string | null {
   const v = noBanco ?? ''
-  const ok = esp.tipo === 'bool' ? /^(t|true|1)$/i.test(v)
+  const ok = esp.tipo === 'bool' ? (esp.esperado === 'false' ? /^(f|false|0)$/i : /^(t|true|1)$/i).test(v)
     : esp.tipo === 'data' || esp.tipo === 'data-hora' ? v.startsWith(esp.esperado.slice(0, 10))
     : esp.tipo === 'hora' ? v.startsWith(esp.esperado)
     : esp.tipo === 'numero' || esp.tipo === 'numero-mascara' ? Number(v) === esp.numero
@@ -287,10 +287,10 @@ function conferirNoBanco(f: ManifestField, esp: Preenchido, noBanco: string | nu
 /** A tela, ao reabrir o registro, mostra o que foi gravado? */
 async function conferirNaTela(page: Page, f: ManifestField, esp: Preenchido): Promise<string | null> {
   const campo = page.locator(`[name="${nomeDoCampo(f.column)}"]`).first()
-  if (esp.tipo === 'bool') return (await campo.isChecked()) ? null : `"${f.label}": a caixa deveria estar marcada`
+  if (esp.tipo === 'bool') return (await campo.isChecked()) === (esp.esperado !== 'false') ? null : `"${f.label}": a caixa deveria estar ${esp.esperado === 'false' ? 'desmarcada' : 'marcada'}`
   const v = await campo.inputValue()
   const ok = esp.tipo === 'data' ? v === esp.esperado
-    : esp.tipo === 'data-hora' ? v.startsWith(esp.esperado.slice(0, 10))
+    : esp.tipo === 'data-hora' ? v.startsWith(esp.esperado) // data E hora: reabrir mostra a hora que foi gravada
     : esp.tipo === 'numero' ? Number(v) === esp.numero
     : esp.tipo === 'numero-mascara' ? Number(v.replace(/\./g, '').replace(',', '.')) === esp.numero
     : esp.tipo === 'texto-mascara' ? v.replace(/\D/g, '') === esp.esperado
@@ -413,6 +413,72 @@ async function acharLinha(page: Page, id: string): Promise<Locator | null> {
     await clicarENavegar(page, proxima)
   }
   return null
+}
+
+/** Número de uma célula do banco ou da tela ("1.500,00" no formato brasileiro, "1500.5" no do banco). */
+function numeroDe(v: unknown): number {
+  const s = String(v ?? '').trim()
+  if (!s) return 0
+  const n = s.includes(',') ? Number(s.replace(/\./g, '').replace(',', '.')) : Number(s)
+  return Number.isNaN(n) ? 0 : n
+}
+
+/**
+ * Calcula uma fórmula do Studio (as mesmas peças que o app usa) a partir dos dados do banco: campos da própria linha pelo nome da coluna e, dentro de
+ * SOMA, MEDIA, COUNT, MAXIMO e MINIMO, os valores de "tabela.coluna" das linhas da aba. null = a fórmula usa algo que o motor ainda não calcula (ex.: SE).
+ */
+function calcularFormula(tokens: Array<{ type: string; value: string }>, linha: Record<string, unknown>, filhos: (ref: string) => number[], tabela: string): number | null {
+  const FN: Record<string, (...a: any[]) => number> = {
+    SOMA: (a: number[]) => a.reduce((x, y) => x + y, 0), MEDIA: (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0), COUNT: (a: number[]) => a.length,
+    MAXIMO: (a: number[]) => (a.length ? Math.max(...a) : 0), MINIMO: (a: number[]) => (a.length ? Math.min(...a) : 0), ARREDONDAR: (x: number) => Math.round(x), ABS: (x: number) => Math.abs(x),
+  }
+  const valores: unknown[] = []
+  let expr = ''
+  for (const t of tokens) {
+    if (t.type === 'operator' || t.type === 'number') expr += ` ${/^[-+*/().,\d\s]*$/.test(t.value) ? t.value : 'NaN'} `
+    else if (t.type === 'function') { if (!FN[t.value]) return null; expr += ` FN.${t.value} ` }
+    else if (t.type === 'field') {
+      // "tabela.coluna" da própria tabela (ex.: itens_pedido.quantidade no item) é a coluna da própria linha; de outra tabela são as linhas da aba
+      const [tab, col] = t.value.includes('.') ? t.value.split('.') : [tabela, t.value]
+      valores.push(tab.toLowerCase() === tabela.toLowerCase() ? numeroDe(val(linha, col)) : filhos(t.value)) // o Oracle guarda os nomes das tabelas em maiúsculas
+      expr += ` V[${valores.length - 1}] `
+    }
+    else return null
+  }
+  try { const r = new Function('FN', 'V', `return (${expr})`)(FN, valores); return typeof r === 'number' && Number.isFinite(r) ? r : null } catch { return null }
+}
+
+/**
+ * Filtro de lista (relação ou opções) de uma tela por tipo: escolhe o valor mais comum da coluna no banco, pesquisa e devolve o que o banco tem para esse valor
+ * (quantos registros). null = a tela não tem filtro de lista, ou a tabela está vazia.
+ */
+async function filtrarPorLista(page: Page, view: ManifestView): Promise<{ coluna: string; esperado: number } | null> {
+  for (const f of view.filter) {
+    const campo = page.locator(`select[name="${nomeDoFiltro(f.column)}"]`).first()
+    if (!(await campo.count())) continue
+    const [mais] = await consultar(`select "${f.column}"::text as v, count(*)::int as n from "${view.table}" where "${f.column}" is not null group by "${f.column}" order by count(*) desc limit 1`)
+    if (!mais) continue
+    if (!(await campo.locator(`option[value="${String(mais.v).replace(/"/g, '')}"]`).count())) continue
+    await campo.selectOption(String(mais.v))
+    await page.getByRole('button', { name: 'Pesquisar' }).first().click()
+    await page.waitForLoadState('networkidle').catch(() => {})
+    await aguardarTela(page)
+    return { coluna: f.column, esperado: Number(mais.n) }
+  }
+  return null
+}
+
+/** Telas por tipo que mostram o texto do registro (cartão, nó, barra): o registro criado aparece nelas. */
+const MOSTRAM_TEXTO = ['galeria', 'mapa_mental', 'gantt', 'kanban', 'map']
+
+/** Filtra a tela pela coluna do marcador (quando ela é um filtro de texto), para o registro criado caber na página. */
+async function filtrarPeloMarcador(page: Page, view: ManifestView, coluna: string, marcador: string) {
+  const f = view.filter.find(x => x.column === coluna)
+  const campo = f ? page.locator(`[name="${nomeDoFiltro(f.column)}"]`).first() : null
+  if (!campo || !(await campo.count())) return
+  await campo.fill(marcador)
+  await page.getByRole('button', { name: 'Pesquisar' }).first().click()
+  await aguardarTela(page)
 }
 
 /** Confirma a exclusão: caixa de diálogo do navegador ou janela de confirmação do app. */
@@ -934,6 +1000,10 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('a[title="Baixar"]').first().click()])
           const conteudo = fs.readFileSync((await dl.path())!).toString('utf8')
           expect(lerCsv(conteudo).cabecalho.length, 'o arquivo baixado tem cabeçalho').toBeGreaterThan(0)
+          // excluir o arquivo pela Central: some da lista (a linha do arquivo é a que contém o botão Excluir mais próximo do nome)
+          const antes = await arquivos.count()
+          await arquivos.first().locator('xpath=ancestor::*[.//button[@title="Excluir"]][1]').locator('button[title="Excluir"]').first().click()
+          await expect(arquivos, 'excluir o arquivo na Central de Downloads tira ele da lista').toHaveCount(antes - 1)
         })
       }
 
@@ -968,6 +1038,18 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               expect.soft(await page.locator(`main [title="${b.label}"]`).count(), `ícone "${b.label}" nas linhas`).toBeGreaterThan(0)
             }
           }
+          // ordem da plataforma: Exportar antes de Novo Registro no topo; Visualizar, Editar e Excluir, nessa ordem, em cada linha
+          const xDe = async (loc: Locator) => ((await loc.locator('visible=true').first().boundingBox())?.x ?? null)
+          const xExportar = await xDe(page.getByRole('button', { name: /^Exportar/ }))
+          const xNovo = await xDe(page.getByRole('link', { name: 'Novo Registro' }))
+          if (xExportar !== null && xNovo !== null) expect.soft(xExportar, '"Exportar" fica antes de "Novo Registro"').toBeLessThan(xNovo)
+          if (linhas > 0) {
+            const ordem = view.buttons.filter(b => ['view', 'edit', 'delete'].includes(b.actionType)).map(b => b.label)
+            const xs: Array<[string, number]> = []
+            for (const rot of ordem) { const x = await xDe(page.locator('tbody tr').first().locator(`[title="${rot}"]`)); if (x !== null) xs.push([rot, x]) }
+            const esperada = ['view', 'edit', 'delete'].map(a => view.buttons.find(b => b.actionType === a)?.label).filter((r): r is string => !!r && xs.some(([l]) => l === r))
+            expect.soft(xs.sort((a, b) => a[1] - b[1]).map(([l]) => l), 'ícones da linha na ordem Visualizar, Editar, Excluir').toEqual(esperada)
+          }
         })
       }
 
@@ -979,6 +1061,14 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             if (!(await campo.count())) { expect.soft(0, `campo "${f.label}" (${f.column}) existe`).toBeGreaterThan(0); continue }
             const tag = await campo.evaluate(e => e.tagName.toLowerCase())
             const tipo = (await campo.getAttribute('type')) ?? ''
+            if (f.relation && tag === 'select') {
+              // lista de relação: traz as linhas da tabela relacionada (os textos de exibição, sem repetir)
+              const noBanco = [...new Set((await consultar(`select "${f.relation.displayColumn}"::text as l from "${f.relation.table}" where "${f.relation.displayColumn}" is not null`)).map(r => norm(String(r.l))))].sort()
+              if (noBanco.length > 0 && noBanco.length <= 500) {
+                const naTela = [...new Set((await campo.locator('option').evaluateAll(os => os.filter(o => (o as HTMLOptionElement).value !== '').map(o => o.textContent || ''))).map(norm).filter(Boolean))].sort()
+                expect.soft(naTela, `as opções de "${f.label}" são as linhas de ${f.relation.table}`).toEqual(noBanco)
+              }
+            }
             if (f.options?.length) {
               expect.soft(tag, `"${f.label}" com opções é uma lista de seleção`).toBe('select')
               if (tag === 'select') expect.soft(await campo.locator('option').count(), `opções de "${f.label}"`).toBeGreaterThanOrEqual(f.options.length)
@@ -993,6 +1083,65 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             } else {
               expect.soft(['input', 'textarea', 'select'], `"${f.label}" é um campo de entrada`).toContain(tag)
             }
+          }
+        })
+      }
+
+      if (t.kind === 'formulas') {
+        test(t.title, async ({ page }) => {
+          // um registro que já tem linhas na aba com fórmula (e, se houver, itens dentro delas): calcula o esperado pelo banco e confere na tela
+          const d = view.details.find(x => x.fields.some(f => f.formula?.length) || (x.subDetails ?? []).some(s => s.fields.some(f => f.formula?.length)))!
+          const sd = (d.subDetails ?? []).find(s => s.fields.some(f => f.formula?.length))
+          const pkD = d.primaryKey ?? 'id'
+          const [pai] = await consultar(`select p."${view.primaryKey}"::text as id from "${view.table}" p where exists (select 1 from "${d.table}" c where c."${d.foreignKey}" = p."${view.primaryKey}"${sd ? ` and exists (select 1 from "${sd.table}" s where s."${sd.foreignKey}" = c."${pkD}")` : ''}) limit 1`)
+          test.skip(!pai, 'nenhum registro tem linhas na aba com itens para conferir a fórmula')
+          const linhasD = await consultar(`select * from "${d.table}" where "${d.foreignKey}"::text = $1`, [String(pai.id)])
+          const esperados: number[] = []
+          const camposTela = new Set<string>()
+          const itensDe = async (linhaD: Record<string, unknown>) => (sd ? await consultar(`select * from "${sd.table}" where "${sd.foreignKey}"::text = $1`, [String(val(linhaD, pkD))]) : [])
+          for (const linhaD of linhasD) {
+            const itens = await itensDe(linhaD)
+            // valor de cada item: a fórmula do item (ex.: Total Item = quantidade × preço) ou a coluna dele
+            const valorDoItem = (it: Record<string, unknown>, col: string): number | null => {
+              const f = sd?.fields.find(x => x.column === col)
+              return f?.formula?.length ? calcularFormula(f.formula, it, () => [], sd!.table) : numeroDe(val(it, col))
+            }
+            for (const f of sd?.fields.filter(x => x.formula?.length) ?? []) {
+              camposTela.add(f.column)
+              for (const it of itens) { const r = valorDoItem(it, f.column); if (r !== null) esperados.push(r) }
+            }
+            for (const f of d.fields.filter(x => x.formula?.length)) {
+              camposTela.add(f.column)
+              const r = calcularFormula(f.formula!, linhaD, ref => itens.map(it => valorDoItem(it, ref.split('.').pop()!)).filter((x): x is number => x !== null), d.table)
+              if (r !== null) esperados.push(r)
+            }
+          }
+          test.skip(esperados.length === 0, 'as fórmulas desta aba usam funções que o motor ainda não calcula')
+          await abrir(page, `${view.path}/${pai.id}`)
+          await page.getByRole('button', { name: d.label, exact: true }).first().click()
+          // expande as linhas da aba e, dentro de cada uma, os itens (cada nível tem o seu "Expandir Todos")
+          for (let nivel = 0; nivel < 3; nivel++) {
+            const botoes = page.getByRole('button', { name: 'Expandir Todos' }).locator('visible=true')
+            const q = await botoes.count()
+            if (q === 0) break
+            for (let i = q - 1; i >= 0; i--) await botoes.nth(i).click().catch(() => {})
+            await page.waitForTimeout(500)
+          }
+          const seletor = [...camposTela].map(c => `input[name="${nomeDoCampo(c)}"]`).join(', ')
+          await expect.poll(async () => (await page.locator(seletor).locator('visible=true').evaluateAll(els => els.map(e => (e as HTMLInputElement).value))).length, { message: 'os campos calculados aparecem na tela', timeout: 10_000 }).toBeGreaterThan(0)
+          // os totais são calculados na tela depois de carregar: espera até os valores do banco aparecerem
+          const conferir = async () => {
+            const naTela = (await page.locator(seletor).locator('visible=true').evaluateAll(els => els.map(e => (e as HTMLInputElement).value))).map(numeroDe)
+            const faltando = [...esperados]
+            for (const n of naTela) { const i = faltando.findIndex(e => Math.abs(e - n) < 0.006); if (i >= 0) faltando.splice(i, 1) }
+            return { faltando, naTela }
+          }
+          const limite = Date.now() + 15_000
+          let ultimo = await conferir()
+          while (ultimo.faltando.length > 0 && Date.now() < limite) { await page.waitForTimeout(500); ultimo = await conferir() }
+          if (ultimo.faltando.length > 0) {
+            const campos = await page.locator('main input:visible, main select:visible').evaluateAll(els => els.map(e => `${(e as HTMLInputElement).name || '?'}=${(e as HTMLInputElement).value}`))
+            throw new Error(`valores calculados pelo banco que a tela não mostra: ${ultimo.faltando.join(' | ')} (esperados: ${esperados.join(' | ')}; campos calculados na tela: ${ultimo.naTela.join(' | ') || 'nenhum'}; campos visíveis: ${campos.slice(0, 40).join(', ')})`)
           }
         })
       }
@@ -1041,6 +1190,9 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await abrir(page, view.path)
           await aguardarTela(page)
           await expect(page.locator('main img'), 'um cartão (imagem) por registro').toHaveCount(total)
+          // filtro de lista (ex.: categoria): só os registros do valor escolhido
+          const r = await filtrarPorLista(page, view)
+          if (r) await expect(page.locator('main img'), `filtrar por "${r.coluna}": só os registros do valor escolhido`).toHaveCount(r.esperado)
         })
       }
 
@@ -1052,6 +1204,15 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           const cartoes = await page.locator('main button[title="Detalhes"]').count()
           const mais = Number(/CARREGAR MAIS\s+(\d+)/i.exec(await page.locator('main').innerText())?.[1] ?? 0)
           expect(cartoes + mais, `cartões na tela (${cartoes}) + a carregar (${mais}) × registros da tabela`).toBe(total)
+          // cada cartão tem as ações Editar e Detalhes
+          if (cartoes > 0) expect(await page.locator('main [title="Editar"]').count(), 'ação Editar nos cartões').toBeGreaterThan(0)
+          // filtro de lista (ex.: projeto): os cartões que sobram são os do valor escolhido
+          const r = await filtrarPorLista(page, view)
+          if (r) {
+            const c2 = await page.locator('main button[title="Detalhes"]').count()
+            const m2 = Number(/CARREGAR MAIS\s+(\d+)/i.exec(await page.locator('main').innerText())?.[1] ?? 0)
+            expect(c2 + m2, `filtrar por "${r.coluna}": só os cartões do valor escolhido`).toBe(r.esperado)
+          }
         })
       }
 
@@ -1073,6 +1234,17 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           await page.locator('button[title="Atualizar Dados"], button:has-text("Atualizar Dados")').first().click()
           await page.waitForLoadState('networkidle').catch(() => {})
           await expect(page.getByText(/Application error|Erro ao carregar/i)).toHaveCount(0)
+          // filtrar por uma lista (ex.: cliente com registros) não deixa a tela com erro
+          const lista = page.locator('main select').first()
+          if (await lista.count()) {
+            const opcao = (await lista.locator('option').evaluateAll(os => os.map(o => (o as HTMLOptionElement).value).filter(v => v !== '')))[0]
+            if (opcao) {
+              await lista.selectOption(opcao)
+              await page.getByRole('button', { name: 'Pesquisar' }).first().click()
+              await page.waitForLoadState('networkidle').catch(() => {})
+              await expect(page.getByText(/Application error|Erro ao carregar/i), 'filtrar a timeline por uma lista não dá erro').toHaveCount(0)
+            }
+          }
         })
       }
 
@@ -1219,6 +1391,14 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
             if (!esp) continue
             expect.soft(await conferirNaTela(page, f, esp), 'campo mostrado ao reabrir').toBeNull()
           }
+          // telas por tipo (galeria, mapa mental, gantt, kanban, mapa): o registro criado aparece na própria tela
+          const marcadorCampo = campoMarcador(view)
+          if (MOSTRAM_TEXTO.includes(view.logicType) && marcadorCampo && estado.marcador) {
+            await abrir(page, view.path)
+            await aguardarTela(page)
+            await filtrarPeloMarcador(page, view, marcadorCampo.column, estado.marcador)
+            await expect(page.getByText(estado.marcador).first(), `o registro criado (${estado.marcador}) aparece na tela (${view.logicType})`).toBeVisible({ timeout: 15_000 })
+          }
         })
       }
 
@@ -1254,6 +1434,24 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
           for (const f of camposDeTipo(view)) {
             const esp = estado.preenchidos[f.column]
             if (esp) expect.soft(conferirNoBanco(f, esp, linha[f.column.toLowerCase()]), 'campo depois da edição').toBeNull()
+          }
+          // a hora de um campo de data e hora continua a mesma depois de salvar a edição de outro campo
+          await abrir(page, `${view.path}/${estado.id}`)
+          for (const f of camposDeTipo(view)) {
+            const esp = estado.preenchidos[f.column]
+            if (esp?.tipo === 'data-hora') expect.soft(await conferirNaTela(page, f, esp), 'a hora é preservada ao editar outro campo').toBeNull()
+          }
+          // caixa de marcar: desmarcar e salvar grava falso, e o registro reabre desmarcado
+          const bool = camposDeTipo(view).find(f => estado.preenchidos[f.column]?.tipo === 'bool' && !f.readOnly)
+          if (bool) {
+            await page.locator(`[name="${nomeDoCampo(bool.column)}"]`).first().uncheck()
+            await page.getByRole('button', { name: 'Salvar Alterações' }).first().click()
+            const falso: Preenchido = { tipo: 'bool', esperado: 'false' }
+            await expect.poll(async () => /^(f|false|0)$/i.test((await lerLinha(view, view.primaryKey, estado.id!, { [bool.column]: falso }))[bool.column.toLowerCase()] ?? ''), { message: `desmarcar "${bool.label}" e salvar grava falso no banco`, timeout: 15_000 }).toBe(true)
+            estado.preenchidos[bool.column] = falso
+            gravarEstado(view.slug, estado)
+            await abrir(page, `${view.path}/${estado.id}`)
+            expect(await page.locator(`[name="${nomeDoCampo(bool.column)}"]`).first().isChecked(), `"${bool.label}" reabre desmarcado`).toBe(false)
           }
         })
       }
@@ -1418,6 +1616,63 @@ linhas de "${sd.table}" do pedido ${novoId} (antes: ${antesModal.size}): ${JSON.
                 exercitado.push('lixeira do item')
               }
             }
+
+            // a própria linha da aba (ex.: o pedido do cliente): editar um campo e excluir uma linha, e o Salvar da tela grava
+            const salvarTelaLinha = () => page.getByRole('button', { name: 'Salvar Alterações' }).last().click()
+            const abrirLinhas = async () => {
+              await abrir(page, `${view.path}/${estado.id}`)
+              await page.getByRole('button', { name: d.label, exact: true }).first().click()
+              await page.locator('button[title="Expandir / Recolher"]').locator('visible=true').first().click()
+            }
+            const valorDaLinha = async (f: ManifestField, id: string) => String((await consultar(`select "${f.column}"::text as v from "${d.table}" where "${pkFilho}"::text = $1`, [id]))[0]?.v ?? '')
+            // texto e número primeiro: trocar a opção de uma lista pode escolher a mesma que já estava
+            const porTipo = [...editaveis].sort((a, b) => Number(/select/i.test(a.componentType || '') || !!a.options?.length) - Number(/select/i.test(b.componentType || '') || !!b.options?.length))
+
+            // 4) editar a linha da aba: troca um campo e o Salvar da tela grava
+            await abrirLinhas()
+            let editadoLinha: [ManifestField, Preenchido] | null = null
+            for (const f of porTipo) { const p = await preencherCampo(page, f, 70, limites, undefined, ultimo); if (p) { editadoLinha = [f, p]; break } }
+            if (!editadoLinha) motivos.push(`aba "${d.label}": nenhum campo da linha pôde ser alterado`)
+            else {
+              await salvarTelaLinha()
+              const [fe, pe] = editadoLinha
+              await expect.poll(async () => conferirNoBanco(fe, pe, await valorDaLinha(fe, novoId)), { message: `editar a linha da aba "${d.label}": "${fe.label}" alterado aparece no banco`, timeout: 15_000 }).toBeNull()
+              exercitado.push(`editar linha da aba ${d.label}`)
+            }
+
+            // 5) excluir uma linha da aba: acrescenta uma segunda linha e a exclui pela lixeira da linha; a primeira (e os itens dela) continua
+            await abrir(page, `${view.path}/${estado.id}`)
+            await page.getByRole('button', { name: d.label, exact: true }).first().click()
+            const antesLinhas = await idsDoPai()
+            const maisLinha = page.locator('button[title="Adicionar"]').locator('visible=true').first()
+            let segundoId = ''
+            if (await maisLinha.count()) {
+              await maisLinha.click()
+              let m = 90
+              for (const f of editaveis) await preencherCampo(page, f, ++m, limites, undefined, ultimo)
+              await salvarTelaLinha()
+              await expect.poll(async () => (await idsDoPai()).size, { message: `segunda linha na aba "${d.label}" aparece no banco`, timeout: 15_000 }).toBe(antesLinhas.size + 1)
+              segundoId = [...(await idsDoPai())].find(id => !antesLinhas.has(id))!
+              anotarCriado(d.table, pkFilho, segundoId)
+              estado.filhos.push({ tabela: d.table, pk: pkFilho, fk: d.foreignKey, id: segundoId })
+              gravarEstado(view.slug, estado)
+              await abrir(page, `${view.path}/${estado.id}`)
+              await page.getByRole('button', { name: d.label, exact: true }).first().click()
+              const lixeiras = page.locator('button[title="Excluir"]').locator('visible=true')
+              if (!(await lixeiras.count())) motivos.push(`aba "${d.label}": sem a lixeira da linha (Excluir)`)
+              else {
+                await lixeiras.last().click() // a segunda linha é a última da aba
+                await confirmarExclusao(page)
+                await salvarTelaLinha()
+                await expect.poll(async () => (await idsDoPai()).has(segundoId), { message: `excluir a linha da aba "${d.label}" tira ela do banco`, timeout: 15_000 }).toBe(false)
+                riscarCriado(d.table, segundoId)
+                estado.filhos = (estado.filhos ?? []).filter(x => x.id !== segundoId)
+                gravarEstado(view.slug, estado)
+                expect((await idsDoPai()).has(novoId), `aba "${d.label}": a outra linha continua`).toBe(true)
+                expect(await registroExiste(view, estado.id!), 'o registro pai continua').toBe(true)
+                exercitado.push(`excluir linha da aba ${d.label}`)
+              }
+            } else motivos.push(`aba "${d.label}": sem o botão + para a segunda linha`)
           }
           test.skip(feitas === 0, motivos.join(' | ') || 'nenhuma aba de detalhe pôde receber uma linha')
           // passou, mas parte das abas não foi exercitada: o painel mostra o aviso (não passa em silêncio)
@@ -1431,6 +1686,30 @@ linhas de "${sd.table}" do pedido ${novoId} (antes: ${antesModal.size}): ${JSON.
           test.skip(!estado?.id, 'o cadastro anterior não criou o registro')
           const contar = async () => Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n)
           const antes = await contar()
+          if (view.logicType !== 'pesquisa_cadastro') {
+            // tela por tipo: exclui pelo botão Excluir da própria tela, quando ela tem um; senão o motor remove pelo banco (e avisa)
+            const marcadorCampo = campoMarcador(view)
+            let pelaTela = false
+            if (marcadorCampo && estado.marcador) {
+              await abrir(page, view.path)
+              await aguardarTela(page)
+              await filtrarPeloMarcador(page, view, marcadorCampo.column, estado.marcador)
+              // o menor bloco que tem o texto do registro e um botão Excluir; só vale com UM botão e um link com o id do registro (a prova de que o bloco é dele, não de outro)
+              const bloco = page.getByText(estado.marcador).first().locator('xpath=ancestor::*[.//button[@title="Excluir"]][1]')
+              if ((await bloco.count()) && (await bloco.locator('button[title="Excluir"]').count()) === 1 && (await bloco.locator(`a[href*="${estado.id}"]`).count()) > 0) { await bloco.locator('button[title="Excluir"]').click(); await confirmarExclusao(page); pelaTela = true }
+            }
+            if (!pelaTela) {
+              test.info().annotations.push({ type: 'aviso', description: `a tela (${view.logicType}) não tem botão Excluir para o registro criado: o motor o removeu pelo banco` })
+              for (const f of [...(estado.filhos ?? [])].reverse()) await consultar(`delete from "${f.tabela}" where "${f.pk}"::text = $1`, [f.id])
+              await consultar(`delete from "${view.table}" where "${view.primaryKey}"::text = $1`, [estado.id])
+            }
+            await expect.poll(async () => registroExiste(view, estado.id!), { message: 'o registro some do banco', timeout: 15_000 }).toBe(false)
+            expect(await contar(), 'só o registro criado pelo teste foi excluído').toBe(antes - 1)
+            for (const f of estado.filhos ?? []) riscarCriado(f.tabela, f.id)
+            riscarCriado(view.table, estado.id!)
+            gravarEstado(view.slug, undefined)
+            return
+          }
           await abrir(page, view.path)
           await aguardarLista(page)
           const linha = await acharLinha(page, estado.id!)
@@ -1625,10 +1904,20 @@ linhas de "${sd.table}" do pedido ${novoId} (antes: ${antesModal.size}): ${JSON.
               expect(await pag.getByText(/TOTAL:\s*\d+/i).count(), 'a tela bloqueada não mostra o total').toBe(0)
               await abrir(pag, `${view.path}/new`)
               if (marcadorCampo) expect(await pag.locator(`[name="${nomeDoCampo(marcadorCampo.column)}"]`).locator('visible=true').count(), 'o formulário não abre pelo endereço').toBe(0)
+              // as outras telas, sem restrição para o grupo, seguem liberadas: no menu e abrindo
+              const outra = manifest.views.find(v => v.slug !== view.slug && v.logicType === 'pesquisa_cadastro')
+              if (outra) {
+                expect(menu, `a tela sem restrição (${outra.path}) segue no menu do grupo`).toContain(outra.path)
+                await abrir(pag, outra.path)
+                await aguardarLista(pag)
+                expect(await pag.locator('thead th').count(), `a tela sem restrição (${outra.path}) abre e mostra a lista`).toBeGreaterThan(0)
+              }
             } else {
               expect(menu, 'o menu do grupo de leitura lista a tela').toContain(view.path)
               await aguardarLista(pag)
               expect(await totalMostrado(pag), 'a lista abre e mostra o total').not.toBeNull()
+              // sem regra por linha neste caso de uso, o grupo de leitura enxerga todas as linhas que já existem
+              if (!regraDeLinha(view)) expect(await totalMostrado(pag), 'sem regra por linha: o total é o da tabela').toBe(Number((await consultar(`select count(*)::int n from "${view.table}"`))[0].n))
               expect(await pag.getByRole('link', { name: 'Novo Registro' }).locator('visible=true').count(), '"Novo Registro" escondido na leitura').toBe(0)
               expect(await pag.locator('main [title="Editar"]').locator('visible=true').count(), 'ícone Editar escondido na leitura').toBe(0)
               expect(await pag.locator('main [title="Excluir"]').locator('visible=true').count(), 'ícone Excluir escondido na leitura').toBe(0)
