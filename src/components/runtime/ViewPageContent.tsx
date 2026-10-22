@@ -24,6 +24,8 @@ import AnalyticsDashboard from './AnalyticsDashboard'
 const ViewContainer = dynamic(() => import('./ViewContainer'), { ssr: false })
 
 interface ViewPageContentProps {
+  /** a tela abriu por um domínio próprio (white-label): o endereço é /<tela>, sem /<workspace>/<projeto>, mas continua sendo o app da plataforma (com o túnel) */
+  isCustomDomain?: boolean
   workspace: any
   project: any
   viewName: string
@@ -89,6 +91,7 @@ interface ViewPageContentProps {
 }
 
 export default function ViewPageContent({
+  isCustomDomain = false,
   workspace,
   project,
   viewName,
@@ -244,7 +247,8 @@ export default function ViewPageContent({
 
   const isNestedRoute =
     typeof window !== 'undefined' && window.location.pathname.startsWith(`/${workspace?.slug}/${project?.slug}`)
-  const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || !isNestedRoute
+  // por domínio próprio o endereço não tem /<workspace>/<projeto>, mas não é um app exportado: usa o túnel como no endereço da plataforma
+  const isEjectedApp = process.env.NEXT_PUBLIC_IS_EJECTED_APP === 'true' || (!isNestedRoute && !isCustomDomain)
 
   const { tunnelChannel, isTunnelReady, supabase } = useTunnelConnection({
     project,

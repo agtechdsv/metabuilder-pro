@@ -1093,6 +1093,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           </div>
         )}
         <ViewPageContent 
+          isCustomDomain={isCustomDomain}
           workspace={workspace}
           project={{ ...publicProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels }}
           canExport={canExport}
