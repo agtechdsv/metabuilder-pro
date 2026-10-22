@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { registroDns } from '@/lib/domainDns'
 import { Globe, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
@@ -206,15 +207,15 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                       <div className="bg-white dark:bg-neutral-900 rounded-lg p-3 font-mono text-xs text-neutral-700 dark:text-neutral-300 grid grid-cols-3 gap-2">
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_type', 'TIPO')}</span>
-                          <strong>CNAME</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain).tipo}</strong>
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_name', 'NOME')}</span>
-                          <strong>{selectedTarget.custom_domain.startsWith('www.') ? 'www' : '@'}</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain).nome}</strong>
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_value', 'VALOR/DESTINO')}</span>
-                          <strong>cname.vercel-dns.com</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain).valor}</strong>
                         </div>
                       </div>
                     </div>
