@@ -3,13 +3,15 @@
  * destino (pasta ou ZIP) que ele indicou. As regras de cada tipo estão em deliveryPackage.ts; a compilação, em deliveryBuild.ts.
  */
 import type { DeliveryFiles, DeliveryKind, DeliveryOptions } from './delivery'
-import { DELIVERY_KINDS, detectProjectInfo, filesForCopyKind, hasDockerPack, kindFolder } from './deliveryPackage'
+import { DELIVERY_KINDS, deliveryDestination, deliveryFolderName, detectProjectInfo, filesForCopyKind, hasDockerPack, kindFolder } from './deliveryPackage'
 import { buildCompiledPackage, runPowerShell, type BuildCtx, type BuildLabels } from './deliveryBuild'
 import { confirmAndClean, pickDestinationFolder, pickDestinationZip, rememberDeliveryFolder, writeFilesToFolder, writeFilesToZip, type DeliveryLabels } from './deliveryIO'
 
 export interface RunLabels extends DeliveryLabels, BuildLabels {
   needSync: string
   noKind: string
+  /** título do seletor da pasta-base */
+  pickBase: string
 }
 
 export interface RunCtx {
@@ -53,7 +55,14 @@ export async function deliverProject(raw: DeliveryFiles, opts: DeliveryOptions, 
   if (kinds.includes('docker') && !hasDockerPack(raw)) throw new Error(ctx.labels.needSync)
   const compiled = kinds.includes('compiled')
 
-  const destination = opts.format === 'zip' ? await pickDestinationZip(`${ctx.folderName || ctx.slug || 'app'}-entrega.zip`) : await pickDestinationFolder()
+  const nome = deliveryFolderName(ctx.folderName, ctx.slug)
+  let destination: string | null
+  if (opts.format === 'zip') destination = await pickDestinationZip(`${nome}-entrega.zip`)
+  else {
+    // escolhe só a pasta-base; a entrega vai para <base>\<nome da pasta do Sincronizar>
+    const base = await pickDestinationFolder(ctx.labels.pickBase)
+    destination = base ? deliveryDestination(base, nome) : null
+  }
   if (!destination) return null
   if (opts.format === 'folder' && opts.cleanBefore && !(await confirmAndClean(destination, ctx.labels))) return null
 

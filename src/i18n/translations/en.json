@@ -5137,7 +5137,8 @@
     "need_sync": "The project folder does not have the deployment files yet (Dockerfile and production compose). Sync again to receive them.",
     "no_kind": "Pick at least one delivery type.",
     "name_hint_zip": "The file is suggested as {name}-entrega.zip.",
-    "name_hint_folder": "Tip: use or create a folder named {name}, the same name as the Sync folder."
+    "name_hint_folder": "You choose the base folder and the delivery goes to the {name} subfolder, the same name as the Sync folder (created if missing).",
+    "pick_base": "Select base folder"
   },
   "ide_folder": {
     "title": "Project folder in use",

@@ -67,6 +67,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
     buildFailed: t('delivery.build_failed', 'A compilação falhou'),
     needSync: t('delivery.need_sync', 'A pasta do projeto ainda não tem os arquivos de subida (Dockerfile e compose de produção). Use Sincronizar de novo para recebê-los.'),
     noKind: t('delivery.no_kind', 'Escolha pelo menos um tipo de entrega.'),
+    pickBase: t('delivery.pick_base', 'Selecionar pasta base'),
   }
   const stepLabels = {
     reading: t('delivery.step_reading', 'Lendo os arquivos da pasta do projeto...'),
@@ -159,7 +160,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
             <p className="mt-2 text-[11px] text-neutral-400">
               {(opts.format === 'zip'
                 ? t('delivery.name_hint_zip', 'O arquivo é sugerido como {name}-entrega.zip.')
-                : t('delivery.name_hint_folder', 'Dica: use ou crie uma pasta chamada {name}, o mesmo nome da pasta do Sincronizar.')).replace('{name}', folderKeyOf(target))}
+                : t('delivery.name_hint_folder', 'Você escolhe a pasta base e a entrega vai para a subpasta {name}, o mesmo nome da pasta do Sincronizar (criada se não existir).')).replace('{name}', folderKeyOf(target))}
             </p>
           </section>
 

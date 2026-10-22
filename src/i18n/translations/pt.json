@@ -5137,7 +5137,8 @@
     "need_sync": "A pasta do projeto ainda não tem os arquivos de subida (Dockerfile e compose de produção). Use Sincronizar de novo para recebê-los.",
     "no_kind": "Escolha pelo menos um tipo de entrega.",
     "name_hint_zip": "O arquivo é sugerido como {name}-entrega.zip.",
-    "name_hint_folder": "Dica: use ou crie uma pasta chamada {name}, o mesmo nome da pasta do Sincronizar."
+    "name_hint_folder": "Você escolhe a pasta base e a entrega vai para a subpasta {name}, o mesmo nome da pasta do Sincronizar (criada se não existir).",
+    "pick_base": "Selecionar pasta base"
   },
   "ide_folder": {
     "title": "Pasta do projeto em uso",

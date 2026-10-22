@@ -31,6 +31,23 @@ export function kindFolder(kind: DeliveryKind, kinds: DeliveryKind[]): string {
   return kind === 'source' ? 'codigo-fonte' : kind === 'docker' ? 'docker' : 'pacote-compilado'
 }
 
+/** Nome da subpasta da Entrega: o da pasta do Sincronizar (se for um nome válido) ou o slug limpo. */
+export function deliveryFolderName(folderName: string | undefined, slug: string): string {
+  const ok = (n: string) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(n) && !n.includes('..') && !n.endsWith('.') && n.length <= 60
+  const a = (folderName || '').trim()
+  if (ok(a)) return a
+  const b = (slug || '').trim().replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[^A-Za-z0-9]+/, '').replace(/[.-]+$/, '')
+  return ok(b) ? b : 'app'
+}
+
+/** Pasta de destino da Entrega: <pasta-base>\<nome>; se a pasta escolhida já tem esse nome, grava nela mesma (sem repetir o nome dentro). */
+export function deliveryDestination(base: string, name: string): string {
+  const b = base.replace(/[\\/]+$/, '')
+  const last = b.split(/[\\/]/).pop() || ''
+  if (last.toLowerCase() === name.toLowerCase()) return b
+  return `${b}${b.includes('\\') ? '\\' : '/'}${name}`
+}
+
 export const kindLabel = (kind: DeliveryKind): string => (kind === 'source' ? 'Código-fonte limpo' : kind === 'docker' ? 'Pacote Docker' : 'Pacote compilado (sem Docker)')
 
 /** Os arquivos de um tipo que é só cópia (source e docker), já sem arquivos de trabalho nem segredos. */

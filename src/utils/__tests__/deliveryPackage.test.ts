@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { DeliveryFiles } from '../delivery'
 import { ASSEMBLE_NEXT } from '../deliveryBuild'
-import { compiledReadme, detectProjectInfo, filesForCopyKind, hasDockerPack, isDeployFile, kindFolder, startScripts } from '../deliveryPackage'
+import { compiledReadme, deliveryDestination, deliveryFolderName, detectProjectInfo, filesForCopyKind, hasDockerPack, isDeployFile, kindFolder, startScripts } from '../deliveryPackage'
 
 const nodeFiles = (): DeliveryFiles => new Map<string, Uint8Array | string>([
   ['package.json', '{}'], ['app/page.tsx', 'x'], ['.env.local', 'DATABASE_URL="postgres://u:p@h:5432/db"\nMB_SESSION_SECRET="abc"\n'],
@@ -136,5 +136,26 @@ describe('Pacote compilado: montagem', () => {
   it('só o app Node leva scripts/ e db/ (tabelas de acesso)', () => {
     expect(ps).toContain("@('scripts', 'db')")
     expect(ASSEMBLE_NEXT('C:\b', 'C:\o', false)).not.toContain("@('scripts', 'db')")
+  })
+})
+
+describe('Entrega: pasta de destino dentro da pasta-base', () => {
+  const BS = String.fromCharCode(92)
+  it('cria <base>/<nome da pasta do Sincronizar>, com o separador da base', () => {
+    expect(deliveryDestination(`C:${BS}Users${BS}Ana${BS}Downloads`, 'vendas-ora-java')).toBe(`C:${BS}Users${BS}Ana${BS}Downloads${BS}vendas-ora-java`)
+    expect(deliveryDestination('/home/ana/entregas/', 'vendas-ora-java')).toBe('/home/ana/entregas/vendas-ora-java')
+    expect(deliveryDestination(`C:${BS}x${BS}y${BS}`, 'p')).toBe(`C:${BS}x${BS}y${BS}p`)
+  })
+
+  it('se a pasta escolhida já tem esse nome, grava nela mesma (sem repetir o nome)', () => {
+    expect(deliveryDestination(`C:${BS}Entregas${BS}Vendas-ORA-Java`, 'vendas-ora-java')).toBe(`C:${BS}Entregas${BS}Vendas-ORA-Java`)
+    expect(deliveryDestination(`C:${BS}Entregas${BS}vendas-ora-java${BS}`, 'vendas-ora-java')).toBe(`C:${BS}Entregas${BS}vendas-ora-java`)
+  })
+
+  it('o nome vem da pasta do Sincronizar; se não servir, do slug limpo; por último "app"', () => {
+    expect(deliveryFolderName('vendas-ora-java', 'vendas-ora')).toBe('vendas-ora-java')
+    expect(deliveryFolderName(undefined, 'vendas-ora')).toBe('vendas-ora')
+    expect(deliveryFolderName('a b/../c', 'Minha Loja!')).toBe('Minha-Loja')
+    expect(deliveryFolderName('', '***')).toBe('app')
   })
 })

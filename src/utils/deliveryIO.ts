@@ -111,9 +111,9 @@ export async function writeFilesToZip(files: DeliveryFiles, zipPath: string): Pr
 }
 
 /** Seletor de pasta de destino (libera a pasta para gravação). null = cancelado. */
-export async function pickDestinationFolder(): Promise<string | null> {
+export async function pickDestinationFolder(title?: string): Promise<string | null> {
   const { open } = await import('@tauri-apps/plugin-dialog')
-  const dir = await open({ directory: true, recursive: true })
+  const dir = await open({ directory: true, recursive: true, title })
   return dir && typeof dir === 'string' ? dir : null
 }
 
