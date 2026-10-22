@@ -784,7 +784,7 @@ export function IDEHeader({
 
   // Pasta de outra pilha: sincronizar aqui misturaria Node e Java. Oferece uma pasta nova (principal), limpar a atual ou cancelar.
   const [mismatch, setMismatch] = useState<{ current: Pilha; wanted: Pilha; suggestion: string } | null>(null)
-  const [newFolderFor, setNewFolderFor] = useState<{ wanted: Pilha; suggestion: string } | null>(null)
+  const [newFolderFor, setNewFolderFor] = useState<{ wanted: Pilha; suggestion: string; first?: boolean } | null>(null)
   const { toast } = useToast()
 
   const confirmSync = async () => {
@@ -795,6 +795,13 @@ export function IDEHeader({
         const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
         setIsSyncModalOpen(false)
         setMismatch({ current, wanted, suggestion: suggestFolderName(target.slug, wanted, [...taken, folderKeyOf(target)]) })
+        return
+      }
+      // primeira sincronização numa pasta vazia com o nome puro do projeto: propõe <projeto>-<pilha> (o dev pode editar ou manter o nome)
+      if (current === 'vazia' && folderKeyOf(target).toLowerCase() === target.slug.toLowerCase()) {
+        const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
+        setIsSyncModalOpen(false)
+        setNewFolderFor({ wanted, first: true, suggestion: suggestFolderName(target.slug, wanted, taken.filter(n => n.toLowerCase() !== target.slug.toLowerCase())) })
         return
       }
     }
@@ -1240,7 +1247,9 @@ export function IDEHeader({
           initialName={newFolderFor.suggestion}
           onCancel={() => setNewFolderFor(null)}
           onConfirm={async (name) => {
+            const first = newFolderFor.first
             setNewFolderFor(null); setMismatch(null)
+            if (first && name === folderKeyOf(target)) { runSync(); return }
             await onSwitchFolder(name)
             toast(t('ide_folder.after_switch', 'Agora na pasta {name}. Clique em Sincronizar para continuar.').replace('{name}', name), 'success')
             setIsSyncModalOpen(true)
