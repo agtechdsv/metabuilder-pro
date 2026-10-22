@@ -12,6 +12,8 @@
     "urls": [
       "https://metabuilderpro.com",
       "https://metabuilderpro.com/**",
+      "https://www.metabuilderpro.com",
+      "https://www.metabuilderpro.com/**",
       "http://localhost:3000",
       "http://localhost:3000/**"
     ]
