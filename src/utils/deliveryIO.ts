@@ -3,6 +3,7 @@
  * Pastas fora da pasta pessoal só são acessíveis depois de escolhidas no seletor de pastas do sistema (recursive: true libera a pasta).
  */
 import { DELIVERY_EXCLUDED_DIRS, type DeliveryFiles } from './delivery'
+import { listProjectFolders, type PilhaDaPasta } from './projectFolders'
 
 const lsGet = (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }
 const lsSet = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* sem armazenamento */ } }
@@ -38,15 +39,24 @@ export async function folderHasDockerPack(dir: string): Promise<boolean> {
 export const lastDeliveryFolder = (projectId: string): string => lsGet(`mb_project_delivery_dir_${projectId}`)
 export const rememberDeliveryFolder = (projectId: string, dir: string) => lsSet(`mb_project_delivery_dir_${projectId}`, dir)
 
-export interface AppFolderSuggestion { kind: 'sync' | 'delivery'; dir: string }
+export interface AppFolderSuggestion { kind: 'sync' | 'delivery'; dir: string; /** nome da pasta do Sincronizar (ex.: vendas-pg-node) */ name?: string; stack?: PilhaDaPasta }
 
-/** Pastas do projeto que têm um app pronto para testar: a do Sincronizar e a da última Entrega. */
-export async function suggestAppFolders(projectId: string, slug: string): Promise<AppFolderSuggestion[]> {
+/**
+ * Pastas do projeto que têm um app pronto para testar: todas as do Sincronizar (<projeto>-<pilha>, achadas pelo marcador do projeto) e a da última Entrega.
+ * A pasta preferida (a que o dev usa na IDE para este projeto) vem primeiro; é a que o painel de testes escolhe sozinho.
+ */
+export async function suggestAppFolders(projectId: string, slug: string, preferred?: string): Promise<AppFolderSuggestion[]> {
   const out: AppFolderSuggestion[] = []
   try {
-    const sync = await syncFolderPath(slug)
-    if (await folderHasApp(sync)) out.push({ kind: 'sync', dir: sync })
+    const [{ homeDir, join }, pastas] = await Promise.all([import('@tauri-apps/api/path'), listProjectFolders(projectId, slug)])
+    const base = await join(await homeDir(), 'AGTech', 'MetaBuilderPRO')
+    const candidatas = pastas.some(p => p.name === slug) || pastas.length > 0 ? pastas : [{ name: slug, stack: 'desconhecida' as PilhaDaPasta }]
+    for (const p of candidatas) {
+      const dir = await join(base, p.name)
+      if (await folderHasApp(dir)) out.push({ kind: 'sync', dir, name: p.name, stack: p.stack })
+    }
   } catch { /* fora do desktop */ }
+  if (preferred) out.sort((x, y) => Number(y.name === preferred) - Number(x.name === preferred))
   const last = lastDeliveryFolder(projectId)
   if (last && !out.some(s => s.dir.toLowerCase() === last.toLowerCase()) && await folderHasApp(last)) out.push({ kind: 'delivery', dir: last })
   return out

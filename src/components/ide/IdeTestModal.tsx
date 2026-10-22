@@ -14,6 +14,8 @@ import { buildCopyScript, buildDbUrl, createDbCopy, dbKey, dbTipoDoProjeto, appH
 import { IdeTestDb, type DbBusy, type DbResult } from './IdeTestDb'
 import { artifactsDirFor, deleteRuns, historyDir, listRuns, readEvidenceBlob, readEvidenceDataUri, saveRun } from '@/utils/testHistory'
 import { suggestAppFolders, type AppFolderSuggestion } from '@/utils/deliveryIO'
+import { currentDevIdentity } from '@/utils/projectIdentity'
+import { getPickedFolder } from '@/utils/projectFolders'
 import { CARGA_MAX_USERS, cargaGrava, describeName, isSupportedView, normalizarCarga, planTitle, planView, type CargaModo, type CargaOpcoes, type TestType } from '@/lib/testing/plan'
 import type { TestManifest, ManifestView } from '@/lib/testing/manifestTypes'
 import type { TestEvent, TestStatus } from '@/lib/testing/results'
@@ -138,12 +140,15 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   // lembra a pasta do app exportado (de cada projeto)
   useEffect(() => {
     if (!isOpen) return
+    // só uma escolha manual (botão da pasta ou um dos atalhos) fica fixa; sem ela, a pasta sugerida (<projeto>-<pilha> do Sincronizar) vale a cada abertura
     const saved = lsGet(`mb_tests_app_dir_${projectId}`)
+    const manual = lsGet(`mb_tests_app_dir_manual_${projectId}`) === '1' && !!saved
     setAppDir(saved); setAppDirAuto(false)
     if (isTauri() && projectSlug) {
-      suggestAppFolders(projectId, folderKeyOf(target) || projectSlug).then(list => {
+      // a pasta preferida: a que este login escolheu para o projeto na IDE (seletor de pasta) ou a aberta agora
+      currentDevIdentity().then(dev => getPickedFolder(dev?.id ?? 'anon', projectId) || folderKeyOf(target)).catch(() => folderKeyOf(target)).then(preferida => suggestAppFolders(projectId, projectSlug, preferida || undefined)).then(list => {
         setFolderSuggestions(list)
-        if (!saved && list.length > 0) { setAppDir(list[0].dir); setAppDirAuto(true) }
+        if (!manual && list.length > 0) { setAppDir(list[0].dir); setAppDirAuto(true); lsSet(`mb_tests_app_dir_${projectId}`, list[0].dir) }
       }).catch(() => setFolderSuggestions([]))
     }
     setDbResult(null)
@@ -352,9 +357,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   const pick = async () => {
     const dir = await pickFolder()
     if (!dir) return
-    setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir)
+    setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir); lsSet(`mb_tests_app_dir_manual_${projectId}`, '1')
   }
-  const useSuggested = (dir: string) => { setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir) }
+  const useSuggested = (dir: string) => { setAppDir(dir); setAppDirAuto(false); lsSet(`mb_tests_app_dir_${projectId}`, dir); lsSet(`mb_tests_app_dir_manual_${projectId}`, '1') }
 
   // ---- histórico
   const loadHistory = useCallback(async () => {
@@ -878,7 +883,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                         {folderSuggestions.map(sg => (
                           <button key={sg.dir} type="button" disabled={running || sg.dir === appDir} onClick={() => useSuggested(sg.dir)} title={sg.dir}
                             className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${sg.dir === appDir ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-200' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>
-                            {sg.kind === 'sync' ? t('delivery.tests_use_sync', 'Pasta do Sincronizar') : t('delivery.tests_use_delivery', 'Última Entrega')}
+                            {sg.kind === 'sync' ? `${sg.name || t('delivery.tests_use_sync', 'Pasta do Sincronizar')}${sg.stack === 'node' ? ' · Node' : sg.stack === 'java' ? ' · Java' : ''}` : t('delivery.tests_use_delivery', 'Última Entrega')}
                           </button>
                         ))}
                         {appDirAuto && <span className="text-[10px] text-neutral-500">{t('delivery.tests_auto', 'Pasta do projeto escolhida automaticamente.')}</span>}
