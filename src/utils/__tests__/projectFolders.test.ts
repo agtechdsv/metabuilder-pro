@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { otherStack, ownerOfFolder, stackOfEntries, suggestFolderName, validateFolderName } from '../projectFolders'
+import { otherStack, ownerOfFolder, stackOfEntries, stackOfName, suggestFolderName, validateFolderName } from '../projectFolders'
 
 describe('pasta do projeto: nome', () => {
   it('aceita nomes normais', () => {
@@ -55,6 +55,17 @@ describe('pasta do projeto: que pilha tem', () => {
 
   it('Java vem antes de Node (o frontend do Java também tem package.json, mas dentro de frontend/)', () => {
     expect(stackOfEntries(['backend', 'frontend', 'package.json'])).toBe('java')
+  })
+})
+
+describe('pasta do projeto: pilha pelo nome', () => {
+  it('lê o sufixo do nome, com ou sem número', () => {
+    expect(stackOfName('vendas-ora-java')).toBe('java')
+    expect(stackOfName('vendas-ora-node')).toBe('node')
+    expect(stackOfName('Vendas-PG-Java-2')).toBe('java')
+    expect(stackOfName('vendas-ora')).toBeNull()
+    expect(stackOfName('javascript')).toBeNull()
+    expect(stackOfName('meu-nodemon')).toBeNull()
   })
 })
 

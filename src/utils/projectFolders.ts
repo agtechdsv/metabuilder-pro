@@ -23,6 +23,12 @@ export function validateFolderName(raw: string): FolderNameError | null {
   return null
 }
 
+/** A pilha que o NOME da pasta anuncia (vendas-ora-java → java); null se não anuncia nenhuma. */
+export function stackOfName(name: string): Pilha | null {
+  const m = /-(node|java)(-\d+)?$/i.exec(name.trim())
+  return m ? (m[1].toLowerCase() as Pilha) : null
+}
+
 export const otherStack = (s: PilhaDaPasta): Pilha | null => (s === 'node' ? 'java' : s === 'java' ? 'node' : null)
 
 /**
@@ -97,6 +103,23 @@ export async function writeProjectMarker(folderName: string, projectId: string, 
     if (await lerMarcador(dir)) return
     await fs.writeTextFile(await join(dir, '.git', 'mb-project.json'), JSON.stringify({ projectId, slug, createdAt: new Date().toISOString() }))
   } catch { /* sem o .git ainda ou sem permissão: o marcador é uma proteção, não uma exigência */ }
+}
+
+/** A pasta existe no disco? null = não deu para saber (fora do desktop ou sem permissão): quem chama não decide nada com base nisso. */
+export async function folderExists(folderName: string): Promise<boolean | null> {
+  try {
+    const { exists } = await import('@tauri-apps/plugin-fs')
+    const { join } = await import('@tauri-apps/api/path')
+    return await exists(await join(await baseFolderPath(), folderName))
+  } catch { return null }
+}
+
+/** Cria a pasta (vazia) se ainda não existe: a escolha de uma pasta nova precisa existir no disco para não ser tomada por apagada. */
+export async function ensureFolder(folderName: string): Promise<void> {
+  try {
+    const fs = await import('@tauri-apps/plugin-fs')
+    await fs.mkdir(`${BASE_REL_DIR}/${folderName}`, { baseDir: fs.BaseDirectory.Home, recursive: true })
+  } catch { /* a IDE cria a pasta ao abrir, como sempre */ }
 }
 
 export async function detectFolderStack(folderName: string): Promise<PilhaDaPasta> {

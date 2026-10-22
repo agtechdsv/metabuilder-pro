@@ -7,7 +7,7 @@
  * e oferece uma pasta própria (<slug>--<início do id do login>).
  */
 import type { IDETargetLike } from './folderKey'
-import { getPickedFolder } from './projectFolders'
+import { folderExists, getPickedFolder, setPickedFolder } from './projectFolders'
 
 export interface DevIdentity { id: string; email: string; name: string }
 
@@ -92,7 +92,11 @@ export async function claimFolder(folderKey: string, dev: DevIdentity): Promise<
 export async function resolveFolderKey(target: IDETargetLike, dev: DevIdentity | null, labels: { title: string; message: (ownerEmail: string) => string; own: string; shared: string }): Promise<string> {
   // a pasta que este login escolheu para o projeto (seletor de pasta) vale mais que qualquer regra
   const escolhida = getPickedFolder(dev?.id ?? 'anon', target.id)
-  if (escolhida) return escolhida
+  if (escolhida) {
+    // a pasta escolhida foi apagada à mão: esquece a escolha em vez de recriá-la vazia ao abrir a IDE
+    if ((await folderExists(escolhida)) !== false) return escolhida
+    setPickedFolder(dev?.id ?? 'anon', target.id, '')
+  }
   if (!dev) return target.slug
   const owner = await readFolderOwner(target.slug)
   const prev = lsGet(choiceKey(dev.id, target.id)) as 'own' | 'shared' | ''

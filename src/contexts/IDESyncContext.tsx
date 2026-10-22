@@ -20,7 +20,7 @@ import { BaseDirectory } from '@tauri-apps/api/path'
 import { IDEModal } from '@/components/ide/IDEModal'
 import { folderKeyOf } from '@/utils/folderKey'
 import { claimFolder, currentDevIdentity, resolveFolderKey } from '@/utils/projectIdentity'
-import { setPickedFolder, writeProjectMarker } from '@/utils/projectFolders'
+import { ensureFolder, setPickedFolder, writeProjectMarker } from '@/utils/projectFolders'
 
 export interface IDETarget {
   type: 'project' | 'workspace'
@@ -388,6 +388,7 @@ export function IDESyncProvider({ children }: { children: ReactNode }) {
   const switchFolder = async (name: string) => {
     if (!target) return
     const dev = await currentDevIdentity()
+    await ensureFolder(name)
     setPickedFolder(dev?.id ?? 'anon', target.id, name)
     await openIDEHere({ ...target, folderKey: name }, { detached: isDetached })
   }

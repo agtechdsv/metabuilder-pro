@@ -17,7 +17,7 @@ import { IDEFolderSwitcher, NewFolderDialog, StackMismatchDialog } from './IDEFo
 import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
-import { detectFolderStack, listProjectFolders, suggestFolderName, type Pilha } from '@/utils/projectFolders'
+import { detectFolderStack, listProjectFolders, stackOfName, suggestFolderName, type Pilha } from '@/utils/projectFolders'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 const GEN_LANGUAGES = [
@@ -797,11 +797,14 @@ export function IDEHeader({
         setMismatch({ current, wanted, suggestion: suggestFolderName(target.slug, wanted, [...taken, folderKeyOf(target)]) })
         return
       }
-      // primeira sincronização numa pasta vazia com o nome puro do projeto: propõe <projeto>-<pilha> (o dev pode editar ou manter o nome)
-      if (current === 'vazia' && folderKeyOf(target).toLowerCase() === target.slug.toLowerCase()) {
+      // pasta vazia com o nome puro do projeto, ou cujo nome anuncia outra pilha (vendas-ora-node para sincronizar Java): propõe <projeto>-<pilha>
+      // (o dev pode editar ou manter o nome)
+      const nomeAtual = folderKeyOf(target)
+      const nomeAnuncia = stackOfName(nomeAtual)
+      if (current === 'vazia' && (nomeAtual.toLowerCase() === target.slug.toLowerCase() || (nomeAnuncia && nomeAnuncia !== wanted))) {
         const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
         setIsSyncModalOpen(false)
-        setNewFolderFor({ wanted, first: true, suggestion: suggestFolderName(target.slug, wanted, taken.filter(n => n.toLowerCase() !== target.slug.toLowerCase())) })
+        setNewFolderFor({ wanted, first: true, suggestion: suggestFolderName(target.slug, wanted, taken.filter(n => n.toLowerCase() !== nomeAtual.toLowerCase())) })
         return
       }
     }
