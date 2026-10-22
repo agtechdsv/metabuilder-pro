@@ -1,4 +1,22 @@
 {
+  "v1.0.21": {
+    "date": "2026-10-22",
+    "pt": [
+      "Maior estabilidade e conectividade no aplicativo Desktop, garantindo acesso contínuo mesmo em redes restritas ou corporativas.",
+      "Otimização no fluxo de automação e integrações de IA, eliminando travamentos longos e fornecendo mensagens de erro mais claras e acionáveis.",
+      "Aprimoramento no gerenciamento de projetos da IDE, preservando configurações personalizadas do desenvolvedor e mantendo a área de trabalho limpa e organizada."
+    ],
+    "en": [
+      "Enhanced connectivity and stability in the Desktop application, ensuring reliable access across corporate and restricted networks.",
+      "Optimized automation and AI workflows, preventing prolonged timeouts and delivering clearer, actionable error messages during network disruptions.",
+      "IDE project workspace improvements that protect custom developer configurations and maintain a cleaner, more reliable build environment."
+    ],
+    "es": [
+      "Mayor estabilidad y conectividad en la aplicación Desktop, garantizando un acceso fluido incluso en redes corporativas o restringidas.",
+      "Optimización en los flujos de automatización e integraciones con IA, evitando esperas prolongadas y ofreciendo mensajes de diagnóstico más claros.",
+      "Mejoras en la gestión del espacio de trabajo del IDE, preservando las reglas personalizadas del desarrollador y manteniendo los proyectos ordenados."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
