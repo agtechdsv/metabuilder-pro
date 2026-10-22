@@ -5174,6 +5174,7 @@
     "delete_confirm": "Isso apaga a pasta {name} inteira: arquivos, histórico Git local e a própria pasta. Não dá para desfazer. Continuar?",
     "delete_done": "Pasta {name} apagada.",
     "delete_failed": "Não foi possível apagar a pasta {name}. Feche programas que a estejam usando e tente de novo.",
-    "delete_current": "A pasta aberta não pode ser apagada. Troque para outra pasta primeiro."
+    "delete_current": "A pasta aberta não pode ser apagada. Troque para outra pasta primeiro.",
+    "after_rename": "Pasta renomeada para {name}. Clique em Sincronizar para continuar."
   }
 }

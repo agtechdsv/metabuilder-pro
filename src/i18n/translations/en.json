@@ -5174,6 +5174,7 @@
     "delete_confirm": "This deletes the whole {name} folder: files, local Git history and the folder itself. This cannot be undone. Continue?",
     "delete_done": "Folder {name} deleted.",
     "delete_failed": "Could not delete the folder {name}. Close programs that may be using it and try again.",
-    "delete_current": "The open folder cannot be deleted. Switch to another folder first."
+    "delete_current": "The open folder cannot be deleted. Switch to another folder first.",
+    "after_rename": "Folder renamed to {name}. Click Sync to continue."
   }
 }

@@ -17,7 +17,7 @@ import { IDEFolderSwitcher, NewFolderDialog, StackMismatchDialog } from './IDEFo
 import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
-import { detectFolderStack, listProjectFolders, stackOfName, suggestFolderName, type Pilha } from '@/utils/projectFolders'
+import { detectFolderStack, listProjectFolders, renameProjectFolder, stackOfName, suggestFolderName, type Pilha } from '@/utils/projectFolders'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
 const GEN_LANGUAGES = [
@@ -797,10 +797,21 @@ export function IDEHeader({
         setMismatch({ current, wanted, suggestion: suggestFolderName(target.slug, wanted, [...taken, folderKeyOf(target)]) })
         return
       }
-      // pasta vazia com o nome puro do projeto, ou cujo nome anuncia outra pilha (vendas-ora-node para sincronizar Java): propõe <projeto>-<pilha>
-      // (o dev pode editar ou manter o nome)
       const nomeAtual = folderKeyOf(target)
       const nomeAnuncia = stackOfName(nomeAtual)
+      // pasta vazia com o nome puro do projeto (a que a IDE cria ao abrir): renomeia para <projeto>-<pilha> e reabre nela
+      if (current === 'vazia' && nomeAtual.toLowerCase() === target.slug.toLowerCase()) {
+        const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
+        const novo = suggestFolderName(target.slug, wanted, taken.filter(n => n.toLowerCase() !== nomeAtual.toLowerCase()))
+        if (await renameProjectFolder(nomeAtual, novo, target.id, target.slug)) {
+          setIsSyncModalOpen(false)
+          await onSwitchFolder(novo)
+          toast(t('ide_folder.after_rename', 'Pasta renomeada para {name}. Clique em Sincronizar para continuar.').replace('{name}', novo), 'success')
+          setIsSyncModalOpen(true)
+          return
+        }
+      }
+      // não deu para renomear, ou a pasta vazia tem nome de outra pilha (vendas-ora-node para sincronizar Java): propõe <projeto>-<pilha> (o dev pode editar ou manter o nome)
       if (current === 'vazia' && (nomeAtual.toLowerCase() === target.slug.toLowerCase() || (nomeAnuncia && nomeAnuncia !== wanted))) {
         const taken = (await listProjectFolders(target.id, target.slug).catch(() => [])).map(f => f.name)
         setIsSyncModalOpen(false)

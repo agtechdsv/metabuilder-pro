@@ -165,6 +165,21 @@ export async function deleteProjectFolder(folderName: string, projectId: string,
   } catch { return 'failed' }
 }
 
+/**
+ * Renomeia uma pasta deste projeto (a que a IDE criou ao abrir, vazia) para o nome da pilha. Só renomeia se a de origem é deste projeto,
+ * o destino tem nome válido e ainda não existe. Devolve true se renomeou; false deixa tudo como estava (quem chama segue o fluxo normal).
+ */
+export async function renameProjectFolder(from: string, to: string, projectId: string, slug: string): Promise<boolean> {
+  if (validateFolderName(to) !== null || to !== to.trim() || from.toLowerCase() === to.toLowerCase()) return false
+  if ((await folderOwner(from, projectId, slug)) !== 'this') return false
+  if ((await folderOwner(to, projectId, slug)) !== 'free') return false
+  try {
+    const fs = await import('@tauri-apps/plugin-fs')
+    await fs.rename(`${BASE_REL_DIR}/${from}`, `${BASE_REL_DIR}/${to}`, { oldPathBaseDir: fs.BaseDirectory.Home, newPathBaseDir: fs.BaseDirectory.Home })
+    return true
+  } catch { return false }
+}
+
 /** De quem é a pasta com esse nome (livre se não existe). */
 export async function folderOwner(folderName: string, projectId: string, slug: string): Promise<Dono> {
   try {
