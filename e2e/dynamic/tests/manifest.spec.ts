@@ -612,9 +612,16 @@ for (const view of manifest.views.filter(v => escolhidos.length === 0 || escolhi
               else {
                 if (await gaveta.isVisible()) achados.push(`${tela.nome}: o menu começa aberto e cobre a tela`)
                 await botao.click()
-                if (!(await gaveta.isVisible())) achados.push(`${tela.nome}: o botão não abriu o menu`)
-                await botao.click({ force: true }).catch(() => {})
-                await expect.poll(() => gaveta.isVisible(), { message: `${tela.nome}: o botão fecha o menu`, timeout: 3000 }).toBe(false).catch(() => achados.push(`${tela.nome}: o botão não fechou o menu`))
+                // a gaveta tem uma animação: espera abrir de verdade antes de conferir
+                const abriu = await expect.poll(() => gaveta.isVisible(), { timeout: 3000 }).toBe(true).then(() => true, () => false)
+                if (!abriu) achados.push(`${tela.nome}: o botão não abriu o menu`)
+                else {
+                  // com a gaveta aberta o botão do cabeçalho fica por baixo dela: a gaveta fecha tocando na área escurecida ao lado (ou no Esc)
+                  await page.mouse.click(tela.width - 6, Math.round(tela.height / 2))
+                  const fechou = await expect.poll(() => gaveta.isVisible(), { timeout: 3000 }).toBe(false).then(() => true, () => false)
+                  if (!fechou) { await page.keyboard.press('Escape'); await page.waitForTimeout(600) }
+                  if (await gaveta.isVisible()) achados.push(`${tela.nome}: o menu não fechou ao tocar fora dele nem com o Esc`)
+                }
               }
             }
             if (m.rolagem > m.janela + 2) achados.push(`${tela.nome} (${tela.width}px): a página rola na horizontal (${m.rolagem}px de conteúdo para ${m.janela}px de janela)`)
