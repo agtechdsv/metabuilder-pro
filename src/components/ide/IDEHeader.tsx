@@ -17,6 +17,7 @@ import { IDEFolderSwitcher, NewFolderDialog, StackMismatchDialog } from './IDEFo
 import { askDialog } from '@/utils/askDialog'
 import { useToast } from '@/components/ui/Toast'
 import { folderKeyOf } from '@/utils/folderKey'
+import { hasSyncedAppFolder } from '@/utils/deliveryIO'
 import { detectFolderStack, listProjectFolders, renameProjectFolder, stackOfName, suggestFolderName, type Pilha } from '@/utils/projectFolders'
 import type { ExportDefaults } from '@/components/workspace/project-manager/types'
 
@@ -789,6 +790,13 @@ export function IDEHeader({
   const [mismatch, setMismatch] = useState<{ current: Pilha; wanted: Pilha; suggestion: string } | null>(null)
   const [newFolderFor, setNewFolderFor] = useState<{ wanted: Pilha; suggestion: string; first?: boolean } | null>(null)
   const { toast } = useToast()
+  // o Ambiente de Testes só vale com um app sincronizado do projeto (a pasta existe em AGTech\MetaBuilderPRO)
+  const [testsReady, setTestsReady] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    hasSyncedAppFolder(target.id, target.slug).then(v => { if (vivo) setTestsReady(v) })
+    return () => { vivo = false }
+  }, [target.id, target.slug, isSyncing])
 
   // Sincronizar numa pasta nova (renomeada ou criada agora): troca de pasta e continua sozinho quando o Sync local da nova pasta estiver pronto
   const pendingSync = useRef<string | null>(null)
@@ -1013,8 +1021,9 @@ export function IDEHeader({
           {onOpenTests && (
             <button
               onClick={onOpenTests}
-              className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg transition-colors border border-neutral-700"
-              title={t('ide_tests.open', 'Ambiente de Testes')}
+              disabled={!testsReady}
+              className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-amber-500 hover:text-amber-400 rounded-lg transition-colors border border-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={testsReady ? t('ide_tests.open', 'Ambiente de Testes') : t('ide_tests.need_sync', 'Sincronize o projeto na IDE (pasta em AGTech\\MetaBuilderPRO) para liberar o Ambiente de Testes')}
             >
               <FlaskConical className="w-4 h-4" />
             </button>

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { hasSyncedAppFolder } from '@/utils/deliveryIO'
 import Link from 'next/link'
 import {
   ChevronRight,
@@ -61,6 +62,14 @@ export function ProjectCard({
   // só depois de montar: o servidor não sabe se está no desktop, e decidir isso no render gera diferença de HTML (erro de hidratação)
   const [desktop, setDesktop] = React.useState(false)
   React.useEffect(() => { setDesktop(isTauri()) }, [])
+  // o Ambiente de Testes só vale com um app sincronizado do projeto em AGTech\MetaBuilderPRO
+  const [testFolder, setTestFolder] = React.useState(false)
+  React.useEffect(() => {
+    if (!desktop || !onOpenTests) return
+    let vivo = true
+    hasSyncedAppFolder(project.id, project.slug).then(v => { if (vivo) setTestFolder(v) })
+    return () => { vivo = false }
+  }, [desktop, onOpenTests, project.id, project.slug])
 
   return (
     <div
@@ -175,8 +184,9 @@ export function ProjectCard({
                     {/* 4. Ambiente de Testes (roda na IDE Desktop) */}
                     {onOpenTests && desktop && (
                       <button
-                        className="p-2 text-amber-500 hover:text-amber-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                        title={t('ide_tests.open', 'Ambiente de Testes')}
+                        disabled={!testFolder}
+                        className="p-2 text-amber-500 hover:text-amber-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        title={testFolder ? t('ide_tests.open', 'Ambiente de Testes') : t('ide_tests.need_sync', 'Sincronize o projeto na IDE (pasta em AGTech\\MetaBuilderPRO) para liberar o Ambiente de Testes')}
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()

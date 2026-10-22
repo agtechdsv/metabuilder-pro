@@ -5079,7 +5079,8 @@
     "carga_modo_leitura": "Read",
     "carga_modo_gravacao": "Write",
     "carga_modo_mistura": "Mixed",
-    "carga_modos_desc": "Read: everyone opens the screen at the same time. Write: everyone saves a record at the same time (E2E- data, deleted at the end; Search + Form only). Mixed: half save, half read. Pick one, two or all three."
+    "carga_modos_desc": "Read: everyone opens the screen at the same time. Write: everyone saves a record at the same time (E2E- data, deleted at the end; Search + Form only). Mixed: half save, half read. Pick one, two or all three.",
+    "need_sync": "Sync the project in the IDE (folder in AGTechMetaBuilderPRO) to unlock the Test Environment"
   },
   "delivery": {
     "button": "Delivery…",

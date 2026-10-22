@@ -5079,7 +5079,8 @@
     "carga_modo_leitura": "Leitura",
     "carga_modo_gravacao": "Gravação",
     "carga_modo_mistura": "Mistura",
-    "carga_modos_desc": "Leitura: todos abrem a tela ao mesmo tempo. Gravação: todos cadastram um registro ao mesmo tempo (dados E2E-, apagados no fim; só Pesquisa + Cadastro). Mistura: metade grava e metade lê. Escolha um, dois ou os três."
+    "carga_modos_desc": "Leitura: todos abrem a tela ao mesmo tempo. Gravação: todos cadastram um registro ao mesmo tempo (dados E2E-, apagados no fim; só Pesquisa + Cadastro). Mistura: metade grava e metade lê. Escolha um, dois ou os três.",
+    "need_sync": "Sincronize o projeto na IDE (pasta em AGTechMetaBuilderPRO) para liberar o Ambiente de Testes"
   },
   "delivery": {
     "button": "Entrega…",

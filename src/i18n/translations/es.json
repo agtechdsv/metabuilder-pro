@@ -5167,7 +5167,8 @@
     "carga_modo_leitura": "Lectura",
     "carga_modo_gravacao": "Escritura",
     "carga_modo_mistura": "Mixta",
-    "carga_modos_desc": "Lectura: todos abren la pantalla a la vez. Escritura: todos guardan un registro a la vez (datos E2E-, borrados al final; solo Búsqueda + Formulario). Mixta: la mitad guarda y la mitad lee. Elija una, dos o las tres."
+    "carga_modos_desc": "Lectura: todos abren la pantalla a la vez. Escritura: todos guardan un registro a la vez (datos E2E-, borrados al final; solo Búsqueda + Formulario). Mixta: la mitad guarda y la mitad lee. Elija una, dos o las tres.",
+    "need_sync": "Sincronice el proyecto en la IDE (carpeta en AGTechMetaBuilderPRO) para habilitar el Entorno de Pruebas"
   },
   "delivery": {
     "button": "Entrega…",

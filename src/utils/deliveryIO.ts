@@ -62,6 +62,11 @@ export async function suggestAppFolders(projectId: string, slug: string, preferr
   return out
 }
 
+/** O projeto tem alguma pasta sincronizada com um app (em AGTech\MetaBuilderPRO)? É o que libera o Ambiente de Testes. */
+export async function hasSyncedAppFolder(projectId: string, slug: string): Promise<boolean> {
+  try { return (await suggestAppFolders(projectId, slug)).some(s => s.kind === 'sync') } catch { return false }
+}
+
 /** Lê os arquivos de uma pasta (sem descer em .git, node_modules, .next, target...). Chave = caminho relativo com "/". */
 export async function readFolderFiles(root: string): Promise<DeliveryFiles> {
   const { readDir, readFile } = await import('@tauri-apps/plugin-fs')
