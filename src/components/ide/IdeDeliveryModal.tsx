@@ -85,7 +85,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
     try {
       const files = await readFolderFiles(folder.dir)
       const r = await deliverProject(files, opts, {
-        projectId: target.id, slug: target.slug, name: target.name, labels, stepLabels,
+        projectId: target.id, slug: target.slug, folderName: folderKeyOf(target), name: target.name, labels, stepLabels,
         onStep: setStep,
         onLog: line => { logRef.current = [...logRef.current.slice(-7), line.slice(0, 220)]; setLog(logRef.current) },
       })
@@ -156,6 +156,11 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
                 <span className="text-sm font-semibold text-white">ZIP</span>
               </button>
             </div>
+            <p className="mt-2 text-[11px] text-neutral-400">
+              {(opts.format === 'zip'
+                ? t('delivery.name_hint_zip', 'O arquivo é sugerido como {name}-entrega.zip.')
+                : t('delivery.name_hint_folder', 'Dica: use ou crie uma pasta chamada {name}, o mesmo nome da pasta do Sincronizar.')).replace('{name}', folderKeyOf(target))}
+            </p>
           </section>
 
           <section className="space-y-2">

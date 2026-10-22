@@ -15,6 +15,8 @@ export interface RunLabels extends DeliveryLabels, BuildLabels {
 export interface RunCtx {
   projectId: string
   slug: string
+  /** nome da pasta do Sincronizar (ex.: vendas-ora-java): vira o nome sugerido do ZIP e da pasta de destino */
+  folderName?: string
   name: string
   labels: RunLabels
   stepLabels: BuildCtx['stepLabels'] & { reading: string; writing: string; publishing: string }
@@ -51,7 +53,7 @@ export async function deliverProject(raw: DeliveryFiles, opts: DeliveryOptions, 
   if (kinds.includes('docker') && !hasDockerPack(raw)) throw new Error(ctx.labels.needSync)
   const compiled = kinds.includes('compiled')
 
-  const destination = opts.format === 'zip' ? await pickDestinationZip(`${ctx.slug || 'app'}-entrega.zip`) : await pickDestinationFolder()
+  const destination = opts.format === 'zip' ? await pickDestinationZip(`${ctx.folderName || ctx.slug || 'app'}-entrega.zip`) : await pickDestinationFolder()
   if (!destination) return null
   if (opts.format === 'folder' && opts.cleanBefore && !(await confirmAndClean(destination, ctx.labels))) return null
 

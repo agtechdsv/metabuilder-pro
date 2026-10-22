@@ -5135,7 +5135,9 @@
     "jdk_failed": "Without JDK 21 the Java backend cannot be compiled. Nothing was delivered.",
     "build_failed": "The build failed",
     "need_sync": "The project folder does not have the deployment files yet (Dockerfile and production compose). Sync again to receive them.",
-    "no_kind": "Pick at least one delivery type."
+    "no_kind": "Pick at least one delivery type.",
+    "name_hint_zip": "The file is suggested as {name}-entrega.zip.",
+    "name_hint_folder": "Tip: use or create a folder named {name}, the same name as the Sync folder."
   },
   "ide_folder": {
     "title": "Project folder in use",

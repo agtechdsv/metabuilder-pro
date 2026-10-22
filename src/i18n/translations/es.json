@@ -5223,7 +5223,9 @@
     "jdk_failed": "Sin el JDK 21 no se puede compilar el backend Java. No se entregó nada.",
     "build_failed": "La compilación falló",
     "need_sync": "La carpeta del proyecto aún no tiene los archivos de despliegue (Dockerfile y compose de producción). Sincronice de nuevo para recibirlos.",
-    "no_kind": "Elija al menos un tipo de entrega."
+    "no_kind": "Elija al menos un tipo de entrega.",
+    "name_hint_zip": "El archivo se sugiere como {name}-entrega.zip.",
+    "name_hint_folder": "Consejo: use o cree una carpeta llamada {name}, el mismo nombre de la carpeta de Sincronizar."
   },
   "ide_folder": {
     "title": "Carpeta del proyecto en uso",
