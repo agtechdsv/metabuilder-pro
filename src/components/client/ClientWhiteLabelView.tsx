@@ -218,6 +218,12 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                           <strong>{registroDns(selectedTarget.custom_domain).valor}</strong>
                         </div>
                       </div>
+                      <ol className="mt-3 list-decimal pl-5 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+                        <li>{t('client_views.whitelabel.guide_1', 'Crie o registro acima no painel de DNS do domínio e mantenha os que já existem (e-mail, por exemplo).')}</li>
+                        <li>{t('client_views.whitelabel.guide_2', 'Se o seu DNS usa Cloudflare, deixe esse registro como "somente DNS" (nuvem cinza), sem o proxy ativado.')}</li>
+                        <li>{t('client_views.whitelabel.guide_3', 'Aguarde a propagação: de alguns minutos até algumas horas. O HTTPS é ativado automaticamente.')}</li>
+                        <li>{t('client_views.whitelabel.guide_4', 'Abra o seu domínio no navegador: deve aparecer a tela de login do seu projeto. Se não abrir depois de um dia, confira o nome e o valor do registro.')}</li>
+                      </ol>
                     </div>
                   </div>
                 </div>

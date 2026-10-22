@@ -4186,7 +4186,11 @@
       "remove_modal_cancel": "Cancelar",
       "remove_modal_confirm": "Sí, Eliminar",
       "verify_title": "Confirme que el dominio es suyo",
-      "verify_desc": "En el panel DNS del dominio, cree este registro TXT y luego haga clic en Vincular de nuevo (el DNS puede tardar unos minutos)."
+      "verify_desc": "En el panel DNS del dominio, cree este registro TXT y luego haga clic en Vincular de nuevo (el DNS puede tardar unos minutos).",
+      "guide_1": "Cree el registro de arriba en el panel DNS del dominio y mantenga los que ya existen (correo, por ejemplo).",
+      "guide_2": "Si su DNS usa Cloudflare, deje este registro como \"solo DNS\" (nube gris), sin el proxy activado.",
+      "guide_3": "Espere la propagación: de unos minutos a unas horas. El HTTPS se activa automáticamente.",
+      "guide_4": "Abra su dominio en el navegador: debe aparecer la pantalla de inicio de sesión de su proyecto. Si no abre después de un día, revise el nombre y el valor del registro."
     },
     "iclub": {
       "loading": "Cargando panel de iClub...",
