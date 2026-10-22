@@ -4848,7 +4848,9 @@
     "revert_success": "Archivo revertido con éxito",
     "revert_error": "Error al revertir el archivo",
     "commit_message": "Mensaje del Commit",
-    "commit_message_placeholder": "Ej.: Actualización de variables de entorno..."
+    "commit_message_placeholder": "Ej.: Actualización de variables de entorno...",
+    "merging": "Aplicando el merge...",
+    "merging_hint": "Aplicando {n} archivo(s) en la carpeta local. Puede tardar unos segundos; no cierre la ventana."
   },
   "ide_git_settings": {
     "modal_title": "Configuración Git Enterprise",

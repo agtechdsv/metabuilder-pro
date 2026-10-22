@@ -4760,7 +4760,9 @@
     "revert_success": "File reverted successfully",
     "revert_error": "Error reverting file",
     "commit_message": "Commit Message",
-    "commit_message_placeholder": "E.g. Update environment variables..."
+    "commit_message_placeholder": "E.g. Update environment variables...",
+    "merging": "Applying the merge...",
+    "merging_hint": "Applying {n} file(s) to the local folder. This may take a few seconds; do not close the window."
   },
   "ide_git_settings": {
     "modal_title": "Enterprise Git Settings",
