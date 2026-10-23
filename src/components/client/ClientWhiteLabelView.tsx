@@ -232,13 +232,24 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                     </button>
                     </div>
                   </div>
-                  {verificacao && (
-                    <p className={`text-xs font-semibold ${verificacao.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                      {verificacao.ready
-                        ? t('client_views.whitelabel.check_ok', 'Tudo certo: o DNS aponta para a plataforma e o domínio está verificado. O HTTPS é ativado automaticamente.')
-                        : verificacao.dnsOk === null
-                          ? t('client_views.whitelabel.check_unknown', 'Não foi possível conferir agora. Tente de novo em instantes.')
-                          : t('client_views.whitelabel.check_wait', 'Ainda não está apontando. Confira o registro de DNS abaixo e aguarde a propagação (de alguns minutos a algumas horas).')}
+                  {verificacao ? (
+                    <div className="space-y-2">
+                      <p className={`text-xs font-semibold ${verificacao.ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {verificacao.ready
+                          ? t('client_views.whitelabel.check_ok', 'Tudo certo: o DNS aponta para a plataforma e o domínio está verificado. O HTTPS é ativado automaticamente.')
+                          : verificacao.dnsOk === null
+                            ? t('client_views.whitelabel.check_unknown', 'Não foi possível conferir agora. Tente de novo em instantes.')
+                            : t('client_views.whitelabel.check_wait', 'Ainda não está apontando. Confira o registro de DNS abaixo e aguarde a propagação (de alguns minutos a algumas horas).')}
+                      </p>
+                      {verificacao.ready && (
+                        <div className="text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                          {t('client_views.whitelabel.txt_cleanup_notice', 'Dica: O registro TXT criado anteriormente serviu apenas para comprovar a posse do domínio. Como o domínio já está ativo e funcionando, você pode deletar esse TXT do seu painel de DNS para mantê-lo limpo.')}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {t('client_views.whitelabel.check_hint', 'Dica: use o botão "Verificar agora" acima a qualquer momento para testar em tempo real se o DNS já propagou e se o domínio está pronto.')}
                     </p>
                   )}
 
@@ -265,12 +276,13 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                           <strong>{registroDns(selectedTarget.custom_domain, recomendado).valor}</strong>
                         </div>
                       </div>
-                      <ol className="mt-3 list-decimal pl-5 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+                      <ol className="mt-3 list-decimal pl-5 space-y-1.5 text-xs text-amber-700 dark:text-amber-400">
                         <li>{t('client_views.whitelabel.guide_1', 'Crie o registro acima no painel de DNS do domínio e mantenha os que já existem (e-mail, por exemplo).')}</li>
                         <li>{t('client_views.whitelabel.guide_2', 'Se o seu DNS usa Cloudflare, deixe esse registro como "somente DNS" (nuvem cinza), sem o proxy ativado.')}</li>
                         <li>{t('client_views.whitelabel.guide_3', 'Aguarde a propagação: de alguns minutos até algumas horas. O HTTPS é ativado automaticamente.')}</li>
-                        <li>{t('client_views.whitelabel.guide_4', 'Volte a esta página e clique em "Verificar agora" (ao lado de Remover). Quando aparecer "Tudo certo", o domínio está pronto; se ainda não, espere mais um pouco e clique de novo.')}</li>
+                        <li>{t('client_views.whitelabel.guide_4', 'Acompanhe a propagação: clique no botão "Verificar agora" (ao lado de Remover). Quando aparecer "Tudo certo", o domínio está pronto; se ainda não, espere mais um pouco e clique de novo.')}</li>
                         <li>{t('client_views.whitelabel.guide_5', 'Abra o seu domínio no navegador: deve aparecer a tela de login do seu projeto. Se não abrir depois de um dia, confira o nome e o valor do registro.')}</li>
+                        <li>{t('client_views.whitelabel.guide_6', 'Limpeza do TXT: depois que o domínio estiver verificado e funcionando, você pode apagar com segurança o registro TXT de validação no seu painel de DNS. Apenas mantenha o registro acima (CNAME/A) ativo.')}</li>
                       </ol>
                     </div>
                   </div>
@@ -308,7 +320,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                     {txtPedido && (
                       <div className="mt-4 rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-500/10 p-4 text-xs text-amber-700 dark:text-amber-400">
                         <p className="font-bold mb-2">{t('client_views.whitelabel.verify_title', 'Confirme que o domínio é seu')}</p>
-                        <p className="mb-3">{t('client_views.whitelabel.verify_desc', 'Antes de vincular, a plataforma precisa ter certeza de que o domínio é seu. Isso é feito com um registro TXT no DNS do domínio.')}</p>
+                        <p className="mb-3">{t('client_views.whitelabel.verify_desc', 'Antes de vincular, a plataforma precisa ter certeza de que o domínio é seu. Isso é feito com um registro TXT no DNS do domínio (ele é necessário apenas para essa validação inicial e poderá ser apagado depois que o domínio estiver ativo).')}</p>
                         <ol className="mb-3 list-decimal pl-5 space-y-1">
                           <li>{t('client_views.whitelabel.verify_step_1', 'Acesse o painel onde você comprou o domínio (Registro.br, GoDaddy, Hostinger, HostGator...) e abra a área de DNS (gerenciar registros).')}</li>
                           <li>{t('client_views.whitelabel.verify_step_2', 'Crie um registro do tipo TXT com o nome e o valor abaixo. Mantenha os registros que já existem.')}</li>
