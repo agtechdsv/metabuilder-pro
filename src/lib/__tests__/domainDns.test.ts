@@ -18,3 +18,14 @@ describe('registro DNS que o cliente cria para o domínio', () => {
     expect(registroDns('WWW.Empresa.com.').nome).toBe('www')
   })
 })
+
+describe('nome do TXT como o painel de DNS pede', () => {
+  it('sem o domínio registrado (muitos painéis acrescentam sozinhos)', async () => {
+    const { txtNomeRelativo } = await import('../domainDns')
+    expect(txtNomeRelativo('vendasora.veritumpro.com')).toBe('_metabuilder-verify.vendasora')
+    expect(txtNomeRelativo('empresa.com')).toBe('_metabuilder-verify')
+    expect(txtNomeRelativo('www.empresa.com')).toBe('_metabuilder-verify')
+    expect(txtNomeRelativo('empresa.com.br')).toBe('_metabuilder-verify')
+    expect(txtNomeRelativo('app.vendas.empresa.com.br')).toBe('_metabuilder-verify.app.vendas')
+  })
+})
