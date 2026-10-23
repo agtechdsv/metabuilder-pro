@@ -1,20 +1,18 @@
 {
-  "v1.0.21": {
-    "date": "2026-10-22",
+  "v1.0.22": {
+    "date": "2026-10-23",
     "pt": [
-      "Maior estabilidade e conectividade no aplicativo Desktop, garantindo acesso contínuo mesmo em redes restritas ou corporativas.",
-      "Otimização no fluxo de automação e integrações de IA, eliminando travamentos longos e fornecendo mensagens de erro mais claras e acionáveis.",
-      "Aprimoramento no gerenciamento de projetos da IDE, preservando configurações personalizadas do desenvolvedor e mantendo a área de trabalho limpa e organizada."
+      "chore: remove release notes for v1.0.21",
+      "feat(white-label): caixa de DNS usa o CNAME que a Vercel recomenda para o projeto (o generico fica como reserva)",
+      "feat(white-label): instrucoes mais claras no TXT (passo a passo, nome curto) e orienta voltar e clicar em Verificar agora",
+      "feat(white-label): botao Verificar agora confere na Vercel se o DNS do dominio ja aponta e se o dominio esta verificado",
+      "feat(white-label): passo a passo para o cliente na caixa de DNS (pt, en, es)"
     ],
     "en": [
-      "Enhanced connectivity and stability in the Desktop application, ensuring reliable access across corporate and restricted networks.",
-      "Optimized automation and AI workflows, preventing prolonged timeouts and delivering clearer, actionable error messages during network disruptions.",
-      "IDE project workspace improvements that protect custom developer configurations and maintain a cleaner, more reliable build environment."
+      "Version update and general improvements."
     ],
     "es": [
-      "Mayor estabilidad y conectividad en la aplicación Desktop, garantizando un acceso fluido incluso en redes corporativas o restringidas.",
-      "Optimización en los flujos de automatización e integraciones con IA, evitando esperas prolongadas y ofreciendo mensajes de diagnóstico más claros.",
-      "Mejoras en la gestión del espacio de trabajo del IDE, preservando las reglas personalizadas del desarrollador y manteniendo los proyectos ordenados."
+      "Actualización de versión y mejoras generales."
     ]
   },
   "v1.0.0": {
