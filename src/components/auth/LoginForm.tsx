@@ -241,7 +241,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
               isInviteOrRecovery = true
             }
           }
-          if (user.user_metadata?.need_password_setup === true) {
+          const isOAuth = user.app_metadata?.provider === 'google' || 
+                          (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes('google'))
+          if (user.user_metadata?.need_password_setup === true && !isOAuth) {
             isInviteOrRecovery = true
           }
 
@@ -270,7 +272,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       if (access_token && refresh_token) {
         supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
           if (!error && data.session) {
-            if (type === 'invite' || type === 'recovery' || data.session.user?.user_metadata?.need_password_setup === true) {
+            const isOAuth = data.session.user?.app_metadata?.provider === 'google' || 
+                            (Array.isArray(data.session.user?.app_metadata?.providers) && data.session.user?.app_metadata?.providers.includes('google'))
+            if (type === 'invite' || type === 'recovery' || (data.session.user?.user_metadata?.need_password_setup === true && !isOAuth)) {
               setShowSetPasswordModal(true)
             } else {
               navigateToDashboard(data.session.user.id)
@@ -294,7 +298,9 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
               isInviteOrRecovery = true
             }
           }
-          if (event === 'PASSWORD_RECOVERY' || user.user_metadata?.need_password_setup === true) {
+          const isOAuth = user.app_metadata?.provider === 'google' || 
+                          (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes('google'))
+          if (event === 'PASSWORD_RECOVERY' || (user.user_metadata?.need_password_setup === true && !isOAuth)) {
             isInviteOrRecovery = true
           }
 

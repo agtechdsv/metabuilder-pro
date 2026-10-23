@@ -18,8 +18,16 @@ export default async function SetPasswordPage({
     redirect('/auth/session-expired')
   }
 
-  // Se ele já definiu a senha (need_password_setup não é true), redireciona direto
-  if (user.user_metadata?.need_password_setup !== true) {
+  const isOAuthUser = user.app_metadata?.provider === 'google' || 
+                      (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes('google'))
+
+  // Se ele já definiu a senha (need_password_setup não é true) ou é usuário OAuth, redireciona direto
+  if (user.user_metadata?.need_password_setup !== true || isOAuthUser) {
+    if (isOAuthUser && user.user_metadata?.need_password_setup === true) {
+      await supabase.auth.updateUser({
+        data: { need_password_setup: false }
+      })
+    }
     if (resolvedSearchParams.workspace_slug && resolvedSearchParams.workspace_slug !== 'default') {
       redirect(`/admin/${resolvedSearchParams.workspace_slug}`)
     } else {

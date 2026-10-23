@@ -34,17 +34,27 @@ export default async function GlobalDashboard() {
   if (mfaRes.mfaSetupRequired) redirect('/login/mfa/setup')
   if (mfaRes.mfaChallengeRequired) redirect(`/login/mfa?factorId=${mfaRes.factorId}`)
 
-  // Enforce password setup if required
+  // Enforce password setup if required (dispensado para usuários de OAuth/Google)
   if (user.user_metadata?.need_password_setup === true) {
-    const { data: memberWs } = await supabase
-      .from('workspace_members')
-      .select('workspaces(slug)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle()
+    const isOAuthUser = user.app_metadata?.provider === 'google' || 
+                        (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes('google'))
 
-    const wsSlug = (memberWs?.workspaces as any)?.slug || 'default'
-    redirect(`/auth/set-password?workspace_slug=${wsSlug}`)
+    if (isOAuthUser) {
+      // Auto-limpa a flag já que o usuário se autentica com segurança via Google
+      await supabase.auth.updateUser({
+        data: { need_password_setup: false }
+      })
+    } else {
+      const { data: memberWs } = await supabase
+        .from('workspace_members')
+        .select('workspaces(slug)')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      const wsSlug = (memberWs?.workspaces as any)?.slug || 'default'
+      redirect(`/auth/set-password?workspace_slug=${wsSlug}`)
+    }
   }
 
   // Busca perfil para o Header

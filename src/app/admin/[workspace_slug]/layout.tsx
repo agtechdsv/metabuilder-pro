@@ -23,9 +23,18 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/session-expired')
 
-  // Enforce password setup if required
+  // Enforce password setup if required (dispensado para usuários de OAuth/Google)
   if (user.user_metadata?.need_password_setup === true) {
-    redirect(`/auth/set-password?workspace_slug=${workspace_slug}`)
+    const isOAuthUser = user.app_metadata?.provider === 'google' || 
+                        (Array.isArray(user.app_metadata?.providers) && user.app_metadata.providers.includes('google'))
+
+    if (isOAuthUser) {
+      await supabase.auth.updateUser({
+        data: { need_password_setup: false }
+      })
+    } else {
+      redirect(`/auth/set-password?workspace_slug=${workspace_slug}`)
+    }
   }
 
   // 2. Fetch profile for navbar

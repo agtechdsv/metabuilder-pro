@@ -36,6 +36,17 @@ function CallbackHandler() {
       if (done) return
       done = true
 
+      // Usuários que autenticam via OAuth (Google) são seguros e não precisam definir senha
+      if (session?.user?.user_metadata?.need_password_setup === true) {
+        try {
+          await supabase.auth.updateUser({
+            data: { need_password_setup: false }
+          })
+        } catch (e) {
+          console.error('Erro ao limpar need_password_setup no callback OAuth:', e)
+        }
+      }
+
       // Registrar indicação se aplicável
       if (session?.user?.email) {
         try {
