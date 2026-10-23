@@ -1,4 +1,20 @@
 {
+  "v1.0.22": {
+    "date": "2026-10-23",
+    "pt": [
+      "chore: remove release notes for v1.0.21",
+      "feat(white-label): caixa de DNS usa o CNAME que a Vercel recomenda para o projeto (o generico fica como reserva)",
+      "feat(white-label): instrucoes mais claras no TXT (passo a passo, nome curto) e orienta voltar e clicar em Verificar agora",
+      "feat(white-label): botao Verificar agora confere na Vercel se o DNS do dominio ja aponta e se o dominio esta verificado",
+      "feat(white-label): passo a passo para o cliente na caixa de DNS (pt, en, es)"
+    ],
+    "en": [
+      "Version update and general improvements."
+    ],
+    "es": [
+      "Actualización de versión y mejoras generales."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
