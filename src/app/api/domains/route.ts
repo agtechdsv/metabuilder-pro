@@ -196,7 +196,10 @@ export async function GET(req: Request) {
     ])
     const dnsOk = cfg ? cfg.misconfigured === false : null
     const verified = proj ? proj.verified === true : null
-    return NextResponse.json({ dnsOk, verified, ready: dnsOk === true && verified === true })
+    // o CNAME que a Vercel recomenda para este projeto (o genérico cname.vercel-dns.com continua valendo, mas ela pede o específico)
+    const rec = Array.isArray(cfg?.recommendedCNAME) ? [...cfg.recommendedCNAME].sort((a: any, b: any) => (a?.rank ?? 99) - (b?.rank ?? 99))[0]?.value : undefined
+    const recomendado = typeof rec === 'string' && rec.length > 0 ? { cname: rec.replace(/\.$/, '') } : {}
+    return NextResponse.json({ dnsOk, verified, ready: dnsOk === true && verified === true, recomendado })
   } catch (error: any) {
     console.error('Check domain error:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

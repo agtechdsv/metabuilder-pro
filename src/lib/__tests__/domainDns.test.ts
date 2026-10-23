@@ -29,3 +29,12 @@ describe('nome do TXT como o painel de DNS pede', () => {
     expect(txtNomeRelativo('app.vendas.empresa.com.br')).toBe('_metabuilder-verify.app.vendas')
   })
 })
+
+describe('CNAME recomendado pela Vercel', () => {
+  it('entra no lugar do genérico, sem o ponto final; sem ele fica o genérico; a raiz continua com o registro A', () => {
+    expect(registroDns('vendasora.veritumpro.com', { cname: '25004989a1b45523.vercel-dns-017.com.' }).valor).toBe('25004989a1b45523.vercel-dns-017.com')
+    expect(registroDns('vendasora.veritumpro.com', {}).valor).toBe('cname.vercel-dns.com')
+    expect(registroDns('vendasora.veritumpro.com').valor).toBe('cname.vercel-dns.com')
+    expect(registroDns('empresa.com', { cname: 'x.vercel-dns-017.com' })).toEqual({ tipo: 'A', nome: '@', valor: '76.76.21.21' })
+  })
+})

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { txtNomeRelativo } from '@/lib/domainDns'
 import { registroDns } from '@/lib/domainDns'
 import { Globe, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react'
@@ -22,6 +22,8 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   // "Verificar agora": o resultado da última conferência do DNS (null = ainda não conferiu)
   const [verificacao, setVerificacao] = useState<{ ready: boolean; dnsOk: boolean | null; verified: boolean | null } | null>(null)
   const [verificando, setVerificando] = useState(false)
+  // o CNAME que a Vercel recomenda (vem da mesma consulta do "Verificar agora"; sem ele a caixa mostra o genérico)
+  const [recomendado, setRecomendado] = useState<{ cname?: string }>({})
   const verificarAgora = async () => {
     if (!selectedTarget?.custom_domain) return
     setVerificando(true)
@@ -30,6 +32,7 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || 'Erro ao verificar')
       setVerificacao(d)
+      setRecomendado(d.recomendado || {})
     } catch (e: any) { toast(e.message, 'error') }
     setVerificando(false)
   }
@@ -50,6 +53,16 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
   const selectedProject = projects?.find(p => p.id === selectedTargetId)
   const selectedTarget = selectedWorkspace || selectedProject
   const targetType = selectedWorkspace ? 'workspace' : selectedProject ? 'project' : null
+
+  // busca o CNAME que a Vercel recomenda para o domínio vinculado (sem ele, a caixa de DNS mostra o genérico)
+  useEffect(() => {
+    const dom = selectedTarget?.custom_domain
+    if (!dom || !selectedTarget) { setRecomendado({}); return }
+    let vivo = true
+    fetch(`/api/domains?domain=${encodeURIComponent(dom)}&targetId=${selectedTarget.id}&targetType=${targetType}`)
+      .then(r => (r.ok ? r.json() : null)).then(d => { if (vivo) setRecomendado(d?.recomendado || {}) }).catch(() => {})
+    return () => { vivo = false }
+  }, [selectedTarget?.id, selectedTarget?.custom_domain, targetType])
 
   const handleAddDomain = async (forceTransfer = false) => {
     if (!domain) {
@@ -241,15 +254,15 @@ export function ClientWhiteLabelView({ workspaces, projects }: ClientWhiteLabelV
                       <div className="bg-white dark:bg-neutral-900 rounded-lg p-3 font-mono text-xs text-neutral-700 dark:text-neutral-300 grid grid-cols-3 gap-2">
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_type', 'TIPO')}</span>
-                          <strong>{registroDns(selectedTarget.custom_domain).tipo}</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain, recomendado).tipo}</strong>
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_name', 'NOME')}</span>
-                          <strong>{registroDns(selectedTarget.custom_domain).nome}</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain, recomendado).nome}</strong>
                         </div>
                         <div className="col-span-1">
                           <span className="text-neutral-400 block mb-1">{t('client_views.whitelabel.dns_value', 'VALOR/DESTINO')}</span>
-                          <strong>{registroDns(selectedTarget.custom_domain).valor}</strong>
+                          <strong>{registroDns(selectedTarget.custom_domain, recomendado).valor}</strong>
                         </div>
                       </div>
                       <ol className="mt-3 list-decimal pl-5 space-y-1 text-xs text-amber-700 dark:text-amber-400">

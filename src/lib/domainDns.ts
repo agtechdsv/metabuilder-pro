@@ -11,12 +11,15 @@ const SUFIXOS_2 = new Set(['com.br', 'net.br', 'org.br', 'gov.br', 'edu.br', 'co
 
 export interface RegistroDns { tipo: 'A' | 'CNAME'; nome: string; valor: string }
 
-export function registroDns(dominio: string): RegistroDns {
+/** Valores que a própria Vercel recomenda para este projeto (o CNAME dela, em vez do genérico). */
+export interface RecomendadoVercel { cname?: string }
+
+export function registroDns(dominio: string, recomendado?: RecomendadoVercel): RegistroDns {
   const partes = dominio.trim().toLowerCase().replace(/\.$/, '').split('.').filter(Boolean)
   const nSufixo = partes.length >= 2 && SUFIXOS_2.has(partes.slice(-2).join('.')) ? 2 : 1
   const nRaiz = nSufixo + 1 // o nome registrado + o sufixo (empresa.com, empresa.com.br)
   if (partes.length <= nRaiz) return { tipo: 'A', nome: '@', valor: IP_VERCEL }
-  return { tipo: 'CNAME', nome: partes.slice(0, partes.length - nRaiz).join('.'), valor: CNAME_VERCEL }
+  return { tipo: 'CNAME', nome: partes.slice(0, partes.length - nRaiz).join('.'), valor: (recomendado?.cname || '').trim().replace(/\.$/, '') || CNAME_VERCEL }
 }
 
 /** O nome do TXT sem o domínio registrado: vendasora.veritumpro.com → _metabuilder-verify.vendasora; empresa.com → _metabuilder-verify. */
