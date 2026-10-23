@@ -325,140 +325,8 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
   }, [serverError])
 
 
-  // Listener para capturar os tokens vindos do popup de login do Google
-  // Usa BroadcastChannel (principal) + postMessage (fallback)
-  // O BroadcastChannel é necessário pois o COOP do Google pode cortar window.opener em produção
-  useEffect(() => {
-    const supabase = createClient();
-    let isExchanging = false;
-
-    const processAuthSuccess = async (access_token: string, refresh_token: string, next: string) => {
-      setIsLoading(true);
-
-      let { data: { session: currentSession } } = await supabase.auth.getSession();
-      let currentUser = currentSession?.user;
-
-      if (!currentUser) {
-        await supabase.auth.setSession({ access_token, refresh_token });
-        const { data: { session: newSession } } = await supabase.auth.getSession();
-        currentUser = newSession?.user;
-      }
-
-      let redirectTo = next;
-      
-      if (currentUser) {
-        try {
-          const mfaRes = await verifyMfaPolicy()
-          if (mfaRes.mfaSetupRequired) {
-            window.location.href = '/login/mfa/setup'
-            return
-          } else if (mfaRes.mfaChallengeRequired) {
-            window.location.href = `/login/mfa?factorId=${mfaRes.factorId}`
-            return
-          }
-        } catch (e) {
-          console.error('MFA Policy check failed:', e)
-        }
-
-        if (!redirectTo || redirectTo === '/workspace') {
-          try {
-            const { getPostLoginRedirectPath } = await import('@/app/auth/actions')
-            redirectTo = await getPostLoginRedirectPath(currentUser.id)
-          } catch (err) {
-            console.error('Error in OAuth redirect:', err)
-            redirectTo = '/workspace'
-          }
-        }
-      }
-
-      if (!redirectTo) {
-        redirectTo = '/workspace';
-      }
-
-      // Redirecionamento INCONDICIONAL: se temos tokens, o login teve sucesso
-      // O recarregamento da página forçará a leitura dos cookies limpos
-      window.location.href = redirectTo;
-    };
-
-    // Helper para lidar com a troca de código (PKCE FIX)
-    const handleAuthCode = async (code: string, redirectNext: string) => {
-      if (isExchanging) return;
-      isExchanging = true;
-      setIsLoading(true);
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
-      if (error) {
-        // Troca de código falhou. Isso pode ocorrer por race condition de PKCE:
-        // - múltiplas abas tentando usar o mesmo verifier
-        // - popup fechou antes de sincronizar os cookies
-        // Fazemos polling por até 8s para aguardar a sessão ser estabelecida
-        // por outro caminho (ex.: o próprio popup já trocou o código antes de fechar).
-        console.error('[handleAuthCode] exchangeCodeForSession falhou:', error?.message || error);
-
-        const MAX_POLLS = 16;
-        const POLL_INTERVAL_MS = 500;
-        let session = null;
-
-        for (let i = 0; i < MAX_POLLS; i++) {
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session?.user) {
-            session = sessionData.session;
-            break;
-          }
-          // A partir da 8ª tentativa, usa getUser() (chamada ao servidor) para garantir
-          if (i >= 7) {
-            const { data: userData } = await supabase.auth.getUser();
-            if (userData?.user) {
-              const { data: freshSession } = await supabase.auth.getSession();
-              session = freshSession?.session;
-              if (session) break;
-            }
-          }
-        }
-
-        if (session?.user) {
-          await processAuthSuccess(session.access_token, session.refresh_token, redirectNext);
-          return;
-        }
-
-        // Reativa a flag para que futuros callbacks (ex.: usuário tenta de novo) possam processar
-        isExchanging = false;
-        setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação. Tente novamente.'));
-        setIsLoading(false);
-      } else if (data?.session) {
-        await processAuthSuccess(data.session.access_token, data.session.refresh_token, redirectNext);
-      }
-    };
 
 
-    // Canal principal: BroadcastChannel (não depende de window.opener)
-    const bc = new BroadcastChannel('supabase_auth_channel');
-    bc.onmessage = async (event) => {
-      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
-        const { access_token, refresh_token, next } = event.data;
-        await processAuthSuccess(access_token, refresh_token, next);
-      } else if (event.data?.type === 'SUPABASE_AUTH_CODE') {
-        await handleAuthCode(event.data.code, event.data.next);
-      }
-    };
-
-    // Canal secundário: postMessage clássico (para browsers sem BroadcastChannel)
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
-        const { access_token, refresh_token, next } = event.data;
-        await processAuthSuccess(access_token, refresh_token, next);
-      } else if (event.data?.type === 'SUPABASE_AUTH_CODE') {
-        await handleAuthCode(event.data.code, event.data.next);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      bc.close();
-    };
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -582,34 +450,17 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     setIsLoading(true)
     setClientError(null)
 
-    // Tática anti-popup blocker: abrir a janela de forma síncrona, ANTES do await.
-    let popup: Window | null = null;
-    if (!isTauri() && typeof window !== 'undefined') {
-      try {
-        const width = 500
-        const height = 650
-        const left = window.screenX + (window.outerWidth - width) / 2
-        const top = window.screenY + (window.outerHeight - height) / 2
-        popup = window.open(
-          '',
-          'google-login',
-          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
-        )
-        if (popup) {
-          popup.document.write('<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #050505; color: white;">Aguarde, conectando ao Google...</div>');
-        }
-      } catch (err) {
-        console.warn('Erro ao preparar popup:', err);
-      }
-    }
-
-    // Para Tauri: usa a mesma callbackUrl do browser (HTTPS), pois a WebView
-    // navega internamente pelo fluxo OAuth sem precisar abrir browser externo.
+    // Web: usa redirect direto (sem popup).
+    // Popup foi removido pois gera race conditions de PKCE, problemas de COOP
+    // do Google (window.opener = null) e falhas de BroadcastChannel timing.
+    // O redirect é a forma padrão, robusta e sem edge cases.
+    //
+    // Tauri: também usa redirect, mas via deep link (metabuilder://) capturado
+    // pelo onOpenUrl listener.
     let origin = typeof window !== 'undefined' ? window.location.origin : ''
     let callbackUrl = `${origin}/auth/callback`
 
     if (isTauri()) {
-      // Mantém HTTPS — a WebView vai navegar para o Google e voltar para cá
       callbackUrl = 'https://metabuilderpro.com/auth/callback?next=/workspace'
     } else if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search)
@@ -634,24 +485,15 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     })
 
     if (error) {
-      if (popup) popup.close();
       setClientError(error.message)
       setIsLoading(false)
       return
     }
 
     if (data?.url) {
-      if (isTauri()) {
-        // Tauri usa In-App Browser (WebView), então é sempre redirect direto.
-        window.location.href = data.url
-      } else {
-        if (popup) {
-          popup.location.href = data.url
-        } else {
-          // Fallback se o navegador bloqueou o popup na abertura síncrona
-          window.location.href = data.url
-        }
-      }
+      // Redireciona a janela atual para o Google OAuth.
+      // O callback em /auth/callback cuida de trocar o código e redirecionar ao dashboard.
+      window.location.href = data.url
     }
   }
 
