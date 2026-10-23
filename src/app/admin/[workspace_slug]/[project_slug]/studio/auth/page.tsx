@@ -92,7 +92,7 @@ export default function AuthSettingsPage() {
     bg_color: '#ffffff',
     welcome_title: t('dashboard.projects.studio.auth.default_welcome_title'),
     welcome_desc: t('dashboard.projects.studio.auth.default_welcome_desc'),
-    theme: 'light',
+    theme: 'dark',
     button_text: t('dashboard.projects.studio.auth.default_button_text'),
     button_color: '#4f46e5',
     email_label: t('dashboard.projects.studio.auth.default_email_label'),
@@ -1404,12 +1404,12 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.default_theme')}</label>
                       <select 
-                        value={visualConfig.theme || 'light'}
+                        value={visualConfig.theme || 'dark'}
                         onChange={e => setVisualConfig({...visualConfig, theme: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                       >
-                        <option value="light">{t('dashboard.projects.studio.auth.light_mode')}</option>
                         <option value="dark">{t('dashboard.projects.studio.auth.dark_mode')}</option>
+                        <option value="light">{t('dashboard.projects.studio.auth.light_mode')}</option>
                         <option value="auto">{t('dashboard.projects.studio.auth.auto_mode')}</option>
                       </select>
                     </div>
