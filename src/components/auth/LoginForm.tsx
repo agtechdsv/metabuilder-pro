@@ -199,9 +199,39 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       }
     }
 
+    // Auto-cura: limpa silenciosamente tokens de refresh inválidos/expirados.
+    // Isso evita que o usuário veja "Erro ao processar autenticação" quando a sessão
+    // simplesmente expirou ou foi invalidada por race condition entre abas.
+    supabase.auth.getSession().then(async ({ data: { session }, error }: any) => {
+      const isInvalidRefreshToken =
+        error?.message?.toLowerCase().includes('invalid refresh token') ||
+        error?.message?.toLowerCase().includes('refresh token not found') ||
+        error?.status === 400
+      if (isInvalidRefreshToken && !session) {
+        try {
+          // Limpa os cookies podres localmente sem chamar o servidor
+          await supabase.auth.signOut({ scope: 'local' })
+        } catch (_) {
+          // Silencioso: ignoramos erros aqui pois o objetivo é só limpar
+        }
+      }
+    })
+
     // Verifica imediatamente se já tem sessão VÁLIDA (ex: refresh na página)
     if (!disableAutoRedirectOnMount) {
-      supabase.auth.getUser().then(({ data: { user } }: any) => {
+      supabase.auth.getUser().then(({ data: { user }, error: userError }: any) => {
+        // Se o token de refresh é inválido/expirado, limpa a sessão local silenciosamente
+        // sem mostrar nenhum erro — o formulário já está visível e pronto para novo login
+        if (userError && !user) {
+          const isStaleToken =
+            userError?.message?.toLowerCase().includes('invalid refresh token') ||
+            userError?.message?.toLowerCase().includes('refresh token not found') ||
+            userError?.status === 400
+          if (isStaleToken) {
+            supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+            return
+          }
+        }
         if (user) {
           let isInviteOrRecovery = false
           if (typeof window !== 'undefined') {
@@ -282,9 +312,18 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
 
   useEffect(() => {
     if (serverError) {
-      setClientError(serverError)
+      // Filtra erros técnicos de refresh token expirado/inválido.
+      // Esses erros são causados por sessões antigas no cookie e não requerem
+      // ação do usuário — o formulário de login já está disponível.
+      const isStaleTokenError =
+        serverError.toLowerCase().includes('invalid refresh token') ||
+        serverError.toLowerCase().includes('refresh token not found')
+      if (!isStaleTokenError) {
+        setClientError(serverError)
+      }
     }
   }, [serverError])
+
 
   // Listener para capturar os tokens vindos do popup de login do Google
   // Usa BroadcastChannel (principal) + postMessage (fallback)
