@@ -387,16 +387,33 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
       setIsLoading(true);
       const { data, error } = await supabase.auth.exchangeCodeForSession(code) as any;
       if (error) {
-        // Ocorreu erro ao trocar o código. Mas é muito provável que o cliente do Supabase
-        // que estava rodando lá no popup já tenha trocado o código automaticamente (auto PKCE).
-        // Vamos verificar se a sessão já está ativa nos cookies!
-        let { data: { session } } = await supabase.auth.getSession();
-        
-        // Dá um tempinho extra para os cookies sincronizarem entre as abas se necessário
-        if (!session?.user) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const res = await supabase.auth.getSession();
-          session = res.data.session;
+        // Troca de código falhou. Isso pode ocorrer por race condition de PKCE:
+        // - múltiplas abas tentando usar o mesmo verifier
+        // - popup fechou antes de sincronizar os cookies
+        // Fazemos polling por até 8s para aguardar a sessão ser estabelecida
+        // por outro caminho (ex.: o próprio popup já trocou o código antes de fechar).
+        console.error('[handleAuthCode] exchangeCodeForSession falhou:', error?.message || error);
+
+        const MAX_POLLS = 16;
+        const POLL_INTERVAL_MS = 500;
+        let session = null;
+
+        for (let i = 0; i < MAX_POLLS; i++) {
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            session = sessionData.session;
+            break;
+          }
+          // A partir da 8ª tentativa, usa getUser() (chamada ao servidor) para garantir
+          if (i >= 7) {
+            const { data: userData } = await supabase.auth.getUser();
+            if (userData?.user) {
+              const { data: freshSession } = await supabase.auth.getSession();
+              session = freshSession?.session;
+              if (session) break;
+            }
+          }
         }
 
         if (session?.user) {
@@ -404,12 +421,15 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           return;
         }
 
+        // Reativa a flag para que futuros callbacks (ex.: usuário tenta de novo) possam processar
+        isExchanging = false;
         setClientError(t('auth.login.errors.auth_error', 'Erro ao processar autenticação. Tente novamente.'));
         setIsLoading(false);
       } else if (data?.session) {
         await processAuthSuccess(data.session.access_token, data.session.refresh_token, redirectNext);
       }
     };
+
 
     // Canal principal: BroadcastChannel (não depende de window.opener)
     const bc = new BroadcastChannel('supabase_auth_channel');
