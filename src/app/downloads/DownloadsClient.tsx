@@ -102,7 +102,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
                 </button>
               )}
               {macAsset && <p className="text-xs text-neutral-400 mt-4 font-mono">{formatSize(macAsset.size)}</p>}
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão beta: o desenvolvimento e os testes são feitos principalmente no Windows.')}</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão em estágio experimental. Otimizações multiplataforma em andamento contínuo.')}</p>
             </div>
 
             {/* Linux */}
@@ -123,7 +123,7 @@ export function DownloadsClient({ release }: DownloadsClientProps) {
                 </button>
               )}
               {linuxAsset && <p className="text-xs text-neutral-400 mt-4 font-mono">{formatSize(linuxAsset.size)}</p>}
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão beta: o desenvolvimento e os testes são feitos principalmente no Windows.')}</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-3 leading-snug">{t('downloads_page.beta_note', 'Versão em estágio experimental. Otimizações multiplataforma em andamento contínuo.')}</p>
             </div>
           </div>
         </div>

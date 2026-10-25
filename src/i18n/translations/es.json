@@ -3612,7 +3612,7 @@
     "linux_desc": "Ubuntu, Debian, Linux Mint (.deb)",
     "download_linux": "Descargar para Linux",
     "beta": "Beta",
-    "beta_note": "Versión beta: el desarrollo y las pruebas se hacen principalmente en Windows.",
+    "beta_note": "Versión en etapa experimental. Optimizaciones multiplataforma en curso continuo.",
     "unavailable": "No disponible"
   },
   "admin": {
