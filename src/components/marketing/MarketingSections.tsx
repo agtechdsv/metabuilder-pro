@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { getEnabledCycles } from '@/lib/pricing-cycles'
 import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
@@ -1054,7 +1055,7 @@ export function MarketingSections() {
         {/* Billing Cycle Selector */}
         <div className="flex justify-center mb-12">
           <div className="bg-neutral-100/80 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full max-w-lg relative z-20 shadow-inner">
-            {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
+            {getEnabledCycles(rules).map((c) => {
               const isSelected = billingCycle === c
               const labels = {
                 monthly: t('marketing_v2.home.pricing_cycle_monthly'),

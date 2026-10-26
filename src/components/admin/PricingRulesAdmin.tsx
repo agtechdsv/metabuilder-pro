@@ -88,6 +88,21 @@ export function PricingRulesAdmin() {
     setVolumeTiers(prev => prev.map((t, i) => i === index ? { ...t, [field]: value } : t))
   }
 
+  const CYCLE_ROWS = [
+    { key: 'monthly', label: 'Mensal', months: 1 },
+    { key: 'quarterly', label: 'Trimestral', months: 3 },
+    { key: 'semiannual', label: 'Semestral', months: 6 },
+    { key: 'yearly', label: 'Anual', months: 12 }
+  ] as const
+
+  const disabledCycles: string[] = Array.isArray(cycleDiscounts.disabled_cycles) ? cycleDiscounts.disabled_cycles : []
+  const isCycleOn = (key: string) => key === 'monthly' || !disabledCycles.includes(key)
+  const toggleCycle = (key: string) => {
+    const next = disabledCycles.includes(key) ? disabledCycles.filter(c => c !== key) : [...disabledCycles, key]
+    setCycleDiscounts({ ...cycleDiscounts, disabled_cycles: next })
+  }
+  const dimCol = (key: string) => (isCycleOn(key) ? '' : ' opacity-30')
+
   const formatCurrency = (val: number) => {
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
@@ -141,85 +156,45 @@ export function PricingRulesAdmin() {
           <p className="text-xs text-neutral-500">Porcentagem de desconto aplicada sobre o valor total em renovações mais longas.</p>
           
           <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="w-1/4">
-                <label className="text-sm font-semibold">Mensal</label>
-              </div>
-              <div className="flex flex-col text-right w-2/4 px-4">
-                <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * 1 * (1 - (cycleDiscounts.monthly || 0) / 100))}</span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - (cycleDiscounts.monthly || 0) / 100))} / mês</span>
-              </div>
-              <div className="flex items-center gap-1 w-1/4 justify-end">
-                <input
-                  type="number"
-                  min={0}
-                  value={cycleDiscounts.monthly || 0}
-                  onChange={(e) => setCycleDiscounts({...cycleDiscounts, monthly: Math.max(0, Number(e.target.value))})}
-                  className="w-20 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500 font-bold"
-                />
-                <span className="text-neutral-500 font-bold">%</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className="w-1/4">
-                <label className="text-sm font-semibold">Trimestral</label>
-              </div>
-              <div className="flex flex-col text-right w-2/4 px-4">
-                <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * 3 * (1 - cycleDiscounts.quarterly / 100))}</span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - cycleDiscounts.quarterly / 100))} / mês</span>
-              </div>
-              <div className="flex items-center gap-1 w-1/4 justify-end">
-                <input
-                  type="number"
-                  min={0}
-                  value={cycleDiscounts.quarterly}
-                  onChange={(e) => setCycleDiscounts({...cycleDiscounts, quarterly: Math.max(0, Number(e.target.value))})}
-                  className="w-20 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500 font-bold"
-                />
-                <span className="text-neutral-500 font-bold">%</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className="w-1/4">
-                <label className="text-sm font-semibold">Semestral</label>
-              </div>
-              <div className="flex flex-col text-right w-2/4 px-4">
-                <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * 6 * (1 - cycleDiscounts.semiannual / 100))}</span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - cycleDiscounts.semiannual / 100))} / mês</span>
-              </div>
-              <div className="flex items-center gap-1 w-1/4 justify-end">
-                <input
-                  type="number"
-                  min={0}
-                  value={cycleDiscounts.semiannual}
-                  onChange={(e) => setCycleDiscounts({...cycleDiscounts, semiannual: Math.max(0, Number(e.target.value))})}
-                  className="w-20 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500 font-bold"
-                />
-                <span className="text-neutral-500 font-bold">%</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className="w-1/4">
-                <label className="text-sm font-semibold">Anual</label>
-              </div>
-              <div className="flex flex-col text-right w-2/4 px-4">
-                <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * 12 * (1 - cycleDiscounts.yearly / 100))}</span>
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - cycleDiscounts.yearly / 100))} / mês</span>
-              </div>
-              <div className="flex items-center gap-1 w-1/4 justify-end">
-                <input
-                  type="number"
-                  min={0}
-                  value={cycleDiscounts.yearly}
-                  onChange={(e) => setCycleDiscounts({...cycleDiscounts, yearly: Math.max(0, Number(e.target.value))})}
-                  className="w-20 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500 font-bold"
-                />
-                <span className="text-neutral-500 font-bold">%</span>
-              </div>
-            </div>
+            {CYCLE_ROWS.map(({ key, label, months }) => {
+              const discount = cycleDiscounts[key] || 0
+              const enabled = isCycleOn(key)
+              return (
+                <div key={key} className={`flex justify-between items-center transition-opacity ${enabled ? '' : 'opacity-40'}`}>
+                  <div className="w-1/4 flex items-center gap-2">
+                    {key === 'monthly' ? (
+                      <span className="w-9" />
+                    ) : (
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled}
+                        title={enabled ? 'Ativo: aparece no site e no checkout' : 'Inativo: oculto no site e no checkout'}
+                        onClick={() => toggleCycle(key)}
+                        className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${enabled ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-4' : ''}`} />
+                      </button>
+                    )}
+                    <label className="text-sm font-semibold">{label}</label>
+                  </div>
+                  <div className="flex flex-col text-right w-2/4 px-4">
+                    <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * months * (1 - discount / 100))}</span>
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - discount / 100))} / mês</span>
+                  </div>
+                  <div className="flex items-center gap-1 w-1/4 justify-end">
+                    <input
+                      type="number"
+                      min={0}
+                      value={discount}
+                      onChange={(e) => setCycleDiscounts({...cycleDiscounts, [key]: Math.max(0, Number(e.target.value))})}
+                      className="w-20 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-center focus:outline-none focus:border-indigo-500 font-bold"
+                    />
+                    <span className="text-neutral-500 font-bold">%</span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -247,9 +222,9 @@ export function PricingRulesAdmin() {
               <div className="col-span-2 text-left">Licenças (≥)</div>
               <div className="col-span-2 text-left">Desconto</div>
               <div className="col-span-2">Mensal</div>
-              <div className="col-span-2">Trimestral</div>
-              <div className="col-span-2">Semestral</div>
-              <div className="col-span-1">Anual</div>
+              <div className={`col-span-2${dimCol('quarterly')}`}>Trimestral</div>
+              <div className={`col-span-2${dimCol('semiannual')}`}>Semestral</div>
+              <div className={`col-span-1${dimCol('yearly')}`}>Anual</div>
               <div className="col-span-1 text-right">Ação</div>
             </div>
             
@@ -298,7 +273,7 @@ export function PricingRulesAdmin() {
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100))} / licença
                     </span>
                   </div>
-                  <div className="col-span-2 flex flex-col justify-center">
+                  <div className={`col-span-2 flex flex-col justify-center${dimCol('quarterly')}`}>
                     <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100) * tier.min_licenses * 3)}
                     </span>
@@ -307,7 +282,7 @@ export function PricingRulesAdmin() {
                       <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100))} / licença</span>
                     </span>
                   </div>
-                  <div className="col-span-2 flex flex-col justify-center">
+                  <div className={`col-span-2 flex flex-col justify-center${dimCol('semiannual')}`}>
                     <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100) * tier.min_licenses * 6)}
                     </span>
@@ -316,7 +291,7 @@ export function PricingRulesAdmin() {
                       <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100))} / licença</span>
                     </span>
                   </div>
-                  <div className="col-span-1 flex flex-col justify-center">
+                  <div className={`col-span-1 flex flex-col justify-center${dimCol('yearly')}`}>
                     <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300">
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100) * tier.min_licenses * 12)}
                     </span>

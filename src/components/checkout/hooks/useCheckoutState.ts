@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
+import { getEnabledCycles } from '@/lib/pricing-cycles'
 
 export interface CheckoutClientProps {
   rules: any
@@ -18,7 +19,7 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
   const isUpgrade = mode === 'upgrade'
   const [licenses, setLicenses] = useState(isUpgrade && profile?.subscription_licenses ? Math.max(initialLicenses, profile.subscription_licenses) : initialLicenses)
   const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>(
-    initialCycle && ['monthly', 'quarterly', 'semiannual', 'yearly'].includes(initialCycle)
+    initialCycle && getEnabledCycles(rules, isUpgrade ? profile?.subscription_cycle : null).includes(initialCycle)
       ? initialCycle
       : 'monthly'
   )

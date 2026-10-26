@@ -11,6 +11,7 @@ import { useCheckoutState } from './hooks/useCheckoutState'
 import { CheckoutSuccessView } from './components/CheckoutSuccessView'
 import { CheckoutPaymentWaitView } from './components/CheckoutPaymentWaitView'
 import { useI18n } from '@/i18n'
+import { getEnabledCycles } from '@/lib/pricing-cycles'
 
 
 interface CheckoutClientProps {
@@ -417,7 +418,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
 
           {/* Cycle Selector */}
           <div className="bg-neutral-100/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full relative z-20 mb-4 shadow-inner">
-            {(['monthly', 'quarterly', 'semiannual', 'yearly'] as const).map((c) => {
+            {getEnabledCycles(rules, mode === 'upgrade' ? profile?.subscription_cycle : null).map((c) => {
               const isSelected = cycle === c
               const labels: Record<string, string> = {
                 monthly: t('checkout.cycles.monthly', 'Mensal'),
