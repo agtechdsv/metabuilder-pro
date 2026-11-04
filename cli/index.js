@@ -1508,6 +1508,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
           }
           console.log(chalk.green(`[ OK ] BPM SYNC ACTION processada para evento ${eventType} em ${safeTable}.`));
+        } else if (action === 'trigger_webhook') {
+          // webhook de entrada: só o servidor (que conferiu o segredo do fluxo) envia isto; usuário final nunca
+          if (endUser) throw new Error('Ação não permitida para usuário final.');
+          if (!bpmEngine) throw new Error('Motor BPM indisponível neste agente.');
+          await bpmEngine.processWebhook(payload.payload.workflowId, payload.payload.data);
+          result = { rows: [{ ok: true }] };
+          console.log(chalk.green(`[ OK ] Webhook processado para o fluxo ${payload.payload.workflowId}.`));
         } else if (action === 'db_privileges') {
           // diagnóstico do poder do usuário do banco: só para membros do projeto (comando sem `access`)
           if (endUser) throw new Error('Ação não permitida para usuário final.');

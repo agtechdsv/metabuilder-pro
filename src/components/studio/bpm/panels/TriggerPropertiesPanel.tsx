@@ -1,8 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import { Check, Box, X } from "lucide-react";
+
+const sha256Hex = async (text: string) => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 export function TriggerPropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, localViews, setLocalViews, currentWorkflowId, supabase, toast, t } = props;
+  // o segredo em texto só existe aqui, logo após ser gerado; no fluxo fica apenas o hash
+  const [newWebhookSecret, setNewWebhookSecret] = useState<string | null>(null);
+  const webhookUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`;
+  const generateWebhookSecret = async () => {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    const secret = 'whsec_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    updateNodeData(selectedNode.id, { triggerWebhookSecretHash: await sha256Hex(secret) });
+    setNewWebhookSecret(secret);
+    toast(t('bpm.canvas.webhook_secret_generated', 'Segredo gerado. Copie agora e salve o fluxo.'), 'success');
+  };
   const triggerTypes = (selectedNode.data?.triggerType as string[]) || (selectedNode.data?.triggerType ? [selectedNode.data?.triggerType as string] : []);
                   const requiresModel = triggerTypes.some(t => ['insert', 'before_insert', 'update', 'before_update', 'delete', 'before_delete', 'on_load'].includes(t));
   const hasUpdate = triggerTypes.includes('update') || triggerTypes.includes('before_update');
@@ -404,13 +419,13 @@ export function TriggerPropertiesPanel(props: any) {
                             <input
                               type="text"
                               readOnly
-                              value={`https://api.metabuilderpro.com/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`}
+                              value={webhookUrl}
                               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-500 font-mono"
                             />
                             <button 
                               onClick={(e) => {
                                 e.preventDefault();
-                                navigator.clipboard.writeText(`https://api.metabuilderpro.com/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`);
+                                navigator.clipboard.writeText(webhookUrl);
                                 toast(t('bpm.canvas.copied', 'Copiado para a área de transferência!'), 'success');
                               }}
                               className="px-2 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded text-[10px] font-bold hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
@@ -422,6 +437,52 @@ export function TriggerPropertiesPanel(props: any) {
                           <p className="text-[9px] text-neutral-500 mt-2 leading-relaxed">
                             {t('bpm.canvas.webhook_hint', 'Envie uma requisição HTTP para esta URL para iniciar o fluxo. O JSON enviado no corpo (body) da requisição estará disponível nas variáveis do fluxo.')}
                           </p>
+                          <p className="text-[9px] text-neutral-500 mt-1 leading-relaxed">
+                            {'Use os campos recebidos como {{webhook.campo}} nas ações. Envie o segredo no cabeçalho Authorization: Bearer <segredo> (ou X-Webhook-Secret).'}
+                          </p>
+                        </div>
+
+                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 space-y-2">
+                          <label className="text-[9px] font-bold text-amber-600 uppercase tracking-widest block">{t('bpm.canvas.webhook_secret', 'Segredo do Webhook')}</label>
+                          {newWebhookSecret ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                readOnly
+                                value={newWebhookSecret}
+                                className="w-full bg-white dark:bg-neutral-950 border border-amber-300 dark:border-amber-900 rounded px-2 py-1 text-[10px] font-mono"
+                              />
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigator.clipboard.writeText(newWebhookSecret);
+                                  toast(t('bpm.canvas.copied', 'Copiado para a área de transferência!'), 'success');
+                                }}
+                                className="px-2 py-1 bg-amber-500 text-white rounded text-[10px] font-bold hover:bg-amber-600 transition-colors"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-neutral-500">
+                              {selectedNode.data?.triggerWebhookSecretHash
+                                ? t('bpm.canvas.webhook_secret_set', 'Segredo configurado (não pode ser exibido de novo). Gere outro para substituir.')
+                                : t('bpm.canvas.webhook_secret_missing', 'Sem segredo, o fluxo recusa todas as chamadas. Gere um segredo.')}
+                            </p>
+                          )}
+                          {newWebhookSecret && (
+                            <p className="text-[9px] text-amber-700 dark:text-amber-400 leading-relaxed">
+                              {t('bpm.canvas.webhook_secret_once', 'Copie agora: ele só é mostrado desta vez. Depois salve o fluxo.')}
+                            </p>
+                          )}
+                          <button
+                            onClick={(e) => { e.preventDefault(); void generateWebhookSecret(); }}
+                            className="w-full bg-white dark:bg-neutral-900 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 font-bold text-[10px] uppercase tracking-widest py-2 rounded-lg transition-all"
+                          >
+                            {selectedNode.data?.triggerWebhookSecretHash
+                              ? t('bpm.canvas.webhook_secret_regen', 'Gerar novo segredo')
+                              : t('bpm.canvas.webhook_secret_generate', 'Gerar segredo')}
+                          </button>
                         </div>
                         
                         <div>

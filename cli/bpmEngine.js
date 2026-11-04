@@ -711,6 +711,24 @@ class BpmEngine {
     }
   }
 
+  /**
+   * Webhook de entrada: o servidor já conferiu o segredo do fluxo e repassou o comando assinado.
+   * Os campos recebidos ficam disponíveis no fluxo como {{webhook.campo}}.
+   */
+  async processWebhook(workflowId, data) {
+    const flow = (this.workflows || []).find(w => w.id === workflowId);
+    if (!flow || !flow.flow_data || !Array.isArray(flow.flow_data.nodes)) throw new Error('Fluxo não encontrado ou inativo neste agente.');
+    const triggerNode = flow.flow_data.nodes.find(n => {
+      if (n.type !== 'trigger') return false;
+      const raw = n.data?.triggerType || [];
+      return (Array.isArray(raw) ? raw : [raw]).some(t => String(t).toLowerCase() === 'webhook');
+    });
+    if (!triggerNode) throw new Error('O fluxo não tem gatilho de webhook.');
+
+    console.log(chalk.cyan(`[BPM] Webhook recebido: disparando fluxo "${flow.name}"...`));
+    await this.runFlow(flow, triggerNode, 'webhook', { ...(data || {}) }, 'WEBHOOK');
+  }
+
   async processCustomAction(workflowIds, tableName, rowData) {
     console.log(chalk.gray(`[BPM-DEBUG] processCustomAction chamado para fluxos: ${workflowIds.join(', ')}`));
     
