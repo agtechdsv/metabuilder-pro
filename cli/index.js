@@ -1386,6 +1386,28 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           
           let deletedRowData = { [safeIdCol]: idValue };
 
+          // Gatilho "Antes de Excluir": fluxo síncrono que pode bloquear a exclusão
+          if (bpmEngine) {
+            let currentRow = { [safeIdCol]: idValue };
+            try {
+              if (dbType === 'oracle') {
+                const oraSel = await oracleConnection.execute(`SELECT * FROM "${safeTable.toUpperCase()}" WHERE "${safeIdCol}" = :1`, [idValue], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                if (oraSel.rows && oraSel.rows[0]) {
+                  currentRow = Object.fromEntries(Object.entries(oraSel.rows[0]).map(([k, v]) => [k.toLowerCase(), v]));
+                }
+              } else {
+                const pgSel = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "${safeIdCol}" = $1`, [idValue]);
+                if (pgSel.rows[0]) currentRow = pgSel.rows[0];
+              }
+            } catch (selErr) {
+              console.error(chalk.yellow(`[BPM] Não foi possível ler o registro antes de excluir: ${selErr.message}`));
+            }
+            const syncResult = await bpmEngine.processSyncEvent(safeTable, 'BEFORE_DELETE', currentRow);
+            if (!syncResult.success) {
+              throw new Error(syncResult.error || 'Exclusão bloqueada pelo fluxo BPM.');
+            }
+          }
+
           if (dbType === 'oracle') {
             const sqlTable = safeTable.toUpperCase();
             sql = `DELETE FROM "${sqlTable}" WHERE "${safeIdCol}" = :1`;
