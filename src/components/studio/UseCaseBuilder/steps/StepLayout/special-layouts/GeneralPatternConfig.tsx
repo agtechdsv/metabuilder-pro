@@ -4,8 +4,9 @@ import { Database } from 'lucide-react'
 import { SpecialLayoutProps } from './types'
 import { HelpTextEditor } from '../../HelpTextEditor'
 import { helpCoverage } from '@/lib/helpText'
+import { HelpOverview } from './HelpOverview'
 
-export function GeneralPatternConfig({ config, setConfig, t }: Pick<SpecialLayoutProps, 'config' | 'setConfig' | 't'>) {
+export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<SpecialLayoutProps, 'config' | 'setConfig' | 'models' | 't'>) {
   return (
     <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -87,6 +88,7 @@ export function GeneralPatternConfig({ config, setConfig, t }: Pick<SpecialLayou
           rows={4}
         />
         <HelpCoverageBadge config={config} t={t} />
+        <HelpOverview config={config} setConfig={setConfig} models={models} t={t} />
       </div>
     </div>
   )

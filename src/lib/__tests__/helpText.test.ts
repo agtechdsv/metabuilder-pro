@@ -42,3 +42,24 @@ describe('ajuda contextual (dica de campo e de tela)', () => {
     expect(helpCoverage(['a'], undefined)).toEqual({ withHelp: 0, total: 1 })
   })
 })
+
+import { setFieldHelp, getFieldHelp } from '../helpText'
+
+describe('edição em lote da dica de campo', () => {
+  it('grava na chave base e na do formulário, sem perder o resto', () => {
+    const meta = { f1: { label: { text: 'CNPJ' }, component: { type: 'text' } }, 'form-f1': { label: { text: 'CNPJ' }, component: { type: 'mask' } } }
+    const out = setFieldHelp(meta, 'f1', { pt: 'Só números' })
+    expect(out.f1.label).toEqual({ text: 'CNPJ', help: { pt: 'Só números' } })
+    expect(out['form-f1'].component.type).toBe('mask')
+    expect(getFieldHelp(out, 'f1')).toEqual({ pt: 'Só números' })
+    expect(meta.f1.label).toEqual({ text: 'CNPJ' }) // não altera o original
+  })
+
+  it('campo sem metadados ganha a entrada; dica vazia remove só o help', () => {
+    const out = setFieldHelp(undefined, 'f2', { en: 'Digits' })
+    expect(getFieldHelp(out, 'f2')).toEqual({ en: 'Digits' })
+    const cleared = setFieldHelp(out, 'f2', { en: '' })
+    expect(getFieldHelp(cleared, 'f2')).toBeUndefined()
+    expect(cleared.f2.component.type).toBe('text')
+  })
+})

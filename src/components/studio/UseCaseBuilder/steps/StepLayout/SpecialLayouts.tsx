@@ -14,7 +14,7 @@ export function SpecialLayouts(props: SpecialLayoutProps) {
   return (
     <>
       {/* ZONA: CONFIGURAÇÕES GERAIS */}
-      <GeneralPatternConfig config={props.config} setConfig={props.setConfig} t={props.t} />
+      <GeneralPatternConfig config={props.config} setConfig={props.setConfig} models={props.models} t={props.t} />
 
       {/* ZONA: KANBAN CONFIG */}
       <KanbanLayoutConfig {...props} />

@@ -51,3 +51,31 @@ export function helpCoverage(fieldIds: string[], fieldsMetadata: Record<string, 
   }
   return { withHelp, total: fieldIds.length }
 }
+
+/**
+ * Grava a dica de um campo no `fields_metadata` sem perder o resto da configuração.
+ * Atualiza a chave base (`<id>`) e a do formulário (`form-<id>`) quando ela já existe, igual ao editor do campo.
+ * Dica vazia remove só o `help`.
+ */
+export function setFieldHelp(fieldsMetadata: Record<string, any> | undefined, fieldId: string, help: HelpText): Record<string, any> {
+  const next: Record<string, any> = { ...(fieldsMetadata || {}) }
+  const clean = normalizeHelp(help)
+  const empty = Object.keys(clean).length === 0
+  const apply = (key: string) => {
+    const current = next[key] || { label: {}, component: { type: 'text' } }
+    const label = { ...(current.label || {}) }
+    // mantém o texto cru enquanto o usuário digita (espaços no fim), mas some com a chave se tudo estiver vazio
+    if (empty && !Object.values(help || {}).some(v => typeof v === 'string' && v.length > 0)) delete label.help
+    else label.help = help
+    next[key] = { ...current, label }
+  }
+  apply(fieldId)
+  if (next[`form-${fieldId}`] !== undefined) apply(`form-${fieldId}`)
+  return next
+}
+
+/** Dica atual do campo (a específica do formulário vale mais que a base) */
+export function getFieldHelp(fieldsMetadata: Record<string, any> | undefined, fieldId: string): unknown {
+  const meta = fieldsMetadata || {}
+  return meta[`form-${fieldId}`]?.label?.help ?? meta[fieldId]?.label?.help
+}
