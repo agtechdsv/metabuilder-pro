@@ -923,21 +923,13 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
       .map((f: any) => f.model_name || 'Details')
   ))
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    let payloadToSave = { ...formData }
-    
-    // ======== BPM SYNC EVENT ========
-    // Se o túnel estiver pronto e tivermos os dados necessários, disparamos o fluxo síncrono.
-    if (projectId && tunnelChannel && isTunnelReady && masterModelName) {
-      const eventType = mode === 'create' ? 'BEFORE_INSERT' : 'BEFORE_UPDATE';
-      const queryId = crypto.randomUUID();
-      
-      try {
-        const syncData = await new Promise<any>((resolve, reject) => {
+  /** Dispara um fluxo BPM síncrono pelo túnel; rejeita se o fluxo bloquear, resolve com os dados (possivelmente alterados) */
+  const requestBpmSync = (eventType: string, rowData: any) => {
+    const queryId = crypto.randomUUID();
+    const payloadToSave = rowData;
+    return new Promise<any>((resolve, reject) => {
           let resolved = false;
-          
+
           const handleResult = (payload: any) => {
              if (payload.payload?.queryId === queryId) {
                 resolved = true;
@@ -990,8 +982,44 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 resolve(payloadToSave); // Continua se der timeout
              }
           }, 1000); // Reduzido de 8000 para 1000ms para evitar travamento da UI
-        });
-        
+    });
+  }
+
+  // "Ao Carregar Formulário": roda o fluxo ao abrir um registro novo/em edição e aplica os dados que ele alterar (ex.: valores padrão)
+  const onLoadFiredFor = useRef<any>(null)
+  useEffect(() => {
+    if (mode === 'view' || !initialData || !projectId || !tunnelChannel || !isTunnelReady || !masterModelName) return
+    if (onLoadFiredFor.current === initialData) return
+    onLoadFiredFor.current = initialData
+    requestBpmSync('ON_LOAD', { ...initialData })
+      .then((loaded: any) => {
+        if (!loaded) return
+        const { _bpmMessage, ...loadedData } = loaded
+        // só aplica o que o fluxo de fato alterou, para não sobrescrever o que o usuário já digitou
+        const changes = Object.fromEntries(Object.entries(loadedData).filter(([k, v]) => v !== (initialData as any)[k]))
+        if (Object.keys(changes).length > 0) setFormData((prev: any) => ({ ...prev, ...changes }))
+        if (_bpmMessage) toast(_bpmMessage, 'info')
+      })
+      .catch((err: any) => {
+        toast(err.message, 'error')
+        onCancel?.()
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, mode, projectId, tunnelChannel, isTunnelReady, masterModelName])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    let payloadToSave = { ...formData }
+
+    // ======== BPM SYNC EVENT ========
+    // Se o túnel estiver pronto e tivermos os dados necessários, disparamos o fluxo síncrono.
+    if (projectId && tunnelChannel && isTunnelReady && masterModelName) {
+      const eventType = mode === 'create' ? 'BEFORE_INSERT' : 'BEFORE_UPDATE';
+
+      try {
+        const syncData = await requestBpmSync(eventType, payloadToSave)
+
         if (syncData) {
            payloadToSave = syncData;
            if (payloadToSave._bpmMessage) {
