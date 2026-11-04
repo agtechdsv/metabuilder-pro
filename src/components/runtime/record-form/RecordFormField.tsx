@@ -282,7 +282,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
           {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
           {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
         </label>
-        <HelpPopover help={zoneConfig.label?.help} />
+        <HelpPopover help={zoneConfig.label?.help} feedback={{ projectId: projectId || project?.id, field: field.id }} />
         </div>
 
         <div className="flex items-center gap-2">

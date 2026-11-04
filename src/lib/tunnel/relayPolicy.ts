@@ -15,7 +15,7 @@ const DEVELOPER_ONLY_ACTIONS = new Set([
 ])
 
 /** O login do usuário final passa pelo servidor (que vê a resposta); nunca por este relay. */
-const SERVER_ONLY_ACTIONS = new Set(['validate_login'])
+const SERVER_ONLY_ACTIONS = new Set(['validate_login', 'trigger_webhook', 'help_feedback'])
 
 export const MAX_RELAY_BYTES = 4 * 1024 * 1024
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

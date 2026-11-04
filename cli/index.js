@@ -34,6 +34,7 @@ oracledb.fetchAsString = [ oracledb.CLOB ];
 const { BpmEngine } = require('./bpmEngine');
 const logger = require('./logger');
 const { cliDbLogger } = require('./cliDbLogger');
+const { saveHelpFeedback } = require('./helpFeedback');
 const { t, setLanguage, detectLanguage, getLanguage } = require('./i18n');
 
 
@@ -1515,6 +1516,16 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           await bpmEngine.processWebhook(payload.payload.workflowId, payload.payload.data);
           result = { rows: [{ ok: true }] };
           console.log(chalk.green(`[ OK ] Webhook processado para o fluxo ${payload.payload.workflowId}.`));
+        } else if (action === 'help_feedback') {
+          // voto "Isto ajudou?": só o servidor (que sabe quem é o usuário pela sessão) envia isto; nunca o navegador
+          if (endUser) throw new Error('Ação não permitida para usuário final.');
+          if (dbType === 'oracle' || !pgClient) throw new Error('O feedback da ajuda só é gravado em PostgreSQL.');
+          const saved = await saveHelpFeedback(pgClient, payload.payload.data || {});
+          if (!saved.ok) {
+            console.log(chalk.yellow(`[ AVISO ] Não foi possível criar a tabela mb_help_feedback (${saved.detail}). Peça ao DBA para executar:\n${saved.script}`));
+            throw new Error('Não foi possível gravar o feedback: a tabela mb_help_feedback não existe e o usuário do banco não pode criá-la.');
+          }
+          result = { rows: [{ ok: true }] };
         } else if (action === 'db_privileges') {
           // diagnóstico do poder do usuário do banco: só para membros do projeto (comando sem `access`)
           if (endUser) throw new Error('Ação não permitida para usuário final.');

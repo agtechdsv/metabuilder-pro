@@ -21,7 +21,7 @@ describe('parseRelayRequest', () => {
 describe('actionAllowed', () => {
   it('o desenvolvedor pode tudo, menos o login (que é do servidor)', () => {
     for (const a of ['select', 'insert', 'raw_sql', 'sync_bpm', 'read_logs']) expect(actionAllowed('member', a).ok).toBe(true)
-    expect(actionAllowed('member', 'validate_login').ok).toBe(false)
+    for (const a of ['validate_login', 'trigger_webhook', 'help_feedback']) expect(actionAllowed('member', a).ok).toBe(false)
   })
   it('o usuário final faz consultas e gravações, mas não SQL livre nem ações do desenvolvedor', () => {
     for (const a of ['select', 'insert', 'update', 'delete', 'count_records', undefined]) expect(actionAllowed('end_user', a).ok).toBe(true)
