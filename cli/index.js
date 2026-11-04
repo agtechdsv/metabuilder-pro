@@ -1412,7 +1412,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           cliDbLogger.logDelete(safeTable, sql, null);
 
           if (bpmEngine) {
-            bpmEngine.processEvent(safeTable, 'record_deleted', deletedRowData).catch(err => {
+            bpmEngine.processEvent(safeTable, 'DELETE', deletedRowData).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar DELETE:`), err);
             });
           }
