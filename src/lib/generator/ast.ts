@@ -47,6 +47,8 @@ export interface FieldLabelConfig {
   bold?: boolean
   italic?: boolean
   uppercase?: boolean
+  /** dica de ajuda do campo ({ pt, en, es }), escrita no Studio */
+  help?: unknown
 }
 
 export interface FieldRelationConfig {
@@ -269,6 +271,7 @@ export interface RouteNode {
   modelName: string            // PascalCase do modelo
   title: string                // label exibido na tela e na sidebar
   description?: string         // descrição/subtítulo exibido no cabeçalho
+  screenHelp?: unknown         // ajuda da tela ({ pt, en, es }) escrita no Studio; vira o ícone "?" do cabeçalho
   icon?: string                // ícone lucide-react da view
   primaryKey: string           // nome da coluna PK (nem sempre 'id')
 

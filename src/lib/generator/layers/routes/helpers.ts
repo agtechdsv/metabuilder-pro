@@ -1,5 +1,6 @@
 import { ResolvedField, RouteNode, CustomActionDef } from '../../ast'
 import { isAutocompleteField, autocompleteProps } from '../autocomplete'
+import { resolveHelp } from '../../../helpText'
 
 export function toCamel(str: string): string {
   return str
@@ -188,7 +189,26 @@ export function getByocComponentName(field: ResolvedField): string {
   return toPascalCase(rawId) || 'CustomComponent'
 }
 
-export function renderFormField(
+/**
+ * Ícone "?" da dica de campo no app exportado. Usa <details> (sem JavaScript): abre ao clicar, ao tocar e pelo teclado,
+ * funciona em página de servidor e não depende de nenhum componente extra. O app exportado tem um idioma só (português).
+ */
+export function helpIconJsx(help: unknown): string {
+  const text = resolveHelp(help, 'pt')
+  if (!text) return ''
+  return `<details className="relative inline-block align-middle"><summary aria-label="Ajuda" title="Ajuda" className="list-none cursor-pointer inline-flex items-center justify-center w-4 h-4 rounded-full border border-neutral-300 dark:border-neutral-600 text-[10px] font-bold leading-none text-neutral-400 hover:text-indigo-500 [&::-webkit-details-marker]:hidden">?</summary><span role="note" className="absolute left-0 top-full mt-2 z-50 w-64 max-w-[80vw] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 text-xs font-medium normal-case tracking-normal text-neutral-700 dark:text-neutral-200 shadow-xl whitespace-pre-line">{${JSON.stringify(text)}}</span></details>`
+}
+
+/** Campo do formulário já com a dica de ajuda (se o DEV escreveu uma) ao lado do rótulo */
+export function renderFormField(...args: Parameters<typeof renderFormFieldBase>): string {
+  const html = renderFormFieldBase(...args)
+  const field = args[0]
+  const icon = helpIconJsx(field.config?.label?.help ?? field.config?.form_config?.label?.help)
+  if (!icon) return html
+  return html.replace(/<label\b[\s\S]*?<\/label>/, (label) => `<div className="flex items-center gap-1.5">${label}${icon}</div>`)
+}
+
+function renderFormFieldBase(
   field: ResolvedField,
   isEdit: boolean,
   readOnly: boolean | string = false,

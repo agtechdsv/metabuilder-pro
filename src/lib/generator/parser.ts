@@ -2869,6 +2869,7 @@ export function parseMetaBuilderJSON(
       modelName: model.name,
       title: rv.name || model.name,
       description: rv.description || resolvedView.description || resolvedView.layout_config?.description || '',
+      screenHelp: resolvedView.layout_config?.screen_help,
       icon: navIcon,
       primaryKey,
       gridFields,

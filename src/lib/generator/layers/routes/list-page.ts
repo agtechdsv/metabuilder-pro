@@ -1,7 +1,7 @@
 import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
 import { exportMenuHtml, exportImportLine, routeExportFormats } from '../export'
-import { renderGridCellValue, toPascalCase, toCamel } from './helpers'
+import { renderGridCellValue, toPascalCase, toCamel, helpIconJsx } from './helpers'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Listagem (pesquisa_cadastro — page.tsx)
@@ -444,8 +444,9 @@ export default async function ${mn}ListPage({
               <DynamicIcon icon="${route.icon || 'Users'}" size={24} />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
+              <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
                 ${route.title}
+                ${helpIconJsx(route.screenHelp)}
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <div className="w-8 h-1 bg-indigo-600 rounded-full" />

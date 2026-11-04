@@ -2,6 +2,7 @@ import React, { useMemo, Suspense } from 'react'
 
 import * as jsxRuntime from 'react/jsx-runtime'
 import * as LucideReact from 'lucide-react'
+import { HelpPopover } from '../HelpPopover'
 
 const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compiledCode: string, fieldName: string, componentProps?: any }) => {
   const DynamicComponent = useMemo(() => {
@@ -265,6 +266,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
     const isDisabled = isReadOnly || field.is_primary_key;
     const isInlineDisabled = isReadOnly || false;    return (
       <div className="space-y-2" style={{ width: width }}>
+        <div className="flex items-center gap-1.5">
         <label
           style={{
             fontFamily: getFontFamily(zoneConfig.label?.font),
@@ -280,6 +282,8 @@ export function RecordFormField(props: RecordFormFieldProps) {
           {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
           {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
         </label>
+        <HelpPopover help={zoneConfig.label?.help} />
+        </div>
 
         <div className="flex items-center gap-2">
           {leftActions.length > 0 && (

@@ -1138,6 +1138,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           actionInterfaceType={view.layout_config?.action_interface_type || view.layout_config?.mindmap_levels?.[0]?.edit_usecase_open_mode || (view.logic_type === 'mapa_mental' ? 'modal' : undefined)}
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
+          screenHelp={view.layout_config?.screen_help}
           filterGridColumns={view.layout_config?.filter_grid_columns}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
           galleryConfig={view.layout_config?.gallery_config}

@@ -72,6 +72,7 @@ interface ViewPageContentProps {
   baseUrl?: string
   breadcrumbs?: { label: string; href: string }[]
   description?: string
+  screenHelp?: unknown
   icon?: string
   analyticsConfig?: {
     widgets: any[]
@@ -136,6 +137,7 @@ export default function ViewPageContent({
   actionInterfaceType = 'drawer',
   baseUrl,
   description,
+  screenHelp,
   icon,
   exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig,
@@ -591,6 +593,7 @@ export default function ViewPageContent({
       <ViewPageHeader
         viewName={viewName}
         description={description}
+        screenHelp={screenHelp}
         icon={icon}
         workspace={workspace}
         project={project}

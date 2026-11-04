@@ -2,6 +2,7 @@ import React from 'react'
 import { Plus, Workflow } from 'lucide-react'
 import { RuntimeHeader } from '../RuntimeHeader'
 import { ExportDropdown } from '../ExportControls'
+import { HelpPopover } from '../HelpPopover'
 import { useI18n } from '@/i18n/I18nContext'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -9,6 +10,7 @@ import { cn } from '@/lib/utils'
 export interface ViewPageHeaderProps {
   viewName: string
   description?: string
+  screenHelp?: unknown
   icon?: string
   workspace: any
   project: any
@@ -39,6 +41,7 @@ export interface ViewPageHeaderProps {
 export function ViewPageHeader({
   viewName,
   description,
+  screenHelp,
   icon,
   workspace,
   project,
@@ -75,6 +78,7 @@ export function ViewPageHeader({
       icon={icon}
       actions={(
         <div className="flex items-center gap-3">
+          <HelpPopover help={screenHelp} variant="screen" />
           {isAutomationsEnabled && (
             <button
               onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}
