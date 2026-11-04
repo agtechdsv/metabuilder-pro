@@ -63,3 +63,30 @@ describe('edição em lote da dica de campo', () => {
     expect(cleared.f2.component.type).toBe('text')
   })
 })
+
+import { collectHelpCenter, searchHelpCenter } from '../helpText'
+
+describe('Central de Ajuda', () => {
+  const views = [
+    { id: 'v2', slug: 'pedidos', name: 'Pedidos', model: { fields: [{ id: 'f9', display_name: 'Cliente' }] },
+      layout_config: { screen_help: { pt: 'Lista os pedidos', en: 'Lists orders' }, form_fields: ['f9', 'f8'], fields_metadata: { f9: { label: { help: { pt: 'Quem comprou' } } } } } },
+    { id: 'v1', slug: 'sem', name: 'Sem ajuda', layout_config: { form_fields: ['x'] } },
+    { id: 'v3', slug: 'cad', name: 'Cadastro', layout_config: { form_fields: [{ id: 'c1' }], fields_metadata: { 'form-c1': { label: { text: 'CNPJ', help: { pt: 'Só números' } } } } } },
+  ]
+
+  it('junta só o que tem ajuda, no idioma pedido, com o nome do campo', () => {
+    const r = collectHelpCenter(views, 'en')
+    expect(r.map(e => e.name)).toEqual(['Cadastro', 'Pedidos'])
+    const pedidos = r.find(e => e.slug === 'pedidos')!
+    expect(pedidos.screen).toBe('Lists orders')
+    expect(pedidos.fields).toEqual([{ id: 'f9', label: 'Cliente', text: 'Quem comprou' }]) // cai para português
+    expect(r[0].fields[0].label).toBe('CNPJ')
+  })
+
+  it('a busca ignora acento e maiúsculas e mantém só os campos que casam', () => {
+    const all = collectHelpCenter(views, 'pt')
+    expect(searchHelpCenter(all, 'NUMEROS').map(e => e.slug)).toEqual(['cad'])
+    expect(searchHelpCenter(all, 'pedidos')[0].fields).toHaveLength(1)
+    expect(searchHelpCenter(all, '')).toHaveLength(2)
+  })
+})

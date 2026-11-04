@@ -79,3 +79,51 @@ export function getFieldHelp(fieldsMetadata: Record<string, any> | undefined, fi
   const meta = fieldsMetadata || {}
   return meta[`form-${fieldId}`]?.label?.help ?? meta[fieldId]?.label?.help
 }
+
+export interface HelpCenterEntry {
+  id: string
+  slug: string
+  name: string
+  screen: string
+  fields: { id: string; label: string; text: string }[]
+}
+
+/**
+ * Central de Ajuda: junta a ajuda de todas as telas do projeto no idioma pedido.
+ * `views` são as linhas de `ui_views` (com `model.fields` para o nome do campo quando o Studio não definiu um rótulo).
+ * Telas sem nenhuma ajuda ficam de fora; campos saem na ordem do formulário.
+ */
+export function collectHelpCenter(views: any[], language: string | undefined): HelpCenterEntry[] {
+  const out: HelpCenterEntry[] = []
+  for (const v of views || []) {
+    const lc = v?.layout_config || {}
+    const meta: Record<string, any> = lc.fields_metadata || {}
+    const modelFields: any[] = v?.model?.fields || []
+    const ids: string[] = (lc.form_fields || []).map((f: any) => (typeof f === 'string' ? f : f?.id)).filter(Boolean)
+    const fields = ids.flatMap(id => {
+      const text = resolveHelp(getFieldHelp(meta, id), language)
+      if (!text) return []
+      const label = meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
+        || modelFields.find(f => f.id === id)?.display_name || modelFields.find(f => f.id === id)?.db_column_name || id
+      return [{ id, label, text }]
+    })
+    const screen = resolveHelp(lc.screen_help, language)
+    if (!screen && fields.length === 0) continue
+    out.push({ id: v.id, slug: v.slug, name: v.name || v.slug, screen, fields })
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Filtra a Central pela busca (nome da tela, campo ou texto da ajuda), sem diferenciar maiúsculas e acentos */
+export function searchHelpCenter(entries: HelpCenterEntry[], query: string): HelpCenterEntry[] {
+  const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const q = norm(query.trim())
+  if (!q) return entries
+  const out: HelpCenterEntry[] = []
+  for (const e of entries) {
+    if (norm(e.name).includes(q) || norm(e.screen).includes(q)) { out.push(e); continue }
+    const fields = e.fields.filter(f => norm(f.label).includes(q) || norm(f.text).includes(q))
+    if (fields.length) out.push({ ...e, fields })
+  }
+  return out
+}

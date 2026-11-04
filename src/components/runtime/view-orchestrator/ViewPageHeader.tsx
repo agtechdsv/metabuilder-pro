@@ -78,7 +78,7 @@ export function ViewPageHeader({
       icon={icon}
       actions={(
         <div className="flex items-center gap-3">
-          <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId }} />
+          <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId }} centralHref={`/${workspace.slug}/${project.slug}/help`} />
           {isAutomationsEnabled && (
             <button
               onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}

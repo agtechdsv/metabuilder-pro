@@ -15,12 +15,14 @@ interface HelpPopoverProps {
   variant?: 'field' | 'screen'
   /** Com isto, a ajuda mostra "Isto ajudou?" e o voto vai para o banco do cliente. Sem projeto, não pergunta. */
   feedback?: { projectId?: string; screen?: string; field?: string }
+  /** Link para a Central de Ajuda do projeto */
+  centralHref?: string
 }
 
 type FeedbackState = 'idle' | 'comment' | 'sending' | 'done' | 'error'
 
 /** Ícone "?" que abre a ajuda ao clicar (funciona no toque, no teclado e com leitor de tela). Não aparece sem texto. */
-export function HelpPopover({ help, className, variant = 'field', feedback }: HelpPopoverProps) {
+export function HelpPopover({ help, className, variant = 'field', feedback, centralHref }: HelpPopoverProps) {
   const { language, t } = useI18n()
   const text = resolveHelp(help, language)
   const [open, setOpen] = useState(false)
@@ -86,6 +88,12 @@ export function HelpPopover({ help, className, variant = 'field', feedback }: He
           )}
         >
           <span className="block whitespace-pre-line">{text}</span>
+
+          {centralHref && (
+            <a href={centralHref} className="mt-2 block text-[11px] font-bold text-indigo-600 hover:underline">
+              {t('runtime.help.see_all', 'Ver toda a ajuda')}
+            </a>
+          )}
 
           {canAsk && (
             <span className="mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800 block text-[11px] text-neutral-500">
