@@ -51,3 +51,10 @@ describe('RateLimiter', () => {
     expect(rl.allow('a')).toBe(true)
   })
 })
+
+describe('leitura do feedback da ajuda', () => {
+  it('só membro lê; usuário final não', () => {
+    expect(actionAllowed('member', 'read_help_feedback').ok).toBe(true)
+    expect(actionAllowed('end_user', 'read_help_feedback').ok).toBe(false)
+  })
+})

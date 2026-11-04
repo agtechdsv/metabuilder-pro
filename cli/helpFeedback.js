@@ -48,4 +48,26 @@ async function saveHelpFeedback(pgClient, data) {
   return { ok: true };
 }
 
-module.exports = { saveHelpFeedback, CREATE_TABLE_SQL };
+/** Resumo por alvo (mais 👎 primeiro) e últimos comentários. Sem a tabela ainda, devolve vazio. */
+async function readHelpFeedback(pgClient) {
+  try {
+    const summary = await pgClient.query(
+      `SELECT screen_id, field_id,
+              SUM(CASE WHEN vote = 1 THEN 1 ELSE 0 END)::int AS up,
+              SUM(CASE WHEN vote = -1 THEN 1 ELSE 0 END)::int AS down,
+              MAX(created_at) AS last_at
+         FROM mb_help_feedback GROUP BY screen_id, field_id
+        ORDER BY down DESC, last_at DESC LIMIT 200`
+    );
+    const comments = await pgClient.query(
+      `SELECT screen_id, field_id, comment, language, created_at
+         FROM mb_help_feedback WHERE comment IS NOT NULL ORDER BY created_at DESC LIMIT 100`
+    );
+    return { summary: summary.rows, comments: comments.rows };
+  } catch (err) {
+    if (err && err.code === '42P01') return { summary: [], comments: [] }; // tabela ainda não existe: ninguém votou
+    throw err;
+  }
+}
+
+module.exports = { saveHelpFeedback, readHelpFeedback, CREATE_TABLE_SQL };

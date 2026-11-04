@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HelpFeedbackPanel } from './HelpFeedbackPanel'
 import { HELP_LANGS, HelpText, getFieldHelp, hasHelp, helpCoverage, normalizeHelp, setFieldHelp } from '@/lib/helpText'
 
 interface HelpOverviewProps {
@@ -67,6 +68,14 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
 
       {open && (
         <div className="space-y-3">
+          <HelpFeedbackPanel
+            projectId={(Array.isArray(models) ? models : []).find((m: any) => m?.project_id)?.project_id}
+            screenId={config.id}
+            fieldIds={ids}
+            fieldName={(id) => fieldLabel(id, models, fieldsMetadata)}
+            t={t}
+          />
+
           <label className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 cursor-pointer">
             <input type="checkbox" checked={onlyMissing} onChange={e => setOnlyMissing(e.target.checked)} />
             {t('wizard.layout.help_only_missing', 'Mostrar só os campos sem dica')}

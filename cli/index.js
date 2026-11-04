@@ -34,7 +34,7 @@ oracledb.fetchAsString = [ oracledb.CLOB ];
 const { BpmEngine } = require('./bpmEngine');
 const logger = require('./logger');
 const { cliDbLogger } = require('./cliDbLogger');
-const { saveHelpFeedback } = require('./helpFeedback');
+const { saveHelpFeedback, readHelpFeedback } = require('./helpFeedback');
 const { t, setLanguage, detectLanguage, getLanguage } = require('./i18n');
 
 
@@ -1526,6 +1526,11 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             throw new Error('Não foi possível gravar o feedback: a tabela mb_help_feedback não existe e o usuário do banco não pode criá-la.');
           }
           result = { rows: [{ ok: true }] };
+        } else if (action === 'read_help_feedback') {
+          // leitura do feedback da ajuda: só membro do projeto (Studio), nunca usuário final
+          if (endUser) throw new Error('Ação não permitida para usuário final.');
+          if (dbType === 'oracle' || !pgClient) throw new Error('O feedback da ajuda só existe em PostgreSQL.');
+          result = { rows: [await readHelpFeedback(pgClient)] };
         } else if (action === 'db_privileges') {
           // diagnóstico do poder do usuário do banco: só para membros do projeto (comando sem `access`)
           if (endUser) throw new Error('Ação não permitida para usuário final.');

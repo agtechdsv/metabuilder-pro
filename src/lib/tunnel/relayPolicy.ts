@@ -12,6 +12,7 @@ const DEVELOPER_ONLY_ACTIONS = new Set([
   'raw_sql', 'sync_bpm', 'sync_log_config', 'read_logs', 'clear_logs', 'get_log_stats',
   // lê QUALQUER tabela indicada pela configuração que o navegador manda (usado só nas telas do Studio)
   'get_users',
+  'read_help_feedback',
 ])
 
 /** O login do usuário final passa pelo servidor (que vê a resposta); nunca por este relay. */
