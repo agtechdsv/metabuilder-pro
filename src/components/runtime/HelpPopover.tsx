@@ -28,6 +28,8 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
   const [open, setOpen] = useState(false)
   const [state, setState] = useState<FeedbackState>('idle')
   const [comment, setComment] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [lastVote, setLastVote] = useState<'up' | 'down'>('down')
   const rootRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
   const canAsk = !!feedback?.projectId && !!(feedback.screen || feedback.field)
 
   const send = async (vote: 'up' | 'down', withComment?: string) => {
+    setLastVote(vote)
     setState('sending')
     try {
       const res = await fetch('/api/v1/help-feedback', {
@@ -58,8 +61,12 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...feedback, vote, comment: withComment || undefined, language }),
       })
-      setState(res.ok ? 'done' : 'error')
+      if (res.ok) { setState('done'); return }
+      const body = await res.json().catch(() => null)
+      setErrorMsg(typeof body?.error === 'string' ? body.error : '')
+      setState('error')
     } catch {
+      setErrorMsg('')
       setState('error')
     }
   }
@@ -99,7 +106,7 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
             <span className="mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800 block text-[11px] text-neutral-500">
               {state === 'done' ? (
                 <span>{t('runtime.help.thanks', 'Obrigado pelo retorno!')}</span>
-              ) : state === 'comment' || state === 'sending' || state === 'error' ? (
+              ) : state === 'comment' || (lastVote === 'down' && (state === 'sending' || state === 'error')) ? (
                 <span className="block space-y-2">
                   <span className="block">{t('runtime.help.what_missing', 'O que faltou? (opcional)')}</span>
                   <textarea
@@ -109,7 +116,7 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
                     onChange={e => setComment(e.target.value)}
                     className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 px-2 py-1 text-xs outline-none focus:border-indigo-500"
                   />
-                  {state === 'error' && <span className="block text-red-500">{t('runtime.help.error', 'Não foi possível enviar agora.')}</span>}
+                  {state === 'error' && <span className="block text-red-500">{t('runtime.help.error', 'Não foi possível enviar agora.')}{errorMsg ? ` (${errorMsg})` : ''}</span>}
                   <button
                     type="button"
                     disabled={state === 'sending'}
@@ -121,7 +128,10 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
-                  <span className="flex-1">{t('runtime.help.was_helpful', 'Isto ajudou?')}</span>
+                  <span className="flex-1">
+                    {t('runtime.help.was_helpful', 'Isto ajudou?')}
+                    {state === 'error' && <span className="block text-red-500">{t('runtime.help.error', 'Não foi possível enviar agora.')}{errorMsg ? ` (${errorMsg})` : ''}</span>}
+                  </span>
                   <button type="button" aria-label={t('runtime.help.yes', 'Sim')} title={t('runtime.help.yes', 'Sim')} onClick={() => send('up')} className="p-1 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:text-emerald-600">
                     <ThumbsUp className="w-3.5 h-3.5" />
                   </button>
