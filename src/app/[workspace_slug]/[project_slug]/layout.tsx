@@ -6,6 +6,7 @@ import { Metadata } from 'next'
 import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
 import { relayEnabled } from '@/lib/tunnel/server'
 import { signingEnabled } from '@/lib/tunnel/commandSigning'
+import { collectHelpCenter, withHelpCenterMenu } from '@/lib/helpText'
 
 export async function generateMetadata({ params }: { params: Promise<{ project_slug: string; workspace_slug: string }> }): Promise<Metadata> {
   const { project_slug, workspace_slug } = await params
@@ -217,6 +218,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   const sessionCookie = clientSessionCookie(cookieStore, project.id)
 
   let allowedViewIds: string[] | null = null
+  let deniedForHelpMenu: string[] = [] // telas negadas ao grupo do usuário: a ajuda delas não conta para o menu
 
   if (isNoAuth) {
     allowedViewIds = null // null means all views allowed by default
@@ -250,6 +252,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
           .eq('can_read', false)
 
         const deniedViewIds = deniedPermissions ? deniedPermissions.map(p => p.view_id) : []
+        deniedForHelpMenu = deniedViewIds
         const allViewIds = getAllViewIds(rawNavigation, viewSlugToIdMap)
         allowedViewIds = allViewIds.filter(id => !deniedViewIds.includes(id))
       } else {
@@ -293,7 +296,9 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
       .filter(item => !(item.type === 'view' && item.target?.toLowerCase() === 'downloads'))
       .map(item => item.children ? { ...item, children: stripDownloads(item.children) } : item)
 
-  const navigation = filterNavigation(isDownloadsInactive ? stripDownloads(rawNavigation) : rawNavigation)
+  // Central de Ajuda: entra no menu sozinha enquanto houver ao menos uma ajuda visível (e sai se todas forem ocultadas)
+  const hasVisibleHelp = collectHelpCenter((uiViews || []).filter(v => !deniedForHelpMenu.includes(v.id)), locale).length > 0
+  const navigation = withHelpCenterMenu(filterNavigation(isDownloadsInactive ? stripDownloads(rawNavigation) : rawNavigation), hasVisibleHelp, locale)
 
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'

@@ -197,6 +197,25 @@ export function collectHelpCenter(views: any[], language: string | undefined): H
   return out.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+export const HELP_CENTER_MENU_LABELS: Record<string, string> = { pt: 'Central de Ajuda', en: 'Help Center', es: 'Centro de Ayuda' }
+
+/**
+ * Item "Central de Ajuda" do menu do app, calculado na hora (nada é gravado no menu do projeto):
+ *  - com pelo menos uma ajuda visível, entra no fim do menu (a menos que o dev já o tenha posto em Navegação);
+ *  - sem nenhuma (nada escrito, ou tudo oculto), sai, mesmo que o dev o tenha posto à mão.
+ */
+export function withHelpCenterMenu(navigation: any[], hasVisibleHelp: boolean, language?: string): any[] {
+  const isHelp = (i: any) => i?.type === 'view' && String(i.target || '').toLowerCase() === 'help'
+  const strip = (items: any[]): any[] =>
+    items.filter(i => !isHelp(i)).map(i => (Array.isArray(i.children) ? { ...i, children: strip(i.children) } : i))
+  const has = (items: any[]): boolean => items.some(i => isHelp(i) || (Array.isArray(i.children) && has(i.children)))
+  const items = Array.isArray(navigation) ? navigation : []
+  if (!hasVisibleHelp) return has(items) ? strip(items) : items
+  if (has(items)) return items
+  const label = HELP_CENTER_MENU_LABELS[language || ''] || HELP_CENTER_MENU_LABELS.pt
+  return [...items, { id: 'help_center_auto', label, description: '', icon: 'HelpCircle', type: 'view', target: 'help', show_dashboard: true }]
+}
+
 /** Filtra a Central pela busca (nome da tela, campo ou texto da ajuda), sem diferenciar maiúsculas e acentos */
 export function searchHelpCenter(entries: HelpCenterEntry[], query: string): HelpCenterEntry[] {
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
