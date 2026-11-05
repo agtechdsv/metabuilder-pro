@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderFormField, helpIconJsx } from '../layers/routes/helpers'
+import { generateListPage } from '../layers/routes/list-page'
 import type { ResolvedField } from '../ast'
 
 const field = (label: any): ResolvedField => ({
@@ -33,5 +34,25 @@ describe('dica de ajuda do campo no app exportado', () => {
   it('sem texto, nenhum ícone', () => {
     expect(helpIconJsx({})).toBe('')
     expect(helpIconJsx(undefined)).toBe('')
+  })
+})
+
+describe('dica de ajuda no filtro e no cabeçalho da coluna (app exportado)', () => {
+  const page = (filterHelp: any, gridHelp: any) => generateListPage({
+    title: 'Clientes', slug: 'clientes', modelName: 'Cliente', tableName: 'clientes',
+    filterFields: [field({ text: 'CNPJ', help: filterHelp })],
+    gridFields: [field({ text: 'CNPJ', help: gridHelp })],
+    formFields: [], detailRelations: [], actions: [], buttons: [], customActions: [], exportFormats: [], primaryKey: 'id', logicType: 'cadastro',
+  } as any)
+
+  it('cada zona mostra o seu próprio texto', () => {
+    const out = page({ pt: 'Digite parte do CNPJ' }, { pt: 'CNPJ da empresa' })
+    expect(out).toContain('{"Digite parte do CNPJ"}')
+    expect(out).toContain('{"CNPJ da empresa"}')
+  })
+
+  it('sem dica, nada muda', () => {
+    const out = page(undefined, undefined)
+    expect(out).not.toContain('<details')
   })
 })

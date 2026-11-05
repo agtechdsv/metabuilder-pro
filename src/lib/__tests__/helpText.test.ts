@@ -90,3 +90,37 @@ describe('Central de Ajuda', () => {
     expect(searchHelpCenter(all, '')).toHaveLength(2)
   })
 })
+
+import { setZoneHelp, clearZoneHelp, getZoneHelp } from '../helpText'
+
+describe('ajuda por zona com herança', () => {
+  const base = () => ({ f1: { label: { text: 'Nome' }, component: { type: 'text' } }, 'grid-f1': { label: { text: 'Nome' }, component: { type: 'text' } } })
+
+  it('a dica padrão vale em todas as zonas e chega às chaves de zona existentes', () => {
+    const m = setFieldHelp(base(), 'f1', { pt: 'Razão social' })
+    expect(getZoneHelp(m, 'f1', 'form')).toEqual({ help: { pt: 'Razão social' }, custom: false })
+    expect(getZoneHelp(m, 'f1', 'grid')).toEqual({ help: { pt: 'Razão social' }, custom: false })
+    expect(m['grid-f1'].label.help).toEqual({ pt: 'Razão social' }) // o app publicado lê a chave da zona
+  })
+
+  it('texto próprio da zona não é trocado pela dica padrão e some ao voltar a herdar', () => {
+    let m = setFieldHelp(base(), 'f1', { pt: 'Padrão' })
+    m = setZoneHelp(m, 'f1', 'form', { pt: 'Só do formulário' })
+    expect(getZoneHelp(m, 'f1', 'form')).toEqual({ help: { pt: 'Só do formulário' }, custom: true })
+    expect(m['form-f1'].component.type).toBe('text') // criou a chave da zona a partir da base
+
+    m = setFieldHelp(m, 'f1', { pt: 'Padrão novo' })
+    expect(getZoneHelp(m, 'f1', 'form').help).toEqual({ pt: 'Só do formulário' })
+    expect(getZoneHelp(m, 'f1', 'grid').help).toEqual({ pt: 'Padrão novo' })
+
+    m = clearZoneHelp(m, 'f1', 'form')
+    expect(getZoneHelp(m, 'f1', 'form')).toEqual({ help: { pt: 'Padrão novo' }, custom: false })
+    expect(m['form-f1'].label.help_custom).toBeUndefined()
+  })
+
+  it('dado antigo (texto replicado só nas zonas) conta como padrão', () => {
+    const old = { 'form-f1': { label: { help: { pt: 'Velho' } } }, 'grid-f1': { label: { help: { pt: 'Velho' } } } }
+    expect(getFieldHelp(old, 'f1')).toEqual({ pt: 'Velho' })
+    expect(helpCoverage(['f1'], old)).toEqual({ withHelp: 1, total: 1 })
+  })
+})

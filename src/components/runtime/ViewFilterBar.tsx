@@ -1,6 +1,7 @@
 import React from 'react'
 import { Search, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HelpPopover } from '@/components/runtime/HelpPopover'
 
 export function ViewFilterBar({
   filterFields, filterValues, setFilterValues, relationalOptions, parseFixedOptions,
@@ -45,12 +46,15 @@ export function ViewFilterBar({
 
                 return (
                   <div key={field.id || field.db_column_name || `filter-${idx}`} className={cn("flex flex-col gap-1.5", colSpanClass)} style={{ width: width }}>
-                    <label
-                      style={{ fontFamily: zoneConfig.label?.font, fontSize: getFontSize(zoneConfig.label?.size), color: zoneConfig.label?.color }}
-                      className={cn("text-[10px] font-black tracking-widest ml-1", !zoneConfig.label?.color && "text-neutral-400")}
-                    >
-                      {zoneConfig.label?.text || field.display_name}
-                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <label
+                        style={{ fontFamily: zoneConfig.label?.font, fontSize: getFontSize(zoneConfig.label?.size), color: zoneConfig.label?.color }}
+                        className={cn("text-[10px] font-black tracking-widest ml-1", !zoneConfig.label?.color && "text-neutral-400")}
+                      >
+                        {zoneConfig.label?.text || field.display_name}
+                      </label>
+                      <HelpPopover help={zoneConfig.label?.help} />
+                    </div>
                     <div className="relative group">
                       {(() => {
                         const comp = zoneConfig.component || field.config?.component || { type: 'text' }

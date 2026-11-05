@@ -2,6 +2,7 @@ import React from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown, RefreshCcw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DynamicGrid from '@/components/DynamicGrid'
+import { HelpPopover } from '@/components/runtime/HelpPopover'
 
 export function ViewListRenderer({
   displayFields, paginatedData, buttonsConfig, customActions, handleCustomAction,
@@ -38,6 +39,7 @@ export function ViewListRenderer({
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
+                        <HelpPopover help={(field.config?.grid_config || field.config)?.label?.help} />
                         {field.is_primary_key && <span className="text-indigo-500" title={t('runtime.primary_key')}>🔑</span>}
                         {field.is_sortable !== false && (
                           <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">

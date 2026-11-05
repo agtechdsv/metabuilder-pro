@@ -3,7 +3,7 @@
 import React from 'react'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { HelpTextEditor } from '../../HelpTextEditor'
+import { ZoneHelpEditor } from './ZoneHelpEditor'
 
 interface DrawerGeneralTabProps {
   currentFieldMeta: any
@@ -13,6 +13,7 @@ interface DrawerGeneralTabProps {
   models: any[]
   enumerations: any[]
   config: any
+  setConfig: (config: any) => void
   getFieldName: (fieldId: string) => string
   t: (key: string, fallback?: string) => string
 }
@@ -25,6 +26,7 @@ export function DrawerGeneralTab({
   models,
   enumerations,
   config,
+  setConfig,
   getFieldName,
   t
 }: DrawerGeneralTabProps) {
@@ -48,18 +50,7 @@ export function DrawerGeneralTab({
             className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
           />
         </div>
-        {editingFieldZone === 'form' && (
-          <div className="space-y-2">
-            <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider ml-1">
-              {t('wizard.layout.drawer.help_text', 'Dica de ajuda (ícone ? ao lado do campo)')}
-            </label>
-            <HelpTextEditor
-              value={currentFieldMeta.label.help}
-              onChange={(help) => updateMeta('label', 'help', help)}
-              placeholder={t('wizard.layout.drawer.help_text_placeholder', 'Explique o que preencher neste campo. Deixe em branco para não mostrar o ícone.')}
-            />
-          </div>
-        )}
+        <ZoneHelpEditor config={config} setConfig={setConfig} fieldId={editingFieldId} zone={editingFieldZone} t={t} />
       </div>
 
       <div className="space-y-4 pt-6 border-t border-neutral-100 dark:border-neutral-800">

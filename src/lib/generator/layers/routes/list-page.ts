@@ -78,6 +78,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
                 key="${col}"
                 className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
               >
+${helpIconJsx(f.config?.label?.help) ? '<div className="flex items-center gap-2">' : ''}
                 <Link
                   href={makeQuery({ sort_by: '${col}', sort_order: sortBy === '${col}' && sortOrder === 'asc' ? 'desc' : 'asc' })}
                   className="flex items-center gap-2"
@@ -91,6 +92,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
                     )}
                   </div>
                 </Link>
+${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help) + '</div>' : ''}
               </th>`
     })
     .join('\n')
@@ -104,6 +106,13 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
   // Filtros
   const filterFields = route.filterFields.length > 0 ? route.filterFields : route.gridFields.filter(f => !f.isPrimaryKey && !f.isVirtual && !f.isByoc).slice(0, 3)
   const relationalFilterComponents: string[] = []
+
+  // rótulo do filtro; com dica de ajuda (da zona Filtro), o ícone ? fica ao lado
+  const filterLabel = (f: any) => {
+    const label = `<label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>`
+    const icon = helpIconJsx(f.config?.label?.help)
+    return icon ? `<div className="flex items-center gap-1.5">${label}${icon}</div>` : label
+  }
 
   const filterInputs = filterFields.map(f => {
     const col = f.dbColumn.replace('.', '_')
@@ -153,7 +162,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
 
       return `
           <div className="flex flex-col gap-1.5 ${colSpanClass}">
-            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            ${filterLabel(f)}
             <Suspense
               fallback={
                 <select
@@ -174,7 +183,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
       const optsCode = JSON.stringify(options)
       return `
           <div className="flex flex-col gap-1.5 ${colSpanClass}">
-            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            ${filterLabel(f)}
             <select
               name="${col}_filter"
               defaultValue={params?.['${col}_filter'] || ''}
@@ -189,7 +198,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
     }
     return `
           <div className="flex flex-col gap-1.5 ${colSpanClass}">
-            <label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>
+            ${filterLabel(f)}
             <div className="relative group">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
               <input

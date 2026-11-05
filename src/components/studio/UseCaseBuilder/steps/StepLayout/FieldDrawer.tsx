@@ -107,6 +107,7 @@ export function FieldDrawer({
                 models={models}
                 enumerations={enumerations}
                 config={config}
+                setConfig={setConfig}
                 getFieldName={getFieldName}
                 t={t}
               />
