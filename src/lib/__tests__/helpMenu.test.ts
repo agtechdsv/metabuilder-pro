@@ -40,3 +40,23 @@ describe('item Central de Ajuda no menu', () => {
     expect(withHelpCenterMenu(nav, collectHelpCenter([view(hidden)], 'pt').length > 0)).toBe(nav)
   })
 })
+
+describe('Central lista a ajuda de qualquer zona', () => {
+  const view = (lc: any) => ({ id: 'v', slug: 's', name: 'T', layout_config: lc })
+
+  it('campo só no filtro entra, e o menu aparece por causa dele', () => {
+    const lc = { filter_fields: ['n'], form_fields: [], fields_metadata: { n: { label: { text: 'Nome', help: { pt: 'filtro' } } } } }
+    const [entry] = collectHelpCenter([view(lc)], 'pt')
+    expect(entry.fields).toEqual([{ id: 'n', label: 'Nome', text: 'filtro' }])
+  })
+
+  it('formulário tem prioridade; se ele está oculto, usa a zona visível seguinte', () => {
+    let meta: Record<string, any> = { a: { label: { text: 'A', help: { pt: 'padrão' } } } }
+    const lc = (m: any) => ({ form_fields: ['a'], grid_fields: ['a'], fields_metadata: m })
+    expect(collectHelpCenter([view(lc(meta))], 'pt')[0].fields[0].text).toBe('padrão')
+    meta = setHelpHidden(meta, 'a', 'form', true)
+    expect(collectHelpCenter([view(lc(meta))], 'pt')[0].fields[0].text).toBe('padrão') // ainda visível no grid
+    meta = setHelpHidden(meta, 'a', 'grid', true)
+    expect(collectHelpCenter([view(lc(meta))], 'pt')).toEqual([])
+  })
+})

@@ -181,12 +181,20 @@ export function collectHelpCenter(views: any[], language: string | undefined): H
     const lc = v?.layout_config || {}
     const meta: Record<string, any> = lc.fields_metadata || {}
     const modelFields: any[] = v?.model?.fields || []
-    const ids: string[] = (lc.form_fields || []).map((f: any) => (typeof f === 'string' ? f : f?.id)).filter(Boolean)
+    // um campo entra se a ajuda dele estiver visível em alguma zona (formulário primeiro, depois grid e filtro)
+    const idsIn = (zone: HelpZone): string[] => (Array.isArray(lc[`${zone}_fields`]) ? lc[`${zone}_fields`] : []).map((f: any) => (typeof f === 'string' ? f : f?.id)).filter(Boolean)
+    const zoneIds = { form: idsIn('form'), grid: idsIn('grid'), filter: idsIn('filter') }
+    const ids: string[] = Array.from(new Set([...zoneIds.form, ...zoneIds.grid, ...zoneIds.filter]))
     const fields = ids.flatMap(id => {
-      if (isHelpHidden(meta, id, 'form')) return []
-      const text = resolveHelp(getZoneHelp(meta, id, 'form').help, language)
+      let text = ''
+      let shownIn: HelpZone = 'form'
+      for (const zone of ['form', 'grid', 'filter'] as HelpZone[]) {
+        if (!zoneIds[zone].includes(id) || isHelpHidden(meta, id, zone)) continue
+        const t = resolveHelp(getZoneHelp(meta, id, zone).help, language)
+        if (t) { text = t; shownIn = zone; break }
+      }
       if (!text) return []
-      const label = meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
+      const label = meta[`${shownIn}-${id}`]?.label?.text || meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
         || modelFields.find(f => f.id === id)?.display_name || modelFields.find(f => f.id === id)?.db_column_name || id
       return [{ id, label, text }]
     })
