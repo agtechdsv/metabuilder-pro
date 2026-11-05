@@ -79,7 +79,7 @@ describe('Central de Ajuda', () => {
     expect(r.map(e => e.name)).toEqual(['Cadastro', 'Pedidos'])
     const pedidos = r.find(e => e.slug === 'pedidos')!
     expect(pedidos.screen).toBe('Lists orders')
-    expect(pedidos.fields).toEqual([{ id: 'f9', label: 'Cliente', text: 'Quem comprou' }]) // cai para português
+    expect(pedidos.fields).toEqual([{ id: 'f9', label: 'Cliente', text: 'Quem comprou', zones: ['form'] }]) // cai para português
     expect(r[0].fields[0].label).toBe('CNPJ')
   })
 

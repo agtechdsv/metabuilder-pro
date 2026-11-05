@@ -167,7 +167,20 @@ export interface HelpCenterEntry {
   slug: string
   name: string
   screen: string
-  fields: { id: string; label: string; text: string }[]
+  /** uma entrada por campo e texto; `zones` são as zonas onde esse texto vale (formulário, grid, filtro) */
+  fields: { id: string; label: string; text: string; zones: HelpZone[] }[]
+}
+
+/** Nome da zona para o usuário final, nos três idiomas (os mesmos nomes do Studio) */
+export const HELP_ZONE_NAMES: Record<HelpLang, Record<HelpZone, string>> = {
+  pt: { filter: 'Filtro de busca', grid: 'Grid de dados', form: 'Formulário' },
+  en: { filter: 'Search filter', grid: 'Data grid', form: 'Form' },
+  es: { filter: 'Filtro de búsqueda', grid: 'Cuadrícula de datos', form: 'Formulario' },
+}
+
+export function helpZoneName(zone: HelpZone, language: string | undefined): string {
+  const lang = HELP_LANGS.includes(language as HelpLang) ? (language as HelpLang) : 'pt'
+  return HELP_ZONE_NAMES[lang][zone]
 }
 
 /**
@@ -186,17 +199,21 @@ export function collectHelpCenter(views: any[], language: string | undefined): H
     const zoneIds = { form: idsIn('form'), grid: idsIn('grid'), filter: idsIn('filter') }
     const ids: string[] = Array.from(new Set([...zoneIds.form, ...zoneIds.grid, ...zoneIds.filter]))
     const fields = ids.flatMap(id => {
-      let text = ''
-      let shownIn: HelpZone = 'form'
+      // zonas onde a ajuda está visível, agrupadas por texto: igual em várias zonas = uma entrada só, com todas as zonas
+      const groups: { text: string; zones: HelpZone[] }[] = []
       for (const zone of ['form', 'grid', 'filter'] as HelpZone[]) {
         if (!zoneIds[zone].includes(id) || isHelpHidden(meta, id, zone)) continue
-        const t = resolveHelp(getZoneHelp(meta, id, zone).help, language)
-        if (t) { text = t; shownIn = zone; break }
+        const text = resolveHelp(getZoneHelp(meta, id, zone).help, language)
+        if (!text) continue
+        const group = groups.find(g => g.text === text)
+        if (group) group.zones.push(zone)
+        else groups.push({ text, zones: [zone] })
       }
-      if (!text) return []
-      const label = meta[`${shownIn}-${id}`]?.label?.text || meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
-        || modelFields.find(f => f.id === id)?.display_name || modelFields.find(f => f.id === id)?.db_column_name || id
-      return [{ id, label, text }]
+      return groups.map(g => {
+        const label = meta[`${g.zones[0]}-${id}`]?.label?.text || meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
+          || modelFields.find(f => f.id === id)?.display_name || modelFields.find(f => f.id === id)?.db_column_name || id
+        return { id, label, text: g.text, zones: g.zones }
+      })
     })
     const screen = lc.screen_help_hidden === true ? '' : resolveHelp(lc.screen_help, language)
     if (!screen && fields.length === 0) continue
@@ -224,15 +241,16 @@ export function withHelpCenterMenu(navigation: any[], hasVisibleHelp: boolean, l
   return [...items, { id: 'help_center_auto', label, description: '', icon: 'HelpCircle', type: 'view', target: 'help', show_dashboard: true }]
 }
 
-/** Filtra a Central pela busca (nome da tela, campo ou texto da ajuda), sem diferenciar maiúsculas e acentos */
-export function searchHelpCenter(entries: HelpCenterEntry[], query: string): HelpCenterEntry[] {
+/** Filtra a Central pela busca (nome da tela, campo, zona ou texto da ajuda), sem diferenciar maiúsculas e acentos */
+export function searchHelpCenter(entries: HelpCenterEntry[], query: string, language?: string): HelpCenterEntry[] {
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   const q = norm(query.trim())
   if (!q) return entries
   const out: HelpCenterEntry[] = []
   for (const e of entries) {
     if (norm(e.name).includes(q) || norm(e.screen).includes(q)) { out.push(e); continue }
-    const fields = e.fields.filter(f => norm(f.label).includes(q) || norm(f.text).includes(q))
+    const fields = e.fields.filter(f =>
+      norm(f.label).includes(q) || norm(f.text).includes(q) || f.zones.some(z => norm(helpZoneName(z, language)).includes(q)))
     if (fields.length) out.push({ ...e, fields })
   }
   return out

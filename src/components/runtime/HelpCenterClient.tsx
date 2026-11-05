@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { HelpCircle, Search } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
-import { searchHelpCenter, type HelpCenterEntry } from '@/lib/helpText'
+import { helpZoneName, searchHelpCenter, type HelpCenterEntry } from '@/lib/helpText'
 
 interface Props {
   entries: HelpCenterEntry[]
@@ -12,9 +12,9 @@ interface Props {
 }
 
 export function HelpCenterClient({ entries, baseHref, projectName }: Props) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [query, setQuery] = useState('')
-  const shown = useMemo(() => searchHelpCenter(entries, query), [entries, query])
+  const shown = useMemo(() => searchHelpCenter(entries, query, language), [entries, query, language])
 
   return (
     <main className="min-h-screen bg-neutral-50 dark:bg-neutral-950 px-6 py-10">
@@ -52,9 +52,16 @@ export function HelpCenterClient({ entries, baseHref, projectName }: Props) {
             {e.screen && <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{e.screen}</p>}
             {e.fields.length > 0 && (
               <dl className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                {e.fields.map(f => (
-                  <div key={f.id}>
-                    <dt className="text-xs font-black text-neutral-500">{f.label}</dt>
+                {e.fields.map((f, i) => (
+                  <div key={`${f.id}-${i}`}>
+                    <dt className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-black text-neutral-500">
+                      {f.label}
+                      {f.zones.map(z => (
+                        <span key={z} className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-400">
+                          {helpZoneName(z, language)}
+                        </span>
+                      ))}
+                    </dt>
                     <dd className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{f.text}</dd>
                   </div>
                 ))}
