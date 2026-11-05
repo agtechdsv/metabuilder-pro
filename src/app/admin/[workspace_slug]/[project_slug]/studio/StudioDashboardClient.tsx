@@ -5,6 +5,7 @@ import { openExternalUrl, isTauri } from '@/utils/tauriUtils'
 import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
+import { HelpCenterStudio } from '@/components/studio/HelpCenterStudio'
 
 import {
   LayoutDashboard,
@@ -51,7 +52,8 @@ import {
   ScrollText,
   Monitor,
   Sparkles,
-  Loader2
+  Loader2,
+  HelpCircle
 } from 'lucide-react'
 import { usePreview } from '@/contexts/PreviewContext'
 import { DesktopAppGeneratorModal } from '@/components/workspace/DesktopAppGeneratorModal'
@@ -247,7 +249,7 @@ export function StudioDashboardClient({
     setIsUpdatingRetention(false)
   }
 
-  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'ai-editor' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security' | 'tunnel' | 'synced-dbs'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'builder' | 'ai-editor' | 'navigation' | 'enumerations' | 'metadata' | 'relations' | 'security' | 'tunnel' | 'synced-dbs' | 'help'>('list')
   const [showDesktopModal, setShowDesktopModal] = useState(false)
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -845,6 +847,15 @@ export function StudioDashboardClient({
                     >
                       <Server className="w-3.5 h-3.5" /> {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
                     </button>
+                   <button
+                     onClick={() => setViewMode('help')}
+                     className={cn(
+                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
+                       viewMode === 'help' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
+                     )}
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.help_center', 'Central de Ajuda')}
+                    </button>
                  </>
                )}
             </div>
@@ -1032,6 +1043,10 @@ export function StudioDashboardClient({
         ) : viewMode === 'synced-dbs' ? (
           <div className="">
             <WorkspaceSyncedDatabases workspaceId={workspace.id} projectId={project.id} />
+          </div>
+        ) : viewMode === 'help' ? (
+          <div className="">
+            <HelpCenterStudio workspaceSlug={workspace_slug} projectSlug={project_slug} views={userViews} models={models} />
           </div>
         ) : (
           <section className="space-y-4">

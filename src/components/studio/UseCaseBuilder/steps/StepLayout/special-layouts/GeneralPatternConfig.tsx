@@ -2,9 +2,9 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 import { Database } from 'lucide-react'
 import { SpecialLayoutProps } from './types'
-import { HelpTextEditor } from '../../HelpTextEditor'
 import { helpCoverage } from '@/lib/helpText'
 import { HelpOverview } from './HelpOverview'
+import { ScreenHelpField } from './ScreenHelpField'
 
 export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<SpecialLayoutProps, 'config' | 'setConfig' | 'models' | 't'>) {
   return (
@@ -80,13 +80,7 @@ export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<Spec
       </div>
 
       <div className="space-y-3 pt-2">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.screen_help', 'Ajuda da tela (ícone ? no cabeçalho)')}</label>
-        <HelpTextEditor
-          value={(config.layout_config as any).screen_help}
-          onChange={(help) => setConfig({ ...config, layout_config: { ...config.layout_config, screen_help: help } })}
-          placeholder={t('wizard.layout.screen_help_placeholder', 'Explique para que serve esta tela e como usá-la. Deixe em branco para não mostrar o ícone.')}
-          rows={4}
-        />
+        <ScreenHelpField config={config} setConfig={setConfig} t={t} />
         <HelpCoverageBadge config={config} t={t} />
         <HelpOverview config={config} setConfig={setConfig} models={models} t={t} />
       </div>

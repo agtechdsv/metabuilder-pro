@@ -1,6 +1,6 @@
 import { ResolvedField, RouteNode, CustomActionDef } from '../../ast'
 import { isAutocompleteField, autocompleteProps } from '../autocomplete'
-import { resolveHelp } from '../../../helpText'
+import { resolveHelp, visibleHelp } from '../../../helpText'
 import { HELP_FEEDBACK_MARKER_OPEN } from '../helpFeedback'
 
 export function toCamel(str: string): string {
@@ -208,7 +208,7 @@ export function helpIconJsx(help: unknown, fb?: { field?: string; screen?: strin
 export function renderFormField(...args: Parameters<typeof renderFormFieldBase>): string {
   const html = renderFormFieldBase(...args)
   const field = args[0]
-  const icon = helpIconJsx(field.config?.label?.help ?? field.config?.form_config?.label?.help, { field: field.id, zone: 'form' })
+  const icon = helpIconJsx(visibleHelp(field.config?.form_config?.label ?? field.config?.label), { field: field.id, zone: 'form' })
   if (!icon) return html
   return html.replace(/<label\b[\s\S]*?<\/label>/, (label) => `<div className="flex items-center gap-1.5">${label}${icon}</div>`)
 }

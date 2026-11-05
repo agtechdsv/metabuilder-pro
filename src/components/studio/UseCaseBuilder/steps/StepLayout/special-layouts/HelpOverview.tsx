@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { HelpFeedbackPanel } from './HelpFeedbackPanel'
 import {
   HELP_LANGS, HELP_ZONES, HelpLang, HelpText, HelpZone,
-  clearZoneHelp, getFieldHelp, getZoneHelp, hasHelp, helpCoverage, normalizeHelp, setFieldHelp, setZoneHelp, zonesOfField,
+  clearZoneHelp, getFieldHelp, getZoneHelp, hasHelp, helpCoverage, isHelpHidden, normalizeHelp, setFieldHelp, setHelpHidden, setZoneHelp, zonesOfField,
 } from '@/lib/helpText'
 
 interface HelpOverviewProps {
@@ -14,6 +14,10 @@ interface HelpOverviewProps {
   setConfig: (config: any) => void
   models?: any
   t: (key: string, fallback?: string) => string
+  /** abre já expandida (a aba Central de Ajuda do Studio) */
+  defaultOpen?: boolean
+  /** sem o painel de feedback (ele aparece uma vez, fora da lista) */
+  hideFeedback?: boolean
 }
 
 function fieldLabel(id: string, models: any, fieldsMetadata: Record<string, any>): string {
@@ -33,8 +37,8 @@ const idsOf = (list: any): string[] =>
  * Visão geral da ajuda: os campos de cada zona (filtro, grid, formulário), uma aba por idioma, para escrever em lote.
  * Um campo em mais de uma zona herda a mesma dica; "Personalizar" dá a uma zona o seu próprio texto.
  */
-export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps) {
-  const [open, setOpen] = useState(false)
+export function HelpOverview({ config, setConfig, models, t, defaultOpen = false, hideFeedback = false }: HelpOverviewProps) {
+  const [open, setOpen] = useState(defaultOpen)
   const [onlyMissing, setOnlyMissing] = useState(false)
   const [lang, setLang] = useState<HelpLang>('pt')
   const fieldsMetadata: Record<string, any> = config.layout_config?.fields_metadata || {}
@@ -68,6 +72,12 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
     save(getZoneHelp(fieldsMetadata, id, zone).custom ? setZoneHelp(fieldsMetadata, id, zone, current) : setFieldHelp(fieldsMetadata, id, current))
   }
 
+  // ocultar: por campo e zona, por zona inteira ou tudo de uma vez (o texto fica guardado)
+  const pairs = (zones: HelpZone[]) => byZone.filter(z => zones.includes(z.zone)).flatMap(z => z.ids.map(id => ({ id, zone: z.zone })))
+  const allHidden = (zones: HelpZone[]) => { const p = pairs(zones); return p.length > 0 && p.every(x => isHelpHidden(fieldsMetadata, x.id, x.zone)) }
+  const hideMany = (zones: HelpZone[], hidden: boolean) =>
+    save(pairs(zones).reduce((acc, x) => setHelpHidden(acc, x.id, x.zone, hidden), fieldsMetadata))
+
   const filledInLang = (l: HelpLang) => formIds.filter(id => !!normalizeHelp(rawOf(id, 'form'))[l]).length
 
   return (
@@ -83,20 +93,28 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
 
       {open && (
         <div className="space-y-3">
-          <HelpFeedbackPanel
-            projectId={(Array.isArray(models) ? models : []).find((m: any) => m?.project_id)?.project_id}
-            screenId={config.id}
-            fieldIds={Array.from(new Set(byZone.flatMap(z => z.ids)))}
-            fieldName={(id) => fieldLabel(id, models, fieldsMetadata)}
-            zoneCount={(id) => zonesOfField(config.layout_config, id).length}
-            isCustom={(id, zone) => zone !== 'screen' && getZoneHelp(fieldsMetadata, id, zone).custom}
-            t={t}
-          />
+          {!hideFeedback && (
+            <HelpFeedbackPanel
+              projectId={(Array.isArray(models) ? models : []).find((m: any) => m?.project_id)?.project_id}
+              screenId={config.id}
+              fieldIds={Array.from(new Set(byZone.flatMap(z => z.ids)))}
+              fieldName={(id) => fieldLabel(id, models, fieldsMetadata)}
+              zoneCount={(id) => zonesOfField(config.layout_config, id).length}
+              isCustom={(id, zone) => zone !== 'screen' && getZoneHelp(fieldsMetadata, id, zone).custom}
+              t={t}
+            />
+          )}
 
-          <label className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 cursor-pointer">
-            <input type="checkbox" checked={onlyMissing} onChange={e => setOnlyMissing(e.target.checked)} />
-            {t('wizard.layout.help_only_missing', 'Mostrar só os campos sem dica')}
-          </label>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <label className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 cursor-pointer">
+              <input type="checkbox" checked={onlyMissing} onChange={e => setOnlyMissing(e.target.checked)} />
+              {t('wizard.layout.help_only_missing', 'Mostrar só os campos sem dica')}
+            </label>
+            <label className="flex items-center gap-2 text-[10px] font-bold text-neutral-500 cursor-pointer">
+              <input type="checkbox" checked={allHidden(byZone.map(z => z.zone))} onChange={e => hideMany(byZone.map(z => z.zone), e.target.checked)} />
+              {t('wizard.layout.help_hide_all', 'Ocultar todas')}
+            </label>
+          </div>
 
           <div className="flex items-center gap-1">
             {HELP_LANGS.map(l => (
@@ -118,13 +136,20 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
             const visible = onlyMissing ? ids.filter(id => !hasHelp(rawOf(id, zone))) : ids
             return (
               <div key={zone} className="space-y-1.5">
-                <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{zoneName(zone)} ({ids.length})</h5>
+                <div className="flex items-center justify-between gap-3">
+                  <h5 className="text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{zoneName(zone)} ({ids.length})</h5>
+                  <label className="flex items-center gap-1.5 text-[9px] font-bold text-neutral-500 cursor-pointer">
+                    <input type="checkbox" checked={allHidden([zone])} onChange={e => hideMany([zone], e.target.checked)} />
+                    {t('wizard.layout.help_hide_group', 'Ocultar este grupo')}
+                  </label>
+                </div>
                 <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 divide-y divide-neutral-100 dark:divide-neutral-800">
                   {visible.map(id => {
                     const { help, custom } = getZoneHelp(fieldsMetadata, id, zone)
                     const multi = zonesOfField(config.layout_config, id).length > 1
+                    const hidden = isHelpHidden(fieldsMetadata, id, zone)
                     return (
-                      <div key={id} className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-2 px-3 py-2">
+                      <div key={id} className={cn('grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-2 px-3 py-2', hidden && 'opacity-60')}>
                         <div className="pt-1.5 space-y-1">
                           <span className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
                             <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-2', hasHelp(help) ? 'bg-emerald-500' : 'bg-neutral-300')} />
@@ -140,6 +165,10 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
                             </button>
                           )}
                           {multi && custom && <span className="block text-[9px] font-black uppercase tracking-widest text-amber-600">{t('wizard.layout.help_own', 'Texto próprio')}</span>}
+                          <label className="flex items-center gap-1.5 text-[9px] font-bold text-neutral-500 cursor-pointer">
+                            <input type="checkbox" checked={hidden} onChange={e => save(setHelpHidden(fieldsMetadata, id, zone, e.target.checked))} />
+                            {t('wizard.layout.help_hide', 'Ocultar')}
+                          </label>
                         </div>
                         <textarea
                           value={cellValue(id, zone)}

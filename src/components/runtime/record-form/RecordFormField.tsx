@@ -3,6 +3,7 @@ import React, { useMemo, Suspense } from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import * as LucideReact from 'lucide-react'
 import { HelpPopover } from '../HelpPopover'
+import { visibleHelp } from '@/lib/helpText'
 
 const ByocRemoteRenderer = ({ compiledCode, fieldName, componentProps }: { compiledCode: string, fieldName: string, componentProps?: any }) => {
   const DynamicComponent = useMemo(() => {
@@ -282,7 +283,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
           {field.is_primary_key && <span className="ml-2 text-indigo-500"># PK</span>}
           {zoneConfig.content?.required && <span className="ml-1 text-red-500">*</span>}
         </label>
-        <HelpPopover help={zoneConfig.label?.help} feedback={{ projectId: projectId || project?.id, field: field.id, zone: 'form' }} />
+        <HelpPopover help={visibleHelp(zoneConfig.label)} feedback={{ projectId: projectId || project?.id, field: field.id, zone: 'form' }} />
         </div>
 
         <div className="flex items-center gap-2">

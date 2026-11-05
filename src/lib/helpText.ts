@@ -128,6 +128,40 @@ export function clearZoneHelp(fieldsMetadata: Record<string, any> | undefined, f
   return next
 }
 
+/**
+ * Ocultar ajuda: o dev esconde o `?` sem apagar o texto (por um tempo ou para sempre).
+ *  - da tela: `layout_config.screen_help_hidden`;
+ *  - do campo, por zona: `label.help_hidden` na chave da zona (`<zona>-<id>`), ou na base se a zona não tem chave.
+ */
+export const visibleHelp = (label: any): unknown => (label?.help_hidden === true ? undefined : label?.help)
+
+export function isHelpHidden(fieldsMetadata: Record<string, any> | undefined, fieldId: string, zone: HelpZone): boolean {
+  const meta = fieldsMetadata || {}
+  const entry = meta[zoneKey(zone, fieldId)]
+  return (entry ?? meta[fieldId])?.label?.help_hidden === true
+}
+
+/** Oculta ou volta a mostrar a ajuda do campo numa zona (cria a chave da zona a partir da base quando precisa) */
+export function setHelpHidden(fieldsMetadata: Record<string, any> | undefined, fieldId: string, zone: HelpZone, hidden: boolean): Record<string, any> {
+  const next: Record<string, any> = { ...(fieldsMetadata || {}) }
+  const key = zoneKey(zone, fieldId)
+  if (next[key] === undefined && !hidden) {
+    // sem chave de zona: só a base pode estar oculta, e é ela que se desfaz
+    if (next[fieldId]?.label?.help_hidden === true) {
+      const label = { ...next[fieldId].label }
+      delete label.help_hidden
+      next[fieldId] = { ...next[fieldId], label }
+    }
+    return next
+  }
+  const seed = next[key] || next[fieldId] || { label: {}, component: { type: 'text' } }
+  const label = { ...(seed.label || {}) }
+  if (hidden) label.help_hidden = true
+  else delete label.help_hidden
+  next[key] = { ...seed, label }
+  return next
+}
+
 export interface HelpCenterEntry {
   id: string
   slug: string
@@ -149,13 +183,14 @@ export function collectHelpCenter(views: any[], language: string | undefined): H
     const modelFields: any[] = v?.model?.fields || []
     const ids: string[] = (lc.form_fields || []).map((f: any) => (typeof f === 'string' ? f : f?.id)).filter(Boolean)
     const fields = ids.flatMap(id => {
+      if (isHelpHidden(meta, id, 'form')) return []
       const text = resolveHelp(getZoneHelp(meta, id, 'form').help, language)
       if (!text) return []
       const label = meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
         || modelFields.find(f => f.id === id)?.display_name || modelFields.find(f => f.id === id)?.db_column_name || id
       return [{ id, label, text }]
     })
-    const screen = resolveHelp(lc.screen_help, language)
+    const screen = lc.screen_help_hidden === true ? '' : resolveHelp(lc.screen_help, language)
     if (!screen && fields.length === 0) continue
     out.push({ id: v.id, slug: v.slug, name: v.name || v.slug, screen, fields })
   }

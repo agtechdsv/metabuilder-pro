@@ -2,6 +2,7 @@ import { RouteNode } from '../../ast'
 import { getGeneratorDictionary } from '../../i18n'
 import { exportMenuHtml, exportImportLine, routeExportFormats } from '../export'
 import { renderGridCellValue, toPascalCase, toCamel, helpIconJsx } from './helpers'
+import { visibleHelp } from '../../../helpText'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Listagem (pesquisa_cadastro — page.tsx)
@@ -78,7 +79,7 @@ export function generateListPage(route: RouteNode, targetLang?: string): string 
                 key="${col}"
                 className="px-6 py-4 text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-[0.15em] whitespace-nowrap cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors group/th"
               >
-${helpIconJsx(f.config?.label?.help) ? '<div className="flex items-center gap-2">' : ''}
+${helpIconJsx(visibleHelp(f.config?.label)) ? '<div className="flex items-center gap-2">' : ''}
                 <Link
                   href={makeQuery({ sort_by: '${col}', sort_order: sortBy === '${col}' && sortOrder === 'asc' ? 'desc' : 'asc' })}
                   className="flex items-center gap-2"
@@ -92,7 +93,7 @@ ${helpIconJsx(f.config?.label?.help) ? '<div className="flex items-center gap-2"
                     )}
                   </div>
                 </Link>
-${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help, { field: f.id, zone: 'grid' }) + '</div>' : ''}
+${helpIconJsx(visibleHelp(f.config?.label)) ? helpIconJsx(visibleHelp(f.config?.label), { field: f.id, zone: 'grid' }) + '</div>' : ''}
               </th>`
     })
     .join('\n')
@@ -110,7 +111,7 @@ ${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help, { fiel
   // rótulo do filtro; com dica de ajuda (da zona Filtro), o ícone ? fica ao lado
   const filterLabel = (f: any) => {
     const label = `<label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>`
-    const icon = helpIconJsx(f.config?.label?.help, { field: f.id, zone: 'filter' })
+    const icon = helpIconJsx(visibleHelp(f.config?.label), { field: f.id, zone: 'filter' })
     return icon ? `<div className="flex items-center gap-1.5">${label}${icon}</div>` : label
   }
 

@@ -31,6 +31,12 @@ describe('dica de ajuda do campo no app exportado', () => {
     expect(icon).toContain('{"Use \\"aspas\\", {chaves} e <tags>"}')
   })
 
+  it('ajuda oculta no Studio não vira ícone no app exportado', () => {
+    const hidden = renderFormField(field({ text: 'CNPJ', help: { pt: 'Só números' }, help_hidden: true }), false)
+    expect(hidden).not.toContain('<details')
+    expect(hidden).not.toContain('Só números')
+  })
+
   it('sem texto, nenhum ícone', () => {
     expect(helpIconJsx({})).toBe('')
     expect(helpIconJsx(undefined)).toBe('')

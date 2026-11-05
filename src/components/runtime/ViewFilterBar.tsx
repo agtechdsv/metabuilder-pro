@@ -2,6 +2,7 @@ import React from 'react'
 import { Search, RefreshCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HelpPopover } from '@/components/runtime/HelpPopover'
+import { visibleHelp } from '@/lib/helpText'
 
 export function ViewFilterBar({
   filterFields, filterValues, setFilterValues, relationalOptions, parseFixedOptions,
@@ -53,7 +54,7 @@ export function ViewFilterBar({
                       >
                         {zoneConfig.label?.text || field.display_name}
                       </label>
-                      <HelpPopover help={zoneConfig.label?.help} feedback={{ ...feedbackBase, field: field.id, zone: 'filter' }} />
+                      <HelpPopover help={visibleHelp(zoneConfig.label)} feedback={{ ...feedbackBase, field: field.id, zone: 'filter' }} />
                     </div>
                     <div className="relative group">
                       {(() => {

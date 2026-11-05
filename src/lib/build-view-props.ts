@@ -695,6 +695,6 @@ export async function buildViewProps(
     masterModelId: view.layout_config?.master_model_id || view.model_id,
     customSlots: view.layout_config?.custom_slots,
     masterUseCaseSlug: view.layout_config?.master_use_case_slug,
-    screenHelp: view.layout_config?.screen_help,
+    screenHelp: view.layout_config?.screen_help_hidden === true ? undefined : view.layout_config?.screen_help,
   }
 }

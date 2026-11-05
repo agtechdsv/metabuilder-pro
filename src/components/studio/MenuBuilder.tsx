@@ -528,6 +528,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
 
                 if (!item.label) {
                   if (selectedSlug === 'downloads') updates.label = t('dashboard.projects.studio.downloads_center')
+                  else if (selectedSlug === 'help') updates.label = t('dashboard.projects.studio.help_center', 'Central de Ajuda')
                   else if (selectedView) updates.label = selectedView.name
                 }
                 onUpdate(item.id, updates)
@@ -539,6 +540,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
               {isDownloadsActive !== false && (
                 <option value="downloads">📁 {t('dashboard.projects.studio.downloads_center')} ({t('dashboard.projects.studio.utility')})</option>
               )}
+              <option value="help">❓ {t('dashboard.projects.studio.help_center', 'Central de Ajuda')} ({t('dashboard.projects.studio.utility')})</option>
               {views.map((v: any) => (
                 <option key={v.id} value={v.slug}>{v.name}</option>
               ))}
