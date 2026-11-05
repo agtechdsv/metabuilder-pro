@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HelpFeedbackPanel } from './HelpFeedbackPanel'
-import { HELP_LANGS, HelpText, getFieldHelp, hasHelp, helpCoverage, normalizeHelp, setFieldHelp } from '@/lib/helpText'
+import { HELP_LANGS, HelpLang, HelpText, getFieldHelp, hasHelp, helpCoverage, normalizeHelp, setFieldHelp } from '@/lib/helpText'
 
 interface HelpOverviewProps {
   config: any
@@ -27,6 +27,7 @@ function fieldLabel(id: string, models: any, fieldsMetadata: Record<string, any>
 export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps) {
   const [open, setOpen] = useState(false)
   const [onlyMissing, setOnlyMissing] = useState(false)
+  const [lang, setLang] = useState<HelpLang>('pt')
   const fieldsMetadata: Record<string, any> = config.layout_config?.fields_metadata || {}
 
   const ids = useMemo(() => {
@@ -81,42 +82,47 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
             {t('wizard.layout.help_only_missing', 'Mostrar só os campos sem dica')}
           </label>
 
-          <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-[9px] font-black uppercase tracking-widest text-neutral-400 text-left">
-                  <th className="px-3 py-2 w-40">{t('wizard.layout.help_field', 'Campo')}</th>
-                  {HELP_LANGS.map(l => <th key={l} className="px-3 py-2 min-w-[200px]">{l.toUpperCase()}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map(id => {
-                  const missing = !hasHelp(getFieldHelp(fieldsMetadata, id))
-                  return (
-                    <tr key={id} className="border-t border-neutral-100 dark:border-neutral-800 align-top">
-                      <td className="px-3 py-2 font-bold text-neutral-700 dark:text-neutral-300">
-                        <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-2', missing ? 'bg-neutral-300' : 'bg-emerald-500')} />
-                        {fieldLabel(id, models, fieldsMetadata)}
-                      </td>
-                      {HELP_LANGS.map(l => (
-                        <td key={l} className="px-2 py-1.5">
-                          <textarea
-                            value={cellValue(id, l)}
-                            rows={2}
-                            maxLength={2000}
-                            onChange={e => update(id, l, e.target.value)}
-                            className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-xs font-medium focus:border-indigo-500 outline-none resize-y"
-                          />
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                })}
-                {visible.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-4 text-center text-neutral-400 italic">{t('wizard.layout.help_all_done', 'Todos os campos têm dica.')}</td></tr>
-                )}
-              </tbody>
-            </table>
+          <div className="flex items-center gap-1">
+            {HELP_LANGS.map(l => {
+              const filled = ids.filter(id => !!normalizeHelp(getFieldHelp(fieldsMetadata, id))[l]).length
+              return (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setLang(l)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest transition-colors',
+                    lang === l ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-700'
+                  )}
+                >
+                  {l.toUpperCase()} ({filled}/{ids.length})
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 divide-y divide-neutral-100 dark:divide-neutral-800">
+            {visible.map(id => {
+              const missing = !hasHelp(getFieldHelp(fieldsMetadata, id))
+              return (
+                <div key={id} className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-2 px-3 py-2">
+                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 pt-1.5">
+                    <span className={cn('inline-block w-1.5 h-1.5 rounded-full mr-2', missing ? 'bg-neutral-300' : 'bg-emerald-500')} />
+                    {fieldLabel(id, models, fieldsMetadata)}
+                  </span>
+                  <textarea
+                    value={cellValue(id, lang)}
+                    rows={2}
+                    maxLength={2000}
+                    onChange={e => update(id, lang, e.target.value)}
+                    className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1.5 text-xs font-medium focus:border-indigo-500 outline-none resize-y"
+                  />
+                </div>
+              )
+            })}
+            {visible.length === 0 && (
+              <p className="px-3 py-4 text-center text-xs text-neutral-400 italic">{t('wizard.layout.help_all_done', 'Todos os campos têm dica.')}</p>
+            )}
           </div>
         </div>
       )}
