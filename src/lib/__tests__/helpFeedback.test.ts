@@ -6,7 +6,7 @@ const pid = '11111111-1111-4111-8111-111111111111'
 describe('feedback da ajuda', () => {
   it('aceita voto de campo e de tela, limpando o comentário', () => {
     const r = parseHelpFeedback({ projectId: pid, field: 'f1', screen: 'v1', vote: 'down', comment: '  não entendi  ', language: 'pt' })
-    expect(r).toEqual({ ok: true, value: { projectId: pid, screen: 'v1', field: 'f1', vote: 'down', comment: 'não entendi', language: 'pt' } })
+    expect(r).toEqual({ ok: true, value: { projectId: pid, screen: 'v1', field: 'f1', zone: null, vote: 'down', comment: 'não entendi', language: 'pt' } })
     expect(parseHelpFeedback({ projectId: pid, screen: 'v1', vote: 'up' }).ok).toBe(true)
   })
 
@@ -16,6 +16,12 @@ describe('feedback da ajuda', () => {
     expect(parseHelpFeedback({ projectId: pid, field: 'f', vote: 'meh' }).ok).toBe(false)
     expect(parseHelpFeedback({ projectId: pid, field: "f'; drop", vote: 'up' }).ok).toBe(false)
     expect(parseHelpFeedback({ projectId: pid, vote: 'up' }).ok).toBe(false)
+  })
+
+  it('guarda a zona e recusa zona desconhecida', () => {
+    const ok = parseHelpFeedback({ projectId: pid, field: 'f', zone: 'grid', vote: 'up' })
+    expect(ok.ok && ok.value.zone).toBe('grid')
+    expect(parseHelpFeedback({ projectId: pid, field: 'f', zone: 'sidebar', vote: 'up' }).ok).toBe(false)
   })
 
   it('corta comentário longo e ignora idioma estranho', () => {

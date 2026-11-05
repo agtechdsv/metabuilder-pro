@@ -265,6 +265,7 @@ export interface RouteNode {
   fieldActions?: Record<string, { left: CustomActionDef[]; right: CustomActionDef[] }>
   path: string                 // ex: '/clientes'
   viewSlug: string             // slug original da view (ex: 'clientes')
+  viewId?: string              // id da view no Studio; identifica a tela no feedback da ajuda
   logicType: LogicType         // tipo da view (pesquisa_cadastro, kanban, etc.)
   modelId: string
   modelTable: string           // nome real da tabela no banco

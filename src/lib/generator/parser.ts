@@ -2863,6 +2863,7 @@ export function parseMetaBuilderJSON(
     routes.push({
       path: `/${rv.slug || rv.name?.toLowerCase() || model.dbTable}`,
       viewSlug: rv.slug || '',
+      viewId: typeof rv.id === 'string' ? rv.id : undefined,
       logicType: resolvedView.logic_type || 'pesquisa_cadastro',
       modelId: model.id,
       modelTable: model.dbTable,

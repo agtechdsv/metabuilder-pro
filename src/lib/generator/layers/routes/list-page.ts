@@ -92,7 +92,7 @@ ${helpIconJsx(f.config?.label?.help) ? '<div className="flex items-center gap-2"
                     )}
                   </div>
                 </Link>
-${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help) + '</div>' : ''}
+${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help, { field: f.id, zone: 'grid' }) + '</div>' : ''}
               </th>`
     })
     .join('\n')
@@ -110,7 +110,7 @@ ${helpIconJsx(f.config?.label?.help) ? helpIconJsx(f.config?.label?.help) + '</d
   // rótulo do filtro; com dica de ajuda (da zona Filtro), o ícone ? fica ao lado
   const filterLabel = (f: any) => {
     const label = `<label className="text-[10px] font-black tracking-widest text-neutral-400 uppercase ml-1">${f.label}</label>`
-    const icon = helpIconJsx(f.config?.label?.help)
+    const icon = helpIconJsx(f.config?.label?.help, { field: f.id, zone: 'filter' })
     return icon ? `<div className="flex items-center gap-1.5">${label}${icon}</div>` : label
   }
 
@@ -455,7 +455,7 @@ export default async function ${mn}ListPage({
             <div className="flex flex-col">
               <h1 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
                 ${route.title}
-                ${helpIconJsx(route.screenHelp)}
+                ${helpIconJsx(route.screenHelp, { screen: route.viewId, zone: 'screen' })}
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <div className="w-8 h-1 bg-indigo-600 rounded-full" />

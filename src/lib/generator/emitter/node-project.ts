@@ -3,6 +3,7 @@ import { generateRoutes } from '../layers/routes'
 import { generateActions } from '../layers/actions'
 import { generateAccessLayer } from '../layers/access'
 import { generateBiEngine } from '../layers/bi-engine'
+import { finalizeHelpFeedback } from '../layers/helpFeedback'
 import { generateComponents } from '../layers/components'
 import { generateBaseFiles } from './base-files'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
@@ -38,6 +39,9 @@ export function generateNodeProject(ast: AppAST): Map<string, string> {
 
   // 4. Página de Downloads
   generateDownloadsPage(ast, files)
+
+  // 4b. "Isto ajudou?" da ajuda: com PostgreSQL grava no banco do app (tabela mb_help_feedback); nos demais bancos some
+  finalizeHelpFeedback(ast, files, ast.dbStack === 'postgres')
 
   // 5. Pacote de produção: Dockerfile, compose com HTTPS, .env.example, rota de saúde e guia DEPLOY.md
   addNodeDeployPack(ast, files)

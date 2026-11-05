@@ -86,8 +86,10 @@ export function HelpOverview({ config, setConfig, models, t }: HelpOverviewProps
           <HelpFeedbackPanel
             projectId={(Array.isArray(models) ? models : []).find((m: any) => m?.project_id)?.project_id}
             screenId={config.id}
-            fieldIds={formIds}
+            fieldIds={Array.from(new Set(byZone.flatMap(z => z.ids)))}
             fieldName={(id) => fieldLabel(id, models, fieldsMetadata)}
+            zoneCount={(id) => zonesOfField(config.layout_config, id).length}
+            isCustom={(id, zone) => zone !== 'screen' && getZoneHelp(fieldsMetadata, id, zone).custom}
             t={t}
           />
 

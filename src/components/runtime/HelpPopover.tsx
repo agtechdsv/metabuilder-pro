@@ -14,7 +14,7 @@ interface HelpPopoverProps {
   /** `screen` é o ícone maior do cabeçalho da tela; `field` é o pequeno ao lado do rótulo */
   variant?: 'field' | 'screen'
   /** Com isto, a ajuda mostra "Isto ajudou?" e o voto vai para o banco do cliente. Sem projeto, não pergunta. */
-  feedback?: { projectId?: string; screen?: string; field?: string }
+  feedback?: { projectId?: string; screen?: string; field?: string; zone?: 'filter' | 'grid' | 'form' | 'screen' }
   /** Link para a Central de Ajuda do projeto */
   centralHref?: string
 }
@@ -72,7 +72,8 @@ export function HelpPopover({ help, className, variant = 'field', feedback, cent
   }
 
   return (
-    <span ref={rootRef} className={cn('relative inline-flex align-middle', className)}>
+    // o clique dentro do balão não deve chegar ao cabeçalho da coluna (que ordena) nem ao rótulo
+    <span ref={rootRef} onClick={(e) => e.stopPropagation()} className={cn('relative inline-flex align-middle', className)}>
       <button
         type="button"
         aria-label={label}

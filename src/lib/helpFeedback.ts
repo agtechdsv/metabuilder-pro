@@ -8,12 +8,17 @@ const MAX_ID = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SAFE_ID = /^[\w\-.:]+$/
 
+export const HELP_FEEDBACK_ZONES = ['filter', 'grid', 'form', 'screen'] as const
+export type HelpFeedbackZone = (typeof HELP_FEEDBACK_ZONES)[number]
+
 export interface HelpFeedbackInput {
   projectId: string
   /** tela (id do caso de uso); sempre informada quando conhecida */
   screen: string | null
   /** campo (id); vazio = feedback da ajuda da tela */
   field: string | null
+  /** onde a ajuda foi vista: filtro, grid, formulário ou a ajuda da tela */
+  zone: HelpFeedbackZone | null
   vote: 'up' | 'down'
   comment: string | null
   language: string | null
@@ -42,5 +47,11 @@ export function parseHelpFeedback(body: unknown): { ok: true; value: HelpFeedbac
   }
   const language = typeof b.language === 'string' && /^[a-z]{2}(-[A-Za-z]{2})?$/.test(b.language) ? b.language : null
 
-  return { ok: true, value: { projectId: b.projectId, screen, field, vote: b.vote, comment, language } }
+  let zone: HelpFeedbackZone | null = null
+  if (b.zone !== undefined && b.zone !== null && b.zone !== '') {
+    if (!HELP_FEEDBACK_ZONES.includes(b.zone as HelpFeedbackZone)) return { ok: false, error: 'Zona inválida.' }
+    zone = b.zone as HelpFeedbackZone
+  }
+
+  return { ok: true, value: { projectId: b.projectId, screen, field, zone, vote: b.vote, comment, language } }
 }

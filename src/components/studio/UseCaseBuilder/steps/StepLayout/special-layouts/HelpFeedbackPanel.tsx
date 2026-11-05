@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react'
 import { ThumbsDown, ThumbsUp, RefreshCw } from 'lucide-react'
+import { FeedbackSummaryRow, groupFeedback, suggestsOwnText } from '@/lib/helpFeedbackSummary'
+import type { HelpFeedbackZone } from '@/lib/helpFeedback'
 
 interface Props {
   projectId?: string
@@ -9,17 +11,20 @@ interface Props {
   screenId?: string
   fieldIds: string[]
   fieldName: (id: string) => string
+  /** quantas zonas (filtro, grid, formulário) usam o campo */
+  zoneCount: (id: string) => number
+  /** a zona já tem texto próprio? */
+  isCustom: (id: string, zone: HelpFeedbackZone) => boolean
   t: (key: string, fallback?: string) => string
 }
 
-interface Summary { screen_id: string | null; field_id: string | null; up: number; down: number }
-interface Comment { screen_id: string | null; field_id: string | null; comment: string; created_at: string }
+interface Comment { screen_id: string | null; field_id: string | null; zone: string | null; comment: string; created_at: string }
 
-/** Feedback dos usuários sobre as dicas desta tela: campos com mais 👎 primeiro, e os comentários mais recentes. */
-export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, t }: Props) {
+/** Feedback dos usuários sobre as dicas desta tela: por campo e por zona, com os de mais 👎 primeiro, e os comentários. */
+export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zoneCount, isCustom, t }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [data, setData] = useState<{ summary: Summary[]; comments: Comment[] } | null>(null)
+  const [data, setData] = useState<{ summary: FeedbackSummaryRow[]; comments: Comment[] } | null>(null)
 
   if (!projectId) return null
 
@@ -37,10 +42,17 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, t 
     }
   }
 
+  const zoneName = (z: string | null) =>
+    z === 'filter' ? t('wizard.layout.zone_filter', 'Filtro de busca')
+      : z === 'grid' ? t('wizard.layout.zone_grid', 'Grid de dados')
+      : z === 'form' ? t('wizard.layout.zone_form', 'Formulário')
+      : z === 'screen' ? t('wizard.layout.help_screen', 'Ajuda da tela')
+      : t('wizard.layout.help_zone_unknown', 'Sem zona (votos antigos)')
+
   const mine = (r: { screen_id: string | null; field_id: string | null }) =>
     r.field_id ? fieldIds.includes(r.field_id) : !!screenId && r.screen_id === screenId
   const nameOf = (r: { field_id: string | null }) => (r.field_id ? fieldName(r.field_id) : t('wizard.layout.help_screen', 'Ajuda da tela'))
-  const summary = (data?.summary || []).filter(mine)
+  const targets = groupFeedback(data?.summary || [], fieldIds, screenId)
   const comments = (data?.comments || []).filter(mine)
 
   return (
@@ -53,14 +65,31 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, t 
         </button>
       </div>
       {error && <p className="text-[11px] text-red-500">{error}</p>}
-      {data && summary.length === 0 && <p className="text-[11px] text-neutral-400 italic">{t('wizard.layout.help_feedback_empty', 'Ninguém votou nas dicas desta tela ainda.')}</p>}
-      {summary.length > 0 && (
-        <ul className="space-y-1">
-          {summary.map(r => (
-            <li key={`${r.screen_id}-${r.field_id}`} className="flex items-center gap-3 text-xs">
-              <span className="flex-1 font-bold text-neutral-700 dark:text-neutral-300 truncate">{nameOf(r)}</span>
-              <span className="flex items-center gap-1 text-emerald-600"><ThumbsUp className="w-3 h-3" />{r.up}</span>
-              <span className="flex items-center gap-1 text-red-500"><ThumbsDown className="w-3 h-3" />{r.down}</span>
+      {data && targets.length === 0 && <p className="text-[11px] text-neutral-400 italic">{t('wizard.layout.help_feedback_empty', 'Ninguém votou nas dicas desta tela ainda.')}</p>}
+      {targets.length > 0 && (
+        <ul className="space-y-2">
+          {targets.map(tg => (
+            <li key={tg.fieldId || '__screen__'} className="text-xs">
+              <span className="block font-bold text-neutral-700 dark:text-neutral-300 truncate">{nameOf({ field_id: tg.fieldId })}</span>
+              <ul className="mt-0.5 space-y-0.5 pl-3">
+                {tg.zones.map(z => {
+                  const hint = tg.fieldId && z.zone && z.zone !== 'screen' && suggestsOwnText(tg, z.zone, {
+                    custom: isCustom(tg.fieldId, z.zone), zoneCount: zoneCount(tg.fieldId),
+                  })
+                  return (
+                    <li key={z.zone || 'none'} className="flex flex-wrap items-center gap-x-3 text-[11px]">
+                      <span className="flex-1 text-neutral-500 truncate">{zoneName(z.zone)}</span>
+                      <span className="flex items-center gap-1 text-emerald-600"><ThumbsUp className="w-3 h-3" />{z.up}</span>
+                      <span className="flex items-center gap-1 text-red-500"><ThumbsDown className="w-3 h-3" />{z.down}</span>
+                      {hint && (
+                        <span className="basis-full text-[10px] font-bold text-amber-600">
+                          {t('wizard.layout.help_suggest_own', 'Esta zona está pior que as outras: considere "Personalizar nesta zona".')}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
             </li>
           ))}
         </ul>
@@ -70,6 +99,7 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, t 
           {comments.map((c, i) => (
             <li key={i} className="text-xs">
               <span className="font-bold text-neutral-600 dark:text-neutral-400">{nameOf(c)}</span>
+              {c.zone && <span className="text-neutral-400"> · {zoneName(c.zone)}</span>}
               <span className="text-neutral-400"> · {new Date(c.created_at).toLocaleDateString()}</span>
               <p className="whitespace-pre-line text-neutral-700 dark:text-neutral-300">{c.comment}</p>
             </li>

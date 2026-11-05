@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       'sql_query',
       {
         queryId: crypto.randomUUID(), action: 'help_feedback',
-        data: { screen: f.screen, field: f.field, vote: f.vote, comment: f.comment, language: f.language, userRef },
+        data: { screen: f.screen, field: f.field, zone: f.zone, vote: f.vote, comment: f.comment, language: f.language, userRef },
       },
       { secret: token, timeoutMs: 10000 },
     )

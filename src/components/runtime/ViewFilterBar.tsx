@@ -6,7 +6,7 @@ import { HelpPopover } from '@/components/runtime/HelpPopover'
 export function ViewFilterBar({
   filterFields, filterValues, setFilterValues, relationalOptions, parseFixedOptions,
   btnSearch, btnClear, canSearch, canClear, handleSearchClick, handleClear, fetchData,
-  t, getButtonStyles, getFontFamily, getFontSize, filterGridColumns
+  t, getButtonStyles, getFontFamily, getFontSize, filterGridColumns, feedbackBase
 }: any) {
   const labelSearch = btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '' ? btnSearch.custom_label : t('runtime.search');
   const labelClear = btnClear?.custom_label !== undefined && btnClear.custom_label !== '' ? btnClear.custom_label : t('runtime.clear');
@@ -53,7 +53,7 @@ export function ViewFilterBar({
                       >
                         {zoneConfig.label?.text || field.display_name}
                       </label>
-                      <HelpPopover help={zoneConfig.label?.help} />
+                      <HelpPopover help={zoneConfig.label?.help} feedback={{ ...feedbackBase, field: field.id, zone: 'filter' }} />
                     </div>
                     <div className="relative group">
                       {(() => {

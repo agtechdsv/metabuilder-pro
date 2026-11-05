@@ -30,6 +30,8 @@ import { useViewDataFetch } from './hooks/useViewDataFetch'
 
 interface ViewContainerProps {
   projectId: string
+  /** id da tela (caso de uso); identifica de onde veio o feedback da ajuda */
+  viewId?: string
   modelName: string
   displayFields: any[]
   filterFields: any[]
@@ -122,6 +124,7 @@ const getFontSize = (size?: string) => {
 
 export default function ViewContainer({
   projectId,
+  viewId,
   modelName,
   displayFields,
   filterFields = [],
@@ -501,6 +504,7 @@ export default function ViewContainer({
         handleSearchClick={handleSearchClick} handleClear={handleClear} fetchData={fetchData}
         t={t} getButtonStyles={getButtonStyles} getFontFamily={getFontFamily} getFontSize={getFontSize}
         filterGridColumns={filterGridColumns}
+        feedbackBase={{ projectId, screen: viewId }}
       />}
       {/* Data Display */}
       {isLoading ? (
@@ -524,6 +528,7 @@ export default function ViewContainer({
           setItemsPerPage={setItemsPerPage} currentPage={currentPage} setCurrentPage={setCurrentPage}
           totalServerRows={totalServerRows} totalPages={totalPages} fetchData={fetchData} filterValues={filterValues} data={data}
           t={t} getFontFamily={getFontFamily} getFontSize={getFontSize}
+          feedbackBase={{ projectId, screen: viewId }}
         />
       ) : viewMode === 'kanban' ? (
         <div className={cn("space-y-6 transition-opacity duration-300", isFetchingBackground && "opacity-70")}>

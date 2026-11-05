@@ -686,6 +686,7 @@ export default function ViewPageContent({
             <ViewContainer
               externalRefreshTrigger={refreshKey}
               projectId={project.id}
+              viewId={viewId}
               project={project}
               modelName={modelName}
               displayFields={displayFields}

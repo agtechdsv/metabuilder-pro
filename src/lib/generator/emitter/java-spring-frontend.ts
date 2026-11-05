@@ -1,5 +1,6 @@
 import { AppAST, ModelNode } from '../ast'
 import { generateRoutes } from '../layers/routes'
+import { finalizeHelpFeedback } from '../layers/helpFeedback'
 import { generateActions } from '../layers/actions'
 import { generateComponents } from '../layers/components'
 import { generateLoginPage, generateDownloadsPage } from './auth-flow'
@@ -71,6 +72,8 @@ export function generateJavaFrontend(ast: AppAST, files: Map<string, string>, jw
   generateDownloadsPage(frontendAst, tempFiles)
   // gestão de acesso (opcional): o frontend lê os grupos e permissões pela API REST, como qualquer outra tabela
   generateAccessAdmin(frontendAst, tempFiles)
+  // o feedback da ajuda grava no banco do app Node; no front Java não há onde gravar: tira os marcadores
+  finalizeHelpFeedback(frontendAst, tempFiles, false)
 
   // com regras de acesso no backend: o login (lê o cadastro do usuário e o grupo) e as telas de gestão de acesso chamam a API como "sistema"
   if (withUser) {

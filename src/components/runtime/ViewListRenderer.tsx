@@ -9,7 +9,7 @@ export function ViewListRenderer({
   relationalOptions, handleSort, sortConfig, onView, onEdit, onDelete,
   isFetchingBackground, isLoading, itemsPerPage, setItemsPerPage, currentPage, setCurrentPage,
   totalServerRows, totalPages, fetchData, filterValues, data,
-  t, getFontFamily, getFontSize
+  t, getFontFamily, getFontSize, feedbackBase
 }: any) {
   return (
         <div className={cn("bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-xl dark:shadow-none backdrop-blur-sm flex flex-col w-full transition-opacity duration-300", isFetchingBackground && "opacity-70")}>
@@ -39,7 +39,7 @@ export function ViewListRenderer({
                     >
                       <div className="flex items-center gap-2">
                         {field.display_name}
-                        <HelpPopover help={(field.config?.grid_config || field.config)?.label?.help} />
+                        <HelpPopover help={(field.config?.grid_config || field.config)?.label?.help} feedback={{ ...feedbackBase, field: field.id, zone: 'grid' }} />
                         {field.is_primary_key && <span className="text-indigo-500" title={t('runtime.primary_key')}>🔑</span>}
                         {field.is_sortable !== false && (
                           <div className="opacity-0 group-hover/th:opacity-100 transition-opacity">
