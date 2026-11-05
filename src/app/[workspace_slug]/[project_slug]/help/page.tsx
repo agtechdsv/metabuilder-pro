@@ -92,5 +92,5 @@ export default async function HelpCenterPage({ params }: PageProps) {
   }
 
   const entries = collectHelpCenter((views || []).filter((v: any) => !denied.has(v.id)), language)
-  return <HelpCenterClient entries={entries} baseHref={`/${workspace_slug}/${project_slug}`} projectName={project.name} />
+  return <HelpCenterClient entries={entries} baseHref={`/${workspace_slug}/${project_slug}`} projectName={project.name} projectId={project.id} />
 }

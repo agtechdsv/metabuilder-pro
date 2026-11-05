@@ -100,7 +100,7 @@ export function HelpOverview({ config, setConfig, models, t, defaultOpen = false
               fieldIds={Array.from(new Set(byZone.flatMap(z => z.ids)))}
               fieldName={(id) => fieldLabel(id, models, fieldsMetadata)}
               zoneCount={(id) => zonesOfField(config.layout_config, id).length}
-              isCustom={(id, zone) => zone !== 'screen' && getZoneHelp(fieldsMetadata, id, zone).custom}
+              isCustom={(id, zone) => (HELP_ZONES as readonly string[]).includes(zone) && getZoneHelp(fieldsMetadata, id, zone as HelpZone).custom}
               t={t}
             />
           )}

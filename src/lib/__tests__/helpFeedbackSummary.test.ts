@@ -21,6 +21,12 @@ describe('resumo do feedback da ajuda', () => {
     expect(groupFeedback(rows, [])).toHaveLength(0)
   })
 
+  it('voto da Central de Ajuda vira uma linha própria, depois das zonas reais, e não entra na sugestão', () => {
+    const [t] = groupFeedback([row('a', 'central', 0, 5), row('a', 'form', 2, 0), row('a', 'grid', 0, 1)], ['a'])
+    expect(t.zones.map(z => z.zone)).toEqual(['grid', 'form', 'central'])
+    expect(suggestsOwnText(t, 'central', { custom: false, zoneCount: 3 })).toBe(false)
+  })
+
   it('une votos antigos sem zona numa linha própria', () => {
     const out = groupFeedback([row('a', null, 1, 0), row('a', 'form', 0, 1)], ['a'])
     expect(out[0].zones.map(z => z.zone)).toEqual(['form', null])
@@ -33,5 +39,6 @@ describe('resumo do feedback da ajuda', () => {
     expect(suggestsOwnText(t, 'grid', { custom: true, zoneCount: 2 })).toBe(false)
     expect(suggestsOwnText(t, 'grid', { custom: false, zoneCount: 1 })).toBe(false)
     expect(suggestsOwnText(t, 'screen', { custom: false, zoneCount: 2 })).toBe(false)
+    expect(suggestsOwnText(t, 'central', { custom: false, zoneCount: 2 })).toBe(false)
   })
 })

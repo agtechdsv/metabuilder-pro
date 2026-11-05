@@ -47,6 +47,7 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
       : z === 'grid' ? t('wizard.layout.zone_grid', 'Grid de dados')
       : z === 'form' ? t('wizard.layout.zone_form', 'Formulário')
       : z === 'screen' ? t('wizard.layout.help_screen', 'Ajuda da tela')
+      : z === 'central' ? t('wizard.layout.help_zone_central', 'Central de Ajuda')
       : t('wizard.layout.help_zone_unknown', 'Sem zona (votos antigos)')
 
   const mine = (r: { screen_id: string | null; field_id: string | null }) =>
@@ -73,7 +74,7 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
               <span className="block font-bold text-neutral-700 dark:text-neutral-300 truncate">{nameOf({ field_id: tg.fieldId })}</span>
               <ul className="mt-0.5 space-y-0.5 pl-3">
                 {tg.zones.map(z => {
-                  const hint = tg.fieldId && z.zone && z.zone !== 'screen' && suggestsOwnText(tg, z.zone, {
+                  const hint = tg.fieldId && z.zone && z.zone !== 'screen' && z.zone !== 'central' && suggestsOwnText(tg, z.zone, {
                     custom: isCustom(tg.fieldId, z.zone), zoneCount: zoneCount(tg.fieldId),
                   })
                   return (

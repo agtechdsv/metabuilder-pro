@@ -3,15 +3,18 @@
 import React, { useMemo, useState } from 'react'
 import { HelpCircle, Search } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { HelpFeedbackBar } from '@/components/runtime/HelpFeedbackBar'
 import { helpZoneName, searchHelpCenter, type HelpCenterEntry } from '@/lib/helpText'
 
 interface Props {
   entries: HelpCenterEntry[]
   baseHref: string
   projectName?: string
+  /** com o projeto, cada item da Central pergunta "Isto ajudou?" (o voto vai para a zona central) */
+  projectId?: string
 }
 
-export function HelpCenterClient({ entries, baseHref, projectName }: Props) {
+export function HelpCenterClient({ entries, baseHref, projectName, projectId }: Props) {
   const { t, language } = useI18n()
   const [query, setQuery] = useState('')
   const shown = useMemo(() => searchHelpCenter(entries, query, language), [entries, query, language])
@@ -49,7 +52,12 @@ export function HelpCenterClient({ entries, baseHref, projectName }: Props) {
             <h2 className="text-sm font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-200">
               <a href={`${baseHref}/${e.slug}`} className="hover:text-indigo-500">{e.name}</a>
             </h2>
-            {e.screen && <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{e.screen}</p>}
+            {e.screen && (
+              <div>
+                <p className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{e.screen}</p>
+                {projectId && <HelpFeedbackBar feedback={{ projectId, screen: e.id, zone: 'central' }} className="mt-2 max-w-[16rem]" />}
+              </div>
+            )}
             {e.fields.length > 0 && (
               <dl className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                 {e.fields.map((f, i) => (
@@ -63,6 +71,7 @@ export function HelpCenterClient({ entries, baseHref, projectName }: Props) {
                       ))}
                     </dt>
                     <dd className="text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-line">{f.text}</dd>
+                    {projectId && <HelpFeedbackBar feedback={{ projectId, screen: e.id, field: f.id, zone: 'central' }} className="mt-1 max-w-[16rem]" />}
                   </div>
                 ))}
               </dl>

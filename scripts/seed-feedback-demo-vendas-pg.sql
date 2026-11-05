@@ -13,6 +13,7 @@
 --   * Pedidos > Status: 👍 no formulário e 👎 no grid  -> sugestão "Personalizar nesta zona" (no grid);
 --   * Clientes > Cnpj Cpf e Nome Empresa: zonas com opiniões diferentes;
 --   * comentários em português, inglês e espanhol, de datas diferentes;
+--   * votos dados na própria Central de Ajuda (linha 'Central de Ajuda', separada das zonas reais);
 --   * demo-ana votou 👎 e depois 👍 em Pedidos > Status (grid): conta só o último voto dela.
 -- =====================================================================================================
 
@@ -118,6 +119,14 @@ FROM (VALUES
   (NULL, '22ad7fe3-f180-438c-aba5-83b61eef9516', 'form',  -1, NULL, 'demo-elisa', 'en', '1 day 8 hours'),
   ('3df191be-07a8-462c-800d-0423cad7bc08', NULL, 'screen', 1, NULL, 'demo-fabio',  'es', '2 days 11 hours'),
   ('3df191be-07a8-462c-800d-0423cad7bc08', NULL, 'screen', 1, NULL, 'demo-ana',    'pt', '1 day 1 hour'),
+
+  -- ===== Votos dados na Central de Ajuda (zona 'central'; levam a tela) =====
+  ('d717d84a-4eb5-4973-a6ee-3144d3f76407', '3dd3f409-d711-4224-9c55-b9092bed62fd', 'central',  1, NULL, 'demo-bruno', 'pt', '2 days 2 hours'),
+  ('d717d84a-4eb5-4973-a6ee-3144d3f76407', '3dd3f409-d711-4224-9c55-b9092bed62fd', 'central',  1, NULL, 'demo-carla', 'pt', '1 day 5 hours'),
+  ('d717d84a-4eb5-4973-a6ee-3144d3f76407', '3dd3f409-d711-4224-9c55-b9092bed62fd', 'central', -1, 'Gostaria de ver aqui a lista completa de status.', 'demo-diego', 'pt', '9 hours'),
+  ('33ccc6eb-072c-49be-add6-3228d71508ab', '23ffc613-bf8f-411b-89f9-60c4645baabe', 'central',  1, NULL, 'demo-elisa', 'en', '1 day 2 hours'),
+  ('33ccc6eb-072c-49be-add6-3228d71508ab', NULL, 'central', 1, NULL, 'demo-fabio', 'es', '20 hours'),
+  ('d717d84a-4eb5-4973-a6ee-3144d3f76407', NULL, 'central', 1, NULL, 'demo-ana', 'pt', '3 hours'),
 
   (NULL, 'cc6c72f2-7649-4d99-a27a-1a218fbfbd09', 'form',   1, NULL, 'demo-ana',    'pt', '3 days 2 hours'),
   (NULL, 'cc6c72f2-7649-4d99-a27a-1a218fbfbd09', 'form',   1, NULL, 'demo-bruno',  'pt', '2 days 6 hours'),

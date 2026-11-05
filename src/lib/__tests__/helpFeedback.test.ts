@@ -22,6 +22,9 @@ describe('feedback da ajuda', () => {
     const ok = parseHelpFeedback({ projectId: pid, field: 'f', zone: 'grid', vote: 'up' })
     expect(ok.ok && ok.value.zone).toBe('grid')
     expect(parseHelpFeedback({ projectId: pid, field: 'f', zone: 'sidebar', vote: 'up' }).ok).toBe(false)
+    // voto dado na Central de Ajuda tem zona própria
+    const central = parseHelpFeedback({ projectId: pid, screen: 'v', field: 'f', zone: 'central', vote: 'down', comment: 'x' })
+    expect(central.ok && central.value.zone).toBe('central')
   })
 
   it('corta comentário longo e ignora idioma estranho', () => {
