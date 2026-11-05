@@ -23,7 +23,7 @@ export function ZoneHelpEditor({ config, setConfig, fieldId, zone, t }: Props) {
   const zones = zonesOfField(config.layout_config, fieldId)
   const multi = zones.length > 1
   const { help, custom } = getZoneHelp(meta, fieldId, z)
-  const zoneName = (x: HelpZone) => (x === 'filter' ? t('wizard.layout.zone_filter', 'Filtro') : x === 'grid' ? t('wizard.layout.zone_grid', 'Grid') : t('wizard.layout.zone_form', 'Formulário'))
+  const zoneName = (x: HelpZone) => (x === 'filter' ? t('wizard.layout.zone_filter', 'Filtro de busca') : x === 'grid' ? t('wizard.layout.zone_grid', 'Grid de dados') : t('wizard.layout.zone_form', 'Formulário'))
 
   const save = (next: Record<string, any>) => setConfig({ ...config, layout_config: { ...config.layout_config, fields_metadata: next } })
 

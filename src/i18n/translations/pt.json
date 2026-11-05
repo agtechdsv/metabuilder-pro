@@ -356,7 +356,8 @@
     "open_modal": "Abrir Modal",
     "select": "Selecione...",
     "yes": "Sim",
-    "ok": "OK"
+    "ok": "OK",
+    "refresh": "Atualizar"
   },
   "hero": {
     "badge": "Mecanismo de Metadados Next-Gen",
@@ -519,7 +520,8 @@
           "use_cases": "Casos de Uso",
           "navigation": "Navegação",
           "enums": "Enums",
-          "table_fields": "Tabela / Campos"
+          "table_fields": "Tabela / Campos",
+          "help_center": "Central de Ajuda"
         },
         "automations": "Automações / BPM",
         "automations_bpm": "Automações / BPM",
@@ -952,7 +954,8 @@
             "config": "JSON Config (Dados)"
           }
         },
-        "refresh_tooltip": "Atualizar"
+        "refresh_tooltip": "Atualizar",
+        "help_center": "Central de Ajuda"
       }
     },
     "toasts": {
@@ -1187,7 +1190,22 @@
     "bi_access_unfilterable": "Este indicador não pode ser filtrado pela regra de acesso: {reason}",
     "bi_auto_refresh": "Atualização automática: a cada {every}",
     "bi_rls_dev_preview": "Prévia do desenvolvedor: as regras de acesso por linha só se aplicam com um usuário final logado no portal.",
-    "login_too_many": "Muitas tentativas. Aguarde um minuto e tente de novo."
+    "login_too_many": "Muitas tentativas. Aguarde um minuto e tente de novo.",
+    "help": {
+      "center": "Central de Ajuda",
+      "error": "Não foi possível enviar agora.",
+      "no": "Não",
+      "no_results": "Nada encontrado para essa busca.",
+      "none": "Ainda não há ajuda cadastrada.",
+      "open": "Ajuda",
+      "search": "Buscar nas ajudas...",
+      "see_all": "Ver toda a ajuda",
+      "send": "Enviar",
+      "thanks": "Obrigado pelo retorno!",
+      "was_helpful": "Isto ajudou?",
+      "what_missing": "O que faltou? (opcional)",
+      "yes": "Sim"
+    }
   },
   "bi_editor": {
     "title_placeholder": "Ex: Total de Vendas",
@@ -2674,7 +2692,9 @@
         "formula_title": "Cálculos e Fórmulas",
         "depends_on": "Depende de (Filtro Em Cascata)",
         "filter_column": "Filtrar Coluna Por",
-        "result_limit_hint": "Vazio = Sem Limite / 100%"
+        "result_limit_hint": "Vazio = Sem Limite / 100%",
+        "help_text": "Dica de ajuda (ícone ? ao lado do campo)",
+        "help_text_placeholder": "Explique o que preencher neste campo. Deixe em branco para não mostrar o ícone."
       },
       "add_relationship": "Adicionar Relacionamento",
       "gantt": {
@@ -2703,7 +2723,32 @@
         "style": "Estilo Visual",
         "title": "Configuração da Linha do Tempo",
         "title_field": "Campo de Título"
-      }
+      },
+      "help_all_done": "Todos os campos têm dica.",
+      "help_coverage": "Dicas de campo",
+      "help_custom_on": "As outras zonas continuam com o texto padrão.",
+      "help_custom_zone": "Texto próprio nesta zona",
+      "help_customize": "Personalizar nesta zona",
+      "help_feedback": "Feedback dos usuários",
+      "help_feedback_empty": "Ninguém votou nas dicas desta tela ainda.",
+      "help_feedback_load": "Carregar",
+      "help_hide": "Ocultar",
+      "help_hide_all": "Ocultar todas",
+      "help_hide_group": "Ocultar este grupo",
+      "help_inherited": "Este texto vale também em",
+      "help_only_missing": "Mostrar só os campos sem dica",
+      "help_overview": "Visão geral da ajuda",
+      "help_own": "Texto próprio",
+      "help_screen": "Ajuda da tela",
+      "help_suggest_own": "Esta zona está pior que as outras: considere \"Personalizar nesta zona\".",
+      "help_use_default": "Usar o texto padrão",
+      "help_zone_central": "Central de Ajuda",
+      "help_zone_unknown": "Sem zona (votos antigos)",
+      "screen_help": "Ajuda da tela (ícone ? no cabeçalho)",
+      "screen_help_placeholder": "Explique para que serve esta tela e como usá-la. Deixe em branco para não mostrar o ícone.",
+      "zone_filter": "Filtro de busca",
+      "zone_grid": "Grid de dados",
+      "zone_form": "Formulário"
     },
     "personalizado": {
       "title": "Configuração do Orquestrador de Casos de Uso",
@@ -5199,5 +5244,19 @@
     "delete_failed": "Não foi possível apagar a pasta {name}. Feche programas que a estejam usando e tente de novo.",
     "delete_current": "A pasta aberta não pode ser apagada. Troque para outra pasta primeiro.",
     "after_rename": "Pasta renomeada para {name}. Continuando a sincronização..."
+  },
+  "help_center_studio": {
+    "description": "Escolha um caso de uso e edite a ajuda dele: da tela, dos campos de cada zona, ou oculte o que não quer mostrar. Vale na hora, sem republicar o caso de uso.",
+    "discard_confirm": "Há alterações não salvas nesta tela. Descartar?",
+    "legend": "✓ = já tem ajuda escrita",
+    "open_central": "Abrir a Central de Ajuda do app",
+    "save": "Salvar ajuda",
+    "save_error": "Não foi possível salvar a ajuda: ",
+    "saved": "Ajuda salva. Já vale para os usuários, sem republicar.",
+    "select": "Selecione um caso de uso…",
+    "title": "Central de Ajuda",
+    "unpublished": "casos de uso ainda não publicados não aparecem aqui (edite no construtor)",
+    "unsaved": "Alterações não salvas",
+    "use_case": "Caso de uso"
   }
 }

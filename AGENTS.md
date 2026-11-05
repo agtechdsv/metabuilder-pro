@@ -41,7 +41,7 @@ Diga com franqueza o que **não** foi testado (ex.: no navegador, no CLI real, e
 - O CLI usa a chave **anon** do Supabase: gravar no Supabase depende de RLS aberto. O certo é pedir ao servidor, assinado com o token *(out/2026)*.
 
 ## Convenções de código
-- **i18n:** textos de interface em `src/i18n/translations/{pt,en,es}.json`, com as mesmas chaves nos três (o teste `src/i18n/__tests__/translations.test.ts` exige paridade). Texto novo: crie a chave nos três idiomas; fallback em português no `t('chave', 'texto')` só em último caso (dívida conhecida: várias telas de ajuda ainda usam só o fallback).
+- **i18n:** textos de interface em `src/i18n/translations/{pt,en,es}.json`, com as mesmas chaves nos três (o teste `src/i18n/__tests__/translations.test.ts` exige paridade). Texto novo: crie a chave nos três idiomas; fallback em português no `t('chave', 'texto')` só em último caso. Um nome de chave = um único texto: se dois lugares precisam de textos diferentes, use duas chaves.
 - **Hooks do React** nunca depois de `return` condicional (já causou o erro #310 no `IDEModal`; há teste guarda).
 - **Gerador/ejeção:** mudou algo em `src/lib/generator`? Acrescente teste em `__tests__/`. Código gerado dentro de template string evita crases e `${}` para não precisar de escapes. O app ejetado é português apenas.
 - Arquivos do repositório têm **CRLF** (`autocrlf`): o aviso "LF will be replaced by CRLF" é inofensivo, mas `Edit` de várias linhas pode falhar; releia o arquivo e tente de novo.

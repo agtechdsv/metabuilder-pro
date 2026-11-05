@@ -356,7 +356,8 @@
     "open_modal": "Open Modal",
     "select": "Select...",
     "yes": "Yes",
-    "ok": "OK"
+    "ok": "OK",
+    "refresh": "Refresh"
   },
   "hero": {
     "badge": "Next-Gen Metadata Engine",
@@ -519,7 +520,8 @@
           "use_cases": "Use Cases",
           "navigation": "Navigation",
           "enums": "Enums",
-          "table_fields": "Table / Fields"
+          "table_fields": "Table / Fields",
+          "help_center": "Help Center"
         },
         "automations": "Automations / BPM",
         "automations_bpm": "Automations / BPM",
@@ -952,7 +954,8 @@
             "config": "JSON Config (Data)"
           }
         },
-        "refresh_tooltip": "Refresh"
+        "refresh_tooltip": "Refresh",
+        "help_center": "Help Center"
       }
     },
     "toasts": {
@@ -1187,7 +1190,22 @@
     "bi_access_unfilterable": "This indicator cannot be filtered by the access rule: {reason}",
     "bi_auto_refresh": "Automatic refresh: every {every}",
     "bi_rls_dev_preview": "Developer preview: row-level access rules only apply with an end user signed in to the portal.",
-    "login_too_many": "Too many attempts. Wait a minute and try again."
+    "login_too_many": "Too many attempts. Wait a minute and try again.",
+    "help": {
+      "center": "Help Center",
+      "error": "Could not send right now.",
+      "no": "No",
+      "no_results": "Nothing found for this search.",
+      "none": "No help has been added yet.",
+      "open": "Help",
+      "search": "Search the help...",
+      "see_all": "See all help",
+      "send": "Send",
+      "thanks": "Thanks for your feedback!",
+      "was_helpful": "Was this helpful?",
+      "what_missing": "What was missing? (optional)",
+      "yes": "Yes"
+    }
   },
   "bi_editor": {
     "title_placeholder": "E.g.: Total Sales",
@@ -2674,7 +2692,9 @@
         "formula_title": "Calculations & Formulas",
         "depends_on": "Depends on (Cascading Filter)",
         "filter_column": "Filter Column By",
-        "result_limit_hint": "Empty = No Limit / 100%"
+        "result_limit_hint": "Empty = No Limit / 100%",
+        "help_text": "Help hint (? icon next to the field)",
+        "help_text_placeholder": "Explain what to fill in for this field. Leave blank to hide the icon."
       },
       "add_relationship": "Add Relationship",
       "gantt": {
@@ -2703,7 +2723,32 @@
         "style": "Visual Style",
         "title": "Timeline Settings",
         "title_field": "Title Field"
-      }
+      },
+      "help_all_done": "All fields have a hint.",
+      "help_coverage": "Field hints",
+      "help_custom_on": "The other zones keep the default text.",
+      "help_custom_zone": "Own text in this zone",
+      "help_customize": "Customize in this zone",
+      "help_feedback": "User feedback",
+      "help_feedback_empty": "Nobody has voted on this screen's hints yet.",
+      "help_feedback_load": "Load",
+      "help_hide": "Hide",
+      "help_hide_all": "Hide all",
+      "help_hide_group": "Hide this group",
+      "help_inherited": "This text also applies to",
+      "help_only_missing": "Show only fields without a hint",
+      "help_overview": "Help overview",
+      "help_own": "Own text",
+      "help_screen": "Screen help",
+      "help_suggest_own": "This zone is doing worse than the others: consider \"Customize in this zone\".",
+      "help_use_default": "Use the default text",
+      "help_zone_central": "Help Center",
+      "help_zone_unknown": "No zone (old votes)",
+      "screen_help": "Screen help (? icon in the header)",
+      "screen_help_placeholder": "Explain what this screen is for and how to use it. Leave blank to hide the icon.",
+      "zone_filter": "Search filter",
+      "zone_grid": "Data grid",
+      "zone_form": "Form"
     },
     "personalizado": {
       "title": "Use Case Orchestrator Configuration",
@@ -5199,5 +5244,19 @@
     "delete_failed": "Could not delete the folder {name}. Close programs that may be using it and try again.",
     "delete_current": "The open folder cannot be deleted. Switch to another folder first.",
     "after_rename": "Folder renamed to {name}. Continuing the sync..."
+  },
+  "help_center_studio": {
+    "description": "Choose a use case and edit its help: the screen help, the field hints of each zone, or hide what you don't want to show. It takes effect immediately, without republishing the use case.",
+    "discard_confirm": "There are unsaved changes on this screen. Discard them?",
+    "legend": "✓ = help already written",
+    "open_central": "Open the app's Help Center",
+    "save": "Save help",
+    "save_error": "Could not save the help: ",
+    "saved": "Help saved. It already applies to users, without republishing.",
+    "select": "Select a use case…",
+    "title": "Help Center",
+    "unpublished": "use cases not yet published do not appear here (edit them in the builder)",
+    "unsaved": "Unsaved changes",
+    "use_case": "Use case"
   }
 }

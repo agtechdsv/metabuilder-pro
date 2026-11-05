@@ -442,7 +442,8 @@
     "open_modal": "Abrir Modal",
     "select": "Seleccione...",
     "yes": "Sí",
-    "ok": "Aceptar"
+    "ok": "Aceptar",
+    "refresh": "Actualizar"
   },
   "hero": {
     "badge": "Motor de Metadatos de Próxima Generación",
@@ -606,7 +607,8 @@
           "use_cases": "Casos de Uso",
           "navigation": "Navegación",
           "enums": "Enums",
-          "table_fields": "Tabla / Campos"
+          "table_fields": "Tabla / Campos",
+          "help_center": "Centro de Ayuda"
         },
         "automations": "Automatizaciones / BPM",
         "automations_bpm": "Automatizaciones / BPM",
@@ -1039,7 +1041,8 @@
             "config": "JSON Config (Datos)"
           }
         },
-        "refresh_tooltip": "Actualizar"
+        "refresh_tooltip": "Actualizar",
+        "help_center": "Centro de Ayuda"
       }
     },
     "toasts": {
@@ -1274,7 +1277,22 @@
     "bi_access_unfilterable": "Este indicador no puede filtrarse con la regla de acceso: {reason}",
     "bi_auto_refresh": "Actualización automática: cada {every}",
     "bi_rls_dev_preview": "Vista previa del desarrollador: las reglas de acceso por fila solo se aplican con un usuario final conectado al portal.",
-    "login_too_many": "Demasiados intentos. Espere un minuto e inténtelo de nuevo."
+    "login_too_many": "Demasiados intentos. Espere un minuto e inténtelo de nuevo.",
+    "help": {
+      "center": "Centro de Ayuda",
+      "error": "No se pudo enviar ahora.",
+      "no": "No",
+      "no_results": "No se encontró nada para esta búsqueda.",
+      "none": "Aún no hay ayuda registrada.",
+      "open": "Ayuda",
+      "search": "Buscar en la ayuda...",
+      "see_all": "Ver toda la ayuda",
+      "send": "Enviar",
+      "thanks": "¡Gracias por su comentario!",
+      "was_helpful": "¿Le resultó útil?",
+      "what_missing": "¿Qué faltó? (opcional)",
+      "yes": "Sí"
+    }
   },
   "bi_editor": {
     "title_placeholder": "Ej.: Total de Ventas",
@@ -2761,7 +2779,9 @@
         "formula_title": "Cálculos y Fórmulas",
         "depends_on": "Depende de (Filtro en Cascada)",
         "filter_column": "Filtrar Columna Por",
-        "result_limit_hint": "Vacío = Sin Límite / 100%"
+        "result_limit_hint": "Vacío = Sin Límite / 100%",
+        "help_text": "Ayuda del campo (icono ? junto al campo)",
+        "help_text_placeholder": "Explique qué completar en este campo. Déjelo en blanco para no mostrar el icono."
       },
       "add_relationship": "Agregar Relación",
       "gantt": {
@@ -2790,7 +2810,32 @@
         "style": "Estilo Visual",
         "title": "Configuración de la Línea de Tiempo",
         "title_field": "Campo de Título"
-      }
+      },
+      "help_all_done": "Todos los campos tienen ayuda.",
+      "help_coverage": "Ayudas de campo",
+      "help_custom_on": "Las demás zonas mantienen el texto predeterminado.",
+      "help_custom_zone": "Texto propio en esta zona",
+      "help_customize": "Personalizar en esta zona",
+      "help_feedback": "Comentarios de los usuarios",
+      "help_feedback_empty": "Nadie ha votado todavía en las ayudas de esta pantalla.",
+      "help_feedback_load": "Cargar",
+      "help_hide": "Ocultar",
+      "help_hide_all": "Ocultar todas",
+      "help_hide_group": "Ocultar este grupo",
+      "help_inherited": "Este texto también vale en",
+      "help_only_missing": "Mostrar solo los campos sin ayuda",
+      "help_overview": "Resumen de la ayuda",
+      "help_own": "Texto propio",
+      "help_screen": "Ayuda de la pantalla",
+      "help_suggest_own": "Esta zona está peor que las demás: considere \"Personalizar en esta zona\".",
+      "help_use_default": "Usar el texto predeterminado",
+      "help_zone_central": "Centro de Ayuda",
+      "help_zone_unknown": "Sin zona (votos antiguos)",
+      "screen_help": "Ayuda de la pantalla (icono ? en el encabezado)",
+      "screen_help_placeholder": "Explique para qué sirve esta pantalla y cómo usarla. Déjelo en blanco para no mostrar el icono.",
+      "zone_filter": "Filtro de búsqueda",
+      "zone_grid": "Cuadrícula de datos",
+      "zone_form": "Formulario"
     },
     "personalizado": {
       "title": "Configuración del Orquestador de Casos de Uso",
@@ -5287,5 +5332,19 @@
     "delete_failed": "No se pudo borrar la carpeta {name}. Cierre los programas que la usen e inténtelo de nuevo.",
     "delete_current": "La carpeta abierta no se puede borrar. Cambie a otra carpeta primero.",
     "after_rename": "Carpeta renombrada a {name}. Continuando la sincronización..."
+  },
+  "help_center_studio": {
+    "description": "Elija un caso de uso y edite su ayuda: la de la pantalla, las ayudas de los campos de cada zona, u oculte lo que no quiera mostrar. Surte efecto de inmediato, sin republicar el caso de uso.",
+    "discard_confirm": "Hay cambios sin guardar en esta pantalla. ¿Descartarlos?",
+    "legend": "✓ = ya tiene ayuda escrita",
+    "open_central": "Abrir el Centro de Ayuda de la app",
+    "save": "Guardar ayuda",
+    "save_error": "No se pudo guardar la ayuda: ",
+    "saved": "Ayuda guardada. Ya vale para los usuarios, sin republicar.",
+    "select": "Seleccione un caso de uso…",
+    "title": "Centro de Ayuda",
+    "unpublished": "los casos de uso aún no publicados no aparecen aquí (edítelos en el constructor)",
+    "unsaved": "Cambios sin guardar",
+    "use_case": "Caso de uso"
   }
 }
