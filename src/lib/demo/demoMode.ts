@@ -21,7 +21,8 @@ export const DEMO_READ_ACTIONS: ReadonlySet<string> = new Set(['select', 'count_
 let demoCached: boolean | null = null
 
 /** A linha sintética que o tutorial precisa que já exista viaja na URL (`mb_seed`), para estar pronta antes da primeira leitura. */
-export interface DemoSeed { table: string; pk: string; row: Record<string, any> }
+export interface DemoSeedChild { table: string; pk?: string; row: Record<string, any> }
+export interface DemoSeed { table: string; pk: string; row: Record<string, any>; /** linhas das abas de detalhe (pedidos, itens...) ligadas à linha principal */ children?: DemoSeedChild[] }
 
 export function encodeDemoSeed(seed: DemoSeed): string {
   return btoa(unescape(encodeURIComponent(JSON.stringify(seed)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
@@ -34,7 +35,11 @@ export function decodeDemoSeed(raw: string | null | undefined): DemoSeed | null 
     const s = JSON.parse(json)
     const SAFE = /^[\w.-]{1,120}$/
     if (!s || typeof s.table !== 'string' || !SAFE.test(s.table) || typeof s.row !== 'object' || s.row === null) return null
-    return { table: s.table, pk: typeof s.pk === 'string' && SAFE.test(s.pk) ? s.pk : 'id', row: s.row }
+    const children: DemoSeedChild[] = (Array.isArray(s.children) ? s.children : [])
+      .filter((c: any) => c && typeof c.table === 'string' && SAFE.test(c.table) && c.row && typeof c.row === 'object')
+      .slice(0, 10)
+      .map((c: any) => ({ table: c.table, pk: typeof c.pk === 'string' && SAFE.test(c.pk) ? c.pk : 'id', row: c.row }))
+    return { table: s.table, pk: typeof s.pk === 'string' && SAFE.test(s.pk) ? s.pk : 'id', row: s.row, children }
   } catch { return null }
 }
 
@@ -47,7 +52,10 @@ export function isDemoMode(): boolean {
     demoCached = params.get('mb_demo') === '1'
     if (demoCached) {
       const seed = decodeDemoSeed(params.get('mb_seed'))
-      if (seed) demoStore.seed(seed.table, seed.row, seed.pk)
+      if (seed) {
+        demoStore.seed(seed.table, seed.row, seed.pk)
+        for (const c of seed.children || []) demoStore.seed(c.table, c.row, c.pk || 'id', true)
+      }
     }
   } catch {
     demoCached = false
@@ -59,6 +67,8 @@ export function isDemoMode(): boolean {
 export function __setDemoModeForTests(v: boolean | null) { demoCached = v }
 
 const keyOf = (v: unknown) => String(v ?? '')
+// marca as linhas de detalhe sintéticas: elas não trazem a chave estrangeira, valem para qualquer leitura filtrada por uma linha de exemplo
+const CHILD = '__mbChild'
 const ciGet = (row: Row, key: string) => {
   if (key in row) return row[key]
   const k = Object.keys(row).find(x => x.toLowerCase() === key.toLowerCase())
@@ -82,9 +92,10 @@ export class DemoStore {
   private deleted = new Map<string, Set<string>>()
   private patches = new Map<string, Map<string, Row>>()
   private pkByTable = new Map<string, string>()
+  private seedKeys = new Set<string>()
   private counter = 0
 
-  reset() { this.inserted.clear(); this.seeds.clear(); this.deleted.clear(); this.patches.clear(); this.pkByTable.clear(); this.counter = 0 }
+  reset() { this.inserted.clear(); this.seeds.clear(); this.deleted.clear(); this.patches.clear(); this.pkByTable.clear(); this.seedKeys.clear(); this.counter = 0 }
 
   private list(map: Map<string, Row[]>, table: string) {
     let l = map.get(table)
@@ -93,11 +104,18 @@ export class DemoStore {
   }
 
   /** Linha sintética que já "existe" quando o tutorial começa (editar, excluir, ver, pesquisar). */
-  seed(table: string, row: Row, pk = 'id') {
+  seed(table: string, row: Row, pk = 'id', child = false) {
     this.pkByTable.set(table, pk)
     const list = this.list(this.seeds, table)
     if (list.some(r => keyOf(r[pk]) === keyOf(row[pk]))) return
-    list.push({ ...row, [pk]: row[pk] ?? `demo-seed-${++this.counter}` })
+    const stored: Row = { ...row, [pk]: row[pk] ?? `demo-seed-${++this.counter}`, ...(child ? { [CHILD]: true } : {}) }
+    list.push(stored)
+    this.seedKeys.add(keyOf(stored[pk]))
+  }
+
+  /** A leitura filtra por uma linha de exemplo (ex.: os pedidos do cliente de exemplo)? Então não vai ao banco: o código dela não existe lá. */
+  readsSeed(filters?: Record<string, any>): boolean {
+    return Object.values(filters || {}).some(v => v !== '' && v !== null && v !== undefined && this.seedKeys.has(keyOf(v)))
   }
 
   insert(table: string, data: Row, pk = 'id'): Row {
@@ -132,7 +150,10 @@ export class DemoStore {
 
   /** Linhas sintéticas (as novas primeiro) que combinam com o filtro. */
   synthetic(table: string, filters?: Record<string, any>): Row[] {
-    return [...(this.inserted.get(table) || []), ...(this.seeds.get(table) || [])].filter(r => matchesFilters(r, filters))
+    const readsSeed = this.readsSeed(filters)
+    return [...(this.inserted.get(table) || []), ...(this.seeds.get(table) || [])]
+      .filter(r => (r[CHILD] ? readsSeed : matchesFilters(r, filters)))
+      .map(r => { if (!(CHILD in r)) return r; const { [CHILD]: _c, ...rest } = r; return rest })
   }
 
   /** Resposta de um select: sintéticas por cima, sem as excluídas, com as edições aplicadas nas linhas reais. */
@@ -216,6 +237,11 @@ export function handleDemoMessage(channel: any, msg: DemoMessage | null | undefi
   const p = msg.payload
   const action = String(p.action || '')
   if (DEMO_READ_ACTIONS.has(action)) {
+    if (action === 'select' && p.queryId && demoStore.readsSeed(p.filters)) {
+      const data = demoStore.synthetic(tableOf(p), p.filters)
+      deliverDemoReply(channel, p.queryId, { success: true, action, demo: true, data, rowCount: data.length, total: data.length })
+      return true
+    }
     if (p.queryId && (action === 'select' || action === 'count_records')) {
       pendingReads.set(p.queryId, { table: tableOf(p), action, filters: p.filters })
       setTimeout(() => pendingReads.delete(p.queryId), 60_000)

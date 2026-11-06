@@ -43,6 +43,8 @@ export function buildFieldInfos(layoutConfig: any, models: any[], zone: TourZone
       readOnly: entry.content?.readonly === true || entry.content?.read_only === true || entry.readOnly === true,
       isPrimaryKey: !!mf?.is_primary_key,
       isDetail: !!masterModelId && !!mf?.model_id && mf.model_id !== masterModelId,
+      detailTable: !!masterModelId && !!mf?.model_id && mf.model_id !== masterModelId ? mf.model_table : undefined,
+      detailPk: !!masterModelId && !!mf?.model_id && mf.model_id !== masterModelId && mf.is_primary_key ? mf.db_column_name : undefined,
       detailModelId: !!masterModelId && !!mf?.model_id && mf.model_id !== masterModelId ? mf.model_id : undefined,
       isVirtual,
       hidden: entry.hidden === true || id.startsWith('byoc_'),

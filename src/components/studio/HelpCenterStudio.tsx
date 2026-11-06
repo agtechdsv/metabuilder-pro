@@ -71,7 +71,12 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
       .map((f: any) => (typeof f === 'string' ? f : f?.id)).filter((x: any) => typeof x === 'string' && x && !x.startsWith('virt_') && !x.startsWith('byoc_'))
     if (lcIds.length) {
       void supabase.from('fields').select('id, model_id, db_column_name, display_name, data_type, is_primary_key').in('id', Array.from(new Set(lcIds)))
-        .then(({ data }: any) => { if (selectedRef.current === id) setFieldRows(data || []) })
+        .then(({ data }: any) => {
+          if (selectedRef.current !== id) return
+          // o nome da tabela do modelo vem dos modelos do Studio (para a linha de exemplo das abas de detalhe)
+          const tableOf = new Map((models || []).map((m: any) => [m.id, m.db_table_name]))
+          setFieldRows((data || []).map((r: any) => ({ ...r, model_table: tableOf.get(r.model_id) })))
+        })
     }
     const layout = JSON.parse(JSON.stringify(v.layout_config || {}))
     setConfig({ id: v.id, layout_config: layout })

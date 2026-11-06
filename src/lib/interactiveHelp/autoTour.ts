@@ -24,6 +24,10 @@ export interface TourFieldInfo extends SampleField {
   isDetail?: boolean
   /** id do modelo da aba de detalhe a que o campo pertence (identifica a aba no runtime) */
   detailModelId?: string
+  /** tabela do modelo do detalhe (para a linha de exemplo da aba) */
+  detailTable?: string
+  /** coluna da chave primária do modelo do detalhe, quando conhecida */
+  detailPk?: string
   /** a ajuda do campo vira a legenda do passo */
   help?: HelpText
   /** id do campo "pai" em listas em cascata: o pai é preenchido antes */
@@ -189,6 +193,18 @@ export function buildSeed(fields: TourFieldInfo[], today?: Date): Record<string,
   return seed
 }
 
+/** Linhas de exemplo das abas de detalhe (uma por tabela), para o cliente de exemplo já ter pedidos e itens na demonstração. */
+export function buildSeedDetails(formFields: TourFieldInfo[], today?: Date): Tour['seedDetails'] {
+  const groups = new Map<string, TourFieldInfo[]>()
+  for (const f of formFields) if (f.isDetail && f.detailTable) groups.set(f.detailTable, [...(groups.get(f.detailTable) || []), f])
+  const out: NonNullable<Tour['seedDetails']> = []
+  for (const [table, list] of groups) {
+    const row = buildSeed(list, today)
+    if (Object.keys(row).length) out.push({ table, pk: list.find(f => f.detailPk)?.detailPk, row })
+  }
+  return out.length ? out : undefined
+}
+
 export interface AutoTourInput {
   /** campos do formulário, na ordem em que aparecem */
   formFields: TourFieldInfo[]
@@ -255,6 +271,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra
     seed: action === 'create' ? undefined : buildSeed(seedFields, options.today),
+    seedDetails: action === 'edit' || action === 'view' ? buildSeedDetails(input.formFields, options.today) : undefined,
   }
 }
 
@@ -305,6 +322,7 @@ export function isTourStale(previous: Tour, input: AutoTourInput, options: AutoT
     title: t.title,
     summary: skipSummary ? null : t.summary,
     seed: Object.keys(t.seed || {}).sort(),
+    seedDetails: (t.seedDetails || []).map(d => [d.table, Object.keys(d.row || {}).sort()]).sort(),
     steps: t.steps.filter(s => s.auto).map(s => [s.kind, targetKey(s), !!s.liveCaption, s.caption]),
   }))
   return shape(previous) !== shape(fresh)

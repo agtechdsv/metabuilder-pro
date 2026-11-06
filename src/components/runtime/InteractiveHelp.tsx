@@ -100,7 +100,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
     if (stage !== 'play' || !tour || typeof window === 'undefined') return ''
     const params = new URLSearchParams({ mb_demo: '1' })
     if (tour.seed && Object.keys(tour.seed).length && modelName) {
-      params.set('mb_seed', encodeDemoSeed({ table: modelName, pk: primaryKeyName || 'id', row: tour.seed }))
+      params.set('mb_seed', encodeDemoSeed({ table: modelName, pk: primaryKeyName || 'id', row: tour.seed, children: (tour.seedDetails || []).map(d => ({ table: d.table, pk: d.pk?.split('.').pop(), row: d.row })) }))
     }
     return `${window.location.pathname}?${params.toString()}`
     // runId força a recarga (Recomeçar e troca de tutorial): cada um começa do zero, com a própria linha de exemplo

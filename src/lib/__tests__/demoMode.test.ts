@@ -124,7 +124,7 @@ describe('linha sintética pela URL', () => {
     const { encodeDemoSeed, decodeDemoSeed } = await import('../demo/demoMode')
     const raw = encodeDemoSeed({ table: 'clientes', pk: 'id', row: { nome_empresa: 'Razão São Paulo 01' } })
     expect(raw).toMatch(/^[A-Za-z0-9_-]+$/)
-    expect(decodeDemoSeed(raw)).toEqual({ table: 'clientes', pk: 'id', row: { nome_empresa: 'Razão São Paulo 01' } })
+    expect(decodeDemoSeed(raw)).toEqual({ table: 'clientes', pk: 'id', row: { nome_empresa: 'Razão São Paulo 01' }, children: [] })
     expect(decodeDemoSeed('%%%')).toBeNull()
     expect(decodeDemoSeed(encodeDemoSeed({ table: 'a b; drop', pk: 'id', row: {} } as any))).toBeNull()
     expect(decodeDemoSeed(null)).toBeNull()

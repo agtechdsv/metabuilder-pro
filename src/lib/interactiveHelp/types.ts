@@ -69,6 +69,8 @@ export interface Tour {
   steps: TourStep[]
   /** linha sintética (coluna → texto) que as ações de editar, excluir e ver usam no modo demonstração */
   seed?: Record<string, string>
+  /** linhas de exemplo das abas de detalhe (pedidos, itens...), por tabela, para editar/ver mostrarem a aba preenchida */
+  seedDetails?: Array<{ table: string; pk?: string; row: Record<string, string> }>
 }
 
 export interface InteractiveHelpConfig {
@@ -105,6 +107,7 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
       editFieldCount: typeof tour.editFieldCount === 'number' && tour.editFieldCount > 0 ? Math.min(20, Math.floor(tour.editFieldCount)) : undefined,
       steps,
       seed: tour.seed && typeof tour.seed === 'object' ? (tour.seed as Record<string, string>) : undefined,
+      seedDetails: Array.isArray(tour.seedDetails) ? (tour.seedDetails as Tour['seedDetails']) : undefined,
     })
   }
   return out
