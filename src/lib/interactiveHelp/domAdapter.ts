@@ -43,7 +43,8 @@ export function queryTarget(doc: Document, target: TourTarget | undefined, from?
   }
   switch (target.type) {
     // roteiros gerados antes dos botões por modelo guardavam o + como botão genérico
-    case 'button': return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
+    // marcadores do mapa (Leaflet): o marcador único é uma imagem; o agrupamento é uma div
+    case 'button': if (target.ref === 'map-marker') return first('img.leaflet-marker-icon'); if (target.ref === 'map-cluster') return first('div.leaflet-marker-icon'); return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
     case 'kanban-column': {

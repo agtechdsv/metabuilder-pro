@@ -166,7 +166,7 @@ describe('ajuda interativa de Kanban, agenda e BI', () => {
     expect([...tourActionsFor('kanban')]).toEqual(['create', 'edit', 'move', 'delete'])
     expect([...tourActionsFor('scheduler')]).toEqual(['create', 'edit', 'delete'])
     expect([...tourActionsFor('analytics')]).toEqual(['search'])
-    expect(supportsInteractiveHelp('gantt')).toBe(false)
+    expect(supportsInteractiveHelp('mapa_mental')).toBe(false)
   })
 
   it('Kanban: cria pelo + da coluna, edita pelo lápis, exclui pela lixeira e arrasta para outra coluna', () => {
@@ -240,4 +240,22 @@ describe('ajuda interativa de Timeline e Galeria', () => {
       expect(buildAutoTour(input, { action: 'edit', ...v }).seed).toBeUndefined()
     })
   }
+})
+
+describe('ajuda interativa de Gantt e Mapa', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', dataType: 'text', ...extra })
+  const input: any = { formFields: [f('titulo', { required: true })], filterFields: [], gridFields: [] }
+  const shape = (t: any) => t.steps.map((s: any) => `${s.kind}:${s.target?.type ?? '-'}:${s.target?.ref ?? '-'}${s.optional ? '?' : ''}`)
+
+  it('Gantt usa os ícones da tarefa e o Novo Registro', () => {
+    expect(shape(buildAutoTour(input, { action: 'create', viewType: 'gantt' }))[0]).toBe('click:button:new')
+    expect(shape(buildAutoTour(input, { action: 'edit', viewType: 'gantt' }))[0]).toBe('click:button:item-edit')
+    expect(shape(buildAutoTour(input, { action: 'delete', viewType: 'gantt' }))).toEqual(['click:button:item-delete', 'click:button:confirm', 'note:-:-'])
+  })
+
+  it('Mapa abre o marcador (aproximando um grupo, se houver) antes do ícone do balão', () => {
+    expect(shape(buildAutoTour(input, { action: 'view', viewType: 'map' }))).toEqual(['click:button:map-cluster?', 'click:button:map-marker', 'click:button:item-view', 'note:-:-', 'click:button:cancel'])
+    expect(shape(buildAutoTour(input, { action: 'edit', viewType: 'map' })).slice(0, 3)).toEqual(['click:button:map-cluster?', 'click:button:map-marker', 'click:button:item-edit'])
+    expect(shape(buildAutoTour(input, { action: 'create', viewType: 'map' }))[0]).toBe('click:button:new')
+  })
 })

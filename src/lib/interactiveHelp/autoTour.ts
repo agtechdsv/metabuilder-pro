@@ -100,6 +100,8 @@ const SCHEDULER_RESULT: Record<string, Cap> = {
   delete: cap('O evento some da agenda.', 'The event disappears from the calendar.', 'El evento desaparece de la agenda.'),
 }
 const CARD_CAPTION: Record<string, Cap> = {
+  'map-cluster': cap('Há marcadores agrupados: clique no grupo para aproximar.', 'Markers are grouped: click the group to zoom in.', 'Hay marcadores agrupados: haga clic en el grupo para acercar.'),
+  'map-marker': cap('Clique em um marcador do mapa.', 'Click a map marker.', 'Haga clic en un marcador del mapa.'),
   'item-view': cap('Clique na lupa do item para ver os detalhes.', 'Click the item magnifier to see the details.', 'Haga clic en la lupa del ítem para ver los detalles.'),
   'item-edit': cap('Clique no lápis do item para editar.', 'Click the item pencil to edit.', 'Haga clic en el lápiz del ítem para editar.'),
   'item-delete': cap('Clique na lixeira do item para excluir.', 'Click the item trash can to delete.', 'Haga clic en la papelera del ítem para eliminar.'),
@@ -291,24 +293,26 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
 
   const seedFields = [...input.formFields, ...(input.gridFields || [])]
 
-  if (vt === 'timeline' || vt === 'galeria') {
+  if (vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map') {
     // linha do tempo e galeria: o Novo Registro do cabeçalho e os ícones do item abrem o MESMO formulário (em janela); sem linha de exemplo, usa o primeiro item real
     const formFieldsUsable = input.formFields.filter(f => !(options.excludeFieldIds || []).includes(f.id))
+    // mapa: os ícones de ver/editar/excluir ficam no balão do marcador, então o primeiro passo é abrir o marcador (antes, aproxima um agrupamento, se houver)
+    const openItem = (): TourStep[] => (vt === 'map' ? [{ ...click('map-cluster'), optional: true }, click('map-marker')] : [])
     if (action === 'create') {
       steps.push(btn('new'))
       for (const f of selectFillFields(formFieldsUsable, fill, options.customFieldIds)) steps.push(fieldStep(f, sampleValue(f, options.today)))
       steps.push(btn('save'))
     } else if (action === 'view') {
-      steps.push(click('item-view'), noteOnly(ITEM_RESULT.view), btn('cancel'))
+      steps.push(...openItem(), click('item-view'), noteOnly(ITEM_RESULT.view), btn('cancel'))
     } else if (action === 'edit') {
-      steps.push(click('item-edit'))
+      steps.push(...openItem(), click('item-edit'))
       const count = Math.max(1, options.editFieldCount ?? 2)
       const textual = formFieldsUsable.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
       const pool = textual.length ? textual : formFieldsUsable.filter(fillable)
       for (const f of pool.slice(0, count)) steps.push(fieldStep(f, editedValue(f, options.today)))
       steps.push(btn('save'))
     } else if (action === 'delete') {
-      steps.push(click('item-delete'), btn('confirm'))
+      steps.push(...openItem(), click('item-delete'), btn('confirm'))
     }
     if (action !== 'view' && ITEM_RESULT[action]) steps.push(noteOnly(ITEM_RESULT[action]))
   } else if (typed) {
@@ -382,9 +386,9 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     summary: buildSummary(action, steps, action === 'search' ? (input.filterFields || []).filter(f => !f.hidden)[0]?.label : undefined),
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra
-    seed: vt === 'kanban' || vt === 'analytics' || vt === 'timeline' || vt === 'galeria' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
+    seed: vt === 'kanban' || vt === 'analytics' || vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
     seedToday: vt === 'scheduler' && action !== 'create' ? options.schedulerSeed?.seedToday : undefined,
-    seedDetails: !typed && vt !== 'analytics' && vt !== 'timeline' && vt !== 'galeria' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
+    seedDetails: !typed && vt !== 'analytics' && vt !== 'timeline' && vt !== 'galeria' && vt !== 'gantt' && vt !== 'map' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
   }
 }
 

@@ -5399,7 +5399,9 @@
       "btn_widget-collapse": "Recolher gráfico",
       "btn_item-view": "Ver item (lupa)",
       "btn_item-edit": "Editar item",
-      "btn_item-delete": "Excluir item"
+      "btn_item-delete": "Excluir item",
+      "btn_map-marker": "Marcador do mapa",
+      "btn_map-cluster": "Grupo de marcadores (se houver)"
     }
   }
 }

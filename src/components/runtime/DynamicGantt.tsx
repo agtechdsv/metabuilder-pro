@@ -328,17 +328,17 @@ export default function DynamicGantt({
                         {/* Actions */}
                         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                             {onView && (
-                            <button onClick={() => onView(task.raw)} className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
+                            <button data-tour="item-view" onClick={() => onView(task.raw)} className="p-1.5 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
                                 <Eye className="w-3.5 h-3.5" />
                             </button>
                             )}
                             {onEdit && (
-                            <button onClick={() => onEdit(task.raw)} className="p-1.5 text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
+                            <button data-tour="item-edit" onClick={() => onEdit(task.raw)} className="p-1.5 text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors">
                                 <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             )}
                             {onDelete && (
-                            <button onClick={() => onDelete(task.raw)} className="p-1.5 text-neutral-400 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                            <button data-tour="item-delete" onClick={() => onDelete(task.raw)} className="p-1.5 text-neutral-400 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             )}

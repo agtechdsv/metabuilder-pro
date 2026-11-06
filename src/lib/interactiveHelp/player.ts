@@ -52,6 +52,19 @@ export interface PlayerOptions {
 const BASE = { noteFind: 600, travel: 650, afterClick: 700, between: 350, perChar: 70, find: 2500, readMin: 700, readPerChar: 28, readMax: 4500 }
 const SLICE = 40
 
+/** Alvos que dependem de DADOS (primeiro item, cartão, marcador...): na primeira execução a conexão com o banco ainda está "fria" e eles demoram a aparecer. */
+const DATA_FIND = 12000
+const DATA_NOTE_FIND = 6000
+export function findTimeout(step: TourStep, base: { find: number; noteFind: number }): number {
+  const t = step.target
+  const dataDependent = !!t && (
+    t.type === 'row' || t.type === 'detail-expand' ||
+    (t.type === 'button' && /^(item-|kanban-(edit|delete|card)|scheduler-(event|delete)|map-marker|widget)/.test(t.ref))
+  )
+  if (!dataDependent) return step.kind === 'note' ? base.noteFind : base.find
+  return step.kind === 'note' ? DATA_NOTE_FIND : DATA_FIND
+}
+
 /** segundos de contagem do cartão "A seguir", conforme a velocidade */
 export const TRANSITION_SECONDS: Record<TourSpeed, number> = { slow: 8, normal: 5, fast: 3 }
 /** carregar a demonstração antes de cada tutorial (não depende da velocidade) */
@@ -175,9 +188,9 @@ export class TourPlayer {
     this.caption = caption
     let el: unknown | null = null
     if (step.target) {
-      el = await this.adapter.find(step, step.kind === 'note' ? BASE.noteFind : BASE.find)
+      el = await this.adapter.find(step, findTimeout(step, BASE))
       if (this.cancelled) return
-      if (!el) { this.skipped++; this.emit(); return } // não existe nesta tela (oculto, sem permissão...): segue sem travar
+      if (!el) { if (!step.optional) this.skipped++; this.emit(); return } // não existe nesta tela (oculto, sem permissão...): segue sem travar
     }
     this.adapter.showStep(el, caption, i, total)
     this.emit()

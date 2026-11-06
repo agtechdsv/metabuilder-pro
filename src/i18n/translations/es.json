@@ -5487,7 +5487,9 @@
       "btn_widget-collapse": "Contraer gráfico",
       "btn_item-view": "Ver ítem (lupa)",
       "btn_item-edit": "Editar ítem",
-      "btn_item-delete": "Eliminar ítem"
+      "btn_item-delete": "Eliminar ítem",
+      "btn_map-marker": "Marcador del mapa",
+      "btn_map-cluster": "Grupo de marcadores (si hay)"
     }
   }
 }

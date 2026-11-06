@@ -15,7 +15,7 @@ export type TourSpeed = 'slow' | 'normal' | 'fast'
 export const SPEED_FACTOR: Record<TourSpeed, number> = { slow: 2, normal: 1, fast: 0.4 }
 
 /** Botões fixos da tela, identificados pelo atributo `data-tour` */
-export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'kanban-add' | 'kanban-edit' | 'kanban-delete' | 'kanban-card' | 'scheduler-add' | 'scheduler-event' | 'scheduler-delete' | 'widget' | 'item-view' | 'item-edit' | 'item-delete' | 'widget-expand' | 'widget-collapse'
+export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'kanban-add' | 'kanban-edit' | 'kanban-delete' | 'kanban-card' | 'scheduler-add' | 'scheduler-event' | 'scheduler-delete' | 'widget' | 'map-marker' | 'map-cluster' | 'item-view' | 'item-edit' | 'item-delete' | 'widget-expand' | 'widget-collapse'
 export type TourRowAction = 'view' | 'edit' | 'delete'
 
 export type TourTarget =
@@ -47,6 +47,8 @@ export interface TourStep {
   value?: string | { pick: 'first' }
   /** legenda mostrada ao lado do elemento, nos três idiomas */
   caption?: HelpText
+  /** se o elemento não existir, o passo é ignorado sem contar como "pulado" (ex.: clicar num agrupamento do mapa só quando ele existe) */
+  optional?: boolean
   /** gerado pelo gerador automático; "Regenerar" refaz só estes e preserva os passos manuais */
   auto?: boolean
   /** o dev mudou o valor de um passo automático: "Regenerar" mantém o valor dele */
@@ -143,6 +145,8 @@ export const TOUR_ACTIONS_BY_TYPE: Record<string, readonly TourAction[]> = {
   kanban: ['create', 'edit', 'move', 'delete'],
   scheduler: ['create', 'edit', 'delete'],
   timeline: ['view', 'create', 'edit', 'delete'],
+  gantt: ['view', 'create', 'edit', 'delete'],
+  map: ['view', 'create', 'edit', 'delete'],
   galeria: ['view', 'create', 'edit', 'delete'],
 }
 

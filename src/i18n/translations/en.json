@@ -5399,7 +5399,9 @@
       "btn_widget-collapse": "Collapse chart",
       "btn_item-view": "View item (magnifier)",
       "btn_item-edit": "Edit item",
-      "btn_item-delete": "Delete item"
+      "btn_item-delete": "Delete item",
+      "btn_map-marker": "Map marker",
+      "btn_map-cluster": "Marker group (if any)"
     }
   }
 }

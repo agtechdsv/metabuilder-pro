@@ -185,21 +185,21 @@ export default function DynamicMap({ data, fields, mapConfig, onEdit, onDelete, 
                 
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
                   <button
-                    onClick={() => onView(point.record)}
+                    data-tour="item-view" onClick={() => onView(point.record)}
                     className="p-1.5 rounded-md hover:bg-neutral-100 text-neutral-500 hover:text-indigo-600 transition-colors"
                     title={t('runtime.view', 'Visualizar')}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => onEdit(point.record)}
+                    data-tour="item-edit" onClick={() => onEdit(point.record)}
                     className="p-1.5 rounded-md hover:bg-indigo-50 text-indigo-500 transition-colors"
                     title={t('runtime.edit', 'Editar')}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => onDelete(point.record)}
+                    data-tour="item-delete" onClick={() => onDelete(point.record)}
                     className="p-1.5 rounded-md hover:bg-red-50 text-red-500 transition-colors"
                     title={t('runtime.delete', 'Excluir')}
                   >

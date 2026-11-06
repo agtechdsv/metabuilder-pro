@@ -172,3 +172,29 @@ describe('arrastar', () => {
     expect(p2.snapshot.skipped).toBe(1)
   })
 })
+
+describe('passo opcional', () => {
+  it('elemento ausente não conta como pulado quando o passo é opcional', async () => {
+    const { adapter } = fakeAdapter(['a'])
+    const p = new TourPlayer(tour([step('a', 'click', { target, optional: true }), step('b', 'click', { target })]), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(p.snapshot.skipped).toBe(0)
+    expect(p.snapshot.state).toBe('ended')
+  })
+})
+
+describe('tempo de espera por alvo', () => {
+  it('alvos que dependem de dados esperam bem mais que botões fixos', async () => {
+    const { findTimeout } = await import('../interactiveHelp/player')
+    const base = { find: 2500, noteFind: 600 }
+    const s = (kind: any, target: any) => ({ id: 'x', kind, target } as any)
+    expect(findTimeout(s('click', { type: 'button', ref: 'new' }), base)).toBe(2500)
+    expect(findTimeout(s('click', { type: 'button', ref: 'item-delete' }), base)).toBeGreaterThan(10000)
+    expect(findTimeout(s('click', { type: 'button', ref: 'kanban-edit' }), base)).toBeGreaterThan(10000)
+    expect(findTimeout(s('click', { type: 'button', ref: 'map-marker' }), base)).toBeGreaterThan(10000)
+    expect(findTimeout(s('click', { type: 'button', ref: 'map-cluster' }), base)).toBe(2500)
+    expect(findTimeout(s('click', { type: 'row', ref: 'first', action: 'edit' }), base)).toBeGreaterThan(10000)
+    expect(findTimeout(s('note', { type: 'row', ref: 'first' }), base)).toBeGreaterThan(600)
+    expect(findTimeout(s('note', { type: 'button', ref: 'new' }), base)).toBe(600)
+  })
+})
