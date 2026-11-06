@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ListVideo, Loader2, Pause, Play, PlayCircle, RotateCcw, SkipForward, X } from 'lucide-react'
+import { ListVideo, Loader2, Pause, Play, PlayCircle, Repeat, RotateCcw, SkipForward, X } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { resolveHelp } from '@/lib/helpText'
 import { encodeDemoSeed, isDemoMode } from '@/lib/demo/demoMode'
@@ -10,7 +10,7 @@ import { buildQueue, toggleId } from '@/lib/interactiveHelp/order'
 import { TourPlayer, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
 import { hasInteractiveHelp, visibleTours, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
-import { HelpFeedbackBar } from './HelpFeedbackBar'
+import { DoneCard, UpNextCard } from './InteractiveHelpCards'
 
 interface Props {
   /** `layout_config.interactive_help` */
@@ -47,8 +47,8 @@ export function InteractiveHelpButton(props: Props) {
 }
 
 const SPEEDS: TourSpeed[] = ['slow', 'normal', 'fast']
-/** pausa entre um tutorial e o próximo, mostrando "Próximo: ..." */
-const TRANSITION_MS = 1600
+/** segundos de contagem do cartão "A seguir", conforme a velocidade escolhida */
+const TRANSITION_SECONDS: Record<TourSpeed, number> = { slow: 8, normal: 5, fast: 3 }
 
 function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, onClose }: Props & { onClose: () => void }) {
   const { t, language } = useI18n()
@@ -60,6 +60,9 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const [queue, setQueue] = useState<Tour[]>([])
   const [qIndex, setQIndex] = useState(0)
   const [transition, setTransition] = useState<Tour | null>(null)
+  const [held, setHeld] = useState(false)
+  const [remaining, setRemaining] = useState(0)
+  const [countTotal, setCountTotal] = useState(5)
   const [runId, setRunId] = useState(0)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -131,6 +134,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const goTo = useCallback((index: number) => {
     teardown()
     setTransition(null)
+    setHeld(false)
     setQIndex(index)
     setSnap(null)
     setLoading(true)
@@ -146,22 +150,36 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
     goTo(0)
   }
 
-  // terminou um tutorial e ainda há outros na fila: mostra "Próximo: ..." e segue sozinho
+  // terminou um tutorial e ainda há outros na fila: mostra o cartão "A seguir" com contagem regressiva
   useEffect(() => {
     if (stage !== 'play' || snap?.state !== 'ended' || isLastInQueue) return
+    const seconds = TRANSITION_SECONDS[speedRef.current]
     setTransition(queue[qIndex + 1])
-    const timer = setTimeout(() => goTo(qIndex + 1), TRANSITION_MS)
+    setHeld(false)
+    setCountTotal(seconds)
+    setRemaining(seconds)
+  }, [stage, snap?.state, isLastInQueue, qIndex, queue])
+
+  // a contagem anda de segundo em segundo (parada quando o usuário cancela) e, ao zerar, começa o próximo
+  useEffect(() => {
+    if (!transition || held) return
+    if (remaining <= 0) { goTo(qIndex + 1); return }
+    const timer = setTimeout(() => setRemaining(r => r - 1), 1000)
     return () => clearTimeout(timer)
-  }, [stage, snap?.state, isLastInQueue, qIndex, queue, goTo])
+  }, [transition, held, remaining, qIndex, goTo])
 
   const changeSpeed = (s: TourSpeed) => { setSpeed(s); playerRef.current?.setSpeed(s) }
-  const restart = () => goTo(qIndex)
+  // "Recomeçar": o tutorial atual; ao fim da fila, ou pelo botão "tudo", a fila inteira desde o primeiro
+  const restart = () => goTo(finishedAllRef.current ? 0 : qIndex)
+  const restartAll = () => goTo(0)
   const skip = () => { if (!isLastInQueue) goTo(qIndex + 1) }
-  const backToChoose = () => { teardown(); setStage('choose'); setSnap(null) }
+  const backToChoose = () => { teardown(); setTransition(null); setHeld(false); setStage('choose'); setSnap(null) }
 
   const playing = snap?.state === 'playing'
   const ended = snap?.state === 'ended'
   const finishedAll = ended && isLastInQueue
+  const finishedAllRef = useRef(false)
+  finishedAllRef.current = finishedAll
   const multi = queue.length > 1
 
   const rowPlay = t('runtime.tour.play_one', 'Reproduzir este')
@@ -244,14 +262,34 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                 onLoad={() => { void handleLoad() }}
                 className="absolute inset-0 w-full h-full border-0"
               />
-              {(loading || failed || transition) && (
+              {(loading || failed) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-neutral-900/80 text-sm font-bold text-neutral-600 dark:text-neutral-300">
                   {failed
                     ? t('runtime.tour.failed', 'Não foi possível preparar a demonstração.')
-                    : transition
-                      ? <span className="flex items-center gap-2 text-indigo-600"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.next_up', 'Próximo: {title}').replace('{title}', resolveHelp(transition.title, language))}</span>
-                      : <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.loading', 'Preparando a demonstração…')}</span>}
+                    : <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.loading', 'Preparando a demonstração…')}</span>}
                 </div>
+              )}
+
+              {transition && tour && !failed && (
+                <UpNextCard
+                  finished={tour}
+                  next={transition}
+                  queue={queue}
+                  index={qIndex}
+                  remaining={remaining}
+                  total={countTotal}
+                  held={held}
+                  language={language}
+                  t={t}
+                  onPlayNow={() => goTo(qIndex + 1)}
+                  onHold={() => setHeld(true)}
+                  onResume={() => { setHeld(false); setRemaining(r => Math.max(1, r)) }}
+                  onChooseAnother={backToChoose}
+                />
+              )}
+
+              {finishedAll && !failed && (
+                <DoneCard queue={queue} language={language} t={t} projectId={projectId} viewId={viewId} onReplayAll={() => goTo(0)} onChooseAnother={backToChoose} />
               )}
             </div>
 
@@ -269,9 +307,17 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                 </button>
                 <button type="button" onClick={restart}
                   className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
-                  title={t('runtime.tour.restart', 'Recomeçar')} aria-label={t('runtime.tour.restart', 'Recomeçar')}>
+                  title={multi && !finishedAll ? t('runtime.tour.restart_this', 'Recomeçar este tutorial') : t('runtime.tour.restart', 'Recomeçar')}
+                  aria-label={multi && !finishedAll ? t('runtime.tour.restart_this', 'Recomeçar este tutorial') : t('runtime.tour.restart', 'Recomeçar')}>
                   <RotateCcw className="w-4 h-4" />
                 </button>
+                {multi && (
+                  <button type="button" onClick={restartAll}
+                    className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    title={t('runtime.tour.restart_all', 'Recomeçar tudo')} aria-label={t('runtime.tour.restart_all', 'Recomeçar tudo')}>
+                    <Repeat className="w-4 h-4" />
+                  </button>
+                )}
                 {multi && (
                   <button type="button" disabled={isLastInQueue} onClick={skip}
                     className="ml-1 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40">
@@ -299,14 +345,6 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
               </span>
               {snap && snap.skipped > 0 && <span className="text-[11px] text-amber-600">{t('runtime.tour.skipped', 'Alguns passos foram pulados: não se aplicam à sua tela.')}</span>}
 
-              <div className="ml-auto flex items-center gap-3">
-                {finishedAll && (
-                  <button type="button" onClick={backToChoose} className="px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700">
-                    {t('runtime.tour.choose_another', 'Escolher outro')}
-                  </button>
-                )}
-                {finishedAll && projectId && viewId && <HelpFeedbackBar feedback={{ projectId, screen: viewId, zone: 'tutorial' }} className="min-w-[14rem]" />}
-              </div>
             </div>
           </>
         )}

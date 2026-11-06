@@ -1235,7 +1235,21 @@
       "sequence": "Tutorial {current} of {total}",
       "choose_another": "Choose another",
       "select_hint": "Click to select one or more tutorials; click again to deselect.",
-      "ended_all": "End of the tutorials."
+      "ended_all": "End of the tutorials.",
+      "up_next": "Up next",
+      "finished": "Finished",
+      "held": "Sequence paused",
+      "starts_in": "Starts in {seconds}s",
+      "play_now": "Start now",
+      "cancel": "Cancel",
+      "resume_sequence": "Continue",
+      "restart_this": "Restart this tutorial",
+      "restart_all": "Restart all",
+      "replay": "Play again",
+      "done_all": "You watched all the selected tutorials",
+      "done_one": "Tutorial finished",
+      "tutorials": "tutorials",
+      "tutorial": "tutorial"
     }
   },
   "bi_editor": {

@@ -1235,7 +1235,21 @@
       "sequence": "Tutorial {current} de {total}",
       "choose_another": "Escolher outro",
       "select_hint": "Clique para selecionar um ou mais tutoriais; clique de novo para desmarcar.",
-      "ended_all": "Fim dos tutoriais."
+      "ended_all": "Fim dos tutoriais.",
+      "up_next": "A seguir",
+      "finished": "Concluído",
+      "held": "Sequência pausada",
+      "starts_in": "Começa em {seconds}s",
+      "play_now": "Começar agora",
+      "cancel": "Cancelar",
+      "resume_sequence": "Continuar",
+      "restart_this": "Recomeçar este tutorial",
+      "restart_all": "Recomeçar tudo",
+      "replay": "Reproduzir de novo",
+      "done_all": "Você viu todos os tutoriais selecionados",
+      "done_one": "Tutorial concluído",
+      "tutorials": "tutoriais",
+      "tutorial": "tutorial"
     }
   },
   "bi_editor": {
