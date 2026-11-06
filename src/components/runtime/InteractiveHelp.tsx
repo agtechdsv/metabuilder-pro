@@ -128,7 +128,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label={t('runtime.tour.title', 'Ajuda interativa')}>
-      <div className="flex flex-col w-full max-w-[1200px] h-[88vh] rounded-3xl bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden">
+      <div className="flex flex-col w-full max-w-[1500px] h-[90vh] rounded-3xl bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-2 min-w-0">
             <PlayCircle className="w-5 h-5 text-indigo-600 shrink-0" />
