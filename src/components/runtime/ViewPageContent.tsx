@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { buildLiveHelp } from '@/lib/interactiveHelp/live'
 import { EMBEDDED_READY_MESSAGE } from '@/components/runtime/EmbeddedFrame'
 import dynamic from 'next/dynamic'
 import { useI18n } from '@/i18n/I18nContext'
@@ -598,6 +599,7 @@ export default function ViewPageContent({
         description={description}
         screenHelp={screenHelp}
         interactiveHelp={interactiveHelp}
+        interactiveLiveHelp={buildLiveHelp(formFields, filterFields)}
         icon={icon}
         workspace={workspace}
         project={project}

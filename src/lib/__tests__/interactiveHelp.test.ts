@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { editedValue, sampleValue } from '../interactiveHelp/sampleValues'
-import { buildAutoTour, buildSeed, regenerateTour, selectFillFields, type TourFieldInfo } from '../interactiveHelp/autoTour'
+import { buildAutoTour, buildSeed, isTourStale, regenerateTour, selectFillFields, type TourFieldInfo } from '../interactiveHelp/autoTour'
 import { hasInteractiveHelp, normalizeInteractiveHelp, SPEED_FACTOR } from '../interactiveHelp/types'
 
 const TODAY = new Date('2026-11-06T12:00:00Z')
@@ -62,9 +62,10 @@ describe('gerador automático', () => {
     expect(tour.steps.every(s => s.auto)).toBe(true)
   })
 
-  it('a legenda do passo é a ajuda do campo; sem ajuda, uma frase pelo rótulo nos três idiomas', () => {
+  it('a legenda do passo é a ajuda ATUAL do campo (ao vivo); o que fica guardado é a frase de reserva pelo rótulo', () => {
     const tour = buildAutoTour(input, { action: 'create', fill: 'all', today: TODAY })
-    expect(tour.steps[1].caption).toEqual({ pt: 'Nome da empresa cliente.' })
+    expect(tour.steps[1].caption).toEqual({ pt: 'Preencha "Nome Empresa".', en: 'Fill in "Nome Empresa".', es: 'Complete "Nome Empresa".' })
+    expect(tour.steps[1].liveCaption).toBe(true)
     const semAjuda = tour.steps.find(s => (s.target as any)?.ref === 'c')!
     expect(semAjuda.caption).toEqual({ pt: 'Preencha "Cnpj Cpf".', en: 'Fill in "Cnpj Cpf".', es: 'Complete "Cnpj Cpf".' })
   })
@@ -114,7 +115,7 @@ describe('gerador automático', () => {
     const manual = { id: 'm1', kind: 'note' as const, caption: { pt: 'Dica minha' } }
     const edited = { ...tour, title: { pt: 'Meu título' }, steps: [...tour.steps, manual] }
     const again = regenerateTour(edited, { ...input, formFields: [pk, nome, email] }, { action: 'create', today: TODAY })
-    expect(again.title.pt).toBe('Meu título')
+    expect(again.title.pt).toBe('Como cadastrar') // o título é refeito junto com o roteiro (acompanha o nome da tela)
     expect(again.steps[again.steps.length - 1]).toEqual(manual)
     expect(again.steps.filter(s => s.auto)).toHaveLength(tour.steps.length - 1) // some o passo do campo calculado, que não existe mais
   })
@@ -425,5 +426,93 @@ describe('frase do cartão editada pelo dev', () => {
   it('a marca "escrita pelo dev" vai e volta do banco', () => {
     const cfg = normalizeInteractiveHelp({ tours: [{ id: 'x', action: 'view', summary: { pt: 'oi' }, summaryCustom: true, steps: [{ id: 's', kind: 'click' }] }] })
     expect(cfg.tours[0]).toMatchObject({ summary: { pt: 'oi' }, summaryCustom: true })
+  })
+})
+
+describe('legenda ao vivo: a ajuda atual do campo na hora de tocar', () => {
+  const tour = buildAutoTour({ formFields: [pk, nome, cnpj], filterFields: [nome] }, { action: 'create', fill: 'all', today: TODAY })
+  const search = buildAutoTour({ formFields: [pk, nome], filterFields: [nome] }, { action: 'search', today: TODAY })
+
+  it('troca a legenda pela ajuda atual; campo sem ajuda mantém a frase de reserva', async () => {
+    const { applyLiveHelp, buildLiveHelp } = await import('../interactiveHelp/live')
+    const live = buildLiveHelp([{ id: 'n', config: { form_config: { label: { help: { pt: 'Ajuda NOVA do nome' } } } } }, { id: 'c', config: { label: {} } }], [])
+    const out = applyLiveHelp([tour], live)[0]
+    expect(out.steps.find(s => (s.target as any)?.ref === 'n')!.caption).toEqual({ pt: 'Ajuda NOVA do nome' })
+    expect(out.steps.find(s => (s.target as any)?.ref === 'c')!.caption?.pt).toBe('Preencha "Cnpj Cpf".')
+    expect(tour.steps.find(s => (s.target as any)?.ref === 'n')!.caption?.pt).toBe('Preencha "Nome Empresa".') // original intacto
+  })
+
+  it('passo de filtro usa a ajuda do FILTRO, e o de formulário a do FORMULÁRIO', async () => {
+    const { applyLiveHelp, buildLiveHelp } = await import('../interactiveHelp/live')
+    const field = { id: 'n', config: { form_config: { label: { help: { pt: 'do formulário' } } }, filter_config: { label: { help: { pt: 'do filtro' } } } } }
+    const live = buildLiveHelp([field], [field])
+    expect(applyLiveHelp([search], live)[0].steps.find(s => s.target?.type === 'filter')!.caption).toEqual({ pt: 'do filtro' })
+    expect(applyLiveHelp([tour], live)[0].steps.find(s => s.target?.type === 'field' && (s.target as any).ref === 'n')!.caption).toEqual({ pt: 'do formulário' })
+  })
+
+  it('ajuda oculta não vira legenda; sem nada ao vivo devolve os roteiros como estão', async () => {
+    const { applyLiveHelp, buildLiveHelp } = await import('../interactiveHelp/live')
+    const oculta = buildLiveHelp([{ id: 'n', config: { form_config: { label: { help: { pt: 'x' }, help_hidden: true } } } }], [])
+    expect(oculta).toEqual({})
+    expect(applyLiveHelp([tour], oculta)[0]).toBe(tour)
+    expect(applyLiveHelp([tour], undefined)[0]).toBe(tour)
+  })
+
+  it('passo manual e passo sem a marca ao vivo nunca são trocados', async () => {
+    const { applyLiveHelp } = await import('../interactiveHelp/live')
+    const manual = { id: 'm', kind: 'type' as const, target: { type: 'field' as const, ref: 'n' }, value: 'x', caption: { pt: 'minha' } }
+    const antigo = { ...manual, id: 'a', auto: true, caption: { pt: 'cópia antiga da ajuda' } }
+    const t2 = { ...tour, steps: [manual, antigo] }
+    const out = applyLiveHelp([t2], { 'form:n': { pt: 'atual' } })[0]
+    expect(out.steps.map(s => s.caption?.pt)).toEqual(['minha', 'cópia antiga da ajuda'])
+  })
+})
+
+describe('roteiro desatualizado', () => {
+  const input = { formFields: [pk, nome, cnpj, email], filterFields: [nome], gridFields: [nome] }
+  const opts = { action: 'create' as const, screenName: 'Clientes', today: TODAY }
+  const fresh = () => buildAutoTour(input, { ...opts, fill: 'all' })
+
+  it('recém-gerado, regenerado e com valores ou datas diferentes NÃO é desatualizado', () => {
+    const t = fresh()
+    expect(isTourStale(t, input, opts)).toBe(false)
+    expect(isTourStale(regenerateTour(t, input, opts), input, opts)).toBe(false)
+    const outroDia = { ...t, steps: t.steps.map(s => (s.kind === 'type' ? { ...s, value: 'qualquer outro valor' } : s)) }
+    expect(isTourStale(outroDia, input, opts)).toBe(false)
+  })
+
+  it('campo novo, campo removido, obrigatório que mudou e rótulo renomeado deixam desatualizado', () => {
+    const t = fresh()
+    const novo = f({ id: 'x', column: 'telefone', label: 'Telefone' })
+    expect(isTourStale(t, { ...input, formFields: [...input.formFields, novo] }, opts)).toBe(true)
+    expect(isTourStale(t, { ...input, formFields: [pk, nome, cnpj] }, opts)).toBe(true)
+    expect(isTourStale(t, { ...input, formFields: [pk, { ...nome, label: 'Razão Social' }, cnpj, email] }, opts)).toBe(true)
+    const obrigatorio = buildAutoTour(input, { ...opts, fill: 'required' })
+    expect(isTourStale(obrigatorio, { ...input, formFields: input.formFields.map(x => (x.id === 'e' ? { ...x, required: true } : x)) }, opts)).toBe(true)
+  })
+
+  it('renomear o caso de uso deixa desatualizado (o título muda)', () => {
+    expect(isTourStale(fresh(), input, { ...opts, screenName: 'Clientes do Sul' })).toBe(true)
+  })
+
+  it('roteiro antigo, com legenda copiada (sem a marca ao vivo), aparece como desatualizado uma vez', () => {
+    const antigo = { ...fresh(), steps: fresh().steps.map(s => ({ ...s, liveCaption: undefined, caption: { pt: 'cópia da ajuda' } })) }
+    expect(isTourStale(antigo, input, opts)).toBe(true)
+    expect(isTourStale(regenerateTour(antigo, input, opts), input, opts)).toBe(false)
+  })
+
+  it('passo manual, frase do dev e valor editado não contam como desatualizado', () => {
+    const t = fresh()
+    const mexido = {
+      ...t,
+      summary: { pt: 'minha frase' }, summaryCustom: true,
+      steps: [...t.steps.map(s => (s.kind === 'type' ? { ...s, value: 'Meu valor', edited: true } : s)), { id: 'm', kind: 'note' as const, caption: { pt: 'passo meu' } }],
+    }
+    expect(isTourStale(mexido, input, opts)).toBe(false)
+  })
+
+  it('a frase automática do cartão acompanha a contagem de campos', () => {
+    const t = fresh()
+    expect(isTourStale(t, { ...input, formFields: [pk, nome] }, opts)).toBe(true)
   })
 })

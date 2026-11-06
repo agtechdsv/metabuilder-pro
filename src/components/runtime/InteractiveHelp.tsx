@@ -9,6 +9,7 @@ import { createDomAdapter, type DomAdapter } from '@/lib/interactiveHelp/domAdap
 import { buildQueue, shortTitle, toggleId } from '@/lib/interactiveHelp/order'
 import { browserStorage, clearSeen, markSeen, readSeen, seenStorageKey, unseenTours } from '@/lib/interactiveHelp/seen'
 import { estimateQueueMs, estimateTourMs, formatDuration, TourPlayer, TRANSITION_SECONDS, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
+import { applyLiveHelp, type LiveHelp } from '@/lib/interactiveHelp/live'
 import { hasInteractiveHelp, visibleTours, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
 import { ACTION_ICON, DoneCard, UpNextCard } from './InteractiveHelpCards'
@@ -23,6 +24,8 @@ interface Props {
   primaryKeyName?: string
   /** nome da tela, para o título do tour completo */
   screenName?: string
+  /** ajuda atual dos campos: as legendas dos passos acompanham o que o dev editou */
+  liveHelp?: LiveHelp
 }
 
 /** Ícone ▶ ao lado do "?" do cabeçalho. Só aparece com roteiro válido, e nunca dentro da própria demonstração. */
@@ -51,10 +54,12 @@ export function InteractiveHelpButton(props: Props) {
 
 const SPEEDS: TourSpeed[] = ['slow', 'normal', 'fast']
 
-function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, screenName, onClose }: Props & { onClose: () => void }) {
+function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, screenName, liveHelp, onClose }: Props & { onClose: () => void }) {
   const { t, language } = useI18n()
   // na ordem que o dev definiu no Studio (roteiros ocultos já ficam de fora)
-  const tours = useMemo(() => visibleTours(config), [config])
+  const liveKey = JSON.stringify(liveHelp || {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tours = useMemo(() => applyLiveHelp(visibleTours(config), liveHelp), [config, liveKey])
   const [selected, setSelected] = useState<string[]>([])
   const [speed, setSpeed] = useState<TourSpeed>('normal')
   const [stage, setStage] = useState<'choose' | 'play'>('choose')

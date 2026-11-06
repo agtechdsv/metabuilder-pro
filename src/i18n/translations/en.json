@@ -5366,7 +5366,13 @@
       "use_suggested_order": "Use the suggested order (search, view, register, edit, delete)",
       "card_phrase": "Card phrase (what the user reads when choosing)",
       "card_phrase_auto": "Use the automatic phrase",
-      "card_phrase_placeholder": "A short phrase about what this tutorial teaches."
+      "card_phrase_placeholder": "A short phrase about what this tutorial teaches.",
+      "stale": "Out of date",
+      "stale_hint": "The use case configuration changed since this script was generated. Regenerate to update it.",
+      "stale_one": "1 script out of date",
+      "stale_many": "{count} scripts out of date",
+      "regenerate_all": "Regenerate all",
+      "live_caption": "caption: the field's current help"
     }
   }
 }

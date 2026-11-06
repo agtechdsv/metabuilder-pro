@@ -5366,7 +5366,13 @@
       "use_suggested_order": "Usar a ordem sugerida (pesquisar, ver, cadastrar, editar, excluir)",
       "card_phrase": "Frase do cartão (o que o usuário lê ao escolher)",
       "card_phrase_auto": "Usar a frase automática",
-      "card_phrase_placeholder": "Uma frase curta do que este tutorial ensina."
+      "card_phrase_placeholder": "Uma frase curta do que este tutorial ensina.",
+      "stale": "Desatualizado",
+      "stale_hint": "A configuração do caso de uso mudou desde que o roteiro foi gerado. Regenere para atualizar.",
+      "stale_one": "1 roteiro desatualizado",
+      "stale_many": "{count} roteiros desatualizados",
+      "regenerate_all": "Regenerar todos",
+      "live_caption": "legenda: ajuda atual do campo"
     }
   }
 }

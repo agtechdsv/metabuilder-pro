@@ -137,12 +137,13 @@ function buildSummary(action: TourAction, steps: TourStep[], firstFilterLabel?: 
 let seq = 0
 const stepId = () => `auto-${++seq}-${Math.random().toString(36).slice(2, 6)}`
 
+// A legenda de um passo de campo é a ajuda ATUAL do campo, lida na hora de tocar (liveCaption). O que fica guardado aqui é só a frase
+// de reserva (pelo rótulo), usada quando o campo não tem ajuda: assim editar a ajuda do campo não deixa o tutorial desatualizado.
 function fieldStep(f: TourFieldInfo, value: string | null, kindTarget: 'field' | 'filter' = 'field'): TourStep {
   const target: TourTarget = { type: kindTarget, ref: f.id }
-  const caption = f.help && Object.values(f.help).some(Boolean) ? f.help : undefined
-  if (isCheck(f)) return { id: stepId(), kind: 'check', target, caption: caption ?? FILL_CAPTION(f.label), auto: true }
-  if (isListLike(f) || value === null) return { id: stepId(), kind: 'select', target, value: { pick: 'first' }, caption: caption ?? PICK_CAPTION(f.label), auto: true }
-  return { id: stepId(), kind: 'type', target, value, caption: caption ?? FILL_CAPTION(f.label), auto: true }
+  if (isCheck(f)) return { id: stepId(), kind: 'check', target, caption: FILL_CAPTION(f.label), auto: true, liveCaption: true }
+  if (isListLike(f) || value === null) return { id: stepId(), kind: 'select', target, value: { pick: 'first' }, caption: PICK_CAPTION(f.label), auto: true, liveCaption: true }
+  return { id: stepId(), kind: 'type', target, value, caption: FILL_CAPTION(f.label), auto: true, liveCaption: true }
 }
 
 /** Linha sintética usada no modo demonstração (editar, excluir, ver, pesquisar): só colunas que têm valor de exemplo. */
@@ -180,7 +181,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     const chosen = selectFillFields(input.formFields, fill, options.customFieldIds)
     for (const f of chosen) steps.push(fieldStep(f, sampleValue(f, options.today)))
     for (const f of input.formFields.filter(x => x.isVirtual && !x.hidden && !x.isDetail)) {
-      steps.push({ id: stepId(), kind: 'note', target: { type: 'field', ref: f.id }, caption: CALC_CAPTION(f.label), auto: true })
+      steps.push({ id: stepId(), kind: 'note', target: { type: 'field', ref: f.id }, caption: CALC_CAPTION(f.label), auto: true, liveCaption: true })
     }
     steps.push(btn('save'), btn('back'), result())
   } else if (action === 'edit') {
@@ -229,10 +230,32 @@ export function regenerateTour(previous: Tour, input: AutoTourInput, options: Au
   return {
     ...fresh,
     id: previous.id,
-    title: previous.title,
+    // o título acompanha o nome da tela (renomeou o caso de uso? regenerar atualiza)
+    title: fresh.title,
     hidden: previous.hidden,
     summary: keepPhrase ? previous.summary : fresh.summary,
     summaryCustom: keepPhrase ? true : undefined,
     steps: [...steps, ...manual],
   }
+}
+
+const targetKey = (s: TourStep) => (s.target ? `${s.target.type}:${'ref' in s.target ? s.target.ref : ''}:${(s.target as { action?: string }).action ?? ''}` : '')
+
+/**
+ * O roteiro ficou DESATUALIZADO? Compara o que está guardado com o que seria gerado agora, olhando só a parte automática:
+ * os passos (tipo e alvo), as legendas de reserva, a frase do cartão (se não for do dev), o título e as colunas da linha de exemplo.
+ * Valores digitados e datas ficam de fora (uma data de exemplo muda todo dia e não significa que a tela mudou).
+ * Os passos manuais e as edições do dev não contam.
+ */
+export function isTourStale(previous: Tour, input: AutoTourInput, options: AutoTourOptions): boolean {
+  const fresh = buildAutoTour(input, { ...options, action: previous.action, fill: previous.fill, editFieldCount: options.editFieldCount ?? previous.editFieldCount })
+  // a frase escrita pelo dev não é comparada (nos dois lados), senão o roteiro ficaria desatualizado para sempre
+  const skipSummary = previous.summaryCustom === true
+  const shape = (t: Tour) => JSON.stringify({
+    title: t.title,
+    summary: skipSummary ? null : t.summary,
+    seed: Object.keys(t.seed || {}).sort(),
+    steps: t.steps.filter(s => s.auto).map(s => [s.kind, targetKey(s), !!s.liveCaption, s.caption]),
+  })
+  return shape(previous) !== shape(fresh)
 }

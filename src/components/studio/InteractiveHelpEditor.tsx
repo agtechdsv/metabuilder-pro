@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, PlayCircle, RefreshCw, Trash2, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
-import { buildAutoTour, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
+import { buildAutoTour, isTourStale, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
 import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
 import { HelpTextEditor } from './UseCaseBuilder/steps/HelpTextEditor'
@@ -87,6 +87,15 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
   const suggested = sortBySuggestedOrder(ih.tours)
   const inSuggestedOrder = suggested.every((x, i) => x.id === ih.tours[i].id)
 
+  // desatualizado = o que seria gerado agora é diferente do que está guardado. Só avalia com os dados dos campos já carregados
+  // (antes disso tudo pareceria mudado).
+  const fieldsReady = models.some(m => Array.isArray(m?.fields) && m.fields.length > 0)
+  const staleIds = useMemo(
+    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name })).map(tr => tr.id) : []),
+    [fieldsReady, ih.tours, input, view.name],
+  )
+  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name })) })
+
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
   return (
@@ -99,6 +108,18 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
         </label>
       </div>
       <p className="text-[11px] text-neutral-500">{t('help_center_studio.interactive.description', 'O usuário vê o sistema executar os passos sozinho, em modo demonstração (nada é gravado). Gere o roteiro de cada ação e ajuste o que quiser.')}</p>
+      {ih.tours.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {staleIds.size > 0 && (
+            <span className="text-[11px] font-bold text-amber-600" title={t('help_center_studio.interactive.stale_hint', 'A configuração do caso de uso mudou desde que o roteiro foi gerado. Regenere para atualizar.')}>
+              {staleIds.size === 1 ? t('help_center_studio.interactive.stale_one', '1 roteiro desatualizado') : t('help_center_studio.interactive.stale_many', '{count} roteiros desatualizados').replace('{count}', String(staleIds.size))}
+            </span>
+          )}
+          <button type="button" onClick={regenerateAll} className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline">
+            <RefreshCw className="h-3 w-3" />{t('help_center_studio.interactive.regenerate_all', 'Regenerar todos')}
+          </button>
+        </div>
+      )}
       {ih.tours.length > 1 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <p className="text-[10px] font-bold text-indigo-600">{t('help_center_studio.interactive.order_hint', 'A ordem desta lista é a ordem em que o usuário vê e em que o "Reproduzir todos" executa.')}</p>
@@ -127,6 +148,11 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
                   {actionName(action)}
                 </button>
                 <span className="text-[10px] text-neutral-400">{tour.steps.length} {t('runtime.tour.steps', 'passos')}</span>
+                {staleIds.has(tour.id) && (
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" title={t('help_center_studio.interactive.stale_hint', 'A configuração do caso de uso mudou desde que o roteiro foi gerado. Regenere para atualizar.')}>
+                    {t('help_center_studio.interactive.stale', 'Desatualizado')}
+                  </span>
+                )}
 
                 {action === 'create' && (
                   <select value={tour.fill} onChange={e => generate(action, { ...tour, fill: e.target.value as TourFill })} className="ml-auto text-[10px] font-bold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1">
@@ -182,7 +208,7 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
                       {s.kind === 'type' && typeof s.value === 'string' ? (
                         <input value={s.value} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : (
-                        <span className="min-w-0 flex-1 pt-1 truncate text-neutral-400">{s.kind === 'select' ? t('help_center_studio.interactive.first_option', 'primeira opção da lista') : resolveHelp(s.caption, 'pt')}</span>
+                        <span className="min-w-0 flex-1 pt-1 truncate text-neutral-400">{s.kind === 'select' ? t('help_center_studio.interactive.first_option', 'primeira opção da lista') : s.liveCaption ? t('help_center_studio.interactive.live_caption', 'legenda: ajuda atual do campo') : resolveHelp(s.caption, 'pt')}</span>
                       )}
                       <button type="button" onClick={() => upsert({ ...tour, steps: tour.steps.filter(x => x.id !== s.id) })} className="pt-1 text-neutral-300 hover:text-red-500" aria-label={t('help_center_studio.interactive.delete_step', 'Apagar passo')}><Trash2 className="w-3 h-3" /></button>
                     </li>

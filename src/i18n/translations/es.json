@@ -5454,7 +5454,13 @@
       "use_suggested_order": "Usar el orden sugerido (buscar, ver, registrar, editar, eliminar)",
       "card_phrase": "Frase de la tarjeta (lo que el usuario lee al elegir)",
       "card_phrase_auto": "Usar la frase automática",
-      "card_phrase_placeholder": "Una frase corta de lo que enseña este tutorial."
+      "card_phrase_placeholder": "Una frase corta de lo que enseña este tutorial.",
+      "stale": "Desactualizado",
+      "stale_hint": "La configuración del caso de uso cambió desde que se generó el guion. Regenere para actualizarlo.",
+      "stale_one": "1 guion desactualizado",
+      "stale_many": "{count} guiones desactualizados",
+      "regenerate_all": "Regenerar todos",
+      "live_caption": "leyenda: ayuda actual del campo"
     }
   }
 }

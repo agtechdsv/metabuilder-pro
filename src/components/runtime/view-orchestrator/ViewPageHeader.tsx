@@ -13,6 +13,8 @@ export interface ViewPageHeaderProps {
   description?: string
   screenHelp?: unknown
   interactiveHelp?: unknown
+  /** ajuda atual dos campos (legenda ao vivo da ajuda interativa) */
+  interactiveLiveHelp?: Record<string, any>
   icon?: string
   workspace: any
   project: any
@@ -45,6 +47,7 @@ export function ViewPageHeader({
   description,
   screenHelp,
   interactiveHelp,
+  interactiveLiveHelp,
   icon,
   workspace,
   project,
@@ -81,7 +84,7 @@ export function ViewPageHeader({
       icon={icon}
       actions={(
         <div className="flex items-center gap-3">
-          <InteractiveHelpButton config={interactiveHelp} projectId={project.id} viewId={viewId} screenName={viewName} modelName={modelName} primaryKeyName={primaryKeyName} />
+          <InteractiveHelpButton config={interactiveHelp} liveHelp={interactiveLiveHelp} projectId={project.id} viewId={viewId} screenName={viewName} modelName={modelName} primaryKeyName={primaryKeyName} />
           <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId, zone: 'screen' }} centralHref={`/${workspace.slug}/${project.slug}/help`} />
           {isAutomationsEnabled && (
             <button

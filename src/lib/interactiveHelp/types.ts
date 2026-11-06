@@ -42,6 +42,8 @@ export interface TourStep {
   auto?: boolean
   /** o dev mudou o valor de um passo automático: "Regenerar" mantém o valor dele */
   edited?: boolean
+  /** a legenda é a ajuda ATUAL do campo, lida na hora de tocar (`caption` fica só como reserva, para campo sem ajuda) */
+  liveCaption?: boolean
 }
 
 export type TourFill = 'required' | 'all' | 'custom'
