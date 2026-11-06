@@ -177,6 +177,25 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
       return true
     },
 
+    isAutocomplete(el) {
+      return (el as HTMLElement).hasAttribute?.('data-tour-autocomplete') === true
+    },
+
+    async pickSuggestion(el) {
+      const box = (el as HTMLElement).closest('[data-tour-ac]')
+      const started = Date.now()
+      // a busca é dinâmica (espera de digitação + consulta ao banco): aguarda a lista aparecer
+      for (;;) {
+        const opt = box && (Array.from(box.querySelectorAll('[data-tour-option]')) as HTMLElement[]).find(isVisible)
+        if (opt) {
+          opt.dispatchEvent(new win.MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+          return true
+        }
+        if (Date.now() - started > 6000) return false
+        await sleep(150)
+      }
+    },
+
     check(el) {
       const box = el as HTMLInputElement
       if (!box.checked) box.click()

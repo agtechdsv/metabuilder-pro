@@ -169,6 +169,11 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                     {t('help_center_studio.interactive.stale', 'Desatualizado')}
                   </span>
                 )}
+                {tour.steps.some(x => x.kind === 'select' && x.value === '') && (
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" title={t('help_center_studio.interactive.search_term_missing_hint', 'Um campo de busca (autocomplete) está sem termo de busca: o passo é pulado até você informar.')}>
+                    {t('help_center_studio.interactive.search_term_missing', 'Falta termo de busca')}
+                  </span>
+                )}
 
                 {action === 'create' && (
                   <select value={tour.fill} onChange={e => generate(action, { ...tour, fill: e.target.value as TourFill })} className="ml-auto text-[10px] font-bold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1">
@@ -221,7 +226,9 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                       <span className="w-5 shrink-0 pt-1 text-right font-black text-neutral-400">{i + 1}</span>
                       <span className="w-16 shrink-0 pt-1 font-black text-neutral-600 dark:text-neutral-300">{kindText(s.kind)}</span>
                       <span className="w-40 shrink-0 pt-1 truncate text-neutral-500" title={targetText(s)}>{targetText(s)}</span>
-                      {s.kind === 'type' && typeof s.value === 'string' ? (
+                      {s.kind === 'select' && typeof s.value === 'string' ? (
+                        <input value={s.value} placeholder={t('help_center_studio.interactive.search_term', 'Termo de busca (ex.: parte do nome)')} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className={cn('min-w-0 flex-1 rounded-lg border bg-transparent px-2 py-1', s.value ? 'border-neutral-200 dark:border-neutral-700' : 'border-amber-400')} />
+                      ) : s.kind === 'type' && typeof s.value === 'string' ? (
                         <input value={s.value} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : (
                         <span className="min-w-0 flex-1 pt-1 truncate text-neutral-400">{s.kind === 'select' ? t('help_center_studio.interactive.first_option', 'primeira opção da lista') : s.liveCaption ? t('help_center_studio.interactive.live_caption', 'legenda: ajuda atual do campo') : resolveHelp(s.caption, 'pt')}</span>

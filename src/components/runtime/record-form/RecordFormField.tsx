@@ -355,6 +355,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
                 valueCol={comp.rel_value}
                 minChars={comp.min_chars ?? 2}
                 debounceMs={comp.debounce_ms ?? 300}
+                tourId={field.id}
                 limit={comp.limit}
                 placeholder={comp.search_placeholder || (mode === 'view' ? '' : t('runtime.record_drawer.input_placeholder').replace('{field}', field.display_name))}
                 style={inputStyle}

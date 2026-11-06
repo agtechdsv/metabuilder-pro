@@ -70,6 +70,7 @@ const RESULT_CAPTION: Record<TourAction, Cap> = {
   view: cap('Os dados aparecem só para leitura.', 'The data is shown read-only.', 'Los datos se muestran solo para lectura.'),
 }
 const FILL_CAPTION = (label: string): Cap => cap(`Preencha "${label}".`, `Fill in "${label}".`, `Complete "${label}".`)
+const SEARCH_CAPTION = (label: string): Cap => cap(`Busque e escolha "${label}".`, `Search and pick "${label}".`, `Busque y elija "${label}".`)
 const PICK_CAPTION = (label: string): Cap => cap(`Escolha uma opção em "${label}".`, `Pick an option in "${label}".`, `Elija una opción en "${label}".`)
 const CALC_CAPTION = (label: string): Cap => cap(`"${label}" é calculado automaticamente.`, `"${label}" is calculated automatically.`, `"${label}" se calcula automáticamente.`)
 
@@ -84,6 +85,7 @@ const TITLE: Record<TourAction, Cap> = {
 const titleFor = (action: TourAction, screenName?: string): HelpText =>
   screenName ? { pt: `${TITLE[action].pt}: ${screenName}`, en: `${TITLE[action].en}: ${screenName}`, es: `${TITLE[action].es}: ${screenName}` } : TITLE[action]
 
+const isAutocomplete = (f: TourFieldInfo) => /autocomplete/i.test(f.component || '')
 const isListLike = (f: TourFieldInfo) => /select|combo|dropdown|autocomplete|radio/i.test(f.component || '')
 const isCheck = (f: TourFieldInfo) => /checkbox|boolean|switch/i.test(f.component || '') || (f.dataType || '').toLowerCase() === 'boolean'
 const fillable = (f: TourFieldInfo) => !f.isPrimaryKey && !f.isVirtual && !f.readOnly && !f.hidden && !f.isDetail
@@ -170,6 +172,8 @@ const stepId = () => `auto-${++seq}-${Math.random().toString(36).slice(2, 6)}`
 function fieldStep(f: TourFieldInfo, value: string | null, kindTarget: 'field' | 'filter' = 'field'): TourStep {
   const target: TourTarget = { type: kindTarget, ref: f.id }
   if (isCheck(f)) return { id: stepId(), kind: 'check', target, caption: FILL_CAPTION(f.label), auto: true, liveCaption: true }
+  // autocomplete: o dev informa o termo de busca no Studio (não dá para adivinhar um que exista no banco do cliente); vazio = o passo é pulado
+  if (isAutocomplete(f)) return { id: stepId(), kind: 'select', target, value: '', caption: SEARCH_CAPTION(f.label), auto: true, liveCaption: true }
   if (isListLike(f) || value === null) return { id: stepId(), kind: 'select', target, value: { pick: 'first' }, caption: PICK_CAPTION(f.label), auto: true, liveCaption: true }
   return { id: stepId(), kind: 'type', target, value, caption: FILL_CAPTION(f.label), auto: true, liveCaption: true }
 }

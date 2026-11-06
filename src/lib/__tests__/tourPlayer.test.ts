@@ -119,3 +119,37 @@ describe('passo de observação cujo elemento não existe', () => {
     expect(timeouts.note1).toBe(600)
   })
 })
+
+describe('autocomplete: digita o termo e escolhe a primeira sugestão', () => {
+  const acAdapter = (found: boolean) => {
+    const { adapter, log } = fakeAdapter()
+    adapter.isAutocomplete = () => true
+    adapter.pickSuggestion = async (el: any) => { log.push(`pick:${el.id}`); return found }
+    return { adapter, log }
+  }
+  const ac = (value: string) => tour([step('a', 'select', { target: { type: 'field', ref: 'p' }, value })])
+
+  it('com termo: digita letra a letra e escolhe a primeira sugestão', async () => {
+    const { adapter, log } = acAdapter(true)
+    const p = new TourPlayer(ac('ca'), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(log.filter(l => !l.startsWith('show'))).toEqual(['text:a:', 'text:a:c', 'text:a:ca', 'pick:a', 'clear'])
+    expect(p.snapshot.skipped).toBe(0)
+  })
+
+  it('sem termo o passo é pulado e nada é digitado', async () => {
+    const { adapter, log } = acAdapter(true)
+    const p = new TourPlayer(ac(''), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(log.some(l => l.startsWith('text') || l.startsWith('pick'))).toBe(false)
+    expect(p.snapshot.skipped).toBe(1)
+  })
+
+  it('busca sem resultado: o passo conta como pulado e o tutorial termina', async () => {
+    const { adapter } = acAdapter(false)
+    const p = new TourPlayer(ac('zzz'), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(p.snapshot.skipped).toBe(1)
+    expect(p.snapshot.state).toBe('ended')
+  })
+})

@@ -20,6 +20,8 @@ export interface AutocompleteInputProps {
   valueCol?: string
   minChars?: number
   debounceMs?: number
+  /** id do campo no Studio: marca o elemento para a Ajuda Interativa (`data-tour-field`) */
+  tourId?: string
   limit?: number | string | null
   placeholder?: string
   disabled?: boolean
@@ -42,6 +44,7 @@ export function AutocompleteInput({
   valueCol,
   minChars = 2,
   debounceMs = 300,
+  tourId,
   limit,
   placeholder = 'Digite para pesquisar...',
   disabled = false,
@@ -347,7 +350,7 @@ export function AutocompleteInput({
   const hasValue = value !== undefined && value !== null && value !== ''
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} data-tour-ac="" className="relative w-full">
       <div className="relative flex items-center">
         {/* Ícone de busca ou spinner */}
         <div className="absolute left-3.5 text-neutral-400 dark:text-neutral-500 pointer-events-none flex items-center justify-center">
@@ -362,6 +365,8 @@ export function AutocompleteInput({
         <input
           ref={inputRef}
           type="text"
+          data-tour-field={tourId}
+          data-tour-autocomplete={tourId ? '' : undefined}
           value={query}
           disabled={disabled}
           onChange={handleInputChange}
@@ -407,6 +412,7 @@ export function AutocompleteInput({
               return (
                 <div
                   key={`${item.value}-${idx}`}
+                  data-tour-option=""
                   onMouseDown={(e) => {
                     e.preventDefault()
                     handleSelect(item)

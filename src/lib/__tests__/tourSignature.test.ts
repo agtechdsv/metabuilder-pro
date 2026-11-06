@@ -121,3 +121,16 @@ describe('abas de detalhe no roteiro', () => {
     expect(shape(buildAutoTour(so, { action: 'create' }))).not.toContain('click:button:detail-add')
   })
 })
+
+describe('autocomplete no gerador', () => {
+  it('vira passo "buscar e escolher" com termo vazio, e o valor do dev sobrevive ao regenerar', async () => {
+    const { regenerateTour } = await import('../interactiveHelp/autoTour')
+    const input: any = { formFields: [{ id: 'prod', label: 'Produto', column: 'produto_id', component: 'autocomplete', required: true }], filterFields: [], gridFields: [] }
+    const tour = buildAutoTour(input, { action: 'create' })
+    const s = tour.steps.find(x => x.target?.type === 'field')!
+    expect([s.kind, s.value]).toEqual(['select', ''])
+    const editado = { ...tour, steps: tour.steps.map(x => (x.id === s.id ? { ...x, value: 'caneta', edited: true } : x)) }
+    const novo = regenerateTour(editado, input, { action: 'create' })
+    expect(novo.steps.find(x => x.target?.type === 'field')!.value).toBe('caneta')
+  })
+})

@@ -5378,7 +5378,10 @@
       "sig_changed": "A configuração mudou, mas isso não afeta os roteiros.",
       "mark_current": "Marcar como em dia",
       "btn_detail-add": "Adicionar item (+)",
-      "detail_tab": "Aba do detalhe"
+      "detail_tab": "Aba do detalhe",
+      "search_term": "Termo de busca (ex.: parte do nome)",
+      "search_term_missing": "Falta termo de busca",
+      "search_term_missing_hint": "Um campo de busca (autocomplete) está sem termo de busca: o passo é pulado até você informar."
     }
   }
 }

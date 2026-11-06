@@ -757,6 +757,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                         valueCol={fieldConfig.component?.rel_value}
                                         minChars={fieldConfig.component?.min_chars ?? 2}
                                         debounceMs={fieldConfig.component?.debounce_ms ?? 300}
+                                        tourId={field.id}
                                         limit={fieldConfig.component?.limit}
                                         placeholder={fieldConfig.component?.search_placeholder || 'Digite para buscar...'}
                                         disabled={isInlineDisabled}

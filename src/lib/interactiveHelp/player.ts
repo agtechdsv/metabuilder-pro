@@ -19,6 +19,10 @@ export interface PlayerAdapter {
   /** Escolhe a opção cujo valor é `value`. */
   selectValue(el: unknown, value: string): boolean
   check(el: unknown): void
+  /** O elemento é um campo de busca com sugestões (autocomplete)? */
+  isAutocomplete?(el: unknown): boolean
+  /** Escolhe a primeira sugestão da lista, esperando a busca terminar. Devolve se conseguiu. */
+  pickSuggestion?(el: unknown): Promise<boolean>
   /** Limpa o destaque e o balão (fim do tutorial). */
   clear(): void
 }
@@ -60,6 +64,7 @@ export function estimateTourMs(tour: Tour, speed: TourSpeed, language = 'pt'): n
     let action = 0
     if (step.kind === 'click') action = BASE.afterClick
     else if (step.kind === 'type' && typeof step.value === 'string') action = step.value.length * BASE.perChar
+    else if (step.kind === 'select' && typeof step.value === 'string' && step.value) action = step.value.length * BASE.perChar + 1500 + BASE.afterClick / 2
     else if (step.kind === 'select' || step.kind === 'check') action = BASE.afterClick / 2
     ms += BASE.travel + Math.min(BASE.readMax, BASE.readMin + caption.length * BASE.readPerChar) + action + BASE.between
   }
@@ -188,6 +193,21 @@ export class TourPlayer {
         this.adapter.setText(el, step.value.slice(0, c))
         await this.wait(BASE.perChar)
       }
+    } else if (step.kind === 'select' && el && this.adapter.isAutocomplete?.(el)) {
+      // autocomplete: digita o termo que o dev informou e escolhe a primeira sugestão; sem termo, não há o que buscar
+      const term = typeof step.value === 'string' ? step.value : ''
+      let ok = false
+      if (term) {
+        this.adapter.setText(el, '')
+        for (let c = 1; c <= term.length && !this.cancelled; c++) {
+          await this.gate()
+          this.adapter.setText(el, term.slice(0, c))
+          await this.wait(BASE.perChar)
+        }
+        ok = !this.cancelled && !!(await this.adapter.pickSuggestion?.(el))
+      }
+      if (!ok) this.skipped++
+      await this.wait(BASE.afterClick / 2)
     } else if (step.kind === 'select' && el) {
       const ok = step.value && typeof step.value === 'object' ? await this.adapter.selectFirst(el) : this.adapter.selectValue(el, String(step.value ?? ''))
       if (!ok) this.skipped++
