@@ -106,7 +106,7 @@ describe('abas de detalhe no roteiro', () => {
     const steps = shape(buildAutoTour(input, { action: 'create' }))
     expect(steps).toEqual([
       'click:button:new', 'type:field:nome',
-      'click:tab:m-ped', 'click:button:detail-add', 'type:field:p_data',
+      'click:tab:m-ped', 'click:detail-add:m-ped', 'type:field:p_data',
       'click:button:save', 'click:button:back', 'note:row:first',
     ])
   })
@@ -118,7 +118,7 @@ describe('abas de detalhe no roteiro', () => {
 
   it('sem campos de detalhe o roteiro não muda', () => {
     const so = { ...input, formFields: input.formFields.slice(0, 1) }
-    expect(shape(buildAutoTour(so, { action: 'create' }))).not.toContain('click:button:detail-add')
+    expect(shape(buildAutoTour(so, { action: 'create' }))).not.toContain('click:detail-add:m-ped')
   })
 })
 
@@ -132,5 +132,14 @@ describe('autocomplete no gerador', () => {
     const editado = { ...tour, steps: tour.steps.map(x => (x.id === s.id ? { ...x, value: 'caneta', edited: true } : x)) }
     const novo = regenerateTour(editado, input, { action: 'create' })
     expect(novo.steps.find(x => x.target?.type === 'field')!.value).toBe('caneta')
+  })
+})
+
+describe('dois níveis de detalhe (Pedidos e Itens do Pedido)', () => {
+  it('cada nível clica no + do seu próprio modelo', () => {
+    const f = (id: string, m: string) => ({ id, label: id, column: id, type: 'text', isDetail: true, detailModelId: m, required: true })
+    const input: any = { formFields: [{ id: 'n', label: 'n', column: 'n', type: 'text', required: true }, f('data', 'm-ped'), f('qtd', 'm-item')], filterFields: [], gridFields: [] }
+    const adds = buildAutoTour(input, { action: 'create' }).steps.filter(s => s.target?.type === 'detail-add').map(s => s.target?.ref)
+    expect(adds).toEqual(['m-ped', 'm-item'])
   })
 })

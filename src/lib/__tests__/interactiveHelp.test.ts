@@ -282,7 +282,7 @@ describe('campos da aba de detalhe', () => {
     expect(infos.map(i => [i.id, i.isDetail])).toEqual([['n', false], ['dp', true]])
     const tour = buildAutoTour({ formFields: infos }, { action: 'create', fill: 'all', today: TODAY })
     const refs = tour.steps.map(s => `${s.kind}:${(s.target as any)?.ref}`)
-    expect(refs.slice(0, 5)).toEqual(['click:new', 'type:n', 'click:D', 'click:detail-add', 'type:dp'])
+    expect(refs.slice(0, 5)).toEqual(['click:new', 'type:n', 'click:D', 'click:D', 'type:dp'])
     expect(infos[1].detailModelId).toBe('D')
     // sem o modelo principal informado nada é tratado como detalhe (comportamento anterior)
     expect(buildFieldInfos(lc, models, 'form').every(i => !i.isDetail)).toBe(true)

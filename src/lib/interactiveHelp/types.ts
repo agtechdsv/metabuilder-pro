@@ -15,7 +15,7 @@ export type TourSpeed = 'slow' | 'normal' | 'fast'
 export const SPEED_FACTOR: Record<TourSpeed, number> = { slow: 2, normal: 1, fast: 0.4 }
 
 /** Botões fixos da tela, identificados pelo atributo `data-tour` */
-export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'detail-add'
+export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel'
 export type TourRowAction = 'view' | 'edit' | 'delete'
 
 export type TourTarget =
@@ -28,6 +28,8 @@ export type TourTarget =
   | { type: 'row'; ref: 'first'; action?: TourRowAction }
   /** aba de detalhe (ex.: Pedidos dentro de Clientes); `ref` é o id do MODELO do detalhe (atributo `data-tour-detail`) */
   | { type: 'tab'; ref: string }
+  /** botão + que adiciona um item daquele detalhe (`data-tour-add`); `ref` é o id do MODELO do detalhe. Cada nível (Pedidos, Itens do Pedido) tem o seu */
+  | { type: 'detail-add'; ref: string }
 
 export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note'
 

@@ -208,7 +208,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             {/* Adicionar registro */}
             <button
               type="button"
-              data-tour="detail-add"
+              data-tour-add={modelId || String(tableName)}
               onClick={() => {
                 if (true) {
                   const newTempId = `temp-${Date.now()}`

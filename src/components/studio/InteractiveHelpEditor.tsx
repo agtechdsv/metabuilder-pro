@@ -21,7 +21,7 @@ interface Props {
 }
 
 const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes' }
-const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar', 'detail-add': 'Adicionar item (+)' }
+const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar' }
 
 /**
  * Ajuda Interativa no Studio: o dev gera o roteiro de cada ação a partir da configuração do caso de uso, define a ORDEM em que eles
@@ -85,6 +85,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
     if (!tg) return ''
     if (tg.type === 'field' || tg.type === 'filter') return labelOf(tg.ref)
     if (tg.type === 'button') return t(`help_center_studio.interactive.btn_${tg.ref}`, BUTTON_FALLBACK[tg.ref] || tg.ref)
+    if (tg.type === 'detail-add') return t('help_center_studio.interactive.btn_detail-add', 'Adicionar item (+)')
     if (tg.type === 'tab') return t('help_center_studio.interactive.detail_tab', 'Aba do detalhe')
     if (tg.type === 'row') return tg.action ? t(`help_center_studio.interactive.row_${tg.action}`, tg.action) : t('help_center_studio.interactive.row', 'Primeira linha')
     return ''

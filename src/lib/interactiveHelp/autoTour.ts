@@ -54,8 +54,8 @@ const BUTTON_CAPTION: Record<string, Cap> = {
   search: cap('Clique em Pesquisar para aplicar o filtro.', 'Click Search to apply the filter.', 'Haga clic en Buscar para aplicar el filtro.'),
   clear: cap('Clique em Limpar para remover o filtro.', 'Click Clear to remove the filter.', 'Haga clic en Limpiar para quitar el filtro.'),
   confirm: cap('Confirme a exclusão.', 'Confirm the deletion.', 'Confirme la eliminación.'),
-  'detail-add': cap('Clique em + para adicionar um item.', 'Click + to add an item.', 'Haga clic en + para agregar un ítem.'),
 }
+const ADD_CAPTION: Cap = cap('Clique em + para adicionar um item.', 'Click + to add an item.', 'Haga clic en + para agregar un ítem.')
 const TAB_CAPTION: Cap = cap('Abra a aba do detalhe.', 'Open the detail tab.', 'Abra la pestaña del detalle.')
 const ROW_CAPTION: Record<string, Cap> = {
   edit: cap('Clique no lápis para editar o registro.', 'Click the pencil to edit the record.', 'Haga clic en el lápiz para editar el registro.'),
@@ -202,7 +202,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
   const { action } = options
   const fill: TourFill = options.fill ?? 'required'
   const steps: TourStep[] = []
-  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'detail-add'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
+  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
   const row = (act: 'view' | 'edit' | 'delete'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'row', ref: 'first', action: act }, caption: ROW_CAPTION[act], auto: true })
   const result = (): TourStep => ({ id: stepId(), kind: 'note', target: { type: 'row', ref: 'first' }, caption: RESULT_CAPTION[action], auto: true })
 
@@ -210,7 +210,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
   const detailSteps = (groups: Array<{ modelId: string; fields: TourFieldInfo[] }>): TourStep[] =>
     groups.flatMap(g => [
       { id: stepId(), kind: 'click', target: { type: 'tab', ref: g.modelId }, caption: TAB_CAPTION, auto: true } as TourStep,
-      btn('detail-add'),
+      { id: stepId(), kind: 'click', target: { type: 'detail-add', ref: g.modelId }, caption: ADD_CAPTION, auto: true } as TourStep,
       ...g.fields.map(f => fieldStep(f, sampleValue(f, options.today))),
     ])
 
