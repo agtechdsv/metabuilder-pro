@@ -5393,7 +5393,10 @@
       "btn_scheduler-add": "Add event (+)",
       "btn_scheduler-event": "Event",
       "btn_scheduler-delete": "Delete event",
-      "btn_widget": "Dashboard charts"
+      "btn_widget": "Dashboard charts",
+      "option_text": "Option to pick, by its text (empty = the first in the list)",
+      "btn_widget-expand": "Expand chart (magnifier)",
+      "btn_widget-collapse": "Collapse chart"
     }
   }
 }

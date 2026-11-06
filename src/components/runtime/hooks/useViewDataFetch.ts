@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 import { clearViewCaches } from '@/lib/tunnel/logoutClient'
 import { getCachedData, setCachedData } from '@/lib/viewCache'
+import { isDemoMode } from '@/lib/demo/demoMode'
 
 export function useViewDataFetch({
   projectId,
@@ -787,7 +788,8 @@ export function useViewDataFetch({
           toast(res.payload.error || 'Erro ao salvar no banco', 'error')
         } else {
           toast(t('runtime.update_success'), 'success')
-          if (onCustomAction) {
+          // na demonstração a lista já foi ajustada na tela: reconsultar só faria o quadro piscar "Conectando ao banco..."
+          if (onCustomAction && !isDemoMode()) {
             onCustomAction({ action: 'system_refresh' })
           }
         }

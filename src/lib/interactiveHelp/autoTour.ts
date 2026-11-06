@@ -39,6 +39,8 @@ export interface AutoTourOptions {
   /** tipo do caso de uso (`logic_type`): muda por onde o roteiro começa (Kanban, agenda, BI). Padrão: cadastro com pesquisa */
   viewType?: string
   /** agenda: linha de exemplo (evento) e as colunas cujo valor é "agora" */
+  /** campos que o roteiro não preenche (agenda: a data de início já vem do dia clicado e mudá-la leva o evento para outro dia) */
+  excludeFieldIds?: string[]
   schedulerSeed?: { seed: Record<string, string>; seedToday: Record<string, 'date' | 'datetime'> }
   fill?: TourFill
   /** ids escolhidos quando `fill` é 'custom' */
@@ -103,6 +105,8 @@ const CARD_CAPTION: Record<string, Cap> = {
   'scheduler-add': cap('Clique em + no dia para criar um evento.', 'Click + on the day to create an event.', 'Haga clic en + en el día para crear un evento.'),
   'scheduler-event': cap('Clique no evento para editá-lo.', 'Click the event to edit it.', 'Haga clic en el evento para editarlo.'),
   'scheduler-delete': cap('Clique na lixeira do evento para excluir.', 'Click the event trash can to delete.', 'Haga clic en la papelera del evento para eliminar.'),
+  'widget-expand': cap('Clique na lupa para ver o gráfico em tela cheia.', 'Click the magnifier to see the chart full screen.', 'Haga clic en la lupa para ver el gráfico a pantalla completa.'),
+  'widget-collapse': cap('Clique em recolher para voltar ao painel.', 'Click collapse to go back to the dashboard.', 'Haga clic en contraer para volver al panel.'),
   widget: cap('Os gráficos e indicadores já mostram o resultado do filtro.', 'The charts and indicators already show the filtered result.', 'Los gráficos e indicadores ya muestran el resultado del filtro.'),
 }
 
@@ -279,16 +283,17 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
   if (typed) {
     // Kanban e agenda abrem o MESMO formulário do cadastro (em janela): os campos e o Salvar são os de sempre
     const result = (vt === 'kanban' ? KANBAN_RESULT : SCHEDULER_RESULT)[action]
+    const formFieldsUsable = input.formFields.filter(f => !(options.excludeFieldIds || []).includes(f.id))
     const prefix = vt === 'kanban' ? 'kanban' : 'scheduler'
     if (action === 'create') {
       steps.push(click(`${prefix}-add` as TourButtonRef))
-      for (const f of selectFillFields(input.formFields, fill, options.customFieldIds)) steps.push(fieldStep(f, sampleValue(f, options.today)))
+      for (const f of selectFillFields(formFieldsUsable, fill, options.customFieldIds)) steps.push(fieldStep(f, sampleValue(f, options.today)))
       steps.push(btn('save'))
     } else if (action === 'edit') {
       steps.push(click(vt === 'kanban' ? 'kanban-edit' : 'scheduler-event'))
       const count = Math.max(1, options.editFieldCount ?? 2)
-      const textual = input.formFields.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
-      const pool = textual.length ? textual : input.formFields.filter(fillable)
+      const textual = formFieldsUsable.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
+      const pool = textual.length ? textual : formFieldsUsable.filter(fillable)
       for (const f of pool.slice(0, count)) steps.push(fieldStep(f, editedValue(f, options.today)))
       steps.push(btn('save'))
     } else if (action === 'delete') {
@@ -301,7 +306,8 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     // painel (BI): só lê. Preenche o filtro, pesquisa e mostra que os gráficos acompanham; depois limpa
     const filters = (input.filterFields || []).filter(f => !f.hidden)
     for (const f of filters.slice(0, 2)) steps.push(fieldStep(f, sampleValue(f, options.today), 'filter'))
-    steps.push(btn('search'), { id: stepId(), kind: 'note', target: { type: 'button', ref: 'widget' }, caption: CARD_CAPTION.widget, auto: true }, btn('clear'))
+    // o botão Limpar fica de fora: na demonstração ele reconsulta tudo e pode estourar o tempo limite
+    steps.push(btn('search'), { id: stepId(), kind: 'note', target: { type: 'button', ref: 'widget' }, caption: CARD_CAPTION.widget, auto: true }, click('widget-expand'), click('widget-collapse'))
   } else if (action === 'create') {
     steps.push(btn('new'))
     const chosen = selectFillFields(input.formFields, fill, options.customFieldIds)

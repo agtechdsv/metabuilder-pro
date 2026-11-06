@@ -5481,7 +5481,10 @@
       "btn_scheduler-add": "Agregar evento (+)",
       "btn_scheduler-event": "Evento",
       "btn_scheduler-delete": "Eliminar evento",
-      "btn_widget": "Gráficos del panel"
+      "btn_widget": "Gráficos del panel",
+      "option_text": "Opción a elegir, por su texto (vacío = la primera de la lista)",
+      "btn_widget-expand": "Ampliar gráfico (lupa)",
+      "btn_widget-collapse": "Contraer gráfico"
     }
   }
 }

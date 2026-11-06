@@ -50,6 +50,11 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   // agenda: o evento de exemplo usa as colunas de início e de título configuradas
   const schedulerSeed = useMemo(() => (view.logic_type === 'scheduler' ? buildSchedulerSeed(lc, models) : undefined), [lc, models, view.logic_type])
 
+  const excludeFieldIds = useMemo(
+    () => (view.logic_type === 'scheduler' ? [lc.scheduler_config?.start_date_field, lc.scheduler_config?.end_date_field].filter((x: any) => typeof x === 'string' && x) : []),
+    [lc, view.logic_type],
+  )
+
   const input: AutoTourInput = useMemo(() => ({
     formFields: buildFieldInfos(lc, models, 'form', view.model_id),
     filterFields: buildFieldInfos(lc, models, 'filter', view.model_id),
@@ -75,7 +80,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   const actionName = (a: TourAction) => t(`help_center_studio.interactive.action_${a}`, ACTION_FALLBACK[a])
 
   const generate = (action: TourAction, previous?: Tour) => {
-    const opts = { action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed }
+    const opts = { action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed, excludeFieldIds }
     const tour = previous ? regenerateTour(previous, input, opts) : buildAutoTour(input, opts)
     upsert(previous?.hidden ? { ...tour, hidden: true } : tour)
   }
@@ -103,10 +108,10 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   // (antes disso tudo pareceria mudado).
   const fieldsReady = models.some(m => Array.isArray(m?.fields) && m.fields.length > 0)
   const staleIds = useMemo(
-    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name, viewType: view.logic_type, schedulerSeed })).map(tr => tr.id) : []),
+    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds })).map(tr => tr.id) : []),
     [fieldsReady, ih.tours, input, view.name],
   )
-  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed })) })
+  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed, excludeFieldIds })) })
   // a configuração mudou (assinatura diferente) mas a comparação exata diz que os roteiros continuam certos: dá para só "carimbar" a assinatura nova
   const sigChanged = fieldsReady && staleIds.size === 0 && ih.tours.some(tr => isLikelyStale(tr, lc, view.name))
   const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => ({ ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
@@ -209,7 +214,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.interactive.card_phrase', 'Frase do cartão (o que o usuário lê ao escolher)')}</span>
                     {tour.summaryCustom && (
-                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name, viewType: view.logic_type, schedulerSeed }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
+                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
                         {t('help_center_studio.interactive.card_phrase_auto', 'Usar a frase automática')}
                       </button>
                     )}
@@ -233,6 +238,8 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                       <span className="w-40 shrink-0 pt-1 truncate text-neutral-500" title={targetText(s)}>{targetText(s)}</span>
                       {s.kind === 'select' && typeof s.value === 'string' ? (
                         <input value={s.value} placeholder={t('help_center_studio.interactive.search_term', 'Termo de busca (ex.: parte do nome)')} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className={cn('min-w-0 flex-1 rounded-lg border bg-transparent px-2 py-1', s.value ? 'border-neutral-200 dark:border-neutral-700' : 'border-amber-400')} />
+                      ) : s.kind === 'select' && s.value && typeof s.value === 'object' ? (
+                        <input defaultValue="" placeholder={t('help_center_studio.interactive.option_text', 'Opção a escolher, pelo texto (vazio = a primeira da lista)')} onBlur={e => { const v = e.target.value.trim(); if (v) patchStep(tour, s.id, { value: v, edited: s.auto ? true : s.edited }) }} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : s.kind === 'type' && typeof s.value === 'string' ? (
                         <input value={s.value} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : (

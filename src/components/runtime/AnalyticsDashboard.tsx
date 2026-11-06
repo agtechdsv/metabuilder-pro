@@ -1381,7 +1381,7 @@ export default function AnalyticsDashboard({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setExpandedWidgetId(widget.id)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all">
+            <button data-tour="widget-expand" onClick={() => setExpandedWidgetId(widget.id)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl text-neutral-400 hover:text-indigo-600 transition-all">
               <Search className="w-4 h-4" />
             </button>
             {isEditMode && onEditWidget && (
@@ -1579,7 +1579,7 @@ export default function AnalyticsDashboard({
       {expandedWidgetId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white dark:bg-neutral-900 rounded-[3.5rem] border border-neutral-200 dark:border-neutral-800 shadow-2xl p-12 relative max-w-6xl w-full h-[85vh] flex flex-col">
-            <button onClick={() => setExpandedWidgetId(null)} className="absolute top-10 right-10 p-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-500 rounded-full transition-all"><Minimize2 className="w-6 h-6" /></button>
+            <button data-tour="widget-collapse" onClick={() => setExpandedWidgetId(null)} className="absolute top-10 right-10 p-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-red-500 rounded-full transition-all"><Minimize2 className="w-6 h-6" /></button>
             {(() => {
               const widget = localWidgets.find(w => w.id === expandedWidgetId)
               if (!widget) return null

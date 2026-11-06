@@ -17,7 +17,7 @@ export interface PlayerAdapter {
   /** Escolhe a primeira opção não vazia (esperando as opções carregarem). Devolve se conseguiu. */
   selectFirst(el: unknown): Promise<boolean>
   /** Escolhe a opção cujo valor é `value`. */
-  selectValue(el: unknown, value: string): boolean
+  selectValue(el: unknown, value: string): boolean | Promise<boolean>
   check(el: unknown): void
   /** Arrasta o elemento até o destino do passo (`step.to`). Devolve se conseguiu. */
   drag?(el: unknown, step: TourStep): Promise<boolean>
@@ -212,7 +212,7 @@ export class TourPlayer {
       if (!ok) this.skipped++
       await this.wait(BASE.afterClick / 2)
     } else if (step.kind === 'select' && el) {
-      const ok = step.value && typeof step.value === 'object' ? await this.adapter.selectFirst(el) : this.adapter.selectValue(el, String(step.value ?? ''))
+      const ok = step.value && typeof step.value === 'object' ? await this.adapter.selectFirst(el) : await this.adapter.selectValue(el, String(step.value ?? ''))
       if (!ok) this.skipped++
       await this.wait(BASE.afterClick / 2)
     } else if (step.kind === 'drag' && el) {

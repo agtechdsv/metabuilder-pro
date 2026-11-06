@@ -53,6 +53,7 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
 
   return (
     <div 
+      data-tour-modal=""
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex }}
     >

@@ -17,23 +17,37 @@ const BANNER: Record<string, string> = {
 
 const esc = (s: string) => s.replace(/["\\]/g, '\\$&')
 
-function isVisible(el: Element): boolean {
+function isVisible(el: Element, strictX = true): boolean {
   const h = el as HTMLElement
-  return h.getClientRects().length > 0 && h.getAttribute('aria-hidden') !== 'true'
+  if (h.getClientRects().length === 0 || h.getAttribute('aria-hidden') === 'true') return false
+  if (!strictX) return true
+  // a gaveta lateral fecha empurrando o conteúdo (com a cópia do formulário) para fora da tela: não conta como visível
+  const r = h.getBoundingClientRect()
+  const w = h.ownerDocument.defaultView?.innerWidth || 0
+  return !(w > 0 && (r.left >= w || r.right <= 0))
 }
 
 /** Acha o elemento do alvo no documento; `null` se ainda não existe ou não está visível. */
 export function queryTarget(doc: Document, target: TourTarget | undefined, from?: HTMLElement | null): HTMLElement | null {
   if (!target) return null
-  const first = (selector: string, root: ParentNode = doc) =>
-    (Array.from(root.querySelectorAll(selector)) as HTMLElement[]).find(isVisible) || null
+  const all = (selector: string, root: ParentNode = doc) => (Array.from(root.querySelectorAll(selector)) as HTMLElement[]).filter(e => isVisible(e))
+  // com uma janela (modal) aberta, o alvo é o que está nela; se não houver lá, cai para a página
+  const first = (selector: string, root: ParentNode = doc) => {
+    if (root === doc) {
+      const modals = all('[data-tour-modal]')
+      const top = modals[modals.length - 1]
+      const inside = top && all(selector, top)[0]
+      if (inside) return inside
+    }
+    return all(selector, root)[0] || null
+  }
   switch (target.type) {
     // roteiros gerados antes dos botões por modelo guardavam o + como botão genérico
     case 'button': return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
     case 'kanban-column': {
-      const cols = (Array.from(doc.querySelectorAll('[data-tour-column]')) as HTMLElement[]).filter(isVisible)
+      const cols = (Array.from(doc.querySelectorAll('[data-tour-column]')) as HTMLElement[]).filter(c => isVisible(c, false))
       const own = from?.closest('[data-tour-column]') as HTMLElement | null
       const i = own ? cols.indexOf(own) : -1
       return cols[i + 1] || cols[i - 1] || null
@@ -68,6 +82,10 @@ export interface DomAdapter extends PlayerAdapter {
 export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
   const win = doc.defaultView as unknown as Window & typeof globalThis
   const lang = BANNER[language] ? language : 'pt'
+
+  const style = doc.createElement('style')
+  style.textContent = '[data-tour-active].opacity-0, [data-tour-active] .opacity-0, .opacity-0:has([data-tour-active]) { opacity: 1 !important; visibility: visible !important; }'
+  doc.head.appendChild(style)
 
   const root = doc.createElement('div')
   root.id = 'mb-tour-root'
@@ -137,7 +155,10 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
     },
 
     showStep(el, caption) {
+      // ícones que só aparecem ao passar o mouse (lápis e lixeira dos cartões, + do dia) ficam visíveis enquanto são o alvo
+      current?.removeAttribute?.('data-tour-active')
       current = (el as HTMLElement) || null
+      current?.setAttribute?.('data-tour-active', '')
       current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
       bubble.textContent = caption
       bubble.style.opacity = caption ? '1' : '0'
@@ -177,13 +198,21 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
       }
     },
 
-    selectValue(el, value) {
+    async selectValue(el, value) {
       const select = el as HTMLSelectElement
-      const opt = Array.from(select.options).find(o => o.value === value || o.text === value)
-      if (!opt) return false
-      setNativeValue(select, opt.value)
-      select.dispatchEvent(new win.Event('change', { bubbles: true }))
-      return true
+      const started = Date.now()
+      const norm = (s: string) => s.trim().toLowerCase()
+      // as opções de listas relacionais chegam depois da tela
+      for (;;) {
+        const opt = Array.from(select.options).find(o => o.value === value || norm(o.text) === norm(value))
+        if (opt) {
+          setNativeValue(select, opt.value)
+          select.dispatchEvent(new win.Event('change', { bubbles: true }))
+          return true
+        }
+        if (Date.now() - started > 3000) return false
+        await sleep(100)
+      }
     },
 
     isAutocomplete(el) {
@@ -195,7 +224,7 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
       const started = Date.now()
       // a busca é dinâmica (espera de digitação + consulta ao banco): aguarda a lista aparecer
       for (;;) {
-        const opt = box && (Array.from(box.querySelectorAll('[data-tour-option]')) as HTMLElement[]).find(isVisible)
+        const opt = box && (Array.from(box.querySelectorAll('[data-tour-option]')) as HTMLElement[]).find(e => isVisible(e))
         if (opt) {
           opt.dispatchEvent(new win.MouseEvent('mousedown', { bubbles: true, cancelable: true }))
           return true
@@ -242,6 +271,7 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
     },
 
     dispose() {
+      style.remove()
       win.cancelAnimationFrame(raf)
       root.remove()
     },

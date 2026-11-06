@@ -203,8 +203,18 @@ describe('ajuda interativa de Kanban, agenda e BI', () => {
     expect(buildSchedulerSeed({ scheduler_config: {} }, [])).toBeUndefined()
   })
 
-  it('BI: preenche os filtros, pesquisa, observa os gráficos e limpa', () => {
+  it('BI: preenche os filtros, pesquisa, amplia e recolhe um gráfico (sem Limpar)', () => {
     const steps = shape(buildAutoTour(input, { action: 'search', viewType: 'analytics' }))
-    expect(steps).toEqual(['type:filter:cliente', 'type:filter:func', 'click:button:search', 'note:button:widget', 'click:button:clear'])
+    expect(steps).toEqual(['type:filter:cliente', 'type:filter:func', 'click:button:search', 'note:button:widget', 'click:button:widget-expand', 'click:button:widget-collapse'])
+  })
+})
+
+describe('agenda: não mexe na data de início', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', dataType: 'text', ...extra })
+  const input: any = { formFields: [f('data', { required: true, dataType: 'date' }), f('obs', { required: true })], filterFields: [], gridFields: [] }
+  it('cadastrar e editar pulam os campos excluídos', () => {
+    const refs = (a: any) => buildAutoTour(input, { action: a, viewType: 'scheduler', excludeFieldIds: ['data'] }).steps.filter(s => s.target?.type === 'field').map(s => (s.target as any).ref)
+    expect(refs('create')).toEqual(['obs'])
+    expect(refs('edit')).toEqual(['obs'])
   })
 })
