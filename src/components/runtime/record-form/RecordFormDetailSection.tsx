@@ -450,6 +450,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                     {(detailsInlineTypes?.[modelId || ''] !== false) && (
                       <button
                         type="button"
+                        data-tour-expand={modelId || String(tableName)}
                         onClick={async (e) => {
                           e.stopPropagation();
                           const willExpand = !expandedDetails[uniqueKey]

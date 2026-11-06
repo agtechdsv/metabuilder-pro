@@ -5469,7 +5469,8 @@
       "detail_tab": "Pestaña del detalle",
       "search_term": "Término de búsqueda (ej.: parte del nombre)",
       "search_term_missing": "Falta término de búsqueda",
-      "search_term_missing_hint": "Un campo de búsqueda (autocomplete) no tiene término: el paso se omite hasta que lo informe."
+      "search_term_missing_hint": "Un campo de búsqueda (autocomplete) no tiene término: el paso se omite hasta que lo informe.",
+      "detail_expand": "Expandir registro"
     }
   }
 }

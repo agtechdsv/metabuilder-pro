@@ -28,9 +28,11 @@ export function queryTarget(doc: Document, target: TourTarget | undefined): HTML
   const first = (selector: string, root: ParentNode = doc) =>
     (Array.from(root.querySelectorAll(selector)) as HTMLElement[]).find(isVisible) || null
   switch (target.type) {
-    case 'button': return first(`[data-tour="${esc(target.ref)}"]`)
+    // roteiros gerados antes dos botões por modelo guardavam o + como botão genérico
+    case 'button': return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
+    case 'detail-expand': return first(`[data-tour-expand="${esc(target.ref)}"]`)
     case 'detail-add': return first(`[data-tour-add="${esc(target.ref)}"]`)
     case 'tab': return first(`[data-tour-detail="${esc(target.ref)}"]`)
     case 'row': {

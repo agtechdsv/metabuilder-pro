@@ -5381,7 +5381,8 @@
       "detail_tab": "Detail tab",
       "search_term": "Search term (e.g. part of the name)",
       "search_term_missing": "Search term missing",
-      "search_term_missing_hint": "A search field (autocomplete) has no search term: the step is skipped until you provide one."
+      "search_term_missing_hint": "A search field (autocomplete) has no search term: the step is skipped until you provide one.",
+      "detail_expand": "Expand record"
     }
   }
 }

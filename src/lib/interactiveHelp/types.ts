@@ -30,6 +30,8 @@ export type TourTarget =
   | { type: 'tab'; ref: string }
   /** botão + que adiciona um item daquele detalhe (`data-tour-add`); `ref` é o id do MODELO do detalhe. Cada nível (Pedidos, Itens do Pedido) tem o seu */
   | { type: 'detail-add'; ref: string }
+  /** seta que expande o primeiro registro existente daquele detalhe, para editá-lo no lugar (`data-tour-expand`) */
+  | { type: 'detail-expand'; ref: string }
 
 export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note'
 

@@ -60,6 +60,7 @@ const BUTTON_CAPTION: Record<string, Cap> = {
   confirm: cap('Confirme a exclusão.', 'Confirm the deletion.', 'Confirme la eliminación.'),
 }
 const ADD_CAPTION: Cap = cap('Clique em + para adicionar um item.', 'Click + to add an item.', 'Haga clic en + para agregar un ítem.')
+const EXPAND_CAPTION: Cap = cap('Abra o registro para editá-lo aqui mesmo.', 'Expand the record to edit it right here.', 'Expanda el registro para editarlo aquí mismo.')
 const TAB_CAPTION: Cap = cap('Abra a aba do detalhe.', 'Open the detail tab.', 'Abra la pestaña del detalle.')
 const ROW_CAPTION: Record<string, Cap> = {
   edit: cap('Clique no lápis para editar o registro.', 'Click the pencil to edit the record.', 'Haga clic en el lápiz para editar el registro.'),
@@ -129,6 +130,16 @@ export function selectDetailFields(formFields: TourFieldInfo[], fill: TourFill, 
     if (chosen.length) out.push({ modelId, fields: orderByDependency(chosen) })
   }
   return out
+}
+
+/** Editar: campos de texto das abas de detalhe a alterar, por aba (os primeiros `count`). Lista, marcação e autocomplete ficam de fora. */
+export function selectDetailEditFields(formFields: TourFieldInfo[], count = 2): Array<{ modelId: string; fields: TourFieldInfo[] }> {
+  const groups = new Map<string, TourFieldInfo[]>()
+  for (const f of formFields) {
+    if (!f.isDetail || !f.detailModelId || f.isPrimaryKey || f.isVirtual || f.readOnly || f.hidden || isListLike(f) || isCheck(f)) continue
+    groups.set(f.detailModelId, [...(groups.get(f.detailModelId) || []), f])
+  }
+  return Array.from(groups, ([modelId, list]) => ({ modelId, fields: list.slice(0, Math.max(1, count)) }))
 }
 
 /** Quais campos entram no cadastro, conforme o preenchimento escolhido. Sem nenhum obrigatório marcado, cai nos 3 primeiros (roteiro vazio não ajuda ninguém). */
@@ -247,7 +258,12 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     const textual = input.formFields.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
     const pool = textual.length ? textual : input.formFields.filter(fillable)
     for (const f of pool.slice(0, count)) steps.push(fieldStep(f, editedValue(f, options.today)))
-    steps.push(...detailSteps(selectDetailFields(input.formFields, 'required')))
+    // editar: o registro de detalhe já existe (na demonstração há um de exemplo): expande e altera, em vez de adicionar
+    steps.push(...selectDetailEditFields(input.formFields, count).flatMap(g => [
+      { id: stepId(), kind: 'click', target: { type: 'tab', ref: g.modelId }, caption: TAB_CAPTION, auto: true } as TourStep,
+      { id: stepId(), kind: 'click', target: { type: 'detail-expand', ref: g.modelId }, caption: EXPAND_CAPTION, auto: true } as TourStep,
+      ...g.fields.map(f => fieldStep(f, editedValue(f, options.today))),
+    ]))
     steps.push(btn('save'), btn('back'), result())
   } else if (action === 'delete') {
     steps.push(row('delete'), btn('confirm'), result())

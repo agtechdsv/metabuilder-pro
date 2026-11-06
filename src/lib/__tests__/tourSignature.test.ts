@@ -143,3 +143,15 @@ describe('dois níveis de detalhe (Pedidos e Itens do Pedido)', () => {
     expect(adds).toEqual(['m-ped', 'm-item'])
   })
 })
+
+describe('editar passa pelo detalhe expandindo o registro existente', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', dataType: 'text', ...extra })
+  const input: any = { formFields: [f('nome', { required: true }), f('obs', { isDetail: true, detailModelId: 'm-ped' }), f('qtd', { isDetail: true, detailModelId: 'm-item' })], filterFields: [], gridFields: [] }
+  it('aba, seta de expandir e campos alterados, sem adicionar item', () => {
+    const steps = buildAutoTour(input, { action: 'edit' }).steps.map(s => `${s.kind}:${s.target?.type}:${s.target?.ref}`)
+    expect(steps).toContain('click:detail-expand:m-ped')
+    expect(steps).toContain('click:detail-expand:m-item')
+    expect(steps.some(s => s.includes('detail-add'))).toBe(false)
+    expect(steps.indexOf('click:detail-expand:m-ped')).toBeLessThan(steps.indexOf('type:field:obs'))
+  })
+})
