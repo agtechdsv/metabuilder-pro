@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { HelpCircle, Loader2, Save, ExternalLink } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
@@ -48,6 +48,10 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
   // o que está gravado, para saber se há alteração (só as propriedades de ajuda contam)
   const [baseline, setBaseline] = useState('')
   const [saving, setSaving] = useState(false)
+  // Os modelos do Studio vêm só com o id dos campos. O gerador da ajuda interativa precisa do nome da coluna, do tipo e da chave:
+  // busca esses dados dos campos usados no caso de uso escolhido.
+  const [fieldRows, setFieldRows] = useState<any[]>([])
+  const selectedRef = useRef('')
 
   const view = views.find(v => v.id === selectedId)
   const helpSig = (layout: any) => JSON.stringify(mergeHelpIntoLayout({}, layout || {}))
@@ -56,8 +60,16 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
   const select = (id: string) => {
     if (dirty && !window.confirm(t('help_center_studio.discard_confirm', 'Há alterações não salvas nesta tela. Descartar?'))) return
     setSelectedId(id)
+    selectedRef.current = id
+    setFieldRows([])
     const v = views.find(x => x.id === id)
     if (!v) { setConfig(null); setBaseline(''); return }
+    const lcIds = ['form_fields', 'grid_fields', 'filter_fields'].flatMap(k => (Array.isArray(v.layout_config?.[k]) ? v.layout_config[k] : []))
+      .map((f: any) => (typeof f === 'string' ? f : f?.id)).filter((x: any) => typeof x === 'string' && x && !x.startsWith('virt_') && !x.startsWith('byoc_'))
+    if (lcIds.length) {
+      void supabase.from('fields').select('id, db_column_name, display_name, data_type, is_primary_key').in('id', Array.from(new Set(lcIds)))
+        .then(({ data }: any) => { if (selectedRef.current === id) setFieldRows(data || []) })
+    }
     const layout = JSON.parse(JSON.stringify(v.layout_config || {}))
     setConfig({ id: v.id, layout_config: layout })
     setBaseline(helpSig(layout))
@@ -149,7 +161,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
           <ScreenHelpField config={config} setConfig={setConfig} t={t} />
           <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
-          <InteractiveHelpEditor config={config} setConfig={setConfig} models={models} view={view} t={t} />
+          <InteractiveHelpEditor config={config} setConfig={setConfig} models={[{ fields: fieldRows }]} view={view} t={t} />
 
           <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}
