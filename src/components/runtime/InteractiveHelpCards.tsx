@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Check, Eye, ListVideo, Pause, Pencil, Play, Plus, Repeat, Search, Trash2 } from 'lucide-react'
+import { Check, Eye, ListVideo, Move, Pause, Pencil, Play, Plus, Repeat, Search, Trash2 } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
 import type { Tour, TourAction } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,7 @@ import { HelpFeedbackBar } from './HelpFeedbackBar'
 type T = (key: string, fallback?: string) => string
 
 export const ACTION_ICON: Record<TourAction, React.ComponentType<{ className?: string }>> = {
-  search: Search, view: Eye, create: Plus, edit: Pencil, delete: Trash2,
+  search: Search, view: Eye, create: Plus, edit: Pencil, move: Move, delete: Trash2,
 }
 
 function ActionBadge({ action, tone }: { action: TourAction; tone: 'next' | 'done' | 'idle' }) {

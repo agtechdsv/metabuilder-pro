@@ -7,7 +7,7 @@ import type { HelpText } from '../helpText'
 
 // A ORDEM é a sugerida para um cadastro com pesquisa: primeiro achar e olhar o que já existe, depois criar, mudar e, por último, excluir
 // (a ação destrutiva). O dev pode reordenar como quiser; esta é só a sequência inicial.
-export const TOUR_ACTIONS = ['search', 'view', 'create', 'edit', 'delete'] as const
+export const TOUR_ACTIONS = ['search', 'view', 'create', 'edit', 'move', 'delete'] as const
 export type TourAction = (typeof TOUR_ACTIONS)[number]
 
 export type TourSpeed = 'slow' | 'normal' | 'fast'
@@ -15,7 +15,7 @@ export type TourSpeed = 'slow' | 'normal' | 'fast'
 export const SPEED_FACTOR: Record<TourSpeed, number> = { slow: 2, normal: 1, fast: 0.4 }
 
 /** Botões fixos da tela, identificados pelo atributo `data-tour` */
-export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel'
+export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'kanban-add' | 'kanban-edit' | 'kanban-delete' | 'kanban-card' | 'scheduler-add' | 'scheduler-event' | 'scheduler-delete' | 'widget'
 export type TourRowAction = 'view' | 'edit' | 'delete'
 
 export type TourTarget =
@@ -32,13 +32,17 @@ export type TourTarget =
   | { type: 'detail-add'; ref: string }
   /** seta que expande o primeiro registro existente daquele detalhe, para editá-lo no lugar (`data-tour-expand`) */
   | { type: 'detail-expand'; ref: string }
+  /** coluna do Kanban (`data-tour-column`): 'other' = uma coluna diferente da do cartão arrastado */
+  | { type: 'kanban-column'; ref: 'other' }
 
-export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note'
+export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note' | 'drag'
 
 export interface TourStep {
   id: string
   kind: TourStepKind
   target?: TourTarget
+  /** arrastar (`kind: 'drag'`): onde soltar o elemento de `target` */
+  to?: TourTarget
   /** texto a digitar (type) ou valor/opção a escolher (select: `{ pick: 'first' }` = a primeira opção que não seja vazia) */
   value?: string | { pick: 'first' }
   /** legenda mostrada ao lado do elemento, nos três idiomas */
@@ -72,6 +76,8 @@ export interface Tour {
   /** linha sintética (coluna → texto) que as ações de editar, excluir e ver usam no modo demonstração */
   seed?: Record<string, string>
   /** linhas de exemplo das abas de detalhe (pedidos, itens...), por tabela, para editar/ver mostrarem a aba preenchida */
+  /** colunas da linha de exemplo cujo valor é "agora" (agenda): atualizado na hora de abrir a demonstração, para o evento aparecer no período atual */
+  seedToday?: Record<string, 'date' | 'datetime'>
   seedDetails?: Array<{ table: string; pk?: string; row: Record<string, string> }>
 }
 
@@ -95,7 +101,7 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
     if (!Array.isArray(tour.steps)) continue
     const steps = (tour.steps as unknown[]).filter((s): s is TourStep => {
       const st = s as Record<string, unknown>
-      return !!st && typeof st.id === 'string' && ['click', 'type', 'select', 'check', 'note'].includes(st.kind as string)
+      return !!st && typeof st.id === 'string' && ['click', 'type', 'select', 'check', 'note', 'drag'].includes(st.kind as string)
     })
     out.tours.push({
       id: tour.id,
@@ -109,6 +115,7 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
       editFieldCount: typeof tour.editFieldCount === 'number' && tour.editFieldCount > 0 ? Math.min(20, Math.floor(tour.editFieldCount)) : undefined,
       steps,
       seed: tour.seed && typeof tour.seed === 'object' ? (tour.seed as Record<string, string>) : undefined,
+      seedToday: tour.seedToday && typeof tour.seedToday === 'object' ? (tour.seedToday as Tour['seedToday']) : undefined,
       seedDetails: Array.isArray(tour.seedDetails) ? (tour.seedDetails as Tour['seedDetails']) : undefined,
     })
   }
@@ -128,3 +135,14 @@ export function visibleTours(raw: unknown): Tour[] {
 export function hasInteractiveHelp(raw: unknown): boolean {
   return visibleTours(raw).length > 0
 }
+
+/** Ações de roteiro que cada tipo de caso de uso suporta (o que não está aqui não tem ajuda interativa). */
+export const TOUR_ACTIONS_BY_TYPE: Record<string, readonly TourAction[]> = {
+  pesquisa_cadastro: ['search', 'view', 'create', 'edit', 'delete'],
+  analytics: ['search'],
+  kanban: ['create', 'edit', 'move', 'delete'],
+  scheduler: ['create', 'edit', 'delete'],
+}
+
+export const supportsInteractiveHelp = (logicType?: string): boolean => !!logicType && logicType in TOUR_ACTIONS_BY_TYPE
+export const tourActionsFor = (logicType?: string): readonly TourAction[] => (logicType && TOUR_ACTIONS_BY_TYPE[logicType]) || []

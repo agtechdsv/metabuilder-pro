@@ -317,6 +317,7 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, onAd
   return (
     <div 
       ref={setDroppableRef}
+      data-tour-column={id}
       className={cn(
         "flex-shrink-0 w-80 flex flex-col bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-[2rem] overflow-hidden h-full transition-all",
         isOver && "ring-2 ring-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20"
@@ -333,7 +334,7 @@ function KanbanColumn({ id, title, items, fields, onView, onEdit, onDelete, onAd
             {items.length}
           </span>
         </div>
-        <button type="button" onClick={() => onAdd?.()} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 transition-all active:scale-90">
+        <button type="button" data-tour="kanban-add" onClick={() => onAdd?.()} className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 transition-all active:scale-90">
           <Plus className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -404,6 +405,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
   return (
     <motion.div
       ref={setNodeRef}
+      data-tour="kanban-card"
       style={style}
       layoutId={id}
       initial={{ opacity: 0, y: 10 }}
@@ -462,6 +464,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
             })}
             {onEdit && (
               <div
+                data-tour="kanban-edit"
                 className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-neutral-400 hover:text-blue-500 transition-all"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onEdit(item) }}
@@ -472,6 +475,7 @@ function KanbanCard({ id, item, fields, isOverlay, onView, onEdit, onDelete, rel
             )}
             {onDelete && (
               <div
+                data-tour="kanban-delete"
                 className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-neutral-400 hover:text-red-500 transition-all"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onDelete(item) }}

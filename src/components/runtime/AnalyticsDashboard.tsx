@@ -130,7 +130,7 @@ function SortableCard({ id, widthClass, compact, box, renderHeader, children }: 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.5 : 1 }
   return (
-    <div ref={setNodeRef} style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", box.pad, compact ? box.compact : box.full, widthClass)}>
+    <div ref={setNodeRef} data-tour="widget" style={style} className={cn("group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] flex flex-col transition-all hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 relative overflow-hidden", box.pad, compact ? box.compact : box.full, widthClass)}>
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all" />
       {renderHeader({ attributes, listeners })}
       <div className="flex-1 flex flex-col relative z-10">{children}</div>

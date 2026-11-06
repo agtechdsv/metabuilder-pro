@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
 import { isLikelyStale, layoutSignature } from '@/lib/interactiveHelp/signature'
 import { buildAutoTour, isTourStale, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
-import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
+import { buildFieldInfos, buildSchedulerSeed } from '@/lib/interactiveHelp/fieldInfo'
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
 import { HelpTextEditor } from './UseCaseBuilder/steps/HelpTextEditor'
-import { normalizeInteractiveHelp, TOUR_ACTIONS, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
+import { normalizeInteractiveHelp, tourActionsFor, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
   config: any
@@ -20,8 +20,8 @@ interface Props {
   t: (key: string, fallback?: string) => string
 }
 
-const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes' }
-const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar' }
+const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes', move: 'Mover cartão' }
+const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar', 'kanban-add': 'Adicionar cartão (+)', 'kanban-edit': 'Editar cartão', 'kanban-delete': 'Excluir cartão', 'kanban-card': 'Cartão', 'scheduler-add': 'Adicionar evento (+)', 'scheduler-event': 'Evento', 'scheduler-delete': 'Excluir evento', widget: 'Gráficos do painel' }
 
 /**
  * Ajuda Interativa no Studio: o dev gera o roteiro de cada ação a partir da configuração do caso de uso, define a ORDEM em que eles
@@ -31,7 +31,7 @@ const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'S
 export function InteractiveHelpEditor(props: Props) {
   // o conteúdo real fica em outro componente: assim a troca entre um caso de uso de cadastro e outro tipo não muda a quantidade de hooks (erro #310)
   const { view, t } = props
-  if (view.logic_type !== 'pesquisa_cadastro') {
+  if (tourActionsFor(view.logic_type).length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 p-4 text-xs text-neutral-500">
         <span className="flex items-center gap-2 font-black uppercase tracking-widest text-[10px] text-neutral-400"><PlayCircle className="w-4 h-4" />{t('help_center_studio.interactive.title', 'Ajuda interativa')}</span>
@@ -46,6 +46,9 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   const [openTour, setOpenTour] = useState<string | null>(null)
   const lc = config.layout_config || {}
   const ih: InteractiveHelpConfig = useMemo(() => normalizeInteractiveHelp(lc.interactive_help), [lc.interactive_help])
+
+  // agenda: o evento de exemplo usa as colunas de início e de título configuradas
+  const schedulerSeed = useMemo(() => (view.logic_type === 'scheduler' ? buildSchedulerSeed(lc, models) : undefined), [lc, models, view.logic_type])
 
   const input: AutoTourInput = useMemo(() => ({
     formFields: buildFieldInfos(lc, models, 'form', view.model_id),
@@ -72,7 +75,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   const actionName = (a: TourAction) => t(`help_center_studio.interactive.action_${a}`, ACTION_FALLBACK[a])
 
   const generate = (action: TourAction, previous?: Tour) => {
-    const opts = { action, screenName: view.name, layoutConfig: lc }
+    const opts = { action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed }
     const tour = previous ? regenerateTour(previous, input, opts) : buildAutoTour(input, opts)
     upsert(previous?.hidden ? { ...tour, hidden: true } : tour)
   }
@@ -91,8 +94,8 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
     if (tg.type === 'row') return tg.action ? t(`help_center_studio.interactive.row_${tg.action}`, tg.action) : t('help_center_studio.interactive.row', 'Primeira linha')
     return ''
   }
-  const kindText = (k: TourStep['kind']) => t(`help_center_studio.interactive.step_${k}`, { click: 'Clicar', type: 'Digitar', select: 'Escolher', check: 'Marcar', note: 'Observar' }[k])
-  const missing = TOUR_ACTIONS.filter(a => !ih.tours.some(x => x.action === a))
+  const kindText = (k: TourStep['kind']) => t(`help_center_studio.interactive.step_${k}`, { click: 'Clicar', type: 'Digitar', select: 'Escolher', check: 'Marcar', note: 'Observar', drag: 'Arrastar' }[k])
+  const missing = tourActionsFor(view.logic_type).filter(a => !ih.tours.some(x => x.action === a))
   const suggested = sortBySuggestedOrder(ih.tours)
   const inSuggestedOrder = suggested.every((x, i) => x.id === ih.tours[i].id)
 
@@ -100,10 +103,10 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   // (antes disso tudo pareceria mudado).
   const fieldsReady = models.some(m => Array.isArray(m?.fields) && m.fields.length > 0)
   const staleIds = useMemo(
-    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name })).map(tr => tr.id) : []),
+    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name, viewType: view.logic_type, schedulerSeed })).map(tr => tr.id) : []),
     [fieldsReady, ih.tours, input, view.name],
   )
-  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc })) })
+  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed })) })
   // a configuração mudou (assinatura diferente) mas a comparação exata diz que os roteiros continuam certos: dá para só "carimbar" a assinatura nova
   const sigChanged = fieldsReady && staleIds.size === 0 && ih.tours.some(tr => isLikelyStale(tr, lc, view.name))
   const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => ({ ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
@@ -206,7 +209,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.interactive.card_phrase', 'Frase do cartão (o que o usuário lê ao escolher)')}</span>
                     {tour.summaryCustom && (
-                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
+                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name, viewType: view.logic_type, schedulerSeed }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
                         {t('help_center_studio.interactive.card_phrase_auto', 'Usar a frase automática')}
                       </button>
                     )}

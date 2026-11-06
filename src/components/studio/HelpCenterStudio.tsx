@@ -68,7 +68,9 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
     const v = views.find(x => x.id === id)
     if (!v) { setConfig(null); setBaseline(''); return }
     const lcIds = ['form_fields', 'grid_fields', 'filter_fields'].flatMap(k => (Array.isArray(v.layout_config?.[k]) ? v.layout_config[k] : []))
-      .map((f: any) => (typeof f === 'string' ? f : f?.id)).filter((x: any) => typeof x === 'string' && x && !x.startsWith('virt_') && !x.startsWith('byoc_'))
+      .map((f: any) => (typeof f === 'string' ? f : f?.id))
+      .concat([v.layout_config?.scheduler_config?.start_date_field, v.layout_config?.scheduler_config?.title_field, v.layout_config?.kanban_group_field])
+      .filter((x: any) => typeof x === 'string' && x && !x.startsWith('virt_') && !x.startsWith('byoc_'))
     if (lcIds.length) {
       void supabase.from('fields').select('id, model_id, db_column_name, display_name, data_type, is_primary_key').in('id', Array.from(new Set(lcIds)))
         .then(({ data }: any) => {

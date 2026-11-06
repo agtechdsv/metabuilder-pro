@@ -155,3 +155,56 @@ describe('editar passa pelo detalhe expandindo o registro existente', () => {
     expect(steps.indexOf('click:detail-expand:m-ped')).toBeLessThan(steps.indexOf('type:field:obs'))
   })
 })
+
+describe('ajuda interativa de Kanban, agenda e BI', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', dataType: 'text', ...extra })
+  const input: any = { formFields: [f('titulo', { required: true }), f('desc')], filterFields: [f('cliente'), f('func')], gridFields: [] }
+  const shape = (t: any) => t.steps.map((s: any) => `${s.kind}:${s.target?.type ?? '-'}:${s.target?.ref ?? '-'}`)
+
+  it('quais ações cada tipo suporta', async () => {
+    const { tourActionsFor, supportsInteractiveHelp } = await import('../interactiveHelp/types')
+    expect([...tourActionsFor('kanban')]).toEqual(['create', 'edit', 'move', 'delete'])
+    expect([...tourActionsFor('scheduler')]).toEqual(['create', 'edit', 'delete'])
+    expect([...tourActionsFor('analytics')]).toEqual(['search'])
+    expect(supportsInteractiveHelp('gantt')).toBe(false)
+  })
+
+  it('Kanban: cria pelo + da coluna, edita pelo lápis, exclui pela lixeira e arrasta para outra coluna', () => {
+    const v = { viewType: 'kanban' }
+    expect(shape(buildAutoTour(input, { action: 'create', ...v }))).toEqual(['click:button:kanban-add', 'type:field:titulo', 'click:button:save', 'note:-:-'])
+    expect(shape(buildAutoTour(input, { action: 'edit', ...v }))[0]).toBe('click:button:kanban-edit')
+    expect(shape(buildAutoTour(input, { action: 'delete', ...v }))).toEqual(['click:button:kanban-delete', 'click:button:confirm', 'note:-:-'])
+    const move = buildAutoTour(input, { action: 'move', ...v })
+    expect(move.steps[0]).toMatchObject({ kind: 'drag', target: { ref: 'kanban-card' }, to: { type: 'kanban-column', ref: 'other' } })
+    expect(move.seed).toBeUndefined()
+  })
+
+  it('agenda: + no dia, clique no evento e lixeira; leva o evento de exemplo com a data de hoje', async () => {
+    const { buildSchedulerSeed } = await import('../interactiveHelp/fieldInfo')
+    const models = [{ fields: [
+      { id: 'd', db_column_name: 'data_entrega', data_type: 'timestamp with time zone' },
+      { id: 't', db_column_name: 'descricao', data_type: 'text' },
+    ] }]
+    const ss = buildSchedulerSeed({ scheduler_config: { start_date_field: 'd', title_field: 't' } }, models, new Date(2026, 10, 6))!
+    expect(ss.seed).toEqual({ data_entrega: '2026-11-06T10:00:00', descricao: 'Evento de exemplo' })
+    expect(ss.seedToday).toEqual({ data_entrega: 'datetime' })
+    const v = { viewType: 'scheduler', schedulerSeed: ss }
+    expect(shape(buildAutoTour(input, { action: 'create', ...v }))[0]).toBe('click:button:scheduler-add')
+    const edit = buildAutoTour(input, { action: 'edit', ...v })
+    expect(shape(edit)[0]).toBe('click:button:scheduler-event')
+    expect(edit.seed).toEqual(ss.seed)
+    expect(edit.seedToday).toEqual(ss.seedToday)
+    expect(buildAutoTour(input, { action: 'create', ...v }).seed).toBeUndefined()
+    expect(shape(buildAutoTour(input, { action: 'delete', ...v }))[0]).toBe('click:button:scheduler-delete')
+  })
+
+  it('agenda sem campo de início configurado não gera linha de exemplo', async () => {
+    const { buildSchedulerSeed } = await import('../interactiveHelp/fieldInfo')
+    expect(buildSchedulerSeed({ scheduler_config: {} }, [])).toBeUndefined()
+  })
+
+  it('BI: preenche os filtros, pesquisa, observa os gráficos e limpa', () => {
+    const steps = shape(buildAutoTour(input, { action: 'search', viewType: 'analytics' }))
+    expect(steps).toEqual(['type:filter:cliente', 'type:filter:func', 'click:button:search', 'note:button:widget', 'click:button:clear'])
+  })
+})

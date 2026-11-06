@@ -5,6 +5,7 @@ import { Check, ListVideo, Loader2, Pause, Play, PlayCircle, Repeat, RotateCcw, 
 import { useI18n } from '@/i18n/I18nContext'
 import { resolveHelp } from '@/lib/helpText'
 import { encodeDemoSeed, isDemoMode } from '@/lib/demo/demoMode'
+import { nowFor } from '@/lib/interactiveHelp/fieldInfo'
 import { createDomAdapter, type DomAdapter } from '@/lib/interactiveHelp/domAdapter'
 import { buildQueue, shortTitle, toggleId } from '@/lib/interactiveHelp/order'
 import { browserStorage, clearSeen, markSeen, readSeen, seenStorageKey, unseenTours } from '@/lib/interactiveHelp/seen'
@@ -100,7 +101,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
     if (stage !== 'play' || !tour || typeof window === 'undefined') return ''
     const params = new URLSearchParams({ mb_demo: '1' })
     if (tour.seed && Object.keys(tour.seed).length && modelName) {
-      params.set('mb_seed', encodeDemoSeed({ table: modelName, pk: primaryKeyName || 'id', row: tour.seed, children: (tour.seedDetails || []).map(d => ({ table: d.table, pk: d.pk?.split('.').pop(), row: d.row })) }))
+      params.set('mb_seed', encodeDemoSeed({ table: modelName, pk: primaryKeyName || 'id', row: { ...tour.seed, ...Object.fromEntries(Object.entries(tour.seedToday || {}).map(([col, kind]) => [col, nowFor(kind)])) }, children: (tour.seedDetails || []).map(d => ({ table: d.table, pk: d.pk?.split('.').pop(), row: d.row })) }))
     }
     return `${window.location.pathname}?${params.toString()}`
     // runId força a recarga (Recomeçar e troca de tutorial): cada um começa do zero, com a própria linha de exemplo
@@ -132,7 +133,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
     const started = Date.now()
     const ready = () => {
       if (needsRow) return Array.from(doc.querySelectorAll('tbody tr')).some(r => r.querySelectorAll('td').length > 1)
-      return !!(doc.querySelector('[data-tour="new"], [data-tour="search"], [data-tour-field]') || Array.from(doc.querySelectorAll('tbody tr')).length)
+      return !!(doc.querySelector('[data-tour="new"], [data-tour="search"], [data-tour-field], [data-tour="kanban-add"], [data-tour="scheduler-add"], [data-tour="widget"]') || Array.from(doc.querySelectorAll('tbody tr')).length)
     }
     while (!ready()) {
       if (Date.now() - started > 25_000 || !frame.isConnected) { setFailed(true); setLoading(false); return }

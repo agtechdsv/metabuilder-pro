@@ -58,3 +58,23 @@ export function buildFieldInfos(layoutConfig: any, models: any[], zone: TourZone
   const byColumn = new Map(infos.map(i => [i.column, i.id]))
   return infos.map(i => ({ ...i, dependsOn: i.dependsOn ? byColumn.get(i.dependsOn) : undefined }))
 }
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** Valor "agora" no formato da coluna (data ou data e hora): a agenda mostra o mês atual, então o evento de exemplo tem de cair nele. */
+export function nowFor(kind: 'date' | 'datetime', d = new Date()): string {
+  const date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+  return kind === 'date' ? date : `${date}T10:00:00`
+}
+
+/** Evento de exemplo da agenda, a partir dos campos de início e de título configurados no caso de uso. */
+export function buildSchedulerSeed(layoutConfig: any, models: any[], today = new Date()): { seed: Record<string, string>; seedToday: Record<string, 'date' | 'datetime'> } | undefined {
+  const cfg = layoutConfig?.scheduler_config || {}
+  const start = cfg.start_date_field ? findModelField(models, cfg.start_date_field) : undefined
+  if (!start?.db_column_name) return undefined
+  const kind: 'date' | 'datetime' = /timestamp|datetime/i.test(String(start.data_type || '')) ? 'datetime' : 'date'
+  const seed: Record<string, string> = { [start.db_column_name]: nowFor(kind, today) }
+  const title = cfg.title_field ? findModelField(models, cfg.title_field) : undefined
+  if (title?.db_column_name && title.db_column_name !== start.db_column_name) seed[title.db_column_name] = 'Evento de exemplo'
+  return { seed, seedToday: { [start.db_column_name]: kind } }
+}

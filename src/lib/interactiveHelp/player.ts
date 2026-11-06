@@ -19,6 +19,8 @@ export interface PlayerAdapter {
   /** Escolhe a opção cujo valor é `value`. */
   selectValue(el: unknown, value: string): boolean
   check(el: unknown): void
+  /** Arrasta o elemento até o destino do passo (`step.to`). Devolve se conseguiu. */
+  drag?(el: unknown, step: TourStep): Promise<boolean>
   /** O elemento é um campo de busca com sugestões (autocomplete)? */
   isAutocomplete?(el: unknown): boolean
   /** Escolhe a primeira sugestão da lista, esperando a busca terminar. Devolve se conseguiu. */
@@ -63,6 +65,7 @@ export function estimateTourMs(tour: Tour, speed: TourSpeed, language = 'pt'): n
     const caption = resolveHelp(step.caption, language)
     let action = 0
     if (step.kind === 'click') action = BASE.afterClick
+    else if (step.kind === 'drag') action = 1500 + BASE.afterClick
     else if (step.kind === 'type' && typeof step.value === 'string') action = step.value.length * BASE.perChar
     else if (step.kind === 'select' && typeof step.value === 'string' && step.value) action = step.value.length * BASE.perChar + 1500 + BASE.afterClick / 2
     else if (step.kind === 'select' || step.kind === 'check') action = BASE.afterClick / 2
@@ -212,6 +215,10 @@ export class TourPlayer {
       const ok = step.value && typeof step.value === 'object' ? await this.adapter.selectFirst(el) : this.adapter.selectValue(el, String(step.value ?? ''))
       if (!ok) this.skipped++
       await this.wait(BASE.afterClick / 2)
+    } else if (step.kind === 'drag' && el) {
+      const ok = !!(await this.adapter.drag?.(el, step))
+      if (!ok) this.skipped++
+      await this.wait(BASE.afterClick)
     } else if (step.kind === 'check' && el) {
       this.adapter.check(el)
       await this.wait(BASE.afterClick / 2)

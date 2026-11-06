@@ -1354,7 +1354,8 @@
       "seen": "Visto",
       "seen_progress": "{seen} de {total} vistos",
       "continue": "Continuar donde lo dejé",
-      "reset_progress": "Reiniciar progreso"
+      "reset_progress": "Reiniciar progreso",
+      "summary_move": "Arrastra una tarjeta a otra columna."
     }
   },
   "bi_editor": {
@@ -5470,7 +5471,17 @@
       "search_term": "Término de búsqueda (ej.: parte del nombre)",
       "search_term_missing": "Falta término de búsqueda",
       "search_term_missing_hint": "Un campo de búsqueda (autocomplete) no tiene término: el paso se omite hasta que lo informe.",
-      "detail_expand": "Expandir registro"
+      "detail_expand": "Expandir registro",
+      "action_move": "Mover tarjeta",
+      "step_drag": "Arrastrar",
+      "btn_kanban-add": "Agregar tarjeta (+)",
+      "btn_kanban-edit": "Editar tarjeta",
+      "btn_kanban-delete": "Eliminar tarjeta",
+      "btn_kanban-card": "Tarjeta",
+      "btn_scheduler-add": "Agregar evento (+)",
+      "btn_scheduler-event": "Evento",
+      "btn_scheduler-delete": "Eliminar evento",
+      "btn_widget": "Gráficos del panel"
     }
   }
 }

@@ -426,7 +426,7 @@ export default function DynamicScheduler({
                         
                         {/* Plus button to quickly create event */}
                         <button 
-                          onClick={() => onAdd?.({ [startCol]: date.toISOString() })}
+                          data-tour="scheduler-add" onClick={() => onAdd?.({ [startCol]: date.toISOString() })}
                           className="opacity-0 group-hover/cell:opacity-100 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-600 transition-all text-neutral-400"
                         >
                           <Plus className="w-3 h-3" />
@@ -442,6 +442,7 @@ export default function DynamicScheduler({
                               key={evt.id}
                               draggable
                               onDragStart={(e) => handleDragStart(e, evt.id)}
+                              data-tour="scheduler-event"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 onEdit?.(evt.raw)
@@ -491,7 +492,7 @@ export default function DynamicScheduler({
                                 </button>
                               )}
                               {onDelete && (
-                                <button
+                                <button data-tour="scheduler-delete"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     onDelete(evt.raw)
@@ -574,6 +575,7 @@ export default function DynamicScheduler({
                             key={evt.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, evt.id)}
+                            data-tour="scheduler-event"
                             onClick={() => onEdit?.(evt.raw)}
                             className={cn(
                               "group/evt p-3 rounded-2xl border flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all text-left relative",
@@ -642,7 +644,7 @@ export default function DynamicScheduler({
                                 </button>
                               )}
                               {onDelete && (
-                                <button
+                                <button data-tour="scheduler-delete"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     onDelete(evt.raw)
@@ -692,7 +694,7 @@ export default function DynamicScheduler({
                 </div>
                 
                 <button
-                  onClick={() => onAdd?.({ [startCol]: currentDate.toISOString() })}
+                  data-tour="scheduler-add" onClick={() => onAdd?.({ [startCol]: currentDate.toISOString() })}
                   className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
                 >
                   <Plus className="w-3 h-3" /> Agendar
@@ -706,6 +708,7 @@ export default function DynamicScheduler({
                   return (
                     <div 
                       key={evt.id}
+                      data-tour="scheduler-event"
                       onClick={() => onEdit?.(evt.raw)}
                       className={cn(
                         "group/evt p-4 rounded-2xl flex items-center justify-between transition-all hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer"
@@ -771,7 +774,7 @@ export default function DynamicScheduler({
                           </button>
                         )}
                         {onDelete && (
-                          <button 
+                          <button data-tour="scheduler-delete" 
                             onClick={(e) => {
                               e.stopPropagation()
                               onDelete(evt.raw)

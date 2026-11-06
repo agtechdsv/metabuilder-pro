@@ -292,7 +292,7 @@ describe('campos da aba de detalhe', () => {
 describe('ordem sugerida dos roteiros', () => {
   it('pesquisar, ver detalhes, cadastrar, editar, excluir', async () => {
     const { TOUR_ACTIONS } = await import('../interactiveHelp/types')
-    expect([...TOUR_ACTIONS]).toEqual(['search', 'view', 'create', 'edit', 'delete'])
+    expect([...TOUR_ACTIONS]).toEqual(['search', 'view', 'create', 'edit', 'move', 'delete'])
   })
 
   it('"usar a ordem sugerida" reordena roteiros já criados sem alterar a lista original', async () => {

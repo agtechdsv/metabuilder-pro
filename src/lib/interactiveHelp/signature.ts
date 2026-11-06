@@ -21,6 +21,7 @@ const ZONES_BY_ACTION: Record<TourAction, Zone[]> = {
   view: ['form', 'grid'],
   delete: ['form', 'grid'],
   search: ['filter', 'form', 'grid'],
+  move: ['grid'],
 }
 
 const idsOf = (list: unknown): string[] =>

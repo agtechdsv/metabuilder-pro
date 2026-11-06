@@ -23,7 +23,7 @@ function isVisible(el: Element): boolean {
 }
 
 /** Acha o elemento do alvo no documento; `null` se ainda não existe ou não está visível. */
-export function queryTarget(doc: Document, target: TourTarget | undefined): HTMLElement | null {
+export function queryTarget(doc: Document, target: TourTarget | undefined, from?: HTMLElement | null): HTMLElement | null {
   if (!target) return null
   const first = (selector: string, root: ParentNode = doc) =>
     (Array.from(root.querySelectorAll(selector)) as HTMLElement[]).find(isVisible) || null
@@ -32,6 +32,12 @@ export function queryTarget(doc: Document, target: TourTarget | undefined): HTML
     case 'button': return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
+    case 'kanban-column': {
+      const cols = (Array.from(doc.querySelectorAll('[data-tour-column]')) as HTMLElement[]).filter(isVisible)
+      const own = from?.closest('[data-tour-column]') as HTMLElement | null
+      const i = own ? cols.indexOf(own) : -1
+      return cols[i + 1] || cols[i - 1] || null
+    }
     case 'detail-expand': return first(`[data-tour-expand="${esc(target.ref)}"]`)
     case 'detail-add': return first(`[data-tour-add="${esc(target.ref)}"]`)
     case 'tab': return first(`[data-tour-detail="${esc(target.ref)}"]`)
@@ -197,6 +203,30 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
         if (Date.now() - started > 6000) return false
         await sleep(150)
       }
+    },
+
+    async drag(el, step) {
+      const card = el as HTMLElement
+      const to = queryTarget(doc, step.to, card)
+      if (!to) return false
+      const PE = ((win as unknown as { PointerEvent?: typeof PointerEvent }).PointerEvent || win.MouseEvent) as typeof PointerEvent
+      const a = card.getBoundingClientRect()
+      const b = to.getBoundingClientRect()
+      const sx = a.left + a.width / 2, sy = a.top + Math.min(a.height / 2, 40)
+      const ex = b.left + b.width / 2, ey = b.top + Math.min(b.height / 2, 160)
+      const fire = (type: string, x: number, y: number, target: EventTarget) =>
+        target.dispatchEvent(new PE(type, { bubbles: true, cancelable: true, composed: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y } as PointerEventInit))
+      card.scrollIntoView?.({ block: 'center' })
+      fire('pointerdown', sx, sy, card)
+      await sleep(120)
+      const N = 24
+      for (let i = 1; i <= N; i++) {
+        fire('pointermove', sx + ((ex - sx) * i) / N, sy + ((ey - sy) * i) / N, doc)
+        await sleep(30)
+      }
+      await sleep(150)
+      fire('pointerup', ex, ey, doc)
+      return true
     },
 
     check(el) {

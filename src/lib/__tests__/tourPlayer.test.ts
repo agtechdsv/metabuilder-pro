@@ -153,3 +153,22 @@ describe('autocomplete: digita o termo e escolhe a primeira sugestão', () => {
     expect(p.snapshot.state).toBe('ended')
   })
 })
+
+describe('arrastar', () => {
+  it('chama o adaptador com o destino e conta como pulado se não conseguiu', async () => {
+    const { adapter, log } = fakeAdapter()
+    let ok = true
+    adapter.drag = async (el: any, s) => { log.push(`drag:${el.id}:${(s.to as any).ref}`); return ok }
+    const st = step('d', 'drag', { target: { type: 'button', ref: 'kanban-card' }, to: { type: 'kanban-column', ref: 'other' } })
+    const p = new TourPlayer(tour([st]), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(log).toContain('drag:d:other')
+    expect(p.snapshot.skipped).toBe(0)
+    ok = false
+    const { adapter: a2 } = fakeAdapter()
+    a2.drag = async () => false
+    const p2 = new TourPlayer(tour([st]), a2, { speed: 'fast' })
+    p2.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(p2.snapshot.skipped).toBe(1)
+  })
+})

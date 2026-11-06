@@ -1267,7 +1267,8 @@
       "seen": "Watched",
       "seen_progress": "{seen} of {total} watched",
       "continue": "Continue where I left off",
-      "reset_progress": "Reset progress"
+      "reset_progress": "Reset progress",
+      "summary_move": "Drags a card to another column."
     }
   },
   "bi_editor": {
@@ -5382,7 +5383,17 @@
       "search_term": "Search term (e.g. part of the name)",
       "search_term_missing": "Search term missing",
       "search_term_missing_hint": "A search field (autocomplete) has no search term: the step is skipped until you provide one.",
-      "detail_expand": "Expand record"
+      "detail_expand": "Expand record",
+      "action_move": "Move card",
+      "step_drag": "Drag",
+      "btn_kanban-add": "Add card (+)",
+      "btn_kanban-edit": "Edit card",
+      "btn_kanban-delete": "Delete card",
+      "btn_kanban-card": "Card",
+      "btn_scheduler-add": "Add event (+)",
+      "btn_scheduler-event": "Event",
+      "btn_scheduler-delete": "Delete event",
+      "btn_widget": "Dashboard charts"
     }
   }
 }
