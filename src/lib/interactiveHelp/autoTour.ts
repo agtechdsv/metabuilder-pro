@@ -243,6 +243,13 @@ export function regenerateTour(previous: Tour, input: AutoTourInput, options: Au
   }
 }
 
+// o jsonb do Postgres reordena as chaves dos objetos (pt,en,es vira en,es,pt): comparar com as chaves em ordem fixa
+function stable(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(stable)
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v as object).sort().map(k => [k, stable((v as Record<string, unknown>)[k])]))
+  return v
+}
+
 const targetKey = (s: TourStep) => (s.target ? `${s.target.type}:${'ref' in s.target ? s.target.ref : ''}:${(s.target as { action?: string }).action ?? ''}` : '')
 
 /**
@@ -255,11 +262,11 @@ export function isTourStale(previous: Tour, input: AutoTourInput, options: AutoT
   const fresh = buildAutoTour(input, { ...options, action: previous.action, fill: previous.fill, editFieldCount: options.editFieldCount ?? previous.editFieldCount })
   // a frase escrita pelo dev não é comparada (nos dois lados), senão o roteiro ficaria desatualizado para sempre
   const skipSummary = previous.summaryCustom === true
-  const shape = (t: Tour) => JSON.stringify({
+  const shape = (t: Tour) => JSON.stringify(stable({
     title: t.title,
     summary: skipSummary ? null : t.summary,
     seed: Object.keys(t.seed || {}).sort(),
     steps: t.steps.filter(s => s.auto).map(s => [s.kind, targetKey(s), !!s.liveCaption, s.caption]),
-  })
+  }))
   return shape(previous) !== shape(fresh)
 }

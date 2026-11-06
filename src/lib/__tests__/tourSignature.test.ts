@@ -75,3 +75,15 @@ describe('roteiro provavelmente desatualizado', () => {
     expect(hasLikelyStaleTours(lc, 'Clientes')).toBe(true)
   })
 })
+
+describe('isTourStale depois de passar pelo jsonb', () => {
+  it('não acusa desatualizado quando o banco reordena as chaves dos textos', async () => {
+    const { isTourStale } = await import('../interactiveHelp/autoTour')
+    const input: any = { formFields: [{ id: 'nome', label: 'Nome', column: 'nome', required: true, type: 'text' }], filterFields: [], gridFields: [] }
+    const tour = buildAutoTour(input, { action: 'create', screenName: 'Clientes' })
+    const reordenar = (v: any): any => Array.isArray(v) ? v.map(reordenar) : v && typeof v === 'object'
+      ? Object.fromEntries(Object.keys(v).sort().reverse().map(k => [k, reordenar(v[k])])) : v
+    const voltou = JSON.parse(JSON.stringify(reordenar(tour)))
+    expect(isTourStale(voltou, input, { action: 'create', screenName: 'Clientes' })).toBe(false)
+  })
+})
