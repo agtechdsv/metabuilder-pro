@@ -8,6 +8,7 @@ import { RuntimeGlobalHeader } from './RuntimeGlobalHeader'
 import DynamicIcon from './DynamicIcon'
 import { setPrivateTunnel, setRelayMode } from '@/lib/tunnel/relayClient'
 import { logoutEndUser } from '@/lib/tunnel/logoutClient'
+import { isDemoMode } from '@/lib/demo/demoMode'
 
 interface RuntimeLayoutClientProps {
   children: React.ReactNode
@@ -46,6 +47,12 @@ export function RuntimeLayoutClient({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // Modo demonstração (Ajuda Interativa): o menu não faz parte do tutorial, então começa recolhido para dar espaço à tela.
+  // Só em memória: nada é gravado, a preferência da pessoa no app real não muda. Feito depois da montagem para não divergir do HTML do servidor.
+  useEffect(() => {
+    if (isDemoMode()) setIsCollapsed(true)
+  }, [])
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const iconRef = useRef<HTMLDivElement>(null)
 
