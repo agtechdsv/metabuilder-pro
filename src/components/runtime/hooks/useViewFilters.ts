@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { filtersFromSearch } from '@/lib/urlFilters'
 import { getModelSchemaName } from '@/components/runtime/utils/schemaHelper'
 import { relOptionsKey, getCachedRelOptions, setCachedRelOptions, dedupeRelFetch } from '@/lib/relationalOptionsCache'
 
@@ -73,12 +74,7 @@ export function useViewFilters({
 
     // Preenche com os parâmetros vindos da URL (query string)
     if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search)
-      searchParams.forEach((value, key) => {
-        if (!['embedded', 'preview', 'return_to', 'edit_id', 'standalone', 'mode'].includes(key)) {
-          defaults[key] = value
-        }
-      })
+      Object.assign(defaults, filtersFromSearch(window.location.search))
     }
 
     return defaults
