@@ -5330,7 +5330,8 @@
       "hidden": "Oculto",
       "hidden_hint": "Oculto: não aparece para o usuário, mas o roteiro fica guardado.",
       "not_generated": "Ainda não geradas",
-      "order_hint": "A ordem desta lista é a ordem em que o usuário vê e em que o \"Reproduzir todos\" executa."
+      "order_hint": "A ordem desta lista é a ordem em que o usuário vê e em que o \"Reproduzir todos\" executa.",
+      "use_suggested_order": "Usar a ordem sugerida (pesquisar, ver, cadastrar, editar, excluir)"
     }
   }
 }

@@ -285,3 +285,17 @@ describe('campos da aba de detalhe ficam fora do roteiro (v1)', () => {
     expect(buildFieldInfos(lc, models, 'form').every(i => !i.isDetail)).toBe(true)
   })
 })
+
+describe('ordem sugerida dos roteiros', () => {
+  it('pesquisar, ver detalhes, cadastrar, editar, excluir', async () => {
+    const { TOUR_ACTIONS } = await import('../interactiveHelp/types')
+    expect([...TOUR_ACTIONS]).toEqual(['search', 'view', 'create', 'edit', 'delete'])
+  })
+
+  it('"usar a ordem sugerida" reordena roteiros já criados sem alterar a lista original', async () => {
+    const { sortBySuggestedOrder } = await import('../interactiveHelp/order')
+    const antiga = [{ id: 'c', action: 'create' }, { id: 'e', action: 'edit' }, { id: 'x', action: 'delete' }, { id: 's', action: 'search' }, { id: 'v', action: 'view' }] as const
+    expect(sortBySuggestedOrder(antiga).map(t => t.id)).toEqual(['s', 'v', 'c', 'e', 'x'])
+    expect(antiga.map(t => t.id)).toEqual(['c', 'e', 'x', 's', 'v'])
+  })
+})

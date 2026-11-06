@@ -3,7 +3,7 @@
  * A ordem da lista de roteiros é a que o dev definiu no Studio; ela vale na modal do usuário, em "Reproduzir selecionados" e em "Reproduzir todos".
  */
 
-import type { Tour } from './types'
+import { TOUR_ACTIONS, type Tour } from './types'
 
 /** Move o item uma posição para cima (delta -1) ou para baixo (+1). Fora dos limites devolve a lista como está. */
 export function moveItem<T>(list: readonly T[], index: number, delta: -1 | 1): T[] {
@@ -26,4 +26,9 @@ export function toggleId(selected: readonly string[], id: string): string[] {
 export function buildQueue(tours: readonly Tour[], selectedIds?: readonly string[]): Tour[] {
   if (!selectedIds) return [...tours]
   return tours.filter(t => selectedIds.includes(t.id))
+}
+
+/** Os roteiros na ordem sugerida (pesquisar, ver, cadastrar, editar, excluir). Não altera a lista original. */
+export function sortBySuggestedOrder<T extends { action: Tour['action'] }>(tours: readonly T[]): T[] {
+  return [...tours].sort((a, b) => TOUR_ACTIONS.indexOf(a.action) - TOUR_ACTIONS.indexOf(b.action))
 }

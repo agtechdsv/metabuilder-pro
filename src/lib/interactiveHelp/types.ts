@@ -5,7 +5,9 @@
 
 import type { HelpText } from '../helpText'
 
-export const TOUR_ACTIONS = ['create', 'edit', 'delete', 'search', 'view'] as const
+// A ORDEM é a sugerida para um cadastro com pesquisa: primeiro achar e olhar o que já existe, depois criar, mudar e, por último, excluir
+// (a ação destrutiva). O dev pode reordenar como quiser; esta é só a sequência inicial.
+export const TOUR_ACTIONS = ['search', 'view', 'create', 'edit', 'delete'] as const
 export type TourAction = (typeof TOUR_ACTIONS)[number]
 
 export type TourSpeed = 'slow' | 'normal' | 'fast'

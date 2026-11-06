@@ -5418,7 +5418,8 @@
       "hidden": "Oculto",
       "hidden_hint": "Oculto: no aparece al usuario, pero el guion se conserva.",
       "not_generated": "Aún no generadas",
-      "order_hint": "El orden de esta lista es el orden en que el usuario la ve y el que sigue \"Reproducir todos\"."
+      "order_hint": "El orden de esta lista es el orden en que el usuario la ve y el que sigue \"Reproducir todos\".",
+      "use_suggested_order": "Usar el orden sugerido (buscar, ver, registrar, editar, eliminar)"
     }
   }
 }

@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
 import { buildAutoTour, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
 import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
-import { moveItem } from '@/lib/interactiveHelp/order'
+import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
 import { normalizeInteractiveHelp, TOUR_ACTIONS, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
@@ -83,6 +83,8 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
   }
   const kindText = (k: TourStep['kind']) => t(`help_center_studio.interactive.step_${k}`, { click: 'Clicar', type: 'Digitar', select: 'Escolher', check: 'Marcar', note: 'Observar' }[k])
   const missing = TOUR_ACTIONS.filter(a => !ih.tours.some(x => x.action === a))
+  const suggested = sortBySuggestedOrder(ih.tours)
+  const inSuggestedOrder = suggested.every((x, i) => x.id === ih.tours[i].id)
 
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
@@ -96,7 +98,16 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
         </label>
       </div>
       <p className="text-[11px] text-neutral-500">{t('help_center_studio.interactive.description', 'O usuário vê o sistema executar os passos sozinho, em modo demonstração (nada é gravado). Gere o roteiro de cada ação e ajuste o que quiser.')}</p>
-      {ih.tours.length > 1 && <p className="text-[10px] font-bold text-indigo-600">{t('help_center_studio.interactive.order_hint', 'A ordem desta lista é a ordem em que o usuário vê e em que o "Reproduzir todos" executa.')}</p>}
+      {ih.tours.length > 1 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-[10px] font-bold text-indigo-600">{t('help_center_studio.interactive.order_hint', 'A ordem desta lista é a ordem em que o usuário vê e em que o "Reproduzir todos" executa.')}</p>
+          {!inSuggestedOrder && (
+            <button type="button" onClick={() => save({ ...ih, tours: suggested })} className="text-[10px] font-bold text-indigo-600 underline hover:no-underline">
+              {t('help_center_studio.interactive.use_suggested_order', 'Usar a ordem sugerida (pesquisar, ver, cadastrar, editar, excluir)')}
+            </button>
+          )}
+        </div>
+      )}
 
       <ul className="space-y-2">
         {ih.tours.map((tour, index) => {

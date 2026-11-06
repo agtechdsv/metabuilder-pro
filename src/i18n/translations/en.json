@@ -5330,7 +5330,8 @@
       "hidden": "Hidden",
       "hidden_hint": "Hidden: not shown to the user, but the script is kept.",
       "not_generated": "Not generated yet",
-      "order_hint": "The order of this list is the order the user sees and the one \"Play all\" follows."
+      "order_hint": "The order of this list is the order the user sees and the one \"Play all\" follows.",
+      "use_suggested_order": "Use the suggested order (search, view, register, edit, delete)"
     }
   }
 }
