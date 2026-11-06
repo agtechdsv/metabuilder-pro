@@ -1313,7 +1313,16 @@
       "failed": "No se pudo preparar la demostración.",
       "progress": "Paso {current} de {total}",
       "ended": "Fin del tutorial.",
-      "skipped": "Se omitieron algunos pasos: no se aplican a su pantalla."
+      "skipped": "Se omitieron algunos pasos: no se aplican a su pantalla.",
+      "play_one": "Reproducir este",
+      "play_selected": "Reproducir seleccionados",
+      "play_all": "Reproducir todos",
+      "skip": "Omitir tutorial",
+      "next_up": "Siguiente: {title}",
+      "sequence": "Tutorial {current} de {total}",
+      "choose_another": "Elegir otro",
+      "select_hint": "Haga clic para seleccionar uno o más tutoriales; haga clic de nuevo para deseleccionar.",
+      "ended_all": "Fin de los tutoriales."
     }
   },
   "bi_editor": {
@@ -5403,7 +5412,13 @@
       "row_view": "Ver (lupa)",
       "row_edit": "Editar (lápiz)",
       "row_delete": "Eliminar (papelera)",
-      "row": "Primera fila"
+      "row": "Primera fila",
+      "move_up": "Subir",
+      "move_down": "Bajar",
+      "hidden": "Oculto",
+      "hidden_hint": "Oculto: no aparece al usuario, pero el guion se conserva.",
+      "not_generated": "Aún no generadas",
+      "order_hint": "El orden de esta lista es el orden en que el usuario la ve y el que sigue \"Reproducir todos\"."
     }
   }
 }

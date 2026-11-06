@@ -205,3 +205,44 @@ describe('regenerar preserva valores ajustados', () => {
     expect(regenerateTour(tour, input, { action: 'edit', today: TODAY }).steps.filter(s => s.kind === 'type')).toHaveLength(3)
   })
 })
+
+describe('ordem, ocultar por roteiro e fila de reprodução', () => {
+  const t = (id: string, over: any = {}) => ({ id, action: 'create', title: { pt: id }, fill: 'required', steps: [{ id: 's', kind: 'click' }], ...over })
+
+  it('a ordem do dev é a da lista; roteiro oculto ou sem passos não aparece', async () => {
+    const { visibleTours } = await import('../interactiveHelp/types')
+    const cfg = { tours: [t('b', { action: 'edit' }), t('a'), t('c', { action: 'delete', hidden: true }), t('d', { action: 'view', steps: [] })] }
+    expect(visibleTours(cfg).map(x => x.id)).toEqual(['b', 'a'])
+    expect(visibleTours({ ...cfg, hidden: true })).toEqual([])
+    expect(hasInteractiveHelp({ tours: [t('c', { hidden: true })] })).toBe(false)
+  })
+
+  it('moveItem sobe e desce sem sair dos limites nem alterar a original', async () => {
+    const { moveItem } = await import('../interactiveHelp/order')
+    const list = ['a', 'b', 'c']
+    expect(moveItem(list, 1, -1)).toEqual(['b', 'a', 'c'])
+    expect(moveItem(list, 1, 1)).toEqual(['a', 'c', 'b'])
+    expect(moveItem(list, 0, -1)).toEqual(['a', 'b', 'c'])
+    expect(moveItem(list, 2, 1)).toEqual(['a', 'b', 'c'])
+    expect(list).toEqual(['a', 'b', 'c'])
+  })
+
+  it('clicar marca e clicar de novo desmarca', async () => {
+    const { toggleId } = await import('../interactiveHelp/order')
+    expect(toggleId([], 'a')).toEqual(['a'])
+    expect(toggleId(['a', 'b'], 'a')).toEqual(['b'])
+  })
+
+  it('a fila segue a ordem do dev, não a ordem dos cliques; sem seleção é "todos"', async () => {
+    const { buildQueue } = await import('../interactiveHelp/order')
+    const tours = [t('cadastrar'), t('pesquisar'), t('editar'), t('excluir')] as any[]
+    expect(buildQueue(tours, ['excluir', 'cadastrar']).map(x => x.id)).toEqual(['cadastrar', 'excluir'])
+    expect(buildQueue(tours).map(x => x.id)).toEqual(['cadastrar', 'pesquisar', 'editar', 'excluir'])
+    expect(buildQueue(tours, [])).toEqual([])
+  })
+
+  it('o "oculto" do roteiro sobrevive à leitura do banco', () => {
+    const cfg = normalizeInteractiveHelp({ tours: [{ id: 'x', action: 'create', hidden: true, steps: [{ id: 's', kind: 'click' }] }] })
+    expect(cfg.tours[0].hidden).toBe(true)
+  })
+})

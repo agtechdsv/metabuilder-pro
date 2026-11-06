@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, PlayCircle, RefreshCw, Trash2, Wand2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, PlayCircle, RefreshCw, Trash2, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
 import { buildAutoTour, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
 import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
+import { moveItem } from '@/lib/interactiveHelp/order'
 import { normalizeInteractiveHelp, TOUR_ACTIONS, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
@@ -21,8 +22,9 @@ const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit:
 const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar' }
 
 /**
- * Ajuda Interativa no Studio: o dev gera o roteiro de cada ação a partir da configuração do caso de uso, revisa os passos
- * (muda o valor digitado, apaga passos) e salva junto com a ajuda, sem republicar. v1: só casos de uso de cadastro com pesquisa.
+ * Ajuda Interativa no Studio: o dev gera o roteiro de cada ação a partir da configuração do caso de uso, define a ORDEM em que eles
+ * aparecem e rodam, revisa os passos (muda o valor digitado, reordena, apaga), liga/desliga cada roteiro e salva junto com a ajuda,
+ * sem republicar. v1: só casos de uso de cadastro com pesquisa.
  */
 export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Props) {
   const [openTour, setOpenTour] = useState<string | null>(null)
@@ -45,7 +47,12 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
     const clean = next.tours.length || next.hidden ? { ...next, tours: next.tours } : undefined
     setConfig({ ...config, layout_config: { ...lc, interactive_help: clean } })
   }
-  const upsert = (tour: Tour) => save({ ...ih, tours: [...ih.tours.filter(x => x.action !== tour.action), tour].sort((a, b) => TOUR_ACTIONS.indexOf(a.action) - TOUR_ACTIONS.indexOf(b.action)) })
+  // troca o roteiro da mesma ação NO LUGAR (a ordem é do dev); um roteiro novo entra no fim da lista
+  const upsert = (tour: Tour) => {
+    const i = ih.tours.findIndex(x => x.action === tour.action)
+    save({ ...ih, tours: i >= 0 ? ih.tours.map((x, k) => (k === i ? tour : x)) : [...ih.tours, tour] })
+  }
+  const moveTour = (index: number, delta: -1 | 1) => save({ ...ih, tours: moveItem(ih.tours, index, delta) })
   const actionName = (a: TourAction) => t(`help_center_studio.interactive.action_${a}`, ACTION_FALLBACK[a])
 
   if (view.logic_type !== 'pesquisa_cadastro') {
@@ -59,7 +66,8 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
 
   const generate = (action: TourAction, previous?: Tour) => {
     const opts = { action, screenName: view.name }
-    upsert(previous ? regenerateTour(previous, input, opts) : buildAutoTour(input, opts))
+    const tour = previous ? regenerateTour(previous, input, opts) : buildAutoTour(input, opts)
+    upsert(previous?.hidden ? { ...tour, hidden: true } : tour)
   }
   const patchTour = (tour: Tour, patch: Partial<Tour>) => upsert({ ...tour, ...patch })
   const patchStep = (tour: Tour, stepId: string, patch: Partial<TourStep>) =>
@@ -74,6 +82,9 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
     return tg.ref
   }
   const kindText = (k: TourStep['kind']) => t(`help_center_studio.interactive.step_${k}`, { click: 'Clicar', type: 'Digitar', select: 'Escolher', check: 'Marcar', note: 'Observar' }[k])
+  const missing = TOUR_ACTIONS.filter(a => !ih.tours.some(x => x.action === a))
+
+  const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
   return (
     <div className="space-y-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
@@ -85,53 +96,57 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
         </label>
       </div>
       <p className="text-[11px] text-neutral-500">{t('help_center_studio.interactive.description', 'O usuário vê o sistema executar os passos sozinho, em modo demonstração (nada é gravado). Gere o roteiro de cada ação e ajuste o que quiser.')}</p>
+      {ih.tours.length > 1 && <p className="text-[10px] font-bold text-indigo-600">{t('help_center_studio.interactive.order_hint', 'A ordem desta lista é a ordem em que o usuário vê e em que o "Reproduzir todos" executa.')}</p>}
 
       <ul className="space-y-2">
-        {TOUR_ACTIONS.map(action => {
-          const tour = ih.tours.find(x => x.action === action)
-          const opened = openTour === action
+        {ih.tours.map((tour, index) => {
+          const opened = openTour === tour.id
+          const action = tour.action
           return (
-            <li key={action} className="rounded-xl border border-neutral-100 dark:border-neutral-800">
+            <li key={tour.id} className={cn('rounded-xl border border-neutral-100 dark:border-neutral-800', tour.hidden && 'opacity-60')}>
               <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-                <button type="button" disabled={!tour} onClick={() => setOpenTour(opened ? null : action)} className="flex items-center gap-1.5 text-xs font-black text-neutral-700 dark:text-neutral-200 disabled:opacity-60">
-                  {tour ? (opened ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />) : <span className="w-3.5" />}
+                <div className="flex flex-col">
+                  <button type="button" disabled={index === 0} onClick={() => moveTour(index, -1)} className={arrow} title={t('help_center_studio.interactive.move_up', 'Subir')} aria-label={t('help_center_studio.interactive.move_up', 'Subir')}><ArrowUp className="w-3 h-3" /></button>
+                  <button type="button" disabled={index === ih.tours.length - 1} onClick={() => moveTour(index, 1)} className={arrow} title={t('help_center_studio.interactive.move_down', 'Descer')} aria-label={t('help_center_studio.interactive.move_down', 'Descer')}><ArrowDown className="w-3 h-3" /></button>
+                </div>
+                <span className="w-4 text-center text-[10px] font-black text-neutral-300">{index + 1}</span>
+                <button type="button" onClick={() => setOpenTour(opened ? null : tour.id)} className="flex items-center gap-1.5 text-xs font-black text-neutral-700 dark:text-neutral-200">
+                  {opened ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                   {actionName(action)}
                 </button>
-                <span className="text-[10px] text-neutral-400">{tour ? `${tour.steps.length} ${t('runtime.tour.steps', 'passos')}` : t('help_center_studio.interactive.none', 'não gerado')}</span>
+                <span className="text-[10px] text-neutral-400">{tour.steps.length} {t('runtime.tour.steps', 'passos')}</span>
 
-                {action === 'create' && tour && (
+                {action === 'create' && (
                   <select value={tour.fill} onChange={e => patchTour(tour, { fill: e.target.value as TourFill })} className="ml-auto text-[10px] font-bold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1">
                     <option value="required">{t('help_center_studio.interactive.fill_required', 'Só obrigatórios')}</option>
                     <option value="all">{t('help_center_studio.interactive.fill_all', 'Todos os campos')}</option>
                   </select>
                 )}
-                {action === 'edit' && tour && (
+                {action === 'edit' && (
                   <label className="ml-auto flex items-center gap-1 text-[10px] font-bold text-neutral-500">
                     {t('help_center_studio.interactive.edit_count', 'Campos a alterar')}
                     <input type="number" min={1} max={20} value={tour.editFieldCount ?? 2} onChange={e => patchTour(tour, { editFieldCount: Math.max(1, Number(e.target.value) || 1) })} className="w-12 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-1.5 py-0.5" />
                   </label>
                 )}
 
-                <div className={cn('flex items-center gap-1', !(tour && (action === 'create' || action === 'edit')) && 'ml-auto')}>
-                  {tour && (
-                    <button type="button" onClick={() => {
-                      // recomeça do que o dev escolheu: a quantidade/o preenchimento já estão no roteiro
-                      generate(action, tour)
-                    }} className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"><RefreshCw className="w-3 h-3" />{t('help_center_studio.interactive.regenerate', 'Regenerar')}</button>
-                  )}
-                  {!tour && (
-                    <button type="button" onClick={() => generate(action)} className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"><Wand2 className="w-3 h-3" />{t('help_center_studio.interactive.generate', 'Gerar')}</button>
-                  )}
-                  {tour && (
-                    <button type="button" onClick={() => save({ ...ih, tours: ih.tours.filter(x => x.action !== action) })} className="ml-2 text-neutral-400 hover:text-red-500" title={t('help_center_studio.interactive.remove', 'Remover')} aria-label={t('help_center_studio.interactive.remove', 'Remover')}><Trash2 className="w-3.5 h-3.5" /></button>
-                  )}
+                <div className={cn('flex items-center gap-2', action !== 'create' && action !== 'edit' && 'ml-auto')}>
+                  <label className="flex items-center gap-1 text-[10px] font-bold text-neutral-500 cursor-pointer" title={t('help_center_studio.interactive.hidden_hint', 'Oculto: não aparece para o usuário, mas o roteiro fica guardado.')}>
+                    <input type="checkbox" checked={tour.hidden === true} onChange={e => patchTour(tour, { hidden: e.target.checked ? true : undefined })} />
+                    {t('help_center_studio.interactive.hidden', 'Oculto')}
+                  </label>
+                  <button type="button" onClick={() => generate(action, tour)} className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"><RefreshCw className="w-3 h-3" />{t('help_center_studio.interactive.regenerate', 'Regenerar')}</button>
+                  <button type="button" onClick={() => save({ ...ih, tours: ih.tours.filter(x => x.id !== tour.id) })} className="text-neutral-400 hover:text-red-500" title={t('help_center_studio.interactive.remove', 'Remover')} aria-label={t('help_center_studio.interactive.remove', 'Remover')}><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
 
-              {tour && opened && (
+              {opened && (
                 <ol className="space-y-1 border-t border-neutral-100 dark:border-neutral-800 px-3 py-2">
                   {tour.steps.map((s, i) => (
                     <li key={s.id} className="flex items-start gap-2 text-[11px]">
+                      <span className="flex shrink-0 flex-col">
+                        <button type="button" disabled={i === 0} onClick={() => upsert({ ...tour, steps: moveItem(tour.steps, i, -1) })} className={arrow} aria-label={t('help_center_studio.interactive.move_up', 'Subir')}><ArrowUp className="w-2.5 h-2.5" /></button>
+                        <button type="button" disabled={i === tour.steps.length - 1} onClick={() => upsert({ ...tour, steps: moveItem(tour.steps, i, 1) })} className={arrow} aria-label={t('help_center_studio.interactive.move_down', 'Descer')}><ArrowDown className="w-2.5 h-2.5" /></button>
+                      </span>
                       <span className="w-5 shrink-0 pt-1 text-right font-black text-neutral-400">{i + 1}</span>
                       <span className="w-16 shrink-0 pt-1 font-black text-neutral-600 dark:text-neutral-300">{kindText(s.kind)}</span>
                       <span className="w-40 shrink-0 pt-1 truncate text-neutral-500" title={targetText(s)}>{targetText(s)}</span>
@@ -149,6 +164,21 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
           )
         })}
       </ul>
+
+      {missing.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.interactive.not_generated', 'Ainda não geradas')}</p>
+          <ul className="flex flex-wrap gap-2">
+            {missing.map(action => (
+              <li key={action}>
+                <button type="button" onClick={() => generate(action)} className="flex items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
+                  <Wand2 className="w-3 h-3" />{t('help_center_studio.interactive.generate', 'Gerar')}: {actionName(action)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

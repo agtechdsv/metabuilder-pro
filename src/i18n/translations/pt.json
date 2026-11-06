@@ -1226,7 +1226,16 @@
       "failed": "Não foi possível preparar a demonstração.",
       "progress": "Passo {current} de {total}",
       "ended": "Fim do tutorial.",
-      "skipped": "Alguns passos foram pulados: não se aplicam à sua tela."
+      "skipped": "Alguns passos foram pulados: não se aplicam à sua tela.",
+      "play_one": "Reproduzir este",
+      "play_selected": "Reproduzir selecionados",
+      "play_all": "Reproduzir todos",
+      "skip": "Pular tutorial",
+      "next_up": "Próximo: {title}",
+      "sequence": "Tutorial {current} de {total}",
+      "choose_another": "Escolher outro",
+      "select_hint": "Clique para selecionar um ou mais tutoriais; clique de novo para desmarcar.",
+      "ended_all": "Fim dos tutoriais."
     }
   },
   "bi_editor": {
@@ -5315,7 +5324,13 @@
       "row_view": "Ver (lupa)",
       "row_edit": "Editar (lápis)",
       "row_delete": "Excluir (lixeira)",
-      "row": "Primeira linha"
+      "row": "Primeira linha",
+      "move_up": "Subir",
+      "move_down": "Descer",
+      "hidden": "Oculto",
+      "hidden_hint": "Oculto: não aparece para o usuário, mas o roteiro fica guardado.",
+      "not_generated": "Ainda não geradas",
+      "order_hint": "A ordem desta lista é a ordem em que o usuário vê e em que o \"Reproduzir todos\" executa."
     }
   }
 }

@@ -192,7 +192,13 @@ export function buildDemoWriteReply(payload: any): Record<string, any> {
   if (action === 'delete') {
     const id = payload.idValue ?? payload.id ?? payload.filters?.[pk]
     demoStore.remove(table, id)
-    return { ...base, data: [], rowCount: 1 }
+    return { ...base, data: [], rowCount: 1, rowsAffected: 1 }
+  }
+  // Exclusão em cascata: o app manda um SQL (execute_custom) com vários DELETE em vez de action 'delete'. A linha RAIZ (a da tabela e do id
+  // enviados) sai da lista; as linhas filhas de outras tabelas não existem no repositório sintético.
+  if (action === 'execute_custom' && payload.idValue !== undefined && table && /\bDELETE\s+FROM\b/i.test(String(payload.query || payload.sql || ''))) {
+    demoStore.remove(table, payload.idValue)
+    return { ...base, data: [], rowCount: 1, rowsAffected: 1 }
   }
   // BPM síncrono: devolve a própria linha, sem alterar; qualquer outra coisa (SQL customizado, webhook, BPM): sucesso vazio
   if (action === 'trigger_bpm_sync') return { ...base, data: [payload.rowData ?? {}] }

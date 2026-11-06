@@ -51,6 +51,8 @@ export interface Tour {
   fill: TourFill
   /** em "editar": quantos campos o tutorial altera (padrão 2) */
   editFieldCount?: number
+  /** o dev desligou este roteiro sem apagar: não aparece para o usuário (nem em "Reproduzir todos") */
+  hidden?: boolean
   steps: TourStep[]
   /** linha sintética (coluna → texto) que as ações de editar, excluir e ver usam no modo demonstração */
   seed?: Record<string, string>
@@ -83,6 +85,7 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
       action: tour.action as TourAction,
       title: (tour.title && typeof tour.title === 'object' ? tour.title : {}) as HelpText,
       fill: tour.fill === 'all' || tour.fill === 'custom' ? tour.fill : 'required',
+      hidden: tour.hidden === true ? true : undefined,
       editFieldCount: typeof tour.editFieldCount === 'number' && tour.editFieldCount > 0 ? Math.min(20, Math.floor(tour.editFieldCount)) : undefined,
       steps,
       seed: tour.seed && typeof tour.seed === 'object' ? (tour.seed as Record<string, string>) : undefined,
@@ -91,8 +94,16 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
   return out
 }
 
-/** O ícone ▶ só aparece se houver pelo menos um roteiro com passos e ele não estiver oculto. */
-export function hasInteractiveHelp(raw: unknown): boolean {
+/**
+ * Roteiros que o usuário vê, NA ORDEM que o dev definiu (a ordem da lista é a ordem de exibição e de execução).
+ * Ficam de fora os desligados e os sem passos.
+ */
+export function visibleTours(raw: unknown): Tour[] {
   const cfg = normalizeInteractiveHelp(raw)
-  return !cfg.hidden && cfg.tours.some(t => t.steps.length > 0)
+  return cfg.hidden ? [] : cfg.tours.filter(t => !t.hidden && t.steps.length > 0)
+}
+
+/** O ícone ▶ só aparece se houver pelo menos um roteiro visível com passos. */
+export function hasInteractiveHelp(raw: unknown): boolean {
+  return visibleTours(raw).length > 0
 }

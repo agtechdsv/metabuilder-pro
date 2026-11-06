@@ -130,3 +130,27 @@ describe('linha sintética pela URL', () => {
     expect(decodeDemoSeed(null)).toBeNull()
   })
 })
+
+describe('exclusão em cascata (o caso do tutorial "Excluir" em Clientes)', () => {
+  it('execute_custom com DELETE tira a linha raiz da lista, como a exclusão simples', () => {
+    const { channel } = makeChannel()
+    demoStore.seed('clientes', { id: 'demo-seed-1', nome_empresa: 'Nome Empresa 01' }, 'id')
+    handleDemoMessage(channel, msg({ queryId: 'r0', action: 'select', table: 'clientes' }))
+    const query = "DELETE FROM pedidos WHERE cliente_id = 'demo-seed-1'; DELETE FROM clientes WHERE id = 'demo-seed-1'"
+    const reply = buildDemoWriteReply({ action: 'execute_custom', table: 'clientes', idColumn: 'id', idValue: 'demo-seed-1', query, sql: query })
+    expect(reply).toMatchObject({ success: true, rowsAffected: 1 })
+    expect(demoStore.mergeRows('clientes', [{ id: 1, nome_empresa: 'Real' }]).map(r => r.nome_empresa)).toEqual(['Real'])
+  })
+
+  it('exclusão simples também informa a linha afetada (o app trata 0 como "não encontrado")', () => {
+    demoStore.seed('clientes', { id: 's1' }, 'id')
+    expect(buildDemoWriteReply({ action: 'delete', table: 'clientes', idColumn: 'id', idValue: 's1' }).rowsAffected).toBe(1)
+  })
+
+  it('execute_custom que não é exclusão (ou sem id) continua só um sucesso vazio, sem tocar na lista', () => {
+    demoStore.seed('clientes', { id: 's1' }, 'id')
+    buildDemoWriteReply({ action: 'execute_custom', table: 'clientes', idValue: 's1', query: 'UPDATE clientes SET x = 1' })
+    buildDemoWriteReply({ action: 'execute_custom', table: 'clientes', query: 'DELETE FROM clientes' })
+    expect(demoStore.synthetic('clientes')).toHaveLength(1)
+  })
+})

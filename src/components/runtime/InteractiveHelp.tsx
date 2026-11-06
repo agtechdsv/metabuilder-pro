@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, Pause, Play, PlayCircle, RotateCcw, SkipForward, X } from 'lucide-react'
+import { ListVideo, Loader2, Pause, Play, PlayCircle, RotateCcw, SkipForward, X } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { resolveHelp } from '@/lib/helpText'
 import { encodeDemoSeed, isDemoMode } from '@/lib/demo/demoMode'
 import { createDomAdapter, type DomAdapter } from '@/lib/interactiveHelp/domAdapter'
+import { buildQueue, toggleId } from '@/lib/interactiveHelp/order'
 import { TourPlayer, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
-import { hasInteractiveHelp, normalizeInteractiveHelp, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
+import { hasInteractiveHelp, visibleTours, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
 import { HelpFeedbackBar } from './HelpFeedbackBar'
 
@@ -46,13 +47,19 @@ export function InteractiveHelpButton(props: Props) {
 }
 
 const SPEEDS: TourSpeed[] = ['slow', 'normal', 'fast']
+/** pausa entre um tutorial e o próximo, mostrando "Próximo: ..." */
+const TRANSITION_MS = 1600
 
 function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, onClose }: Props & { onClose: () => void }) {
   const { t, language } = useI18n()
-  const tours = useMemo(() => normalizeInteractiveHelp(config).tours.filter(x => x.steps.length > 0), [config])
-  const [tourId, setTourId] = useState(tours[0]?.id || '')
+  // na ordem que o dev definiu no Studio (roteiros ocultos já ficam de fora)
+  const tours = useMemo(() => visibleTours(config), [config])
+  const [selected, setSelected] = useState<string[]>([])
   const [speed, setSpeed] = useState<TourSpeed>('normal')
   const [stage, setStage] = useState<'choose' | 'play'>('choose')
+  const [queue, setQueue] = useState<Tour[]>([])
+  const [qIndex, setQIndex] = useState(0)
+  const [transition, setTransition] = useState<Tour | null>(null)
   const [runId, setRunId] = useState(0)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -64,7 +71,8 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const speedRef = useRef(speed)
   speedRef.current = speed
 
-  const tour: Tour | undefined = tours.find(x => x.id === tourId) || tours[0]
+  const tour: Tour | undefined = queue[qIndex]
+  const isLastInQueue = qIndex >= queue.length - 1
 
   // a página da demonstração é a própria tela, aberta no modo demonstração, já com a linha sintética (se o roteiro precisar)
   const src = useMemo(() => {
@@ -74,7 +82,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
       params.set('mb_seed', encodeDemoSeed({ table: modelName, pk: primaryKeyName || 'id', row: tour.seed }))
     }
     return `${window.location.pathname}?${params.toString()}`
-    // runId força a recarga (Recomeçar)
+    // runId força a recarga (Recomeçar e troca de tutorial): cada um começa do zero, com a própria linha de exemplo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, tour, modelName, primaryKeyName, runId])
 
@@ -119,12 +127,44 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
     player.play()
   }, [tour, language, teardown])
 
+  /** Passa para o tutorial `index` da fila: recarrega a demonstração do zero. */
+  const goTo = useCallback((index: number) => {
+    teardown()
+    setTransition(null)
+    setQIndex(index)
+    setSnap(null)
+    setLoading(true)
+    setFailed(false)
+    setRunId(n => n + 1)
+  }, [teardown])
+
+  const startQueue = (list: Tour[]) => {
+    if (!list.length) return
+    teardown()
+    setQueue(list)
+    setStage('play')
+    goTo(0)
+  }
+
+  // terminou um tutorial e ainda há outros na fila: mostra "Próximo: ..." e segue sozinho
+  useEffect(() => {
+    if (stage !== 'play' || snap?.state !== 'ended' || isLastInQueue) return
+    setTransition(queue[qIndex + 1])
+    const timer = setTimeout(() => goTo(qIndex + 1), TRANSITION_MS)
+    return () => clearTimeout(timer)
+  }, [stage, snap?.state, isLastInQueue, qIndex, queue, goTo])
+
   const changeSpeed = (s: TourSpeed) => { setSpeed(s); playerRef.current?.setSpeed(s) }
-  const start = () => { teardown(); setStage('play'); setRunId(n => n + 1) }
-  const restart = () => { teardown(); setRunId(n => n + 1) }
+  const restart = () => goTo(qIndex)
+  const skip = () => { if (!isLastInQueue) goTo(qIndex + 1) }
+  const backToChoose = () => { teardown(); setStage('choose'); setSnap(null) }
 
   const playing = snap?.state === 'playing'
   const ended = snap?.state === 'ended'
+  const finishedAll = ended && isLastInQueue
+  const multi = queue.length > 1
+
+  const rowPlay = t('runtime.tour.play_one', 'Reproduzir este')
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label={t('runtime.tour.title', 'Ajuda interativa')}>
@@ -145,20 +185,29 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <div className="space-y-2">
               <p className="text-xs font-black uppercase tracking-widest text-neutral-400">{t('runtime.tour.choose', 'Escolha o que você quer ver')}</p>
+              <p className="text-[11px] text-neutral-400">{t('runtime.tour.select_hint', 'Clique para selecionar um ou mais tutoriais; clique de novo para desmarcar.')}</p>
               <ul className="space-y-2">
-                {tours.map(x => (
-                  <li key={x.id}>
-                    <button
-                      type="button"
-                      onClick={() => setTourId(x.id)}
-                      className={cn('w-full text-left px-4 py-3 rounded-2xl border text-sm font-bold transition-colors',
-                        tourId === x.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800')}
-                    >
-                      {resolveHelp(x.title, language) || x.id}
-                      <span className="ml-2 text-[11px] font-medium text-neutral-400">{x.steps.length} {t('runtime.tour.steps', 'passos')}</span>
-                    </button>
-                  </li>
-                ))}
+                {tours.map(x => {
+                  const on = selected.includes(x.id)
+                  return (
+                    <li key={x.id} className="flex items-stretch gap-2">
+                      <button
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setSelected(s => toggleId(s, x.id))}
+                        className={cn('flex-1 text-left px-4 py-3 rounded-2xl border text-sm font-bold transition-colors',
+                          on ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800')}
+                      >
+                        {resolveHelp(x.title, language) || x.id}
+                        <span className="ml-2 text-[11px] font-medium text-neutral-400">{x.steps.length} {t('runtime.tour.steps', 'passos')}</span>
+                      </button>
+                      <button type="button" onClick={() => startQueue([x])} title={rowPlay} aria-label={`${rowPlay}: ${resolveHelp(x.title, language)}`}
+                        className="px-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
+                        <Play className="w-4 h-4" />
+                      </button>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
             <div className="space-y-2">
@@ -173,9 +222,16 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
               </div>
             </div>
             <p className="text-[11px] text-neutral-400">{t('runtime.tour.demo_note', 'Nada do que aparece na demonstração é gravado de verdade.')}</p>
-            <button type="button" onClick={start} disabled={!tour} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black tracking-wide disabled:opacity-50">
-              <Play className="w-4 h-4" /> {t('runtime.tour.play', 'Reproduzir')}
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={() => startQueue(buildQueue(tours, selected))} disabled={selected.length === 0}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black tracking-wide disabled:opacity-40 disabled:cursor-not-allowed">
+                <Play className="w-4 h-4" /> {t('runtime.tour.play_selected', 'Reproduzir selecionados')}{selected.length > 0 ? ` (${selected.length})` : ''}
+              </button>
+              <button type="button" onClick={() => startQueue(buildQueue(tours))} disabled={tours.length === 0}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-indigo-200 dark:border-indigo-900 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-black tracking-wide disabled:opacity-40">
+                <ListVideo className="w-4 h-4" /> {t('runtime.tour.play_all', 'Reproduzir todos')}
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -188,11 +244,13 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                 onLoad={() => { void handleLoad() }}
                 className="absolute inset-0 w-full h-full border-0"
               />
-              {(loading || failed) && (
+              {(loading || failed || transition) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-neutral-900/80 text-sm font-bold text-neutral-600 dark:text-neutral-300">
                   {failed
                     ? t('runtime.tour.failed', 'Não foi possível preparar a demonstração.')
-                    : <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.loading', 'Preparando a demonstração…')}</span>}
+                    : transition
+                      ? <span className="flex items-center gap-2 text-indigo-600"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.next_up', 'Próximo: {title}').replace('{title}', resolveHelp(transition.title, language))}</span>
+                      : <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('runtime.tour.loading', 'Preparando a demonstração…')}</span>}
                 </div>
               )}
             </div>
@@ -214,6 +272,12 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                   title={t('runtime.tour.restart', 'Recomeçar')} aria-label={t('runtime.tour.restart', 'Recomeçar')}>
                   <RotateCcw className="w-4 h-4" />
                 </button>
+                {multi && (
+                  <button type="button" disabled={isLastInQueue} onClick={skip}
+                    className="ml-1 px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-40">
+                    {t('runtime.tour.skip', 'Pular tutorial')}
+                  </button>
+                )}
               </div>
 
               <div className="inline-flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-0.5">
@@ -226,14 +290,22 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
               </div>
 
               <span className="text-[11px] font-bold text-neutral-500" aria-live="polite">
+                {multi && t('runtime.tour.sequence', 'Tutorial {current} de {total}').replace('{current}', String(qIndex + 1)).replace('{total}', String(queue.length))}
+                {multi && snap && !ended ? ' · ' : ''}
                 {snap && !ended
                   ? t('runtime.tour.progress', 'Passo {current} de {total}').replace('{current}', String(Math.min(snap.index + 1, snap.total))).replace('{total}', String(snap.total))
-                  : ended ? t('runtime.tour.ended', 'Fim do tutorial.') : ''}
+                  : ended && !multi ? t('runtime.tour.ended', 'Fim do tutorial.') : ''}
+                {finishedAll && multi ? ` · ${t('runtime.tour.ended_all', 'Fim dos tutoriais.')}` : ''}
               </span>
               {snap && snap.skipped > 0 && <span className="text-[11px] text-amber-600">{t('runtime.tour.skipped', 'Alguns passos foram pulados: não se aplicam à sua tela.')}</span>}
 
-              <div className="ml-auto">
-                {ended && projectId && viewId && <HelpFeedbackBar feedback={{ projectId, screen: viewId, zone: 'tutorial' }} className="min-w-[14rem]" />}
+              <div className="ml-auto flex items-center gap-3">
+                {finishedAll && (
+                  <button type="button" onClick={backToChoose} className="px-3 py-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700">
+                    {t('runtime.tour.choose_another', 'Escolher outro')}
+                  </button>
+                )}
+                {finishedAll && projectId && viewId && <HelpFeedbackBar feedback={{ projectId, screen: viewId, zone: 'tutorial' }} className="min-w-[14rem]" />}
               </div>
             </div>
           </>

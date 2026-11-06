@@ -1226,7 +1226,16 @@
       "failed": "Could not prepare the demo.",
       "progress": "Step {current} of {total}",
       "ended": "End of the tutorial.",
-      "skipped": "Some steps were skipped: they do not apply to your screen."
+      "skipped": "Some steps were skipped: they do not apply to your screen.",
+      "play_one": "Play this one",
+      "play_selected": "Play selected",
+      "play_all": "Play all",
+      "skip": "Skip tutorial",
+      "next_up": "Next: {title}",
+      "sequence": "Tutorial {current} of {total}",
+      "choose_another": "Choose another",
+      "select_hint": "Click to select one or more tutorials; click again to deselect.",
+      "ended_all": "End of the tutorials."
     }
   },
   "bi_editor": {
@@ -5315,7 +5324,13 @@
       "row_view": "View (magnifier)",
       "row_edit": "Edit (pencil)",
       "row_delete": "Delete (trash can)",
-      "row": "First row"
+      "row": "First row",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "hidden": "Hidden",
+      "hidden_hint": "Hidden: not shown to the user, but the script is kept.",
+      "not_generated": "Not generated yet",
+      "order_hint": "The order of this list is the order the user sees and the one \"Play all\" follows."
     }
   }
 }
