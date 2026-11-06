@@ -55,6 +55,8 @@ export interface Tour {
   editFieldCount?: number
   /** o dev desligou este roteiro sem apagar: não aparece para o usuário (nem em "Reproduzir todos") */
   hidden?: boolean
+  /** frase curta do que o tutorial ensina (aparece no cartão); gerada junto com o roteiro */
+  summary?: HelpText
   steps: TourStep[]
   /** linha sintética (coluna → texto) que as ações de editar, excluir e ver usam no modo demonstração */
   seed?: Record<string, string>
@@ -88,6 +90,7 @@ export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
       title: (tour.title && typeof tour.title === 'object' ? tour.title : {}) as HelpText,
       fill: tour.fill === 'all' || tour.fill === 'custom' ? tour.fill : 'required',
       hidden: tour.hidden === true ? true : undefined,
+      summary: tour.summary && typeof tour.summary === 'object' ? (tour.summary as HelpText) : undefined,
       editFieldCount: typeof tour.editFieldCount === 'number' && tour.editFieldCount > 0 ? Math.min(20, Math.floor(tour.editFieldCount)) : undefined,
       steps,
       seed: tour.seed && typeof tour.seed === 'object' ? (tour.seed as Record<string, string>) : undefined,

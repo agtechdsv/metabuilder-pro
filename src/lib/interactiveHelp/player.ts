@@ -46,6 +46,42 @@ export interface PlayerOptions {
 const BASE = { noteFind: 600, travel: 650, afterClick: 700, between: 350, perChar: 70, find: 2500, readMin: 700, readPerChar: 28, readMax: 4500 }
 const SLICE = 40
 
+/** segundos de contagem do cartão "A seguir", conforme a velocidade */
+export const TRANSITION_SECONDS: Record<TourSpeed, number> = { slow: 8, normal: 5, fast: 3 }
+/** carregar a demonstração antes de cada tutorial (não depende da velocidade) */
+const LOAD_MS = 3000
+
+/** Duração estimada de um tutorial, com os mesmos tempos do player. É uma estimativa: a rede e a tela podem demorar mais. */
+export function estimateTourMs(tour: Tour, speed: TourSpeed, language = 'pt'): number {
+  const factor = SPEED_FACTOR[speed]
+  let ms = 0
+  for (const step of tour.steps) {
+    const caption = resolveHelp(step.caption, language)
+    let action = 0
+    if (step.kind === 'click') action = BASE.afterClick
+    else if (step.kind === 'type' && typeof step.value === 'string') action = step.value.length * BASE.perChar
+    else if (step.kind === 'select' || step.kind === 'check') action = BASE.afterClick / 2
+    ms += BASE.travel + Math.min(BASE.readMax, BASE.readMin + caption.length * BASE.readPerChar) + action + BASE.between
+  }
+  return Math.round(ms * factor) + LOAD_MS
+}
+
+/** Soma da fila: cada tutorial mais a espera do cartão "A seguir" entre eles. */
+export function estimateQueueMs(tours: readonly Tour[], speed: TourSpeed, language = 'pt'): number {
+  const total = tours.reduce((acc, t) => acc + estimateTourMs(t, speed, language), 0)
+  return total + Math.max(0, tours.length - 1) * TRANSITION_SECONDS[speed] * 1000
+}
+
+/** "22 s", "1 min 5 s" (acima de um minuto arredonda para múltiplos de 5 s). */
+export function formatDuration(ms: number): string {
+  const total = Math.max(1, Math.round(ms / 1000))
+  if (total < 60) return `${total} s`
+  const rounded = Math.round(total / 5) * 5
+  const m = Math.floor(rounded / 60)
+  const s = rounded % 60
+  return s ? `${m} min ${s} s` : `${m} min`
+}
+
 export class TourPlayer {
   private state: PlayerState = 'idle'
   private index = 0

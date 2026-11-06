@@ -81,7 +81,7 @@ export function ViewPageHeader({
       icon={icon}
       actions={(
         <div className="flex items-center gap-3">
-          <InteractiveHelpButton config={interactiveHelp} projectId={project.id} viewId={viewId} modelName={modelName} primaryKeyName={primaryKeyName} />
+          <InteractiveHelpButton config={interactiveHelp} projectId={project.id} viewId={viewId} screenName={viewName} modelName={modelName} primaryKeyName={primaryKeyName} />
           <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId, zone: 'screen' }} centralHref={`/${workspace.slug}/${project.slug}/help`} />
           {isAutomationsEnabled && (
             <button

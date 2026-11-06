@@ -299,3 +299,56 @@ describe('ordem sugerida dos roteiros', () => {
     expect(antiga.map(t => t.id)).toEqual(['c', 'e', 'x', 's', 'v'])
   })
 })
+
+describe('cartão do tutorial: resumo, duração e título curto', () => {
+  const input = { formFields: [pk, nome, cnpj, email], filterFields: [nome, status], gridFields: [nome] }
+
+  it('o resumo diz o que o roteiro faz, nos três idiomas, com o rótulo e a contagem reais', () => {
+    const search = buildAutoTour(input, { action: 'search', today: TODAY })
+    expect(search.summary).toEqual({ pt: 'Filtra a lista por "Nome Empresa".', en: 'Filters the list by "Nome Empresa".', es: 'Filtra la lista por "Nome Empresa".' })
+    const create = buildAutoTour(input, { action: 'create', fill: 'all', today: TODAY })
+    expect(create.summary?.pt).toBe('Preenche 3 campos e salva um novo registro.')
+    const um = buildAutoTour({ formFields: [pk, nome] }, { action: 'create', fill: 'all', today: TODAY })
+    expect(um.summary?.pt).toBe('Preenche 1 campo e salva um novo registro.')
+    expect(buildAutoTour(input, { action: 'edit', editFieldCount: 2, today: TODAY }).summary?.en).toBe('Changes 2 fields of a record and saves.')
+    expect(buildAutoTour(input, { action: 'delete', today: TODAY }).summary?.pt).toBe('Remove um registro, com confirmação.')
+    expect(buildAutoTour(input, { action: 'view', today: TODAY }).summary?.es).toBe('Abre un registro solo de lectura.')
+  })
+
+  it('o resumo vai para o banco, volta na leitura e sobrevive a regenerar', () => {
+    const tour = buildAutoTour(input, { action: 'create', today: TODAY })
+    expect(normalizeInteractiveHelp({ tours: [tour] }).tours[0].summary).toEqual(tour.summary)
+    const again = regenerateTour({ ...tour, hidden: true }, input, { action: 'create', today: TODAY })
+    expect(again.summary).toBeDefined()
+    expect(again.hidden).toBe(true) // regenerar não "liga" um roteiro oculto
+  })
+
+  it('a duração estimada cresce com o roteiro e encolhe com a velocidade', async () => {
+    const { estimateTourMs, estimateQueueMs, formatDuration, TRANSITION_SECONDS } = await import('../interactiveHelp/player')
+    const curto = buildAutoTour(input, { action: 'delete', today: TODAY })
+    const longo = buildAutoTour(input, { action: 'create', fill: 'all', today: TODAY })
+    expect(estimateTourMs(longo, 'normal')).toBeGreaterThan(estimateTourMs(curto, 'normal'))
+    expect(estimateTourMs(longo, 'fast')).toBeLessThan(estimateTourMs(longo, 'normal'))
+    expect(estimateTourMs(longo, 'slow')).toBeGreaterThan(estimateTourMs(longo, 'normal'))
+    // a fila soma os tutoriais e a espera entre eles
+    const dois = estimateTourMs(curto, 'normal') + estimateTourMs(longo, 'normal') + TRANSITION_SECONDS.normal * 1000
+    expect(estimateQueueMs([curto, longo], 'normal')).toBe(dois)
+    expect(estimateQueueMs([], 'normal')).toBe(0)
+  })
+
+  it('formata a duração: segundos, e minutos arredondados de 5 em 5 s', async () => {
+    const { formatDuration } = await import('../interactiveHelp/player')
+    expect(formatDuration(22_000)).toBe('22 s')
+    expect(formatDuration(65_000)).toBe('1 min 5 s')
+    expect(formatDuration(120_000)).toBe('2 min')
+    expect(formatDuration(127_000)).toBe('2 min 5 s')
+    expect(formatDuration(0)).toBe('1 s')
+  })
+
+  it('o título curto tira o nome da tela, mas só se houver dois-pontos', async () => {
+    const { shortTitle } = await import('../interactiveHelp/order')
+    expect(shortTitle('Como pesquisar: Clientes')).toBe('Como pesquisar')
+    expect(shortTitle('Tour sem dois pontos')).toBe('Tour sem dois pontos')
+    expect(shortTitle(': só o fim')).toBe(': só o fim')
+  })
+})

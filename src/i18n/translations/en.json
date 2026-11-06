@@ -1249,7 +1249,21 @@
       "done_all": "You watched all the selected tutorials",
       "done_one": "Tutorial finished",
       "tutorials": "tutorials",
-      "tutorial": "tutorial"
+      "tutorial": "tutorial",
+      "subtitle": "See the system in action, step by step. Nothing is actually saved.",
+      "full_tour": "Full tour",
+      "full_tour_named": "Full tour: {name}",
+      "about": "about {time}",
+      "selected_one": "1 selected",
+      "selected_many": "{count} selected",
+      "clear": "Clear",
+      "pick_hint": "Click the cards to choose",
+      "order": "Play order",
+      "summary_search": "Filters the list using the search fields.",
+      "summary_view": "Opens a record in read-only mode.",
+      "summary_create": "Fills in the fields and saves a new record.",
+      "summary_edit": "Changes fields of a record and saves.",
+      "summary_delete": "Deletes a record, with confirmation."
     }
   },
   "bi_editor": {

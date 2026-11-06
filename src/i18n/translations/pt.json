@@ -1249,7 +1249,21 @@
       "done_all": "Você viu todos os tutoriais selecionados",
       "done_one": "Tutorial concluído",
       "tutorials": "tutoriais",
-      "tutorial": "tutorial"
+      "tutorial": "tutorial",
+      "subtitle": "Veja o sistema em ação, passo a passo. Nada é gravado de verdade.",
+      "full_tour": "Tour completo",
+      "full_tour_named": "Tour completo: {name}",
+      "about": "cerca de {time}",
+      "selected_one": "1 selecionado",
+      "selected_many": "{count} selecionados",
+      "clear": "Limpar",
+      "pick_hint": "Clique nos cartões para escolher",
+      "order": "Ordem de reprodução",
+      "summary_search": "Filtra a lista pelos campos de busca.",
+      "summary_view": "Abre um registro só para leitura.",
+      "summary_create": "Preenche os campos e salva um novo registro.",
+      "summary_edit": "Altera campos de um registro e salva.",
+      "summary_delete": "Remove um registro, com confirmação."
     }
   },
   "bi_editor": {

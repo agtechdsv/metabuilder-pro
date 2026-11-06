@@ -9,7 +9,7 @@ import { HelpFeedbackBar } from './HelpFeedbackBar'
 
 type T = (key: string, fallback?: string) => string
 
-const ACTION_ICON: Record<TourAction, React.ComponentType<{ className?: string }>> = {
+export const ACTION_ICON: Record<TourAction, React.ComponentType<{ className?: string }>> = {
   search: Search, view: Eye, create: Plus, edit: Pencil, delete: Trash2,
 }
 

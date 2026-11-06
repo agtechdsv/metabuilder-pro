@@ -118,6 +118,22 @@ export function selectFillFields(formFields: TourFieldInfo[], fill: TourFill, cu
   return orderByDependency(candidates.filter(c => ids.has(c.id)))
 }
 
+/** Frase do cartão do tutorial, nos três idiomas, a partir do que o roteiro realmente faz. */
+function buildSummary(action: TourAction, steps: TourStep[], firstFilterLabel?: string): HelpText {
+  const fields = steps.filter(s => s.target?.type === 'field' && s.kind !== 'note').length
+  const n = (one: string, many: string) => (fields === 1 ? one : many.replace('{n}', String(fields)))
+  switch (action) {
+    case 'search':
+      return firstFilterLabel
+        ? { pt: `Filtra a lista por "${firstFilterLabel}".`, en: `Filters the list by "${firstFilterLabel}".`, es: `Filtra la lista por "${firstFilterLabel}".` }
+        : { pt: 'Filtra a lista pelos campos de busca.', en: 'Filters the list using the search fields.', es: 'Filtra la lista con los campos de búsqueda.' }
+    case 'view': return { pt: 'Abre um registro só para leitura.', en: 'Opens a record in read-only mode.', es: 'Abre un registro solo de lectura.' }
+    case 'create': return { pt: `Preenche ${n('1 campo', '{n} campos')} e salva um novo registro.`, en: `Fills in ${n('1 field', '{n} fields')} and saves a new record.`, es: `Completa ${n('1 campo', '{n} campos')} y guarda un nuevo registro.` }
+    case 'edit': return { pt: `Altera ${n('1 campo', '{n} campos')} de um registro e salva.`, en: `Changes ${n('1 field', '{n} fields')} of a record and saves.`, es: `Modifica ${n('1 campo', '{n} campos')} de un registro y guarda.` }
+    default: return { pt: 'Remove um registro, com confirmação.', en: 'Deletes a record, with confirmation.', es: 'Elimina un registro, con confirmación.' }
+  }
+}
+
 let seq = 0
 const stepId = () => `auto-${++seq}-${Math.random().toString(36).slice(2, 6)}`
 
@@ -191,6 +207,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     title: titleFor(action, options.screenName),
     fill,
     editFieldCount: action === 'edit' ? Math.max(1, options.editFieldCount ?? 2) : undefined,
+    summary: buildSummary(action, steps, action === 'search' ? (input.filterFields || []).filter(f => !f.hidden)[0]?.label : undefined),
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra
     seed: action === 'create' ? undefined : buildSeed(seedFields, options.today),
@@ -208,5 +225,5 @@ export function regenerateTour(previous: Tour, input: AutoTourInput, options: Au
     const key = s.target && 'ref' in s.target ? `${s.kind}:${s.target.type}:${s.target.ref}` : ''
     return key && keep.has(key) ? { ...s, value: keep.get(key), edited: true } : s
   })
-  return { ...fresh, id: previous.id, title: previous.title, steps: [...steps, ...manual] }
+  return { ...fresh, id: previous.id, title: previous.title, hidden: previous.hidden, steps: [...steps, ...manual] }
 }

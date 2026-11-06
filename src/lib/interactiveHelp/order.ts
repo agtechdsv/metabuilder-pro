@@ -32,3 +32,10 @@ export function buildQueue(tours: readonly Tour[], selectedIds?: readonly string
 export function sortBySuggestedOrder<T extends { action: Tour['action'] }>(tours: readonly T[]): T[] {
   return [...tours].sort((a, b) => TOUR_ACTIONS.indexOf(a.action) - TOUR_ACTIONS.indexOf(b.action))
 }
+
+/** Título do cartão sem o nome da tela ("Como pesquisar: Clientes" vira "Como pesquisar"); sem dois-pontos, o título inteiro. */
+export function shortTitle(title: string): string {
+  const i = title.indexOf(':')
+  const head = i > 0 ? title.slice(0, i).trim() : ''
+  return head || title
+}

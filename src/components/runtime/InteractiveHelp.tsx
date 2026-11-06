@@ -1,16 +1,16 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ListVideo, Loader2, Pause, Play, PlayCircle, Repeat, RotateCcw, SkipForward, X } from 'lucide-react'
+import { Check, ListVideo, Loader2, Pause, Play, PlayCircle, Repeat, RotateCcw, SkipForward, X } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { resolveHelp } from '@/lib/helpText'
 import { encodeDemoSeed, isDemoMode } from '@/lib/demo/demoMode'
 import { createDomAdapter, type DomAdapter } from '@/lib/interactiveHelp/domAdapter'
-import { buildQueue, toggleId } from '@/lib/interactiveHelp/order'
-import { TourPlayer, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
+import { buildQueue, shortTitle, toggleId } from '@/lib/interactiveHelp/order'
+import { estimateQueueMs, estimateTourMs, formatDuration, TourPlayer, TRANSITION_SECONDS, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
 import { hasInteractiveHelp, visibleTours, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
-import { DoneCard, UpNextCard } from './InteractiveHelpCards'
+import { ACTION_ICON, DoneCard, UpNextCard } from './InteractiveHelpCards'
 
 interface Props {
   /** `layout_config.interactive_help` */
@@ -20,6 +20,8 @@ interface Props {
   /** tabela/modelo e chave primária, para a linha sintética do modo demonstração */
   modelName?: string
   primaryKeyName?: string
+  /** nome da tela, para o título do tour completo */
+  screenName?: string
 }
 
 /** Ícone ▶ ao lado do "?" do cabeçalho. Só aparece com roteiro válido, e nunca dentro da própria demonstração. */
@@ -47,10 +49,8 @@ export function InteractiveHelpButton(props: Props) {
 }
 
 const SPEEDS: TourSpeed[] = ['slow', 'normal', 'fast']
-/** segundos de contagem do cartão "A seguir", conforme a velocidade escolhida */
-const TRANSITION_SECONDS: Record<TourSpeed, number> = { slow: 8, normal: 5, fast: 3 }
 
-function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, onClose }: Props & { onClose: () => void }) {
+function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKeyName, screenName, onClose }: Props & { onClose: () => void }) {
   const { t, language } = useI18n()
   // na ordem que o dev definiu no Studio (roteiros ocultos já ficam de fora)
   const tours = useMemo(() => visibleTours(config), [config])
@@ -69,6 +69,7 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const [snap, setSnap] = useState<PlayerSnapshot | null>(null)
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<TourPlayer | null>(null)
   const adapterRef = useRef<DomAdapter | null>(null)
   const speedRef = useRef(speed)
@@ -184,6 +185,23 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
 
   const rowPlay = t('runtime.tour.play_one', 'Reproduzir este')
 
+  // duração estimada (muda com a velocidade): de cada cartão, do que está selecionado e do tour completo
+  const selectedQueue = useMemo(() => buildQueue(tours, selected), [tours, selected])
+  const selectedMs = estimateQueueMs(selectedQueue, speed, language)
+  const allMs = estimateQueueMs(tours, speed, language)
+  const about = (ms: number) => t('runtime.tour.about', 'cerca de {time}').replace('{time}', formatDuration(ms))
+
+  // teclado: setas andam entre os cartões, Enter reproduz o cartão, Espaço marca/desmarca (nativo do botão)
+  const onCardKey = (x: Tour) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter') { e.preventDefault(); startQueue([x]); return }
+    const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (!dir) return
+    e.preventDefault()
+    const cards = Array.from(gridRef.current?.querySelectorAll<HTMLButtonElement>('[data-tour-card]') || [])
+    const i = cards.indexOf(e.currentTarget)
+    cards[(i + dir + cards.length) % cards.length]?.focus()
+  }
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label={t('runtime.tour.title', 'Ajuda interativa')}>
       <div className="flex flex-col w-full max-w-[1500px] h-[90vh] rounded-3xl bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden">
@@ -200,57 +218,90 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
         </div>
 
         {stage === 'choose' ? (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="space-y-2">
-              <p className="text-xs font-black uppercase tracking-widest text-neutral-400">{t('runtime.tour.choose', 'Escolha o que você quer ver')}</p>
-              <p className="text-[11px] text-neutral-400">{t('runtime.tour.select_hint', 'Clique para selecionar um ou mais tutoriais; clique de novo para desmarcar.')}</p>
-              <ul className="space-y-2">
+          <>
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              <p className="text-xs text-neutral-500">{t('runtime.tour.subtitle', 'Veja o sistema em ação, passo a passo. Nada é gravado de verdade.')}</p>
+
+              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/70 dark:bg-indigo-950/30 p-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white"><ListVideo className="h-5 w-5" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-indigo-900 dark:text-indigo-200">
+                    {screenName ? t('runtime.tour.full_tour_named', 'Tour completo: {name}').replace('{name}', screenName) : t('runtime.tour.full_tour', 'Tour completo')}
+                  </p>
+                  <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80">{tours.length} {tours.length === 1 ? t('runtime.tour.tutorial', 'tutorial') : t('runtime.tour.tutorials', 'tutoriais')} · {about(allMs)}</p>
+                </div>
+                <button type="button" onClick={() => startQueue(buildQueue(tours))} disabled={tours.length === 0}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black tracking-wide text-white hover:bg-indigo-500 disabled:opacity-40">
+                  <Play className="h-4 w-4" /> {t('runtime.tour.play_all', 'Reproduzir todos')}
+                </button>
+              </div>
+
+              <div ref={gridRef} role="group" aria-label={t('runtime.tour.choose', 'Escolha o que você quer ver')} className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
                 {tours.map(x => {
-                  const on = selected.includes(x.id)
+                  const pos = selectedQueue.findIndex(q => q.id === x.id) + 1
+                  const on = pos > 0
+                  const Icon = ACTION_ICON[x.action]
+                  const title = shortTitle(resolveHelp(x.title, language) || x.id)
+                  const summary = resolveHelp(x.summary, language) || t(`runtime.tour.summary_${x.action}`, '')
                   return (
-                    <li key={x.id} className="flex items-stretch gap-2">
+                    <div key={x.id} className="relative">
                       <button
                         type="button"
+                        data-tour-card
                         aria-pressed={on}
                         onClick={() => setSelected(s => toggleId(s, x.id))}
-                        className={cn('flex-1 text-left px-4 py-3 rounded-2xl border text-sm font-bold transition-colors',
-                          on ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800')}
+                        onKeyDown={onCardKey(x)}
+                        className={cn('flex h-full w-full flex-col gap-1.5 rounded-2xl border-2 p-3.5 pb-10 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+                          on ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-800')}
                       >
-                        {resolveHelp(x.title, language) || x.id}
-                        <span className="ml-2 text-[11px] font-medium text-neutral-400">{x.steps.length} {t('runtime.tour.steps', 'passos')}</span>
+                        <span className="flex items-center justify-between">
+                          <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', on ? 'bg-indigo-600 text-white' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800')}><Icon className="h-4 w-4" /></span>
+                          {on
+                            ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-black text-white" title={t('runtime.tour.order', 'Ordem de reprodução')}>{pos}</span>
+                            : <span className="h-5 w-5 rounded-full border border-neutral-300 dark:border-neutral-600" aria-hidden="true" />}
+                        </span>
+                        <span className={cn('text-sm font-black', on ? 'text-indigo-700 dark:text-indigo-300' : 'text-neutral-900 dark:text-white')}>{title}</span>
+                        {summary && <span className={cn('text-xs leading-snug', on ? 'text-indigo-700/90 dark:text-indigo-300/90' : 'text-neutral-500')}>{summary}</span>}
+                        <span className="mt-auto pt-1 text-[11px] text-neutral-400">{x.steps.length} {t('runtime.tour.steps', 'passos')} · {formatDuration(estimateTourMs(x, speed, language))}</span>
                       </button>
-                      <button type="button" onClick={() => startQueue([x])} title={rowPlay} aria-label={`${rowPlay}: ${resolveHelp(x.title, language)}`}
-                        className="px-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
-                        <Play className="w-4 h-4" />
+                      <button type="button" onClick={() => startQueue([x])} title={rowPlay} aria-label={`${rowPlay}: ${title}`}
+                        className="absolute bottom-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-950/60">
+                        <Play className="h-4 w-4" />
                       </button>
-                    </li>
+                    </div>
                   )
                 })}
-              </ul>
+              </div>
+              <p className="text-[11px] text-neutral-400">{t('runtime.tour.select_hint', 'Clique para selecionar um ou mais tutoriais; clique de novo para desmarcar.')}</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-black uppercase tracking-widest text-neutral-400">{t('runtime.tour.speed', 'Velocidade')}</p>
-              <div className="inline-flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1">
-                {SPEEDS.map(s => (
-                  <button key={s} type="button" onClick={() => setSpeed(s)}
-                    className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-colors', speed === s ? 'bg-white dark:bg-neutral-700 text-indigo-600 shadow-sm' : 'text-neutral-500')}>
-                    {t(`runtime.tour.${s}`, s === 'slow' ? 'Lento' : s === 'fast' ? 'Rápido' : 'Normal')}
-                  </button>
-                ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 px-5 py-3">
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-neutral-500" aria-live="polite">
+                  {selected.length === 0
+                    ? t('runtime.tour.pick_hint', 'Clique nos cartões para escolher')
+                    : `${selected.length === 1 ? t('runtime.tour.selected_one', '1 selecionado') : t('runtime.tour.selected_many', '{count} selecionados').replace('{count}', String(selected.length))} · ${about(selectedMs)}`}
+                </span>
+                {selected.length > 0 && (
+                  <button type="button" onClick={() => setSelected([])} className="font-bold text-indigo-600 underline hover:no-underline">{t('runtime.tour.clear', 'Limpar')}</button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="inline-flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-0.5">
+                  {SPEEDS.map(s => (
+                    <button key={s} type="button" onClick={() => setSpeed(s)}
+                      className={cn('rounded-md px-3 py-1 text-[11px] font-bold transition-colors', speed === s ? 'bg-white text-indigo-600 shadow-sm dark:bg-neutral-700' : 'text-neutral-500')}>
+                      {t(`runtime.tour.${s}`, s === 'slow' ? 'Lento' : s === 'fast' ? 'Rápido' : 'Normal')}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" onClick={() => startQueue(selectedQueue)} disabled={selected.length === 0}
+                  className="inline-flex items-center gap-2 rounded-xl border border-indigo-300 dark:border-indigo-800 px-5 py-2.5 text-xs font-black tracking-wide text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-40 disabled:cursor-not-allowed">
+                  <Check className="h-4 w-4" /> {t('runtime.tour.play_selected', 'Reproduzir selecionados')}
+                </button>
               </div>
             </div>
-            <p className="text-[11px] text-neutral-400">{t('runtime.tour.demo_note', 'Nada do que aparece na demonstração é gravado de verdade.')}</p>
-            <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={() => startQueue(buildQueue(tours, selected))} disabled={selected.length === 0}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black tracking-wide disabled:opacity-40 disabled:cursor-not-allowed">
-                <Play className="w-4 h-4" /> {t('runtime.tour.play_selected', 'Reproduzir selecionados')}{selected.length > 0 ? ` (${selected.length})` : ''}
-              </button>
-              <button type="button" onClick={() => startQueue(buildQueue(tours))} disabled={tours.length === 0}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-indigo-200 dark:border-indigo-900 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs font-black tracking-wide disabled:opacity-40">
-                <ListVideo className="w-4 h-4" /> {t('runtime.tour.play_all', 'Reproduzir todos')}
-              </button>
-            </div>
-          </div>
+          </>
         ) : (
           <>
             <div className="relative flex-1 bg-neutral-100 dark:bg-neutral-950">
