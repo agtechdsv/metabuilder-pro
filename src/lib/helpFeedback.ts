@@ -8,7 +8,7 @@ const MAX_ID = 120
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SAFE_ID = /^[\w\-.:]+$/
 
-export const HELP_FEEDBACK_ZONES = ['filter', 'grid', 'form', 'screen', 'central'] as const
+export const HELP_FEEDBACK_ZONES = ['filter', 'grid', 'form', 'screen', 'central', 'tutorial'] as const
 export type HelpFeedbackZone = (typeof HELP_FEEDBACK_ZONES)[number]
 
 export interface HelpFeedbackInput {

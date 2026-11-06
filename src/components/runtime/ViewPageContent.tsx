@@ -73,6 +73,8 @@ interface ViewPageContentProps {
   breadcrumbs?: { label: string; href: string }[]
   description?: string
   screenHelp?: unknown
+  /** roteiros da Ajuda Interativa (layout_config.interactive_help) */
+  interactiveHelp?: unknown
   icon?: string
   analyticsConfig?: {
     widgets: any[]
@@ -138,6 +140,7 @@ export default function ViewPageContent({
   baseUrl,
   description,
   screenHelp,
+  interactiveHelp,
   icon,
   exportFormats = ['xlsx', 'csv', 'json'],
   analyticsConfig: initialAnalyticsConfig,
@@ -594,6 +597,7 @@ export default function ViewPageContent({
         viewName={viewName}
         description={description}
         screenHelp={screenHelp}
+        interactiveHelp={interactiveHelp}
         icon={icon}
         workspace={workspace}
         project={project}

@@ -114,6 +114,7 @@ export function ViewPageFormRenderer({
           </div>
           {!isCadastroOnly && (
             <button
+              data-tour="back"
               onClick={() => setIsPageVisible(false)}
               className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
             >

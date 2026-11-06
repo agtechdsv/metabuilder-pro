@@ -23,7 +23,7 @@ function copyLabelHelp(from: any, into: any): any {
 /** Copia a ajuda de `edited` para `target` (tela e campos), sem tocar em nenhuma outra configuração. Não altera os originais. */
 export function mergeHelpIntoLayout(target: any, edited: any): any {
   const out: any = { ...(target || {}) }
-  for (const key of ['screen_help', 'screen_help_hidden']) {
+  for (const key of ['screen_help', 'screen_help_hidden', 'interactive_help']) {
     if (edited?.[key] === undefined) delete out[key]
     else out[key] = edited[key]
   }

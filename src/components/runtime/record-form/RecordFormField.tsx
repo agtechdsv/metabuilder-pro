@@ -314,6 +314,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
           <div className="relative group flex-1">
             {['textarea', 'Área de Texto (Textarea)'].includes(fieldType) ? (
               <textarea
+                data-tour-field={field.id}
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
                 value={value}
@@ -325,6 +326,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
               />
             ) : ['select', 'Combo (Select)', 'Seleção (Dropdown)'].includes(fieldType) ? (
               <select
+                data-tour-field={field.id}
                 disabled={isDisabled}
                 required={zoneConfig.content?.required}
                 value={
@@ -455,6 +457,7 @@ export function RecordFormField(props: RecordFormFieldProps) {
               />
             ) : (
               <input
+                data-tour-field={field.id}
                 type={
                   fieldType === 'date' ? 'date' :
                     (fieldType === 'datetime-local' || fieldType === 'datetime') ? 'datetime-local' :

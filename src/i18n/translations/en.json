@@ -1205,6 +1205,28 @@
       "was_helpful": "Was this helpful?",
       "what_missing": "What was missing? (optional)",
       "yes": "Yes"
+    },
+    "tour": {
+      "open": "Interactive help",
+      "title": "Interactive help",
+      "choose": "Choose what you want to see",
+      "steps": "steps",
+      "speed": "Speed",
+      "slow": "Slow",
+      "normal": "Normal",
+      "fast": "Fast",
+      "demo_note": "Nothing shown in the demo is actually saved.",
+      "play": "Play",
+      "pause": "Pause",
+      "resume": "Resume",
+      "step": "Next step",
+      "restart": "Restart",
+      "close": "Close",
+      "loading": "Preparing the demo…",
+      "failed": "Could not prepare the demo.",
+      "progress": "Step {current} of {total}",
+      "ended": "End of the tutorial.",
+      "skipped": "Some steps were skipped: they do not apply to your screen."
     }
   },
   "bi_editor": {
@@ -2748,7 +2770,8 @@
       "screen_help_placeholder": "Explain what this screen is for and how to use it. Leave blank to hide the icon.",
       "zone_filter": "Search filter",
       "zone_grid": "Data grid",
-      "zone_form": "Form"
+      "zone_form": "Form",
+      "help_zone_tutorial": "Interactive help"
     },
     "personalizado": {
       "title": "Use Case Orchestrator Configuration",
@@ -5257,6 +5280,42 @@
     "title": "Help Center",
     "unpublished": "use cases not yet published do not appear here (edit them in the builder)",
     "unsaved": "Unsaved changes",
-    "use_case": "Use case"
+    "use_case": "Use case",
+    "interactive": {
+      "title": "Interactive help",
+      "only_cadastro": "In this version interactive help applies to search-and-register use cases.",
+      "hide": "Hide the ▶ icon (keeps the scripts)",
+      "description": "The user watches the system run the steps on its own, in demo mode (nothing is saved). Generate the script for each action and adjust whatever you like.",
+      "action_create": "Register",
+      "action_edit": "Edit",
+      "action_delete": "Delete",
+      "action_search": "Search",
+      "action_view": "See details",
+      "none": "not generated",
+      "fill_required": "Required fields only",
+      "fill_all": "All fields",
+      "edit_count": "Fields to change",
+      "regenerate": "Regenerate",
+      "generate": "Generate",
+      "remove": "Remove",
+      "first_option": "first option in the list",
+      "delete_step": "Delete step",
+      "step_click": "Click",
+      "step_type": "Type",
+      "step_select": "Choose",
+      "step_check": "Check",
+      "step_note": "Observe",
+      "btn_new": "New Record",
+      "btn_save": "Save Changes",
+      "btn_back": "Back to List",
+      "btn_search": "Search",
+      "btn_clear": "Clear",
+      "btn_confirm": "Confirm deletion",
+      "btn_cancel": "Cancel",
+      "row_view": "View (magnifier)",
+      "row_edit": "Edit (pencil)",
+      "row_delete": "Delete (trash can)",
+      "row": "First row"
+    }
   }
 }

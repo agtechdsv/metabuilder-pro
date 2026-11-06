@@ -1,4 +1,5 @@
 import { needsRelay, relayThroughChannel } from '@/lib/tunnel/relayClient'
+import { demoHandleSend, demoWrapReplyCallback, isReplyEvent } from '@/lib/demo/demoMode'
 
 export const CHUNK_SIZE = 100 * 1024; // 100KB per chunk
 
@@ -36,7 +37,7 @@ export function wrapChannelWithChunking(channel: any) {
       // Dispatch to registered listeners: um ouvinte com defeito não pode impedir os outros de receber a resposta
       const cbs = listeners[event] || [];
       cbs.forEach((cb) => {
-        try { cb({ payload: fullPayload }); } catch (e) { console.error('Error in chunked payload listener', e); }
+        try { (isReplyEvent(event) ? demoWrapReplyCallback(cb as any) : cb)({ payload: fullPayload }); } catch (e) { console.error('Error in chunked payload listener', e); }
       });
     }
   });
@@ -50,6 +51,8 @@ export function wrapChannelWithChunking(channel: any) {
       return channel.channelAdapter;
     },
     send: (msg: any) => {
+      // modo demonstração: escrita é respondida aqui, sem chegar ao túnel nem ao servidor
+      if (demoHandleSend(channel, msg)) return Promise.resolve('ok');
       // Comando sem token (relay ligado): vai INTEIRO ao servidor, que coloca o token e divide em pedaços se precisar.
       // Tem de ser antes de dividir, porque o token fica dentro do conteúdo que o CLI remonta.
       if (needsRelay(msg)) return relayThroughChannel(channel, msg);

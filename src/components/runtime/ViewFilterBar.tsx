@@ -82,7 +82,7 @@ export function ViewFilterBar({
 
                         if (fieldType === 'select') {
                           return (
-                            <select value={filterValues[field.db_column_name] || ''} onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })} style={style} className={commonClasses}>
+                            <select data-tour-filter={field.id} value={filterValues[field.db_column_name] || ''} onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })} style={style} className={commonClasses}>
                               <option value="">{t('common.all', 'Todos')}</option>
                               {options.map((opt: any, i: number) => <option key={i} value={opt.value}>{opt.label}</option>)}
                             </select>
@@ -107,7 +107,7 @@ export function ViewFilterBar({
                         return (
                           <>
                             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-500 transition-colors" />
-                            <input type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'} placeholder={t('runtime.filter_placeholder').replace('{field}', field.display_name)} value={filterValues[field.db_column_name] || ''} onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })} style={style} className={commonClasses} />
+                            <input data-tour-filter={field.id} type={fieldType === 'number' ? 'number' : fieldType === 'date' ? 'date' : 'text'} placeholder={t('runtime.filter_placeholder').replace('{field}', field.display_name)} value={filterValues[field.db_column_name] || ''} onChange={e => setFilterValues({ ...filterValues, [field.db_column_name]: e.target.value })} style={style} className={commonClasses} />
                           </>
                         )
                       })()}
@@ -119,13 +119,13 @@ export function ViewFilterBar({
 
             <div className="flex items-center gap-3 mb-[1px]">
               {canSearch && (
-                <button onClick={handleSearchClick} style={getButtonStyles(btnSearch)} className={cn("h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2", (btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '') ? "" : "capitalize tracking-wider")}>
+                <button data-tour="search" onClick={handleSearchClick} style={getButtonStyles(btnSearch)} className={cn("h-[42px] px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2", (btnSearch?.custom_label !== undefined && btnSearch.custom_label !== '') ? "" : "capitalize tracking-wider")}>
                   <Search className="w-4 h-4" />
                   {labelSearch}
                 </button>
               )}
               {canClear && (
-                <button onClick={() => handleClear(fetchData)} style={getButtonStyles(btnClear)} className={cn("h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2", (btnClear?.custom_label !== undefined && btnClear.custom_label !== '') ? "" : "capitalize tracking-wider")}>
+                <button data-tour="clear" onClick={() => handleClear(fetchData)} style={getButtonStyles(btnClear)} className={cn("h-[42px] px-6 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2", (btnClear?.custom_label !== undefined && btnClear.custom_label !== '') ? "" : "capitalize tracking-wider")}>
                   <RefreshCcw className="w-4 h-4" />
                   {labelClear}
                 </button>

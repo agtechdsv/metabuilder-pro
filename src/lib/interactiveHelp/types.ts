@@ -1,0 +1,98 @@
+/**
+ * Ajuda Interativa: um tutorial que executa passos na tela (clicar, digitar, escolher) com legendas, em modo demonstração.
+ * O roteiro fica em `layout_config.interactive_help` do caso de uso e viaja junto com a configuração.
+ */
+
+import type { HelpText } from '../helpText'
+
+export const TOUR_ACTIONS = ['create', 'edit', 'delete', 'search', 'view'] as const
+export type TourAction = (typeof TOUR_ACTIONS)[number]
+
+export type TourSpeed = 'slow' | 'normal' | 'fast'
+/** Multiplicador dos tempos (digitação e pausas): Lento 2×, Normal 1×, Rápido 0,4× */
+export const SPEED_FACTOR: Record<TourSpeed, number> = { slow: 2, normal: 1, fast: 0.4 }
+
+/** Botões fixos da tela, identificados pelo atributo `data-tour` */
+export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel'
+export type TourRowAction = 'view' | 'edit' | 'delete'
+
+export type TourTarget =
+  | { type: 'button'; ref: TourButtonRef }
+  /** campo do formulário; `ref` é o id do campo no Studio (atributo `data-tour-field`) */
+  | { type: 'field'; ref: string }
+  /** campo do filtro de busca (atributo `data-tour-filter`) */
+  | { type: 'filter'; ref: string }
+  /** a primeira linha do grid: com `action`, o botão daquela ação; sem ela, a linha inteira (para destacar o resultado) */
+  | { type: 'row'; ref: 'first'; action?: TourRowAction }
+  | { type: 'tab'; ref: string }
+
+export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note'
+
+export interface TourStep {
+  id: string
+  kind: TourStepKind
+  target?: TourTarget
+  /** texto a digitar (type) ou valor/opção a escolher (select: `{ pick: 'first' }` = a primeira opção que não seja vazia) */
+  value?: string | { pick: 'first' }
+  /** legenda mostrada ao lado do elemento, nos três idiomas */
+  caption?: HelpText
+  /** gerado pelo gerador automático; "Regenerar" refaz só estes e preserva os passos manuais */
+  auto?: boolean
+  /** o dev mudou o valor de um passo automático: "Regenerar" mantém o valor dele */
+  edited?: boolean
+}
+
+export type TourFill = 'required' | 'all' | 'custom'
+
+export interface Tour {
+  id: string
+  action: TourAction
+  title: HelpText
+  fill: TourFill
+  /** em "editar": quantos campos o tutorial altera (padrão 2) */
+  editFieldCount?: number
+  steps: TourStep[]
+  /** linha sintética (coluna → texto) que as ações de editar, excluir e ver usam no modo demonstração */
+  seed?: Record<string, string>
+}
+
+export interface InteractiveHelpConfig {
+  tours: Tour[]
+  /** esconde o ícone sem apagar os roteiros */
+  hidden?: boolean
+}
+
+/** Lê e valida o que veio do banco: nunca confia no formato (o JSON é editável). */
+export function normalizeInteractiveHelp(raw: unknown): InteractiveHelpConfig {
+  const out: InteractiveHelpConfig = { tours: [] }
+  if (!raw || typeof raw !== 'object') return out
+  const r = raw as Record<string, unknown>
+  if (r.hidden === true) out.hidden = true
+  if (!Array.isArray(r.tours)) return out
+  for (const t of r.tours) {
+    if (!t || typeof t !== 'object') continue
+    const tour = t as Record<string, unknown>
+    if (typeof tour.id !== 'string' || !(TOUR_ACTIONS as readonly string[]).includes(tour.action as string)) continue
+    if (!Array.isArray(tour.steps)) continue
+    const steps = (tour.steps as unknown[]).filter((s): s is TourStep => {
+      const st = s as Record<string, unknown>
+      return !!st && typeof st.id === 'string' && ['click', 'type', 'select', 'check', 'note'].includes(st.kind as string)
+    })
+    out.tours.push({
+      id: tour.id,
+      action: tour.action as TourAction,
+      title: (tour.title && typeof tour.title === 'object' ? tour.title : {}) as HelpText,
+      fill: tour.fill === 'all' || tour.fill === 'custom' ? tour.fill : 'required',
+      editFieldCount: typeof tour.editFieldCount === 'number' && tour.editFieldCount > 0 ? Math.min(20, Math.floor(tour.editFieldCount)) : undefined,
+      steps,
+      seed: tour.seed && typeof tour.seed === 'object' ? (tour.seed as Record<string, string>) : undefined,
+    })
+  }
+  return out
+}
+
+/** O ícone ▶ só aparece se houver pelo menos um roteiro com passos e ele não estiver oculto. */
+export function hasInteractiveHelp(raw: unknown): boolean {
+  const cfg = normalizeInteractiveHelp(raw)
+  return !cfg.hidden && cfg.tours.some(t => t.steps.length > 0)
+}

@@ -1139,6 +1139,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           analyticsConfig={view.layout_config?.analytics_config}
           exportFormats={view.layout_config?.export_formats}
           screenHelp={view.layout_config?.screen_help_hidden === true ? undefined : view.layout_config?.screen_help}
+          interactiveHelp={view.layout_config?.interactive_help}
           filterGridColumns={view.layout_config?.filter_grid_columns}
           galleryClickBehavior={view.layout_config?.gallery_click_behavior}
           galleryConfig={view.layout_config?.gallery_config}

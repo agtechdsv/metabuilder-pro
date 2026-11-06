@@ -11,7 +11,7 @@
 
 'use strict';
 
-const ZONES = ['filter', 'grid', 'form', 'screen', 'central'];
+const ZONES = ['filter', 'grid', 'form', 'screen', 'central', 'tutorial'];
 
 const CREATE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS mb_help_feedback (

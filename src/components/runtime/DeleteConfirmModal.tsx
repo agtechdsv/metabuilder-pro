@@ -64,6 +64,7 @@ export default function DeleteConfirmModal({
 
         <div className="flex items-center justify-end gap-3 pt-2">
           <button 
+            data-tour="cancel"
             onClick={onClose}
             className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
           >
@@ -71,6 +72,7 @@ export default function DeleteConfirmModal({
           </button>
           
           <button 
+            data-tour="confirm"
             onClick={onConfirm}
             disabled={isLoading}
             className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 active:scale-95 disabled:opacity-50"

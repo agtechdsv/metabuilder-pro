@@ -281,6 +281,7 @@ export default function RecordForm({
 
             {isPageMode && (
               <button
+                data-tour="back"
                 onClick={handleCancel}
                 className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-widest text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all"
               >
@@ -773,6 +774,7 @@ export default function RecordForm({
           {mode !== 'view' && (
             <button
               type="submit"
+              data-tour="save"
               disabled={isLoading}
               className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black capitalize tracking-wider transition-all shadow-xl shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
             >

@@ -1205,6 +1205,28 @@
       "was_helpful": "Isto ajudou?",
       "what_missing": "O que faltou? (opcional)",
       "yes": "Sim"
+    },
+    "tour": {
+      "open": "Ajuda interativa",
+      "title": "Ajuda interativa",
+      "choose": "Escolha o que você quer ver",
+      "steps": "passos",
+      "speed": "Velocidade",
+      "slow": "Lento",
+      "normal": "Normal",
+      "fast": "Rápido",
+      "demo_note": "Nada do que aparece na demonstração é gravado de verdade.",
+      "play": "Reproduzir",
+      "pause": "Pausar",
+      "resume": "Continuar",
+      "step": "Próximo passo",
+      "restart": "Recomeçar",
+      "close": "Fechar",
+      "loading": "Preparando a demonstração…",
+      "failed": "Não foi possível preparar a demonstração.",
+      "progress": "Passo {current} de {total}",
+      "ended": "Fim do tutorial.",
+      "skipped": "Alguns passos foram pulados: não se aplicam à sua tela."
     }
   },
   "bi_editor": {
@@ -2748,7 +2770,8 @@
       "screen_help_placeholder": "Explique para que serve esta tela e como usá-la. Deixe em branco para não mostrar o ícone.",
       "zone_filter": "Filtro de busca",
       "zone_grid": "Grid de dados",
-      "zone_form": "Formulário"
+      "zone_form": "Formulário",
+      "help_zone_tutorial": "Ajuda interativa"
     },
     "personalizado": {
       "title": "Configuração do Orquestrador de Casos de Uso",
@@ -5257,6 +5280,42 @@
     "title": "Central de Ajuda",
     "unpublished": "casos de uso ainda não publicados não aparecem aqui (edite no construtor)",
     "unsaved": "Alterações não salvas",
-    "use_case": "Caso de uso"
+    "use_case": "Caso de uso",
+    "interactive": {
+      "title": "Ajuda interativa",
+      "only_cadastro": "Nesta versão a ajuda interativa vale para casos de uso de cadastro com pesquisa.",
+      "hide": "Ocultar o ícone ▶ (mantém os roteiros)",
+      "description": "O usuário vê o sistema executar os passos sozinho, em modo demonstração (nada é gravado). Gere o roteiro de cada ação e ajuste o que quiser.",
+      "action_create": "Cadastrar",
+      "action_edit": "Editar",
+      "action_delete": "Excluir",
+      "action_search": "Pesquisar",
+      "action_view": "Ver detalhes",
+      "none": "não gerado",
+      "fill_required": "Só obrigatórios",
+      "fill_all": "Todos os campos",
+      "edit_count": "Campos a alterar",
+      "regenerate": "Regenerar",
+      "generate": "Gerar",
+      "remove": "Remover",
+      "first_option": "primeira opção da lista",
+      "delete_step": "Apagar passo",
+      "step_click": "Clicar",
+      "step_type": "Digitar",
+      "step_select": "Escolher",
+      "step_check": "Marcar",
+      "step_note": "Observar",
+      "btn_new": "Novo Registro",
+      "btn_save": "Salvar Alterações",
+      "btn_back": "Voltar para Lista",
+      "btn_search": "Pesquisar",
+      "btn_clear": "Limpar",
+      "btn_confirm": "Confirmar exclusão",
+      "btn_cancel": "Cancelar",
+      "row_view": "Ver (lupa)",
+      "row_edit": "Editar (lápis)",
+      "row_delete": "Excluir (lixeira)",
+      "row": "Primeira linha"
+    }
   }
 }

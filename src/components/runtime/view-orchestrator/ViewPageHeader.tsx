@@ -3,6 +3,7 @@ import { Plus, Workflow } from 'lucide-react'
 import { RuntimeHeader } from '../RuntimeHeader'
 import { ExportDropdown } from '../ExportControls'
 import { HelpPopover } from '../HelpPopover'
+import { InteractiveHelpButton } from '../InteractiveHelp'
 import { useI18n } from '@/i18n/I18nContext'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -11,6 +12,7 @@ export interface ViewPageHeaderProps {
   viewName: string
   description?: string
   screenHelp?: unknown
+  interactiveHelp?: unknown
   icon?: string
   workspace: any
   project: any
@@ -42,6 +44,7 @@ export function ViewPageHeader({
   viewName,
   description,
   screenHelp,
+  interactiveHelp,
   icon,
   workspace,
   project,
@@ -78,6 +81,7 @@ export function ViewPageHeader({
       icon={icon}
       actions={(
         <div className="flex items-center gap-3">
+          <InteractiveHelpButton config={interactiveHelp} projectId={project.id} viewId={viewId} modelName={modelName} primaryKeyName={primaryKeyName} />
           <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId, zone: 'screen' }} centralHref={`/${workspace.slug}/${project.slug}/help`} />
           {isAutomationsEnabled && (
             <button
@@ -109,6 +113,7 @@ export function ViewPageHeader({
           )}
           {canAdd && (
             <button 
+              data-tour="new"
               onClick={handleOpenAdd}
               style={getButtonStyles(btnAdd)}
               className={cn(

@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { patchChannelForRelay, tunnelTopicFor } from '@/lib/tunnel/relayClient'
+import { installDemoGuards } from '@/lib/demo/demoMode'
 
 const createDefaultClient = () => createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,6 +43,9 @@ export function createClient(options?: any) {
   // Canais do túnel: comandos sem token (relay ligado) passam pelo servidor, que coloca o token do projeto
   const originalChannel = client.channel.bind(client)
   client.channel = ((name: string, opts?: any) => patchChannelForRelay(originalChannel(tunnelTopicFor(name), opts))) as typeof client.channel
+
+  // modo demonstração (Ajuda Interativa): bloqueia escrita por HTTP; o canal do túnel é tratado em relayClient/chunkedChannel
+  installDemoGuards()
 
   if (typeof window !== 'undefined' && !options) {
     clientInstance = client

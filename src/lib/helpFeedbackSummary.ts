@@ -20,7 +20,7 @@ export interface FeedbackTarget {
   totalDown: number
 }
 
-const ZONE_ORDER: (string | null)[] = ['filter', 'grid', 'form', 'screen', 'central', null]
+const ZONE_ORDER: (string | null)[] = ['filter', 'grid', 'form', 'screen', 'central', 'tutorial', null]
 
 /**
  * Agrupa o resumo por alvo, com uma linha por zona. Só entram campos de `fieldIds` e a ajuda desta tela.
@@ -56,7 +56,7 @@ export function suggestsOwnText(
   zone: HelpFeedbackZone | null,
   opts: { custom: boolean; zoneCount: number },
 ): boolean {
-  if (!target.fieldId || zone === null || zone === 'screen' || zone === 'central') return false
+  if (!target.fieldId || zone === null || zone === 'screen' || zone === 'central' || zone === 'tutorial') return false
   if (opts.custom || opts.zoneCount < 2) return false
   const z = target.zones.find(x => x.zone === zone)
   return !!z && z.down > z.up

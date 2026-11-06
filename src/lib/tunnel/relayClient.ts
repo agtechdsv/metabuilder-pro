@@ -10,6 +10,7 @@
  */
 
 import { handleEndUserSessionEnded } from './logoutClient'
+import { demoHandleSend, demoWrapReplyCallback, isDemoMode, isReplyEvent, isWriteMessage } from '../demo/demoMode'
 
 export interface BroadcastMessage { type?: string; event?: string; payload?: any }
 
@@ -89,6 +90,8 @@ export async function relaySend(
   msg: BroadcastMessage,
   fetchImpl: typeof fetch = (...a) => fetch(...a),
 ): Promise<RelayResult> {
+  // modo demonstração: escrita nunca vai ao servidor (defesa extra; o canal já responde localmente)
+  if (isDemoMode() && isWriteMessage(msg)) return { ok: true, status: 200 }
   try {
     const res = await fetchImpl('/api/tunnel/send', {
       method: 'POST',
@@ -147,7 +150,13 @@ export function patchChannelForRelay<T extends { send?: any; topic?: string }>(c
   if (!ch || ch.__mbRelayPatched || typeof ch.send !== 'function') return channel
   if (!projectIdFromTopic(ch.topic)) return channel
   const original = ch.send.bind(ch)
-  ch.send = (msg: BroadcastMessage, opts?: any) => (needsRelay(msg) ? relayThroughChannel(ch, msg) : original(msg, opts))
+  ch.send = (msg: BroadcastMessage, opts?: any) =>
+    demoHandleSend(ch, msg) ? Promise.resolve('ok') : needsRelay(msg) ? relayThroughChannel(ch, msg) : original(msg, opts)
+  // modo demonstração: as respostas de leitura ganham as linhas sintéticas
+  if (isDemoMode() && typeof ch.on === 'function') {
+    const originalOn = ch.on.bind(ch)
+    ch.on = (type: string, filter: any, callback: any) => originalOn(type, filter, type === 'broadcast' && isReplyEvent(filter?.event) ? demoWrapReplyCallback(callback) : callback)
+  }
   ch.__mbRelayPatched = true
   return channel
 }

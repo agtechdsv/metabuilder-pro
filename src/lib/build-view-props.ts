@@ -16,6 +16,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 export interface BuiltViewProps {
   screenHelp?: unknown
+  interactiveHelp?: unknown
   viewId: string
   viewName: string
   modelName: string
@@ -696,5 +697,6 @@ export async function buildViewProps(
     customSlots: view.layout_config?.custom_slots,
     masterUseCaseSlug: view.layout_config?.master_use_case_slug,
     screenHelp: view.layout_config?.screen_help_hidden === true ? undefined : view.layout_config?.screen_help,
+    interactiveHelp: view.layout_config?.interactive_help,
   }
 }

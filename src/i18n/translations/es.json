@@ -1292,6 +1292,28 @@
       "was_helpful": "¿Le resultó útil?",
       "what_missing": "¿Qué faltó? (opcional)",
       "yes": "Sí"
+    },
+    "tour": {
+      "open": "Ayuda interactiva",
+      "title": "Ayuda interactiva",
+      "choose": "Elija lo que quiere ver",
+      "steps": "pasos",
+      "speed": "Velocidad",
+      "slow": "Lento",
+      "normal": "Normal",
+      "fast": "Rápido",
+      "demo_note": "Nada de lo que aparece en la demostración se guarda de verdad.",
+      "play": "Reproducir",
+      "pause": "Pausar",
+      "resume": "Continuar",
+      "step": "Siguiente paso",
+      "restart": "Reiniciar",
+      "close": "Cerrar",
+      "loading": "Preparando la demostración…",
+      "failed": "No se pudo preparar la demostración.",
+      "progress": "Paso {current} de {total}",
+      "ended": "Fin del tutorial.",
+      "skipped": "Se omitieron algunos pasos: no se aplican a su pantalla."
     }
   },
   "bi_editor": {
@@ -2835,7 +2857,8 @@
       "screen_help_placeholder": "Explique para qué sirve esta pantalla y cómo usarla. Déjelo en blanco para no mostrar el icono.",
       "zone_filter": "Filtro de búsqueda",
       "zone_grid": "Cuadrícula de datos",
-      "zone_form": "Formulario"
+      "zone_form": "Formulario",
+      "help_zone_tutorial": "Ayuda interactiva"
     },
     "personalizado": {
       "title": "Configuración del Orquestador de Casos de Uso",
@@ -5345,6 +5368,42 @@
     "title": "Centro de Ayuda",
     "unpublished": "los casos de uso aún no publicados no aparecen aquí (edítelos en el constructor)",
     "unsaved": "Cambios sin guardar",
-    "use_case": "Caso de uso"
+    "use_case": "Caso de uso",
+    "interactive": {
+      "title": "Ayuda interactiva",
+      "only_cadastro": "En esta versión la ayuda interactiva vale para casos de uso de registro con búsqueda.",
+      "hide": "Ocultar el icono ▶ (mantiene los guiones)",
+      "description": "El usuario ve al sistema ejecutar los pasos solo, en modo demostración (no se guarda nada). Genere el guion de cada acción y ajuste lo que quiera.",
+      "action_create": "Registrar",
+      "action_edit": "Editar",
+      "action_delete": "Eliminar",
+      "action_search": "Buscar",
+      "action_view": "Ver detalles",
+      "none": "no generado",
+      "fill_required": "Solo obligatorios",
+      "fill_all": "Todos los campos",
+      "edit_count": "Campos a modificar",
+      "regenerate": "Regenerar",
+      "generate": "Generar",
+      "remove": "Quitar",
+      "first_option": "primera opción de la lista",
+      "delete_step": "Borrar paso",
+      "step_click": "Hacer clic",
+      "step_type": "Escribir",
+      "step_select": "Elegir",
+      "step_check": "Marcar",
+      "step_note": "Observar",
+      "btn_new": "Nuevo Registro",
+      "btn_save": "Guardar Cambios",
+      "btn_back": "Volver a la Lista",
+      "btn_search": "Buscar",
+      "btn_clear": "Limpiar",
+      "btn_confirm": "Confirmar eliminación",
+      "btn_cancel": "Cancelar",
+      "row_view": "Ver (lupa)",
+      "row_edit": "Editar (lápiz)",
+      "row_delete": "Eliminar (papelera)",
+      "row": "Primera fila"
+    }
   }
 }

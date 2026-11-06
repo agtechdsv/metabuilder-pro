@@ -11,6 +11,7 @@ import { hasHelp } from '@/lib/helpText'
 import { draftLayoutOf, mergeHelpIntoLayout, patchComponentHelp } from '@/lib/helpPatch'
 import { HelpOverview } from './UseCaseBuilder/steps/StepLayout/special-layouts/HelpOverview'
 import { ScreenHelpField } from './UseCaseBuilder/steps/StepLayout/special-layouts/ScreenHelpField'
+import { InteractiveHelpEditor } from './InteractiveHelpEditor'
 
 interface Props {
   workspaceSlug: string
@@ -148,6 +149,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
           <ScreenHelpField config={config} setConfig={setConfig} t={t} />
           <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
+          <InteractiveHelpEditor config={config} setConfig={setConfig} models={models} view={view} t={t} />
 
           <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}
