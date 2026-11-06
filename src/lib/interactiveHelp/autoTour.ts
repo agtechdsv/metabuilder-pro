@@ -19,6 +19,8 @@ export interface TourFieldInfo extends SampleField {
   /** campo calculado: não se digita, só se observa */
   isVirtual?: boolean
   hidden?: boolean
+  /** campo de um modelo de DETALHE (aba como "Pedidos" dentro de "Clientes"): a v1 só ensina a aba principal */
+  isDetail?: boolean
   /** a ajuda do campo vira a legenda do passo */
   help?: HelpText
   /** id do campo "pai" em listas em cascata: o pai é preenchido antes */
@@ -77,7 +79,7 @@ const titleFor = (action: TourAction, screenName?: string): HelpText =>
 
 const isListLike = (f: TourFieldInfo) => /select|combo|dropdown|autocomplete|radio/i.test(f.component || '')
 const isCheck = (f: TourFieldInfo) => /checkbox|boolean|switch/i.test(f.component || '') || (f.dataType || '').toLowerCase() === 'boolean'
-const fillable = (f: TourFieldInfo) => !f.isPrimaryKey && !f.isVirtual && !f.readOnly && !f.hidden
+const fillable = (f: TourFieldInfo) => !f.isPrimaryKey && !f.isVirtual && !f.readOnly && !f.hidden && !f.isDetail
 
 /** Coloca cada campo "filho" logo depois do "pai" (listas em cascata), mantendo a ordem do formulário no resto. */
 function orderByDependency(fields: TourFieldInfo[]): TourFieldInfo[] {
@@ -161,7 +163,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     steps.push(btn('new'))
     const chosen = selectFillFields(input.formFields, fill, options.customFieldIds)
     for (const f of chosen) steps.push(fieldStep(f, sampleValue(f, options.today)))
-    for (const f of input.formFields.filter(x => x.isVirtual && !x.hidden)) {
+    for (const f of input.formFields.filter(x => x.isVirtual && !x.hidden && !x.isDetail)) {
       steps.push({ id: stepId(), kind: 'note', target: { type: 'field', ref: f.id }, caption: CALC_CAPTION(f.label), auto: true })
     }
     steps.push(btn('save'), btn('back'), result())

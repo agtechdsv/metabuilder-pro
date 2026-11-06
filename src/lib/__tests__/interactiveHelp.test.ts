@@ -246,3 +246,42 @@ describe('ordem, ocultar por roteiro e fila de reprodução', () => {
     expect(cfg.tours[0].hidden).toBe(true)
   })
 })
+
+describe('trocar preenchimento e quantidade (o que o editor faz agora ao mudar a caixa)', () => {
+  const campos = [pk, nome, cnpj, email, lat].map(c => ({ ...c, required: c.id === 'n' }))
+  const input = { formFields: campos }
+
+  it('de "só obrigatórios" para "todos os campos" o roteiro ganha os outros campos', () => {
+    const so = buildAutoTour(input, { action: 'create', fill: 'required', today: TODAY })
+    const todos = regenerateTour({ ...so, fill: 'all' }, input, { action: 'create', today: TODAY })
+    const digitados = (t: typeof so) => t.steps.filter(s => s.kind === 'type').map(s => (s.target as any).ref)
+    expect(digitados(so)).toEqual(['n'])
+    expect(digitados(todos)).toEqual(['n', 'c', 'e', 'la'])
+    expect(todos.fill).toBe('all')
+  })
+
+  it('de 2 para 5 campos a alterar, "editar" muda 5 campos (limitado ao que existe)', () => {
+    const mais = [...campos, f({ id: 'x1', column: 'a1', label: 'A1' }), f({ id: 'x2', column: 'a2', label: 'A2' }), f({ id: 'x3', column: 'a3', label: 'A3' })]
+    const dois = buildAutoTour({ formFields: mais }, { action: 'edit', today: TODAY })
+    const cinco = regenerateTour({ ...dois, editFieldCount: 5 }, { formFields: mais }, { action: 'edit', today: TODAY })
+    expect(dois.steps.filter(s => s.kind === 'type')).toHaveLength(2)
+    expect(cinco.steps.filter(s => s.kind === 'type')).toHaveLength(5)
+  })
+})
+
+describe('campos da aba de detalhe ficam fora do roteiro (v1)', () => {
+  it('campo de outro modelo e a observação de calculado dele não entram; o campo do modelo principal entra', async () => {
+    const { buildFieldInfos } = await import('../interactiveHelp/fieldInfo')
+    const models = [{ fields: [
+      { id: 'n', model_id: 'M', db_column_name: 'nome_empresa', display_name: 'Nome Empresa', data_type: 'text' },
+      { id: 'dp', model_id: 'D', db_column_name: 'data_pedido', display_name: 'Data Pedido', data_type: 'timestamp with time zone' },
+    ] }]
+    const lc = { form_fields: ['n', 'dp'], fields_metadata: { n: { content: { required: true } }, dp: { content: { required: true } } } }
+    const infos = buildFieldInfos(lc, models, 'form', 'M')
+    expect(infos.map(i => [i.id, i.isDetail])).toEqual([['n', false], ['dp', true]])
+    const tour = buildAutoTour({ formFields: infos }, { action: 'create', fill: 'all', today: TODAY })
+    expect(tour.steps.filter(s => s.kind === 'type').map(s => (s.target as any).ref)).toEqual(['n'])
+    // sem o modelo principal informado nada é tratado como detalhe (comportamento anterior)
+    expect(buildFieldInfos(lc, models, 'form').every(i => !i.isDetail)).toBe(true)
+  })
+})

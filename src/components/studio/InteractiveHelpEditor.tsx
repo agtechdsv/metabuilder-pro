@@ -14,7 +14,7 @@ interface Props {
   setConfig: (config: any) => void
   models: any[]
   /** o caso de uso escolhido (nome e tipo) */
-  view: { name?: string; logic_type?: string }
+  view: { name?: string; logic_type?: string; model_id?: string | null }
   t: (key: string, fallback?: string) => string
 }
 
@@ -32,10 +32,10 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
   const ih: InteractiveHelpConfig = useMemo(() => normalizeInteractiveHelp(lc.interactive_help), [lc.interactive_help])
 
   const input: AutoTourInput = useMemo(() => ({
-    formFields: buildFieldInfos(lc, models, 'form'),
-    filterFields: buildFieldInfos(lc, models, 'filter'),
-    gridFields: buildFieldInfos(lc, models, 'grid'),
-  }), [lc, models])
+    formFields: buildFieldInfos(lc, models, 'form', view.model_id),
+    filterFields: buildFieldInfos(lc, models, 'filter', view.model_id),
+    gridFields: buildFieldInfos(lc, models, 'grid', view.model_id),
+  }), [lc, models, view.model_id])
 
   const labelOf = useMemo(() => {
     const map = new Map<string, string>()
@@ -117,7 +117,7 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
                 <span className="text-[10px] text-neutral-400">{tour.steps.length} {t('runtime.tour.steps', 'passos')}</span>
 
                 {action === 'create' && (
-                  <select value={tour.fill} onChange={e => patchTour(tour, { fill: e.target.value as TourFill })} className="ml-auto text-[10px] font-bold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1">
+                  <select value={tour.fill} onChange={e => generate(action, { ...tour, fill: e.target.value as TourFill })} className="ml-auto text-[10px] font-bold rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1">
                     <option value="required">{t('help_center_studio.interactive.fill_required', 'Só obrigatórios')}</option>
                     <option value="all">{t('help_center_studio.interactive.fill_all', 'Todos os campos')}</option>
                   </select>
@@ -125,7 +125,7 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
                 {action === 'edit' && (
                   <label className="ml-auto flex items-center gap-1 text-[10px] font-bold text-neutral-500">
                     {t('help_center_studio.interactive.edit_count', 'Campos a alterar')}
-                    <input type="number" min={1} max={20} value={tour.editFieldCount ?? 2} onChange={e => patchTour(tour, { editFieldCount: Math.max(1, Number(e.target.value) || 1) })} className="w-12 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-1.5 py-0.5" />
+                    <input type="number" min={1} max={20} value={tour.editFieldCount ?? 2} onChange={e => generate(action, { ...tour, editFieldCount: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} className="w-12 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-1.5 py-0.5" />
                   </label>
                 )}
 

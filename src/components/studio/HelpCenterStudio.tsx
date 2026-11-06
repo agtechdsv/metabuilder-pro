@@ -67,7 +67,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
     const lcIds = ['form_fields', 'grid_fields', 'filter_fields'].flatMap(k => (Array.isArray(v.layout_config?.[k]) ? v.layout_config[k] : []))
       .map((f: any) => (typeof f === 'string' ? f : f?.id)).filter((x: any) => typeof x === 'string' && x && !x.startsWith('virt_') && !x.startsWith('byoc_'))
     if (lcIds.length) {
-      void supabase.from('fields').select('id, db_column_name, display_name, data_type, is_primary_key').in('id', Array.from(new Set(lcIds)))
+      void supabase.from('fields').select('id, model_id, db_column_name, display_name, data_type, is_primary_key').in('id', Array.from(new Set(lcIds)))
         .then(({ data }: any) => { if (selectedRef.current === id) setFieldRows(data || []) })
     }
     const layout = JSON.parse(JSON.stringify(v.layout_config || {}))

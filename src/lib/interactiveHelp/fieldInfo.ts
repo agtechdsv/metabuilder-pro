@@ -19,7 +19,8 @@ function findModelField(models: any[], fieldId: string): any | undefined {
   return undefined
 }
 
-export function buildFieldInfos(layoutConfig: any, models: any[], zone: TourZone): TourFieldInfo[] {
+/** `masterModelId`: modelo do caso de uso; campos de OUTRO modelo são de aba de detalhe (ficam fora do roteiro na v1). */
+export function buildFieldInfos(layoutConfig: any, models: any[], zone: TourZone, masterModelId?: string | null): TourFieldInfo[] {
   const lc = layoutConfig || {}
   const meta: Record<string, any> = lc.fields_metadata || {}
   const ids = idsOf(lc[`${zone}_fields`])
@@ -41,6 +42,7 @@ export function buildFieldInfos(layoutConfig: any, models: any[], zone: TourZone
       required: entry.content?.required === true,
       readOnly: entry.content?.readonly === true || entry.content?.read_only === true || entry.readOnly === true,
       isPrimaryKey: !!mf?.is_primary_key,
+      isDetail: !!masterModelId && !!mf?.model_id && mf.model_id !== masterModelId,
       isVirtual,
       hidden: entry.hidden === true || id.startsWith('byoc_'),
       help: hasHelp,

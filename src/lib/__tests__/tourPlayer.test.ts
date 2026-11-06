@@ -107,3 +107,15 @@ describe('player da Ajuda Interativa', () => {
     expect(p.snapshot.state).toBe('ended')
   })
 })
+
+describe('passo de observação cujo elemento não existe', () => {
+  it('espera pouco (não os 2,5 s de um clique), para não arrastar o tutorial', async () => {
+    const timeouts: Record<string, number> = {}
+    const { adapter } = fakeAdapter()
+    const spy: PlayerAdapter = { ...adapter, find: async (s, ms) => { timeouts[s.id] = ms; return null } }
+    const p = new TourPlayer(tour([step('click1', 'click', { target }), step('note1', 'note', { target: { type: 'field', ref: 'x' } })]), spy, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(20_000)
+    expect(timeouts.click1).toBe(2500)
+    expect(timeouts.note1).toBe(600)
+  })
+})

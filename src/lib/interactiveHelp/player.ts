@@ -43,7 +43,7 @@ export interface PlayerOptions {
 }
 
 // tempos base em ms, multiplicados pelo fator da velocidade
-const BASE = { travel: 650, afterClick: 700, between: 350, perChar: 70, find: 2500, readMin: 700, readPerChar: 28, readMax: 4500 }
+const BASE = { noteFind: 600, travel: 650, afterClick: 700, between: 350, perChar: 70, find: 2500, readMin: 700, readPerChar: 28, readMax: 4500 }
 const SLICE = 40
 
 export class TourPlayer {
@@ -131,7 +131,7 @@ export class TourPlayer {
     this.caption = caption
     let el: unknown | null = null
     if (step.target) {
-      el = await this.adapter.find(step, BASE.find)
+      el = await this.adapter.find(step, step.kind === 'note' ? BASE.noteFind : BASE.find)
       if (this.cancelled) return
       if (!el) { this.skipped++; this.emit(); return } // não existe nesta tela (oculto, sem permissão...): segue sem travar
     }

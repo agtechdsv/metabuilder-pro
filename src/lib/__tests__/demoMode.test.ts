@@ -154,3 +154,38 @@ describe('exclusão em cascata (o caso do tutorial "Excluir" em Clientes)', () =
     expect(demoStore.synthetic('clientes')).toHaveLength(1)
   })
 })
+
+describe('cache da lista no modo demonstração (sessionStorage é compartilhado com o app)', () => {
+  const store: Record<string, string> = {}
+  const fake = { getItem: (k: string) => (k in store ? store[k] : null), setItem: (k: string, v: string) => { store[k] = v }, removeItem: (k: string) => { delete store[k] }, key: (i: number) => Object.keys(store)[i] ?? null, get length() { return Object.keys(store).length } }
+
+  beforeEach(() => {
+    for (const k of Object.keys(store)) delete store[k]
+    vi.stubGlobal('window', {})
+    vi.stubGlobal('sessionStorage', fake)
+  })
+
+  it('fora da demonstração o cache funciona como sempre', async () => {
+    const { getCachedData, setCachedData } = await import('../viewCache')
+    __setDemoModeForTests(false)
+    setCachedData('p:clientes', [{ id: 1 }])
+    expect(getCachedData('p:clientes')).toEqual([{ id: 1 }])
+    __setDemoModeForTests(null)
+  })
+
+  it('na demonstração NÃO lê o cache real (começaria com as linhas reais antes da linha de exemplo)', async () => {
+    const { getCachedData } = await import('../viewCache')
+    store['metabuilder_cache_p:clientes'] = JSON.stringify([{ id: 1 }, { id: 2 }, { id: 3 }])
+    __setDemoModeForTests(true)
+    expect(getCachedData('p:clientes')).toBeNull()
+    __setDemoModeForTests(null)
+  })
+
+  it('na demonstração NÃO grava no cache (poluiria a lista do app real com as linhas de exemplo)', async () => {
+    const { setCachedData } = await import('../viewCache')
+    __setDemoModeForTests(true)
+    setCachedData('p:clientes', [{ id: 'demo-seed-1' }])
+    expect(Object.keys(store)).toEqual([])
+    __setDemoModeForTests(null)
+  })
+})
