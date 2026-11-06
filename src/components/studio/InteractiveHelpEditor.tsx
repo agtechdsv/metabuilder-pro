@@ -28,7 +28,21 @@ const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'S
  * aparecem e rodam, revisa os passos (muda o valor digitado, reordena, apaga), liga/desliga cada roteiro e salva junto com a ajuda,
  * sem republicar. v1: só casos de uso de cadastro com pesquisa.
  */
-export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Props) {
+export function InteractiveHelpEditor(props: Props) {
+  // o conteúdo real fica em outro componente: assim a troca entre um caso de uso de cadastro e outro tipo não muda a quantidade de hooks (erro #310)
+  const { view, t } = props
+  if (view.logic_type !== 'pesquisa_cadastro') {
+    return (
+      <div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 p-4 text-xs text-neutral-500">
+        <span className="flex items-center gap-2 font-black uppercase tracking-widest text-[10px] text-neutral-400"><PlayCircle className="w-4 h-4" />{t('help_center_studio.interactive.title', 'Ajuda interativa')}</span>
+        <p className="mt-2">{t('help_center_studio.interactive.only_cadastro', 'Nesta versão a ajuda interativa vale para casos de uso de cadastro com pesquisa.')}</p>
+      </div>
+    )
+  }
+  return <InteractiveHelpEditorBody {...props} />
+}
+
+function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props) {
   const [openTour, setOpenTour] = useState<string | null>(null)
   const lc = config.layout_config || {}
   const ih: InteractiveHelpConfig = useMemo(() => normalizeInteractiveHelp(lc.interactive_help), [lc.interactive_help])
@@ -56,15 +70,6 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
   }
   const moveTour = (index: number, delta: -1 | 1) => save({ ...ih, tours: moveItem(ih.tours, index, delta) })
   const actionName = (a: TourAction) => t(`help_center_studio.interactive.action_${a}`, ACTION_FALLBACK[a])
-
-  if (view.logic_type !== 'pesquisa_cadastro') {
-    return (
-      <div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 p-4 text-xs text-neutral-500">
-        <span className="flex items-center gap-2 font-black uppercase tracking-widest text-[10px] text-neutral-400"><PlayCircle className="w-4 h-4" />{t('help_center_studio.interactive.title', 'Ajuda interativa')}</span>
-        <p className="mt-2">{t('help_center_studio.interactive.only_cadastro', 'Nesta versão a ajuda interativa vale para casos de uso de cadastro com pesquisa.')}</p>
-      </div>
-    )
-  }
 
   const generate = (action: TourAction, previous?: Tour) => {
     const opts = { action, screenName: view.name, layoutConfig: lc }
