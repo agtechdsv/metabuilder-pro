@@ -7,6 +7,7 @@ import { resolveHelp } from '@/lib/helpText'
 import { encodeDemoSeed, isDemoMode } from '@/lib/demo/demoMode'
 import { createDomAdapter, type DomAdapter } from '@/lib/interactiveHelp/domAdapter'
 import { buildQueue, shortTitle, toggleId } from '@/lib/interactiveHelp/order'
+import { browserStorage, clearSeen, markSeen, readSeen, seenStorageKey, unseenTours } from '@/lib/interactiveHelp/seen'
 import { estimateQueueMs, estimateTourMs, formatDuration, TourPlayer, TRANSITION_SECONDS, type PlayerSnapshot } from '@/lib/interactiveHelp/player'
 import { hasInteractiveHelp, visibleTours, type Tour, type TourSpeed } from '@/lib/interactiveHelp/types'
 import { cn } from '@/lib/utils'
@@ -68,6 +69,11 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const [failed, setFailed] = useState(false)
   const [snap, setSnap] = useState<PlayerSnapshot | null>(null)
 
+  // tutoriais já vistos (só neste navegador): ✓ nos cartões, progresso e "Continuar de onde parei"
+  const storage = useMemo(() => browserStorage(), [])
+  const seenKey = seenStorageKey(projectId, viewId)
+  const [seen, setSeen] = useState<string[]>(() => readSeen(browserStorage(), seenStorageKey(projectId, viewId)))
+
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<TourPlayer | null>(null)
@@ -77,6 +83,12 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
 
   const tour: Tour | undefined = queue[qIndex]
   const isLastInQueue = qIndex >= queue.length - 1
+
+  // terminou um tutorial: fica marcado como visto
+  const tourId = tour?.id
+  useEffect(() => {
+    if (stage === 'play' && snap?.state === 'ended' && tourId) setSeen(prev => markSeen(storage, seenKey, tourId, prev))
+  }, [stage, snap?.state, tourId, storage, seenKey])
 
   // a página da demonstração é a própria tela, aberta no modo demonstração, já com a linha sintética (se o roteiro precisar)
   const src = useMemo(() => {
@@ -190,6 +202,9 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
   const selectedMs = estimateQueueMs(selectedQueue, speed, language)
   const allMs = estimateQueueMs(tours, speed, language)
   const about = (ms: number) => t('runtime.tour.about', 'cerca de {time}').replace('{time}', formatDuration(ms))
+  const seenCount = tours.filter(x => seen.includes(x.id)).length
+  const unseen = unseenTours(tours, seen)
+  const partial = seenCount > 0 && unseen.length > 0
 
   // teclado: setas andam entre os cartões, Enter reproduz o cartão, Espaço marca/desmarca (nativo do botão)
   const onCardKey = (x: Tour) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -229,11 +244,33 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                     {screenName ? t('runtime.tour.full_tour_named', 'Tour completo: {name}').replace('{name}', screenName) : t('runtime.tour.full_tour', 'Tour completo')}
                   </p>
                   <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80">{tours.length} {tours.length === 1 ? t('runtime.tour.tutorial', 'tutorial') : t('runtime.tour.tutorials', 'tutoriais')} · {about(allMs)}</p>
+                  {seenCount > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="h-1.5 w-32 overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-900/60">
+                        <span className="block h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.round((seenCount / tours.length) * 100)}%` }} />
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                        {t('runtime.tour.seen_progress', '{seen} de {total} vistos').replace('{seen}', String(seenCount)).replace('{total}', String(tours.length))}
+                      </span>
+                      <button type="button" onClick={() => { clearSeen(storage, seenKey); setSeen([]) }} className="text-[11px] text-indigo-600 underline hover:no-underline">
+                        {t('runtime.tour.reset_progress', 'Zerar progresso')}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button type="button" onClick={() => startQueue(buildQueue(tours))} disabled={tours.length === 0}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black tracking-wide text-white hover:bg-indigo-500 disabled:opacity-40">
-                  <Play className="h-4 w-4" /> {t('runtime.tour.play_all', 'Reproduzir todos')}
-                </button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {partial && (
+                    <button type="button" onClick={() => startQueue(unseen)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black tracking-wide text-white hover:bg-indigo-500">
+                      <Play className="h-4 w-4" /> {t('runtime.tour.continue', 'Continuar de onde parei')} ({unseen.length})
+                    </button>
+                  )}
+                  <button type="button" onClick={() => startQueue(buildQueue(tours))} disabled={tours.length === 0}
+                    className={cn('inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black tracking-wide disabled:opacity-40',
+                      partial ? 'border border-indigo-300 text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:hover:bg-indigo-950/60' : 'bg-indigo-600 text-white hover:bg-indigo-500')}>
+                    {partial ? <ListVideo className="h-4 w-4" /> : <Play className="h-4 w-4" />} {t('runtime.tour.play_all', 'Reproduzir todos')}
+                  </button>
+                </div>
               </div>
 
               <div ref={gridRef} role="group" aria-label={t('runtime.tour.choose', 'Escolha o que você quer ver')} className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
@@ -262,7 +299,10 @@ function InteractiveHelpModal({ config, projectId, viewId, modelName, primaryKey
                         </span>
                         <span className={cn('text-sm font-black', on ? 'text-indigo-700 dark:text-indigo-300' : 'text-neutral-900 dark:text-white')}>{title}</span>
                         {summary && <span className={cn('text-xs leading-snug', on ? 'text-indigo-700/90 dark:text-indigo-300/90' : 'text-neutral-500')}>{summary}</span>}
-                        <span className="mt-auto pt-1 text-[11px] text-neutral-400">{x.steps.length} {t('runtime.tour.steps', 'passos')} · {formatDuration(estimateTourMs(x, speed, language))}</span>
+                        <span className="mt-auto flex items-center gap-2 pt-1 text-[11px] text-neutral-400">
+                          <span>{x.steps.length} {t('runtime.tour.steps', 'passos')} · {formatDuration(estimateTourMs(x, speed, language))}</span>
+                          {seen.includes(x.id) && <span className="inline-flex items-center gap-0.5 font-bold text-emerald-600 dark:text-emerald-400"><Check className="h-3 w-3" />{t('runtime.tour.seen', 'Visto')}</span>}
+                        </span>
                       </button>
                       <button type="button" onClick={() => startQueue([x])} title={rowPlay} aria-label={`${rowPlay}: ${title}`}
                         className="absolute bottom-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-950/60">

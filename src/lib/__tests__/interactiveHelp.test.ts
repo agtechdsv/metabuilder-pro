@@ -352,3 +352,78 @@ describe('cartão do tutorial: resumo, duração e título curto', () => {
     expect(shortTitle(': só o fim')).toBe(': só o fim')
   })
 })
+
+describe('tutoriais já vistos (só no navegador)', () => {
+  const makeStorage = (initial: Record<string, string> = {}) => {
+    const data: Record<string, string> = { ...initial }
+    return { data, getItem: (k: string) => (k in data ? data[k] : null), setItem: (k: string, v: string) => { data[k] = v }, removeItem: (k: string) => { delete data[k] } }
+  }
+
+  it('a chave é por projeto e por tela', async () => {
+    const { seenStorageKey } = await import('../interactiveHelp/seen')
+    expect(seenStorageKey('p1', 'v1')).toBe('mb_tour_seen:p1:v1')
+    expect(seenStorageKey('p1', 'v2')).not.toBe(seenStorageKey('p1', 'v1'))
+    expect(seenStorageKey()).toBe('mb_tour_seen:-:-')
+  })
+
+  it('marca como visto sem duplicar e lê de volta', async () => {
+    const { markSeen, readSeen } = await import('../interactiveHelp/seen')
+    const st = makeStorage()
+    expect(markSeen(st, 'k', 'a')).toEqual(['a'])
+    expect(markSeen(st, 'k', 'b')).toEqual(['a', 'b'])
+    expect(markSeen(st, 'k', 'a')).toEqual(['a', 'b'])
+    expect(readSeen(st, 'k')).toEqual(['a', 'b'])
+  })
+
+  it('zerar o progresso apaga só o desta tela', async () => {
+    const { clearSeen, markSeen, readSeen } = await import('../interactiveHelp/seen')
+    const st = makeStorage()
+    markSeen(st, 'k1', 'a'); markSeen(st, 'k2', 'z')
+    clearSeen(st, 'k1')
+    expect(readSeen(st, 'k1')).toEqual([])
+    expect(readSeen(st, 'k2')).toEqual(['z'])
+  })
+
+  it('valor guardado estranho, sem armazenamento ou armazenamento que lança: nunca derruba a tela', async () => {
+    const { markSeen, readSeen, clearSeen } = await import('../interactiveHelp/seen')
+    expect(readSeen(makeStorage({ k: 'não é json' }), 'k')).toEqual([])
+    expect(readSeen(makeStorage({ k: '{"a":1}' }), 'k')).toEqual([])
+    expect(readSeen(makeStorage({ k: '["a", 7, null, "b"]' }), 'k')).toEqual(['a', 'b'])
+    expect(readSeen(null, 'k')).toEqual([])
+    expect(markSeen(null, 'k', 'a')).toEqual(['a']) // vale para a sessão da tela mesmo sem armazenamento
+    const quebrado = { getItem: () => { throw new Error('bloqueado') }, setItem: () => { throw new Error('cheio') }, removeItem: () => { throw new Error('x') } }
+    expect(readSeen(quebrado, 'k')).toEqual([])
+    expect(markSeen(quebrado, 'k', 'a', ['b'])).toEqual(['b', 'a'])
+    expect(() => clearSeen(quebrado, 'k')).not.toThrow()
+  })
+
+  it('"continuar de onde parei" são os que faltam, na ordem do dev', async () => {
+    const { unseenTours } = await import('../interactiveHelp/seen')
+    const tours = [{ id: 'search' }, { id: 'view' }, { id: 'create' }, { id: 'edit' }]
+    expect(unseenTours(tours, ['view', 'create']).map(t => t.id)).toEqual(['search', 'edit'])
+    expect(unseenTours(tours, [])).toHaveLength(4)
+    expect(unseenTours(tours, ['search', 'view', 'create', 'edit'])).toEqual([])
+  })
+})
+
+describe('frase do cartão editada pelo dev', () => {
+  const input = { formFields: [pk, nome, email], filterFields: [nome] }
+
+  it('a frase escrita pelo dev sobrevive a regenerar; a automática é refeita', () => {
+    const tour = buildAutoTour(input, { action: 'create', fill: 'all', today: TODAY })
+    const minha = { pt: 'Meu texto', en: 'My text' }
+    const custom = { ...tour, summary: minha, summaryCustom: true }
+    const again = regenerateTour(custom, { formFields: [pk, nome] }, { action: 'create', today: TODAY })
+    expect(again.summary).toEqual(minha)
+    expect(again.summaryCustom).toBe(true)
+    // sem marca de "escrita pelo dev", regenerar atualiza a frase com a contagem nova
+    const auto = regenerateTour(tour, { formFields: [pk, nome] }, { action: 'create', fill: 'all', today: TODAY })
+    expect(auto.summary?.pt).toBe('Preenche 1 campo e salva um novo registro.')
+    expect(auto.summaryCustom).toBeUndefined()
+  })
+
+  it('a marca "escrita pelo dev" vai e volta do banco', () => {
+    const cfg = normalizeInteractiveHelp({ tours: [{ id: 'x', action: 'view', summary: { pt: 'oi' }, summaryCustom: true, steps: [{ id: 's', kind: 'click' }] }] })
+    expect(cfg.tours[0]).toMatchObject({ summary: { pt: 'oi' }, summaryCustom: true })
+  })
+})

@@ -225,5 +225,14 @@ export function regenerateTour(previous: Tour, input: AutoTourInput, options: Au
     const key = s.target && 'ref' in s.target ? `${s.kind}:${s.target.type}:${s.target.ref}` : ''
     return key && keep.has(key) ? { ...s, value: keep.get(key), edited: true } : s
   })
-  return { ...fresh, id: previous.id, title: previous.title, hidden: previous.hidden, steps: [...steps, ...manual] }
+  const keepPhrase = previous.summaryCustom === true && !!previous.summary
+  return {
+    ...fresh,
+    id: previous.id,
+    title: previous.title,
+    hidden: previous.hidden,
+    summary: keepPhrase ? previous.summary : fresh.summary,
+    summaryCustom: keepPhrase ? true : undefined,
+    steps: [...steps, ...manual],
+  }
 }

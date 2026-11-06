@@ -1263,7 +1263,11 @@
       "summary_view": "Opens a record in read-only mode.",
       "summary_create": "Fills in the fields and saves a new record.",
       "summary_edit": "Changes fields of a record and saves.",
-      "summary_delete": "Deletes a record, with confirmation."
+      "summary_delete": "Deletes a record, with confirmation.",
+      "seen": "Watched",
+      "seen_progress": "{seen} of {total} watched",
+      "continue": "Continue where I left off",
+      "reset_progress": "Reset progress"
     }
   },
   "bi_editor": {
@@ -5359,7 +5363,10 @@
       "hidden_hint": "Hidden: not shown to the user, but the script is kept.",
       "not_generated": "Not generated yet",
       "order_hint": "The order of this list is the order the user sees and the one \"Play all\" follows.",
-      "use_suggested_order": "Use the suggested order (search, view, register, edit, delete)"
+      "use_suggested_order": "Use the suggested order (search, view, register, edit, delete)",
+      "card_phrase": "Card phrase (what the user reads when choosing)",
+      "card_phrase_auto": "Use the automatic phrase",
+      "card_phrase_placeholder": "A short phrase about what this tutorial teaches."
     }
   }
 }

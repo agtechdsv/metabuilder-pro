@@ -1350,7 +1350,11 @@
       "summary_view": "Abre un registro solo de lectura.",
       "summary_create": "Completa los campos y guarda un nuevo registro.",
       "summary_edit": "Modifica campos de un registro y guarda.",
-      "summary_delete": "Elimina un registro, con confirmación."
+      "summary_delete": "Elimina un registro, con confirmación.",
+      "seen": "Visto",
+      "seen_progress": "{seen} de {total} vistos",
+      "continue": "Continuar donde lo dejé",
+      "reset_progress": "Reiniciar progreso"
     }
   },
   "bi_editor": {
@@ -5447,7 +5451,10 @@
       "hidden_hint": "Oculto: no aparece al usuario, pero el guion se conserva.",
       "not_generated": "Aún no generadas",
       "order_hint": "El orden de esta lista es el orden en que el usuario la ve y el que sigue \"Reproducir todos\".",
-      "use_suggested_order": "Usar el orden sugerido (buscar, ver, registrar, editar, eliminar)"
+      "use_suggested_order": "Usar el orden sugerido (buscar, ver, registrar, editar, eliminar)",
+      "card_phrase": "Frase de la tarjeta (lo que el usuario lee al elegir)",
+      "card_phrase_auto": "Usar la frase automática",
+      "card_phrase_placeholder": "Una frase corta de lo que enseña este tutorial."
     }
   }
 }

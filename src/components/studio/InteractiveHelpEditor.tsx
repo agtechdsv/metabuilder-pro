@@ -7,6 +7,7 @@ import { resolveHelp } from '@/lib/helpText'
 import { buildAutoTour, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
 import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
+import { HelpTextEditor } from './UseCaseBuilder/steps/HelpTextEditor'
 import { normalizeInteractiveHelp, TOUR_ACTIONS, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
@@ -151,7 +152,24 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
               </div>
 
               {opened && (
-                <ol className="space-y-1 border-t border-neutral-100 dark:border-neutral-800 px-3 py-2">
+                <div className="border-t border-neutral-100 dark:border-neutral-800">
+                <div className="space-y-1.5 px-3 pt-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.interactive.card_phrase', 'Frase do cartão (o que o usuário lê ao escolher)')}</span>
+                    {tour.summaryCustom && (
+                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
+                        {t('help_center_studio.interactive.card_phrase_auto', 'Usar a frase automática')}
+                      </button>
+                    )}
+                  </div>
+                  <HelpTextEditor
+                    value={tour.summary}
+                    rows={2}
+                    placeholder={t('help_center_studio.interactive.card_phrase_placeholder', 'Uma frase curta do que este tutorial ensina.')}
+                    onChange={v => patchTour(tour, { summary: v, summaryCustom: true })}
+                  />
+                </div>
+                <ol className="space-y-1 px-3 py-2">
                   {tour.steps.map((s, i) => (
                     <li key={s.id} className="flex items-start gap-2 text-[11px]">
                       <span className="flex shrink-0 flex-col">
@@ -170,6 +188,7 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
                     </li>
                   ))}
                 </ol>
+                </div>
               )}
             </li>
           )
