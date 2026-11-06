@@ -147,6 +147,8 @@ export const TOUR_ACTIONS_BY_TYPE: Record<string, readonly TourAction[]> = {
   timeline: ['view', 'create', 'edit', 'delete'],
   gantt: ['view', 'create', 'edit', 'delete'],
   map: ['view', 'create', 'edit', 'delete'],
+  mapa_mental: ['view', 'create', 'edit', 'delete'],
+  blueprint: ['view', 'create', 'edit', 'delete'],
   galeria: ['view', 'create', 'edit', 'delete'],
 }
 

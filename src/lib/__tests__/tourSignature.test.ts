@@ -166,7 +166,7 @@ describe('ajuda interativa de Kanban, agenda e BI', () => {
     expect([...tourActionsFor('kanban')]).toEqual(['create', 'edit', 'move', 'delete'])
     expect([...tourActionsFor('scheduler')]).toEqual(['create', 'edit', 'delete'])
     expect([...tourActionsFor('analytics')]).toEqual(['search'])
-    expect(supportsInteractiveHelp('mapa_mental')).toBe(false)
+    expect(supportsInteractiveHelp('personalizado')).toBe(false)
   })
 
   it('Kanban: cria pelo + da coluna, edita pelo lápis, exclui pela lixeira e arrasta para outra coluna', () => {
@@ -258,4 +258,19 @@ describe('ajuda interativa de Gantt e Mapa', () => {
     expect(shape(buildAutoTour(input, { action: 'edit', viewType: 'map' })).slice(0, 3)).toEqual(['click:button:map-cluster?', 'click:button:map-marker', 'click:button:item-edit'])
     expect(shape(buildAutoTour(input, { action: 'create', viewType: 'map' }))[0]).toBe('click:button:new')
   })
+})
+
+describe('ajuda interativa de Mapa Mental e Fluxograma', () => {
+  const input: any = { formFields: [{ id: 'titulo', label: 'titulo', column: 'titulo', type: 'text', dataType: 'text', required: true }], filterFields: [], gridFields: [] }
+  const shape = (t: any) => t.steps.map((s: any) => `${s.kind}:${s.target?.type ?? '-'}:${s.target?.ref ?? '-'}`)
+  for (const vt of ['mapa_mental', 'blueprint']) {
+    it(`${vt}: cadastrar pelo Novo Registro e ver/editar/excluir pelos ícones do nó`, async () => {
+      const { tourActionsFor } = await import('../interactiveHelp/types')
+      expect([...tourActionsFor(vt)]).toEqual(['view', 'create', 'edit', 'delete'])
+      expect(shape(buildAutoTour(input, { action: 'create', viewType: vt }))[0]).toBe('click:button:new')
+      expect(shape(buildAutoTour(input, { action: 'view', viewType: vt }))[0]).toBe('click:button:item-view')
+      expect(shape(buildAutoTour(input, { action: 'edit', viewType: vt }))[0]).toBe('click:button:item-edit')
+      expect(shape(buildAutoTour(input, { action: 'delete', viewType: vt }))[0]).toBe('click:button:item-delete')
+    })
+  }
 })

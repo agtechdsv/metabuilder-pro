@@ -293,7 +293,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
 
   const seedFields = [...input.formFields, ...(input.gridFields || [])]
 
-  if (vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map') {
+  if (vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map' || vt === 'mapa_mental' || vt === 'blueprint') {
     // linha do tempo e galeria: o Novo Registro do cabeçalho e os ícones do item abrem o MESMO formulário (em janela); sem linha de exemplo, usa o primeiro item real
     const formFieldsUsable = input.formFields.filter(f => !(options.excludeFieldIds || []).includes(f.id))
     // mapa: os ícones de ver/editar/excluir ficam no balão do marcador, então o primeiro passo é abrir o marcador (antes, aproxima um agrupamento, se houver)
@@ -386,9 +386,9 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     summary: buildSummary(action, steps, action === 'search' ? (input.filterFields || []).filter(f => !f.hidden)[0]?.label : undefined),
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra
-    seed: vt === 'kanban' || vt === 'analytics' || vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
+    seed: vt === 'kanban' || vt === 'analytics' || vt === 'timeline' || vt === 'galeria' || vt === 'gantt' || vt === 'map' || vt === 'mapa_mental' || vt === 'blueprint' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
     seedToday: vt === 'scheduler' && action !== 'create' ? options.schedulerSeed?.seedToday : undefined,
-    seedDetails: !typed && vt !== 'analytics' && vt !== 'timeline' && vt !== 'galeria' && vt !== 'gantt' && vt !== 'map' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
+    seedDetails: !typed && vt !== 'analytics' && vt !== 'timeline' && vt !== 'galeria' && vt !== 'gantt' && vt !== 'map' && vt !== 'mapa_mental' && vt !== 'blueprint' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
   }
 }
 

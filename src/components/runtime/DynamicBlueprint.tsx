@@ -128,9 +128,9 @@ const BlueprintNode = memo(({ data, selected }: NodeProps) => {
           transformOrigin: 'left center'
         }}
       >
-        <button onClick={(e) => { e.stopPropagation(); onView?.(rawData); }} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-500" title="Visualizar"><Eye className="w-4 h-4" /></button>
+        <button data-tour="item-view" onClick={(e) => { e.stopPropagation(); onView?.(rawData); }} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-500" title="Visualizar"><Eye className="w-4 h-4" /></button>
         <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
-        <button onClick={(e) => { e.stopPropagation(); onEdit?.(rawData); }} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-500" title="Editar"><Pencil className="w-4 h-4" /></button>
+        <button data-tour="item-edit" onClick={(e) => { e.stopPropagation(); onEdit?.(rawData); }} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-indigo-500" title="Editar"><Pencil className="w-4 h-4" /></button>
         <div className="h-px bg-neutral-200 dark:bg-neutral-800" />
         {customActions.filter((a: any) => (a.contexts ? (Array.isArray(a.contexts) ? a.contexts : [a.contexts]) : [a.context]).includes('row')).map((action: any) => {
           const colors = getActionColorClasses(action.color)
@@ -147,7 +147,7 @@ const BlueprintNode = memo(({ data, selected }: NodeProps) => {
             </React.Fragment>
           )
         })}
-        <button onClick={(e) => { e.stopPropagation(); onDelete?.(rawData); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-neutral-400 hover:text-red-500" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+        <button data-tour="item-delete" onClick={(e) => { e.stopPropagation(); onDelete?.(rawData); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-neutral-400 hover:text-red-500" title="Excluir"><Trash2 className="w-4 h-4" /></button>
       </div>
     </div>
   )
