@@ -330,7 +330,7 @@ export default function DynamicGallery({
                   >
                     {canView && (
                       <button 
-                        onClick={() => onView?.(asset.raw)}
+                        data-tour="item-view" onClick={() => onView?.(asset.raw)}
                         className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-indigo-500 transition-colors shadow-sm"
                         title="Ver Detalhes"
                       >
@@ -339,7 +339,7 @@ export default function DynamicGallery({
                     )}
                     {canEdit && (
                       <button 
-                        onClick={() => onEdit?.(asset.raw)}
+                        data-tour="item-edit" onClick={() => onEdit?.(asset.raw)}
                         className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-rose-500 transition-colors shadow-sm"
                         title="Editar"
                       >
@@ -348,7 +348,7 @@ export default function DynamicGallery({
                     )}
                     {canDelete && (
                       <button 
-                        onClick={() => onDelete?.(asset.raw)}
+                        data-tour="item-delete" onClick={() => onDelete?.(asset.raw)}
                         className="p-1.5 rounded-lg bg-white/90 dark:bg-neutral-950/90 text-neutral-500 dark:text-neutral-400 hover:text-red-500 transition-colors shadow-sm"
                         title="Excluir"
                       >

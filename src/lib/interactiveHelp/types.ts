@@ -15,7 +15,7 @@ export type TourSpeed = 'slow' | 'normal' | 'fast'
 export const SPEED_FACTOR: Record<TourSpeed, number> = { slow: 2, normal: 1, fast: 0.4 }
 
 /** Botões fixos da tela, identificados pelo atributo `data-tour` */
-export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'kanban-add' | 'kanban-edit' | 'kanban-delete' | 'kanban-card' | 'scheduler-add' | 'scheduler-event' | 'scheduler-delete' | 'widget' | 'widget-expand' | 'widget-collapse'
+export type TourButtonRef = 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel' | 'kanban-add' | 'kanban-edit' | 'kanban-delete' | 'kanban-card' | 'scheduler-add' | 'scheduler-event' | 'scheduler-delete' | 'widget' | 'item-view' | 'item-edit' | 'item-delete' | 'widget-expand' | 'widget-collapse'
 export type TourRowAction = 'view' | 'edit' | 'delete'
 
 export type TourTarget =
@@ -142,6 +142,8 @@ export const TOUR_ACTIONS_BY_TYPE: Record<string, readonly TourAction[]> = {
   analytics: ['search'],
   kanban: ['create', 'edit', 'move', 'delete'],
   scheduler: ['create', 'edit', 'delete'],
+  timeline: ['view', 'create', 'edit', 'delete'],
+  galeria: ['view', 'create', 'edit', 'delete'],
 }
 
 export const supportsInteractiveHelp = (logicType?: string): boolean => !!logicType && logicType in TOUR_ACTIONS_BY_TYPE

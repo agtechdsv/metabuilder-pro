@@ -5396,7 +5396,10 @@
       "btn_widget": "Gráficos do painel",
       "option_text": "Opção a escolher, pelo texto (vazio = a primeira da lista)",
       "btn_widget-expand": "Ampliar gráfico (lupa)",
-      "btn_widget-collapse": "Recolher gráfico"
+      "btn_widget-collapse": "Recolher gráfico",
+      "btn_item-view": "Ver item (lupa)",
+      "btn_item-edit": "Editar item",
+      "btn_item-delete": "Excluir item"
     }
   }
 }

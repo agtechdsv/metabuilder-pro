@@ -5484,7 +5484,10 @@
       "btn_widget": "Gráficos del panel",
       "option_text": "Opción a elegir, por su texto (vacío = la primera de la lista)",
       "btn_widget-expand": "Ampliar gráfico (lupa)",
-      "btn_widget-collapse": "Contraer gráfico"
+      "btn_widget-collapse": "Contraer gráfico",
+      "btn_item-view": "Ver ítem (lupa)",
+      "btn_item-edit": "Editar ítem",
+      "btn_item-delete": "Eliminar ítem"
     }
   }
 }

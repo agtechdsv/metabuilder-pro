@@ -176,7 +176,7 @@ export default function DynamicTimeline({
       >
         {onView && (
           <button 
-            onClick={() => onView(item)} 
+            data-tour="item-view" onClick={() => onView(item)} 
             className="bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg transition-all shadow-sm"
             style={{ padding: `${scale * 6}px` }}
           >
@@ -185,7 +185,7 @@ export default function DynamicTimeline({
         )}
         {onEdit && (
           <button 
-            onClick={() => onEdit(item)} 
+            data-tour="item-edit" onClick={() => onEdit(item)} 
             className="bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 rounded-lg transition-all shadow-sm"
             style={{ padding: `${scale * 6}px` }}
           >
@@ -194,7 +194,7 @@ export default function DynamicTimeline({
         )}
         {onDelete && (
           <button 
-            onClick={(e) => { e.stopPropagation(); onDelete(item) }} 
+            data-tour="item-delete" onClick={(e) => { e.stopPropagation(); onDelete(item) }} 
             className="bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 rounded-lg transition-all shadow-sm"
             style={{ padding: `${scale * 6}px` }}
           >
@@ -289,7 +289,7 @@ export default function DynamicTimeline({
       <div key="actions" className={cn("flex items-center gap-2 mt-2", isHorizontal ? "justify-center" : (alignRight ? "justify-end" : "justify-start"))}>
         {onView && (
           <button 
-            onClick={() => onView(item)} 
+            data-tour="item-view" onClick={() => onView(item)} 
             className="transition-colors p-1"
             style={{ color: `${itemColor}cc` }}
             onMouseEnter={(e) => e.currentTarget.style.color = itemColor}
@@ -300,7 +300,7 @@ export default function DynamicTimeline({
         )}
         {onEdit && (
           <button 
-            onClick={() => onEdit(item)} 
+            data-tour="item-edit" onClick={() => onEdit(item)} 
             className="transition-colors p-1"
             style={{ color: `${itemColor}cc` }}
             onMouseEnter={(e) => e.currentTarget.style.color = itemColor}
@@ -310,7 +310,7 @@ export default function DynamicTimeline({
           </button>
         )}
           {onDelete && (
-            <button onClick={(e) => { e.stopPropagation(); onDelete(item) }} className="text-red-400 hover:text-red-600 transition-colors p-1">
+            <button data-tour="item-delete" onClick={(e) => { e.stopPropagation(); onDelete(item) }} className="text-red-400 hover:text-red-600 transition-colors p-1">
               <Trash2 style={{ width: `${scale * 16}px`, height: `${scale * 16}px` }} />
             </button>
           )}

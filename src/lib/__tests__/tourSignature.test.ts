@@ -218,3 +218,26 @@ describe('agenda: não mexe na data de início', () => {
     expect(refs('edit')).toEqual(['obs'])
   })
 })
+
+describe('ajuda interativa de Timeline e Galeria', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', dataType: 'text', ...extra })
+  const input: any = { formFields: [f('titulo', { required: true }), f('desc')], filterFields: [], gridFields: [] }
+  const shape = (t: any) => t.steps.map((s: any) => `${s.kind}:${s.target?.type ?? '-'}:${s.target?.ref ?? '-'}`)
+
+  it('ações suportadas', async () => {
+    const { tourActionsFor } = await import('../interactiveHelp/types')
+    expect([...tourActionsFor('timeline')]).toEqual(['view', 'create', 'edit', 'delete'])
+    expect([...tourActionsFor('galeria')]).toEqual(['view', 'create', 'edit', 'delete'])
+  })
+
+  for (const vt of ['timeline', 'galeria']) {
+    it(`${vt}: cadastrar, ver, editar e excluir usam o Novo Registro e os ícones do item`, () => {
+      const v = { viewType: vt }
+      expect(shape(buildAutoTour(input, { action: 'create', ...v }))).toEqual(['click:button:new', 'type:field:titulo', 'click:button:save', 'note:-:-'])
+      expect(shape(buildAutoTour(input, { action: 'view', ...v }))).toEqual(['click:button:item-view', 'note:-:-', 'click:button:cancel'])
+      expect(shape(buildAutoTour(input, { action: 'edit', ...v }))[0]).toBe('click:button:item-edit')
+      expect(shape(buildAutoTour(input, { action: 'delete', ...v }))).toEqual(['click:button:item-delete', 'click:button:confirm', 'note:-:-'])
+      expect(buildAutoTour(input, { action: 'edit', ...v }).seed).toBeUndefined()
+    })
+  }
+})

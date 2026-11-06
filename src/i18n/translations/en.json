@@ -5396,7 +5396,10 @@
       "btn_widget": "Dashboard charts",
       "option_text": "Option to pick, by its text (empty = the first in the list)",
       "btn_widget-expand": "Expand chart (magnifier)",
-      "btn_widget-collapse": "Collapse chart"
+      "btn_widget-collapse": "Collapse chart",
+      "btn_item-view": "View item (magnifier)",
+      "btn_item-edit": "Edit item",
+      "btn_item-delete": "Delete item"
     }
   }
 }

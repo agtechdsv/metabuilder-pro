@@ -64,6 +64,7 @@ const BUTTON_CAPTION: Record<string, Cap> = {
   search: cap('Clique em Pesquisar para aplicar o filtro.', 'Click Search to apply the filter.', 'Haga clic en Buscar para aplicar el filtro.'),
   clear: cap('Clique em Limpar para remover o filtro.', 'Click Clear to remove the filter.', 'Haga clic en Limpiar para quitar el filtro.'),
   confirm: cap('Confirme a exclusão.', 'Confirm the deletion.', 'Confirme la eliminación.'),
+  cancel: cap('Feche a janela para voltar.', 'Close the window to go back.', 'Cierre la ventana para volver.'),
 }
 const ADD_CAPTION: Cap = cap('Clique em + para adicionar um item.', 'Click + to add an item.', 'Haga clic en + para agregar un ítem.')
 const EXPAND_CAPTION: Cap = cap('Abra o registro para editá-lo aqui mesmo.', 'Expand the record to edit it right here.', 'Expanda el registro para editarlo aquí mismo.')
@@ -99,6 +100,9 @@ const SCHEDULER_RESULT: Record<string, Cap> = {
   delete: cap('O evento some da agenda.', 'The event disappears from the calendar.', 'El evento desaparece de la agenda.'),
 }
 const CARD_CAPTION: Record<string, Cap> = {
+  'item-view': cap('Clique na lupa do item para ver os detalhes.', 'Click the item magnifier to see the details.', 'Haga clic en la lupa del ítem para ver los detalles.'),
+  'item-edit': cap('Clique no lápis do item para editar.', 'Click the item pencil to edit.', 'Haga clic en el lápiz del ítem para editar.'),
+  'item-delete': cap('Clique na lixeira do item para excluir.', 'Click the item trash can to delete.', 'Haga clic en la papelera del ítem para eliminar.'),
   'kanban-add': cap('Clique em + na coluna para criar um cartão.', 'Click + on the column to create a card.', 'Haga clic en + en la columna para crear una tarjeta.'),
   'kanban-edit': cap('Clique no lápis do cartão para editar.', 'Click the card pencil to edit.', 'Haga clic en el lápiz de la tarjeta para editar.'),
   'kanban-delete': cap('Clique na lixeira do cartão para excluir.', 'Click the card trash can to delete.', 'Haga clic en la papelera de la tarjeta para eliminar.'),
@@ -108,6 +112,13 @@ const CARD_CAPTION: Record<string, Cap> = {
   'widget-expand': cap('Clique na lupa para ver o gráfico em tela cheia.', 'Click the magnifier to see the chart full screen.', 'Haga clic en la lupa para ver el gráfico a pantalla completa.'),
   'widget-collapse': cap('Clique em recolher para voltar ao painel.', 'Click collapse to go back to the dashboard.', 'Haga clic en contraer para volver al panel.'),
   widget: cap('Os gráficos e indicadores já mostram o resultado do filtro.', 'The charts and indicators already show the filtered result.', 'Los gráficos e indicadores ya muestran el resultado del filtro.'),
+}
+
+const ITEM_RESULT: Record<string, Cap> = {
+  create: cap('O novo item aparece na tela.', 'The new item shows up on screen.', 'El nuevo ítem aparece en la pantalla.'),
+  edit: cap('As alterações já aparecem no item.', 'The changes already show on the item.', 'Los cambios ya aparecen en el ítem.'),
+  delete: cap('O item some da tela.', 'The item disappears from the screen.', 'El ítem desaparece de la pantalla.'),
+  view: cap('Os dados aparecem só para leitura.', 'The data is shown read-only.', 'Los datos se muestran solo para lectura.'),
 }
 
 const TITLE: Record<TourAction, Cap> = {
@@ -266,7 +277,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
   const typed = vt === 'kanban' || vt === 'scheduler'
   const click = (ref: TourButtonRef): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: CARD_CAPTION[ref], auto: true })
   const noteOnly = (caption: Cap): TourStep => ({ id: stepId(), kind: 'note', caption, auto: true })
-  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
+  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'cancel'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
   const row = (act: 'view' | 'edit' | 'delete'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'row', ref: 'first', action: act }, caption: ROW_CAPTION[act], auto: true })
   const result = (): TourStep => ({ id: stepId(), kind: 'note', target: { type: 'row', ref: 'first' }, caption: RESULT_CAPTION[action], auto: true })
 
@@ -280,7 +291,27 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
 
   const seedFields = [...input.formFields, ...(input.gridFields || [])]
 
-  if (typed) {
+  if (vt === 'timeline' || vt === 'galeria') {
+    // linha do tempo e galeria: o Novo Registro do cabeçalho e os ícones do item abrem o MESMO formulário (em janela); sem linha de exemplo, usa o primeiro item real
+    const formFieldsUsable = input.formFields.filter(f => !(options.excludeFieldIds || []).includes(f.id))
+    if (action === 'create') {
+      steps.push(btn('new'))
+      for (const f of selectFillFields(formFieldsUsable, fill, options.customFieldIds)) steps.push(fieldStep(f, sampleValue(f, options.today)))
+      steps.push(btn('save'))
+    } else if (action === 'view') {
+      steps.push(click('item-view'), noteOnly(ITEM_RESULT.view), btn('cancel'))
+    } else if (action === 'edit') {
+      steps.push(click('item-edit'))
+      const count = Math.max(1, options.editFieldCount ?? 2)
+      const textual = formFieldsUsable.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
+      const pool = textual.length ? textual : formFieldsUsable.filter(fillable)
+      for (const f of pool.slice(0, count)) steps.push(fieldStep(f, editedValue(f, options.today)))
+      steps.push(btn('save'))
+    } else if (action === 'delete') {
+      steps.push(click('item-delete'), btn('confirm'))
+    }
+    if (action !== 'view' && ITEM_RESULT[action]) steps.push(noteOnly(ITEM_RESULT[action]))
+  } else if (typed) {
     // Kanban e agenda abrem o MESMO formulário do cadastro (em janela): os campos e o Salvar são os de sempre
     const result = (vt === 'kanban' ? KANBAN_RESULT : SCHEDULER_RESULT)[action]
     const formFieldsUsable = input.formFields.filter(f => !(options.excludeFieldIds || []).includes(f.id))
@@ -351,9 +382,9 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     summary: buildSummary(action, steps, action === 'search' ? (input.filterFields || []).filter(f => !f.hidden)[0]?.label : undefined),
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra
-    seed: vt === 'kanban' || vt === 'analytics' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
+    seed: vt === 'kanban' || vt === 'analytics' || vt === 'timeline' || vt === 'galeria' || action === 'create' ? undefined : vt === 'scheduler' ? options.schedulerSeed?.seed : buildSeed(seedFields, options.today),
     seedToday: vt === 'scheduler' && action !== 'create' ? options.schedulerSeed?.seedToday : undefined,
-    seedDetails: !typed && vt !== 'analytics' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
+    seedDetails: !typed && vt !== 'analytics' && vt !== 'timeline' && vt !== 'galeria' && (action === 'edit' || action === 'view') ? buildSeedDetails(input.formFields, options.today) : undefined,
   }
 }
 

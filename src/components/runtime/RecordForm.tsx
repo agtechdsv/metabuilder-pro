@@ -766,6 +766,7 @@ export default function RecordForm({
           {!(logicType === 'cadastro' && isPageMode) && (
             <button
               type="button"
+              data-tour="cancel"
               onClick={handleCancel}
               className="px-6 py-3 rounded-xl text-xs font-bold capitalize tracking-wider text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
             >

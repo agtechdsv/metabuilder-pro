@@ -21,7 +21,7 @@ interface Props {
 }
 
 const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes', move: 'Mover cartão' }
-const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar', 'kanban-add': 'Adicionar cartão (+)', 'kanban-edit': 'Editar cartão', 'kanban-delete': 'Excluir cartão', 'kanban-card': 'Cartão', 'scheduler-add': 'Adicionar evento (+)', 'scheduler-event': 'Evento', 'scheduler-delete': 'Excluir evento', widget: 'Gráficos do painel' }
+const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar', 'kanban-add': 'Adicionar cartão (+)', 'kanban-edit': 'Editar cartão', 'kanban-delete': 'Excluir cartão', 'kanban-card': 'Cartão', 'scheduler-add': 'Adicionar evento (+)', 'scheduler-event': 'Evento', 'scheduler-delete': 'Excluir evento', widget: 'Gráficos do painel', 'widget-expand': 'Ampliar gráfico (lupa)', 'widget-collapse': 'Recolher gráfico', 'item-view': 'Ver item (lupa)', 'item-edit': 'Editar item', 'item-delete': 'Excluir item' }
 
 /**
  * Ajuda Interativa no Studio: o dev gera o roteiro de cada ação a partir da configuração do caso de uso, define a ORDEM em que eles
