@@ -56,7 +56,8 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   )
 
   const input: AutoTourInput = useMemo(() => ({
-    formFields: buildFieldInfos(lc, models, 'form', view.model_id),
+    // sem campos na zona do formulário (comum em Fluxograma, Kanban...), o runtime usa os campos da grade como formulário
+    formFields: buildFieldInfos(lc, models, 'form', view.model_id).length > 0 ? buildFieldInfos(lc, models, 'form', view.model_id) : buildFieldInfos(lc, models, 'grid', view.model_id),
     filterFields: buildFieldInfos(lc, models, 'filter', view.model_id),
     gridFields: buildFieldInfos(lc, models, 'grid', view.model_id),
   }), [lc, models, view.model_id])

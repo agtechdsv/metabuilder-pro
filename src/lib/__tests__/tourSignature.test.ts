@@ -274,3 +274,14 @@ describe('ajuda interativa de Mapa Mental e Fluxograma', () => {
     })
   }
 })
+
+describe('formulário vazio cai nos campos da grade', () => {
+  it('a assinatura de cadastrar acompanha os campos da grade quando a zona do formulário está vazia', () => {
+    const base: any = { form_fields: [], grid_fields: ['a', 'b'], fields_metadata: {} }
+    const a = layoutSignature(base, 'create', 'X')
+    expect(layoutSignature({ ...base, grid_fields: ['a', 'b', 'c'] }, 'create', 'X')).not.toBe(a)
+    // com formulário configurado, a grade não conta
+    const comForm: any = { ...base, form_fields: ['a'] }
+    expect(layoutSignature({ ...comForm, grid_fields: ['a', 'b', 'c'] }, 'create', 'X')).toBe(layoutSignature(comForm, 'create', 'X'))
+  })
+})

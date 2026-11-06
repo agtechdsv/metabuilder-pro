@@ -42,7 +42,8 @@ export function layoutSignature(layoutConfig: any, action: TourAction, screenNam
   const meta: Record<string, any> = lc.fields_metadata || {}
   const zones = ZONES_BY_ACTION[action].map(zone => [
     zone,
-    idsOf(lc[`${zone}_fields`]).map(id => {
+    // a zona do formulário vazia cai nos campos da grade (como o runtime faz)
+    (zone === 'form' && idsOf(lc.form_fields).length === 0 ? idsOf(lc.grid_fields) : idsOf(lc[`${zone}_fields`])).map(id => {
       const e = meta[`${zone}-${id}`] ?? meta[id] ?? {}
       return [
         id,
