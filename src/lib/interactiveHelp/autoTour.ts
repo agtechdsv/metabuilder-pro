@@ -8,6 +8,7 @@
 
 import type { HelpText } from '../helpText'
 import { editedValue, sampleValue, type SampleField } from './sampleValues'
+import { layoutSignature } from './signature'
 import type { Tour, TourAction, TourFill, TourStep, TourTarget } from './types'
 
 export interface TourFieldInfo extends SampleField {
@@ -36,6 +37,8 @@ export interface AutoTourOptions {
   editFieldCount?: number
   /** nome do caso de uso, para o título */
   screenName?: string
+  /** `layout_config` do caso de uso: com ele, o roteiro guarda a assinatura da configuração usada (detecção barata de "desatualizado") */
+  layoutConfig?: any
   today?: Date
 }
 
@@ -208,6 +211,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     title: titleFor(action, options.screenName),
     fill,
     editFieldCount: action === 'edit' ? Math.max(1, options.editFieldCount ?? 2) : undefined,
+    sourceSig: options.layoutConfig ? layoutSignature(options.layoutConfig, action, options.screenName) : undefined,
     summary: buildSummary(action, steps, action === 'search' ? (input.filterFields || []).filter(f => !f.hidden)[0]?.label : undefined),
     steps,
     // a linha sintética usa os mesmos valores do cadastro, para a pesquisa e a edição enxergarem o que o tutorial mostra

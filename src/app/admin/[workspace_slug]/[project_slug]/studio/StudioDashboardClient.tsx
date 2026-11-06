@@ -1,5 +1,6 @@
 'use client'
 
+import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
 import React, { useState, useTransition, useEffect } from 'react'
 import { openExternalUrl, isTauri } from '@/utils/tauriUtils'
 import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
@@ -1390,6 +1391,11 @@ export function StudioDashboardClient({
                           {view.layout_config?.generated_by_ai && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">
                               <Sparkles className="w-2.5 h-2.5" /> IA
+                            </span>
+                          )}
+                          {hasLikelyStaleTours(view.layout_config, view.name) && (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-full text-[9px] font-black shrink-0" title={t('studio.tour_stale_badge_hint', 'A ajuda interativa deste caso de uso pode estar desatualizada. Abra a Central de Ajuda para regenerar.')}>
+                              ⚠ {t('studio.tour_stale_badge', 'Ajuda interativa')}
                             </span>
                           )}
                         </div>

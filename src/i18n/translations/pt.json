@@ -3709,7 +3709,9 @@
       "config_key_title_dev": "IA Não Configurada",
       "config_key_desc_owner": "Para usar o AI Builder, configure sua chave de API de IA nas Configurações do Workspace.",
       "config_key_desc_dev": "A chave de API para a geração de casos do AI Builder ainda não foi configurada. Favor entrar em contato com o owner do projeto e solicite a realização da configuração."
-    }
+    },
+    "tour_stale_badge": "Ajuda interativa",
+    "tour_stale_badge_hint": "A ajuda interativa deste caso de uso pode estar desatualizada. Abra a Central de Ajuda para regenerar."
   },
   "checkout": {
     "title": "Finalizar",
@@ -5372,7 +5374,9 @@
       "stale_one": "1 roteiro desatualizado",
       "stale_many": "{count} roteiros desatualizados",
       "regenerate_all": "Regenerar todos",
-      "live_caption": "legenda: ajuda atual do campo"
+      "live_caption": "legenda: ajuda atual do campo",
+      "sig_changed": "A configuração mudou, mas isso não afeta os roteiros.",
+      "mark_current": "Marcar como em dia"
     }
   }
 }

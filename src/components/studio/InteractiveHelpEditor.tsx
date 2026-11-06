@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, PlayCircle, RefreshCw, Trash2, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
+import { isLikelyStale, layoutSignature } from '@/lib/interactiveHelp/signature'
 import { buildAutoTour, isTourStale, regenerateTour, type AutoTourInput } from '@/lib/interactiveHelp/autoTour'
 import { buildFieldInfos } from '@/lib/interactiveHelp/fieldInfo'
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
@@ -66,7 +67,7 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
   }
 
   const generate = (action: TourAction, previous?: Tour) => {
-    const opts = { action, screenName: view.name }
+    const opts = { action, screenName: view.name, layoutConfig: lc }
     const tour = previous ? regenerateTour(previous, input, opts) : buildAutoTour(input, opts)
     upsert(previous?.hidden ? { ...tour, hidden: true } : tour)
   }
@@ -94,7 +95,10 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
     () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name })).map(tr => tr.id) : []),
     [fieldsReady, ih.tours, input, view.name],
   )
-  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name })) })
+  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc })) })
+  // a configuração mudou (assinatura diferente) mas a comparação exata diz que os roteiros continuam certos: dá para só "carimbar" a assinatura nova
+  const sigChanged = fieldsReady && staleIds.size === 0 && ih.tours.some(tr => isLikelyStale(tr, lc, view.name))
+  const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => ({ ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
 
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
@@ -113,6 +117,12 @@ export function InteractiveHelpEditor({ config, setConfig, models, view, t }: Pr
           {staleIds.size > 0 && (
             <span className="text-[11px] font-bold text-amber-600" title={t('help_center_studio.interactive.stale_hint', 'A configuração do caso de uso mudou desde que o roteiro foi gerado. Regenere para atualizar.')}>
               {staleIds.size === 1 ? t('help_center_studio.interactive.stale_one', '1 roteiro desatualizado') : t('help_center_studio.interactive.stale_many', '{count} roteiros desatualizados').replace('{count}', String(staleIds.size))}
+            </span>
+          )}
+          {sigChanged && (
+            <span className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+              {t('help_center_studio.interactive.sig_changed', 'A configuração mudou, mas isso não afeta os roteiros.')}
+              <button type="button" onClick={markCurrent} className="font-bold text-indigo-600 hover:underline">{t('help_center_studio.interactive.mark_current', 'Marcar como em dia')}</button>
             </span>
           )}
           <button type="button" onClick={regenerateAll} className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline">

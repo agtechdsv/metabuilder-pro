@@ -12,6 +12,7 @@ import { draftLayoutOf, mergeHelpIntoLayout, patchComponentHelp } from '@/lib/he
 import { HelpOverview } from './UseCaseBuilder/steps/StepLayout/special-layouts/HelpOverview'
 import { ScreenHelpField } from './UseCaseBuilder/steps/StepLayout/special-layouts/ScreenHelpField'
 import { InteractiveHelpEditor } from './InteractiveHelpEditor'
+import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
 
 interface Props {
   workspaceSlug: string
@@ -51,6 +52,8 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
   // Os modelos do Studio vêm só com o id dos campos. O gerador da ajuda interativa precisa do nome da coluna, do tipo e da chave:
   // busca esses dados dos campos usados no caso de uso escolhido.
   const [fieldRows, setFieldRows] = useState<any[]>([])
+  // mesma identidade enquanto os campos não mudam: o editor só recalcula o que depende deles (ex.: roteiros desatualizados)
+  const tourModels = useMemo(() => [{ fields: fieldRows }], [fieldRows])
   const selectedRef = useRef('')
 
   const view = views.find(v => v.id === selectedId)
@@ -148,7 +151,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
         >
           <option value="">{t('help_center_studio.select', 'Selecione um caso de uso…')}</option>
           {sorted.map(v => (
-            <option key={v.id} value={v.id}>{viewHasHelp(v) ? '✓ ' : '   '}{v.name || v.slug}</option>
+            <option key={v.id} value={v.id}>{viewHasHelp(v) ? '✓ ' : '   '}{hasLikelyStaleTours(v.layout_config, v.name) ? '⚠ ' : ''}{v.name || v.slug}</option>
           ))}
         </select>
         <p className="text-[10px] text-neutral-400 ml-1">
@@ -161,7 +164,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
           <ScreenHelpField config={config} setConfig={setConfig} t={t} />
           <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
-          <InteractiveHelpEditor config={config} setConfig={setConfig} models={[{ fields: fieldRows }]} view={view} t={t} />
+          <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} />
 
           <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}
