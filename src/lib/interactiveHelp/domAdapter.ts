@@ -31,6 +31,7 @@ export function queryTarget(doc: Document, target: TourTarget | undefined): HTML
     case 'button': return first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
+    case 'tab': return first(`[data-tour-detail="${esc(target.ref)}"]`)
     case 'row': {
       // primeira linha com dados (a linha de "nenhum registro" tem uma célula só)
       const row = (Array.from(doc.querySelectorAll('tbody tr')) as HTMLElement[]).find(r => isVisible(r) && r.querySelectorAll('td').length > 1)

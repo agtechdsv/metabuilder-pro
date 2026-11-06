@@ -5376,7 +5376,9 @@
       "regenerate_all": "Regenerar todos",
       "live_caption": "legenda: ajuda atual do campo",
       "sig_changed": "A configuração mudou, mas isso não afeta os roteiros.",
-      "mark_current": "Marcar como em dia"
+      "mark_current": "Marcar como em dia",
+      "btn_detail-add": "Adicionar item (+)",
+      "detail_tab": "Aba do detalhe"
     }
   }
 }

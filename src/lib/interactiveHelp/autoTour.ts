@@ -22,6 +22,8 @@ export interface TourFieldInfo extends SampleField {
   hidden?: boolean
   /** campo de um modelo de DETALHE (aba como "Pedidos" dentro de "Clientes"): a v1 só ensina a aba principal */
   isDetail?: boolean
+  /** id do modelo da aba de detalhe a que o campo pertence (identifica a aba no runtime) */
+  detailModelId?: string
   /** a ajuda do campo vira a legenda do passo */
   help?: HelpText
   /** id do campo "pai" em listas em cascata: o pai é preenchido antes */
@@ -52,7 +54,9 @@ const BUTTON_CAPTION: Record<string, Cap> = {
   search: cap('Clique em Pesquisar para aplicar o filtro.', 'Click Search to apply the filter.', 'Haga clic en Buscar para aplicar el filtro.'),
   clear: cap('Clique em Limpar para remover o filtro.', 'Click Clear to remove the filter.', 'Haga clic en Limpiar para quitar el filtro.'),
   confirm: cap('Confirme a exclusão.', 'Confirm the deletion.', 'Confirme la eliminación.'),
+  'detail-add': cap('Clique em + para adicionar um item.', 'Click + to add an item.', 'Haga clic en + para agregar un ítem.'),
 }
+const TAB_CAPTION: Cap = cap('Abra a aba do detalhe.', 'Open the detail tab.', 'Abra la pestaña del detalle.')
 const ROW_CAPTION: Record<string, Cap> = {
   edit: cap('Clique no lápis para editar o registro.', 'Click the pencil to edit the record.', 'Haga clic en el lápiz para editar el registro.'),
   view: cap('Clique na lupa para ver os detalhes.', 'Click the magnifier to see the details.', 'Haga clic en la lupa para ver los detalles.'),
@@ -97,6 +101,27 @@ function orderByDependency(fields: TourFieldInfo[]): TourFieldInfo[] {
     out.push(f)
   }
   fields.forEach(f => place(f))
+  return out
+}
+
+/** Campos das abas de DETALHE que entram no roteiro, por aba: obrigatórios (sem nenhum, os 2 primeiros), ou todos / os escolhidos. */
+export function selectDetailFields(formFields: TourFieldInfo[], fill: TourFill, customIds: string[] = []): Array<{ modelId: string; fields: TourFieldInfo[] }> {
+  const groups = new Map<string, TourFieldInfo[]>()
+  for (const f of formFields) {
+    if (!f.isDetail || !f.detailModelId || f.isPrimaryKey || f.isVirtual || f.readOnly || f.hidden) continue
+    groups.set(f.detailModelId, [...(groups.get(f.detailModelId) || []), f])
+  }
+  const out: Array<{ modelId: string; fields: TourFieldInfo[] }> = []
+  for (const [modelId, list] of groups) {
+    let chosen: TourFieldInfo[]
+    if (fill === 'all') chosen = list
+    else if (fill === 'custom') chosen = list.filter(f => customIds.includes(f.id))
+    else {
+      chosen = list.filter(f => f.required)
+      if (chosen.length === 0) chosen = list.slice(0, 2)
+    }
+    if (chosen.length) out.push({ modelId, fields: orderByDependency(chosen) })
+  }
   return out
 }
 
@@ -173,9 +198,17 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
   const { action } = options
   const fill: TourFill = options.fill ?? 'required'
   const steps: TourStep[] = []
-  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
+  const btn = (ref: 'new' | 'save' | 'back' | 'search' | 'clear' | 'confirm' | 'detail-add'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'button', ref }, caption: BUTTON_CAPTION[ref], auto: true })
   const row = (act: 'view' | 'edit' | 'delete'): TourStep => ({ id: stepId(), kind: 'click', target: { type: 'row', ref: 'first', action: act }, caption: ROW_CAPTION[act], auto: true })
   const result = (): TourStep => ({ id: stepId(), kind: 'note', target: { type: 'row', ref: 'first' }, caption: RESULT_CAPTION[action], auto: true })
+
+  // aba de detalhe: abre a aba, clica em + e preenche o item novo (a gravação do item também é simulada na demonstração)
+  const detailSteps = (groups: Array<{ modelId: string; fields: TourFieldInfo[] }>): TourStep[] =>
+    groups.flatMap(g => [
+      { id: stepId(), kind: 'click', target: { type: 'tab', ref: g.modelId }, caption: TAB_CAPTION, auto: true } as TourStep,
+      btn('detail-add'),
+      ...g.fields.map(f => fieldStep(f, sampleValue(f, options.today))),
+    ])
 
   const seedFields = [...input.formFields, ...(input.gridFields || [])]
 
@@ -186,6 +219,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     for (const f of input.formFields.filter(x => x.isVirtual && !x.hidden && !x.isDetail)) {
       steps.push({ id: stepId(), kind: 'note', target: { type: 'field', ref: f.id }, caption: CALC_CAPTION(f.label), auto: true, liveCaption: true })
     }
+    steps.push(...detailSteps(selectDetailFields(input.formFields, fill, options.customFieldIds)))
     steps.push(btn('save'), btn('back'), result())
   } else if (action === 'edit') {
     steps.push(row('edit'))
@@ -193,6 +227,7 @@ export function buildAutoTour(input: AutoTourInput, options: AutoTourOptions): T
     const textual = input.formFields.filter(f => fillable(f) && !isListLike(f) && !isCheck(f))
     const pool = textual.length ? textual : input.formFields.filter(fillable)
     for (const f of pool.slice(0, count)) steps.push(fieldStep(f, editedValue(f, options.today)))
+    steps.push(...detailSteps(selectDetailFields(input.formFields, 'required')))
     steps.push(btn('save'), btn('back'), result())
   } else if (action === 'delete') {
     steps.push(row('delete'), btn('confirm'), result())

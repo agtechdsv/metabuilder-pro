@@ -5376,7 +5376,9 @@
       "regenerate_all": "Regenerate all",
       "live_caption": "caption: the field's current help",
       "sig_changed": "The configuration changed, but this does not affect the tours.",
-      "mark_current": "Mark as up to date"
+      "mark_current": "Mark as up to date",
+      "btn_detail-add": "Add item (+)",
+      "detail_tab": "Detail tab"
     }
   }
 }

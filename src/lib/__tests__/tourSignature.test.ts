@@ -87,3 +87,37 @@ describe('isTourStale depois de passar pelo jsonb', () => {
     expect(isTourStale(voltou, input, { action: 'create', screenName: 'Clientes' })).toBe(false)
   })
 })
+
+describe('abas de detalhe no roteiro', () => {
+  const f = (id: string, extra: any = {}) => ({ id, label: id, column: id, type: 'text', ...extra })
+  const input: any = {
+    formFields: [
+      f('nome', { required: true }),
+      f('p_data', { isDetail: true, detailModelId: 'm-ped', required: true }),
+      f('p_obs', { isDetail: true, detailModelId: 'm-ped' }),
+      f('p_id', { isDetail: true, detailModelId: 'm-ped', isPrimaryKey: true }),
+    ],
+    filterFields: [],
+    gridFields: [],
+  }
+  const shape = (t: any) => t.steps.map((s: any) => `${s.kind}:${s.target?.type}:${s.target?.ref}`)
+
+  it('cadastrar: abre a aba, clica em + e preenche o item antes de salvar', () => {
+    const steps = shape(buildAutoTour(input, { action: 'create' }))
+    expect(steps).toEqual([
+      'click:button:new', 'type:field:nome',
+      'click:tab:m-ped', 'click:button:detail-add', 'type:field:p_data',
+      'click:button:save', 'click:button:back', 'note:row:first',
+    ])
+  })
+
+  it('editar também passa pela aba; excluir, pesquisar e ver não', () => {
+    expect(shape(buildAutoTour(input, { action: 'edit' }))).toContain('click:tab:m-ped')
+    for (const a of ['delete', 'search', 'view'] as const) expect(shape(buildAutoTour(input, { action: a }))).not.toContain('click:tab:m-ped')
+  })
+
+  it('sem campos de detalhe o roteiro não muda', () => {
+    const so = { ...input, formFields: input.formFields.slice(0, 1) }
+    expect(shape(buildAutoTour(so, { action: 'create' }))).not.toContain('click:button:detail-add')
+  })
+})

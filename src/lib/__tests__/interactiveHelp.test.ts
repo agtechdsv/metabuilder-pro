@@ -270,8 +270,8 @@ describe('trocar preenchimento e quantidade (o que o editor faz agora ao mudar a
   })
 })
 
-describe('campos da aba de detalhe ficam fora do roteiro (v1)', () => {
-  it('campo de outro modelo e a observação de calculado dele não entram; o campo do modelo principal entra', async () => {
+describe('campos da aba de detalhe', () => {
+  it('campo de outro modelo só entra depois de abrir a aba e clicar em +; o campo do modelo principal vem antes', async () => {
     const { buildFieldInfos } = await import('../interactiveHelp/fieldInfo')
     const models = [{ fields: [
       { id: 'n', model_id: 'M', db_column_name: 'nome_empresa', display_name: 'Nome Empresa', data_type: 'text' },
@@ -281,7 +281,9 @@ describe('campos da aba de detalhe ficam fora do roteiro (v1)', () => {
     const infos = buildFieldInfos(lc, models, 'form', 'M')
     expect(infos.map(i => [i.id, i.isDetail])).toEqual([['n', false], ['dp', true]])
     const tour = buildAutoTour({ formFields: infos }, { action: 'create', fill: 'all', today: TODAY })
-    expect(tour.steps.filter(s => s.kind === 'type').map(s => (s.target as any).ref)).toEqual(['n'])
+    const refs = tour.steps.map(s => `${s.kind}:${(s.target as any)?.ref}`)
+    expect(refs.slice(0, 5)).toEqual(['click:new', 'type:n', 'click:D', 'click:detail-add', 'type:dp'])
+    expect(infos[1].detailModelId).toBe('D')
     // sem o modelo principal informado nada é tratado como detalhe (comportamento anterior)
     expect(buildFieldInfos(lc, models, 'form').every(i => !i.isDetail)).toBe(true)
   })

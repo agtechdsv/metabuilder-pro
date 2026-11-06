@@ -381,6 +381,7 @@ export default function RecordForm({
                           setActiveTab('master')
                           onTabChange?.('master')
                         }}
+                        data-tour-detail="master"
                         style={{
                           fontFamily: getFontFamily(tabsStyleConfig?.label?.font),
                           fontSize: getFontSize(tabsStyleConfig?.label?.size),
@@ -422,6 +423,7 @@ export default function RecordForm({
                           <button
                             key={tableName}
                             type="button"
+                            data-tour-detail={modelId || String(tableName)}
                             onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()

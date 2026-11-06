@@ -208,6 +208,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
             {/* Adicionar registro */}
             <button
               type="button"
+              data-tour="detail-add"
               onClick={() => {
                 if (true) {
                   const newTempId = `temp-${Date.now()}`
@@ -713,6 +714,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   return (
                                     <div className="flex flex-col gap-1">
                                       <textarea
+                                        data-tour-field={field.id}
                                         value={rawValue || ''}
                                         onChange={(e) => handleInlineChange(e.target.value)}
                                         disabled={isInlineDisabled}
@@ -787,6 +789,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
                                   return (
                                     <div className="flex flex-col gap-1">
                                       <select
+                                        data-tour-field={field.id}
                                         value={
                                           options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.value ?? 
                                           options.find((opt: any) => String(opt.value ?? opt.id ?? opt.ID ?? '').toLowerCase() === String(rawValue ?? '').toLowerCase())?.id ?? (rawValue !== undefined && rawValue !== null ? String(rawValue) : '')
@@ -912,6 +915,7 @@ export function RecordFormDetailSection(props: RecordFormDetailSectionProps) {
 
                                 return (
                                   <input
+                                    data-tour-field={field.id}
                                     type={
                                       type === 'date' ? 'date' :
                                         (type === 'datetime-local' || type === 'datetime') ? 'datetime-local' :
