@@ -239,6 +239,8 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
                   const zoneOpen = open.has(r.key)
                   const campoOpen = fieldLevel ? open.has(fieldLevelKey) : zoneRows.some(z => open.has(z.key))
                   const showCampoArrow = r.firstOfField && (fieldLevel ? !!renderFieldEditor : true)
+                  // voto na Central de Ajuda (ou antigo, sem zona): o texto votado é o do campo, em uma ou mais zonas. A seta abre o mesmo que a do Campo
+                  const linkedToField = !!r.fieldId && (r.zone === 'central' || r.zone === null) && (fieldLevel ? !!renderFieldEditor : true)
                   return (
                     <li key={r.key} className={cn('grid grid-cols-1 items-start gap-x-3 gap-y-1 px-2 py-2 sm:grid', colGrid, bad && 'bg-red-50/40 dark:bg-red-950/10')}>
                       {/* campo: a seta abre/fecha TODAS as zonas dele */}
@@ -255,6 +257,10 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
                         {canZone ? (
                           <button type="button" onClick={() => flip([r.key])} className={arrow} aria-expanded={zoneOpen} title={t('help_center_studio.feedback.edit_zone', 'Editar o texto desta zona')}>
                             {zoneOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                          </button>
+                        ) : linkedToField ? (
+                          <button type="button" onClick={() => flip(fieldLevel ? [fieldLevelKey] : zoneRows.map(z => z.key))} className={arrow} aria-expanded={campoOpen} title={t('help_center_studio.feedback.edit_central', 'Esta nota é sobre o texto do campo (o mesmo das zonas): abre para editar')}>
+                            {campoOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                           </button>
                         ) : <span className="h-5 w-5 shrink-0" />}
                         <span className="truncate rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800">{zoneName(r.zone)}</span>

@@ -5566,7 +5566,8 @@
       "uses_default": "Usa el texto estándar del campo",
       "edit_this": "Editar la ayuda de este punto",
       "close_edit": "Cerrar edición",
-      "default_edited_above": "Usa el texto estándar del campo, editado en la primera zona sin texto propio."
+      "default_edited_above": "Usa el texto estándar del campo, editado en la primera zona sin texto propio.",
+      "edit_central": "Este voto es sobre el texto del campo (el mismo de sus zonas): abra para editar"
     }
   }
 }

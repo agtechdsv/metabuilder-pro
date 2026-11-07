@@ -5478,7 +5478,8 @@
       "uses_default": "Uses the field default text",
       "edit_this": "Edit the help for this item",
       "close_edit": "Close editing",
-      "default_edited_above": "Uses the field default text, edited in the first zone without its own text."
+      "default_edited_above": "Uses the field default text, edited in the first zone without its own text.",
+      "edit_central": "This vote is about the field text (the same as in its zones): open to edit"
     }
   }
 }
