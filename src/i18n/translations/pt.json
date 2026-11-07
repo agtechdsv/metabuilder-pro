@@ -5495,6 +5495,7 @@
     "step_of": "{n} de {total}",
     "click_to_continue": "Clique no item destacado para continuar.",
     "target_missing": "Este item não está visível agora. Continue o tour ou volte depois.",
-    "recover": "Voltar ao ponto do tour"
+    "recover": "Voltar ao ponto do tour",
+    "complete_to_continue": "Complete este passo para continuar."
   }
 }

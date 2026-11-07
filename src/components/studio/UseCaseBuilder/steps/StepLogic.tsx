@@ -95,6 +95,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.logic.screen_name')}</label>
             <input
+              data-help-id="wizard.name_input"
               required
               autoFocus
               type="text"
@@ -129,7 +130,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
       </div>
 
       {/* Logic type selector */}
-      <div data-help-id="wizard.logic" className="space-y-4">
+      <div data-help-id="wizard.logic" data-help-state={config.logic_type ? 'ok' : 'empty'} className="space-y-4">
         {categories.map(cat => {
           const isExpanded = expandedCategory === cat.id
           const hasSelectedLogic = cat.items.some(i => i.id === config.logic_type)

@@ -111,3 +111,34 @@ describe('passos do assistente que a pessoa precisa usar', () => {
     for (const id of ['studio-visao-geral', 'studio-criar-caso-de-uso']) expect(PLATFORM_TOURS.find(t => t.id === id)?.recover?.length).toBeGreaterThan(0)
   })
 })
+
+describe('passos com condição', () => {
+  const tour = () => PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+  it('todo passo com condição tem o alvo da condição no código e uma dica de espera nos 3 idiomas', () => {
+    const src = path.join(process.cwd(), 'src')
+    const found = new Set<string>()
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) walk(full)
+        else if (/\.tsx$/.test(e.name)) for (const m of fs.readFileSync(full, 'utf8').matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1])
+      }
+    }
+    walk(src)
+    for (const s of tour().steps) {
+      if (!s.completeWhen) continue
+      expect(found.has(s.completeWhen.id), `${s.id}: ${s.completeWhen.id}`).toBe(true)
+      if (s.completeWhen.check === 'attr') expect(s.completeWhen.attr).toBeTruthy()
+      for (const l of ['pt', 'en', 'es'] as const) expect((s.waitingHint as any)?.[l], `${s.id}: dica ${l}`).toBeTruthy()
+    }
+  })
+
+  it('o assistente só avança com o nome, a lógica, a tabela e os campos cumpridos; o painel de campos vem antes das zonas', () => {
+    const ids = tour().steps.map(s => s.id)
+    for (const id of ['name', 'logic', 'next1', 'tables', 'next2', 'fill-zones', 'next3']) expect(tour().steps.find(s => s.id === id)?.completeWhen, id).toBeTruthy()
+    expect(ids.indexOf('fields-panel')).toBeLessThan(ids.indexOf('zone-filter'))
+    expect(ids.indexOf('fill-zones')).toBeLessThan(ids.indexOf('next3'))
+    expect(tour().steps.find(s => s.id === 'fill-zones')?.freeInteraction).toBe(true)
+  })
+})

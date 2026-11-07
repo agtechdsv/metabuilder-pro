@@ -20,6 +20,23 @@ export interface PlatformStep {
   advanceOnClick?: boolean
   /** deixa a pessoa usar o item destacado sem avançar (preencher o nome, escolher a lógica). Os outros passos bloqueiam a tela */
   interactive?: boolean
+  /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */
+  freeInteraction?: boolean
+  /**
+   * Condição para o passo ser dado como cumprido: enquanto não valer, o "Próximo" do balão fica desligado (e, nos passos de clique, o item
+   * destacado também). Lida na tela: `filled` (campo com texto), `enabled` (botão habilitado) ou `attr` (atributo com um valor).
+   */
+  completeWhen?: StepRule
+  /** o que dizer enquanto a condição não vale */
+  waitingHint?: HelpText
+}
+
+export interface StepRule {
+  /** `data-help-id` do elemento que se confere */
+  id: string
+  check: 'filled' | 'enabled' | 'attr'
+  attr?: string
+  equals?: string
 }
 
 export interface PlatformTour {

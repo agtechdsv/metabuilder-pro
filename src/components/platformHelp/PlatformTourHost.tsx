@@ -22,6 +22,17 @@ function isVisible(el: HTMLElement): boolean {
 const findById = (id: string): HTMLElement | null =>
   (Array.from(document.querySelectorAll(`[data-help-id="${esc(id)}"]`)) as HTMLElement[]).find(isVisible) || null
 
+type Rule = NonNullable<import('@/lib/platformHelp/types').PlatformStep['completeWhen']>
+
+/** A condição do passo vale agora? Lida direto da tela (o app é quem sabe se o campo foi preenchido ou o botão está pronto). */
+function evalRule(rule: Rule): boolean {
+  const el = (Array.from(document.querySelectorAll(`[data-help-id="${esc(rule.id)}"]`)) as HTMLElement[])[0]
+  if (!el) return false
+  if (rule.check === 'filled') return String((el as HTMLInputElement).value ?? '').trim().length > 0
+  if (rule.check === 'enabled') return !(el as HTMLButtonElement).disabled && el.getAttribute('aria-disabled') !== 'true'
+  return !!rule.attr && el.getAttribute(rule.attr) === (rule.equals ?? '')
+}
+
 const sameRect = (a: DOMRect | null, b: DOMRect) => !!a && Math.abs(a.top - b.top) < 1 && Math.abs(a.left - b.left) < 1 && Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1
 
 /**
@@ -35,6 +46,7 @@ export function PlatformTourHost() {
   const [missing, setMissing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [nonce, setNonce] = useState(0)
+  const [ready, setReady] = useState(true)
   const recoveredRef = useRef<Set<string>>(new Set())
   useEffect(() => setMounted(true), [])
 
@@ -85,6 +97,16 @@ export function PlatformTourHost() {
     return () => { cancelled = true }
   }, [key, nonce])
 
+  // condição para o passo ser cumprido (nome preenchido, lógica escolhida, botão habilitado...)
+  useEffect(() => {
+    const rule = step?.completeWhen
+    if (!rule) { setReady(true); return }
+    const check = () => setReady(evalRule(rule))
+    check()
+    const id = setInterval(check, 150)
+    return () => clearInterval(id)
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // navegou para outra página: o tour não faz mais sentido
   useEffect(() => {
     if (!active?.path) return
@@ -106,13 +128,27 @@ export function PlatformTourHost() {
 
   // passo que só avança quando a pessoa clica no elemento destacado
   useEffect(() => {
-    if (!step?.advanceOnClick || !step.target || !hasRect) return
+    if (!step?.advanceOnClick || !step.target || !hasRect || !ready) return
     const el = findById(step.target)
     if (!el) return
-    const onClick = () => setTimeout(nextStep, 0)
-    el.addEventListener('click', onClick, { once: true })
+    let busy = false
+    const onClick = async () => {
+      if (busy) return
+      busy = true
+      // o tour só acompanha a tela: avança quando o item do próximo passo aparece (se a tela recusou o clique, o tour fica)
+      const a = activeRef.current
+      const nextTarget = a ? a.tour.steps[a.index + 1]?.target : undefined
+      if (!nextTarget) { nextStep(); return }
+      const until = Date.now() + 1500
+      while (Date.now() < until) {
+        if (findById(nextTarget)) { nextStep(); return }
+        await sleep(100)
+      }
+      busy = false
+    }
+    el.addEventListener('click', onClick)
     return () => el.removeEventListener('click', onClick)
-  }, [key, hasRect]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, hasRect, ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // teclado
   useEffect(() => {
@@ -129,6 +165,10 @@ export function PlatformTourHost() {
   const finishOrNext = () => {
     const a = activeRef.current
     if (!a) return
+    const cur = a.tour.steps[a.index]
+    // passo de clique: só avança clicando no item; passo com condição: só depois que ela vale
+    const isFinal = a.index >= a.tour.steps.length - 1
+    if (!isFinal && (cur.advanceOnClick || (cur.completeWhen && !evalRule(cur.completeWhen)))) return
     if (a.index >= a.tour.steps.length - 1) { markTourSeen(a.tour.id); stopPlatformTour() } else nextStep()
   }
 
@@ -164,7 +204,7 @@ export function PlatformTourHost() {
             style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: '0 0 0 9999px rgba(15,23,42,0.55)', pointerEvents: 'none' }}
           />
           {/* a tela atrás do escurecimento não responde a cliques (senão a pessoa sai do tour sem querer); só o item destacado, e só nos passos que pedem o clique */}
-          {step.advanceOnClick || step.interactive ? (
+          {step.freeInteraction ? null : (step.advanceOnClick && ready) || step.interactive ? (
             <>
               <div className="fixed left-0 right-0 top-0" style={{ height: Math.max(0, rect.top - PAD), pointerEvents: 'auto' }} />
               <div className="fixed bottom-0 left-0 right-0" style={{ top: rect.bottom + PAD, pointerEvents: 'auto' }} />
@@ -197,7 +237,11 @@ export function PlatformTourHost() {
             {!!active.tour.recover?.length && <button type="button" onClick={recoverNow} className="text-[11px] font-bold text-indigo-600 hover:underline">{t('platform_help.recover', 'Voltar ao ponto do tour')}</button>}
           </div>
         )}
-        {step.advanceOnClick && !missing && <p className="mt-2 text-[11px] font-bold text-indigo-600">{t('platform_help.click_to_continue', 'Clique no item destacado para continuar.')}</p>}
+        {!missing && (step.advanceOnClick || step.completeWhen) && (
+          ready
+            ? (step.advanceOnClick && <p className="mt-2 text-[11px] font-bold text-indigo-600">{t('platform_help.click_to_continue', 'Clique no item destacado para continuar.')}</p>)
+            : <p className="mt-2 text-[11px] font-bold text-amber-600">{resolveHelp(step.waitingHint, language) || t('platform_help.complete_to_continue', 'Complete este passo para continuar.')}</p>
+        )}
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[10px] font-bold text-neutral-400">{t('platform_help.step_of', '{n} de {total}').replace('{n}', String(active.index + 1)).replace('{total}', String(total))}</span>
@@ -205,7 +249,7 @@ export function PlatformTourHost() {
             <button type="button" disabled={active.index === 0} onClick={prevStep} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-30 dark:hover:text-white">
               <ArrowLeft className="h-3 w-3" />{t('platform_help.back', 'Voltar')}
             </button>
-            <button type="button" onClick={finishOrNext} className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-indigo-500">
+            <button type="button" onClick={finishOrNext} disabled={!isLast && (!!step.advanceOnClick || (!!step.completeWhen && !ready))} className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">
               {isLast ? <><Check className="h-3 w-3" />{t('platform_help.done', 'Concluir')}</> : <>{t('platform_help.next', 'Próximo')}<ArrowRight className="h-3 w-3" /></>}
             </button>
           </div>

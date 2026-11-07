@@ -5583,6 +5583,7 @@
     "step_of": "{n} de {total}",
     "click_to_continue": "Haga clic en el elemento resaltado para continuar.",
     "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde.",
-    "recover": "Volver al punto del tour"
+    "recover": "Volver al punto del tour",
+    "complete_to_continue": "Complete este paso para continuar."
   }
 }

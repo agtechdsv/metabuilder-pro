@@ -563,6 +563,7 @@ export function UseCaseBuilderWizard({
 
           <button
             data-help-id="wizard.next"
+            data-help-state={currentStep === steps[steps.length - 1].id ? 'last' : isStepValid(currentStep) ? 'ready' : 'blocked'}
             onClick={currentStep === steps[steps.length - 1].id ? handleSave : nextStep}
             disabled={isSaving || (currentStep === steps[steps.length - 1].id && !canCreate)}
             className={cn(

@@ -10,6 +10,7 @@ export function FieldSourcePanel({
   return (
           <div className="w-full xl:w-80 shrink-0">
             <motion.div
+              data-help-id="wizard.fields_panel"
               drag
               dragControls={dragControls}
               dragListener={false}

@@ -100,7 +100,7 @@ export function StepTables({ config, setConfig, models, relations = [] }: StepTa
               <Database className="w-4 h-4" />
               {t('wizard.tables.db_prefix', 'Banco')}: {schema}
             </h3>
-            <div data-help-id="wizard.tables" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div data-help-id="wizard.tables" data-help-state={config.selected_models.length > 0 ? 'ok' : 'empty'} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {groupedModels[schema].map(m => {
                 const isSelected = selectedId === m.id
                 const relCount = relationCountByModel[m.id] || 0
