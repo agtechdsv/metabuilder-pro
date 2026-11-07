@@ -20,7 +20,7 @@ import { TunnelLogConsoleModal } from './tunnel/TunnelLogConsoleModal'
  *  - workspaceSlug de um workspace → nível 2: projetos deste workspace
  *  - projectSlug informado → nível 3: somente este projeto
  */
-export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspaceSlug: string; projectSlug?: string }) {
+export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice = false }: { workspaceSlug: string; projectSlug?: string; /** no navegador, em vez de sumir, explica que o gerenciador é da IDE Desktop (usado na aba do Studio) */ webNotice?: boolean }) {
   const { t, language } = useI18n()
   const { toast } = useToast()
   const pathname = usePathname()
@@ -393,6 +393,21 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug }: { workspa
       toast(t('workspace_components.tunnel_control.cli_process_failed', 'Falha ao executar processo CLI.'), 'error')
       checkStatus()
     }
+  }
+
+  if (isDesktopEnv === false && webNotice) {
+    return (
+      <div className="mb-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10"><Network className="h-5 w-5 text-indigo-500" /></div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{t('workspace_components.tunnel_control.title', 'Gerenciador do Túnel Local')}</h3>
+            <p className="max-w-2xl text-sm text-neutral-500">{t('workspace_components.tunnel_control.web_only_notice', 'O Gerenciador do Túnel controla o programa que roda no seu computador (iniciar, parar, configurar e sincronizar), então só funciona na IDE Desktop. Abra o Studio por ela para usar esta aba.')}</p>
+            <a href="/downloads" className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white hover:bg-indigo-500">{t('hero.download_ide', '⬇ Baixar IDE Gratuitamente')}</a>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (isDesktopEnv === false || isDesktopEnv === null) {

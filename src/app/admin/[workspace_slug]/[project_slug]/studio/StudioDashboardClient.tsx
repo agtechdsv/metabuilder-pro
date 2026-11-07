@@ -1039,7 +1039,7 @@ export function StudioDashboardClient({
         ) : viewMode === 'tunnel' ? (
           <div className="">
             {/* Iniciar/Parar continuam globais (um único agente atende todos os projetos); Configurar e Sincronizar valem para este projeto */}
-            <WorkspaceTunnelControl workspaceSlug={workspace_slug} projectSlug={project_slug} />
+            <WorkspaceTunnelControl workspaceSlug={workspace_slug} projectSlug={project_slug} webNotice />
           </div>
         ) : viewMode === 'synced-dbs' ? (
           <div className="">

@@ -4601,7 +4601,8 @@
       "sync_starting": "Starting Global Synchronization...",
       "sync_web_cloud": "Process triggered in the cloud. Check the server logs.",
       "sync_web_comm_error": "Web communication failure:",
-      "close_btn": "Close"
+      "close_btn": "Close",
+      "web_only_notice": "The Tunnel Manager controls the program that runs on your computer (start, stop, configure and sync), so it only works in the Desktop IDE. Open Studio through it to use this tab."
     },
     "synced_dbs": {
       "title": "Synced Databases (Schemas)",

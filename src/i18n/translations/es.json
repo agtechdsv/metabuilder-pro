@@ -4689,7 +4689,8 @@
       "sync_starting": "Iniciando Sincronización General...",
       "sync_web_cloud": "Proceso disparado en la nube. Verifique los registros del servidor.",
       "sync_web_comm_error": "Fallo de comunicación web:",
-      "close_btn": "Cerrar"
+      "close_btn": "Cerrar",
+      "web_only_notice": "El Administrador del Túnel controla el programa que corre en su computadora (iniciar, detener, configurar y sincronizar), por lo que solo funciona en el IDE de escritorio. Abra el Studio desde él para usar esta pestaña."
     },
     "synced_dbs": {
       "title": "Bases de Datos Sincronizadas (Schemas)",
