@@ -222,6 +222,10 @@ export function createDomAdapter(doc: Document, language = 'pt'): DomAdapter {
       }
     },
 
+    isAttached(el) {
+      return (el as HTMLElement).isConnected !== false
+    },
+
     isAutocomplete(el) {
       return (el as HTMLElement).hasAttribute?.('data-tour-autocomplete') === true
     },

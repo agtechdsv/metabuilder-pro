@@ -21,6 +21,8 @@ export interface PlayerAdapter {
   check(el: unknown): void
   /** Arrasta o elemento até o destino do passo (`step.to`). Devolve se conseguiu. */
   drag?(el: unknown, step: TourStep): Promise<boolean>
+  /** O elemento ainda está na tela? (o app pode redesenhar a tela enquanto a legenda é lida e deixar o elemento antigo solto) */
+  isAttached?(el: unknown): boolean
   /** O elemento é um campo de busca com sugestões (autocomplete)? */
   isAutocomplete?(el: unknown): boolean
   /** Escolhe a primeira sugestão da lista, esperando a busca terminar. Devolve se conseguiu. */
@@ -207,6 +209,17 @@ export class TourPlayer {
     // tempo para ler a legenda, proporcional ao tamanho
     await this.wait(Math.min(BASE.readMax, BASE.readMin + caption.length * BASE.readPerChar))
     if (this.cancelled) return
+
+    // depois de salvar, o app costuma redesenhar o formulário: o elemento achado antes pode ter sido trocado por outro igual.
+    // Agir nele não faria nada (o clique caía no vazio), então acha de novo e mostra o novo.
+    if (el && step.target && this.adapter.isAttached && !this.adapter.isAttached(el)) {
+      el = await this.adapter.find(step, 4000)
+      if (this.cancelled) return
+      if (!el) { if (!step.optional) this.skipped++; this.emit(); return }
+      this.adapter.showStep(el, caption, i, total)
+      await this.wait(BASE.travel)
+      if (this.cancelled) return
+    }
 
     if (step.kind === 'click' && el) {
       this.adapter.click(el)

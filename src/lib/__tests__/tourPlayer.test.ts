@@ -210,3 +210,28 @@ describe('espera por janelas que abrem depois de um clique', () => {
     expect(findTimeout(s('type', { type: 'field', ref: 'a' }), base, false)).toBe(2500)
   })
 })
+
+describe('elemento redesenhado enquanto a legenda é lida', () => {
+  it('acha o elemento de novo e age no novo, não no antigo solto', async () => {
+    const { adapter, log } = fakeAdapter()
+    let n = 0
+    // 1ª busca devolve o elemento antigo (que já saiu da tela); a 2ª devolve o novo
+    adapter.find = async (s) => ({ id: `${s.id}${++n === 1 ? '-velho' : '-novo'}` })
+    adapter.isAttached = (el: any) => !String(el.id).endsWith('-velho')
+    const p = new TourPlayer(tour([step('b', 'click', { target })]), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(log.filter(l => l.startsWith('click'))).toEqual(['click:b-novo'])
+    expect(p.snapshot.skipped).toBe(0)
+  })
+
+  it('se não houver mais o elemento, o passo conta como pulado', async () => {
+    const { adapter, log } = fakeAdapter()
+    let n = 0
+    adapter.find = async (s) => (++n === 1 ? { id: `${s.id}-velho` } : null)
+    adapter.isAttached = (el: any) => !String(el.id).endsWith('-velho')
+    const p = new TourPlayer(tour([step('b', 'click', { target })]), adapter, { speed: 'fast' })
+    p.play(); await vi.advanceTimersByTimeAsync(60_000)
+    expect(log.some(l => l.startsWith('click'))).toBe(false)
+    expect(p.snapshot.skipped).toBe(1)
+  })
+})
