@@ -5413,7 +5413,9 @@
       "record_default_title": "Tutorial gravado",
       "record_unsupported": "Este tipo de caso de uso não tem geração automática: grave o roteiro usando a tela.",
       "caption_placeholder": "Legenda deste passo",
-      "action_custom": "Gravado"
+      "action_custom": "Gravado",
+      "delete_all": "Excluir todos",
+      "delete_all_confirm": "Excluir os {count} roteiros deste caso de uso? Só vale depois de Salvar ajuda."
     }
   }
 }

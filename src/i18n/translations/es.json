@@ -5501,7 +5501,9 @@
       "record_default_title": "Tutorial grabado",
       "record_unsupported": "Este tipo de caso de uso no tiene generación automática: grabe el recorrido usando la pantalla.",
       "caption_placeholder": "Leyenda de este paso",
-      "action_custom": "Grabado"
+      "action_custom": "Grabado",
+      "delete_all": "Eliminar todos",
+      "delete_all_confirm": "¿Eliminar los {count} recorridos de este caso de uso? Solo vale después de Guardar ayuda."
     }
   }
 }

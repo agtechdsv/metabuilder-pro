@@ -114,6 +114,14 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
   const sigChanged = fieldsReady && staleIds.size === 0 && ih.tours.some(tr => isLikelyStale(tr, lc, view.name))
   const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => (tr.action === 'custom' ? tr : { ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
 
+  // apaga TODOS os roteiros deste caso de uso (só vale depois de Salvar ajuda)
+  const deleteAll = () => {
+    const msg = t('help_center_studio.interactive.delete_all_confirm', 'Excluir os {count} roteiros deste caso de uso? Só vale depois de Salvar ajuda.').replace('{count}', String(ih.tours.length))
+    if (typeof window !== 'undefined' && !window.confirm(msg)) return
+    save({ ...ih, tours: [] })
+    setOpenTour(null)
+  }
+
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
   return (
@@ -149,6 +157,9 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
           )}
           <button type="button" onClick={regenerateAll} className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline">
             <RefreshCw className="h-3 w-3" />{t('help_center_studio.interactive.regenerate_all', 'Regenerar todos')}
+          </button>
+          <button type="button" onClick={deleteAll} className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:underline">
+            <Trash2 className="h-3 w-3" />{t('help_center_studio.interactive.delete_all', 'Excluir todos')}
           </button>
         </div>
       )}
