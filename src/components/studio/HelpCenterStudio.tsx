@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { HelpCircle, Loader2, Save, ExternalLink, FileText, PlayCircle } from 'lucide-react'
+import { HelpCircle, Loader2, Save, ExternalLink, FileText, PlayCircle, MessageSquareHeart } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -13,6 +13,9 @@ import { HelpOverview } from './UseCaseBuilder/steps/StepLayout/special-layouts/
 import { ScreenHelpField } from './UseCaseBuilder/steps/StepLayout/special-layouts/ScreenHelpField'
 import { InteractiveHelpEditor } from './InteractiveHelpEditor'
 import { askDialog } from '@/utils/askDialog'
+import { HelpFeedbackPanel } from './UseCaseBuilder/steps/StepLayout/special-layouts/HelpFeedbackPanel'
+import { FieldHelpInline, ZoneHelpInline } from './HelpInlineEditors'
+import { HELP_ZONES, getZoneHelp, zonesOfField, type HelpZone } from '@/lib/helpText'
 import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
 import { normalizeInteractiveHelp } from '@/lib/interactiveHelp/types'
 
@@ -21,6 +24,38 @@ interface Props {
   projectSlug: string
   views: any[]
   models: any[]
+}
+
+const idsOf = (list: any): string[] => (Array.isArray(list) ? list : []).map((f: any) => (typeof f === 'string' ? f : f?.id)).filter(Boolean)
+
+/** Aba Feedback: votos e comentários dos usuários, com a edição do texto ali mesmo. */
+function FeedbackTab({ config, setConfig, models, t }: { config: any; setConfig: (c: any) => void; models: any[]; t: (k: string, f?: string) => string }) {
+  const lc = config.layout_config || {}
+  const meta: Record<string, any> = lc.fields_metadata || {}
+  const fieldIds = Array.from(new Set(HELP_ZONES.flatMap(z => idsOf(lc[`${z}_fields`]))))
+  const nameOf = (id: string): string => {
+    const label = meta[`form-${id}`]?.label?.text || meta[id]?.label?.text
+    if (label) return label
+    for (const m of Array.isArray(models) ? models : []) {
+      const f = (m.fields || []).find((x: any) => x.id === id)
+      if (f) return f.display_name || f.db_column_name || id
+    }
+    return id
+  }
+  return (
+    <HelpFeedbackPanel
+      autoLoad
+      projectId={(Array.isArray(models) ? models : []).find((m: any) => m?.project_id)?.project_id}
+      screenId={config.id}
+      fieldIds={fieldIds}
+      fieldName={nameOf}
+      zoneCount={id => zonesOfField(lc, id).length}
+      isCustom={(id, zone) => (HELP_ZONES as readonly string[]).includes(zone) && getZoneHelp(meta, id, zone as HelpZone).custom}
+      renderFieldEditor={fieldId => <FieldHelpInline config={config} setConfig={setConfig} t={t} fieldId={fieldId} />}
+      renderZoneEditor={(fieldId, zone) => <ZoneHelpInline config={config} setConfig={setConfig} t={t} fieldId={fieldId} zone={zone} />}
+      t={t}
+    />
+  )
 }
 
 const viewHasHelp = (view: any): boolean => {
@@ -48,7 +83,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
 
   const [selectedId, setSelectedId] = useState('')
   // ajuda textual (campos, tela, feedback) e ajuda interativa (tutoriais) ficam em abas separadas
-  const [helpTab, setHelpTab] = useState<'text' | 'interactive'>('text')
+  const [helpTab, setHelpTab] = useState<'text' | 'interactive' | 'feedback'>('text')
   const [config, setConfig] = useState<any>(null)
   // o que está gravado, para saber se há alteração (só as propriedades de ajuda contam)
   const [baseline, setBaseline] = useState('')
@@ -185,6 +220,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
             {([
               { id: 'text', icon: <FileText className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_text', 'Ajuda textual'), count: null },
               { id: 'interactive', icon: <PlayCircle className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_interactive', 'Ajuda interativa'), count: normalizeInteractiveHelp(config.layout_config?.interactive_help).tours.length },
+              { id: 'feedback', icon: <MessageSquareHeart className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_feedback', 'Feedback'), count: null },
             ] as const).map(tab => (
               <button
                 key={tab.id}
@@ -204,8 +240,10 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
           {helpTab === 'text' ? (
             <>
               <ScreenHelpField config={config} setConfig={setConfig} t={t} />
-              <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
+              <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen hideFeedback />
             </>
+          ) : helpTab === 'feedback' ? (
+            <FeedbackTab config={config} setConfig={setConfig} models={models} t={t} />
           ) : (
             <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} recordUrl={view?.slug ? `/${workspaceSlug}/${projectSlug}/${view.slug}?mb_demo=1` : undefined} />
           )}

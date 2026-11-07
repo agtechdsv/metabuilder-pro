@@ -2855,7 +2855,10 @@
       "help_feedback_comments": "Comments",
       "help_feedback_more": "See {n} more",
       "help_feedback_less": "Show less",
-      "help_suggest_short": "Customize"
+      "help_suggest_short": "Customize",
+      "help_feedback_filter_other": "Others",
+      "help_feedback_all_fields": "All fields",
+      "help_feedback_none_match": "Nothing matches this filter."
     },
     "personalizado": {
       "title": "Use Case Orchestrator Configuration",
@@ -5463,6 +5466,18 @@
     "discard_title": "Unsaved changes",
     "discard_ok": "Discard",
     "tab_text": "Text help",
-    "tab_interactive": "Interactive help"
+    "tab_interactive": "Interactive help",
+    "tab_feedback": "Feedback",
+    "feedback": {
+      "edit_field": "Edit this field text",
+      "edit_zone": "Edit this zone text",
+      "field_text": "Field default text",
+      "zone_text": "Text in this zone",
+      "field_help_placeholder": "Default text of this field (applies to every zone without its own text).",
+      "zone_help_placeholder": "Text of this zone.",
+      "uses_default": "Uses the field default text",
+      "edit_this": "Edit the help for this item",
+      "close_edit": "Close editing"
+    }
   }
 }

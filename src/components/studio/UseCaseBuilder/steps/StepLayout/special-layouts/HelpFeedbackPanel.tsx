@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { AlertTriangle, MessageSquare, RefreshCw, ThumbsDown, ThumbsUp } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, ChevronDown, ChevronRight, MessageSquare, Pencil, RefreshCw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FeedbackSummaryRow, groupFeedback, suggestsOwnText } from '@/lib/helpFeedbackSummary'
 import type { HelpFeedbackZone } from '@/lib/helpFeedback'
@@ -16,6 +16,12 @@ interface Props {
   zoneCount: (id: string) => number
   /** a zona já tem texto próprio? */
   isCustom: (id: string, zone: HelpFeedbackZone) => boolean
+  /** editor do texto PADRÃO do campo (null = ajuda da tela); com ele, o nome do campo ganha a seta de expandir */
+  renderFieldEditor?: (fieldId: string | null) => React.ReactNode
+  /** editor do texto de uma zona do campo; com ele, a zona ganha a seta de expandir */
+  renderZoneEditor?: (fieldId: string | null, zone: string | null) => React.ReactNode
+  /** carrega sozinho ao abrir (a aba Feedback) */
+  autoLoad?: boolean
   t: (key: string, fallback?: string) => string
 }
 
@@ -24,17 +30,32 @@ interface Comment { screen_id: string | null; field_id: string | null; zone: str
 interface Row { key: string; fieldId: string | null; name: string; zone: string | null; up: number; down: number; suggest: boolean; firstOfField: boolean }
 
 const COMMENTS_SHOWN = 4
+const EDITABLE_ZONES = ['filter', 'grid', 'form']
+type ZoneFilter = 'all' | 'filter' | 'grid' | 'form' | 'other'
+const zoneGroup = (z: string | null): ZoneFilter => (z === 'filter' || z === 'grid' || z === 'form' ? z : 'other')
 
 /**
- * Feedback dos usuários sobre as dicas desta tela. Em cima, o resumo (aprovação geral e quantas dicas precisam de atenção);
- * no meio, uma linha por campo e zona com a barra de aprovação, as piores primeiro; embaixo, os comentários em cartões.
+ * Feedback dos usuários sobre as dicas da tela. Resumo no topo; filtros por zona e por campo (valem para a tabela e para os comentários);
+ * uma linha por campo e zona com os dois percentuais; os comentários em cartões. O campo, a zona e cada comentário abrem a edição
+ * do texto ali mesmo.
  */
-export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zoneCount, isCustom, t }: Props) {
+export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zoneCount, isCustom, renderFieldEditor, renderZoneEditor, autoLoad = false, t }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [data, setData] = useState<{ summary: FeedbackSummaryRow[]; comments: Comment[] } | null>(null)
-  const [filter, setFilter] = useState<'all' | 'attention'>('all')
+  const [attentionOnly, setAttentionOnly] = useState(false)
+  const [zoneFilter, setZoneFilter] = useState<ZoneFilter>('all')
+  const [fieldFilter, setFieldFilter] = useState('')
   const [showAllComments, setShowAllComments] = useState(false)
+  const [openField, setOpenField] = useState<Set<string>>(new Set())
+  const [openZone, setOpenZone] = useState<Set<string>>(new Set())
+  const [openComment, setOpenComment] = useState<Set<number>>(new Set())
+
+  const toggle = <K,>(set: Set<K>, setter: (s: Set<K>) => void, key: K) => {
+    const next = new Set(set)
+    if (next.has(key)) next.delete(key); else next.add(key)
+    setter(next)
+  }
 
   const zoneName = (z: string | null) =>
     z === 'filter' ? t('wizard.layout.zone_filter', 'Filtro de busca')
@@ -55,16 +76,15 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
     for (const tg of targets) {
       tg.zones.forEach((z, i) => {
         const suggest = !!tg.fieldId && z.zone !== null && suggestsOwnText(tg, z.zone, { custom: isCustom(tg.fieldId, z.zone as HelpFeedbackZone), zoneCount: zoneCount(tg.fieldId) })
-        out.push({ key: `${tg.fieldId || '__screen__'}-${z.zone || 'none'}`, fieldId: tg.fieldId, name: nameOf({ field_id: tg.fieldId }), zone: z.zone, up: z.up, down: z.down, suggest, firstOfField: i === 0 })
+        out.push({ key: `${tg.fieldId || '__screen__'}|${z.zone || 'none'}`, fieldId: tg.fieldId, name: nameOf({ field_id: tg.fieldId }), zone: z.zone, up: z.up, down: z.down, suggest, firstOfField: i === 0 })
       })
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, fieldIds, screenId])
 
-  if (!projectId) return null
-
   const load = async () => {
+    if (!projectId) return
     setLoading(true); setError('')
     try {
       const res = await fetch(`/api/v1/help-feedback?projectId=${encodeURIComponent(projectId)}`)
@@ -77,17 +97,50 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
       setLoading(false)
     }
   }
+  useEffect(() => { if (autoLoad && projectId) void load() }, [autoLoad, projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const comments = (data?.comments || []).filter(mine)
+
+  // totais (de tudo, sem filtro): o resumo não muda quando o dev filtra
   const up = rows.reduce((a, r) => a + r.up, 0)
   const down = rows.reduce((a, r) => a + r.down, 0)
   const votes = up + down
   const approval = votes ? Math.round((up / votes) * 100) : 0
   const attention = rows.filter(r => r.down > r.up).length
-  const visible = filter === 'attention' ? rows.filter(r => r.down > r.up) : rows
-  const comments = (data?.comments || []).filter(mine)
-  const shownComments = showAllComments ? comments : comments.slice(0, COMMENTS_SHOWN)
+
+  // campos que aparecem no feedback (para o filtro por campo) e quantos itens há em cada zona
+  const fieldOptions = useMemo(() => {
+    const ids = new Set<string>()
+    rows.forEach(r => r.fieldId && ids.add(r.fieldId))
+    comments.forEach(c => c.field_id && ids.add(c.field_id))
+    return Array.from(ids).map(id => ({ id, name: fieldName(id) })).sort((a, b) => a.name.localeCompare(b.name))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, comments.length])
+  const zoneCounts = useMemo(() => {
+    const c: Record<ZoneFilter, number> = { all: 0, filter: 0, grid: 0, form: 0, other: 0 }
+    rows.forEach(r => { c.all++; c[zoneGroup(r.zone)]++ })
+    return c
+  }, [rows])
+
+  if (!projectId) return null
+
+  const passes = (zone: string | null, fieldId: string | null) =>
+    (zoneFilter === 'all' || zoneGroup(zone) === zoneFilter) && (!fieldFilter || fieldId === fieldFilter)
+  const visibleRows = rows.filter(r => passes(r.zone, r.fieldId) && (!attentionOnly || r.down > r.up))
+  const visibleComments = comments.filter(c => passes(c.zone, c.field_id))
+  const shownComments = showAllComments ? visibleComments : visibleComments.slice(0, COMMENTS_SHOWN)
 
   const pill = (active: boolean) => cn('rounded-full px-3 py-1 text-[10px] font-bold transition-colors', active ? 'bg-indigo-600 text-white' : 'bg-neutral-100 text-neutral-500 hover:text-neutral-800 dark:bg-neutral-800')
+  const arrow = 'flex h-5 w-5 shrink-0 items-center justify-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-indigo-600 dark:hover:bg-neutral-800'
+  const colGrid = 'sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto]'
+
+  const zoneChips: Array<{ id: ZoneFilter; label: string }> = [
+    { id: 'all', label: t('wizard.layout.help_feedback_filter_all', 'Todos') },
+    { id: 'filter', label: t('wizard.layout.zone_filter', 'Filtro de busca') },
+    { id: 'grid', label: t('wizard.layout.zone_grid', 'Grid de dados') },
+    { id: 'form', label: t('wizard.layout.zone_form', 'Formulário') },
+    { id: 'other', label: t('wizard.layout.help_feedback_filter_other', 'Outras') },
+  ]
 
   return (
     <div className="space-y-4 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
@@ -99,7 +152,7 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
         </button>
       </div>
       {error && <p className="text-[11px] text-red-500">{error}</p>}
-      {data && rows.length === 0 && <p className="text-[11px] italic text-neutral-400">{t('wizard.layout.help_feedback_empty', 'Ninguém votou nas dicas desta tela ainda.')}</p>}
+      {data && rows.length === 0 && comments.length === 0 && <p className="text-[11px] italic text-neutral-400">{t('wizard.layout.help_feedback_empty', 'Ninguém votou nas dicas desta tela ainda.')}</p>}
 
       {rows.length > 0 && (
         <>
@@ -123,28 +176,63 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
             </div>
           </div>
 
+          {/* filtros: valem para a tabela e para os comentários */}
+          <div className="flex flex-wrap items-center gap-2">
+            {zoneChips.map(c => (
+              <button key={c.id} type="button" onClick={() => setZoneFilter(c.id)} className={pill(zoneFilter === c.id)}>{c.label} ({zoneCounts[c.id]})</button>
+            ))}
+            <select
+              value={fieldFilter}
+              onChange={e => setFieldFilter(e.target.value)}
+              className="rounded-full border border-neutral-200 bg-transparent px-3 py-1 text-[10px] font-bold text-neutral-600 dark:border-neutral-700 dark:text-neutral-300"
+              aria-label={t('wizard.layout.help_feedback_col_field', 'Campo')}
+            >
+              <option value="">{t('wizard.layout.help_feedback_all_fields', 'Todos os campos')}</option>
+              {fieldOptions.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+            <label className="flex cursor-pointer items-center gap-1.5 text-[10px] font-bold text-neutral-500">
+              <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
+              {t('wizard.layout.help_feedback_filter_attention', 'Precisam de atenção')} ({attention})
+            </label>
+          </div>
+
           {/* por campo e zona */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setFilter('all')} className={pill(filter === 'all')}>{t('wizard.layout.help_feedback_filter_all', 'Todos')} ({rows.length})</button>
-              <button type="button" onClick={() => setFilter('attention')} className={pill(filter === 'attention')}>{t('wizard.layout.help_feedback_filter_attention', 'Precisam de atenção')} ({attention})</button>
-            </div>
-            <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-3 px-2 text-[9px] font-black uppercase tracking-widest text-neutral-400 sm:grid">
+            <div className={cn('hidden gap-3 px-2 text-[9px] font-black uppercase tracking-widest text-neutral-400 sm:grid', colGrid)}>
               <span>{t('wizard.layout.help_feedback_col_field', 'Campo')}</span>
               <span>{t('wizard.layout.help_feedback_col_where', 'Onde')}</span>
               <span>{t('wizard.layout.help_feedback_col_approval', 'Aprovação')}</span>
               <span className="w-24 text-right">{t('wizard.layout.help_feedback_votes', 'votos')}</span>
             </div>
             <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-100 dark:divide-neutral-800 dark:border-neutral-800">
-              {visible.length === 0 && <li className="p-3 text-[11px] italic text-neutral-400">{t('wizard.layout.help_feedback_none_attention', 'Nenhuma dica precisa de atenção.')}</li>}
-              {visible.map(r => {
+              {visibleRows.length === 0 && <li className="p-3 text-[11px] italic text-neutral-400">{t('wizard.layout.help_feedback_none_match', 'Nada com este filtro.')}</li>}
+              {visibleRows.map(r => {
                 const total = r.up + r.down
-                const pct = total ? Math.round((r.up / total) * 100) : 0
+                const pctUp = total ? Math.round((r.up / total) * 100) : 0
+                const pctDown = total ? 100 - pctUp : 0
                 const bad = r.down > r.up
+                const fKey = r.fieldId || '__screen__'
+                const canZone = !!renderZoneEditor && !!r.fieldId && r.zone !== null && EDITABLE_ZONES.includes(r.zone)
+                const fieldOpen = openField.has(fKey)
+                const zoneOpen = openZone.has(r.key)
                 return (
-                  <li key={r.key} className={cn('grid grid-cols-1 items-center gap-x-3 gap-y-1 px-2 py-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.4fr)_auto]', bad && 'bg-red-50/40 dark:bg-red-950/10')}>
-                    <span className={cn('truncate text-xs', r.firstOfField ? 'font-bold text-neutral-800 dark:text-neutral-200' : 'text-transparent select-none')} title={r.name}>{r.name}</span>
+                  <li key={r.key} className={cn('grid grid-cols-1 items-start gap-x-3 gap-y-1 px-2 py-2 sm:grid', colGrid, bad && 'bg-red-50/40 dark:bg-red-950/10')}>
+                    {/* campo */}
+                    <span className="flex min-w-0 items-center gap-1">
+                      {r.firstOfField && renderFieldEditor ? (
+                        <button type="button" onClick={() => toggle(openField, setOpenField, fKey)} className={arrow} aria-expanded={fieldOpen} title={t('help_center_studio.feedback.edit_field', 'Editar o texto deste campo')}>
+                          {fieldOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        </button>
+                      ) : <span className="h-5 w-5 shrink-0" />}
+                      <span className={cn('truncate text-xs', r.firstOfField ? 'font-bold text-neutral-800 dark:text-neutral-200' : 'select-none text-transparent')} title={r.name}>{r.name}</span>
+                    </span>
+                    {/* onde */}
                     <span className="flex min-w-0 items-center gap-1.5">
+                      {canZone ? (
+                        <button type="button" onClick={() => toggle(openZone, setOpenZone, r.key)} className={arrow} aria-expanded={zoneOpen} title={t('help_center_studio.feedback.edit_zone', 'Editar o texto desta zona')}>
+                          {zoneOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        </button>
+                      ) : <span className="h-5 w-5 shrink-0" />}
                       <span className="truncate rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-500 dark:bg-neutral-800">{zoneName(r.zone)}</span>
                       {r.suggest && (
                         <span title={t('wizard.layout.help_suggest_own', 'Esta zona está pior que as outras: considere "Personalizar nesta zona".')} className="flex shrink-0 items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-700 dark:bg-amber-950/40">
@@ -152,14 +240,35 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
                         </span>
                       )}
                     </span>
-                    <span className="flex items-center gap-2">
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-red-200 dark:bg-red-900/40"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></span>
-                      <span className={cn('w-9 text-right text-[10px] font-black', bad ? 'text-red-500' : 'text-emerald-600')}>{pct}%</span>
+                    {/* aprovação: 👍% à esquerda, 👎% à direita */}
+                    <span className="block">
+                      <span className="flex items-center justify-between text-[10px] font-black leading-none">
+                        <span className="text-emerald-600">{pctUp}%</span>
+                        <span className="text-red-500">{pctDown}%</span>
+                      </span>
+                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-red-200 dark:bg-red-900/40"><span className="block h-full rounded-full bg-emerald-500" style={{ width: `${pctUp}%` }} /></span>
                     </span>
                     <span className="flex w-24 items-center justify-end gap-3 text-[11px]">
                       <span className="flex items-center gap-1 text-emerald-600"><ThumbsUp className="h-3 w-3" />{r.up}</span>
                       <span className="flex items-center gap-1 text-red-500"><ThumbsDown className="h-3 w-3" />{r.down}</span>
                     </span>
+
+                    {(fieldOpen || zoneOpen) && (
+                      <div className="space-y-3 rounded-xl border border-indigo-100 bg-white p-3 dark:border-indigo-900/40 dark:bg-neutral-950 sm:col-span-full">
+                        {fieldOpen && renderFieldEditor && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{r.fieldId ? t('help_center_studio.feedback.field_text', 'Texto padrão do campo') : t('wizard.layout.help_screen', 'Ajuda da tela')}</span>
+                            {renderFieldEditor(r.fieldId)}
+                          </div>
+                        )}
+                        {zoneOpen && renderZoneEditor && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.feedback.zone_text', 'Texto nesta zona')}: {zoneName(r.zone)}</span>
+                            {renderZoneEditor(r.fieldId, r.zone)}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </li>
                 )
               })}
@@ -171,22 +280,34 @@ export function HelpFeedbackPanel({ projectId, screenId, fieldIds, fieldName, zo
       {/* comentários */}
       {comments.length > 0 && (
         <div className="space-y-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-          <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-neutral-400"><MessageSquare className="h-3 w-3" />{t('wizard.layout.help_feedback_comments', 'Comentários')} ({comments.length})</span>
+          <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-neutral-400"><MessageSquare className="h-3 w-3" />{t('wizard.layout.help_feedback_comments', 'Comentários')} ({visibleComments.length}{visibleComments.length !== comments.length ? ` / ${comments.length}` : ''})</span>
+          {visibleComments.length === 0 && <p className="text-[11px] italic text-neutral-400">{t('wizard.layout.help_feedback_none_match', 'Nada com este filtro.')}</p>}
           <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-            {shownComments.map((c, i) => (
-              <li key={i} className="rounded-xl border border-neutral-100 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/40">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
-                  <span className="font-black text-neutral-700 dark:text-neutral-300">{nameOf(c)}</span>
-                  {c.zone && <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-bold text-neutral-500 dark:bg-neutral-800">{zoneName(c.zone)}</span>}
-                  <span className="ml-auto text-neutral-400">{new Date(c.created_at).toLocaleDateString()}</span>
-                </div>
-                <p className="mt-1.5 whitespace-pre-line text-xs text-neutral-700 dark:text-neutral-300">{c.comment}</p>
-              </li>
-            ))}
+            {shownComments.map((c, i) => {
+              const canEdit = !!renderZoneEditor && (c.zone === null || c.zone === 'screen' || EDITABLE_ZONES.includes(c.zone) || !c.field_id)
+              const open = openComment.has(i)
+              return (
+                <li key={`${c.created_at}-${i}`} className="rounded-xl border border-neutral-100 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/40">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+                    <span className="font-black text-neutral-700 dark:text-neutral-300">{nameOf(c)}</span>
+                    {c.zone && <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-bold text-neutral-500 dark:bg-neutral-800">{zoneName(c.zone)}</span>}
+                    <span className="ml-auto text-neutral-400">{new Date(c.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="mt-1.5 whitespace-pre-line text-xs text-neutral-700 dark:text-neutral-300">{c.comment}</p>
+                  {canEdit && (
+                    <button type="button" onClick={() => toggle(openComment, setOpenComment, i)} className="mt-2 flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline" aria-expanded={open}>
+                      {open ? <ChevronDown className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+                      {open ? t('help_center_studio.feedback.close_edit', 'Fechar edição') : t('help_center_studio.feedback.edit_this', 'Editar a ajuda deste ponto')}
+                    </button>
+                  )}
+                  {open && renderZoneEditor && <div className="mt-2 rounded-xl border border-indigo-100 p-3 dark:border-indigo-900/40">{renderZoneEditor(c.field_id, c.zone)}</div>}
+                </li>
+              )
+            })}
           </ul>
-          {comments.length > COMMENTS_SHOWN && (
+          {visibleComments.length > COMMENTS_SHOWN && (
             <button type="button" onClick={() => setShowAllComments(v => !v)} className="text-[11px] font-bold text-indigo-600 hover:underline">
-              {showAllComments ? t('wizard.layout.help_feedback_less', 'Mostrar menos') : t('wizard.layout.help_feedback_more', 'Ver mais {n}').replace('{n}', String(comments.length - COMMENTS_SHOWN))}
+              {showAllComments ? t('wizard.layout.help_feedback_less', 'Mostrar menos') : t('wizard.layout.help_feedback_more', 'Ver mais {n}').replace('{n}', String(visibleComments.length - COMMENTS_SHOWN))}
             </button>
           )}
         </div>

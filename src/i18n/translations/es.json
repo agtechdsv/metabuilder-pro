@@ -2942,7 +2942,10 @@
       "help_feedback_comments": "Comentarios",
       "help_feedback_more": "Ver {n} más",
       "help_feedback_less": "Mostrar menos",
-      "help_suggest_short": "Personalizar"
+      "help_suggest_short": "Personalizar",
+      "help_feedback_filter_other": "Otras",
+      "help_feedback_all_fields": "Todos los campos",
+      "help_feedback_none_match": "Nada con este filtro."
     },
     "personalizado": {
       "title": "Configuración del Orquestador de Casos de Uso",
@@ -5551,6 +5554,18 @@
     "discard_title": "Cambios sin guardar",
     "discard_ok": "Descartar",
     "tab_text": "Ayuda de texto",
-    "tab_interactive": "Ayuda interactiva"
+    "tab_interactive": "Ayuda interactiva",
+    "tab_feedback": "Comentarios",
+    "feedback": {
+      "edit_field": "Editar el texto de este campo",
+      "edit_zone": "Editar el texto de esta zona",
+      "field_text": "Texto estándar del campo",
+      "zone_text": "Texto en esta zona",
+      "field_help_placeholder": "Texto estándar de este campo (vale para todas las zonas sin texto propio).",
+      "zone_help_placeholder": "Texto de esta zona.",
+      "uses_default": "Usa el texto estándar del campo",
+      "edit_this": "Editar la ayuda de este punto",
+      "close_edit": "Cerrar edición"
+    }
   }
 }
