@@ -10,6 +10,7 @@ import { buildFieldInfos, buildSchedulerSeed } from '@/lib/interactiveHelp/field
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
 import { HelpTextEditor } from './UseCaseBuilder/steps/HelpTextEditor'
 import { InteractiveHelpRecorder } from './InteractiveHelpRecorder'
+import { askDialog } from '@/utils/askDialog'
 import { normalizeInteractiveHelp, tourActionsFor, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
@@ -115,9 +116,15 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
   const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => (tr.action === 'custom' ? tr : { ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
 
   // apaga TODOS os roteiros deste caso de uso (só vale depois de Salvar ajuda)
-  const deleteAll = () => {
+  const deleteAll = async () => {
     const msg = t('help_center_studio.interactive.delete_all_confirm', 'Excluir os {count} roteiros deste caso de uso? Só vale depois de Salvar ajuda.').replace('{count}', String(ih.tours.length))
-    if (typeof window !== 'undefined' && !window.confirm(msg)) return
+    const ok = await askDialog(msg, {
+      title: t('help_center_studio.interactive.delete_all', 'Excluir todos'),
+      kind: 'warning',
+      okLabel: t('help_center_studio.interactive.delete_all_ok', 'Excluir todos'),
+      cancelLabel: t('common.cancel', 'Cancelar'),
+    })
+    if (!ok) return
     save({ ...ih, tours: [] })
     setOpenTour(null)
   }

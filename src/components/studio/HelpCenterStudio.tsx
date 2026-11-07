@@ -12,6 +12,7 @@ import { draftLayoutOf, mergeHelpIntoLayout, patchComponentHelp } from '@/lib/he
 import { HelpOverview } from './UseCaseBuilder/steps/StepLayout/special-layouts/HelpOverview'
 import { ScreenHelpField } from './UseCaseBuilder/steps/StepLayout/special-layouts/ScreenHelpField'
 import { InteractiveHelpEditor } from './InteractiveHelpEditor'
+import { askDialog } from '@/utils/askDialog'
 import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
 
 interface Props {
@@ -60,8 +61,16 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
   const helpSig = (layout: any) => JSON.stringify(mergeHelpIntoLayout({}, layout || {}))
   const dirty = !!config && helpSig(config.layout_config) !== baseline
 
-  const select = (id: string) => {
-    if (dirty && !window.confirm(t('help_center_studio.discard_confirm', 'Há alterações não salvas nesta tela. Descartar?'))) return
+  const select = async (id: string) => {
+    if (dirty) {
+      const ok = await askDialog(t('help_center_studio.discard_confirm', 'Há alterações não salvas nesta tela. Descartar?'), {
+        title: t('help_center_studio.discard_title', 'Alterações não salvas'),
+        kind: 'warning',
+        okLabel: t('help_center_studio.discard_ok', 'Descartar'),
+        cancelLabel: t('common.cancel', 'Cancelar'),
+      })
+      if (!ok) return
+    }
     setSelectedId(id)
     selectedRef.current = id
     setFieldRows([])

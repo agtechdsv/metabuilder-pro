@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical , PlayCircle } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -91,6 +91,12 @@ export function MarketingSections() {
       title: t('marketing_v2.navbar.control_center'),
       desc: t('marketing_v2.home.control_center_desc'),
       href: "/features/control-center"
+    },
+    {
+      icon: <PlayCircle className="w-6 h-6 text-rose-400" />,
+      title: t('marketing_v2.navbar.help'),
+      desc: t('marketing_v2.features.help.card_desc'),
+      href: "/features/help"
     },
     {
       icon: <Network className="w-6 h-6 text-indigo-400" />,

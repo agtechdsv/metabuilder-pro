@@ -1558,7 +1558,8 @@
       "ide_desktop": "IDE de Escritorio (Pro)",
       "git_architecture": "Arquitectura Git",
       "ai_studio": "AI Studio",
-      "testing": "Entorno de Pruebas"
+      "testing": "Entorno de Pruebas",
+      "help": "Ayuda interactiva"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",
@@ -1981,6 +1982,34 @@
         "type_compat_desc": "Chrome, Firefox y Safari.",
         "type_load_title": "Rendimiento y carga",
         "type_load_desc": "Muchos accesos al mismo tiempo."
+      },
+      "help": {
+        "card_desc": "Ayuda en cada campo y tutoriales que el sistema ejecuta solo en pantalla, en modo demostración. El usuario aprende viendo, sin riesgo.",
+        "hero_title": "Un sistema que",
+        "hero_title_highlight": "se explica solo.",
+        "hero_desc": "Cada pantalla creada en MetaBuilder nace con ayuda: el usuario hace clic en ▶ y ve al sistema registrar, editar, eliminar y buscar solo, con leyendas y a la velocidad que quiera. No se guarda nada de verdad.",
+        "demo_title": "Aprender viendo",
+        "demo_desc": "El cursor se mueve, los campos se completan y las pantallas se abren, todo en modo demostración.",
+        "speed_slow": "Lento",
+        "speed_normal": "Normal",
+        "speed_fast": "Rápido",
+        "languages": "Portugués · Inglés · Español",
+        "items_title": "Ayuda de punta a punta",
+        "items_desc": "Del texto de un campo al tutorial completo: el desarrollador lo arma, el usuario aprende y el equipo ve qué ayudó.",
+        "item_context_title": "Ayuda en cada campo y pantalla",
+        "item_context_desc": "Ícono ? en campos, filtros, columnas y en el encabezado de la pantalla, en tres idiomas. El desarrollador lo edita en el Centro de Ayuda, sin republicar el caso de uso.",
+        "item_tour_title": "Tutoriales que se ejecutan solos",
+        "item_tour_desc": "El ícono ▶ reproduce el recorrido en la pantalla real: hace clic, escribe, elige y guarda en modo demostración. El usuario controla la velocidad, pausa y repite.",
+        "item_auto_title": "Generados automáticamente",
+        "item_auto_desc": "Registrar, editar, eliminar, buscar y ver detalles nacen listos desde la configuración, para formularios, maestro-detalle, Kanban, Agenda, BI, Línea de tiempo, Galería, Gantt, Mapa, Mapa Mental y Diagrama de flujo.",
+        "item_record_title": "Grabe su propio recorrido",
+        "item_record_desc": "¿Prefiere enseñar un flujo específico? Use la pantalla como lo haría el usuario y el grabador convierte cada clic en un paso editable.",
+        "item_feedback_title": "Centro de Ayuda y valoraciones",
+        "item_feedback_desc": "Menú de ayuda armado automáticamente, con búsqueda y el botón \"¿Esto ayudó?\". Las valoraciones quedan en la base del cliente y muestran dónde mejorar.",
+        "item_fresh_title": "Siempre actualizada",
+        "item_fresh_desc": "La leyenda sigue la ayuda actual del campo, y Studio avisa cuando la configuración cambió y un recorrido puede estar desactualizado, con regeneración en un clic.",
+        "types_title": "Sin código y sin manual extra",
+        "types_desc": "La ayuda es parte del propio sistema: menos capacitación, menos tickets de soporte y usuarios productivos antes. Sigue el mismo cuidado de seguridad del resto de la plataforma: el modo demostración nunca escribe en la base de datos."
       }
     },
     "use_cases_page": {
@@ -5503,7 +5532,10 @@
       "caption_placeholder": "Leyenda de este paso",
       "action_custom": "Grabado",
       "delete_all": "Eliminar todos",
-      "delete_all_confirm": "¿Eliminar los {count} recorridos de este caso de uso? Solo vale después de Guardar ayuda."
-    }
+      "delete_all_confirm": "¿Eliminar los {count} recorridos de este caso de uso? Solo vale después de Guardar ayuda.",
+      "delete_all_ok": "Eliminar todos"
+    },
+    "discard_title": "Cambios sin guardar",
+    "discard_ok": "Descartar"
   }
 }

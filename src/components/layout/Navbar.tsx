@@ -117,6 +117,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
     '/features/control-center',
     '/features/branding',
     '/features/desktop',
+    '/features/help',
   ].includes(pathname || '')
 
   const isInfraActive = Boolean(pathname?.startsWith('/features/')) && [
@@ -446,6 +447,20 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                     >
                       <span>{t('marketing_v2.navbar.branding')}</span>
                       {isItemActive('/features/branding') && <ActiveIndicator />}
+                    </Link>
+
+                    {/* Ajuda que se explica sozinha */}
+                    <Link 
+                      href="/features/help" 
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
+                        isItemActive('/features/help')
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black text-indigo-600 dark:text-indigo-400"
+                          : "font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      )}
+                    >
+                      <span>{t('marketing_v2.navbar.help')}</span>
+                      {isItemActive('/features/help') && <ActiveIndicator />}
                     </Link>
 
                     {/* Compilador Desktop */}

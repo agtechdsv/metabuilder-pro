@@ -1471,7 +1471,8 @@
       "ide_desktop": "Desktop IDE (Pro)",
       "git_architecture": "Git Architecture",
       "ai_studio": "AI Studio",
-      "testing": "Test Environment"
+      "testing": "Test Environment",
+      "help": "Interactive help"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -1894,6 +1895,34 @@
         "type_compat_desc": "Chrome, Firefox and Safari.",
         "type_load_title": "Performance and load",
         "type_load_desc": "Many simultaneous accesses."
+      },
+      "help": {
+        "card_desc": "Help on every field and tutorials the system runs by itself on screen, in demo mode. Users learn by watching, with no risk.",
+        "hero_title": "A system that",
+        "hero_title_highlight": "explains itself.",
+        "hero_desc": "Every screen built in MetaBuilder is born with help: users click ▶ and watch the system register, edit, delete and search by itself, with captions and at the speed they choose. Nothing is really saved.",
+        "demo_title": "Learn by watching",
+        "demo_desc": "The cursor moves, fields get filled and screens open, all in demo mode.",
+        "speed_slow": "Slow",
+        "speed_normal": "Normal",
+        "speed_fast": "Fast",
+        "languages": "Portuguese · English · Spanish",
+        "items_title": "End-to-end help",
+        "items_desc": "From a field hint to a full tutorial: the developer builds it, the user learns, and the team sees what helped.",
+        "item_context_title": "Help on every field and screen",
+        "item_context_desc": "A ? icon on fields, filters, columns and the screen header, in three languages. Developers edit it in the Help Center, without republishing the use case.",
+        "item_tour_title": "Tutorials that run themselves",
+        "item_tour_desc": "The ▶ icon plays the tour on the real screen: it clicks, types, picks and saves in demo mode. Users control the speed, pause and replay.",
+        "item_auto_title": "Generated automatically",
+        "item_auto_desc": "Register, edit, delete, search and view details come ready from the configuration, for forms, master-detail, Kanban, Calendar, BI, Timeline, Gallery, Gantt, Map, Mind Map and Flowchart.",
+        "item_record_title": "Record your own tour",
+        "item_record_desc": "Want to teach a specific flow? Use the screen as a user would and the recorder turns every click into an editable step.",
+        "item_feedback_title": "Help Center and ratings",
+        "item_feedback_desc": "A help menu built automatically, with search and an \"Was this helpful?\" button. Ratings stay in the customer database and show where help needs to improve.",
+        "item_fresh_title": "Always up to date",
+        "item_fresh_desc": "Captions follow the field's current help, and Studio warns when the configuration changed and a tour may be outdated, with one-click regeneration.",
+        "types_title": "No code and no extra manual",
+        "types_desc": "Help is part of the system itself: less training, fewer support tickets and users productive sooner. It follows the same security care as the rest of the platform: demo mode never writes to the database."
       }
     },
     "use_cases_page": {
@@ -5415,7 +5444,10 @@
       "caption_placeholder": "Caption for this step",
       "action_custom": "Recorded",
       "delete_all": "Delete all",
-      "delete_all_confirm": "Delete all {count} tours of this use case? It only applies after Save help."
-    }
+      "delete_all_confirm": "Delete all {count} tours of this use case? It only applies after Save help.",
+      "delete_all_ok": "Delete all"
+    },
+    "discard_title": "Unsaved changes",
+    "discard_ok": "Discard"
   }
 }
