@@ -16,6 +16,7 @@ type Zone = 'form' | 'filter' | 'grid'
 
 /** Zonas que cada ação observa (editar, ver, excluir e pesquisar também leem o grid, que forma a linha de exemplo). */
 const ZONES_BY_ACTION: Record<TourAction, Zone[]> = {
+  custom: [],
   create: ['form'],
   edit: ['form', 'grid'],
   view: ['form', 'grid'],
@@ -64,6 +65,8 @@ export function layoutSignature(layoutConfig: any, action: TourAction, screenNam
  * a legenda copiada da ajuda, então vale regenerar uma vez.
  */
 export function isLikelyStale(tour: Tour, layoutConfig: any, screenName?: string): boolean {
+  // roteiro gravado pelo dev não nasce da configuração: não há como saber se envelheceu
+  if (tour.action === 'custom') return false
   if (!tour.sourceSig) return true
   return layoutSignature(layoutConfig, tour.action, screenName) !== tour.sourceSig
 }

@@ -7,7 +7,8 @@ import type { HelpText } from '../helpText'
 
 // A ORDEM é a sugerida para um cadastro com pesquisa: primeiro achar e olhar o que já existe, depois criar, mudar e, por último, excluir
 // (a ação destrutiva). O dev pode reordenar como quiser; esta é só a sequência inicial.
-export const TOUR_ACTIONS = ['search', 'view', 'create', 'edit', 'move', 'delete'] as const
+/** `custom` = roteiro GRAVADO pelo dev (não é gerado: o Regenerar não mexe nele) */
+export const TOUR_ACTIONS = ['search', 'view', 'create', 'edit', 'move', 'delete', 'custom'] as const
 export type TourAction = (typeof TOUR_ACTIONS)[number]
 
 export type TourSpeed = 'slow' | 'normal' | 'fast'
@@ -34,6 +35,8 @@ export type TourTarget =
   | { type: 'detail-expand'; ref: string }
   /** coluna do Kanban (`data-tour-column`): 'other' = uma coluna diferente da do cartão arrastado */
   | { type: 'kanban-column'; ref: 'other' }
+  /** botão, link ou aba achado pelo TEXTO visível (ou título/aria-label): usado pelo gravador quando o elemento não tem marca */
+  | { type: 'text'; ref: string }
 
 export type TourStepKind = 'click' | 'type' | 'select' | 'check' | 'note' | 'drag'
 

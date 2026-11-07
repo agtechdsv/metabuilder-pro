@@ -75,6 +75,7 @@ const ROW_CAPTION: Record<string, Cap> = {
   delete: cap('Clique na lixeira para excluir o registro.', 'Click the trash can to delete the record.', 'Haga clic en la papelera para eliminar el registro.'),
 }
 const RESULT_CAPTION: Record<TourAction, Cap> = {
+  custom: cap('', '', ''),
   create: cap('O novo registro aparece na lista.', 'The new record shows up in the list.', 'El nuevo registro aparece en la lista.'),
   edit: cap('As alterações já aparecem na lista.', 'The changes already show in the list.', 'Los cambios ya aparecen en la lista.'),
   delete: cap('O registro some da lista.', 'The record disappears from the list.', 'El registro desaparece de la lista.'),
@@ -124,6 +125,7 @@ const ITEM_RESULT: Record<string, Cap> = {
 }
 
 const TITLE: Record<TourAction, Cap> = {
+  custom: cap('Tutorial gravado', 'Recorded tutorial', 'Tutorial grabado'),
   create: cap('Como cadastrar', 'How to register', 'Cómo registrar'),
   edit: cap('Como editar', 'How to edit', 'Cómo editar'),
   delete: cap('Como excluir', 'How to delete', 'Cómo eliminar'),

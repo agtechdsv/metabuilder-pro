@@ -9,18 +9,21 @@ import { buildAutoTour, isTourStale, regenerateTour, type AutoTourInput } from '
 import { buildFieldInfos, buildSchedulerSeed } from '@/lib/interactiveHelp/fieldInfo'
 import { moveItem, sortBySuggestedOrder } from '@/lib/interactiveHelp/order'
 import { HelpTextEditor } from './UseCaseBuilder/steps/HelpTextEditor'
+import { InteractiveHelpRecorder } from './InteractiveHelpRecorder'
 import { normalizeInteractiveHelp, tourActionsFor, type InteractiveHelpConfig, type Tour, type TourAction, type TourFill, type TourStep } from '@/lib/interactiveHelp/types'
 
 interface Props {
   config: any
   setConfig: (config: any) => void
   models: any[]
+  /** endereço da tela em modo demonstração, para gravar um roteiro (sem ele o botão Gravar não aparece) */
+  recordUrl?: string
   /** o caso de uso escolhido (nome e tipo) */
   view: { name?: string; logic_type?: string; model_id?: string | null }
   t: (key: string, fallback?: string) => string
 }
 
-const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes', move: 'Mover cartão' }
+const ACTION_FALLBACK: Record<TourAction, string> = { create: 'Cadastrar', edit: 'Editar', delete: 'Excluir', search: 'Pesquisar', view: 'Ver detalhes', move: 'Mover cartão', custom: 'Gravado' }
 const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'Salvar Alterações', back: 'Voltar para Lista', search: 'Pesquisar', clear: 'Limpar', confirm: 'Confirmar exclusão', cancel: 'Cancelar', 'kanban-add': 'Adicionar cartão (+)', 'kanban-edit': 'Editar cartão', 'kanban-delete': 'Excluir cartão', 'kanban-card': 'Cartão', 'scheduler-add': 'Adicionar evento (+)', 'scheduler-event': 'Evento', 'scheduler-delete': 'Excluir evento', widget: 'Gráficos do painel', 'widget-expand': 'Ampliar gráfico (lupa)', 'widget-collapse': 'Recolher gráfico', 'item-view': 'Ver item (lupa)', 'item-edit': 'Editar item', 'item-delete': 'Excluir item', 'map-marker': 'Marcador do mapa', 'map-cluster': 'Grupo de marcadores (se houver)' }
 
 /**
@@ -30,20 +33,12 @@ const BUTTON_FALLBACK: Record<string, string> = { new: 'Novo Registro', save: 'S
  */
 export function InteractiveHelpEditor(props: Props) {
   // o conteúdo real fica em outro componente: assim a troca entre um caso de uso de cadastro e outro tipo não muda a quantidade de hooks (erro #310)
-  const { view, t } = props
-  if (tourActionsFor(view.logic_type).length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-neutral-300 dark:border-neutral-700 p-4 text-xs text-neutral-500">
-        <span className="flex items-center gap-2 font-black uppercase tracking-widest text-[10px] text-neutral-400"><PlayCircle className="w-4 h-4" />{t('help_center_studio.interactive.title', 'Ajuda interativa')}</span>
-        <p className="mt-2">{t('help_center_studio.interactive.only_cadastro', 'Nesta versão a ajuda interativa vale para casos de uso de cadastro com pesquisa.')}</p>
-      </div>
-    )
-  }
   return <InteractiveHelpEditorBody {...props} />
 }
 
-function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props) {
+function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordUrl }: Props) {
   const [openTour, setOpenTour] = useState<string | null>(null)
+  const [recording, setRecording] = useState(false)
   const lc = config.layout_config || {}
   const ih: InteractiveHelpConfig = useMemo(() => normalizeInteractiveHelp(lc.interactive_help), [lc.interactive_help])
 
@@ -74,7 +69,8 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   }
   // troca o roteiro da mesma ação NO LUGAR (a ordem é do dev); um roteiro novo entra no fim da lista
   const upsert = (tour: Tour) => {
-    const i = ih.tours.findIndex(x => x.action === tour.action)
+    // roteiro gravado tem identidade própria (pode haver vários); os gerados são um por ação
+    const i = ih.tours.findIndex(x => (tour.action === 'custom' ? x.id === tour.id : x.action === tour.action))
     save({ ...ih, tours: i >= 0 ? ih.tours.map((x, k) => (k === i ? tour : x)) : [...ih.tours, tour] })
   }
   const moveTour = (index: number, delta: -1 | 1) => save({ ...ih, tours: moveItem(ih.tours, index, delta) })
@@ -97,6 +93,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
     if (tg.type === 'detail-expand') return t('help_center_studio.interactive.detail_expand', 'Expandir registro')
     if (tg.type === 'detail-add') return t('help_center_studio.interactive.btn_detail-add', 'Adicionar item (+)')
     if (tg.type === 'tab') return t('help_center_studio.interactive.detail_tab', 'Aba do detalhe')
+    if (tg.type === 'text') return tg.ref
     if (tg.type === 'row') return tg.action ? t(`help_center_studio.interactive.row_${tg.action}`, tg.action) : t('help_center_studio.interactive.row', 'Primeira linha')
     return ''
   }
@@ -109,13 +106,13 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
   // (antes disso tudo pareceria mudado).
   const fieldsReady = models.some(m => Array.isArray(m?.fields) && m.fields.length > 0)
   const staleIds = useMemo(
-    () => new Set(fieldsReady ? ih.tours.filter(tr => isTourStale(tr, input, { action: tr.action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds })).map(tr => tr.id) : []),
+    () => new Set(fieldsReady ? ih.tours.filter(tr => tr.action !== 'custom' && isTourStale(tr, input, { action: tr.action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds })).map(tr => tr.id) : []),
     [fieldsReady, ih.tours, input, view.name],
   )
-  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed, excludeFieldIds })) })
+  const regenerateAll = () => save({ ...ih, tours: ih.tours.map(tr => tr.action === 'custom' ? tr : regenerateTour(tr, input, { action: tr.action, screenName: view.name, layoutConfig: lc, viewType: view.logic_type, schedulerSeed, excludeFieldIds })) })
   // a configuração mudou (assinatura diferente) mas a comparação exata diz que os roteiros continuam certos: dá para só "carimbar" a assinatura nova
   const sigChanged = fieldsReady && staleIds.size === 0 && ih.tours.some(tr => isLikelyStale(tr, lc, view.name))
-  const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => ({ ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
+  const markCurrent = () => save({ ...ih, tours: ih.tours.map(tr => (tr.action === 'custom' ? tr : { ...tr, sourceSig: layoutSignature(lc, tr.action, view.name) })) })
 
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
@@ -128,6 +125,14 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
           {t('help_center_studio.interactive.hide', 'Ocultar o ícone ▶ (mantém os roteiros)')}
         </label>
       </div>
+      {recordUrl && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setRecording(true)} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
+            <span className="h-2 w-2 rounded-full bg-red-600" />{t('help_center_studio.interactive.record_button', 'Gravar roteiro')}
+          </button>
+          {tourActionsFor(view.logic_type).length === 0 && <span className="text-[10px] text-neutral-400">{t('help_center_studio.interactive.record_unsupported', 'Este tipo de caso de uso não tem geração automática: grave o roteiro usando a tela.')}</span>}
+        </div>
+      )}
       <p className="text-[11px] text-neutral-500">{t('help_center_studio.interactive.description', 'O usuário vê o sistema executar os passos sozinho, em modo demonstração (nada é gravado). Gere o roteiro de cada ação e ajuste o que quiser.')}</p>
       {ih.tours.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -172,7 +177,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                 <span className="w-4 text-center text-[10px] font-black text-neutral-300">{index + 1}</span>
                 <button type="button" onClick={() => setOpenTour(opened ? null : tour.id)} className="flex items-center gap-1.5 text-xs font-black text-neutral-700 dark:text-neutral-200">
                   {opened ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                  {actionName(action)}
+                  {action === 'custom' ? (resolveHelp(tour.title, 'pt') || actionName(action)) : actionName(action)}
                 </button>
                 <span className="text-[10px] text-neutral-400">{tour.steps.length} {t('runtime.tour.steps', 'passos')}</span>
                 {staleIds.has(tour.id) && (
@@ -204,7 +209,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                     <input type="checkbox" checked={tour.hidden === true} onChange={e => patchTour(tour, { hidden: e.target.checked ? true : undefined })} />
                     {t('help_center_studio.interactive.hidden', 'Oculto')}
                   </label>
-                  <button type="button" onClick={() => generate(action, tour)} className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"><RefreshCw className="w-3 h-3" />{t('help_center_studio.interactive.regenerate', 'Regenerar')}</button>
+                  {action !== 'custom' && <button type="button" onClick={() => generate(action, tour)} className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"><RefreshCw className="w-3 h-3" />{t('help_center_studio.interactive.regenerate', 'Regenerar')}</button>}
                   <button type="button" onClick={() => save({ ...ih, tours: ih.tours.filter(x => x.id !== tour.id) })} className="text-neutral-400 hover:text-red-500" title={t('help_center_studio.interactive.remove', 'Remover')} aria-label={t('help_center_studio.interactive.remove', 'Remover')}><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
@@ -215,7 +220,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('help_center_studio.interactive.card_phrase', 'Frase do cartão (o que o usuário lê ao escolher)')}</span>
                     {tour.summaryCustom && (
-                      <button type="button" onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
+                      <button type="button" hidden={action === 'custom'} onClick={() => patchTour(tour, { summary: buildAutoTour(input, { action, screenName: view.name, viewType: view.logic_type, schedulerSeed, excludeFieldIds }).summary, summaryCustom: undefined })} className="text-[10px] font-bold text-indigo-600 hover:underline">
                         {t('help_center_studio.interactive.card_phrase_auto', 'Usar a frase automática')}
                       </button>
                     )}
@@ -243,6 +248,8 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
                         <input defaultValue="" placeholder={t('help_center_studio.interactive.option_text', 'Opção a escolher, pelo texto (vazio = a primeira da lista)')} onBlur={e => { const v = e.target.value.trim(); if (v) patchStep(tour, s.id, { value: v, edited: s.auto ? true : s.edited }) }} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : s.kind === 'type' && typeof s.value === 'string' ? (
                         <input value={s.value} onChange={e => patchStep(tour, s.id, { value: e.target.value, edited: s.auto ? true : s.edited })} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
+                      ) : !s.auto && !s.liveCaption && (s.kind === 'click' || s.kind === 'note' || s.kind === 'check') ? (
+                        <input value={resolveHelp(s.caption, 'pt')} onChange={e => patchStep(tour, s.id, { caption: { pt: e.target.value } })} placeholder={t('help_center_studio.interactive.caption_placeholder', 'Legenda deste passo')} className="min-w-0 flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-2 py-1" />
                       ) : (
                         <span className="min-w-0 flex-1 pt-1 truncate text-neutral-400">{s.kind === 'select' ? t('help_center_studio.interactive.first_option', 'primeira opção da lista') : s.liveCaption ? t('help_center_studio.interactive.live_caption', 'legenda: ajuda atual do campo') : resolveHelp(s.caption, 'pt')}</span>
                       )}
@@ -270,6 +277,20 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t }: Props
             ))}
           </ul>
         </div>
+      )}
+      {recording && recordUrl && (
+        <InteractiveHelpRecorder
+          src={recordUrl}
+          t={t}
+          onCancel={() => setRecording(false)}
+          onSave={({ title, summary, steps }) => {
+            setRecording(false)
+            if (steps.length === 0) return
+            const id = `rec-${Date.now().toString(36)}`
+            upsert({ id, action: 'custom', title: { pt: title }, fill: 'required', steps, summary: summary ? { pt: summary } : undefined, summaryCustom: summary ? true : undefined })
+            setOpenTour(id)
+          }}
+        />
       )}
     </div>
   )

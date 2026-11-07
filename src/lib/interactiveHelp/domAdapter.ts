@@ -32,14 +32,15 @@ export function queryTarget(doc: Document, target: TourTarget | undefined, from?
   if (!target) return null
   const all = (selector: string, root: ParentNode = doc) => (Array.from(root.querySelectorAll(selector)) as HTMLElement[]).filter(e => isVisible(e))
   // com uma janela (modal) aberta, o alvo é o que está nela; se não houver lá, cai para a página
-  const first = (selector: string, root: ParentNode = doc) => {
+  const first = (selector: string, root: ParentNode = doc, pred?: (e: HTMLElement) => boolean) => {
+    const ok = (e: HTMLElement) => !pred || pred(e)
     if (root === doc) {
       const modals = all('[data-tour-modal]')
       const top = modals[modals.length - 1]
-      const inside = top && all(selector, top)[0]
+      const inside = top && all(selector, top).find(ok)
       if (inside) return inside
     }
-    return all(selector, root)[0] || null
+    return all(selector, root).find(ok) || null
   }
   switch (target.type) {
     // roteiros gerados antes dos botões por modelo guardavam o + como botão genérico
@@ -47,6 +48,11 @@ export function queryTarget(doc: Document, target: TourTarget | undefined, from?
     case 'button': if (target.ref === 'map-marker') return first('img.leaflet-marker-icon'); if (target.ref === 'map-cluster') return first('div.leaflet-marker-icon'); return target.ref === ('detail-add' as string) ? first('[data-tour-add]') : first(`[data-tour="${esc(target.ref)}"]`)
     case 'field': return first(`[data-tour-field="${esc(target.ref)}"]`)
     case 'filter': return first(`[data-tour-filter="${esc(target.ref)}"]`)
+    case 'text': {
+      const norm = (s: string | null | undefined) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+      const want = norm(target.ref)
+      return first('button, a, [role="button"], [role="tab"], [role="menuitem"], summary', doc, e => norm(e.innerText || e.textContent) === want || norm(e.getAttribute('title')) === want || norm(e.getAttribute('aria-label')) === want)
+    }
     case 'kanban-column': {
       const cols = (Array.from(doc.querySelectorAll('[data-tour-column]')) as HTMLElement[]).filter(c => isVisible(c, false))
       const own = from?.closest('[data-tour-column]') as HTMLElement | null

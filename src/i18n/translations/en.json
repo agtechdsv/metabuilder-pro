@@ -5401,7 +5401,19 @@
       "btn_item-edit": "Edit item",
       "btn_item-delete": "Delete item",
       "btn_map-marker": "Map marker",
-      "btn_map-cluster": "Marker group (if any)"
+      "btn_map-cluster": "Marker group (if any)",
+      "record_button": "Record tour",
+      "record_title": "Record tour",
+      "record_recording": "Recording",
+      "record_hint": "Use the screen on the left as a user would: every click, typed text and chosen option becomes a step. Nothing is saved to the database.",
+      "record_title_label": "Tutorial name (e.g. How to enter an order)",
+      "record_desc_label": "Card phrase (optional)",
+      "record_empty": "No steps recorded yet. Start using the screen.",
+      "record_stop": "Stop and save",
+      "record_default_title": "Recorded tutorial",
+      "record_unsupported": "This use case type has no automatic generation: record the tour by using the screen.",
+      "caption_placeholder": "Caption for this step",
+      "action_custom": "Recorded"
     }
   }
 }

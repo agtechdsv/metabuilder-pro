@@ -5401,7 +5401,19 @@
       "btn_item-edit": "Editar item",
       "btn_item-delete": "Excluir item",
       "btn_map-marker": "Marcador do mapa",
-      "btn_map-cluster": "Grupo de marcadores (se houver)"
+      "btn_map-cluster": "Grupo de marcadores (se houver)",
+      "record_button": "Gravar roteiro",
+      "record_title": "Gravar roteiro",
+      "record_recording": "Gravando",
+      "record_hint": "Use a tela ao lado como o usuário usaria: cada clique, texto digitado e opção escolhida vira um passo. Nada é gravado no banco.",
+      "record_title_label": "Nome do tutorial (ex.: Como lançar um pedido)",
+      "record_desc_label": "Frase do cartão (opcional)",
+      "record_empty": "Nenhum passo gravado ainda. Comece a usar a tela.",
+      "record_stop": "Parar e salvar",
+      "record_default_title": "Tutorial gravado",
+      "record_unsupported": "Este tipo de caso de uso não tem geração automática: grave o roteiro usando a tela.",
+      "caption_placeholder": "Legenda deste passo",
+      "action_custom": "Gravado"
     }
   }
 }

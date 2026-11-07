@@ -5489,7 +5489,19 @@
       "btn_item-edit": "Editar ítem",
       "btn_item-delete": "Eliminar ítem",
       "btn_map-marker": "Marcador del mapa",
-      "btn_map-cluster": "Grupo de marcadores (si hay)"
+      "btn_map-cluster": "Grupo de marcadores (si hay)",
+      "record_button": "Grabar recorrido",
+      "record_title": "Grabar recorrido",
+      "record_recording": "Grabando",
+      "record_hint": "Use la pantalla de al lado como lo haría el usuario: cada clic, texto escrito y opción elegida se vuelve un paso. No se guarda nada en la base de datos.",
+      "record_title_label": "Nombre del tutorial (ej.: Cómo registrar un pedido)",
+      "record_desc_label": "Frase de la tarjeta (opcional)",
+      "record_empty": "Aún no hay pasos grabados. Empiece a usar la pantalla.",
+      "record_stop": "Detener y guardar",
+      "record_default_title": "Tutorial grabado",
+      "record_unsupported": "Este tipo de caso de uso no tiene generación automática: grabe el recorrido usando la pantalla.",
+      "caption_placeholder": "Leyenda de este paso",
+      "action_custom": "Grabado"
     }
   }
 }

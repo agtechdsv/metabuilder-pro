@@ -171,7 +171,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
           <ScreenHelpField config={config} setConfig={setConfig} t={t} />
           <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
-          <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} />
+          <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} recordUrl={view?.slug ? `/${workspaceSlug}/${projectSlug}/${view.slug}?mb_demo=1` : undefined} />
 
           <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}
