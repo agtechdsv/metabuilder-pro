@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
@@ -47,6 +47,8 @@ export function PlatformTourHost() {
   const [mounted, setMounted] = useState(false)
   const [nonce, setNonce] = useState(0)
   const [ready, setReady] = useState(true)
+  const popRef = useRef<HTMLDivElement>(null)
+  const [popH, setPopH] = useState(200)
   const recoveredRef = useRef<Set<string>>(new Set())
   useEffect(() => setMounted(true), [])
 
@@ -177,6 +179,11 @@ export function PlatformTourHost() {
     if (a.index >= a.tour.steps.length - 1) { markTourSeen(a.tour.id); stopPlatformTour() } else nextStep()
   }
 
+  useLayoutEffect(() => {
+    const h = popRef.current?.offsetHeight
+    if (h && Math.abs(h - popH) > 2) setPopH(h)
+  })
+
   const recoverNow = () => {
     const back = (activeRef.current?.tour.recover || []).map(findById).find(Boolean)
     if (back) back.click()
@@ -188,13 +195,18 @@ export function PlatformTourHost() {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
   let left = Math.round(vw / 2 - POPOVER_W / 2)
-  let top = Math.round(vh / 2 - 90)
+  let top = Math.round(vh / 2 - popH / 2)
   if (rect) {
-    left = Math.max(12, Math.min(vw - POPOVER_W - 12, rect.left))
-    const below = rect.bottom + PAD + 12
-    top = vh - rect.bottom > 230 ? below : Math.max(12, rect.top - PAD - 12 - 190)
-    // alvo muito alto (ocupa a tela): o balão fica sobre ele, no canto de baixo
-    if (rect.height > vh * 0.7) top = Math.max(12, vh - 230)
+    // o balão nunca cobre o item destacado: abaixo dele, senão acima, senão ao lado (altura medida de verdade, não estimada)
+    const gap = PAD + 12
+    const clampX = (x: number) => Math.max(12, Math.min(vw - POPOVER_W - 12, x))
+    const clampY = (y: number) => Math.max(12, Math.min(vh - popH - 12, y))
+    left = clampX(rect.left)
+    if (vh - rect.bottom >= popH + gap) top = rect.bottom + gap
+    else if (rect.top >= popH + gap) top = rect.top - gap - popH
+    else if (rect.left >= POPOVER_W + gap + 12) { left = rect.left - gap - POPOVER_W; top = clampY(rect.top) }
+    else if (vw - rect.right >= POPOVER_W + gap + 12) { left = rect.right + gap; top = clampY(rect.top) }
+    else top = clampY(vh - popH - 12) // alvo gigante: no canto de baixo, sobre ele
   }
 
   const title = resolveHelp(step.title, language)
@@ -225,6 +237,7 @@ export function PlatformTourHost() {
       )}
 
       <div
+        ref={popRef}
         role="dialog"
         aria-label={title || resolveHelp(active.tour.title, language)}
         className="fixed rounded-2xl border border-neutral-200 bg-white p-4 text-neutral-800 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
