@@ -5482,5 +5482,18 @@
       "default_edited_above": "Usa o texto padrão do campo, editado na primeira zona sem texto próprio.",
       "edit_central": "Esta nota é sobre o texto do campo (o mesmo das zonas): abre para editar"
     }
+  },
+  "platform_help": {
+    "button": "Ajuda desta tela",
+    "menu_title": "Ajuda desta tela",
+    "none": "Ainda não há tutoriais para esta tela. Eles estão sendo preparados.",
+    "steps": "passos",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "done": "Concluir",
+    "step_of": "{n} de {total}",
+    "click_to_continue": "Clique no item destacado para continuar.",
+    "target_missing": "Este item não está visível agora. Continue o tour ou volte depois."
   }
 }

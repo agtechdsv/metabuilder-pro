@@ -263,7 +263,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Tables List */}
-        <div className="lg:col-span-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 space-y-4">
+        <div data-help-id="data.tables" className="lg:col-span-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 space-y-4">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
@@ -402,7 +402,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 </div>
 
                 {/* Permissões da Tabela */}
-                <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
+                <div data-help-id="data.permissions" className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
                   <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-indigo-500" /> {t('dashboard.projects.studio.metadata.actions_permissions')}
                   </span>
@@ -452,6 +452,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                 </div>
 
                 {/* Auditoria: quem e quando criou/alterou cada registro (preenchida pelo servidor) */}
+                <div data-help-id="data.audit">
                 <AuditEditor
                   project={project}
                   models={models}
@@ -460,6 +461,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                   value={auditCfg}
                   onChange={cfg => { setAuditCfg(cfg); setAuditDirty(true) }}
                 />
+                </div>
 
                 {/* Acesso por linha do usuário final */}
                 <RowPolicyEditor
@@ -501,7 +503,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                         ui_widget: 'text'
                       }
                       return (
-                        <div key={f.id} className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
+                        <div key={f.id} data-help-id="data.field" className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
                           {/* Column Identification */}
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">

@@ -57,7 +57,7 @@ export function DataDashboardClient({
 
           <div className="flex items-center gap-4">
             {/* Navegação de Abas */}
-            <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <div data-help-id="data.tabs" className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
               <button
                 onClick={() => setActiveTab('metadata')}
                 className={cn(

@@ -5482,5 +5482,18 @@
       "default_edited_above": "Uses the field default text, edited in the first zone without its own text.",
       "edit_central": "This vote is about the field text (the same as in its zones): open to edit"
     }
+  },
+  "platform_help": {
+    "button": "Help for this screen",
+    "menu_title": "Help for this screen",
+    "none": "There are no tutorials for this screen yet. They are being prepared.",
+    "steps": "steps",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "step_of": "{n} of {total}",
+    "click_to_continue": "Click the highlighted item to continue.",
+    "target_missing": "This item is not visible right now. Continue the tour or come back later."
   }
 }

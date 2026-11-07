@@ -104,7 +104,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
   ]
 
   return (
-    <aside className="fixed left-0 top-20 h-[calc(100vh-80px)] w-20 bg-white dark:bg-neutral-900/50 border-r border-neutral-200 dark:border-neutral-800 flex flex-col items-center py-8 gap-8 z-20 backdrop-blur-xl transition-colors">
+    <aside data-help-id="studio.rail" className="fixed left-0 top-20 h-[calc(100vh-80px)] w-20 bg-white dark:bg-neutral-900/50 border-r border-neutral-200 dark:border-neutral-800 flex flex-col items-center py-8 gap-8 z-20 backdrop-blur-xl transition-colors">
       <Link
         href={base}
         className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)] group relative"

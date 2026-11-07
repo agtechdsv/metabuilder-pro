@@ -121,7 +121,7 @@ export function SettingsDashboardClient({
           </section>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
+          <div data-help-id="settings.tabs" className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
             <button 
               onClick={() => setActiveTab('fields')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fields' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
@@ -140,7 +140,7 @@ export function SettingsDashboardClient({
         {activeTab === 'fields' && (
           <div className="flex gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Left Column: Models List */}
-            <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+            <div data-help-id="settings.tables" className="w-80 flex-shrink-0 flex flex-col gap-3">
               <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-4 flex flex-col gap-2 shadow-sm">
                 <div className="px-3 py-2">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">Tabelas Sincronizadas</h3>
@@ -192,7 +192,7 @@ export function SettingsDashboardClient({
                       </p>
                     </div>
 
-                    <div className="relative w-64 shrink-0">
+                    <div data-help-id="settings.search" className="relative w-64 shrink-0">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                       <input 
                         type="text" 

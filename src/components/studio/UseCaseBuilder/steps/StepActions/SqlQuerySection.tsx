@@ -6,7 +6,7 @@ export function SqlQuerySection({
 }: any) {
   return (
     <>
-      <div className="space-y-6">
+      <div data-help-id="wizard.query_strategy" className="space-y-6">
         <div className="space-y-4">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.data_strategy')}</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

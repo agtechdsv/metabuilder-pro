@@ -302,6 +302,26 @@ export function shouldBlockHttp(method: string, rawUrl: string, origin = 'http:/
   return false
 }
 
+type HeadersLike = Headers | Record<string, string> | string[][] | undefined
+
+function headerValue(h: HeadersLike, name: string): string | null {
+  if (!h) return null
+  if (typeof Headers !== 'undefined' && h instanceof Headers) return h.get(name)
+  if (Array.isArray(h)) return h.find(([k]) => k.toLowerCase() === name)?.[1] ?? null
+  const key = Object.keys(h).find(k => k.toLowerCase() === name)
+  return key ? (h as Record<string, string>)[key] : null
+}
+
+/**
+ * Chamada a uma SERVER ACTION do Next (POST para a própria página com o cabeçalho `Next-Action`)? Elas gravam no servidor sem passar por /api,
+ * então a regra de /api não as pega. Na demonstração toda server action é recusada.
+ */
+export function isServerActionCall(method: string, rawUrl: string, origin = 'http://localhost', headers?: HeadersLike): boolean {
+  if (method.toUpperCase() !== 'POST') return false
+  if (!headerValue(headers, 'next-action')) return false
+  try { return new URL(rawUrl, origin).origin === origin } catch { return false }
+}
+
 /** Instala as proteções de HTTP do modo demonstração (idempotente). */
 export function installDemoGuards() {
   if (guardsInstalled || !isDemoMode() || typeof window === 'undefined') return
@@ -310,6 +330,11 @@ export function installDemoGuards() {
   window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const method = (init?.method || (typeof Request !== 'undefined' && input instanceof Request ? input.method : 'GET')).toUpperCase()
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url
+    const hdrs = (init?.headers as HeadersLike) ?? (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
+    if (isServerActionCall(method, url, window.location.origin, hdrs)) {
+      // não há resposta falsa que o Next entenda: recusa de forma explícita (nada é gravado)
+      return Promise.reject(new Error('Modo demonstração: esta ação não é executada.'))
+    }
     if (shouldBlockHttp(method, url, window.location.origin)) {
       return Promise.resolve(fakeOk(url.includes('/rest/v1/') ? [] : { success: true, demo: true }))
     }

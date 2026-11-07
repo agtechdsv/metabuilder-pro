@@ -90,7 +90,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
       </div>
 
       {/* Name & Slug */}
-      <div className="p-4 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 space-y-4">
+      <div data-help-id="wizard.name" className="p-4 bg-neutral-50/50 dark:bg-neutral-900/30 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.logic.screen_name')}</label>
@@ -129,7 +129,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
       </div>
 
       {/* Logic type selector */}
-      <div className="space-y-4">
+      <div data-help-id="wizard.logic" className="space-y-4">
         {categories.map(cat => {
           const isExpanded = expandedCategory === cat.id
           const hasSelectedLogic = cat.items.some(i => i.id === config.logic_type)

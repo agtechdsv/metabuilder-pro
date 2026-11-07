@@ -8,6 +8,7 @@ import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 import { PreviewProvider } from '@/contexts/PreviewContext'
 import { IDESyncProvider } from '@/contexts/IDESyncContext'
 import { AskDialogHost } from '@/components/ui/AskDialogHost'
+import { PlatformTourHost } from '@/components/platformHelp/PlatformTourHost'
 
 export function Providers({ 
   children,
@@ -27,6 +28,7 @@ export function Providers({
                 <AutoUpdater />
                 <GlobalDesktopListener />
                 <AskDialogHost />
+                <PlatformTourHost />
                 {children}
               </IDESyncProvider>
             </PreviewProvider>

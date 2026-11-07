@@ -800,7 +800,7 @@ export function StudioDashboardClient({
               </div>
             </div>
 
-            <div className={cn(canCreate ? 'grid grid-cols-3' : 'flex', 'gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800')}>
+            <div data-help-id="studio.tabs" className={cn(canCreate ? 'grid grid-cols-3' : 'flex', 'gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800')}>
                <button 
                 onClick={() => setViewMode('list')}
                 className={cn(
@@ -849,6 +849,7 @@ export function StudioDashboardClient({
                       <Server className="w-3.5 h-3.5" /> {t('workspace_components.tabs_synced_dbs', 'Bancos Sincronizados')}
                     </button>
                    <button
+                     data-help-id="studio.tab_help"
                      onClick={() => setViewMode('help')}
                      className={cn(
                        "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
@@ -866,6 +867,7 @@ export function StudioDashboardClient({
 
 
                 <button
+                  data-help-id="studio.new_use_case"
                   disabled={isCheckingLimit}
                   onClick={async () => {
                     if (tier === 'free') {
@@ -894,6 +896,7 @@ export function StudioDashboardClient({
 
                 {tier === 'pro' && (
                   <button
+                    data-help-id="studio.ai"
                     onClick={handleGenerateWithAI}
                     disabled={isCheckingAI}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-violet-500/20 active:scale-95 disabled:opacity-50"

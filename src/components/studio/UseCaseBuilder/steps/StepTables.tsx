@@ -71,7 +71,7 @@ export function StepTables({ config, setConfig, models, relations = [] }: StepTa
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
+          <div data-help-id="wizard.depth" className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
             <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
               {t('wizard.tables.max_depth_label', 'Profundidade Máxima (Níveis)')}
             </label>
@@ -100,7 +100,7 @@ export function StepTables({ config, setConfig, models, relations = [] }: StepTa
               <Database className="w-4 h-4" />
               {t('wizard.tables.db_prefix', 'Banco')}: {schema}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div data-help-id="wizard.tables" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {groupedModels[schema].map(m => {
                 const isSelected = selectedId === m.id
                 const relCount = relationCountByModel[m.id] || 0

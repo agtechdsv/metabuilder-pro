@@ -973,6 +973,7 @@ export default function AuthSettingsPage() {
 
             {activeTab !== 'permissions' && (
               <button 
+                data-help-id="auth.save"
                 onClick={handleSave}
                 disabled={isSaving}
                 className={`flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
@@ -994,7 +995,7 @@ export default function AuthSettingsPage() {
           </section>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
+          <div data-help-id="auth.tabs" className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
             <button 
               onClick={() => setActiveTab('permissions')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
@@ -1040,7 +1041,7 @@ export default function AuthSettingsPage() {
           </div>
         ) : activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div data-help-id="auth.strategies" className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button 
                 onClick={() => setAuthConfig({...authConfig, auth_type: 'managed'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'managed' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}

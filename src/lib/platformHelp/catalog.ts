@@ -1,0 +1,296 @@
+/**
+ * Catálogo dos tours da PLATAFORMA (escritos pela equipe do MetaBuilder). Cada passo aponta para um `data-help-id` da tela;
+ * o teste `platformHelp.test.ts` confere que todo alvo citado aqui existe de fato no código e que todo texto está nos 3 idiomas.
+ */
+
+import type { HelpText } from '../helpText'
+import type { PlatformTour } from './types'
+
+const h = (pt: string, en: string, es: string): HelpText => ({ pt, en, es })
+
+const STUDIO = '/admin/:workspace/:project/studio'
+
+export const PLATFORM_TOURS: readonly PlatformTour[] = [
+  {
+    id: 'studio-visao-geral',
+    route: STUDIO,
+    title: h('Conhecendo o Studio', 'Getting to know Studio', 'Conociendo el Studio'),
+    summary: h('Onde ficam as áreas do Studio e para que serve cada aba.', 'Where each Studio area is and what each tab is for.', 'Dónde está cada área del Studio y para qué sirve cada pestaña.'),
+    steps: [
+      {
+        id: 'rail',
+        target: 'studio.rail',
+        title: h('Menu do Studio', 'Studio menu', 'Menú del Studio'),
+        body: h(
+          'Cada ícone abre uma área: Dashboard (casos de uso), Dados & Schemas, Autenticação, BYOC, Configurações, Bancos (JSON), Terminal, Logs e SQL Studio. Passe o mouse para ver o nome.',
+          'Each icon opens an area: Dashboard (use cases), Data & Schemas, Authentication, BYOC, Settings, Databases (JSON), Terminal, Logs and SQL Studio. Hover to see the name.',
+          'Cada ícono abre un área: Dashboard (casos de uso), Datos y Esquemas, Autenticación, BYOC, Configuración, Bases (JSON), Terminal, Logs y SQL Studio. Pase el mouse para ver el nombre.',
+        ),
+      },
+      {
+        id: 'tabs',
+        target: 'studio.tabs',
+        title: h('Abas do Dashboard', 'Dashboard tabs', 'Pestañas del Dashboard'),
+        body: h(
+          'Casos de Uso: as telas do seu app. Navegação: o menu do app publicado. Enums: listas de valores fixos. Gerenciador do Túnel e Bancos Sincronizados: a conexão com o banco do cliente (IDE Desktop). Central de Ajuda: a ajuda que o usuário final vê.',
+          'Use Cases: your app screens. Navigation: the published app menu. Enums: fixed value lists. Tunnel Manager and Synced Databases: the connection to the customer database (Desktop IDE). Help Center: the help end users see.',
+          'Casos de Uso: las pantallas de su app. Navegación: el menú de la app publicada. Enums: listas de valores fijos. Administrador del Túnel y Bases Sincronizadas: la conexión con la base del cliente (IDE de escritorio). Centro de Ayuda: la ayuda que ve el usuario final.',
+        ),
+      },
+      {
+        id: 'new',
+        target: 'studio.new_use_case',
+        title: h('Novo caso de uso', 'New use case', 'Nuevo caso de uso'),
+        body: h('Abre o assistente de 4 etapas para criar uma tela: lógica, tabelas, campos e layout, ações e query. Há um tour só para ele.', 'Opens the 4-step wizard to create a screen: logic, tables, fields and layout, actions and query. There is a tour just for it.', 'Abre el asistente de 4 etapas para crear una pantalla: lógica, tablas, campos y diseño, acciones y consulta. Hay un tour solo para él.'),
+      },
+      {
+        id: 'ai',
+        target: 'studio.ai',
+        title: h('Gerar com IA', 'Generate with AI', 'Generar con IA'),
+        body: h('Descreva a tela que você quer e a IA monta o caso de uso para você ajustar depois. Disponível no plano Pro.', 'Describe the screen you want and the AI builds the use case for you to adjust. Available on the Pro plan.', 'Describa la pantalla que quiere y la IA arma el caso de uso para que lo ajuste. Disponible en el plan Pro.'),
+      },
+      {
+        id: 'help',
+        target: 'studio.tab_help',
+        title: h('Central de Ajuda', 'Help Center', 'Centro de Ayuda'),
+        body: h('Aqui você escreve a ajuda que o usuário final vê (dicas dos campos e tutoriais ▶), sem republicar o caso de uso.', 'Here you write the help end users see (field hints and ▶ tutorials) without republishing the use case.', 'Aquí escribe la ayuda que ve el usuario final (pistas de campos y tutoriales ▶) sin republicar el caso de uso.'),
+      },
+    ],
+  },
+  {
+    id: 'studio-criar-caso-de-uso',
+    route: STUDIO,
+    title: h('Criar um caso de uso', 'Create a use case', 'Crear un caso de uso'),
+    summary: h('Passo a passo do assistente: da lógica ao botão final. Nada é salvo até você concluir.', 'Wizard walkthrough: from logic to the final button. Nothing is saved until you finish.', 'Recorrido del asistente: de la lógica al botón final. No se guarda nada hasta que termine.'),
+    steps: [
+      {
+        id: 'open',
+        target: 'studio.new_use_case',
+        title: h('Comece por aqui', 'Start here', 'Empiece aquí'),
+        body: h('Clique em "Novo caso de uso" para abrir o assistente.', 'Click "New use case" to open the wizard.', 'Haga clic en "Nuevo caso de uso" para abrir el asistente.'),
+        advanceOnClick: true,
+      },
+      {
+        id: 'stepper',
+        target: 'wizard.stepper',
+        title: h('As 4 etapas', 'The 4 steps', 'Las 4 etapas'),
+        body: h('Lógica → Tabelas → Campos & Layout → Ações & Query. Você pode voltar a qualquer etapa antes de concluir.', 'Logic → Tables → Fields & Layout → Actions & Query. You can go back to any step before finishing.', 'Lógica → Tablas → Campos y Diseño → Acciones y Consulta. Puede volver a cualquier etapa antes de concluir.'),
+      },
+      {
+        id: 'name',
+        target: 'wizard.name',
+        title: h('Nome e endereço', 'Name and address', 'Nombre y dirección'),
+        body: h('O nome aparece no menu do app. O endereço (slug) vira o final da URL da tela e é gerado a partir do nome; você pode trocar.', 'The name shows in the app menu. The address (slug) becomes the end of the screen URL and is generated from the name; you can change it.', 'El nombre aparece en el menú de la app. La dirección (slug) es el final de la URL de la pantalla y se genera a partir del nombre; puede cambiarla.'),
+      },
+      {
+        id: 'logic',
+        target: 'wizard.logic',
+        title: h('Qual é a lógica?', 'What is the logic?', '¿Cuál es la lógica?'),
+        body: h('Define o tipo de tela: cadastro com pesquisa, Kanban, Agenda, Gantt, mapa, painel de BI e outros. Abra um grupo e escolha o tipo. Dica: "Pesquisa + Cadastro" serve para a maioria das telas de dados.', 'Defines the screen type: search + form, Kanban, Calendar, Gantt, map, BI dashboard and more. Open a group and pick the type. Tip: "Search + Form" fits most data screens.', 'Define el tipo de pantalla: búsqueda y formulario, Kanban, Agenda, Gantt, mapa, panel de BI y más. Abra un grupo y elija el tipo. Consejo: "Búsqueda + Formulario" sirve para la mayoría de las pantallas de datos.'),
+      },
+      {
+        id: 'next1',
+        target: 'wizard.next',
+        title: h('Próxima etapa', 'Next step', 'Siguiente etapa'),
+        body: h('Preencha o nome, escolha a lógica e clique em "Próximo passo".', 'Fill in the name, pick the logic and click "Next step".', 'Complete el nombre, elija la lógica y haga clic en "Siguiente paso".'),
+        advanceOnClick: true,
+      },
+      {
+        id: 'tables',
+        target: 'wizard.tables',
+        title: h('Tabela principal', 'Main table', 'Tabla principal'),
+        body: h('Escolha a tabela raiz da tela. As tabelas relacionadas entram sozinhas na etapa seguinte.', 'Pick the screen root table. Related tables come in automatically in the next step.', 'Elija la tabla raíz de la pantalla. Las tablas relacionadas entran solas en la siguiente etapa.'),
+      },
+      {
+        id: 'depth',
+        target: 'wizard.depth',
+        title: h('Profundidade das relações', 'Relation depth', 'Profundidad de las relaciones'),
+        body: h('Quantos níveis de relacionamento entram automaticamente. 2 é o padrão e basta na maioria dos casos; níveis maiores deixam a consulta mais lenta.', 'How many relationship levels come in automatically. 2 is the default and enough most of the time; deeper levels make the query slower.', 'Cuántos niveles de relación entran automáticamente. 2 es el valor por defecto y suele bastar; más niveles hacen la consulta más lenta.'),
+      },
+      {
+        id: 'next2',
+        target: 'wizard.next',
+        title: h('Selecione a tabela e avance', 'Select the table and continue', 'Seleccione la tabla y avance'),
+        body: h('Escolha uma tabela e clique em "Próximo passo".', 'Pick a table and click "Next step".', 'Elija una tabla y haga clic en "Siguiente paso".'),
+        advanceOnClick: true,
+      },
+      {
+        id: 'zone-filter',
+        target: 'wizard.zone_filter',
+        title: h('Zona 1: filtro de busca', 'Zone 1: search filter', 'Zona 1: filtro de búsqueda'),
+        body: h('Arraste para cá os campos que o usuário poderá usar para filtrar a lista.', 'Drag here the fields users can use to filter the list.', 'Arrastre aquí los campos que el usuario podrá usar para filtrar la lista.'),
+      },
+      {
+        id: 'zone-grid',
+        target: 'wizard.zone_grid',
+        title: h('Zona 2: grid de dados', 'Zone 2: data grid', 'Zona 2: cuadrícula de datos'),
+        body: h('Os campos que aparecem como colunas da lista (ou como cartões, conforme o modo escolhido).', 'The fields that show as list columns (or as cards, depending on the chosen mode).', 'Los campos que aparecen como columnas de la lista (o como tarjetas, según el modo elegido).'),
+      },
+      {
+        id: 'zone-form',
+        target: 'wizard.zone_form',
+        title: h('Zona 3: formulário', 'Zone 3: form', 'Zona 3: formulario'),
+        body: h('Os campos do cadastro e da edição. Campos de tabelas filhas viram abas de detalhe.', 'The fields of the create and edit form. Fields of child tables become detail tabs.', 'Los campos del alta y la edición. Los campos de tablas hijas se vuelven pestañas de detalle.'),
+      },
+      {
+        id: 'next3',
+        target: 'wizard.next',
+        title: h('Siga para as ações', 'On to the actions', 'Siga a las acciones'),
+        body: h('Com os campos distribuídos, clique em "Próximo passo".', 'With the fields in place, click "Next step".', 'Con los campos distribuidos, haga clic en "Siguiente paso".'),
+        advanceOnClick: true,
+      },
+      {
+        id: 'buttons',
+        target: 'wizard.buttons',
+        title: h('Botões da interface', 'Interface buttons', 'Botones de la interfaz'),
+        body: h('Escolha quais botões a tela terá: Pesquisar, Limpar, Visualizar, Novo, Editar e Excluir. Ações customizadas (abrir outra tela, SQL, REST) ficam logo abaixo.', 'Choose which buttons the screen has: Search, Clear, View, New, Edit and Delete. Custom actions (open another screen, SQL, REST) are right below.', 'Elija qué botones tendrá la pantalla: Buscar, Limpiar, Ver, Nuevo, Editar y Eliminar. Las acciones personalizadas (abrir otra pantalla, SQL, REST) están justo debajo.'),
+      },
+      {
+        id: 'interface',
+        target: 'wizard.action_interface',
+        title: h('Onde abre o formulário', 'Where the form opens', 'Dónde se abre el formulario'),
+        body: h('Mesma tela (substitui a lista), gaveta lateral ou janela central (modal). Muda só a experiência de quem usa.', 'Same screen (replaces the list), side drawer or centered window (modal). It only changes the experience of whoever uses it.', 'Misma pantalla (reemplaza la lista), panel lateral o ventana central (modal). Solo cambia la experiencia de quien lo usa.'),
+      },
+      {
+        id: 'export',
+        target: 'wizard.export',
+        title: h('Exportação de dados', 'Data export', 'Exportación de datos'),
+        body: h('Liga a exportação em segundo plano e define os formatos permitidos (Excel, CSV, JSON, PDF, OFX).', 'Turns on background export and sets the allowed formats (Excel, CSV, JSON, PDF, OFX).', 'Activa la exportación en segundo plano y define los formatos permitidos (Excel, CSV, JSON, PDF, OFX).'),
+      },
+      {
+        id: 'query',
+        target: 'wizard.query_strategy',
+        title: h('Estratégia de dados', 'Data strategy', 'Estrategia de datos'),
+        body: h('Query Dinâmica: o MetaBuilder monta os JOINs e SELECTs pelas relações. SQL Manual: você escreve o SQL para ter mais controle e desempenho.', 'Dynamic Query: MetaBuilder builds the JOINs and SELECTs from the relations. Manual SQL: you write the SQL for more control and performance.', 'Consulta Dinámica: MetaBuilder arma los JOIN y SELECT por las relaciones. SQL Manual: usted escribe el SQL para más control y rendimiento.'),
+      },
+      {
+        id: 'finish',
+        target: 'wizard.next',
+        title: h('Concluir', 'Finish', 'Concluir'),
+        body: h('Este botão cria (ou atualiza) o caso de uso. Esse passo do tour não clica por você.', 'This button creates (or updates) the use case. This tour step does not click it for you.', 'Este botón crea (o actualiza) el caso de uso. Este paso del tour no hace clic por usted.'),
+      },
+    ],
+  },
+  {
+    id: 'studio-dados',
+    route: `${STUDIO}/data`,
+    title: h('Dados e Schemas', 'Data and Schemas', 'Datos y Esquemas'),
+    summary: h('Nomes amigáveis, permissões, auditoria e relacionamentos das tabelas.', 'Friendly names, permissions, audit and table relationships.', 'Nombres amigables, permisos, auditoría y relaciones de las tablas.'),
+    steps: [
+      {
+        id: 'tabs',
+        target: 'data.tabs',
+        title: h('Duas visões', 'Two views', 'Dos vistas'),
+        body: h('Tabela / Campos: nomes e regras de cada tabela e coluna. Relacionamentos: como as tabelas se ligam (a base dos JOINs automáticos).', 'Table / Fields: names and rules for each table and column. Relationships: how tables connect (the basis of automatic JOINs).', 'Tabla / Campos: nombres y reglas de cada tabla y columna. Relaciones: cómo se unen las tablas (la base de los JOIN automáticos).'),
+      },
+      {
+        id: 'tables',
+        target: 'data.tables',
+        title: h('Suas tabelas', 'Your tables', 'Sus tablas'),
+        body: h('Vêm do banco sincronizado. Busque pelo nome e clique para editar os detalhes dela ao lado.', 'They come from the synced database. Search by name and click one to edit its details on the right.', 'Vienen de la base sincronizada. Busque por nombre y haga clic para editar sus detalles a la derecha.'),
+      },
+      {
+        id: 'permissions',
+        target: 'data.permissions',
+        title: h('Permissões da tabela', 'Table permissions', 'Permisos de la tabla'),
+        body: h('Define se os apps podem criar, editar e excluir registros desta tabela. Valem para todos os casos de uso que a usam.', 'Defines whether apps can create, edit and delete records of this table. They apply to every use case that uses it.', 'Define si las apps pueden crear, editar y eliminar registros de esta tabla. Valen para todos los casos de uso que la usan.'),
+      },
+      {
+        id: 'audit',
+        target: 'data.audit',
+        title: h('Auditoria', 'Audit', 'Auditoría'),
+        body: h('Guarda quem criou e quem alterou cada registro, e quando. O servidor preenche sozinho: a tela nunca consegue falsificar. As colunas são reconhecidas pelo nome e você pode trocar.', 'Stores who created and changed each record, and when. The server fills it in: the screen can never fake it. Columns are recognized by name and you can change them.', 'Guarda quién creó y modificó cada registro, y cuándo. Lo completa el servidor: la pantalla nunca puede falsificarlo. Las columnas se reconocen por el nombre y puede cambiarlas.'),
+      },
+      {
+        id: 'field',
+        target: 'data.field',
+        title: h('Cada coluna', 'Each column', 'Cada columna'),
+        body: h('Dê um nome amigável (é o rótulo padrão nas telas), escolha o tipo de campo e ajuste as regras. Depois clique em "Salvar Tabela".', 'Give it a friendly name (the default label on screens), pick the field type and adjust the rules. Then click "Save Table".', 'Dele un nombre amigable (es la etiqueta por defecto en las pantallas), elija el tipo de campo y ajuste las reglas. Luego haga clic en "Guardar Tabla".'),
+      },
+    ],
+  },
+  {
+    id: 'studio-auth',
+    route: `${STUDIO}/auth`,
+    title: h('Autenticação', 'Authentication', 'Autenticación'),
+    summary: h('Como os usuários do seu app entram: estratégias, mapeamento e acesso.', 'How your app users sign in: strategies, mapping and access.', 'Cómo entran los usuarios de su app: estrategias, mapeo y acceso.'),
+    steps: [
+      {
+        id: 'tabs',
+        target: 'auth.tabs',
+        title: h('Quatro abas', 'Four tabs', 'Cuatro pestañas'),
+        body: h('Controle de Acesso (papéis e permissões), Estratégia de Autenticação (como o login funciona), Personalização Visual (a tela de login) e Gestão de Usuários.', 'Access Control (roles and permissions), Authentication Strategy (how sign-in works), Visual Customization (the login screen) and User Management.', 'Control de Acceso (roles y permisos), Estrategia de Autenticación (cómo funciona el inicio de sesión), Personalización Visual (la pantalla de acceso) y Gestión de Usuarios.'),
+      },
+      {
+        id: 'strategies',
+        target: 'auth.strategies',
+        title: h('Escolha a estratégia', 'Pick the strategy', 'Elija la estrategia'),
+        body: h('Managed Auth: o MetaBuilder guarda os usuários em uma base isolada (mais rápido). Banco legado: o Agente CLI valida o login na SUA tabela de usuários. LDAP/AD: Active Directory do cliente. Sem autenticação: só para enquanto o app não foi ao ar.', 'Managed Auth: MetaBuilder keeps users in an isolated database (fastest). Legacy database: the CLI Agent validates sign-in against YOUR users table. LDAP/AD: the customer Active Directory. No authentication: only until the app goes live.', 'Managed Auth: MetaBuilder guarda los usuarios en una base aislada (más rápido). Base heredada: el Agente CLI valida el acceso en SU tabla de usuarios. LDAP/AD: el Active Directory del cliente. Sin autenticación: solo hasta que la app salga al aire.'),
+      },
+      {
+        id: 'save',
+        target: 'auth.save',
+        title: h('Salvar', 'Save', 'Guardar'),
+        body: h('As alterações só valem depois de salvar. Troque de estratégia com cuidado em apps já publicados: os usuários passam a entrar pelo novo método.', 'Changes only apply after saving. Change strategy carefully on published apps: users will sign in with the new method.', 'Los cambios solo valen después de guardar. Cambie de estrategia con cuidado en apps ya publicadas: los usuarios pasarán a entrar por el nuevo método.'),
+      },
+    ],
+  },
+  {
+    id: 'studio-settings',
+    route: `${STUDIO}/settings`,
+    title: h('Configurações do projeto', 'Project settings', 'Configuración del proyecto'),
+    summary: h('Defaults dos campos e campos calculados do projeto.', 'Field defaults and calculated fields of the project.', 'Valores por defecto de los campos y campos calculados del proyecto.'),
+    steps: [
+      {
+        id: 'tabs',
+        target: 'settings.tabs',
+        title: h('Defaults e calculados', 'Defaults and calculated', 'Valores por defecto y calculados'),
+        body: h('Defaults dos Campos: como cada coluna se comporta em casos de uso NOVOS. Campos Calculados: fórmulas reaproveitáveis em várias telas.', 'Field Defaults: how each column behaves in NEW use cases. Calculated Fields: formulas reusable across screens.', 'Valores por defecto de los Campos: cómo se comporta cada columna en casos de uso NUEVOS. Campos Calculados: fórmulas reutilizables en varias pantallas.'),
+      },
+      {
+        id: 'tables',
+        target: 'settings.tables',
+        title: h('Tabelas sincronizadas', 'Synced tables', 'Tablas sincronizadas'),
+        body: h('Escolha uma tabela para configurar os defaults das colunas dela.', 'Pick a table to configure its column defaults.', 'Elija una tabla para configurar los valores por defecto de sus columnas.'),
+      },
+      {
+        id: 'search',
+        target: 'settings.search',
+        title: h('Achar um campo', 'Find a field', 'Encontrar un campo'),
+        body: h('Em tabelas grandes, busque a coluna pelo nome. Mudar um default não altera casos de uso que já existem.', 'On big tables, search the column by name. Changing a default does not alter existing use cases.', 'En tablas grandes, busque la columna por nombre. Cambiar un valor por defecto no altera los casos de uso que ya existen.'),
+      },
+    ],
+  },
+  {
+    id: 'studio-logs',
+    route: `${STUDIO}/logs`,
+    title: h('Logs do projeto', 'Project logs', 'Logs del proyecto'),
+    summary: h('Ligar os logs, escolher o que registrar e investigar um problema.', 'Turn logs on, choose what to record and investigate a problem.', 'Activar los logs, elegir qué registrar e investigar un problema.'),
+    steps: [
+      {
+        id: 'enable',
+        target: 'logs.enable',
+        title: h('Ligue os logs', 'Turn logs on', 'Active los logs'),
+        body: h('Por padrão ficam desligados. Ligado, o Agente registra leituras, escritas, erros de SQL, BPM, sincronizações e o túnel. Escolha os tipos que importam: registrar tudo gera muito volume.', 'Off by default. When on, the Agent records reads, writes, SQL errors, BPM, syncs and the tunnel. Choose the types that matter: recording everything makes a lot of volume.', 'Desactivados por defecto. Activos, el Agente registra lecturas, escrituras, errores de SQL, BPM, sincronizaciones y el túnel. Elija los tipos que importan: registrar todo genera mucho volumen.'),
+      },
+      {
+        id: 'retention',
+        target: 'logs.retention',
+        title: h('Retenção', 'Retention', 'Retención'),
+        body: h('Por quantos dias guardar. Registros mais antigos são apagados sozinhos. Salve as configurações depois de mudar.', 'How many days to keep. Older records are deleted automatically. Save the settings after changing.', 'Cuántos días guardar. Los registros más antiguos se eliminan solos. Guarde la configuración después de cambiar.'),
+      },
+      {
+        id: 'toolbar',
+        target: 'logs.toolbar',
+        title: h('Filtros', 'Filters', 'Filtros'),
+        body: h('Busque por texto ou SQL, filtre por tipo, tabela e período, e alterne entre Banco e Arquivo. Atualize e limpe daqui.', 'Search by text or SQL, filter by type, table and period, and switch between Database and File. Refresh and clear from here.', 'Busque por texto o SQL, filtre por tipo, tabla y período, y alterne entre Base y Archivo. Actualice y limpie desde aquí.'),
+      },
+      {
+        id: 'table',
+        target: 'logs.table',
+        title: h('Os registros', 'The records', 'Los registros'),
+        body: h('Cada linha mostra hora, tipo, ação, tabela, mensagem, tempo e linhas afetadas. Abra a seta para ver o SQL completo e o erro.', 'Each row shows time, type, action, table, message, duration and rows affected. Open the arrow to see the full SQL and the error.', 'Cada fila muestra hora, tipo, acción, tabla, mensaje, tiempo y filas afectadas. Abra la flecha para ver el SQL completo y el error.'),
+      },
+    ],
+  },
+]

@@ -85,7 +85,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
         t={t}
         isDownloadsActive={isDownloadsActive}
       />
-      <div className="space-y-6">
+      <div data-help-id="wizard.action_interface" className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.action_interface_label')}</label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
@@ -122,7 +122,7 @@ export function StepActions({ config, setConfig, models, useCases, isDownloadsAc
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div data-help-id="wizard.export" className="space-y-6">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.export_data_title', 'Exportação de Dados')}</label>
 
         <div className="space-y-4">

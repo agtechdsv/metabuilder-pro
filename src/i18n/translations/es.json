@@ -5570,5 +5570,18 @@
       "default_edited_above": "Usa el texto estándar del campo, editado en la primera zona sin texto propio.",
       "edit_central": "Este voto es sobre el texto del campo (el mismo de sus zonas): abra para editar"
     }
+  },
+  "platform_help": {
+    "button": "Ayuda de esta pantalla",
+    "menu_title": "Ayuda de esta pantalla",
+    "none": "Todavía no hay tutoriales para esta pantalla. Se están preparando.",
+    "steps": "pasos",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Concluir",
+    "step_of": "{n} de {total}",
+    "click_to_continue": "Haga clic en el elemento resaltado para continuar.",
+    "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde."
   }
 }

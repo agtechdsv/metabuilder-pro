@@ -6,7 +6,7 @@ export function ButtonsConfig({
 }: any) {
   return (
     <>
-        <div className="space-y-6">
+        <div data-help-id="wizard.buttons" className="space-y-6">
           <div className="flex items-center justify-between mb-2 ml-1">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">{t('wizard.actions.interface_buttons')}</label>
             <div className="flex items-center gap-2">

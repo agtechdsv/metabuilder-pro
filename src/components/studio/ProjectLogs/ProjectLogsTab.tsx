@@ -238,7 +238,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           </div>
 
           {/* Enable Toggle */}
-          <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3">
+          <div data-help-id="logs.enable" className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">Ativar Logs</p>
@@ -296,7 +296,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           </div>
 
           {/* Retention */}
-          <div className="space-y-2">
+          <div data-help-id="logs.retention" className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Retenção</p>
             <div className="grid grid-cols-3 gap-1.5">
               {RETENTION_OPTIONS.map(days => (
@@ -350,7 +350,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
       <div className="flex-1 flex flex-col gap-4 min-w-0">
 
         {/* Toolbar */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div data-help-id="logs.toolbar" className="flex items-center gap-2 flex-wrap">
           {/* Search */}
           <div className="flex-1 min-w-48 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
@@ -461,7 +461,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div data-help-id="logs.table" className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50">
