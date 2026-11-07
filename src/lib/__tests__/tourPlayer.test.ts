@@ -198,3 +198,15 @@ describe('tempo de espera por alvo', () => {
     expect(findTimeout(s('note', { type: 'button', ref: 'new' }), base)).toBe(600)
   })
 })
+
+describe('espera por janelas que abrem depois de um clique', () => {
+  it('confirmar e salvar esperam mais; o 1º campo depois de um clique também', async () => {
+    const { findTimeout } = await import('../interactiveHelp/player')
+    const base = { find: 2500, noteFind: 600 }
+    const s = (kind: any, target: any) => ({ id: 'x', kind, target } as any)
+    expect(findTimeout(s('click', { type: 'button', ref: 'confirm' }), base)).toBe(8000)
+    expect(findTimeout(s('click', { type: 'button', ref: 'save' }), base)).toBe(8000)
+    expect(findTimeout(s('type', { type: 'field', ref: 'a' }), base, true)).toBe(8000)
+    expect(findTimeout(s('type', { type: 'field', ref: 'a' }), base, false)).toBe(2500)
+  })
+})

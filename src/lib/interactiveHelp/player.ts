@@ -55,8 +55,11 @@ const SLICE = 40
 /** Alvos que dependem de DADOS (primeiro item, cartão, marcador...): na primeira execução a conexão com o banco ainda está "fria" e eles demoram a aparecer. */
 const DATA_FIND = 12000
 const DATA_NOTE_FIND = 6000
-export function findTimeout(step: TourStep, base: { find: number; noteFind: number }): number {
+/** Janela que abre depois de um clique (formulário, confirmação de exclusão): pode precisar consultar o banco antes de aparecer. */
+const WINDOW_FIND = 8000
+export function findTimeout(step: TourStep, base: { find: number; noteFind: number }, afterClick = false): number {
   const t = step.target
+  if (step.kind !== 'note' && t && ((t.type === 'button' && (t.ref === 'confirm' || t.ref === 'save')) || (afterClick && (t.type === 'field' || t.type === 'filter')))) return WINDOW_FIND
   const dataDependent = !!t && (
     t.type === 'row' || t.type === 'detail-expand' ||
     (t.type === 'button' && /^(item-|kanban-(edit|delete|card)|scheduler-(event|delete)|map-marker|widget)/.test(t.ref))
@@ -182,13 +185,19 @@ export class TourPlayer {
     } finally { this.running = false }
   }
 
+  /** o passo anterior foi um clique (a janela do formulário ainda pode estar abrindo) */
+  private prevWasClick = false
+
   private async runStep(step: TourStep, i: number) {
+    const afterClick = this.prevWasClick
+    this.prevWasClick = step.kind === 'click'
+    void afterClick
     const total = this.tour.steps.length
     const caption = resolveHelp(step.caption, this.opts.language)
     this.caption = caption
     let el: unknown | null = null
     if (step.target) {
-      el = await this.adapter.find(step, findTimeout(step, BASE))
+      el = await this.adapter.find(step, findTimeout(step, BASE, this.prevWasClick))
       if (this.cancelled) return
       if (!el) { if (!step.optional) this.skipped++; this.emit(); return } // não existe nesta tela (oculto, sem permissão...): segue sem travar
     }
