@@ -78,6 +78,11 @@ export function PlatformTourHost() {
         if (el) {
           el.scrollIntoView({ block: 'center', behavior: 'smooth' })
           setRect(el.getBoundingClientRect())
+          // passo que espera texto digitado: já deixa o cursor no campo, para a pessoa ver que é ali
+          if (s.completeWhen?.check === 'filled') {
+            const input = findById(s.completeWhen.id)
+            if (input && typeof input.focus === 'function') input.focus({ preventScroll: true })
+          }
           return
         }
         if (Date.now() > deadline) {
