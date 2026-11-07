@@ -18,6 +18,8 @@ export interface PlatformStep {
   enterClick?: string
   /** o passo só avança quando a pessoa clica no próprio elemento destacado (ex.: "Próximo passo" do assistente) */
   advanceOnClick?: boolean
+  /** quanto esperar (ms) o item do próximo passo aparecer depois do clique; padrão 1500. Ações que gravam (criar, publicar) levam mais */
+  advanceWaitMs?: number
   /** deixa a pessoa usar o item destacado sem avançar (preencher o nome, escolher a lógica). Os outros passos bloqueiam a tela */
   interactive?: boolean
   /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */

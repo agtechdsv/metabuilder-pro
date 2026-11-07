@@ -144,7 +144,7 @@ export function PlatformTourHost() {
       const a = activeRef.current
       const nextTarget = a ? a.tour.steps[a.index + 1]?.target : undefined
       if (!nextTarget) { nextStep(); return }
-      const until = Date.now() + 1500
+      const until = Date.now() + (a?.tour.steps[a.index]?.advanceWaitMs ?? 1500)
       while (Date.now() < until) {
         if (findById(nextTarget)) { nextStep(); return }
         await sleep(100)

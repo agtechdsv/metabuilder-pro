@@ -58,7 +58,7 @@ describe('catálogo da ajuda da plataforma', () => {
         const full = path.join(dir, e.name)
         if (e.isDirectory()) walk(full)
         else if (/\.(tsx|ts)$/.test(e.name) && !full.includes(`${path.sep}lib${path.sep}platformHelp${path.sep}`)) {
-          for (const m of fs.readFileSync(full, 'utf8').matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1])
+          { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
         }
       }
     }
@@ -122,7 +122,7 @@ describe('passos com condição', () => {
         if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
         const full = path.join(dir, e.name)
         if (e.isDirectory()) walk(full)
-        else if (/\.tsx$/.test(e.name)) for (const m of fs.readFileSync(full, 'utf8').matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1])
+        else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
       }
     }
     walk(src)

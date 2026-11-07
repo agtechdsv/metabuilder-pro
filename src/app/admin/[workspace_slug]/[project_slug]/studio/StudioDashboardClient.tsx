@@ -262,6 +262,15 @@ export function StudioDashboardClient({
   const [isAISettingsModalOpen, setIsAISettingsModalOpen] = useState(false)
   const [isCheckingLimit, setIsCheckingLimit] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
+  // o caso de uso mais recente da lista: o tour "Criar um caso de uso" o acompanha (rascunho, Publicar, versão publicada)
+  const latestViewId = (() => {
+    let best: any = null
+    for (const v of userViews) {
+      const stamp = String(v.updated_at || v.created_at || '')
+      if (!best || stamp >= best.stamp) best = { id: v.id, stamp }
+    }
+    return best?.id as string | undefined
+  })()
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
   const automationsView = views?.find(view => view.slug === 'automations')
@@ -1380,6 +1389,7 @@ export function StudioDashboardClient({
               }).map((view) => (
                 <div
                   key={view.id}
+                  data-help-id={view.id === latestViewId ? 'studio.latest_card' : undefined}
                   className="group relative p-5 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-[1.5rem] hover:border-indigo-500/50 transition-all duration-500 shadow-sm hover:shadow-2xl dark:shadow-none hover:-translate-y-1"
                 >
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-full capitalize tracking-widest shadow-lg shadow-indigo-500/10 z-10 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap min-w-[140px] text-center">
@@ -1468,6 +1478,7 @@ export function StudioDashboardClient({
                           {(view.draft_config || !view.layout_config || Object.keys(view.layout_config).length === 0 || view.status === 'draft') && (
                             <div className="flex gap-2">
                               <button
+                                data-help-id={view.id === latestViewId ? 'studio.latest_publish' : undefined}
                                 onClick={() => {
                                   setViewToPublish(view)
                                   setIsPublishModalOpen(true)
@@ -1523,6 +1534,7 @@ export function StudioDashboardClient({
                             )}
                             {(view.layout_config && Object.keys(view.layout_config).length > 0) && (
                               <button
+                                data-help-id={view.id === latestViewId ? 'studio.latest_open' : undefined}
                                 onClick={() => openPreview(`${window.location.origin}/${workspace_slug}/${project_slug}/${view.slug}`, `Publicado: ${view.name}`)}
                                 className="w-14 flex items-center justify-center bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-2xl border border-neutral-200 dark:border-neutral-700 transition-all text-neutral-400 hover:text-indigo-600 dark:hover:text-white shadow-sm group/publish"
                                 title={t('dashboard.projects.studio.access_published_tooltip', 'Acessar versão publicada')}
@@ -1613,6 +1625,7 @@ export function StudioDashboardClient({
             
             <div className="flex flex-col gap-3">
               <button
+                data-help-id="studio.publish_confirm"
                 onClick={handlePublishView}
                 disabled={isPublishing}
                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]"
