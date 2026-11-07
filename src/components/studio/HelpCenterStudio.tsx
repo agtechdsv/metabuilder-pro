@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { HelpCircle, Loader2, Save, ExternalLink } from 'lucide-react'
+import { HelpCircle, Loader2, Save, ExternalLink, FileText, PlayCircle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -14,6 +14,7 @@ import { ScreenHelpField } from './UseCaseBuilder/steps/StepLayout/special-layou
 import { InteractiveHelpEditor } from './InteractiveHelpEditor'
 import { askDialog } from '@/utils/askDialog'
 import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
+import { normalizeInteractiveHelp } from '@/lib/interactiveHelp/types'
 
 interface Props {
   workspaceSlug: string
@@ -46,6 +47,8 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
   const supabase = useMemo(() => createClient(), [])
 
   const [selectedId, setSelectedId] = useState('')
+  // ajuda textual (campos, tela, feedback) e ajuda interativa (tutoriais) ficam em abas separadas
+  const [helpTab, setHelpTab] = useState<'text' | 'interactive'>('text')
   const [config, setConfig] = useState<any>(null)
   // o que está gravado, para saber se há alteração (só as propriedades de ajuda contam)
   const [baseline, setBaseline] = useState('')
@@ -178,9 +181,34 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
 
       {config && view && (
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
-          <ScreenHelpField config={config} setConfig={setConfig} t={t} />
-          <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
-          <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} recordUrl={view?.slug ? `/${workspaceSlug}/${projectSlug}/${view.slug}?mb_demo=1` : undefined} />
+          <div className="flex items-center gap-1 rounded-2xl border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900/50 w-fit">
+            {([
+              { id: 'text', icon: <FileText className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_text', 'Ajuda textual'), count: null },
+              { id: 'interactive', icon: <PlayCircle className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_interactive', 'Ajuda interativa'), count: normalizeInteractiveHelp(config.layout_config?.interactive_help).tours.length },
+            ] as const).map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setHelpTab(tab.id)}
+                className={cn(
+                  'flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-black tracking-wide transition-all',
+                  helpTab === tab.id ? 'bg-white text-indigo-600 shadow-sm dark:bg-neutral-800' : 'text-neutral-400 hover:text-neutral-600',
+                )}
+              >
+                {tab.icon}{tab.label}
+                {tab.count ? <span className="rounded-full bg-indigo-100 px-1.5 text-[10px] font-black text-indigo-600 dark:bg-indigo-950/50">{tab.count}</span> : null}
+              </button>
+            ))}
+          </div>
+
+          {helpTab === 'text' ? (
+            <>
+              <ScreenHelpField config={config} setConfig={setConfig} t={t} />
+              <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen />
+            </>
+          ) : (
+            <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} recordUrl={view?.slug ? `/${workspaceSlug}/${projectSlug}/${view.slug}?mb_demo=1` : undefined} />
+          )}
 
           <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}

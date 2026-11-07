@@ -800,11 +800,11 @@ export function StudioDashboardClient({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <div className={cn(canCreate ? 'grid grid-cols-3' : 'flex', 'gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800')}>
                <button 
                 onClick={() => setViewMode('list')}
                 className={cn(
-                  "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all",
+                  "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center",
                   viewMode === 'list' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                 )}
                >
@@ -815,7 +815,7 @@ export function StudioDashboardClient({
                    <button 
                     onClick={() => setViewMode('navigation')}
                     className={cn(
-                      "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all",
+                      "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center",
                       viewMode === 'navigation' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                     )}
                    >
@@ -824,7 +824,7 @@ export function StudioDashboardClient({
                    <button 
                      onClick={() => setViewMode('enumerations')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
+                       "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
                        viewMode === 'enumerations' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
@@ -833,7 +833,7 @@ export function StudioDashboardClient({
                    <button
                      onClick={() => setViewMode('tunnel')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
+                       "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
                        viewMode === 'tunnel' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
@@ -842,7 +842,7 @@ export function StudioDashboardClient({
                    <button
                      onClick={() => setViewMode('synced-dbs')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
+                       "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
                        viewMode === 'synced-dbs' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >
@@ -851,7 +851,7 @@ export function StudioDashboardClient({
                    <button
                      onClick={() => setViewMode('help')}
                      className={cn(
-                       "px-6 py-2 rounded-xl text-xs font-black tracking-wide transition-all flex items-center gap-1.5",
+                       "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
                        viewMode === 'help' ? "bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm" : "text-neutral-400 hover:text-neutral-600"
                      )}
                     >

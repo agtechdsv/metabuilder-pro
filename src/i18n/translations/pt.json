@@ -2842,7 +2842,20 @@
       "zone_filter": "Filtro de busca",
       "zone_grid": "Grid de dados",
       "zone_form": "Formulário",
-      "help_zone_tutorial": "Ajuda interativa"
+      "help_zone_tutorial": "Ajuda interativa",
+      "help_feedback_approval": "aprovação",
+      "help_feedback_votes": "votos",
+      "help_feedback_attention": "precisam de atenção",
+      "help_feedback_filter_all": "Todos",
+      "help_feedback_filter_attention": "Precisam de atenção",
+      "help_feedback_none_attention": "Nenhuma dica precisa de atenção.",
+      "help_feedback_col_field": "Campo",
+      "help_feedback_col_where": "Onde",
+      "help_feedback_col_approval": "Aprovação",
+      "help_feedback_comments": "Comentários",
+      "help_feedback_more": "Ver mais {n}",
+      "help_feedback_less": "Mostrar menos",
+      "help_suggest_short": "Personalizar"
     },
     "personalizado": {
       "title": "Configuração do Orquestrador de Casos de Uso",
@@ -5448,6 +5461,8 @@
       "delete_all_ok": "Excluir todos"
     },
     "discard_title": "Alterações não salvas",
-    "discard_ok": "Descartar"
+    "discard_ok": "Descartar",
+    "tab_text": "Ajuda textual",
+    "tab_interactive": "Ajuda interativa"
   }
 }

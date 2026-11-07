@@ -2842,7 +2842,20 @@
       "zone_filter": "Search filter",
       "zone_grid": "Data grid",
       "zone_form": "Form",
-      "help_zone_tutorial": "Interactive help"
+      "help_zone_tutorial": "Interactive help",
+      "help_feedback_approval": "approval",
+      "help_feedback_votes": "votes",
+      "help_feedback_attention": "need attention",
+      "help_feedback_filter_all": "All",
+      "help_feedback_filter_attention": "Need attention",
+      "help_feedback_none_attention": "No hint needs attention.",
+      "help_feedback_col_field": "Field",
+      "help_feedback_col_where": "Where",
+      "help_feedback_col_approval": "Approval",
+      "help_feedback_comments": "Comments",
+      "help_feedback_more": "See {n} more",
+      "help_feedback_less": "Show less",
+      "help_suggest_short": "Customize"
     },
     "personalizado": {
       "title": "Use Case Orchestrator Configuration",
@@ -5448,6 +5461,8 @@
       "delete_all_ok": "Delete all"
     },
     "discard_title": "Unsaved changes",
-    "discard_ok": "Discard"
+    "discard_ok": "Discard",
+    "tab_text": "Text help",
+    "tab_interactive": "Interactive help"
   }
 }
