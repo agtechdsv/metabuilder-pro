@@ -5557,7 +5557,7 @@
     "tab_interactive": "Ayuda interactiva",
     "tab_feedback": "Comentarios",
     "feedback": {
-      "edit_field": "Editar el texto de este campo",
+      "edit_field": "Editar el texto de este campo (abre todas las zonas)",
       "edit_zone": "Editar el texto de esta zona",
       "field_text": "Texto estándar del campo",
       "zone_text": "Texto en esta zona",
@@ -5565,7 +5565,8 @@
       "zone_help_placeholder": "Texto de esta zona.",
       "uses_default": "Usa el texto estándar del campo",
       "edit_this": "Editar la ayuda de este punto",
-      "close_edit": "Cerrar edición"
+      "close_edit": "Cerrar edición",
+      "default_edited_above": "Usa el texto estándar del campo, editado en la primera zona sin texto propio."
     }
   }
 }

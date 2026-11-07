@@ -41,7 +41,7 @@ export function FieldHelpInline({ config, setConfig, t, fieldId }: Common & { fi
 }
 
 /** Edita o texto de UMA zona (filtro, grid ou formulário) de um campo: o próprio, ou o padrão se a zona ainda não tem texto próprio. */
-export function ZoneHelpInline({ config, setConfig, t, fieldId, zone }: Common & { fieldId: string | null; zone: string | null }) {
+export function ZoneHelpInline({ config, setConfig, t, fieldId, zone, showDefaultEditor = true }: Common & { fieldId: string | null; zone: string | null; /** false = o texto padrão já é editado em outra zona aberta do mesmo campo (não repete a caixa) */ showDefaultEditor?: boolean }) {
   const lc = config.layout_config || {}
   const meta: Record<string, any> = lc.fields_metadata || {}
   if (!fieldId || !isZone(zone)) return <ScreenHelpInline config={config} setConfig={setConfig} t={t} />
@@ -51,12 +51,16 @@ export function ZoneHelpInline({ config, setConfig, t, fieldId, zone }: Common &
   const hidden = isHelpHidden(meta, fieldId, zone)
   return (
     <div className="space-y-2">
-      <HelpTextEditor
-        value={help}
-        rows={2}
-        placeholder={t('help_center_studio.feedback.zone_help_placeholder', 'Texto desta zona.')}
-        onChange={h => save(custom ? setZoneHelp(meta, fieldId, zone, h) : setFieldHelp(meta, fieldId, h))}
-      />
+      {custom || showDefaultEditor || !multi ? (
+        <HelpTextEditor
+          value={help}
+          rows={2}
+          placeholder={t('help_center_studio.feedback.zone_help_placeholder', 'Texto desta zona.')}
+          onChange={h => save(custom ? setZoneHelp(meta, fieldId, zone, h) : setFieldHelp(meta, fieldId, h))}
+        />
+      ) : (
+        <p className="rounded-lg bg-neutral-50 px-3 py-2 text-[11px] italic text-neutral-500 dark:bg-neutral-900">{t('help_center_studio.feedback.default_edited_above', 'Usa o texto padrão do campo, editado na primeira zona sem texto próprio.')}</p>
+      )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {multi && (
           <button

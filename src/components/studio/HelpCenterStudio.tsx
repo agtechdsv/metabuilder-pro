@@ -52,7 +52,7 @@ function FeedbackTab({ config, setConfig, models, t }: { config: any; setConfig:
       zoneCount={id => zonesOfField(lc, id).length}
       isCustom={(id, zone) => (HELP_ZONES as readonly string[]).includes(zone) && getZoneHelp(meta, id, zone as HelpZone).custom}
       renderFieldEditor={fieldId => <FieldHelpInline config={config} setConfig={setConfig} t={t} fieldId={fieldId} />}
-      renderZoneEditor={(fieldId, zone) => <ZoneHelpInline config={config} setConfig={setConfig} t={t} fieldId={fieldId} zone={zone} />}
+      renderZoneEditor={(fieldId, zone, opts) => <ZoneHelpInline config={config} setConfig={setConfig} t={t} fieldId={fieldId} zone={zone} showDefaultEditor={opts?.showDefaultEditor} />}
       t={t}
     />
   )

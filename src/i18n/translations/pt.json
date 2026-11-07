@@ -5469,7 +5469,7 @@
     "tab_interactive": "Ajuda interativa",
     "tab_feedback": "Feedback",
     "feedback": {
-      "edit_field": "Editar o texto deste campo",
+      "edit_field": "Editar o texto deste campo (abre todas as zonas)",
       "edit_zone": "Editar o texto desta zona",
       "field_text": "Texto padrão do campo",
       "zone_text": "Texto nesta zona",
@@ -5477,7 +5477,8 @@
       "zone_help_placeholder": "Texto desta zona.",
       "uses_default": "Usa o texto padrão do campo",
       "edit_this": "Editar a ajuda deste ponto",
-      "close_edit": "Fechar edição"
+      "close_edit": "Fechar edição",
+      "default_edited_above": "Usa o texto padrão do campo, editado na primeira zona sem texto próprio."
     }
   }
 }
