@@ -10,7 +10,7 @@ export const getActiveTour = (): ActiveTour | null => active
 
 export function startPlatformTour(tour: PlatformTour) {
   if (tour.steps.length === 0) return
-  active = { tour, index: 0 }
+  active = { tour, index: 0, path: typeof window !== 'undefined' ? window.location.pathname : undefined }
   emit()
 }
 

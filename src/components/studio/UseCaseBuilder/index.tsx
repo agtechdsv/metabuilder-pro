@@ -459,7 +459,7 @@ export function UseCaseBuilderWizard({
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <button data-help-id="wizard.back" onClick={onClose} className="p-2.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-all text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-800 shadow-sm">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="h-8 w-px bg-neutral-200 dark:bg-neutral-800 mx-2" />

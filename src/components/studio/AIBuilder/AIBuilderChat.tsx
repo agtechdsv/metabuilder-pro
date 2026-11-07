@@ -457,6 +457,7 @@ export function AIBuilderChat({
         {onClose && (
           <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950/50">
             <button
+              data-help-id="ai.back"
               onClick={onClose}
               className="flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-sm font-bold transition-colors"
             >

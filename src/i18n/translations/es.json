@@ -5582,6 +5582,7 @@
     "done": "Concluir",
     "step_of": "{n} de {total}",
     "click_to_continue": "Haga clic en el elemento resaltado para continuar.",
-    "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde."
+    "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde.",
+    "recover": "Volver al punto del tour"
   }
 }

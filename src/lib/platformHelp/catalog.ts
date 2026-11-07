@@ -15,7 +15,8 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
     id: 'studio-visao-geral',
     route: STUDIO,
     title: h('Conhecendo o Studio', 'Getting to know Studio', 'Conociendo el Studio'),
-    summary: h('Onde ficam as áreas do Studio e para que serve cada aba.', 'Where each Studio area is and what each tab is for.', 'Dónde está cada área del Studio y para qué sirve cada pestaña.'),
+    summary: h('Onde ficam as áreas do Studio, os indicadores, os atalhos e a lista dos seus casos de uso.', 'Where Studio areas, indicators, shortcuts and your use case list are.', 'Dónde están las áreas del Studio, los indicadores, los atajos y la lista de sus casos de uso.'),
+    recover: ['studio.tab_list', 'wizard.back', 'ai.back'],
     steps: [
       {
         id: 'rail',
@@ -36,6 +37,54 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
           'Use Cases: your app screens. Navigation: the published app menu. Enums: fixed value lists. Tunnel Manager and Synced Databases: the connection to the customer database (Desktop IDE). Help Center: the help end users see.',
           'Casos de Uso: las pantallas de su app. Navegación: el menú de la app publicada. Enums: listas de valores fijos. Administrador del Túnel y Bases Sincronizadas: la conexión con la base del cliente (IDE de escritorio). Centro de Ayuda: la ayuda que ve el usuario final.',
         ),
+      },
+      {
+        id: 'stat-tables',
+        target: 'studio.stat_tables',
+        title: h('Tabelas sincronizadas', 'Synced tables', 'Tablas sincronizadas'),
+        body: h('Quantas tabelas do banco do cliente o MetaBuilder já conhece. Elas chegam pelo Agente CLI e são a matéria-prima dos casos de uso.', 'How many tables of the customer database MetaBuilder already knows. They arrive through the CLI Agent and are the raw material of use cases.', 'Cuántas tablas de la base del cliente ya conoce MetaBuilder. Llegan por el Agente CLI y son la materia prima de los casos de uso.'),
+      },
+      {
+        id: 'stat-views',
+        target: 'studio.stat_views',
+        title: h('Views personalizadas', 'Custom views', 'Vistas personalizadas'),
+        body: h('Quantos casos de uso (telas) este projeto tem, contando os do sistema (login, automações, downloads).', 'How many use cases (screens) this project has, including the system ones (login, automations, downloads).', 'Cuántos casos de uso (pantallas) tiene este proyecto, incluidos los del sistema (acceso, automatizaciones, descargas).'),
+      },
+      {
+        id: 'stat-agent',
+        target: 'studio.stat_agent',
+        title: h('Agente e conexão', 'Agent and connection', 'Agente y conexión'),
+        body: h('Mostra se o Agente CLI está respondendo agora, o ID e o token secreto do projeto (usados na configuração do túnel) e por quanto tempo as exportações geradas ficam disponíveis. Trate o token como uma senha.', 'Shows whether the CLI Agent is answering right now, the project ID and secret token (used in the tunnel setup) and how long generated exports stay available. Treat the token like a password.', 'Muestra si el Agente CLI está respondiendo ahora, el ID y el token secreto del proyecto (usados en la configuración del túnel) y cuánto tiempo quedan disponibles las exportaciones generadas. Trate el token como una contraseña.'),
+      },
+      {
+        id: 'quick-start',
+        target: 'studio.quick_start',
+        title: h('Quick Start', 'Quick Start', 'Quick Start'),
+        body: h('Atalhos para criar um caso de uso já de um tipo específico: cadastro, Kanban, linha do tempo, Gantt, agenda, fluxograma, mapa mental, mapa, gráfico, galeria e painel de BI. Clique em um ícone, dê o nome e pronto.', 'Shortcuts to create a use case of a specific type right away: form, Kanban, timeline, Gantt, calendar, flowchart, mind map, map, chart, gallery and BI dashboard. Click an icon, name it and you are done.', 'Atajos para crear de inmediato un caso de uso de un tipo específico: formulario, Kanban, línea de tiempo, Gantt, agenda, diagrama de flujo, mapa mental, mapa, gráfico, galería y panel de BI. Haga clic en un ícono, póngale nombre y listo.'),
+      },
+      {
+        id: 'type-filter',
+        target: 'studio.type_filter',
+        title: h('Filtrar por categoria', 'Filter by category', 'Filtrar por categoría'),
+        body: h('Mostra só os casos de uso de uma categoria: Sistema, Gestão de Dados, Projetos e Prazos, Mapeamento e Fluxos, Inteligência e Mídia ou Avançado. Clique de novo no mesmo ícone para limpar o filtro.', 'Shows only the use cases of one category: System, Data Management, Projects and Schedules, Mapping and Flows, Intelligence and Media or Advanced. Click the same icon again to clear the filter.', 'Muestra solo los casos de uso de una categoría: Sistema, Gestión de Datos, Proyectos y Plazos, Mapeo y Flujos, Inteligencia y Medios o Avanzado. Haga clic otra vez en el mismo ícono para quitar el filtro.'),
+      },
+      {
+        id: 'scale',
+        target: 'studio.scale',
+        title: h('Tamanho dos cartões', 'Card size', 'Tamaño de las tarjetas'),
+        body: h('Pequeno, normal, grande ou extra grande: muda quantos cartões cabem na tela. Em projetos com muitas telas, o pequeno ajuda a achar tudo de uma vez.', 'Small, normal, large or extra large: changes how many cards fit on screen. In projects with many screens, small helps you see everything at once.', 'Pequeño, normal, grande o extra grande: cambia cuántas tarjetas caben en la pantalla. En proyectos con muchas pantallas, el pequeño ayuda a verlo todo de una vez.'),
+      },
+      {
+        id: 'refresh',
+        target: 'studio.refresh',
+        title: h('Atualizar a lista', 'Refresh the list', 'Actualizar la lista'),
+        body: h('Recarrega os casos de uso. Ao lado, o contador mostra quantos existem no projeto.', 'Reloads the use cases. Next to it, the counter shows how many exist in the project.', 'Recarga los casos de uso. Al lado, el contador muestra cuántos existen en el proyecto.'),
+      },
+      {
+        id: 'cards',
+        target: 'studio.cards',
+        title: h('Seus casos de uso', 'Your use cases', 'Sus casos de uso'),
+        body: h('Cada cartão é uma tela do app. Os de cima, marcados como Sistema, são do próprio MetaBuilder (login, automações, downloads). Os demais são os seus: use Configurar para editar, a seta para abrir a tela publicada e o ícone de lixeira para excluir. O selo de cor mostra o tipo da tela.', 'Each card is an app screen. The top ones, marked System, belong to MetaBuilder itself (login, automations, downloads). The rest are yours: use Configure to edit, the arrow to open the published screen and the trash icon to delete. The colored badge shows the screen type.', 'Cada tarjeta es una pantalla de la app. Las de arriba, marcadas como Sistema, son del propio MetaBuilder (acceso, automatizaciones, descargas). Las demás son suyas: use Configurar para editar, la flecha para abrir la pantalla publicada y el ícono de papelera para eliminar. La insignia de color muestra el tipo de pantalla.'),
       },
       {
         id: 'new',
@@ -62,6 +111,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
     route: STUDIO,
     title: h('Criar um caso de uso', 'Create a use case', 'Crear un caso de uso'),
     summary: h('Passo a passo do assistente: da lógica ao botão final. Nada é salvo até você concluir.', 'Wizard walkthrough: from logic to the final button. Nothing is saved until you finish.', 'Recorrido del asistente: de la lógica al botón final. No se guarda nada hasta que termine.'),
+    recover: ['studio.tab_list', 'ai.back'],
     steps: [
       {
         id: 'open',
@@ -79,12 +129,14 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'name',
         target: 'wizard.name',
+        interactive: true,
         title: h('Nome e endereço', 'Name and address', 'Nombre y dirección'),
         body: h('O nome aparece no menu do app. O endereço (slug) vira o final da URL da tela e é gerado a partir do nome; você pode trocar.', 'The name shows in the app menu. The address (slug) becomes the end of the screen URL and is generated from the name; you can change it.', 'El nombre aparece en el menú de la app. La dirección (slug) es el final de la URL de la pantalla y se genera a partir del nombre; puede cambiarla.'),
       },
       {
         id: 'logic',
         target: 'wizard.logic',
+        interactive: true,
         title: h('Qual é a lógica?', 'What is the logic?', '¿Cuál es la lógica?'),
         body: h('Define o tipo de tela: cadastro com pesquisa, Kanban, Agenda, Gantt, mapa, painel de BI e outros. Abra um grupo e escolha o tipo. Dica: "Pesquisa + Cadastro" serve para a maioria das telas de dados.', 'Defines the screen type: search + form, Kanban, Calendar, Gantt, map, BI dashboard and more. Open a group and pick the type. Tip: "Search + Form" fits most data screens.', 'Define el tipo de pantalla: búsqueda y formulario, Kanban, Agenda, Gantt, mapa, panel de BI y más. Abra un grupo y elija el tipo. Consejo: "Búsqueda + Formulario" sirve para la mayoría de las pantallas de datos.'),
       },
@@ -98,6 +150,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'tables',
         target: 'wizard.tables',
+        interactive: true,
         title: h('Tabela principal', 'Main table', 'Tabla principal'),
         body: h('Escolha a tabela raiz da tela. As tabelas relacionadas entram sozinhas na etapa seguinte.', 'Pick the screen root table. Related tables come in automatically in the next step.', 'Elija la tabla raíz de la pantalla. Las tablas relacionadas entran solas en la siguiente etapa.'),
       },

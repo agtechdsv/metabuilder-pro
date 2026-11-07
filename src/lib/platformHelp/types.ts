@@ -18,6 +18,8 @@ export interface PlatformStep {
   enterClick?: string
   /** o passo só avança quando a pessoa clica no próprio elemento destacado (ex.: "Próximo passo" do assistente) */
   advanceOnClick?: boolean
+  /** deixa a pessoa usar o item destacado sem avançar (preencher o nome, escolher a lógica). Os outros passos bloqueiam a tela */
+  interactive?: boolean
 }
 
 export interface PlatformTour {
@@ -27,6 +29,11 @@ export interface PlatformTour {
   title: HelpText
   summary: HelpText
   steps: PlatformStep[]
+  /**
+   * Como voltar ao ponto de partida do tour se a pessoa saiu dele (abriu o assistente, a IA, outra aba): `data-help-id` de botões que
+   * levam de volta ("Voltar ao Studio", aba Casos de Uso...). O primeiro visível é clicado quando o alvo do passo não aparece.
+   */
+  recover?: string[]
 }
 
-export interface ActiveTour { tour: PlatformTour; index: number }
+export interface ActiveTour { tour: PlatformTour; index: number; /** página em que o tour começou: se a pessoa navegar para outra, o tour termina */ path?: string }

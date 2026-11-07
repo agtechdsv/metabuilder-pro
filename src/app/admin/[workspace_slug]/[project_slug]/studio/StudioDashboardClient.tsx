@@ -802,6 +802,7 @@ export function StudioDashboardClient({
 
             <div data-help-id="studio.tabs" className={cn(canCreate ? 'grid grid-cols-3' : 'flex', 'gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800')}>
                <button 
+                data-help-id="studio.tab_list"
                 onClick={() => setViewMode('list')}
                 className={cn(
                   "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center",
@@ -913,7 +914,7 @@ export function StudioDashboardClient({
         {/* Stats Rápidos */}
         {viewMode === 'list' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-2 shadow-sm dark:shadow-none transition-all">
+            <div data-help-id="studio.stat_tables" className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-2 shadow-sm dark:shadow-none transition-all">
               <div className="flex items-center justify-between">
                 <div className="p-2 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-500">
                   <Database className="w-5 h-5" />
@@ -923,7 +924,7 @@ export function StudioDashboardClient({
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-widest">{t('dashboard.projects.studio.stats.synced_tables')}</p>
             </div>
 
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-2 shadow-sm dark:shadow-none transition-all">
+            <div data-help-id="studio.stat_views" className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-2 shadow-sm dark:shadow-none transition-all">
               <div className="flex items-center justify-between">
                 <div className="p-2 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-500">
                   <Layers className="w-5 h-5" />
@@ -933,7 +934,7 @@ export function StudioDashboardClient({
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-widest">{t('dashboard.projects.studio.stats.custom_views')}</p>
             </div>
 
-            <div className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm dark:shadow-none transition-all group/stat relative overflow-hidden">
+            <div data-help-id="studio.stat_agent" className="p-4 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-3 shadow-sm dark:shadow-none transition-all group/stat relative overflow-hidden">
               <div className="flex items-center justify-between relative z-10">
                 <div className="p-2 bg-orange-500/10 rounded-xl text-orange-600 dark:text-orange-500">
                   <Clock className="w-5 h-5" />
@@ -1062,7 +1063,7 @@ export function StudioDashboardClient({
                 </h3>
                 
                 {/* QUICK START BAR */}
-                <div className="flex items-center gap-1 bg-white dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden xl:flex shadow-inner">
+                <div data-help-id="studio.quick_start" className="flex items-center gap-1 bg-white dark:bg-neutral-900/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden xl:flex shadow-inner">
                   <span className="text-[9px] font-black uppercase text-indigo-400/80 dark:text-indigo-500/80 tracking-widest px-3 border-r border-neutral-200 dark:border-neutral-800 mr-1 flex items-center gap-1.5">
                     <Plus className="w-3 h-3" />
                     {t('dashboard.projects.studio.quick_start', 'Quick Start')}
@@ -1085,7 +1086,7 @@ export function StudioDashboardClient({
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+                <div data-help-id="studio.type_filter" className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
                   {filterOptions.map(f => {
                     const Icon = f.icon
                     const isActive = activeFilter === f.id
@@ -1108,7 +1109,7 @@ export function StudioDashboardClient({
                   })}
                 </div>
                 <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-800 hidden md:block"></div>
-                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
+                <div data-help-id="studio.scale" className="flex items-center bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-xl border border-neutral-200 dark:border-neutral-800 hidden md:flex">
                   {scales.map(s => (
                     <button
                       key={s.value}
@@ -1126,6 +1127,7 @@ export function StudioDashboardClient({
                   ))}
                 </div>
                 <button
+                  data-help-id="studio.refresh"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
@@ -1139,7 +1141,7 @@ export function StudioDashboardClient({
               </div>
             </div>
 
-            <div className={cn("grid gap-4 transition-all duration-500", gridColumns)}>
+            <div data-help-id="studio.cards" className={cn("grid gap-4 transition-all duration-500", gridColumns)}>
               {(!activeFilter || activeFilter === 'sistema') && (
                 <>
                   {/* 1. Card Fixo do Portal de Login (Sistema) */}

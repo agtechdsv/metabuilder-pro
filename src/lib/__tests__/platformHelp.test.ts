@@ -100,3 +100,14 @@ describe('demonstração recusa server actions', () => {
     expect(isServerActionCall('POST', '/api/tunnel/send', origin, { 'Content-Type': 'application/json' })).toBe(false)
   })
 })
+
+describe('passos do assistente que a pessoa precisa usar', () => {
+  it('nome, lógica e tabela deixam o item destacado clicável', () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+    for (const id of ['name', 'logic', 'tables']) expect(tour.steps.find(s => s.id === id)?.interactive).toBe(true)
+  })
+
+  it('os tours do Studio sabem voltar ao ponto de partida', () => {
+    for (const id of ['studio-visao-geral', 'studio-criar-caso-de-uso']) expect(PLATFORM_TOURS.find(t => t.id === id)?.recover?.length).toBeGreaterThan(0)
+  })
+})
