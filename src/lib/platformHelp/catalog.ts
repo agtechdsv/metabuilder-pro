@@ -133,7 +133,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
         completeWhen: { id: 'wizard.name_input', check: 'filled' },
         waitingHint: h('Digite o nome da tela para continuar.', 'Type the screen name to continue.', 'Escriba el nombre de la pantalla para continuar.'),
         title: h('Nome e endereço', 'Name and address', 'Nombre y dirección'),
-        body: h('O nome aparece no menu do app. O endereço (slug) vira o final da URL da tela e é gerado a partir do nome; você pode trocar.', 'The name shows in the app menu. The address (slug) becomes the end of the screen URL and is generated from the name; you can change it.', 'El nombre aparece en el menú de la app. La dirección (slug) es el final de la URL de la pantalla y se genera a partir del nombre; puede cambiarla.'),
+        body: h('O nome aparece no menu do app. O endereço (slug) vira o final da URL da tela e é gerado a partir do nome; você pode trocar. Para treinar, use um nome como "Teste".', 'The name shows in the app menu. The address (slug) becomes the end of the screen URL and is generated from the name; you can change it. To practice, use a name like "Test".', 'El nombre aparece en el menú de la app. La dirección (slug) es el final de la URL de la pantalla y se genera a partir del nombre; puede cambiarla. Para practicar, use un nombre como "Prueba".'),
       },
       {
         id: 'logic',
@@ -250,8 +250,12 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'finish',
         target: 'wizard.next',
-        title: h('Concluir', 'Finish', 'Concluir'),
-        body: h('Este botão cria (ou atualiza) o caso de uso. Esse passo do tour não clica por você.', 'This button creates (or updates) the use case. This tour step does not click it for you.', 'Este botón crea (o actualiza) el caso de uso. Este paso del tour no hace clic por usted.'),
+        title: h('Finalizar: cria de verdade', 'Finish: it really creates it', 'Finalizar: lo crea de verdad'),
+        body: h(
+          'Este botão cria o caso de uso DE VERDADE, como rascunho: ele só vira tela do app quando você clicar em "Publicar", e dá para excluir pela lixeira do cartão. Se está só treinando, use um nome como "Teste" e apague depois. No plano gratuito ele conta no limite de casos de uso. O tour não clica por você.',
+          'This button REALLY creates the use case, as a draft: it only becomes an app screen when you click "Publish", and you can delete it with the card trash icon. If you are just practicing, use a name like "Test" and delete it later. On the free plan it counts toward the use case limit. The tour does not click it for you.',
+          'Este botón crea el caso de uso DE VERDAD, como borrador: solo se vuelve pantalla de la app cuando hace clic en "Publicar", y se puede eliminar con la papelera de la tarjeta. Si solo está practicando, use un nombre como "Prueba" y elimínelo después. En el plan gratuito cuenta para el límite de casos de uso. El tour no hace clic por usted.',
+        ),
       },
     ],
   },
