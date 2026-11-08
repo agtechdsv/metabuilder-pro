@@ -14,6 +14,11 @@ export interface PlatformStep {
   target?: string
   title?: HelpText
   body: HelpText
+  /**
+   * O passo anterior do tour está em OUTRA tela do assistente (ou fora dele): ao clicar em Voltar, o tour clica neste botão (`data-help-id`)
+   * para o app voltar junto, e então recua o passo. Sem isso o tour voltaria para um alvo que não está na tela.
+   */
+  backClick?: string
   /** sem "Voltar" neste passo: o que veio antes já foi feito de verdade (ex.: o caso de uso já foi criado) */
   noBack?: boolean
   /** quanto esperar (ms) o alvo aparecer ao entrar no passo; padrão 4000. Itens que dependem de gravar e recarregar a lista levam mais */

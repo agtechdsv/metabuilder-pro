@@ -64,7 +64,7 @@ describe('catálogo da ajuda da plataforma', () => {
     }
     walk(src)
     const wanted = new Set<string>()
-    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) { if (s.target) wanted.add(s.target); if (s.enterClick) wanted.add(s.enterClick); if (s.alsoTarget) wanted.add(s.alsoTarget) }
+    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) { if (s.target) wanted.add(s.target); if (s.enterClick) wanted.add(s.enterClick); if (s.alsoTarget) wanted.add(s.alsoTarget); if (s.backClick) wanted.add(s.backClick) }
     const missing = [...wanted].filter(id => !found.has(id))
     expect(missing).toEqual([])
   })
@@ -120,6 +120,16 @@ describe('passos do assistente que a pessoa precisa usar', () => {
     const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
     for (const id of ['draft', 'publish', 'publish-confirm', 'open-published']) expect(tour.steps.find(s => s.id === id)?.noBack, id).toBe(true)
     for (const id of ['buttons', 'interface', 'export', 'query']) expect(tour.steps.find(s => s.id === id)?.interactive, id).toBe(true)
+  })
+
+  it('o primeiro passo de cada etapa do assistente volta o próprio assistente, e a profundidade vem antes da tabela', () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+    const by = (id: string) => tour.steps.find(s => s.id === id)
+    expect(by('stepper')?.backClick).toBe('wizard.back')
+    for (const id of ['depth', 'fields-panel', 'buttons']) expect(by(id)?.backClick, id).toBe('wizard.prev')
+    const ids = tour.steps.map(s => s.id)
+    expect(ids.indexOf('depth')).toBeLessThan(ids.indexOf('tables'))
+    expect(ids.indexOf('tables')).toBeLessThan(ids.indexOf('next2'))
   })
 
   it('os tours do Studio sabem voltar ao ponto de partida', () => {

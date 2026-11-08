@@ -549,6 +549,7 @@ export function UseCaseBuilderWizard({
       <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-40">
         <div className="w-full max-w-2xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-neutral-200 dark:border-neutral-800 p-2 rounded-full flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
           <button
+            data-help-id="wizard.prev"
             onClick={prevStep}
             disabled={currentStep === 1}
             className={cn(

@@ -123,6 +123,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'stepper',
         target: 'wizard.stepper',
+        backClick: 'wizard.back',
         title: h('As 4 etapas', 'The 4 steps', 'Las 4 etapas'),
         body: h('Lógica → Tabelas → Campos & Layout → Ações & Query. Você pode voltar a qualquer etapa antes de concluir.', 'Logic → Tables → Fields & Layout → Actions & Query. You can go back to any step before finishing.', 'Lógica → Tablas → Campos y Diseño → Acciones y Consulta. Puede volver a cualquier etapa antes de concluir.'),
       },
@@ -154,6 +155,14 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
         advanceOnClick: true,
       },
       {
+        id: 'depth',
+        target: 'wizard.depth',
+        backClick: 'wizard.prev',
+        interactive: true,
+        title: h('Profundidade das relações', 'Relation depth', 'Profundidad de las relaciones'),
+        body: h('Quantos níveis de relacionamento entram automaticamente. 2 é o padrão e basta na maioria dos casos; níveis maiores deixam a consulta mais lenta. Se precisar, troque o valor agora.', 'How many relationship levels come in automatically. 2 is the default and enough most of the time; deeper levels make the query slower. If you need to, change the value now.', 'Cuántos niveles de relación entran automáticamente. 2 es el valor por defecto y suele bastar; más niveles hacen la consulta más lenta. Si lo necesita, cambie el valor ahora.'),
+      },
+      {
         id: 'tables',
         target: 'wizard.tables',
         interactive: true,
@@ -161,13 +170,6 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
         waitingHint: h('Clique em uma tabela para continuar.', 'Click a table to continue.', 'Haga clic en una tabla para continuar.'),
         title: h('Tabela principal', 'Main table', 'Tabla principal'),
         body: h('Escolha a tabela raiz da tela. As tabelas relacionadas entram sozinhas na etapa seguinte.', 'Pick the screen root table. Related tables come in automatically in the next step.', 'Elija la tabla raíz de la pantalla. Las tablas relacionadas entran solas en la siguiente etapa.'),
-      },
-      {
-        id: 'depth',
-        target: 'wizard.depth',
-        interactive: true,
-        title: h('Profundidade das relações', 'Relation depth', 'Profundidad de las relaciones'),
-        body: h('Quantos níveis de relacionamento entram automaticamente. 2 é o padrão e basta na maioria dos casos; níveis maiores deixam a consulta mais lenta. Se precisar, troque o valor agora.', 'How many relationship levels come in automatically. 2 is the default and enough most of the time; deeper levels make the query slower. If you need to, change the value now.', 'Cuántos niveles de relación entran automáticamente. 2 es el valor por defecto y suele bastar; más niveles hacen la consulta más lenta. Si lo necesita, cambie el valor ahora.'),
       },
       {
         id: 'next2',
@@ -181,6 +183,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'fields-panel',
         target: 'wizard.fields_panel',
+        backClick: 'wizard.prev',
         title: h('De onde vêm os campos', 'Where fields come from', 'De dónde vienen los campos'),
         body: h(
           'Este painel lista os campos das tabelas escolhidas. É daqui que você ARRASTA os campos para as zonas ao lado (ou clica no + de cada campo). "Arrastar todos" leva a tabela inteira de uma vez. Em "Ferramentas virtuais", o "Campo calculado" cria um campo com fórmula. O painel pode ser movido se estiver atrapalhando.',
@@ -254,6 +257,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'buttons',
         target: 'wizard.buttons',
+        backClick: 'wizard.prev',
         interactive: true,
         title: h('Botões da interface', 'Interface buttons', 'Botones de la interfaz'),
         body: h('Escolha quais botões a tela terá: Pesquisar, Limpar, Visualizar, Novo, Editar e Excluir. Ações customizadas (abrir outra tela, SQL, REST) ficam logo abaixo.', 'Choose which buttons the screen has: Search, Clear, View, New, Edit and Delete. Custom actions (open another screen, SQL, REST) are right below.', 'Elija qué botones tendrá la pantalla: Buscar, Limpiar, Ver, Nuevo, Editar y Eliminar. Las acciones personalizadas (abrir otra pantalla, SQL, REST) están justo debajo.'),
