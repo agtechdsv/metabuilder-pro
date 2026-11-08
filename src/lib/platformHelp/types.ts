@@ -66,6 +66,11 @@ export interface PlatformTour {
    * levam de volta ("Voltar ao Studio", aba Casos de Uso...). O primeiro visível é clicado quando o alvo do passo não aparece.
    */
   recover?: string[]
+  /**
+   * Onde começar quando a pessoa abre o tour com a tela já adiantada (ex.: já dentro do assistente, na etapa 3). Vale a primeira regra que
+   * se cumpre na tela; sem nenhuma, o tour começa no primeiro passo.
+   */
+  entry?: { rule: StepRule; step: string }[]
 }
 
-export interface ActiveTour { tour: PlatformTour; index: number; /** página em que o tour começou: se a pessoa navegar para outra, o tour termina */ path?: string }
+export interface ActiveTour { tour: PlatformTour; index: number; /** passo em que o tour começou (o Voltar não recua além dele) */ from?: number; /** página em que o tour começou: se a pessoa navegar para outra, o tour termina */ path?: string }

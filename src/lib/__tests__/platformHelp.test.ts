@@ -132,6 +132,14 @@ describe('passos do assistente que a pessoa precisa usar', () => {
     expect(ids.indexOf('tables')).toBeLessThan(ids.indexOf('next2'))
   })
 
+  it('o tour aberto com o assistente já na tela começa na etapa em que a pessoa está', () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+    const ids = tour.steps.map(s => s.id)
+    const got = Object.fromEntries((tour.entry || []).map(e => [e.rule.equals, e.step]))
+    expect(got).toEqual({ '1': 'stepper', '2': 'depth', '3': 'fields-panel', '4': 'buttons' })
+    for (const e of tour.entry || []) expect(ids.includes(e.step), e.step).toBe(true)
+  })
+
   it('os tours do Studio sabem voltar ao ponto de partida', () => {
     for (const id of ['studio-visao-geral', 'studio-criar-caso-de-uso']) expect(PLATFORM_TOURS.find(t => t.id === id)?.recover?.length).toBeGreaterThan(0)
   })

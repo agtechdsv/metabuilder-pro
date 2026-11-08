@@ -503,7 +503,7 @@ export function UseCaseBuilderWizard({
         </div>
 
         {/* Stepper */}
-        <div data-help-id="wizard.stepper" className="bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 px-6 py-4 rounded-[2rem]">
+        <div data-help-id="wizard.stepper" data-help-state={String(currentStep)} className="bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 px-6 py-4 rounded-[2rem]">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             {steps.map((step, idx) => (
               <div key={step.id} className="flex items-center flex-1 last:flex-none">

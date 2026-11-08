@@ -8,9 +8,22 @@ const emit = () => listeners.forEach(l => l())
 export const subscribePlatformTour = (fn: () => void): (() => void) => { listeners.add(fn); return () => { listeners.delete(fn) } }
 export const getActiveTour = (): ActiveTour | null => active
 
+/** Em que passo começar: o da primeira regra de `entry` que vale na tela agora (tela já adiantada), senão o primeiro. */
+export function resolveStartIndex(tour: PlatformTour): number {
+  if (typeof document === 'undefined' || !tour.entry?.length) return 0
+  for (const e of tour.entry) {
+    const els = Array.from(document.querySelectorAll(`[data-help-id="${e.rule.id.replace(/["\\]/g, '\\$&')}"]`)) as HTMLElement[]
+    const ok = els.some(el => (e.rule.attr ? el.getAttribute(e.rule.attr) === (e.rule.equals ?? '') : true))
+    const idx = tour.steps.findIndex(st => st.id === e.step)
+    if (ok && idx >= 0) return idx
+  }
+  return 0
+}
+
 export function startPlatformTour(tour: PlatformTour) {
   if (tour.steps.length === 0) return
-  active = { tour, index: 0, path: typeof window !== 'undefined' ? window.location.pathname : undefined }
+  const start = resolveStartIndex(tour)
+  active = { tour, index: start, from: start, path: typeof window !== 'undefined' ? window.location.pathname : undefined }
   emit()
 }
 
