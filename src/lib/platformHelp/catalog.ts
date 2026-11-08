@@ -5,12 +5,15 @@
 
 import type { HelpText } from '../helpText'
 import type { PlatformTour } from './types'
+import { AUTH_TOURS } from './catalogAuth'
+import { SETTINGS_TOURS } from './catalogSettings'
+import { LOGS_TOURS } from './catalogLogs'
 
 const h = (pt: string, en: string, es: string): HelpText => ({ pt, en, es })
 
 const STUDIO = '/admin/:workspace/:project/studio'
 
-export const PLATFORM_TOURS: readonly PlatformTour[] = [
+const BASE_TOURS: readonly PlatformTour[] = [
   {
     id: 'studio-visao-geral',
     needs: 'studio.tabs',
@@ -384,88 +387,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       },
     ],
   },
-  {
-    id: 'studio-auth',
-    route: `${STUDIO}/auth`,
-    title: h('Autenticação', 'Authentication', 'Autenticación'),
-    summary: h('Como os usuários do seu app entram: estratégias, mapeamento e acesso.', 'How your app users sign in: strategies, mapping and access.', 'Cómo entran los usuarios de su app: estrategias, mapeo y acceso.'),
-    steps: [
-      {
-        id: 'tabs',
-        target: 'auth.tabs',
-        title: h('Quatro abas', 'Four tabs', 'Cuatro pestañas'),
-        body: h('Controle de Acesso (papéis e permissões), Estratégia de Autenticação (como o login funciona), Personalização Visual (a tela de login) e Gestão de Usuários.', 'Access Control (roles and permissions), Authentication Strategy (how sign-in works), Visual Customization (the login screen) and User Management.', 'Control de Acceso (roles y permisos), Estrategia de Autenticación (cómo funciona el inicio de sesión), Personalización Visual (la pantalla de acceso) y Gestión de Usuarios.'),
-      },
-      {
-        id: 'strategies',
-        target: 'auth.strategies',
-        title: h('Escolha a estratégia', 'Pick the strategy', 'Elija la estrategia'),
-        body: h('Managed Auth: o MetaBuilder guarda os usuários em uma base isolada (mais rápido). Banco legado: o Agente CLI valida o login na SUA tabela de usuários. LDAP/AD: Active Directory do cliente. Sem autenticação: só para enquanto o app não foi ao ar.', 'Managed Auth: MetaBuilder keeps users in an isolated database (fastest). Legacy database: the CLI Agent validates sign-in against YOUR users table. LDAP/AD: the customer Active Directory. No authentication: only until the app goes live.', 'Managed Auth: MetaBuilder guarda los usuarios en una base aislada (más rápido). Base heredada: el Agente CLI valida el acceso en SU tabla de usuarios. LDAP/AD: el Active Directory del cliente. Sin autenticación: solo hasta que la app salga al aire.'),
-      },
-      {
-        id: 'save',
-        target: 'auth.save',
-        title: h('Salvar', 'Save', 'Guardar'),
-        body: h('As alterações só valem depois de salvar. Troque de estratégia com cuidado em apps já publicados: os usuários passam a entrar pelo novo método.', 'Changes only apply after saving. Change strategy carefully on published apps: users will sign in with the new method.', 'Los cambios solo valen después de guardar. Cambie de estrategia con cuidado en apps ya publicadas: los usuarios pasarán a entrar por el nuevo método.'),
-      },
-    ],
-  },
-  {
-    id: 'studio-settings',
-    route: `${STUDIO}/settings`,
-    title: h('Configurações do projeto', 'Project settings', 'Configuración del proyecto'),
-    summary: h('Defaults dos campos e campos calculados do projeto.', 'Field defaults and calculated fields of the project.', 'Valores por defecto de los campos y campos calculados del proyecto.'),
-    steps: [
-      {
-        id: 'tabs',
-        target: 'settings.tabs',
-        title: h('Defaults e calculados', 'Defaults and calculated', 'Valores por defecto y calculados'),
-        body: h('Defaults dos Campos: como cada coluna se comporta em casos de uso NOVOS. Campos Calculados: fórmulas reaproveitáveis em várias telas.', 'Field Defaults: how each column behaves in NEW use cases. Calculated Fields: formulas reusable across screens.', 'Valores por defecto de los Campos: cómo se comporta cada columna en casos de uso NUEVOS. Campos Calculados: fórmulas reutilizables en varias pantallas.'),
-      },
-      {
-        id: 'tables',
-        target: 'settings.tables',
-        title: h('Tabelas sincronizadas', 'Synced tables', 'Tablas sincronizadas'),
-        body: h('Escolha uma tabela para configurar os defaults das colunas dela.', 'Pick a table to configure its column defaults.', 'Elija una tabla para configurar los valores por defecto de sus columnas.'),
-      },
-      {
-        id: 'search',
-        target: 'settings.search',
-        title: h('Achar um campo', 'Find a field', 'Encontrar un campo'),
-        body: h('Em tabelas grandes, busque a coluna pelo nome. Mudar um default não altera casos de uso que já existem.', 'On big tables, search the column by name. Changing a default does not alter existing use cases.', 'En tablas grandes, busque la columna por nombre. Cambiar un valor por defecto no altera los casos de uso que ya existen.'),
-      },
-    ],
-  },
-  {
-    id: 'studio-logs',
-    route: `${STUDIO}/logs`,
-    title: h('Logs do projeto', 'Project logs', 'Logs del proyecto'),
-    summary: h('Ligar os logs, escolher o que registrar e investigar um problema.', 'Turn logs on, choose what to record and investigate a problem.', 'Activar los logs, elegir qué registrar e investigar un problema.'),
-    steps: [
-      {
-        id: 'enable',
-        target: 'logs.enable',
-        title: h('Ligue os logs', 'Turn logs on', 'Active los logs'),
-        body: h('Por padrão ficam desligados. Ligado, o Agente registra leituras, escritas, erros de SQL, BPM, sincronizações e o túnel. Escolha os tipos que importam: registrar tudo gera muito volume.', 'Off by default. When on, the Agent records reads, writes, SQL errors, BPM, syncs and the tunnel. Choose the types that matter: recording everything makes a lot of volume.', 'Desactivados por defecto. Activos, el Agente registra lecturas, escrituras, errores de SQL, BPM, sincronizaciones y el túnel. Elija los tipos que importan: registrar todo genera mucho volumen.'),
-      },
-      {
-        id: 'retention',
-        target: 'logs.retention',
-        title: h('Retenção', 'Retention', 'Retención'),
-        body: h('Por quantos dias guardar. Registros mais antigos são apagados sozinhos. Salve as configurações depois de mudar.', 'How many days to keep. Older records are deleted automatically. Save the settings after changing.', 'Cuántos días guardar. Los registros más antiguos se eliminan solos. Guarde la configuración después de cambiar.'),
-      },
-      {
-        id: 'toolbar',
-        target: 'logs.toolbar',
-        title: h('Filtros', 'Filters', 'Filtros'),
-        body: h('Busque por texto ou SQL, filtre por tipo, tabela e período, e alterne entre Banco e Arquivo. Atualize e limpe daqui.', 'Search by text or SQL, filter by type, table and period, and switch between Database and File. Refresh and clear from here.', 'Busque por texto o SQL, filtre por tipo, tabla y período, y alterne entre Base y Archivo. Actualice y limpie desde aquí.'),
-      },
-      {
-        id: 'table',
-        target: 'logs.table',
-        title: h('Os registros', 'The records', 'Los registros'),
-        body: h('Cada linha mostra hora, tipo, ação, tabela, mensagem, tempo e linhas afetadas. Abra a seta para ver o SQL completo e o erro.', 'Each row shows time, type, action, table, message, duration and rows affected. Open the arrow to see the full SQL and the error.', 'Cada fila muestra hora, tipo, acción, tabla, mensaje, tiempo y filas afectadas. Abra la flecha para ver el SQL completo y el error.'),
-      },
-    ],
-  },
 ]
+
+/** Todos os tours: o Studio e os dados (aqui) mais Login & Segurança, Configurações e Logs (um arquivo por área). */
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]

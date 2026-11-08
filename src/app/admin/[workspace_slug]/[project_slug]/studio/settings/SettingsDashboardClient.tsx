@@ -121,15 +121,15 @@ export function SettingsDashboardClient({
           </section>
 
           {/* Tabs */}
-          <div data-help-id="settings.tabs" className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
+          <div data-help-id="settings.tabs" data-help-state={activeTab} className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
             <button 
-              onClick={() => setActiveTab('fields')}
+              data-help-id="settings.tab_fields" onClick={() => setActiveTab('fields')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fields' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Columns className="w-4 h-4" /> Defaults dos Campos
             </button>
             <button 
-              onClick={() => setActiveTab('calculated')}
+              data-help-id="settings.tab_calculated" onClick={() => setActiveTab('calculated')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'calculated' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <FunctionSquare className="w-4 h-4" /> Campos Calculados
@@ -181,7 +181,7 @@ export function SettingsDashboardClient({
                 <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm flex flex-col h-[calc(100vh-230px)]">
                   
                   {/* Header */}
-                  <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-4 shrink-0">
+                  <div data-help-id="settings.table_header" className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-4 shrink-0">
                     <div>
                       <h2 className="text-lg font-black text-neutral-900 dark:text-white flex items-center gap-2">
                         <Table className="w-5 h-5 text-indigo-500" />
@@ -213,7 +213,7 @@ export function SettingsDashboardClient({
                         return (
                           <div 
                             key={field.id}
-                            className="group relative bg-white dark:bg-neutral-900/40 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 cursor-pointer transition-all hover:-translate-y-1 overflow-hidden"
+                            data-help-id="settings.field_card" className="group relative bg-white dark:bg-neutral-900/40 p-5 rounded-2xl border border-neutral-100 dark:border-neutral-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 cursor-pointer transition-all hover:-translate-y-1 overflow-hidden"
                             onClick={() => handleOpenDrawer(field)}
                           >
                             <div className="flex items-start justify-between">
@@ -234,7 +234,7 @@ export function SettingsDashboardClient({
                                         setUpdateTargetField(field)
                                         setIsUpdateModalOpen(true)
                                       }}
-                                      title="Atualizar Casos de Uso"
+                                      data-help-id="settings.field_refresh" title="Atualizar Casos de Uso"
                                       className="p-1 rounded-md text-indigo-500 hover:text-white hover:bg-indigo-600 transition-colors"
                                     >
                                       <RefreshCw className="w-3 h-3" />

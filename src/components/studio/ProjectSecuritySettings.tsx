@@ -53,7 +53,7 @@ export function ProjectSecuritySettings({ project, canEdit }: ProjectSecuritySet
   }
 
   return (
-    <div className="bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-sm max-w-4xl mx-auto">
+    <div data-help-id="auth.security" className="bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-8 shadow-sm max-w-4xl mx-auto">
       <div className="flex flex-col items-center text-center mb-10 pb-8 border-b border-neutral-100 dark:border-neutral-800/60">
         <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-900 rounded-2xl flex items-center justify-center text-neutral-900 dark:text-white mb-6">
           <Shield className="w-8 h-8" />
@@ -68,7 +68,7 @@ export function ProjectSecuritySettings({ project, canEdit }: ProjectSecuritySet
 
       <div className="space-y-6">
         {/* Passkey Toggle */}
-        <div className={`flex items-center justify-between p-6 rounded-2xl border transition-colors ${passkeyEnabled ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20' : 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/50 dark:border-neutral-800'}`}>
+        <div data-help-id="auth.passkey" className={`flex items-center justify-between p-6 rounded-2xl border transition-colors ${passkeyEnabled ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20' : 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/50 dark:border-neutral-800'}`}>
           <div className="flex gap-4 items-start">
             <div className={`p-3 rounded-xl ${passkeyEnabled ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'}`}>
               <Fingerprint className="w-6 h-6" />
@@ -95,7 +95,7 @@ export function ProjectSecuritySettings({ project, canEdit }: ProjectSecuritySet
         </div>
 
         {/* MFA Toggle */}
-        <div className={`flex items-center justify-between p-6 rounded-2xl border transition-colors ${mfaEnabled ? 'bg-amber-50/50 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/20' : 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/50 dark:border-neutral-800'}`}>
+        <div data-help-id="auth.mfa" className={`flex items-center justify-between p-6 rounded-2xl border transition-colors ${mfaEnabled ? 'bg-amber-50/50 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/20' : 'bg-neutral-50 border-neutral-200 dark:bg-neutral-900/50 dark:border-neutral-800'}`}>
           <div className="flex gap-4 items-start">
             <div className={`p-3 rounded-xl ${mfaEnabled ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400'}`}>
               <Smartphone className="w-6 h-6" />
@@ -130,7 +130,7 @@ export function ProjectSecuritySettings({ project, canEdit }: ProjectSecuritySet
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-8 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-sm font-black tracking-widest uppercase rounded-2xl transition-all shadow-xl active:scale-95 flex items-center gap-2"
+              data-help-id="auth.security_save" className="px-8 py-3.5 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-black text-sm font-black tracking-widest uppercase rounded-2xl transition-all shadow-xl active:scale-95 flex items-center gap-2"
             >
               {isSaving ? (
                 <>Salvando...</>

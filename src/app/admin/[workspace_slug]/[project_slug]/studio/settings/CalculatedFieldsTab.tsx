@@ -143,7 +143,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
             </div>
             <button
               onClick={startNew}
-              title="Novo campo calculado"
+              data-help-id="settings.calc_new" title="Novo campo calculado"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-500/20 flex-shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -197,14 +197,14 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
                   <button
                     onClick={() => startEdit(vf)}
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
-                    title="Editar"
+                    data-help-id="settings.calc_edit" title="Editar"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => setFieldToDelete(vf.id)}
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                    title="Excluir"
+                    data-help-id="settings.calc_delete" title="Excluir"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -218,7 +218,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
       {/* ── RIGHT COLUMN: Formula Builder ── */}
       <div className="flex-1 flex flex-col gap-4 min-w-0">
         {editing ? (
-          <div className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm flex flex-col h-[calc(100vh-230px)]">
+          <div data-help-id="settings.calc_editor" className="bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] shadow-sm flex flex-col h-[calc(100vh-230px)]">
 
             {/* Header */}
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-4 shrink-0">
@@ -231,7 +231,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
                     type="text"
                     value={editing.display_name}
                     onChange={e => setEditing({ ...editing, display_name: e.target.value, name: e.target.value })}
-                    placeholder="Nome do campo calculado (ex: Total R$)"
+                    data-help-id="settings.calc_name" placeholder="Nome do campo calculado (ex: Total R$)"
                     className="w-full text-lg font-black tracking-tight text-neutral-900 dark:text-white bg-transparent outline-none border-b-2 border-dashed border-neutral-200 dark:border-neutral-700 focus:border-indigo-500 transition-colors py-1"
                   />
                   <p className="text-[11px] text-neutral-400 font-medium mt-1">
@@ -243,7 +243,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
               {/* Actions */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
-                  onClick={cancelEdit}
+                  data-help-id="settings.calc_cancel" onClick={cancelEdit}
                   className="flex items-center gap-2 px-4 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   <X className="w-4 h-4" />
@@ -252,7 +252,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center gap-2 px-5 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+                  data-help-id="settings.calc_save" className="flex items-center gap-2 px-5 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
                 >
                   {isSaving ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -266,7 +266,7 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
 
             {/* Formula Builder */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-3 mb-4">
+              <div data-help-id="settings.calc_intro" className="space-y-3 mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-4 bg-indigo-600 rounded-full" />
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400">Construtor de Fórmula</h3>
@@ -276,11 +276,13 @@ export function CalculatedFieldsTab({ project, models }: CalculatedFieldsTabProp
                 </p>
               </div>
 
-              <FormulaBuilder
-                value={editing.formula_tokens}
-                onChange={tokens => setEditing({ ...editing, formula_tokens: tokens })}
-                availableFields={availableFields}
-              />
+              <div data-help-id="settings.calc_builder">
+                <FormulaBuilder
+                  value={editing.formula_tokens}
+                  onChange={tokens => setEditing({ ...editing, formula_tokens: tokens })}
+                  availableFields={availableFields}
+                />
+              </div>
             </div>
           </div>
         ) : (

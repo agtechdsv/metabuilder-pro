@@ -119,7 +119,7 @@ export function FieldSettingsModal({
               <button 
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
+                data-help-id="settings.modal_save" className="flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
               >
                 {isSaving ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -133,7 +133,7 @@ export function FieldSettingsModal({
               
               <button
                 onClick={onClose}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                data-help-id="settings.modal_close" className="w-12 h-12 flex items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -141,9 +141,9 @@ export function FieldSettingsModal({
           </section>
 
           {/* Tabs */}
-          <div className="flex border-b border-neutral-200 dark:border-neutral-800 pt-2">
+          <div data-help-id="settings.modal_tabs" data-help-state={activeTab} className="flex border-b border-neutral-200 dark:border-neutral-800 pt-2">
             <button
-              onClick={() => setActiveTab('geral')}
+              data-help-id="settings.modal_tab_general" onClick={() => setActiveTab('geral')}
               className={cn(
                 "px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
                 activeTab === 'geral' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
@@ -153,7 +153,7 @@ export function FieldSettingsModal({
               {activeTab === 'geral' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
             </button>
             <button
-              onClick={() => setActiveTab('estilos')}
+              data-help-id="settings.modal_tab_styles" onClick={() => setActiveTab('estilos')}
               className={cn(
                 "px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative",
                 activeTab === 'estilos' ? "text-indigo-600" : "text-neutral-400 hover:text-neutral-600"
@@ -180,7 +180,7 @@ export function FieldSettingsModal({
                   <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.display_text')}</label>
                   <input
                     type="text"
-                    value={currentFieldMeta.label?.text || ''}
+                    data-help-id="settings.modal_label" value={currentFieldMeta.label?.text || ''}
                     onChange={e => updateMeta('label', 'text', e.target.value)}
                     className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                   />
@@ -196,7 +196,7 @@ export function FieldSettingsModal({
                   
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.mask')}</label>
-                    <div className="flex flex-col gap-2">
+                    <div data-help-id="settings.modal_mask" className="flex flex-col gap-2">
                       <select
                         value={
                           ['', '000.000.000-00', '00.000.000/0000-00', '00000-000', '(00) 00000-0000', '00/00/0000', '0.000', '0.000,00'].includes(currentFieldMeta.content?.mask || '')
@@ -239,7 +239,7 @@ export function FieldSettingsModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div data-help-id="settings.modal_flags" className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center gap-4 p-5 bg-neutral-50 dark:bg-neutral-950 rounded-2xl border border-neutral-100 dark:border-neutral-800 cursor-pointer group" onClick={() => updateMeta('content', 'required', !currentFieldMeta.content?.required)}>
                       <div className={cn(
                         "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
@@ -276,7 +276,7 @@ export function FieldSettingsModal({
                 </div>
 
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div data-help-id="settings.modal_layout" className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800 rounded-2xl space-y-4">
                       <h4 className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Layout Padrão (Página)</h4>
                       <div className="space-y-4">
@@ -399,7 +399,7 @@ export function FieldSettingsModal({
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.component_type', 'Tipo de Componente')}</label>
                     <select
-                      value={currentFieldMeta.component?.type || 'text'}
+                      data-help-id="settings.modal_component_type" value={currentFieldMeta.component?.type || 'text'}
                       onChange={e => {
                         updateMeta('component', 'type', e.target.value)
                         if (e.target.value === 'autocomplete') {
@@ -768,7 +768,7 @@ export function FieldSettingsModal({
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font', 'Fonte')}</label>
                     <select
-                      value={currentFieldMeta.label?.font || 'Inter'}
+                      data-help-id="settings.modal_label_style" value={currentFieldMeta.label?.font || 'Inter'}
                       onChange={e => updateMeta('label', 'font', e.target.value)}
                       className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                     >
@@ -820,7 +820,7 @@ export function FieldSettingsModal({
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider ml-1">{t('wizard.layout.drawer.font', 'Fonte')}</label>
                     <select
-                      value={currentFieldMeta.content?.font || 'Inter'}
+                      data-help-id="settings.modal_content_style" value={currentFieldMeta.content?.font || 'Inter'}
                       onChange={e => updateMeta('content', 'font', e.target.value)}
                       className="w-full bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-bold outline-none"
                     >

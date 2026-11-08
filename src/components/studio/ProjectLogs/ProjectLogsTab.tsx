@@ -271,7 +271,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           </div>
 
           {/* Log Types */}
-          <div className="space-y-2">
+          <div data-help-id="logs.types" className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Tipos de Log</p>
             {LOG_TYPES.map(type => {
               const meta = TYPE_META[type]
@@ -317,7 +317,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
           {/* Save Button */}
           <button
-            onClick={saveConfig}
+            data-help-id="logs.save" onClick={saveConfig}
             disabled={isSavingConfig}
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors"
           >
@@ -328,7 +328,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
         {/* Stats Card */}
         {Object.keys(stats).length > 0 && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 space-y-3">
+          <div data-help-id="logs.stats" className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <BarChart2 className="w-4 h-4 text-indigo-500" />
               <p className="text-xs font-bold text-neutral-700 dark:text-neutral-200">Resumo da Sessão</p>
@@ -357,14 +357,14 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
             <input
               value={filterSearch}
               onChange={e => { setFilterSearch(e.target.value); setPage(0) }}
-              placeholder="Buscar em mensagem ou SQL..."
+              data-help-id="logs.search" placeholder="Buscar em mensagem ou SQL..."
               className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-indigo-400"
             />
           </div>
 
           {/* Type filter */}
           <select
-            value={filterType}
+            data-help-id="logs.filter_type" value={filterType}
             onChange={e => { setFilterType(e.target.value); setPage(0) }}
             className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none"
           >
@@ -374,14 +374,14 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
           {/* Table filter */}
           <input
-            value={filterTable}
+            data-help-id="logs.filter_table" value={filterTable}
             onChange={e => { setFilterTable(e.target.value); setPage(0) }}
             placeholder="Tabela..."
             className="w-28 py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none"
           />
 
           {/* Source Toggle */}
-          <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl">
+          <div data-help-id="logs.source" data-help-state={logSource} className="flex bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl">
             <button onClick={() => { setLogSource('db'); setPage(0) }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${logSource === 'db' ? 'bg-white shadow dark:bg-neutral-900 text-indigo-500' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}>Banco</button>
             <button onClick={() => { setLogSource('file'); setPage(0) }} className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${logSource === 'file' ? 'bg-white shadow dark:bg-neutral-900 text-indigo-500' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}>Arquivo</button>
           </div>
@@ -389,21 +389,21 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
           {/* Date range */}
           {logSource === 'db' ? (
             <>
-              <input type="datetime-local" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
+              <input data-help-id="logs.dates" type="datetime-local" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
                 className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
               <span className="text-xs text-neutral-400">até</span>
               <input type="datetime-local" value={filterTo} onChange={e => setFilterTo(e.target.value)}
                 className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
             </>
           ) : (
-            <input type="date" value={fileDate} onChange={e => setFileDate(e.target.value)}
+            <input data-help-id="logs.dates" type="date" value={fileDate} onChange={e => setFileDate(e.target.value)}
               className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none" />
           )}
 
           {/* Actions */}
           <button onClick={() => { loadLogs(); loadStats() }} disabled={isLoadingLogs}
             className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 transition-colors"
-            title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
+            data-help-id="logs.refresh" title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
           >
             <RefreshCw className={`w-3.5 h-3.5 text-neutral-500 ${isLoadingLogs ? 'animate-spin' : ''}`} />
           </button>
@@ -413,7 +413,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
             value={pageSize}
             onChange={e => { setPageSize(parseInt(e.target.value, 10)); setPage(0) }}
             className="py-2 px-3 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none"
-            title="Linhas por página"
+            data-help-id="logs.pagesize" title="Linhas por página"
           >
             <option value="50">50 linhas</option>
             <option value="100">100 linhas</option>
@@ -424,12 +424,12 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
           <button onClick={() => setAutoRefresh(r => !r)}
             className={`p-2 rounded-xl border transition-colors ${autoRefresh ? 'bg-indigo-500 border-indigo-500 text-white' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-500'}`}
-            title={autoRefresh ? 'Parar auto-refresh' : 'Auto-refresh 5s'}>
+            data-help-id="logs.autorefresh" title={autoRefresh ? 'Parar auto-refresh' : 'Auto-refresh 5s'}>
             {autoRefresh ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </button>
 
           {!isClearConfirm ? (
-            <button onClick={() => setIsClearConfirm(true)}
+            <button data-help-id="logs.clear" onClick={() => setIsClearConfirm(true)}
               className="p-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-red-400 text-neutral-400 hover:text-red-400 transition-colors">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -444,7 +444,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
         {/* Count */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-400">{totalLogs} entrada(s) encontrada(s)</span>
+          <span data-help-id="logs.count" className="text-xs text-neutral-400">{totalLogs} entrada(s) encontrada(s)</span>
           {autoRefresh && <span className="text-xs text-indigo-500 font-medium animate-pulse">● Auto-refresh ativo</span>}
         </div>
 
@@ -485,7 +485,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                     return (
                       <Fragment key={log.id}>
                         <tr
-                          onClick={() => setExpandedRow(isExpanded ? null : idx)}
+                          data-help-id={idx === 0 ? 'logs.row' : undefined} data-help-state={isExpanded ? 'open' : 'closed'} onClick={() => setExpandedRow(isExpanded ? null : idx)}
                           className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer transition-colors"
                         >
                           <td className="px-4 py-2.5 font-mono text-neutral-500 whitespace-nowrap">
@@ -523,7 +523,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
                         </tr>
                         {isExpanded && (
                           <tr key={`exp-${log.id}`} className="bg-neutral-50 dark:bg-neutral-800/30">
-                            <td colSpan={7} className="px-6 py-4 space-y-3">
+                            <td data-help-id="logs.detail" colSpan={7} className="px-6 py-4 space-y-3">
                               {log.sql_text && (
                                 <div>
                                   <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-1">SQL</p>
@@ -559,7 +559,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between">
+          <div data-help-id="logs.pagination" className="flex items-center justify-between">
             <span className="text-xs text-neutral-400">
               Página {page + 1} de {totalPages} ({totalLogs} total)
             </span>

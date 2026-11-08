@@ -995,27 +995,27 @@ export default function AuthSettingsPage() {
           </section>
 
           {/* Tabs */}
-          <div data-help-id="auth.tabs" className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
+          <div data-help-id="auth.tabs" data-help-state={activeTab} className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 w-fit">
             <button 
-              onClick={() => setActiveTab('permissions')}
+              data-help-id="auth.tab_permissions" onClick={() => setActiveTab('permissions')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Shield className="w-4 h-4" /> Controle de Acesso
             </button>
             <button 
-              onClick={() => setActiveTab('strategy')}
+              data-help-id="auth.tab_strategy" onClick={() => setActiveTab('strategy')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'strategy' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Fingerprint className="w-4 h-4" /> {t('dashboard.projects.studio.auth.strategy_tab')}
             </button>
             <button 
-              onClick={() => setActiveTab('visual')}
+              data-help-id="auth.tab_visual" onClick={() => setActiveTab('visual')}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'visual' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Palette className="w-4 h-4" /> {t('dashboard.projects.studio.auth.visual_tab')}
             </button>
             <button 
-              onClick={() => setActiveTab('users' as any)}
+              data-help-id="auth.tab_users" onClick={() => setActiveTab('users' as any)}
               className={`flex items-center gap-2 px-6 py-2 rounded-[1rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-xl' : 'text-neutral-400 hover:text-neutral-600'}`}
             >
               <Users className="w-4 h-4" /> {t('dashboard.projects.studio.auth.users_tab') || 'Usuários'}
@@ -1041,9 +1041,9 @@ export default function AuthSettingsPage() {
           </div>
         ) : activeTab === 'strategy' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div data-help-id="auth.strategies" className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div data-help-id="auth.strategies" data-help-state={String(authConfig.auth_type)} className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button 
-                onClick={() => setAuthConfig({...authConfig, auth_type: 'managed'})}
+                data-help-id="auth.strategy_managed" onClick={() => setAuthConfig({...authConfig, auth_type: 'managed'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'managed' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all shadow-sm ${authConfig.auth_type === 'managed' ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
@@ -1054,7 +1054,7 @@ export default function AuthSettingsPage() {
               </button>
 
               <button 
-                onClick={() => setAuthConfig({...authConfig, auth_type: 'database'})}
+                data-help-id="auth.strategy_database" onClick={() => setAuthConfig({...authConfig, auth_type: 'database'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'database' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all shadow-sm ${authConfig.auth_type === 'database' ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
@@ -1065,7 +1065,7 @@ export default function AuthSettingsPage() {
               </button>
 
               <button 
-                onClick={() => setAuthConfig({...authConfig, auth_type: 'ldap'})}
+                data-help-id="auth.strategy_ldap" onClick={() => setAuthConfig({...authConfig, auth_type: 'ldap'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'ldap' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all shadow-sm ${authConfig.auth_type === 'ldap' ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
@@ -1076,7 +1076,7 @@ export default function AuthSettingsPage() {
               </button>
 
               <button 
-                onClick={() => setAuthConfig({...authConfig, auth_type: 'none'})}
+                data-help-id="auth.strategy_none" onClick={() => setAuthConfig({...authConfig, auth_type: 'none'})}
                 className={`p-6 border-2 rounded-[2rem] text-left transition-all group relative overflow-hidden ${authConfig.auth_type === 'none' ? 'border-indigo-600 bg-indigo-600/5 shadow-2xl shadow-indigo-500/10' : 'bg-white dark:bg-neutral-900/30 border-neutral-100 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-700'}`}
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all shadow-sm ${authConfig.auth_type === 'none' ? 'bg-indigo-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400'}`}>
@@ -1088,7 +1088,7 @@ export default function AuthSettingsPage() {
             </div>
 
             <div className="bg-neutral-50 dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 p-6 rounded-[2rem] space-y-6">
-              <div className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              <div data-help-id="auth.signup" className="flex items-center justify-between p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <UserPlus className="w-4 h-4" />
@@ -1107,7 +1107,7 @@ export default function AuthSettingsPage() {
               </div>
 
               {authConfig.auth_type === 'managed' && (
-                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
+                <div data-help-id="auth.managed_panel" className="flex flex-col items-center justify-center text-center space-y-4 py-8">
                   <ShieldCheck className="w-20 h-20 text-indigo-500/30" />
                   <div>
                     <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.managed_ready')}</h3>
@@ -1117,7 +1117,7 @@ export default function AuthSettingsPage() {
               )}
 
               {authConfig.auth_type === 'none' && (
-                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8 animate-in fade-in duration-300">
+                <div data-help-id="auth.none_panel" className="flex flex-col items-center justify-center text-center space-y-4 py-8 animate-in fade-in duration-300">
                   <Unlock className="w-20 h-20 text-amber-500/30" />
                   <div>
                     <h3 className="text-2xl font-black text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.none_ready')}</h3>
@@ -1133,7 +1133,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.user_table')}</label>
                       <select 
-                        value={authConfig.db_table_name || ''}
+                        data-help-id="auth.db_table" value={authConfig.db_table_name || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_table_name: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
@@ -1146,7 +1146,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.email_column')}</label>
                       <select 
-                        value={authConfig.db_email_column || ''}
+                        data-help-id="auth.db_email" value={authConfig.db_email_column || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_email_column: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
@@ -1161,7 +1161,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Exibição (Opcional)</label>
                       <select 
-                        value={authConfig.db_display_name_column || ''}
+                        data-help-id="auth.db_display" value={authConfig.db_display_name_column || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_display_name_column: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
@@ -1176,7 +1176,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.pass_column')}</label>
                       <select 
-                        value={authConfig.db_password_column || ''}
+                        data-help-id="auth.db_password" value={authConfig.db_password_column || ''}
                         onChange={(e) => setAuthConfig({...authConfig, db_password_column: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
@@ -1191,7 +1191,7 @@ export default function AuthSettingsPage() {
                     <div className="space-y-3">
                       <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">{t('dashboard.projects.studio.auth.hash_format')}</label>
                       <select 
-                        value={authConfig.db_password_hash_type || 'bcrypt'}
+                        data-help-id="auth.db_hash" value={authConfig.db_password_hash_type || 'bcrypt'}
                         onChange={(e) => setAuthConfig({...authConfig, db_password_hash_type: e.target.value})}
                         className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                       >
@@ -1211,7 +1211,7 @@ export default function AuthSettingsPage() {
                         <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Permite gerenciar as roles de usuários vindas do seu banco de dados atual.</p>
                       </div>
                       <button 
-                        onClick={() => setAuthConfig({...authConfig, sync_legacy_groups: !authConfig.sync_legacy_groups})}
+                        data-help-id="auth.legacy_sync" onClick={() => setAuthConfig({...authConfig, sync_legacy_groups: !authConfig.sync_legacy_groups})}
                         className={`w-12 h-6 rounded-full transition-all relative ${authConfig.sync_legacy_groups ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-800'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${authConfig.sync_legacy_groups ? 'left-7' : 'left-1'}`} />
@@ -1219,7 +1219,7 @@ export default function AuthSettingsPage() {
                     </div>
 
                     {authConfig.sync_legacy_groups && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-neutral-100 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                      <div data-help-id="auth.legacy_sync_panel" className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-neutral-100 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800">
                         <div className="space-y-3">
                           <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Grupos/Roles</label>
                           <select 
@@ -1251,7 +1251,7 @@ export default function AuthSettingsPage() {
                         <div className="space-y-3 md:col-span-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Relacionamento (Com Usuário)</label>
                           <select 
-                            value={authConfig.db_user_groups_type || '1_to_n'}
+                            data-help-id="auth.legacy_rel_type" value={authConfig.db_user_groups_type || '1_to_n'}
                             onChange={(e) => setAuthConfig({...authConfig, db_user_groups_type: e.target.value})}
                             className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 text-sm font-bold shadow-sm"
                           >
@@ -1334,7 +1334,7 @@ export default function AuthSettingsPage() {
               {authConfig.auth_type === 'ldap' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
                   <h3 className="text-lg font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 text-neutral-900 dark:text-white">{t('dashboard.projects.studio.auth.ldap_config')}</h3>
-                  <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-2xl p-6 flex gap-4">
+                  <div data-help-id="auth.ldap_info" className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-2xl p-6 flex gap-4">
                     <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl h-fit text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                       <ShieldCheck className="w-6 h-6" />
                     </div>
@@ -1357,7 +1357,7 @@ export default function AuthSettingsPage() {
             <div className="lg:col-span-7 space-y-4 pb-20">
               
               {/* Branding e Identidade */}
-              <div className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+              <div data-help-id="auth.visual_identity" className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Layout className="w-4 h-4" />
@@ -1419,7 +1419,7 @@ export default function AuthSettingsPage() {
               </div>
 
               {/* Messaging */}
-              <div className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+              <div data-help-id="auth.visual_texts" className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Type className="w-4 h-4" />
@@ -1449,7 +1449,7 @@ export default function AuthSettingsPage() {
               </div>
 
               {/* Form Fields & Tooltips */}
-              <div className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+              <div data-help-id="auth.visual_fields" className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Fingerprint className="w-4 h-4" />
@@ -1511,7 +1511,7 @@ export default function AuthSettingsPage() {
               </div>
 
               {/* Botão de Ação */}
-              <div className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
+              <div data-help-id="auth.visual_button" className="space-y-4 p-6 bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem]">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-600">
                     <Zap className="w-4 h-4" />
@@ -1547,7 +1547,7 @@ export default function AuthSettingsPage() {
             </div>
 
             {/* Coluna de Preview (5/12) */}
-            <div className="lg:col-span-5 relative">
+            <div data-help-id="auth.visual_preview" className="lg:col-span-5 relative">
               <div className="sticky top-[180px] space-y-4">
                 <div className="flex items-center justify-between px-6">
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.auth.live_preview')}</h3>
@@ -1643,21 +1643,21 @@ export default function AuthSettingsPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                <div data-help-id="auth.users_subtabs" data-help-state={usersSubTab} className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
                   <button 
-                    onClick={() => setUsersSubTab('list')}
+                    data-help-id="auth.users_sub_list" onClick={() => setUsersSubTab('list')}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'list' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                   >
                     Lista de Usuários
                   </button>
                   <button 
-                    onClick={() => setUsersSubTab('groups')}
+                    data-help-id="auth.users_sub_groups" onClick={() => setUsersSubTab('groups')}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'groups' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                   >
                     Grupos de Acesso
                   </button>
                   <button 
-                    onClick={() => setUsersSubTab('permissions')}
+                    data-help-id="auth.users_sub_perms" onClick={() => setUsersSubTab('permissions')}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${usersSubTab === 'permissions' ? 'bg-white dark:bg-neutral-800 text-indigo-600 shadow-sm' : 'text-neutral-500 hover:text-neutral-700'}`}
                   >
                     Permissões de Telas
@@ -1665,7 +1665,7 @@ export default function AuthSettingsPage() {
                 </div>
 
                 <button
-                  onClick={handleRefreshData}
+                  data-help-id="auth.users_refresh" onClick={handleRefreshData}
                   disabled={isRefreshing}
                   className="p-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl transition-all flex items-center justify-center group shadow-sm"
                   title={t('dashboard.projects.studio.refresh_tooltip', 'Atualizar')}
@@ -1680,11 +1680,11 @@ export default function AuthSettingsPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input 
                       type="text" 
-                      placeholder="Buscar..."
+                      data-help-id="auth.users_search" placeholder="Buscar..."
                       className="w-full h-11 pl-12 pr-4 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
                     />
                   </div>
-                  <button onClick={openCreateUserModal} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
+                  <button data-help-id="auth.user_create" onClick={openCreateUserModal} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
                     <UserPlus className="w-4 h-4" />
                     Criar Usuário
                   </button>
@@ -1693,7 +1693,7 @@ export default function AuthSettingsPage() {
 
               {usersSubTab === 'groups' && (
                 <div className="flex gap-4 items-center w-full max-w-md justify-end">
-                  <button onClick={() => setIsCreatingRole(true)} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
+                  <button data-help-id="auth.group_create" onClick={() => setIsCreatingRole(true)} className="flex items-center gap-2 px-6 h-11 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 whitespace-nowrap">
                     <ShieldCheck className="w-4 h-4" />
                     Criar Grupo
                   </button>
@@ -1702,7 +1702,7 @@ export default function AuthSettingsPage() {
             </div>
 
             {isCreatingRole && (
-              <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex gap-4 items-end animate-in fade-in slide-in-from-top-4">
+              <div data-help-id="auth.group_form" className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] p-6 flex gap-4 items-end animate-in fade-in slide-in-from-top-4">
                 <div className="flex-1 space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Nome do Grupo de Acesso</label>
                   <input 
@@ -1722,7 +1722,7 @@ export default function AuthSettingsPage() {
 
             {usersSubTab === 'list' ? (
               <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
+                <div data-help-id="auth.users_table" className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
@@ -1802,7 +1802,7 @@ export default function AuthSettingsPage() {
               </div>
             ) : usersSubTab === 'groups' ? (
               <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
+                <div data-help-id="auth.groups_table" className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
@@ -1883,12 +1883,12 @@ export default function AuthSettingsPage() {
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Permissões de Telas por Grupo</h3>
+                    <h3 data-help-id="auth.perm_help" className="text-sm font-bold text-neutral-900 dark:text-white">Permissões de Telas por Grupo</h3>
                     <p className="text-[10px] text-neutral-500">{t('access_admin.perms_help', 'Nenhum: some do menu e a rota é bloqueada. Leitura: abre a tela, mas não cria, edita nem exclui. Escrita: faz tudo.')}</p>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-x-auto shadow-sm">
+                <div data-help-id="auth.perm_matrix" className="bg-white dark:bg-neutral-900/30 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-x-auto shadow-sm">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30">
@@ -1934,7 +1934,7 @@ export default function AuthSettingsPage() {
                                   ]
                                   return (
                                     <td key={role.id} className="px-6 py-4 text-center">
-                                      <div className="inline-flex rounded-full bg-neutral-100 dark:bg-neutral-800 p-0.5" role="radiogroup" aria-label={`${view.name} — ${role.name}`}>
+                                      <div data-help-id="auth.perm_levels" className="inline-flex rounded-full bg-neutral-100 dark:bg-neutral-800 p-0.5" role="radiogroup" aria-label={`${view.name} — ${role.name}`}>
                                         {OPTIONS.map(o => (
                                           <button
                                             key={o.id}

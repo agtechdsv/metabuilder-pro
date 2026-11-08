@@ -21,7 +21,9 @@ describe('rotas da ajuda da plataforma', () => {
     const ids = (p: string) => toursForRoute(PLATFORM_TOURS, p).map(t => t.id)
     expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso'])
     expect(ids('/admin/w/p/studio/data')).toEqual(['studio-dados'])
-    expect(ids('/admin/w/p/studio/logs')).toEqual(['studio-logs'])
+    expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
+    expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
+    expect(ids('/admin/w/p/studio/auth')).toEqual(['auth-visao-geral', 'auth-controle-acesso', 'auth-estrategia-managed', 'auth-estrategia-banco-legado', 'auth-estrategia-ldap', 'auth-estrategia-sem-login', 'auth-personalizacao-visual', 'auth-usuarios', 'auth-grupos', 'auth-permissoes-telas'])
     expect(ids('/outra/rota')).toEqual([])
   })
 })
@@ -174,5 +176,52 @@ describe('passos com condição', () => {
     expect(ids.indexOf('fields-panel')).toBeLessThan(ids.indexOf('zone-filter'))
     expect(ids.indexOf('fill-zones')).toBeLessThan(ids.indexOf('next3'))
     expect(tour().steps.find(s => s.id === 'fill-zones')?.freeInteraction).toBe(true)
+  })
+})
+
+describe('todos os tours (Studio, Login, Configurações, Logs)', () => {
+  const found = new Set<string>()
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) walk(full)
+      else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
+    }
+  }
+  walk(path.join(process.cwd(), 'src'))
+  const langs = ['pt', 'en', 'es'] as const
+  const filled = (t: any) => langs.every(l => typeof t?.[l] === 'string' && t[l].trim().length > 0)
+
+  it('toda condição (completeWhen) de qualquer tour aponta para algo que existe e tem dica nos 3 idiomas', () => {
+    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) {
+      if (!s.completeWhen) continue
+      expect(found.has(s.completeWhen.id), `${tour.id}/${s.id}: ${s.completeWhen.id}`).toBe(true)
+      if (s.completeWhen.check === 'attr') expect(s.completeWhen.attr, `${tour.id}/${s.id}`).toBeTruthy()
+      expect(filled(s.waitingHint), `${tour.id}/${s.id}: dica de espera`).toBe(true)
+    }
+  })
+
+  it('passo opcional (skipIfMissing) e passo que clica (advanceOnClick) sempre têm alvo; backClick e enterClick existem na tela', () => {
+    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) {
+      if (s.skipIfMissing || s.advanceOnClick) expect(s.target, `${tour.id}/${s.id}`).toBeTruthy()
+      for (const id of [s.backClick, s.enterClick].filter(Boolean) as string[]) expect(found.has(id), `${tour.id}/${s.id}: ${id}`).toBe(true)
+    }
+  })
+
+  it('os tours de Login, Configurações e Logs são ricos: vários tours por tela e muitos passos', () => {
+    const count = (prefix: string) => PLATFORM_TOURS.filter(t => t.id.startsWith(prefix))
+    expect(count('auth-').length).toBeGreaterThanOrEqual(8)
+    expect(count('settings-').length).toBeGreaterThanOrEqual(4)
+    expect(count('logs-').length).toBeGreaterThanOrEqual(3)
+    for (const prefix of ['auth-', 'settings-', 'logs-']) expect(count(prefix).reduce((n, t) => n + t.steps.length, 0), prefix).toBeGreaterThanOrEqual(15)
+  })
+
+  it('cada estratégia de login tem seu tour e ele só segue depois da pessoa escolher o cartão certo', () => {
+    for (const [id, kind] of [['auth-estrategia-managed', 'managed'], ['auth-estrategia-banco-legado', 'database'], ['auth-estrategia-ldap', 'ldap'], ['auth-estrategia-sem-login', 'none']] as const) {
+      const first = PLATFORM_TOURS.find(t => t.id === id)!.steps[0]
+      expect(first.completeWhen?.equals, id).toBe(kind)
+      expect(first.interactive, id).toBe(true)
+    }
   })
 })

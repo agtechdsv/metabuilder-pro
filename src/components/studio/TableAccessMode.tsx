@@ -30,7 +30,7 @@ export function TableAccessMode({ tables, value, onChange, onSave, saving, saved
   }
 
   return (
-    <div className="mt-10 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-6 space-y-4">
+    <div data-help-id="auth.table_access" data-help-state={value.closed ? 'closed' : 'open'} className="mt-10 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-6 space-y-4">
       <div className="space-y-1">
         <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
           <Lock className="w-4 h-4 text-indigo-500" /> {t(t0 + 'ta_title')}
@@ -38,7 +38,7 @@ export function TableAccessMode({ tables, value, onChange, onSave, saving, saved
         <p className="text-[11px] text-neutral-500 leading-relaxed max-w-3xl">{t(t0 + 'ta_desc')}</p>
       </div>
 
-      <label className="flex items-center gap-3 text-sm font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer">
+      <label data-help-id="auth.table_access_toggle" className="flex items-center gap-3 text-sm font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer">
         <input
           type="checkbox"
           checked={value.closed}
@@ -52,7 +52,7 @@ export function TableAccessMode({ tables, value, onChange, onSave, saving, saved
         <p className="text-[11px] text-neutral-400">{t(t0 + 'ta_off')}</p>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div data-help-id="auth.table_access_bulk" className="flex items-center justify-between gap-3">
             <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t(t0 + 'ta_open_list')}</span>
             <div className="flex gap-2">
               <button type="button" onClick={() => onChange({ ...value, open: names.map(n => n.toLowerCase()) })} className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all">
@@ -63,7 +63,7 @@ export function TableAccessMode({ tables, value, onChange, onSave, saving, saved
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div data-help-id="auth.table_access_list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {names.map(name => (
               <label key={name} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer">
                 <input type="checkbox" checked={isOpen(name)} onChange={() => toggle(name)} className="w-4 h-4 accent-indigo-600" />
@@ -78,7 +78,7 @@ export function TableAccessMode({ tables, value, onChange, onSave, saving, saved
       <div className="flex justify-end pt-2">
         <button
           type="button"
-          onClick={onSave}
+          data-help-id="auth.table_access_save" onClick={onSave}
           disabled={saving}
           className={`px-6 h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50 ${saved ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}
         >
