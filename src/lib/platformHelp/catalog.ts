@@ -165,8 +165,9 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'depth',
         target: 'wizard.depth',
+        interactive: true,
         title: h('Profundidade das relações', 'Relation depth', 'Profundidad de las relaciones'),
-        body: h('Quantos níveis de relacionamento entram automaticamente. 2 é o padrão e basta na maioria dos casos; níveis maiores deixam a consulta mais lenta.', 'How many relationship levels come in automatically. 2 is the default and enough most of the time; deeper levels make the query slower.', 'Cuántos niveles de relación entran automáticamente. 2 es el valor por defecto y suele bastar; más niveles hacen la consulta más lenta.'),
+        body: h('Quantos níveis de relacionamento entram automaticamente. 2 é o padrão e basta na maioria dos casos; níveis maiores deixam a consulta mais lenta. Se precisar, troque o valor agora.', 'How many relationship levels come in automatically. 2 is the default and enough most of the time; deeper levels make the query slower. If you need to, change the value now.', 'Cuántos niveles de relación entran automáticamente. 2 es el valor por defecto y suele bastar; más niveles hacen la consulta más lenta. Si lo necesita, cambie el valor ahora.'),
       },
       {
         id: 'next2',
