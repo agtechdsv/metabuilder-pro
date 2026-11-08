@@ -254,24 +254,28 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'buttons',
         target: 'wizard.buttons',
+        interactive: true,
         title: h('Botões da interface', 'Interface buttons', 'Botones de la interfaz'),
         body: h('Escolha quais botões a tela terá: Pesquisar, Limpar, Visualizar, Novo, Editar e Excluir. Ações customizadas (abrir outra tela, SQL, REST) ficam logo abaixo.', 'Choose which buttons the screen has: Search, Clear, View, New, Edit and Delete. Custom actions (open another screen, SQL, REST) are right below.', 'Elija qué botones tendrá la pantalla: Buscar, Limpiar, Ver, Nuevo, Editar y Eliminar. Las acciones personalizadas (abrir otra pantalla, SQL, REST) están justo debajo.'),
       },
       {
         id: 'interface',
         target: 'wizard.action_interface',
+        interactive: true,
         title: h('Onde abre o formulário', 'Where the form opens', 'Dónde se abre el formulario'),
         body: h('Mesma tela (substitui a lista), gaveta lateral ou janela central (modal). Muda só a experiência de quem usa.', 'Same screen (replaces the list), side drawer or centered window (modal). It only changes the experience of whoever uses it.', 'Misma pantalla (reemplaza la lista), panel lateral o ventana central (modal). Solo cambia la experiencia de quien lo usa.'),
       },
       {
         id: 'export',
         target: 'wizard.export',
+        interactive: true,
         title: h('Exportação de dados', 'Data export', 'Exportación de datos'),
         body: h('Liga a exportação em segundo plano e define os formatos permitidos (Excel, CSV, JSON, PDF, OFX).', 'Turns on background export and sets the allowed formats (Excel, CSV, JSON, PDF, OFX).', 'Activa la exportación en segundo plano y define los formatos permitidos (Excel, CSV, JSON, PDF, OFX).'),
       },
       {
         id: 'query',
         target: 'wizard.query_strategy',
+        interactive: true,
         title: h('Estratégia de dados', 'Data strategy', 'Estrategia de datos'),
         body: h('Query Dinâmica: o MetaBuilder monta os JOINs e SELECTs pelas relações. SQL Manual: você escreve o SQL para ter mais controle e desempenho.', 'Dynamic Query: MetaBuilder builds the JOINs and SELECTs from the relations. Manual SQL: you write the SQL for more control and performance.', 'Consulta Dinámica: MetaBuilder arma los JOIN y SELECT por las relaciones. SQL Manual: usted escribe el SQL para más control y rendimiento.'),
       },
@@ -290,6 +294,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'draft',
         target: 'studio.latest_card',
+        noBack: true,
         findWaitMs: 20000,
         title: h('Seu caso de uso, como rascunho', 'Your use case, as a draft', 'Su caso de uso, como borrador'),
         body: h(
@@ -301,6 +306,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'publish',
         target: 'studio.latest_publish',
+        noBack: true,
         advanceOnClick: true,
         title: h('Publicar', 'Publish', 'Publicar'),
         body: h('Para disponibilizar a tela no app, clique em "Publicar".', 'To make the screen available in the app, click "Publish".', 'Para dejar la pantalla disponible en la app, haga clic en "Publicar".'),
@@ -308,6 +314,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'publish-confirm',
         target: 'studio.publish_confirm',
+        noBack: true,
         advanceOnClick: true,
         advanceWaitMs: 15000,
         title: h('Confirme a publicação', 'Confirm publishing', 'Confirme la publicación'),
@@ -316,6 +323,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'open-published',
         target: 'studio.latest_open',
+        noBack: true,
         title: h('Acessar a versão publicada', 'Open the published version', 'Acceder a la versión publicada'),
         body: h(
           'Agora o caso de uso está publicado. A seta "Acessar versão publicada" abre a tela como o usuário final a vê. Alterações futuras ficam em rascunho até você publicar de novo, então dá para testar com calma.',

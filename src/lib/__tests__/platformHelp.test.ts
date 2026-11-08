@@ -116,6 +116,12 @@ describe('passos do assistente que a pessoa precisa usar', () => {
     for (const id of ['detail-expand', 'detail-fill']) expect(tour.steps.find(s => s.id === id)?.skipIfMissing, id).toBe(true)
   })
 
+  it('depois de criar o caso de uso não dá para voltar, e os passos de ações finais deixam a pessoa usar o item', () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+    for (const id of ['draft', 'publish', 'publish-confirm', 'open-published']) expect(tour.steps.find(s => s.id === id)?.noBack, id).toBe(true)
+    for (const id of ['buttons', 'interface', 'export', 'query']) expect(tour.steps.find(s => s.id === id)?.interactive, id).toBe(true)
+  })
+
   it('os tours do Studio sabem voltar ao ponto de partida', () => {
     for (const id of ['studio-visao-geral', 'studio-criar-caso-de-uso']) expect(PLATFORM_TOURS.find(t => t.id === id)?.recover?.length).toBeGreaterThan(0)
   })

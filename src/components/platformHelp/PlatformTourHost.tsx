@@ -219,7 +219,7 @@ export function PlatformTourHost() {
       if (e.defaultPrevented) return
       if (e.key === 'Escape') { e.preventDefault(); stopPlatformTour('tecla Esc') }
       else if (e.key === 'ArrowRight') { e.preventDefault(); finishOrNext() }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep() }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); const a = activeRef.current; if (a && !a.tour.steps[a.index]?.noBack) prevStep() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -338,7 +338,7 @@ export function PlatformTourHost() {
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[10px] font-bold text-neutral-400">{t('platform_help.step_of', '{n} de {total}').replace('{n}', String(active.index + 1)).replace('{total}', String(total))}</span>
           <div className="flex items-center gap-2">
-            <button type="button" disabled={active.index === 0} onClick={prevStep} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-30 dark:hover:text-white">
+            <button type="button" disabled={active.index === 0 || !!step.noBack} onClick={prevStep} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-30 dark:hover:text-white">
               <ArrowLeft className="h-3 w-3" />{t('platform_help.back', 'Voltar')}
             </button>
             <button type="button" onClick={finishOrNext} disabled={!isLast && (!!step.advanceOnClick || (!!step.completeWhen && !ready))} className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40">

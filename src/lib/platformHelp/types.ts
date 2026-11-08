@@ -14,6 +14,8 @@ export interface PlatformStep {
   target?: string
   title?: HelpText
   body: HelpText
+  /** sem "Voltar" neste passo: o que veio antes já foi feito de verdade (ex.: o caso de uso já foi criado) */
+  noBack?: boolean
   /** quanto esperar (ms) o alvo aparecer ao entrar no passo; padrão 4000. Itens que dependem de gravar e recarregar a lista levam mais */
   findWaitMs?: number
   /** segundo item destacado junto com o alvo (ex.: a zona do detalhe e o painel de campos de onde se arrasta); se não aparecer, só o alvo é destacado */
