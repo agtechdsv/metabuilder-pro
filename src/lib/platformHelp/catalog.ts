@@ -290,6 +290,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'draft',
         target: 'studio.latest_card',
+        findWaitMs: 20000,
         title: h('Seu caso de uso, como rascunho', 'Your use case, as a draft', 'Su caso de uso, como borrador'),
         body: h(
           'Pronto, ele aparece na lista. Enquanto estiver como rascunho, só você o vê pelo Studio: os usuários do app ainda não têm acesso. Use "Configurar" para continuar editando quando quiser.',

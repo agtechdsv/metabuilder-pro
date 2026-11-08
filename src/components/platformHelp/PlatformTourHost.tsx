@@ -88,7 +88,7 @@ export function PlatformTourHost() {
         await sleep(300)
       }
       if (!s.target) return
-      let deadline = Date.now() + (s.skipIfMissing ? 1200 : 4000)
+      let deadline = Date.now() + (s.skipIfMissing ? 1200 : (s.findWaitMs ?? 4000))
       for (;;) {
         if (cancelled) return
         const el = findById(s.target)

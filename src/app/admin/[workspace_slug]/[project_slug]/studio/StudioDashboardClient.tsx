@@ -1,7 +1,7 @@
 'use client'
 
 import { hasLikelyStaleTours } from '@/lib/interactiveHelp/signature'
-import React, { useState, useTransition, useEffect } from 'react'
+import React, { useState, useTransition, useEffect, useRef } from 'react'
 import { openExternalUrl, isTauri } from '@/utils/tauriUtils'
 import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
@@ -263,9 +263,16 @@ export function StudioDashboardClient({
   const [isCheckingLimit, setIsCheckingLimit] = useState(false)
   const userViews = views?.filter(view => view.slug !== 'downloads' && view.slug !== 'automations') || []
   // o caso de uso mais recente da lista: o tour "Criar um caso de uso" o acompanha (rascunho, Publicar, versão publicada)
+  // "o mais recente" = o que NÃO existia quando o assistente foi aberto. Antes da lista atualizar, ninguém é marcado (o tour espera),
+  // em vez de apontar para o caso de uso que foi editado por último
+  const builderBaselineRef = useRef<Set<string> | null>(null)
+  const prevViewModeRef = useRef<string>('')
+  if (viewMode === 'builder' && prevViewModeRef.current !== 'builder') builderBaselineRef.current = new Set(userViews.map((v: any) => v.id))
+  prevViewModeRef.current = viewMode
   const latestViewId = (() => {
     let best: any = null
     for (const v of userViews) {
+      if (builderBaselineRef.current && builderBaselineRef.current.has(v.id)) continue
       const stamp = String(v.updated_at || v.created_at || '')
       if (!best || stamp >= best.stamp) best = { id: v.id, stamp }
     }
