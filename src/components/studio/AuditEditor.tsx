@@ -74,11 +74,13 @@ export function AuditEditor({ project, models, tableName, columns, value, onChan
         </div>
         <div className="flex gap-2 shrink-0">
           {!disabled && (
-            <button type="button" onClick={() => setSqlOpen(true)} className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all">
+            <button data-help-id="data.audit_sql" type="button" onClick={() => setSqlOpen(true)} className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all">
               {t(t0 + 'sql')}
             </button>
           )}
           <button
+            data-help-id="data.audit_toggle"
+            data-help-state={disabled ? 'off' : 'on'}
             type="button"
             onClick={() => onChange(disabled ? null : { disabled: true })}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all"
@@ -92,7 +94,7 @@ export function AuditEditor({ project, models, tableName, columns, value, onChan
         <p className="text-[11px] text-neutral-400">{t(t0 + 'off')}</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div data-help-id="data.audit_columns" className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {KEYS.map(({ key, label }) => (
               <div key={key} className="space-y-1">
                 <label className={labelCls}>{t(t0 + label)}</label>
@@ -105,7 +107,7 @@ export function AuditEditor({ project, models, tableName, columns, value, onChan
           </div>
 
           {(shown.createdBy || shown.updatedBy) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div data-help-id="data.audit_by" className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className={labelCls}>{t(t0 + 'by_title')}</label>
                 <select className={selectCls} value={byMode} onChange={e => setByMode(e.target.value)}>

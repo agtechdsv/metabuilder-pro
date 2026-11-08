@@ -5,6 +5,7 @@
 
 import type { HelpText } from '../helpText'
 import type { PlatformTour } from './types'
+import { DATA_TOURS } from './catalogData'
 import { AUTH_TOURS } from './catalogAuth'
 import { SETTINGS_TOURS } from './catalogSettings'
 import { LOGS_TOURS } from './catalogLogs'
@@ -349,45 +350,7 @@ const BASE_TOURS: readonly PlatformTour[] = [
       },
     ],
   },
-  {
-    id: 'studio-dados',
-    route: `${STUDIO}/data`,
-    title: h('Dados e Schemas', 'Data and Schemas', 'Datos y Esquemas'),
-    summary: h('Nomes amigáveis, permissões, auditoria e relacionamentos das tabelas.', 'Friendly names, permissions, audit and table relationships.', 'Nombres amigables, permisos, auditoría y relaciones de las tablas.'),
-    steps: [
-      {
-        id: 'tabs',
-        target: 'data.tabs',
-        title: h('Duas visões', 'Two views', 'Dos vistas'),
-        body: h('Tabela / Campos: nomes e regras de cada tabela e coluna. Relacionamentos: como as tabelas se ligam (a base dos JOINs automáticos).', 'Table / Fields: names and rules for each table and column. Relationships: how tables connect (the basis of automatic JOINs).', 'Tabla / Campos: nombres y reglas de cada tabla y columna. Relaciones: cómo se unen las tablas (la base de los JOIN automáticos).'),
-      },
-      {
-        id: 'tables',
-        target: 'data.tables',
-        title: h('Suas tabelas', 'Your tables', 'Sus tablas'),
-        body: h('Vêm do banco sincronizado. Busque pelo nome e clique para editar os detalhes dela ao lado.', 'They come from the synced database. Search by name and click one to edit its details on the right.', 'Vienen de la base sincronizada. Busque por nombre y haga clic para editar sus detalles a la derecha.'),
-      },
-      {
-        id: 'permissions',
-        target: 'data.permissions',
-        title: h('Permissões da tabela', 'Table permissions', 'Permisos de la tabla'),
-        body: h('Define se os apps podem criar, editar e excluir registros desta tabela. Valem para todos os casos de uso que a usam.', 'Defines whether apps can create, edit and delete records of this table. They apply to every use case that uses it.', 'Define si las apps pueden crear, editar y eliminar registros de esta tabla. Valen para todos los casos de uso que la usan.'),
-      },
-      {
-        id: 'audit',
-        target: 'data.audit',
-        title: h('Auditoria', 'Audit', 'Auditoría'),
-        body: h('Guarda quem criou e quem alterou cada registro, e quando. O servidor preenche sozinho: a tela nunca consegue falsificar. As colunas são reconhecidas pelo nome e você pode trocar.', 'Stores who created and changed each record, and when. The server fills it in: the screen can never fake it. Columns are recognized by name and you can change them.', 'Guarda quién creó y modificó cada registro, y cuándo. Lo completa el servidor: la pantalla nunca puede falsificarlo. Las columnas se reconocen por el nombre y puede cambiarlas.'),
-      },
-      {
-        id: 'field',
-        target: 'data.field',
-        title: h('Cada coluna', 'Each column', 'Cada columna'),
-        body: h('Dê um nome amigável (é o rótulo padrão nas telas), escolha o tipo de campo e ajuste as regras. Depois clique em "Salvar Tabela".', 'Give it a friendly name (the default label on screens), pick the field type and adjust the rules. Then click "Save Table".', 'Dele un nombre amigable (es la etiqueta por defecto en las pantallas), elija el tipo de campo y ajuste las reglas. Luego haga clic en "Guardar Tabla".'),
-      },
-    ],
-  },
 ]
 
-/** Todos os tours: o Studio e os dados (aqui) mais Login & Segurança, Configurações e Logs (um arquivo por área). */
-export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]
+/** Todos os tours: o Studio (aqui) mais Dados & Schemas, Login & Segurança, Configurações e Logs (um arquivo por área). */
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]

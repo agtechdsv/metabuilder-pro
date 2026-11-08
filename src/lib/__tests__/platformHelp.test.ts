@@ -20,7 +20,7 @@ describe('rotas da ajuda da plataforma', () => {
   it('cada tela recebe só os tours dela', () => {
     const ids = (p: string) => toursForRoute(PLATFORM_TOURS, p).map(t => t.id)
     expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso'])
-    expect(ids('/admin/w/p/studio/data')).toEqual(['studio-dados'])
+    expect(ids('/admin/w/p/studio/data')).toEqual(['studio-dados', 'dados-tabela-campos', 'dados-auditoria', 'dados-acesso-linha', 'dados-relacionamentos'])
     expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
     expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
     expect(ids('/admin/w/p/studio/auth')).toEqual(['auth-visao-geral', 'auth-controle-acesso', 'auth-estrategia-managed', 'auth-estrategia-banco-legado', 'auth-estrategia-ldap', 'auth-estrategia-sem-login', 'auth-personalizacao-visual', 'auth-usuarios', 'auth-grupos', 'auth-permissoes-telas'])

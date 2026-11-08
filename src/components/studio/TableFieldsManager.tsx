@@ -267,6 +267,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
           <div className="relative">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
+              data-help-id="data.table_search"
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -322,7 +323,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
             <>
               {/* Table Metadata Section */}
               <div className="space-y-5">
-                <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
+                <div data-help-id="data.table_header" className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800/50 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-500/10 rounded-xl">
                       <Table className="w-5 h-5 text-indigo-500" />
@@ -332,6 +333,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Schema: {selectedModel.db_schema_name || 'public'}</p>
                         <button 
+                          data-help-id="data.schema_migrate"
                           type="button"
                           onClick={() => {
                             setNewSchemaName(selectedModel.db_schema_name || 'public')
@@ -347,6 +349,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      data-help-id="data.refresh"
                       onClick={fetchFields}
                       disabled={loadingFields}
                       type="button"
@@ -356,6 +359,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       <RefreshCw className={`w-4 h-4 ${loadingFields ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500 ease-out'}`} />
                     </button>
                     <button
+                      data-help-id="data.save"
                       onClick={handleSave}
                       disabled={isSaving}
                       className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-505 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
@@ -374,7 +378,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div data-help-id="data.table_names" className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
                       <Tag className="w-3.5 h-3.5 text-indigo-500" /> {t('dashboard.projects.studio.metadata.friendly_name')}
@@ -478,7 +482,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               </div>
 
               {/* Fields List Section */}
-              <div className="space-y-5 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+              <div data-help-id="data.fields_section" className="space-y-5 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
                     <Database className="w-4 h-4 text-indigo-500" /> {t('dashboard.projects.studio.metadata.detected_columns').replace('{count}', String(fields.length))}
@@ -505,7 +509,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                       return (
                         <div key={f.id} data-help-id="data.field" className="p-5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-850 rounded-2xl space-y-4">
                           {/* Column Identification */}
-                          <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div data-help-id="data.field_head" className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
                               <span className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">{f.db_column_name}</span>
                               <span className="px-2 py-0.5 bg-neutral-200/50 dark:bg-neutral-800 text-[9px] font-mono text-neutral-600 dark:text-neutral-400 rounded border border-neutral-200 dark:border-neutral-700">
@@ -529,7 +533,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
  
                           {/* Editable Inputs */}
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-3 space-y-1.5">
+                            <div data-help-id="data.field_label" className="md:col-span-3 space-y-1.5">
                               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.metadata.ui_label')}</label>
                               <input
                                 type="text"
@@ -539,7 +543,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                               />
                             </div>
-                            <div className="space-y-1.5">
+                            <div data-help-id="data.field_order" className="space-y-1.5">
                               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">{t('dashboard.projects.studio.metadata.order_index')}</label>
                               <input
                                 type="number"
@@ -548,7 +552,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                                 className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-indigo-500 transition-colors"
                               />
                             </div>
-                            <div className="space-y-1.5 md:col-span-2">
+                            <div data-help-id="data.field_widget" className="space-y-1.5 md:col-span-2">
                               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tipo de Interface</label>
                               <select
                                 value={edit.ui_widget || 'text'}
@@ -567,7 +571,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
                           </div>
 
                                             {/* Checkboxes Config */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                          <div data-help-id="data.field_flags" className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                             {/* is_searchable */}
                             <label className="flex items-center gap-2 p-2 bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 rounded-xl cursor-pointer hover:border-indigo-500/50 transition-all">
                               <input
@@ -628,7 +632,7 @@ export function TableFieldsManager({ project, models, onSaveSuccess }: TableFiel
               </div>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center py-20 text-neutral-400 dark:text-neutral-600 gap-4">
+            <div data-help-id="data.no_table" className="flex flex-col items-center justify-center text-center py-20 text-neutral-400 dark:text-neutral-600 gap-4">
               <Table className="w-12 h-12 opacity-50" />
               <div>
                 <h4 className="font-bold text-sm">{t('dashboard.projects.studio.metadata.no_table_selected')}</h4>

@@ -221,7 +221,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
         isManual
           ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/70 dark:border-blue-800/40 hover:border-blue-400 dark:hover:border-blue-600'
           : 'bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-      )}>
+      )} data-help-id="rel.row">
         {/* From */}
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tabela</span>
@@ -298,7 +298,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div data-help-id="rel.title" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
             <GitFork className="w-5 h-5" />
           </div>
@@ -313,6 +313,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
         </div>
         <div className="flex items-center gap-3">
           <button
+            data-help-id="rel.refresh"
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-all group"
@@ -321,6 +322,8 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
             <RefreshCw className={cn('w-4 h-4 transition-transform duration-500', isRefreshing && 'animate-spin')} />
           </button>
           <button
+            data-help-id="rel.new"
+            data-help-state={showAddForm ? 'open' : 'closed'}
             onClick={() => setShowAddForm(v => !v)}
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all',
@@ -336,7 +339,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
       </div>
 
       {/* Info Banner */}
-      <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl">
+      <div data-help-id="rel.banner" className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl">
         <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
@@ -352,14 +355,14 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
 
       {/* Add Form */}
       {showAddForm && (
-        <div className="p-5 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-3xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div data-help-id="rel.form" className="p-5 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-3xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <h4 className="text-xs font-black uppercase tracking-widest text-blue-700 dark:text-blue-400 flex items-center gap-2">
             <Plus className="w-3.5 h-3.5" /> Nova Relação Manual
           </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* From Model */}
-            <div className="space-y-2">
+            <div data-help-id="rel.form_from_model" className="space-y-2">
               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tabela Origem</label>
               <select
                 value={formFromModel}
@@ -374,7 +377,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
             </div>
 
             {/* From Field */}
-            <div className="space-y-2">
+            <div data-help-id="rel.form_from_field" className="space-y-2">
               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Campo FK (Chave Estrangeira)</label>
               <select
                 value={formFromField}
@@ -390,7 +393,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
             </div>
 
             {/* To Model */}
-            <div className="space-y-2">
+            <div data-help-id="rel.form_to_model" className="space-y-2">
               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tabela Destino (Referenciada)</label>
               <select
                 value={formToModel}
@@ -405,7 +408,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
             </div>
 
             {/* To Field */}
-            <div className="space-y-2">
+            <div data-help-id="rel.form_to_field" className="space-y-2">
               <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Campo PK (Chave Primária Referenciada)</label>
               <select
                 value={formToField}
@@ -422,7 +425,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
           </div>
 
           {/* Relation Type */}
-          <div className="space-y-2">
+          <div data-help-id="rel.form_type" className="space-y-2">
             <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Tipo de Relação</label>
             <div className="flex gap-2">
               {Object.entries(RELATION_TYPE_LABELS).map(([val, label]) => (
@@ -446,12 +449,14 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
           {/* Save Button */}
           <div className="flex justify-end gap-3 pt-2 border-t border-blue-200/50 dark:border-blue-800/30">
             <button
+              data-help-id="rel.form_cancel"
               onClick={resetForm}
               className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-600 transition-colors"
             >
               Cancelar
             </button>
             <button
+              data-help-id="rel.form_save"
               onClick={handleSaveManual}
               disabled={isSaving || !formFromModel || !formFromField || !formToModel || !formToField}
               className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20"
@@ -465,7 +470,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
         {/* CLI Relations */}
-        <div className="space-y-3">
+        <div data-help-id="rel.cli" className="space-y-3">
           <div className="flex items-center gap-2">
             <Database className="w-3.5 h-3.5 text-emerald-500" />
             <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
@@ -494,7 +499,7 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
         </div>
 
         {/* Manual Relations */}
-        <div className="space-y-3">
+        <div data-help-id="rel.manual" className="space-y-3">
           <div className="flex items-center gap-2">
             <GitFork className="w-3.5 h-3.5 text-blue-500" />
             <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">

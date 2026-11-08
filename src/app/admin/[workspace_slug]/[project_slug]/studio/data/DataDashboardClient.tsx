@@ -57,8 +57,9 @@ export function DataDashboardClient({
 
           <div className="flex items-center gap-4">
             {/* Navegação de Abas */}
-            <div data-help-id="data.tabs" className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+            <div data-help-id="data.tabs" data-help-state={activeTab} className="flex items-center gap-2 bg-neutral-100 dark:bg-neutral-900/50 p-1 rounded-2xl border border-neutral-200 dark:border-neutral-800">
               <button
+                data-help-id="data.tab_metadata"
                 onClick={() => setActiveTab('metadata')}
                 className={cn(
                   "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
@@ -70,6 +71,7 @@ export function DataDashboardClient({
                 Tabela / Campos
               </button>
               <button
+                data-help-id="data.tab_relations"
                 onClick={() => setActiveTab('relations')}
                 className={cn(
                   "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
@@ -85,6 +87,7 @@ export function DataDashboardClient({
 
             {/* Botão de Voltar para o Dashboard do Studio */}
             <Link
+              data-help-id="data.back"
               href={`/admin/${workspace_slug}/${project_slug}/studio`}
               className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900/50 dark:hover:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black tracking-widest transition-all uppercase text-neutral-600 dark:text-neutral-300"
             >

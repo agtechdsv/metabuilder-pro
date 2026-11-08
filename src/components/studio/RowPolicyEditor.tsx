@@ -67,7 +67,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
   const tableNames = models.map(m => String(m.db_table_name)).filter(Boolean).sort()
 
   return (
-    <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
+    <div data-help-id="data.row_policy" data-help-state={String(rules.length)} className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-100 dark:border-neutral-800/80 rounded-2xl p-5 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <span className={`${labelCls} flex items-center gap-1.5`}>
@@ -78,6 +78,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
         <div className="flex gap-2 shrink-0">
           {createdBy && !rules.some(r => r.column.toLowerCase() === createdBy.column.toLowerCase() && r.op === 'eq') && (
             <button
+              data-help-id="data.row_mine"
               type="button"
               title={t('dashboard.projects.studio.metadata.audit_mine_hint')}
               onClick={() => onChange([...rules, { id: newId(), column: createdBy.column, op: 'eq', source: createdBy.by.source, ...(createdBy.by.attr ? { attr: createdBy.by.attr } : {}) }])}
@@ -87,6 +88,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
             </button>
           )}
           <button
+            data-help-id="data.row_add"
             type="button"
             onClick={add}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-indigo-600 hover:border-indigo-400 transition-all"
@@ -96,7 +98,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
         </div>
       </div>
 
-      {rules.length === 0 && <p className="text-[11px] text-neutral-400">{t(t0 + 'none')}</p>}
+      {rules.length === 0 && <p data-help-id="data.row_none" className="text-[11px] text-neutral-400">{t(t0 + 'none')}</p>}
 
       {authTable === null && rules.length > 0 && (
         <p className="flex items-start gap-2 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3 py-2">
@@ -109,8 +111,8 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
         const attrMissing = rule.source === 'user.attr' && !!rule.attr && authColumns.length > 0 && !authColumns.some(c => c.toLowerCase() === rule.attr!.toLowerCase())
         const bypassMissing = !!rule.bypass && rule.bypass.source === 'user.attr' && !!rule.bypass.attr && authColumns.length > 0 && !authColumns.some(c => c.toLowerCase() === rule.bypass!.attr!.toLowerCase())
         return (
-          <div key={rule.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div key={rule.id} data-help-id="data.row_rule" className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3">
+            <div data-help-id="data.row_rule_main" className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className={labelCls}>{t(t0 + 'column')}</label>
                 <Select value={rule.column} onChangeValue={v => patch(i, { column: v })}>
@@ -181,7 +183,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
               )}
             </div>
 
-            <label className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 cursor-pointer">
+            <label data-help-id="data.row_bypass" className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 cursor-pointer">
               <input
                 type="checkbox"
                 className="w-4 h-4 accent-indigo-600"
@@ -239,7 +241,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
             )}
 
             <div className="flex justify-end">
-              <button type="button" onClick={() => remove(i)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500 transition-colors">
+              <button data-help-id="data.row_remove" type="button" onClick={() => remove(i)} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-red-500 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> {t(t0 + 'remove')}
               </button>
             </div>
@@ -247,7 +249,7 @@ export function RowPolicyEditor({ project, models, columns, rules, onChange, cre
         )
       })}
 
-      {rules.length > 0 && <p className="text-[10px] text-neutral-400">{t(t0 + 'fail_closed')}</p>}
+      {rules.length > 0 && <p data-help-id="data.row_failclosed" className="text-[10px] text-neutral-400">{t(t0 + 'fail_closed')}</p>}
     </div>
   )
 }
