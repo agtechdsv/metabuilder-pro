@@ -58,7 +58,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
     }
 
     return (
-      <div key={`${model.id}-${depth}-${index}`} className={cn("space-y-4", depth > 0 && "ml-8 border-l-2 border-dashed border-amber-200 dark:border-amber-900/30 pl-6 pb-4")}>
+      <div key={`${model.id}-${depth}-${index}`} data-help-id={!isMaster ? 'wizard.detail_block' : undefined} data-help-state={!isMaster ? (retractedModels.has(model.id) ? 'closed' : 'open') : undefined} className={cn("space-y-4", depth > 0 && "ml-8 border-l-2 border-dashed border-amber-200 dark:border-amber-900/30 pl-6 pb-4")}>
         <div className="flex items-center justify-between ml-1 pr-6">
           <div className="flex items-center gap-2">
             <div className={cn("w-1.5 h-4 rounded-full shadow-sm transition-colors duration-300", fieldsOfThisModel.length > 0 ? "bg-emerald-500 shadow-emerald-500/30" : (isMaster ? "bg-amber-600" : "bg-amber-400"))}></div>
@@ -154,6 +154,7 @@ export function StepLayoutModelZone(props: StepLayoutModelZoneProps) {
             {!isMaster && (
               <button
                 type="button"
+                data-help-id={!isMaster ? 'wizard.detail_expand' : undefined}
                 title={retractedModels.has(model.id) ? t('wizard.layout.expand', 'Expandir') : t('wizard.layout.collapse', 'Retrair')}
                 onClick={() => {
                   setRetractedModels(prev => {

@@ -107,6 +107,15 @@ describe('passos do assistente que a pessoa precisa usar', () => {
     for (const id of ['name', 'logic', 'tables']) expect(tour.steps.find(s => s.id === id)?.interactive).toBe(true)
   })
 
+  it('os passos do detalhe (mestre + detalhe) ficam entre o preenchimento das zonas e o próximo passo, e são pulados se não há detalhe', () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!
+    const ids = tour.steps.map(s => s.id)
+    expect(ids.indexOf('detail-expand')).toBeGreaterThan(ids.indexOf('fill-zones'))
+    expect(ids.indexOf('detail-fill')).toBeGreaterThan(ids.indexOf('detail-expand'))
+    expect(ids.indexOf('detail-fill')).toBeLessThan(ids.indexOf('next3'))
+    for (const id of ['detail-expand', 'detail-fill']) expect(tour.steps.find(s => s.id === id)?.skipIfMissing, id).toBe(true)
+  })
+
   it('os tours do Studio sabem voltar ao ponto de partida', () => {
     for (const id of ['studio-visao-geral', 'studio-criar-caso-de-uso']) expect(PLATFORM_TOURS.find(t => t.id === id)?.recover?.length).toBeGreaterThan(0)
   })

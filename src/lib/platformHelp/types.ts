@@ -22,6 +22,8 @@ export interface PlatformStep {
   advanceWaitMs?: number
   /** deixa a pessoa usar o item destacado sem avançar (preencher o nome, escolher a lógica). Os outros passos bloqueiam a tela */
   interactive?: boolean
+  /** se o alvo não existe nesta tela (ex.: o caso de uso não tem tabela de detalhe), o passo é pulado em vez de mostrar "item não visível" */
+  skipIfMissing?: boolean
   /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */
   freeInteraction?: boolean
   /**

@@ -19,15 +19,21 @@ function isVisible(el: HTMLElement): boolean {
   return r.width > 0 && r.height > 0
 }
 
-const findById = (id: string): HTMLElement | null =>
-  (Array.from(document.querySelectorAll(`[data-help-id="${esc(id)}"]`)) as HTMLElement[]).find(isVisible) || null
+const findById = (id: string): HTMLElement | null => {
+  const all = (Array.from(document.querySelectorAll(`[data-help-id="${esc(id)}"]`)) as HTMLElement[]).filter(isVisible)
+  // vários itens com a mesma marca (os detalhes do cadastro): prefere o que já está aberto
+  return all.find(el => el.getAttribute('data-help-state') === 'open') || all[0] || null
+}
 
 type Rule = NonNullable<import('@/lib/platformHelp/types').PlatformStep['completeWhen']>
 
 /** A condição do passo vale agora? Lida direto da tela (o app é quem sabe se o campo foi preenchido ou o botão está pronto). */
 function evalRule(rule: Rule): boolean {
-  const el = (Array.from(document.querySelectorAll(`[data-help-id="${esc(rule.id)}"]`)) as HTMLElement[])[0]
+  const els = Array.from(document.querySelectorAll(`[data-help-id="${esc(rule.id)}"]`)) as HTMLElement[]
+  const el = els[0]
   if (!el) return false
+  // vários itens com a marca (os detalhes): basta um ter o valor esperado
+  if (rule.check === 'attr') return !!rule.attr && els.some(e => e.getAttribute(rule.attr as string) === (rule.equals ?? ''))
   if (rule.check === 'filled') return String((el as HTMLInputElement).value ?? '').trim().length > 0
   if (rule.check === 'enabled') return !(el as HTMLButtonElement).disabled && el.getAttribute('aria-disabled') !== 'true'
   return !!rule.attr && el.getAttribute(rule.attr) === (rule.equals ?? '')
@@ -58,6 +64,13 @@ export function PlatformTourHost() {
   const key = active ? `${active.tour.id}:${active.index}` : ''
   const activeRef = useRef(active)
   activeRef.current = active
+  // de onde a pessoa chegou ao passo atual (para um passo pulado seguir na mesma direção)
+  const lastIndexRef = useRef(-1)
+  const cameFromAfterRef = useRef(false)
+  if (active) {
+    const prevIdx = lastIndexRef.current
+    if (prevIdx !== active.index) { cameFromAfterRef.current = prevIdx > active.index; lastIndexRef.current = active.index }
+  } else lastIndexRef.current = -1
 
   // ao entrar no passo: navega (se for o caso), espera o alvo aparecer e rola até ele
   useEffect(() => {
@@ -73,7 +86,7 @@ export function PlatformTourHost() {
         await sleep(300)
       }
       if (!s.target) return
-      let deadline = Date.now() + 4000
+      let deadline = Date.now() + (s.skipIfMissing ? 1200 : 4000)
       for (;;) {
         if (cancelled) return
         const el = findById(s.target)
@@ -85,6 +98,11 @@ export function PlatformTourHost() {
             const input = findById(s.completeWhen.id)
             if (input && typeof input.focus === 'function') input.focus({ preventScroll: true })
           }
+          return
+        }
+        if (Date.now() > deadline && s.skipIfMissing) {
+          // passo opcional sem alvo nesta tela: segue na direção em que a pessoa vinha (para trás, se ela clicou em Voltar)
+          if (cameFromAfterRef.current) prevStep(); else nextStep()
           return
         }
         if (Date.now() > deadline) {

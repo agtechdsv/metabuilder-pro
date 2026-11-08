@@ -110,7 +110,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
     id: 'studio-criar-caso-de-uso',
     route: STUDIO,
     title: h('Criar um caso de uso', 'Create a use case', 'Crear un caso de uso'),
-    summary: h('Passo a passo do assistente: da lógica ao botão final. Nada é salvo até você concluir.', 'Wizard walkthrough: from logic to the final button. Nothing is saved until you finish.', 'Recorrido del asistente: de la lógica al botón final. No se guarda nada hasta que termine.'),
+    summary: h('Passo a passo do assistente, com ou sem tabelas de detalhe (mestre + detalhe): da lógica ao botão final.', 'Wizard walkthrough, with or without detail tables (master + detail): from logic to the final button.', 'Recorrido del asistente, con o sin tablas de detalle (maestro + detalle): de la lógica al botón final.'),
     recover: ['studio.tab_list', 'ai.back'],
     steps: [
       {
@@ -213,6 +213,32 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
         title: h('Agora é com você', 'Now it is your turn', 'Ahora es su turno'),
         body: h('Arraste pelo menos um campo para o Grid de dados e um para o Formulário (e para o Filtro, se a tela usa busca por argumentos). A tela está liberada nesta etapa.', 'Drag at least one field into the Data grid and one into the Form (and into the Filter if the screen uses search arguments). The screen is free during this step.', 'Arrastre al menos un campo a la Cuadrícula de datos y uno al Formulario (y al Filtro, si la pantalla usa argumentos de búsqueda). La pantalla está libre en esta etapa.'),
         waitingHint: h('Faltam campos nas zonas: o "Próximo passo" só habilita quando a grade e o formulário têm campos.', 'Fields are missing in the zones: "Next step" only enables once the grid and form have fields.', 'Faltan campos en las zonas: "Siguiente paso" solo se habilita cuando la cuadrícula y el formulario tienen campos.'),
+      },
+      {
+        id: 'detail-expand',
+        target: 'wizard.detail_expand',
+        skipIfMissing: true,
+        interactive: true,
+        completeWhen: { id: 'wizard.detail_block', check: 'attr', attr: 'data-help-state', equals: 'open' },
+        waitingHint: h('Clique na setinha de um detalhe para expandi-lo.', 'Click the small arrow of a detail to expand it.', 'Haga clic en la flechita de un detalle para expandirlo.'),
+        title: h('Tem detalhes? Expanda um', 'Has details? Expand one', '¿Tiene detalles? Expanda uno'),
+        body: h(
+          'Embaixo do formulário aparecem as tabelas de DETALHE ligadas ao cadastro (por exemplo, os itens de um pedido). Cada uma começa recolhida. Clique na setinha de um detalhe para expandir a área de campos dele.',
+          'Below the form you see the DETAIL tables linked to the record (for example, the items of an order). Each one starts collapsed. Click the small arrow of a detail to expand its field area.',
+          'Debajo del formulario aparecen las tablas de DETALLE vinculadas al registro (por ejemplo, los ítems de un pedido). Cada una empieza contraída. Haga clic en la flechita de un detalle para expandir su área de campos.',
+        ),
+      },
+      {
+        id: 'detail-fill',
+        target: 'wizard.detail_block',
+        skipIfMissing: true,
+        freeInteraction: true,
+        title: h('Campos do detalhe', 'Detail fields', 'Campos del detalle'),
+        body: h(
+          'Arraste do painel "Campos disponíveis" os campos do detalhe para esta área. No app, eles viram a aba ou a seção do detalhe dentro do formulário do mestre. Aqui também dá escolher Aba ou Seção, Modal ou Drawer e o título de cada item. Este passo é opcional: quando terminar, clique em Próximo.',
+          'Drag the detail fields from the "Available fields" panel into this area. In the app they become the detail tab or section inside the master form. Here you can also choose Tab or Section, Modal or Drawer and each item title. This step is optional: when you are done, click Next.',
+          'Arrastre del panel "Campos disponibles" los campos del detalle a esta área. En la app se vuelven la pestaña o la sección del detalle dentro del formulario del maestro. Aquí también puede elegir Pestaña o Sección, Modal o Drawer y el título de cada ítem. Este paso es opcional: cuando termine, haga clic en Siguiente.',
+        ),
       },
       {
         id: 'next3',
