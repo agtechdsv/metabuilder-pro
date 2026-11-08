@@ -14,6 +14,8 @@ export interface PlatformStep {
   target?: string
   title?: HelpText
   body: HelpText
+  /** segundo item destacado junto com o alvo (ex.: a zona do detalhe e o painel de campos de onde se arrasta); se não aparecer, só o alvo é destacado */
+  alsoTarget?: string
   /** antes de mostrar o passo, clica neste elemento (só para NAVEGAR: abrir uma aba ou o assistente, nunca para gravar) */
   enterClick?: string
   /** o passo só avança quando a pessoa clica no próprio elemento destacado (ex.: "Próximo passo" do assistente) */

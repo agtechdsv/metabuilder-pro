@@ -49,6 +49,7 @@ export function PlatformTourHost() {
   const { t, language } = useI18n()
   const active = useSyncExternalStore(subscribePlatformTour, getActiveTour, () => null)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const [rect2, setRect2] = useState<DOMRect | null>(null)
   const [missing, setMissing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [nonce, setNonce] = useState(0)
@@ -75,6 +76,7 @@ export function PlatformTourHost() {
   // ao entrar no passo: navega (se for o caso), espera o alvo aparecer e rola até ele
   useEffect(() => {
     setRect(null)
+    setRect2(null)
     setMissing(false)
     const a = activeRef.current
     const s = a ? a.tour.steps[a.index] : null
@@ -93,6 +95,7 @@ export function PlatformTourHost() {
         if (el) {
           el.scrollIntoView({ block: 'center', behavior: 'smooth' })
           setRect(el.getBoundingClientRect())
+          if (s.alsoTarget) { const el2 = findById(s.alsoTarget); if (el2) setRect2(el2.getBoundingClientRect()) }
           // passo que espera texto digitado: já deixa o cursor no campo, para a pessoa ver que é ali
           if (s.completeWhen?.check === 'filled') {
             const input = findById(s.completeWhen.id)
@@ -151,6 +154,8 @@ export function PlatformTourHost() {
     const id = setInterval(() => {
       const el = findById(target)
       if (el) { const r = el.getBoundingClientRect(); setRect(prev => (sameRect(prev, r) ? prev : r)) }
+      const also = activeRef.current?.tour.steps[activeRef.current.index]?.alsoTarget
+      if (also) { const el2 = findById(also); if (el2) { const r2 = el2.getBoundingClientRect(); setRect2(prev => (sameRect(prev, r2) ? prev : r2)) } else setRect2(null) }
     }, 120)
     return () => clearInterval(id)
   }, [key, hasRect]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -267,10 +272,28 @@ export function PlatformTourHost() {
     <div className="fixed inset-0 z-[1000020]" style={{ pointerEvents: 'none' }}>
       {rect ? (
         <>
-          <div
-            className="fixed rounded-xl border-2 border-indigo-400 transition-all duration-300"
-            style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: '0 0 0 9999px rgba(15,23,42,0.55)', pointerEvents: 'none' }}
-          />
+          {rect2 ? (
+            <>
+              {/* dois itens destacados: o escurecimento vira uma máscara com dois buracos (o box-shadow só abre um) */}
+              <svg className="fixed inset-0" width="100%" height="100%" style={{ pointerEvents: 'none' }}>
+                <defs>
+                  <mask id="mb-tour-mask">
+                    <rect width="100%" height="100%" fill="white" />
+                    {[rect, rect2].map((r, i) => <rect key={i} x={r.left - PAD} y={r.top - PAD} width={r.width + PAD * 2} height={r.height + PAD * 2} rx={12} fill="black" />)}
+                  </mask>
+                </defs>
+                <rect width="100%" height="100%" fill="rgba(15,23,42,0.55)" mask="url(#mb-tour-mask)" />
+              </svg>
+              {[rect, rect2].map((r, i) => (
+                <div key={i} className="fixed rounded-xl border-2 border-indigo-400" style={{ top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2, pointerEvents: 'none' }} />
+              ))}
+            </>
+          ) : (
+            <div
+              className="fixed rounded-xl border-2 border-indigo-400 transition-all duration-300"
+              style={{ top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2, boxShadow: '0 0 0 9999px rgba(15,23,42,0.55)', pointerEvents: 'none' }}
+            />
+          )}
           {/* a tela atrás do escurecimento não responde a cliques (senão a pessoa sai do tour sem querer); só o item destacado, e só nos passos que pedem o clique */}
           {step.freeInteraction ? null : (step.advanceOnClick && ready) || step.interactive ? (
             <>

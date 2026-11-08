@@ -64,7 +64,7 @@ describe('catálogo da ajuda da plataforma', () => {
     }
     walk(src)
     const wanted = new Set<string>()
-    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) { if (s.target) wanted.add(s.target); if (s.enterClick) wanted.add(s.enterClick) }
+    for (const tour of PLATFORM_TOURS) for (const s of tour.steps) { if (s.target) wanted.add(s.target); if (s.enterClick) wanted.add(s.enterClick); if (s.alsoTarget) wanted.add(s.alsoTarget) }
     const missing = [...wanted].filter(id => !found.has(id))
     expect(missing).toEqual([])
   })

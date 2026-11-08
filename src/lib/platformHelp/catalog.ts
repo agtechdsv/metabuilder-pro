@@ -231,6 +231,7 @@ export const PLATFORM_TOURS: readonly PlatformTour[] = [
       {
         id: 'detail-fill',
         target: 'wizard.detail_block',
+        alsoTarget: 'wizard.fields_panel',
         skipIfMissing: true,
         freeInteraction: true,
         title: h('Campos do detalhe', 'Detail fields', 'Campos del detalle'),
