@@ -13,6 +13,8 @@ const STUDIO = '/admin/:workspace/:project/studio'
 export const PLATFORM_TOURS: readonly PlatformTour[] = [
   {
     id: 'studio-visao-geral',
+    needs: 'studio.tabs',
+    needsHint: h('Disponível na lista do Studio: saia do assistente (seta ao lado do título) para ver este tour.', 'Available on the Studio list: leave the wizard (arrow next to the title) to see this tour.', 'Disponible en la lista del Studio: salga del asistente (flecha junto al título) para ver este recorrido.'),
     route: STUDIO,
     title: h('Conhecendo o Studio', 'Getting to know Studio', 'Conociendo el Studio'),
     summary: h('Onde ficam as áreas do Studio, os indicadores, os atalhos e a lista dos seus casos de uso.', 'Where Studio areas, indicators, shortcuts and your use case list are.', 'Dónde están las áreas del Studio, los indicadores, los atajos y la lista de sus casos de uso.'),

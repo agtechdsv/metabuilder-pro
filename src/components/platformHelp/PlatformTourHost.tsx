@@ -57,6 +57,10 @@ export function PlatformTourHost() {
   const popRef = useRef<HTMLDivElement>(null)
   const [popH, setPopH] = useState(200)
   const recoveredRef = useRef<Set<string>>(new Set())
+  // depois do clique que muda a tela (Finalizar, Publicar), o destaque some até o próximo alvo aparecer: nada fica marcado esperando
+  const holdRef = useRef(false)
+  const posRef = useRef<{ left: number; top: number } | null>(null)
+  const goneSinceRef = useRef(0)
   useEffect(() => setMounted(true), [])
 
   const step = active ? active.tour.steps[active.index] : null
@@ -77,6 +81,8 @@ export function PlatformTourHost() {
   useEffect(() => {
     setRect(null)
     setRect2(null)
+    holdRef.current = false
+    goneSinceRef.current = 0
     setMissing(false)
     const a = activeRef.current
     const s = a ? a.tour.steps[a.index] : null
@@ -149,16 +155,28 @@ export function PlatformTourHost() {
   // acompanha o alvo (rolagem, redimensionar, a tela se rearrumando)
   const hasRect = !!rect
   useEffect(() => {
-    if (!step?.target || !hasRect) return
+    if (!step?.target) return
     const target = step.target
     const id = setInterval(() => {
+      if (holdRef.current) return
       const el = findById(target)
-      if (el) { const r = el.getBoundingClientRect(); setRect(prev => (sameRect(prev, r) ? prev : r)) }
+      if (el) {
+        goneSinceRef.current = 0
+        const r = el.getBoundingClientRect()
+        setRect(prev => (sameRect(prev, r) ? prev : r))
+        setMissing(false)
+      } else {
+        // o alvo sumiu (a tela mudou): tira a marcação; se não voltar em um tempo, avisa
+        setRect(prev => (prev ? null : prev))
+        setRect2(prev => (prev ? null : prev))
+        if (!goneSinceRef.current) goneSinceRef.current = Date.now()
+        else if (Date.now() - goneSinceRef.current > 8000) setMissing(true)
+      }
       const also = activeRef.current?.tour.steps[activeRef.current.index]?.alsoTarget
       if (also) { const el2 = findById(also); if (el2) { const r2 = el2.getBoundingClientRect(); setRect2(prev => (sameRect(prev, r2) ? prev : r2)) } else setRect2(null) }
     }, 120)
     return () => clearInterval(id)
-  }, [key, hasRect]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // passo que só avança quando a pessoa clica no elemento destacado
   useEffect(() => {
@@ -169,6 +187,9 @@ export function PlatformTourHost() {
     const onClick = async () => {
       if (busy) return
       busy = true
+      holdRef.current = true
+      setRect(null)
+      setRect2(null)
       // o tour só acompanha a tela: avança quando o item do próximo passo aparece (se a tela recusou o clique, o tour fica)
       const a = activeRef.current
       const nextTarget = a ? a.tour.steps[a.index + 1]?.target : undefined
@@ -179,6 +200,7 @@ export function PlatformTourHost() {
         await sleep(100)
       }
       busy = false
+      holdRef.current = false
     }
     el.addEventListener('click', onClick)
     return () => el.removeEventListener('click', onClick)
@@ -275,6 +297,11 @@ export function PlatformTourHost() {
     else top = clampY(vh - popH - 12) // alvo gigante: no canto de baixo, sobre ele
   }
 
+  // esperando o alvo (rect nulo, com alvo e sem aviso de ausente): balão onde estava e tela sem destaque nem escurecimento
+  const waiting = !rect && !!step.target && !missing
+  if (rect) posRef.current = { left, top }
+  else if (waiting && posRef.current) { left = posRef.current.left; top = posRef.current.top }
+
   const title = resolveHelp(step.title, language)
   const body = resolveHelp(step.body, language)
 
@@ -317,7 +344,7 @@ export function PlatformTourHost() {
           )}
         </>
       ) : (
-        <div className="fixed inset-0 bg-slate-900/55" style={{ pointerEvents: 'auto' }} />
+        <div className={waiting ? 'fixed inset-0' : 'fixed inset-0 bg-slate-900/55'} style={{ pointerEvents: 'auto' }} />
       )}
 
       <div

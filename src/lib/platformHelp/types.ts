@@ -66,6 +66,10 @@ export interface PlatformTour {
    * levam de volta ("Voltar ao Studio", aba Casos de Uso...). O primeiro visível é clicado quando o alvo do passo não aparece.
    */
   recover?: string[]
+  /** `data-help-id` que precisa estar na tela para o tour fazer sentido (ex.: as abas do dashboard, que somem dentro do assistente) */
+  needs?: string
+  /** o que dizer no menu quando o tour não está disponível por falta de `needs` */
+  needsHint?: HelpText
   /**
    * Onde começar quando a pessoa abre o tour com a tela já adiantada (ex.: já dentro do assistente, na etapa 3). Vale a primeira regra que
    * se cumpre na tela; sem nenhuma, o tour começa no primeiro passo.

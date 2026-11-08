@@ -20,8 +20,16 @@ export function resolveStartIndex(tour: PlatformTour): number {
   return 0
 }
 
+/** O tour pode começar nesta tela? (alguns só valem na lista do Studio, não dentro do assistente) */
+export function tourAvailable(tour: PlatformTour): boolean {
+  if (!tour.needs || typeof document === 'undefined') return true
+  const els = Array.from(document.querySelectorAll(`[data-help-id="${tour.needs}"]`)) as HTMLElement[]
+  return els.some(el => el.getClientRects().length > 0)
+}
+
 export function startPlatformTour(tour: PlatformTour) {
   if (tour.steps.length === 0) return
+  if (!tourAvailable(tour)) return
   const start = resolveStartIndex(tour)
   active = { tour, index: start, from: start, path: typeof window !== 'undefined' ? window.location.pathname : undefined }
   emit()
