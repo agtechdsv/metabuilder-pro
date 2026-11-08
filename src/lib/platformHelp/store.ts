@@ -25,8 +25,10 @@ export function goToStep(index: number) {
 export const nextStep = () => { if (active) goToStep(active.index + 1) }
 export const prevStep = () => { if (active) goToStep(active.index - 1) }
 
-export function stopPlatformTour() {
+/** Encerra o tour. `reason` vai para o console (F12), para entender por que ele fechou se a pessoa não clicou em Fechar. */
+export function stopPlatformTour(reason = 'fechado') {
   if (!active) return
+  if (typeof console !== 'undefined') console.info(`[ajuda da plataforma] tour "${active.tour.id}" encerrado no passo ${active.index + 1}: ${reason}`)
   active = null
   emit()
 }

@@ -117,7 +117,11 @@ export function PlatformTourHost() {
   // navegou para outra página: o tour não faz mais sentido
   useEffect(() => {
     if (!active?.path) return
-    const id = setInterval(() => { if (window.location.pathname !== activeRef.current?.path) stopPlatformTour() }, 300)
+    let strikes = 0
+    const id = setInterval(() => {
+      if (window.location.pathname === activeRef.current?.path) { strikes = 0; return }
+      if (++strikes >= 2) stopPlatformTour(`a página mudou para ${window.location.pathname}`)
+    }, 300)
     return () => clearInterval(id)
   }, [active?.tour.id, active?.path])
 
@@ -161,7 +165,11 @@ export function PlatformTourHost() {
   useEffect(() => {
     if (!active) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); stopPlatformTour() }
+      // quem está digitando (ou usando um painel como o de propriedades do campo) não pode ter as setas e o Esc tomados pelo tour
+      const el = e.target as HTMLElement | null
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return
+      if (e.defaultPrevented) return
+      if (e.key === 'Escape') { e.preventDefault(); stopPlatformTour('tecla Esc') }
       else if (e.key === 'ArrowRight') { e.preventDefault(); finishOrNext() }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); prevStep() }
     }
@@ -176,7 +184,7 @@ export function PlatformTourHost() {
     // passo de clique: só avança clicando no item; passo com condição: só depois que ela vale
     const isFinal = a.index >= a.tour.steps.length - 1
     if (!isFinal && (cur.advanceOnClick || (cur.completeWhen && !evalRule(cur.completeWhen)))) return
-    if (a.index >= a.tour.steps.length - 1) { markTourSeen(a.tour.id); stopPlatformTour() } else nextStep()
+    if (a.index >= a.tour.steps.length - 1) { markTourSeen(a.tour.id); stopPlatformTour('concluído') } else nextStep()
   }
 
   useLayoutEffect(() => {
@@ -245,7 +253,7 @@ export function PlatformTourHost() {
       >
         <div className="mb-1 flex items-start justify-between gap-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{resolveHelp(active.tour.title, language)}</span>
-          <button type="button" onClick={stopPlatformTour} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white" aria-label={t('platform_help.close', 'Fechar')}><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => stopPlatformTour('botão Fechar')} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white" aria-label={t('platform_help.close', 'Fechar')}><X className="h-4 w-4" /></button>
         </div>
         {title && <h3 className="text-sm font-black">{title}</h3>}
         <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">{body}</p>
