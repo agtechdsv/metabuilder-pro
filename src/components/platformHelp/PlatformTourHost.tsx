@@ -179,6 +179,31 @@ export function PlatformTourHost() {
     return () => el.removeEventListener('click', onClick)
   }, [key, hasRect, ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // trava de cliques: o buraco do destaque é um retângulo, e outros botões podem estar por cima dele (ex.: a barra flutuante "Próximo passo").
+  // Enquanto o passo não é livre, só vale clique dentro do item do passo ou do balão do tour; o resto é descartado.
+  useEffect(() => {
+    if (!step || step.freeInteraction) return
+    const target = step.target
+    const guard = (e: Event) => {
+      // cliques do próprio tour (enterClick e recuperação usam .click()) não são da pessoa: passam
+      if (!e.isTrusted) return
+      const node = e.target as Node | null
+      if (!node || !(node instanceof Node)) return
+      if (popRef.current?.contains(node)) return
+      if (target) {
+        const els = Array.from(document.querySelectorAll(`[data-help-id="${esc(target)}"]`)) as HTMLElement[]
+        // com o passo bloqueado (esperando condição ou só leitura) nada fora do balão responde; com o passo liberado, só o próprio item
+        const open = step.interactive || (step.advanceOnClick && ready)
+        if (open && els.some(el => el.contains(node))) return
+      }
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    const evs = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'dblclick']
+    for (const n of evs) window.addEventListener(n, guard, true)
+    return () => { for (const n of evs) window.removeEventListener(n, guard, true) }
+  }, [key, ready]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // teclado
   useEffect(() => {
     if (!active) return
