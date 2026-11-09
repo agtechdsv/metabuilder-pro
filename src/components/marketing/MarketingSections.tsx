@@ -8,6 +8,9 @@ import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { BottomCta } from '@/components/landing/BottomCta'
+import { CampaignBanner } from '@/components/marketing/CampaignBanner'
+import { campaignOffPercent, fetchActiveCampaign, type PricingCampaign } from '@/lib/campaigns'
+import { chargeBreakdown } from '../../../supabase/functions/_shared/pricing'
 
 export function MarketingSections() {
   const { t } = useI18n()
@@ -16,6 +19,10 @@ export function MarketingSections() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>('monthly')
+  const [campaign, setCampaign] = useState<PricingCampaign | null>(null)
+
+  // campanha de preço vigente (Black November...), se houver
+  useEffect(() => { fetchActiveCampaign(createClient()).then(setCampaign) }, [])
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -1067,6 +1074,8 @@ export function MarketingSections() {
           </p>
         </div>
 
+        <CampaignBanner campaign={campaign} className="max-w-4xl mx-auto mb-8 rounded-2xl" />
+
         {/* Billing Cycle Selector */}
         <div className="flex justify-center mb-12">
           <div className="bg-neutral-100/80 dark:bg-neutral-900/60 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/40 p-1.5 rounded-2xl flex items-center gap-1.5 w-full max-w-lg relative z-20 shadow-inner">
@@ -1286,6 +1295,16 @@ export function MarketingSections() {
                           </>
                         )}
                       </div>
+                      {campaign && licenses < 100 && (() => {
+                        const first = chargeBreakdown({ rules, licenses, cycle: billingCycle, campaign: { percent: Number(campaign.discount_percent), months: campaign.months, licenses } })
+                        return (
+                          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t('campaign.price_first_charge')}</span>
+                            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">R$ {first.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <p className="mt-1 text-[11px] font-bold text-neutral-500">{t('campaign.price_note').replace('{off}', String(campaignOffPercent(campaign))).replace('{months}', String(campaign.months))}</p>
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {licenses >= 100 ? (

@@ -25,6 +25,20 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
   )
   const [workspace, setWorkspace] = useState<any>(null)
 
+  // Cotação do SERVIDOR: o valor que será cobrado de verdade (campanha incluída, só para quem for elegível). Sem ela, vale o cálculo local (preço regular).
+  const [quote, setQuote] = useState<{ quotes: Record<string, { total: number }>; campaign: any | null; licenses: number } | null>(null)
+  useEffect(() => {
+    if (!user || licenses >= 100) { setQuote(null); return }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const { data, error } = await createClient().functions.invoke('asaas-checkout', { body: { action: 'quote', licenses, isUpgrade } })
+        if (!cancelled && !error && data?.success) setQuote({ quotes: data.quotes || {}, campaign: data.campaign || null, licenses })
+      } catch { /* sem cotação: fica o cálculo local */ }
+    }, 350)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [licenses, isUpgrade, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Checkout form states
   const [billingName, setBillingName] = useState(profile?.full_name || '')
   const [billingCpfCnpj, setBillingCpfCnpj] = useState(profile?.cnpj || '')
@@ -102,6 +116,13 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
   // Helper to calculate cycle prices dynamically
   const getCyclePrices = (currentCycle: 'monthly' | 'quarterly' | 'semiannual' | 'yearly', targetLicenses: number = licenses) => {
     if (!rules) return { total: 0, monthlyEquivalent: 0, months: 1, dailyRate: 0 }
+
+    // o servidor sabe o que será cobrado (campanha, desconto de indicação): usa a cotação dele quando ela é desta quantidade de licenças
+    const q = quote && quote.licenses === targetLicenses ? quote.quotes[currentCycle] : null
+    if (q && Number.isFinite(q.total)) {
+      const m = currentCycle === 'quarterly' ? 3 : currentCycle === 'semiannual' ? 6 : currentCycle === 'yearly' ? 12 : 1
+      return { total: q.total, monthlyEquivalent: q.total / m, months: m, dailyRate: q.total / (m * 30) }
+    }
 
     const basePrice = Number(rules.base_price) || 450
     let volDiscount = 0
@@ -376,7 +397,7 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,
     cardName, setCardName, cardExpiry, setCardExpiry, cardCvv, setCardCvv,
     billingPostalCode, setBillingPostalCode, billingAddressNumber, setBillingAddressNumber,
-    isProcessing, checkoutStep, showPaymentDetails, getCyclePrices, prorataDetails, isDowngradeOrSame, handleSubmitCheckout, featuresList, router,
+    isProcessing, checkoutStep, showPaymentDetails, getCyclePrices, quote, prorataDetails, isDowngradeOrSame, handleSubmitCheckout, featuresList, router,
     countdown, successWorkspaceSlug, pixQrCode, pixCopiaCola, barCode, identificationField, invoiceUrl, pendingPaymentId,
     isSendingEmail, setIsSendingEmail, emailSent, setEmailSent, toast
   }

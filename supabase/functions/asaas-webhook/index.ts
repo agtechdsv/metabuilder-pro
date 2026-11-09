@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { grantVolumeLicenses, processReferralConversion, revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
+import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -55,16 +57,16 @@ serve(async (req) => {
       externalReference: string;
     }
 
+    // 0 = a referência não informa as licenças (renovações do Asaas às vezes vêm sem ela): quem chama NÃO deve sobrescrever as licenças do perfil
     const extractLicensesFromExtRef = (extRef: string): number => {
-      if (!extRef) return 1;
+      if (!extRef) return 0;
       const parts = extRef.split("_");
       let lIndex = parts.indexOf("l");
       if (lIndex === -1) lIndex = parts.indexOf("u");
       if (lIndex !== -1 && parts[lIndex + 1]) {
         return parseInt(parts[lIndex + 1], 10) || 1;
       }
-      // Try to get it from description if external_reference doesn't have it
-      return 1;
+      return 0;
     };
 
     const resolveContext = async (): Promise<Context | null> => {
@@ -101,7 +103,7 @@ serve(async (req) => {
         console.log(`[S2] Looking up profiles by asaas_subscription_id=${subId}`);
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, subscription_cycle")
+          .select("id, subscription_cycle, subscription_licenses")
           .eq("asaas_subscription_id", subId)
           .maybeSingle();
 
@@ -111,7 +113,7 @@ serve(async (req) => {
           return {
             userId: data.id,
             cycle: data.subscription_cycle || "",
-            licenses: extractLicensesFromExtRef(payment?.externalReference || ""),
+            licenses: extractLicensesFromExtRef(payment?.externalReference || "") || Number(data.subscription_licenses) || 0,
             externalReference: payment?.externalReference || ""
           };
         }
@@ -206,50 +208,6 @@ serve(async (req) => {
         .select("asaas_subscription_id")
         .single();
         
-      if (isUpgradePayment && oldProfile?.asaas_subscription_id) {
-          const { data: rules } = await supabase.from("pricing_rules").select("*").order("created_at", { ascending: false }).limit(1).single();
-          const basePrice = Number(rules?.base_price) || 450;
-          let volDiscount = 0;
-          if (rules?.volume_tiers && rules.volume_tiers.length > 0) {
-            const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
-            const tier = sorted.find((t: any) => ctx.licenses >= t.min_licenses);
-            if (tier) volDiscount = tier.discount_percent;
-          }
-          const unitPrice = basePrice * (1 - volDiscount / 100);
-          
-          let cycleDiscount = 0;
-          if (ctx.cycle !== "monthly" && rules?.cycle_discounts) {
-            cycleDiscount = rules.cycle_discounts[ctx.cycle] || 0;
-          }
-          const cyclePrice = (unitPrice * ctx.licenses * monthsToAdd) * (1 - cycleDiscount / 100);
-          
-          let asaasCycle = "MONTHLY";
-          if (ctx.cycle === "quarterly") asaasCycle = "QUARTERLY";
-          else if (ctx.cycle === "semiannual") asaasCycle = "SEMIANNUALLY";
-          else if (ctx.cycle === "yearly") asaasCycle = "YEARLY";
-
-          const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
-          const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
-          if (ASAAS_API_KEY) {
-            await fetch(`${ASAAS_URL}/subscriptions/${oldProfile.asaas_subscription_id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json", "access_token": ASAAS_API_KEY },
-              body: JSON.stringify({ 
-                value: cyclePrice, 
-                cycle: asaasCycle,
-                description: `MetaBuilderPRO - Assinatura Pro (${ctx.licenses} licenças)`
-              })
-            });
-            console.log(`[PAYMENT_RECEIVED] Subscription ${oldProfile.asaas_subscription_id} base value updated for upgrade`);
-            
-            // Sync the updated base value to our profiles table
-            await supabase
-              .from("profiles")
-              .update({ subscription_amount: cyclePrice })
-              .eq("id", ctx.userId);
-          }
-      }
-
       if (profileError) {
         console.error(`[PAYMENT_RECEIVED] Error updating profile ${ctx.userId}:`, profileError);
         throw profileError;
@@ -293,161 +251,39 @@ serve(async (req) => {
       }
 
       // =======================================================================
-      // iClub: Process Referral Conversion & Apply Discounts
+      // Campanha + iClub (regras e cálculo em ../_shared; ver scripts/iclub-campanhas.sql)
       // =======================================================================
       try {
-        // Fetch the user's profile to get email and details
-        const { data: subscribedUserProfile } = await supabase
-          .from("profiles")
-          .select("email, full_name")
-          .eq("id", ctx.userId)
-          .single();
-
-        if (subscribedUserProfile) {
-          const userEmail = subscribedUserProfile.email?.toLowerCase();
-
-          // Check if there is a pending referral for this user
-          const { data: referral, error: refError } = await supabase
-            .from("iclub_referrals")
-            .select("id, referrer_id, status")
-            .eq("status", "registered")
-            .or(`referred_id.eq.${ctx.userId},referred_email.eq.${userEmail}`)
-            .maybeSingle();
-
-          if (referral) {
-            console.log(`[iClub] Found referral conversion! ReferralId=${referral.id}, ReferrerId=${referral.referrer_id}`);
-
-            // 1. Update referral status to subscribed
+        // meses de uso pagos: conta UMA vez por pagamento (o Asaas manda PAYMENT_CONFIRMED e PAYMENT_RECEIVED); a cobrança extra de upgrade não conta
+        if (payment?.id && !isUpgradePayment && isCycle(ctx.cycle)) {
+          const { data: claimed } = await supabase
+            .from("payments")
+            .update({ campaign_counted: true })
+            .eq("asaas_payment_id", payment.id)
+            .eq("campaign_counted", false)
+            .select("id");
+          if (claimed?.length) {
+            const { data: cur } = await supabase.from("profiles").select("campaign_months_used").eq("id", ctx.userId).single();
             await supabase
-              .from("iclub_referrals")
-              .update({
-                referred_id: ctx.userId,
-                status: "subscribed",
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", referral.id);
-
-            // 2. Fetch active referral discount rules
-            const { data: rules } = await supabase
-              .from("iclub_rules")
-              .select("reward_value")
-              .eq("benefit_type", "referral_discount")
-              .eq("is_active", true)
-              .maybeSingle();
-
-            const discountValue = rules ? Number(rules.reward_value) : 5.00; // fallback to 5%
-
-            // 3. Create active reward for referrer
-            await supabase
-              .from("iclub_rewards")
-              .insert({
-                user_id: referral.referrer_id,
-                reward_type: "percent_discount",
-                reward_value: discountValue,
-                status: "active",
-                notes: `Indicação de ${subscribedUserProfile.full_name || userEmail} (${userEmail})`
-              });
-
-            // 4. Recalculate referrer's next invoice value and apply to Asaas
-            const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
-            const ASAAS_URL = Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3";
-
-            if (ASAAS_API_KEY) {
-              // Get referrer profile
-              const { data: referrerProfile } = await supabase
-                .from("profiles")
-                .select("asaas_subscription_id")
-                .eq("id", referral.referrer_id)
-                .single();
-
-              if (referrerProfile?.asaas_subscription_id) {
-                // Get all active percent discount rewards for referrer
-                const { data: activeRewards } = await supabase
-                  .from("iclub_rewards")
-                  .select("reward_value")
-                  .eq("user_id", referral.referrer_id)
-                  .eq("reward_type", "percent_discount")
-                  .eq("status", "active");
-
-                const totalDiscountPercent = Math.min(
-                  activeRewards ? activeRewards.reduce((sum, r) => sum + Number(r.reward_value), 0) : 0,
-                  100
-                );
-
-                console.log(`[iClub] Referrer total discount percentage: ${totalDiscountPercent}%`);
-
-                if (totalDiscountPercent > 0) {
-                  // Fetch referrer's subscription from Asaas to get base price
-                  const subRes = await fetch(`${ASAAS_URL}/subscriptions/${referrerProfile.asaas_subscription_id}`, {
-                    headers: { "access_token": ASAAS_API_KEY }
-                  });
-
-                  if (subRes.ok) {
-                    const subData = await subRes.json();
-                    const basePrice = Number(subData.value);
-
-                    // Fetch next pending payment
-                    const paymentsRes = await fetch(
-                      `${ASAAS_URL}/payments?subscription=${referrerProfile.asaas_subscription_id}&status=PENDING`,
-                      { headers: { "access_token": ASAAS_API_KEY } }
-                    );
-
-                    if (paymentsRes.ok) {
-                      const paymentsData = await paymentsRes.json();
-                      if (paymentsData.data && paymentsData.data.length > 0) {
-                        const firstPendingPayment = paymentsData.data[0];
-                        const newPrice = Math.max(0, basePrice * (1 - totalDiscountPercent / 100));
-
-                        console.log(`[iClub] Updating pending payment ${firstPendingPayment.id} in Asaas from ${basePrice} to ${newPrice}`);
-
-                        // Update payment value in Asaas
-                        const updatePayRes = await fetch(`${ASAAS_URL}/payments/${firstPendingPayment.id}`, {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            "access_token": ASAAS_API_KEY
-                          },
-                          body: JSON.stringify({ value: newPrice })
-                        });
-
-                        if (!updatePayRes.ok) {
-                          const payErr = await updatePayRes.json().catch(() => ({}));
-                          console.error(`[iClub] Error updating payment in Asaas:`, payErr);
-                        } else {
-                          console.log(`[iClub] Successfully updated payment ${firstPendingPayment.id} value in Asaas.`);
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+              .from("profiles")
+              .update({ campaign_months_used: (Number(cur?.campaign_months_used) || 0) + CYCLE_MONTHS[ctx.cycle] })
+              .eq("id", ctx.userId);
           }
         }
 
-        // 5. Consume active rewards for the user who just made a payment (if they have active percent_discount rewards)
-        const { data: userRewardsToConsume } = await supabase
-          .from("iclub_rewards")
-          .select("id")
-          .eq("user_id", ctx.userId)
-          .eq("reward_type", "percent_discount")
-          .eq("status", "active");
+        // o indicado pagou: quem indicou ganha o desconto (em carência) enquanto ele seguir assinante
+        const referrerId = await processReferralConversion(supabase, ctx.userId);
+        // licença grátis a cada 12 licenças contadas (as da campanha só contam depois dos meses da campanha)
+        await grantVolumeLicenses(supabase, ctx.userId);
 
-        if (userRewardsToConsume && userRewardsToConsume.length > 0) {
-          const rewardIds = userRewardsToConsume.map(r => r.id);
-          console.log(`[iClub] Consuming ${rewardIds.length} active percent_discount rewards for user ${ctx.userId}`);
-          
-          await supabase
-            .from("iclub_rewards")
-            .update({
-              status: "applied",
-              notes: `Aplicado no pagamento Asaas ID ${payment?.id || 'unknown'}`,
-              updated_at: new Date().toISOString()
-            })
-            .in("id", rewardIds);
+        // valor da PRÓXIMA cobrança de quem pagou (campanha que acaba, desconto de indicação, licenças) e de quem indicou
+        const next = await syncNextCharge(supabase, ctx.userId);
+        if (isUpgradePayment && next) {
+          await supabase.from("profiles").update({ subscription_amount: next.total }).eq("id", ctx.userId);
         }
+        if (referrerId) await syncNextCharge(supabase, referrerId);
       } catch (iclubErr) {
-        console.error("[iClub] Error processing referral conversion / discounts:", iclubErr);
+        console.error("[campanha/iClub] erro ao processar o pagamento:", iclubErr);
       }
     }
 
@@ -459,7 +295,27 @@ serve(async (req) => {
           .update({ subscription_status: "canceled" })
           .eq("id", ctx.userId);
         console.log(`[SUBSCRIPTION_DELETED] Profile ${ctx.userId} marked canceled`);
+        // quem foi indicado por esta pessoa deixa de dar desconto; recalcula a assinatura de quem indicou
+        try {
+          for (const referrerId of await revokeReferralRewards(supabase, ctx.userId)) await syncNextCharge(supabase, referrerId);
+        } catch (e) { console.error("[iClub] erro ao revogar recompensas:", e); }
       }
+    }
+
+    else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
+      const ctx = await resolveContext();
+      if (payment?.id) {
+        await supabase
+          .from("payments")
+          .update({ status: "refunded", webhook_payload: body, webhook_received_at: new Date().toISOString(), webhook_processed: true })
+          .eq("asaas_payment_id", payment.id);
+      }
+      if (ctx?.userId) {
+        try {
+          for (const referrerId of await revokeReferralRewards(supabase, ctx.userId)) await syncNextCharge(supabase, referrerId);
+        } catch (e) { console.error("[iClub] erro ao revogar recompensas:", e); }
+      }
+      console.log(`[${event}] payment ${payment?.id} user ${ctx?.userId}`);
     }
 
     else if (event === "PAYMENT_OVERDUE") {

@@ -16,6 +16,9 @@ export function useClientIClub({
     rules: IClubRule[];
     referrals: IClubReferral[];
     rewards: IClubReward[];
+    countedLicenses?: number;
+    capPercent?: number;
+    activeDiscountPercent?: number;
   } | null>(null)
   const [loadingIClub, setLoadingIClub] = useState(false)
 
@@ -28,6 +31,9 @@ export function useClientIClub({
         rules: res.rules || [],
         referrals: res.referrals || [],
         rewards: res.rewards || [],
+        countedLicenses: res.countedLicenses,
+        capPercent: res.capPercent,
+        activeDiscountPercent: res.activeDiscountPercent,
       })
     } else {
       toast(res.error || 'Erro ao carregar dados do iClub.', 'error')

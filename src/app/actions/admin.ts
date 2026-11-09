@@ -322,6 +322,110 @@ export async function getPricingRules() {
   }
 }
 
+// ---- Campanhas de preço (Black November...) e ajustes do iClub: só o SuperAdmin ----
+
+export interface CampaignInput {
+  id?: string
+  name: { pt: string; en: string; es: string }
+  headline: { pt: string; en: string; es: string }
+  discount_percent: number
+  months: number
+  starts_at: string
+  ends_at: string
+  is_active: boolean
+  allowed_emails: string[]
+}
+
+export async function listCampaigns() {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+    const { data, error } = await adminSupabase.from('pricing_campaigns').select('*').order('created_at', { ascending: false })
+    if (error) return { success: false, error: error.message }
+    return { success: true, campaigns: data || [] }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function saveCampaign(input: CampaignInput) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+    const percent = Number(input.discount_percent)
+    const months = Math.round(Number(input.months))
+    const starts = new Date(input.starts_at)
+    const ends = new Date(input.ends_at)
+    if (!input.name?.pt?.trim()) return { success: false, error: 'Dê um nome em português à campanha.' }
+    if (!Number.isFinite(percent) || percent <= 0 || percent > 100) return { success: false, error: 'O % cobrado da tabela deve ficar entre 1 e 100 (50 = metade do preço).' }
+    if (!Number.isFinite(months) || months < 1 || months > 36) return { success: false, error: 'Os meses da campanha devem ficar entre 1 e 36.' }
+    if (isNaN(starts.getTime()) || isNaN(ends.getTime()) || ends <= starts) return { success: false, error: 'A data de fim deve ser depois da data de início.' }
+
+    const row = {
+      name: { pt: input.name.pt.trim(), en: (input.name.en || input.name.pt).trim(), es: (input.name.es || input.name.pt).trim() },
+      headline: { pt: (input.headline?.pt || '').trim(), en: (input.headline?.en || input.headline?.pt || '').trim(), es: (input.headline?.es || input.headline?.pt || '').trim() },
+      discount_percent: percent,
+      months,
+      starts_at: starts.toISOString(),
+      ends_at: ends.toISOString(),
+      is_active: !!input.is_active,
+      allowed_emails: (input.allowed_emails || []).map(e => e.trim().toLowerCase()).filter(Boolean),
+      updated_at: new Date().toISOString(),
+    }
+    const { error } = input.id
+      ? await adminSupabase.from('pricing_campaigns').update(row).eq('id', input.id)
+      : await adminSupabase.from('pricing_campaigns').insert(row)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/')
+    revalidatePath('/checkout')
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function deleteCampaign(id: string) {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+    const { error } = await adminSupabase.from('pricing_campaigns').delete().eq('id', id)
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/')
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function getIClubSettings() {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+    const { data } = await adminSupabase.from('platform_settings').select('key, value').in('key', ['iclub_referral_cap_percent', 'iclub_grace_days'])
+    const map = new Map((data || []).map((r: any) => [r.key, r.value]))
+    const cap = Number((map.get('iclub_referral_cap_percent') as any)?.percent)
+    const grace = Number((map.get('iclub_grace_days') as any)?.days)
+    return { success: true, capPercent: Number.isFinite(cap) ? cap : 30, graceDays: Number.isFinite(grace) ? grace : 7 }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+export async function saveIClubSettings(capPercent: number, graceDays: number) {
+  try {
+    const { adminSupabase, user } = await checkSuperAdmin()
+    const cap = Number(capPercent)
+    const grace = Math.round(Number(graceDays))
+    if (!Number.isFinite(cap) || cap < 0 || cap > 100) return { success: false, error: 'O teto do desconto de indicação deve ficar entre 0 e 100%.' }
+    if (!Number.isFinite(grace) || grace < 0 || grace > 60) return { success: false, error: 'A carência deve ficar entre 0 e 60 dias.' }
+    const now = new Date().toISOString()
+    const { error } = await adminSupabase.from('platform_settings').upsert([
+      { key: 'iclub_referral_cap_percent', value: { percent: cap }, updated_at: now, updated_by: user?.id ?? null },
+      { key: 'iclub_grace_days', value: { days: grace }, updated_at: now, updated_by: user?.id ?? null },
+    ])
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
 /** Prazo da lixeira (em horas), lido do ajuste global. Só o SuperAdmin lê por aqui; as demais pessoas usam a função mb_trash_retention_hours. */
 export async function getTrashRetention() {
   try {

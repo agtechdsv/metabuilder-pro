@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import type { IClubRule, IClubReferral, IClubReward } from '@/lib/iclub'
+import { iclubCountedLicenses, referralPercentTotal } from '../../../supabase/functions/_shared/pricing'
 
 // Helper to check super admin authorization
 async function checkSuperAdmin() {
@@ -35,7 +36,7 @@ export async function getIClubDashboardData() {
     // Fetch user's profile to get referral code
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, referral_code')
+      .select('id, referral_code, subscription_licenses, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used')
       .eq('id', user.id)
       .single()
 
@@ -90,12 +91,26 @@ export async function getIClubDashboardData() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
+    // as licenças da campanha só contam para as "12 licenças" depois dos meses da campanha
+    const campaign = profile.campaign_id && Number(profile.campaign_months) > 0
+      ? { percent: Number(profile.campaign_percent) || 50, months: Number(profile.campaign_months), licenses: Number(profile.campaign_licenses) || Number(profile.subscription_licenses) || 1 }
+      : null
+    const countedLicenses = iclubCountedLicenses(Number(profile.subscription_licenses) || 1, campaign, Number(profile.campaign_months_used) || 0)
+
+    // teto do desconto de indicação (definido pelo SuperAdmin) e o desconto que vale agora
+    const { data: capRow } = await supabase.from('platform_settings').select('value').eq('key', 'iclub_referral_cap_percent').maybeSingle()
+    const capPercent = Number.isFinite(Number((capRow?.value as any)?.percent)) ? Number((capRow?.value as any).percent) : 30
+    const activeDiscountPercent = referralPercentTotal(((rewards || []) as any[]).filter(r => r.reward_type === 'percent_discount'), capPercent)
+
     return {
       success: true,
       referralCode: profile.referral_code,
       rules: (rules || []) as IClubRule[],
       referrals: referrals as IClubReferral[],
-      rewards: (rewards || []) as IClubReward[]
+      rewards: (rewards || []) as IClubReward[],
+      countedLicenses,
+      capPercent,
+      activeDiscountPercent
     }
   } catch (err: any) {
     console.error('Error fetching iClub dashboard data:', err)

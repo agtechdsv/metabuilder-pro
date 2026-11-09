@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { campaignFromProfile, grantVolumeLicenses, referralPercentFor } from "../_shared/iclub.ts";
+import { isCycle, isCycleEnabled, nextChargeValue } from "../_shared/pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +48,7 @@ serve(async (req) => {
     // Fetch user profile
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
-      .select("id, asaas_subscription_id, asaas_customer_id, subscription_licenses, subscription_cycle")
+      .select("id, asaas_subscription_id, asaas_customer_id, subscription_licenses, subscription_cycle, subscription_status, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used")
       .eq("id", user.id)
       .single();
 
@@ -174,44 +176,25 @@ serve(async (req) => {
         );
       }
 
-      // Calculate dynamic price
-      let discountPercent = 0;
-      const tiers = [...(rules.volume_tiers || [])].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
-      for (const tier of tiers) {
-        if (licensesCount >= tier.min_licenses) {
-          discountPercent = tier.discount_percent;
-          break;
-        }
-      }
-
-      let baseValue = rules.base_price * licensesCount;
-      let valueWithVolumeDiscount = baseValue * (1 - discountPercent / 100);
-
-      let cycleDiscount = 0;
-      let asaasCycle = "";
-      if (cycle === "monthly") {
-        asaasCycle = "MONTHLY";
-      } else if (cycle === "quarterly") {
-        cycleDiscount = rules.cycle_discounts?.quarterly || 10;
-        asaasCycle = "QUARTERLY";
-      } else if (cycle === "semiannual") {
-        cycleDiscount = rules.cycle_discounts?.semiannual || 15;
-        asaasCycle = "SEMIANNUALLY";
-      } else if (cycle === "yearly") {
-        cycleDiscount = rules.cycle_discounts?.yearly || 20;
-        asaasCycle = "YEARLY";
-      } else {
+      // Ciclo e valor: cálculo ÚNICO em ../_shared/pricing.ts (a campanha comprada continua valendo; licenças acrescentadas pagam preço regular)
+      if (!isCycle(cycle)) {
         return new Response(
           JSON.stringify({ error: "Ciclo de faturamento inválido" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      let finalValue = valueWithVolumeDiscount * (1 - cycleDiscount / 100);
-      let cyclePrice = finalValue;
-      if (cycle === "quarterly") cyclePrice *= 3;
-      else if (cycle === "semiannual") cyclePrice *= 6;
-      else if (cycle === "yearly") cyclePrice *= 12;
+      if (!isCycleEnabled(rules, cycle, profile.subscription_cycle)) {
+        return new Response(
+          JSON.stringify({ error: "Este ciclo de faturamento não está disponível" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const asaasCycle = cycle === "monthly" ? "MONTHLY" : cycle === "quarterly" ? "QUARTERLY" : cycle === "semiannual" ? "SEMIANNUALLY" : "YEARLY";
+      const referralPercent = await referralPercentFor(supabaseClient, user.id);
+      const cyclePrice = nextChargeValue({
+        rules, licenses: licensesCount, cycle,
+        campaign: campaignFromProfile(profile), monthsUsed: Number(profile.campaign_months_used) || 0, referralPercent,
+      }).total;
 
       // Update Subscription in Asaas
       const updatePayload = {
@@ -262,6 +245,9 @@ serve(async (req) => {
       if (updateDbError) {
         console.error("Erro ao atualizar perfil local:", updateDbError);
       }
+
+      // mais licenças podem completar um múltiplo de 12 (licença grátis do iClub)
+      try { await grantVolumeLicenses(supabaseClient, user.id); } catch (e) { console.error("[iClub] erro ao conceder licença por volume:", e); }
 
       return new Response(
         JSON.stringify({ success: true, subscription: updatedSub }),

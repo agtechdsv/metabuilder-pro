@@ -3797,6 +3797,13 @@
     "tour_stale_badge": "Ajuda interativa",
     "tour_stale_badge_hint": "A ajuda interativa deste caso de uso pode estar desatualizada. Abra a Central de Ajuda para regenerar."
   },
+  "campaign": {
+    "banner_detail": "{off}% de desconto nos primeiros {months} meses de uso. Para novos clientes.",
+    "banner_ends": "Termina em {time}",
+    "price_first_charge": "Primeira cobrança com a campanha",
+    "price_note": "{off}% de desconto nos primeiros {months} meses de uso; depois, a renovação volta ao preço normal. Para novos clientes.",
+    "checkout_note": "Campanha {name}: {off}% de desconto nos primeiros {months} meses de uso, já incluído no total acima. Depois, a renovação volta ao preço normal."
+  },
   "checkout": {
     "title": "Finalizar",
     "title_highlight": "Assinatura",
@@ -4369,6 +4376,9 @@
       "granted_at": "Concedido em {date}",
       "status_active": "Ativo",
       "status_applied": "Consumido",
+      "status_pending": "Em carência",
+      "status_revoked": "Encerrado",
+      "status_canceled": "Cancelado",
       "status_expired": "Expirado",
       "no_rewards": "Nenhuma recompensa recebida ainda.",
       "error_init": "Não foi possível inicializar o painel do iClub."

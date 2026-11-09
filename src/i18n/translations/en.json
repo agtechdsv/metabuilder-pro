@@ -3797,6 +3797,13 @@
     "tour_stale_badge": "Interactive help",
     "tour_stale_badge_hint": "The interactive help for this use case may be out of date. Open the Help Center to regenerate it."
   },
+  "campaign": {
+    "banner_detail": "{off}% off the first {months} months of use. For new customers.",
+    "banner_ends": "Ends in {time}",
+    "price_first_charge": "First charge with the campaign",
+    "price_note": "{off}% off the first {months} months of use; after that, renewal goes back to the regular price. For new customers.",
+    "checkout_note": "Campaign {name}: {off}% off the first {months} months of use, already included in the total above. After that, renewal goes back to the regular price."
+  },
   "checkout": {
     "title": "Complete",
     "title_highlight": "Subscription",
@@ -4369,6 +4376,9 @@
       "granted_at": "Granted on {date}",
       "status_active": "Active",
       "status_applied": "Redeemed",
+      "status_pending": "In grace period",
+      "status_revoked": "Ended",
+      "status_canceled": "Canceled",
       "status_expired": "Expired",
       "no_rewards": "No rewards received yet.",
       "error_init": "Could not initialize iClub panel."

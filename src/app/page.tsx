@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { Navbar } from '@/components/layout/Navbar'
 import { HeroContent } from '@/components/landing/HeroContent'
 import { MarketingSections } from '@/components/marketing/MarketingSections'
+import { CampaignTopBar } from '@/components/marketing/CampaignBanner'
 import { Footer } from '@/components/layout/Footer'
 import { HomeClientRouter } from '@/components/landing/HomeClientRouter'
 
@@ -24,6 +25,9 @@ export default async function Home() {
       <Navbar user={user} profile={profile} />
 
       <main className="flex-grow flex flex-col items-center relative">
+        {/* Campanha de preço vigente (Black November...): só aparece se houver uma ativa */}
+        <div className="w-full relative z-10"><CampaignTopBar /></div>
+
         {/* Decorative background elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute top-[10%] left-[-10%] w-[60%] h-[40%] bg-indigo-500/10 rounded-full blur-[140px]"></div>

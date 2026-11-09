@@ -123,7 +123,8 @@ export function ClientIClubView({
                 const volumeRule = iclubData.rules.find((r: any) => r.benefit_type === 'volume_license');
                 const target = volumeRule ? volumeRule.target_count : 12;
                 const rewardValue = volumeRule ? Math.round(Number(volumeRule.reward_value)) : 1;
-                const currentVal = localProfile?.subscription_licenses || 1;
+                // licenças da campanha só contam depois dos meses da campanha (o servidor já descontou)
+                const currentVal = iclubData.countedLicenses ?? (localProfile?.subscription_licenses || 1);
                 const progress = Math.min((currentVal / target) * 100, 100);
                 const licensesRemaining = target - (currentVal % target);
 
@@ -177,7 +178,8 @@ export function ClientIClubView({
                 const referralRule = iclubData.rules.find((r: any) => r.benefit_type === 'referral_discount');
                 const referralDiscount = referralRule ? Math.round(Number(referralRule.reward_value)) : 5;
 
-                const totalDiscount = iclubData.rewards
+                // desconto que vale agora (ativo, ou em carência já vencida), limitado pelo teto definido pela plataforma
+                const totalDiscount = iclubData.activeDiscountPercent ?? iclubData.rewards
                   .filter((r: any) => r.reward_type === 'percent_discount' && r.status === 'active')
                   .reduce((sum: number, r: any) => sum + Number(r.reward_value), 0);
 
@@ -254,9 +256,11 @@ export function ClientIClubView({
                                 "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
                                 ref.status === 'subscribed' || ref.status === 'reward_applied'
                                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
-                                  : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
+                                  : ref.status === 'canceled'
+                                    ? "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
                               )}>
-                                {ref.status === 'subscribed' || ref.status === 'reward_applied' ? t('client_views.iclub.status_active_subscriber', 'Assinante Ativo') : t('client_views.iclub.status_registered', 'Cadastro Realizado')}
+                                {ref.status === 'subscribed' || ref.status === 'reward_applied' ? t('client_views.iclub.status_active_subscriber', 'Assinante Ativo') : ref.status === 'canceled' ? t('client_views.iclub.status_canceled') : t('client_views.iclub.status_registered', 'Cadastro Realizado')}
                               </span>
                             </td>
                           </tr>
@@ -298,11 +302,13 @@ export function ClientIClubView({
                         "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest whitespace-nowrap",
                         reward.status === 'active'
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
+                          : reward.status === 'pending'
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
                           : reward.status === 'applied'
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-450"
                             : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800"
                       )}>
-                        {reward.status === 'active' ? t('client_views.iclub.status_active', 'Ativo') : reward.status === 'applied' ? t('client_views.iclub.status_applied', 'Consumido') : t('client_views.iclub.status_expired', 'Expirado')}
+                        {reward.status === 'active' ? t('client_views.iclub.status_active', 'Ativo') : reward.status === 'pending' ? t('client_views.iclub.status_pending') : reward.status === 'revoked' ? t('client_views.iclub.status_revoked') : reward.status === 'applied' ? t('client_views.iclub.status_applied', 'Consumido') : t('client_views.iclub.status_expired', 'Expirado')}
                       </span>
                     </div>
                   ))

@@ -21,7 +21,7 @@ export interface IClubReferral {
   referrer_id: string
   referred_id: string | null
   referred_email: string
-  status: 'registered' | 'subscribed' | 'reward_applied'
+  status: 'registered' | 'subscribed' | 'reward_applied' | 'canceled'
   created_at: string
   referred_name?: string | null
 }
@@ -31,7 +31,8 @@ export interface IClubReward {
   user_id: string
   reward_type: 'free_license' | 'percent_discount'
   reward_value: number
-  status: 'active' | 'applied' | 'expired'
+  status: 'pending' | 'active' | 'applied' | 'expired' | 'revoked'
+  release_at?: string | null
   notes: string | null
   created_at: string
 }

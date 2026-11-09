@@ -12,6 +12,7 @@ import { CheckoutSuccessView } from './components/CheckoutSuccessView'
 import { CheckoutPaymentWaitView } from './components/CheckoutPaymentWaitView'
 import { useI18n } from '@/i18n'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
+import { campaignOffPercent, localizedText } from '@/lib/campaigns'
 
 
 interface CheckoutClientProps {
@@ -25,7 +26,7 @@ interface CheckoutClientProps {
 }
 
 export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const state = useCheckoutState({ rules, initialLicenses, initialCycle, workspaceSlug, user, profile, mode })
   const {
     isUpgrade, licenses, setLicenses, cycle, setCycle, workspace,
@@ -34,7 +35,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,
     cardName, setCardName, cardExpiry, setCardExpiry, cardCvv, setCardCvv,
     billingPostalCode, setBillingPostalCode, billingAddressNumber, setBillingAddressNumber,
-    isProcessing, checkoutStep, showPaymentDetails, getCyclePrices, prorataDetails, isDowngradeOrSame, handleSubmitCheckout, featuresList, router
+    isProcessing, checkoutStep, showPaymentDetails, getCyclePrices, quote, prorataDetails, isDowngradeOrSame, handleSubmitCheckout, featuresList, router
   } = state
 
   if (checkoutStep === 'success') return <CheckoutSuccessView state={state} />
@@ -541,6 +542,16 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     {licenses >= 100 ? t('checkout.under_consultation', 'Sob Consulta') : `R$ ${getCyclePrices(cycle).total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </span>
                 </div>
+                {!isUpgrade && licenses < 100 && quote?.campaign && (
+                  <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+                    <p className="text-xs text-emerald-800 dark:text-emerald-400 font-medium">
+                      {t('campaign.checkout_note')
+                        .replace('{name}', localizedText(quote.campaign.name, language))
+                        .replace('{off}', String(campaignOffPercent({ discount_percent: quote.campaign.percent })))
+                        .replace('{months}', String(quote.campaign.months))}
+                    </p>
+                  </div>
+                )}
                 {isUpgrade && licenses < 100 && (
                   <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
                     <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">

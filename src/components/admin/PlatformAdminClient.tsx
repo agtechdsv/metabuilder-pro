@@ -21,6 +21,7 @@ import CommunityHubView from '@/components/client/CommunityHubView'
 import { CliFilesAdminView } from './CliFilesAdminView'
 import { PricingRulesAdmin } from './PricingRulesAdmin'
 import { TrashSettingsAdmin } from './TrashSettingsAdmin'
+import { CampaignsAdmin, IClubSettingsAdmin } from './CampaignsAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
 import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
 
@@ -330,6 +331,8 @@ export default function PlatformAdminClient({
             className="space-y-6"
           >
             <PricingRulesAdmin />
+            <CampaignsAdmin />
+            <IClubSettingsAdmin />
             <TrashSettingsAdmin />
           </motion.div>
         )}

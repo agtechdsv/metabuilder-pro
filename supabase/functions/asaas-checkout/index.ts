@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { campaignFromProfile, findEligibleCampaign, referralPercentFor } from "../_shared/iclub.ts";
+import { CYCLE_MONTHS, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,10 +68,12 @@ serve(async (req) => {
       cardExpiry, // MM/AA
       cardCvv,
       workspaceId,
-      isUpgrade
+      isUpgrade,
+      action
     } = body;
 
-    if (!licenses || !cycle || !paymentMethod || !billingName || !billingCpfCnpj || !billingEmail || !workspaceId) {
+    const isQuote = action === "quote";
+    if (isQuote ? !licenses : (!licenses || !cycle || !paymentMethod || !billingName || !billingCpfCnpj || !billingEmail || !workspaceId)) {
       return new Response(
         JSON.stringify({ error: "Parâmetros obrigatórios ausentes" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -91,41 +95,61 @@ serve(async (req) => {
       );
     }
 
-    // Determine cycle price and Asaas cycle name
-    const basePrice = Number(rules.base_price) || 450;
-    let volDiscount = 0;
-    if (rules.volume_tiers && rules.volume_tiers.length > 0) {
-      const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
-      const tier = sorted.find((t: any) => licenses >= t.min_licenses);
-      if (tier) volDiscount = tier.discount_percent;
-    }
-    
-    const unitPrice = basePrice * (1 - volDiscount / 100);
+    // Ciclo e valor: cálculo ÚNICO em ../_shared/pricing.ts (campanha, desconto de indicação, licenças). Nada do preço vem do navegador.
+    const { data: prevProfile } = await supabaseClient.from("profiles").select("*").eq("id", user.id).single();
 
-    let months = 1;
-    let asaasCycle = "MONTHLY";
-    if (cycle === "quarterly") {
-      months = 3;
-      asaasCycle = "QUARTERLY";
-    } else if (cycle === "semiannual") {
-      months = 6;
-      asaasCycle = "SEMIANNUALLY";
-    } else if (cycle === "yearly") {
-      months = 12;
-      asaasCycle = "YEARLY";
-    } else if (cycle !== "monthly") {
+    // Campanha: só para quem NUNCA pagou (cliente novo). Quem faz upgrade mantém a campanha que já comprou (as licenças acrescentadas pagam preço regular).
+    let campaignTerms: CampaignTerms | null = null;
+    let newCampaign: any = null;
+    let monthsUsed = 0;
+    if (isUpgrade) {
+      campaignTerms = campaignFromProfile(prevProfile);
+      monthsUsed = Number(prevProfile?.campaign_months_used) || 0;
+    } else {
+      const { count: paidBefore } = await supabaseClient.from("payments").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "paid");
+      if (!paidBefore) {
+        newCampaign = await findEligibleCampaign(supabaseClient, user.email);
+        if (newCampaign) {
+          campaignTerms = { percent: Number(newCampaign.discount_percent), months: Number(newCampaign.months), licenses: Number(licenses) };
+        }
+      }
+    }
+    const referralPercent = await referralPercentFor(supabaseClient, user.id);
+
+    // Cotação: o site mostra exatamente o que será cobrado (campanha incluída), para cada ciclo disponível. Não cria nada no Asaas.
+    if (isQuote) {
+      const quotes: Record<string, unknown> = {};
+      for (const c of ["monthly", "quarterly", "semiannual", "yearly"] as const) {
+        if (!isCycleEnabled(rules, c, prevProfile?.subscription_cycle)) continue;
+        quotes[c] = nextChargeValue({ rules, licenses: Number(licenses), cycle: c, campaign: campaignTerms, monthsUsed, referralPercent });
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          quotes,
+          campaign: newCampaign
+            ? { id: newCampaign.id, name: newCampaign.name, headline: newCampaign.headline, percent: Number(newCampaign.discount_percent), months: Number(newCampaign.months), ends_at: newCampaign.ends_at }
+            : null,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isCycle(cycle)) {
       return new Response(
         JSON.stringify({ error: "Ciclo de faturamento inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    let cycleDiscount = 0;
-    if (cycle !== "monthly" && rules.cycle_discounts) {
-      cycleDiscount = rules.cycle_discounts[cycle] || 0;
+    const months = CYCLE_MONTHS[cycle];
+    const asaasCycle = cycle === "monthly" ? "MONTHLY" : cycle === "quarterly" ? "QUARTERLY" : cycle === "semiannual" ? "SEMIANNUALLY" : "YEARLY";
+    if (!isCycleEnabled(rules, cycle, prevProfile?.subscription_cycle)) {
+      return new Response(
+        JSON.stringify({ error: "Este ciclo de faturamento não está disponível" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    const cyclePrice = (unitPrice * licenses * months) * (1 - cycleDiscount / 100);
+    const cyclePrice = nextChargeValue({ rules, licenses: Number(licenses), cycle, campaign: campaignTerms, monthsUsed, referralPercent }).total;
 
     // Get Asaas config
     const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY")?.trim();
@@ -292,19 +316,9 @@ serve(async (req) => {
       if (profile.subscription_amount && profile.subscription_amount > 0) {
         oldDailyRate = profile.subscription_amount / (oldMonths * 30);
       } else {
-        let oldVolDiscount = 0;
-        if (rules.volume_tiers && rules.volume_tiers.length > 0) {
-          const sorted = [...rules.volume_tiers].sort((a: any, b: any) => b.min_licenses - a.min_licenses);
-          const tier = sorted.find((t: any) => (profile.subscription_licenses || 1) >= t.min_licenses);
-          if (tier) oldVolDiscount = tier.discount_percent;
-        }
-        const oldUnitPrice = basePrice * (1 - oldVolDiscount / 100);
-
-        let oldCycleDiscount = 0;
-        if (profile.subscription_cycle !== "monthly" && rules.cycle_discounts) {
-          oldCycleDiscount = rules.cycle_discounts[profile.subscription_cycle] || 0;
-        }
-        const oldCyclePrice = (oldUnitPrice * (profile.subscription_licenses || 1) * oldMonths) * (1 - oldCycleDiscount / 100);
+        const oldCyclePrice = isCycle(profile.subscription_cycle)
+          ? chargeBreakdown({ rules, licenses: Number(profile.subscription_licenses) || 1, cycle: profile.subscription_cycle }).total
+          : 0;
 
         oldDailyRate = oldCyclePrice / (oldMonths * 30);
       }
@@ -419,9 +433,15 @@ serve(async (req) => {
       // Update profile with subscription id and amount
       await supabaseClient
         .from("profiles")
-        .update({ 
+        .update({
           asaas_subscription_id: asaasSubscriptionId,
-          subscription_amount: cyclePrice 
+          subscription_amount: cyclePrice,
+          // a campanha comprada fica gravada (mudar a campanha depois não altera quem já comprou); sem campanha, zera
+          campaign_id: newCampaign ? newCampaign.id : null,
+          campaign_percent: newCampaign ? Number(newCampaign.discount_percent) : null,
+          campaign_months: newCampaign ? Number(newCampaign.months) : null,
+          campaign_licenses: newCampaign ? Number(licenses) : null,
+          campaign_months_used: 0
         })
         .eq("id", user.id);
     }
