@@ -35,6 +35,8 @@ export interface PlatformStep {
   interactive?: boolean
   /** se o alvo não existe nesta tela (ex.: o caso de uso não tem tabela de detalhe), o passo é pulado em vez de mostrar "item não visível" */
   skipIfMissing?: boolean
+  /** só leitura: mesmo num tour de cliques livres (`freeClicks`), este passo não deixa clicar no item destacado */
+  readOnly?: boolean
   /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */
   freeInteraction?: boolean
   /**
@@ -61,6 +63,8 @@ export interface PlatformTour {
   title: HelpText
   summary: HelpText
   steps: PlatformStep[]
+  /** a pessoa pode clicar e usar o item destacado em TODOS os passos (exceto os `readOnly`); sem isso, só nos passos `interactive` */
+  freeClicks?: boolean
   /**
    * Como voltar ao ponto de partida do tour se a pessoa saiu dele (abriu o assistente, a IA, outra aba): `data-help-id` de botões que
    * levam de volta ("Voltar ao Studio", aba Casos de Uso...). O primeiro visível é clicado quando o alvo do passo não aparece.

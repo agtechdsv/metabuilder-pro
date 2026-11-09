@@ -22,6 +22,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-visao-geral',
     route: AUTH,
+    freeClicks: true,
     title: h(['Login & Segurança: visão geral', 'Login & Security: overview', 'Acceso y Seguridad: visión general']),
     summary: h(['As quatro abas da tela e onde fica cada coisa. Cada aba tem um tour próprio neste menu.', 'The four tabs of the screen and where each thing is. Each tab has its own tour in this menu.', 'Las cuatro pestañas de la pantalla y dónde está cada cosa. Cada pestaña tiene su propio recorrido en este menú.']),
     steps: [
@@ -55,7 +56,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'The Save button in the header saves the strategy, the visual customization and the table access options. It disappears on the Access Control tab, which has its own save buttons. Changes only apply after saving.',
         'El botón Guardar del encabezado guarda la estrategia, la personalización visual y las opciones de acceso a las tablas. Desaparece en la pestaña Control de Acceso, que tiene sus propios botones de guardar. Los cambios solo valen después de guardar.',
       ], { enterClick: 'auth.tab_strategy' }),
-      st('more', undefined, ['Para ir além', 'Going further', 'Para ir más allá'], [
+      st('more', 'platform.help_button', ['Para ir além', 'Going further', 'Para ir más allá'], [
         'Neste menu de ajuda há um tour para cada assunto: Controle de Acesso, cada Estratégia (Managed Auth, banco legado, LDAP, sem autenticação), Personalização Visual, Usuários, Grupos e Permissões de Telas.',
         'In this help menu there is one tour for each topic: Access Control, each Strategy (Managed Auth, legacy database, LDAP, no authentication), Visual Customization, Users, Groups and Screen Permissions.',
         'En este menú de ayuda hay un recorrido para cada tema: Control de Acceso, cada Estrategia (Managed Auth, base heredada, LDAP, sin autenticación), Personalización Visual, Usuarios, Grupos y Permisos de Pantallas.',
@@ -67,6 +68,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-controle-acesso',
     route: AUTH,
+    freeClicks: true,
     title: h(['Controle de Acesso: segurança e tabelas', 'Access Control: security and tables', 'Control de Acceso: seguridad y tablas']),
     summary: h(['Passkey, MFA e o bloqueio de tabelas por padrão para o usuário final.', 'Passkey, MFA and the default table lock for the end user.', 'Passkey, MFA y el bloqueo de tablas por defecto para el usuario final.']),
     steps: [
@@ -126,6 +128,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-estrategia-managed',
     route: AUTH,
+    freeClicks: true,
     title: h(['Estratégia: Managed Auth', 'Strategy: Managed Auth', 'Estrategia: Managed Auth']),
     summary: h(['O MetaBuilder guarda os usuários do app em uma base isolada. A opção mais rápida.', 'MetaBuilder keeps the app users in an isolated database. The fastest option.', 'MetaBuilder guarda los usuarios de la app en una base aislada. La opción más rápida.']),
     steps: [
@@ -156,6 +159,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-estrategia-banco-legado',
     route: AUTH,
+    freeClicks: true,
     title: h(['Estratégia: banco legado', 'Strategy: legacy database', 'Estrategia: base heredada']),
     summary: h(['O login é validado na SUA tabela de usuários, pelo Agente CLI. Mapeie as colunas e, se quiser, os grupos.', 'Sign-in is validated against YOUR users table, through the CLI Agent. Map the columns and, if you want, the groups.', 'El acceso se valida en SU tabla de usuarios, por el Agente CLI. Mapee las columnas y, si quiere, los grupos.']),
     steps: [
@@ -190,20 +194,25 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'Cómo está guardada la contraseña: bcrypt (recomendado), MD5, SHA-256 o texto plano. Debe coincidir con lo que usa su sistema, si no nadie puede entrar. Evite MD5 y texto plano en producción.',
       ], { interactive: true }),
       st('sync', 'auth.legacy_sync', ['Sincronizar grupos de acesso legado', 'Sync legacy access groups', 'Sincronizar grupos de acceso heredados'], [
-        'Liga a leitura dos grupos (papéis) que já existem no seu banco, para você gerenciar as permissões aqui no Studio sem recriar tudo. Ao ligar, aparecem os campos de mapeamento dos grupos.',
-        'Turns on reading the groups (roles) that already exist in your database, so you manage permissions here in Studio without recreating everything. When on, the group mapping fields appear.',
-        'Activa la lectura de los grupos (roles) que ya existen en su base, para gestionar los permisos aquí en el Studio sin recrear todo. Al activarlo, aparecen los campos de mapeo de los grupos.',
+        'Liga a leitura dos grupos (papéis) que já existem no seu banco, para você gerenciar as permissões aqui no Studio sem recriar tudo. Ao ligar, aparecem os campos de mapeamento dos grupos; ao desligar, eles somem e os próximos passos são pulados.',
+        'Turns on reading the groups (roles) that already exist in your database, so you manage permissions here in Studio without recreating everything. When on, the group mapping fields appear; when off, they disappear and the next steps are skipped.',
+        'Activa la lectura de los grupos (roles) que ya existen en su base, para gestionar los permisos aquí en el Studio sin recrear todo. Al activarlo, aparecen los campos de mapeo de los grupos; al desactivarlo, desaparecen y los próximos pasos se omiten.',
       ], { interactive: true }),
-      st('groups', 'auth.legacy_sync_panel', ['Tabela e coluna dos grupos', 'Groups table and column', 'Tabla y columna de los grupos'], [
+      st('groups', 'auth.legacy_groups_fields', ['Tabela e coluna dos grupos', 'Groups table and column', 'Tabla y columna de los grupos'], [
         'Escolha a tabela de grupos/roles e a coluna com o nome de cada grupo. Esses nomes passam a aparecer na aba Grupos de Acesso.',
         'Pick the groups/roles table and the column holding each group name. Those names then show up in the Access Groups tab.',
         'Elija la tabla de grupos/roles y la columna con el nombre de cada grupo. Esos nombres pasan a aparecer en la pestaña Grupos de Acceso.',
-      ], { skipIfMissing: true, interactive: true }),
+      ], { skipIfMissing: true }),
       st('rel', 'auth.legacy_rel_type', ['Como o usuário se liga ao grupo', 'How the user links to the group', 'Cómo se liga el usuario al grupo'], [
         'Coluna direta na tabela de usuários (ex.: role_id): um grupo por usuário. Tabela intermediária N:N (ex.: user_roles): um usuário em vários grupos; aí você informa a tabela e as colunas de user ID e role ID.',
         'Direct column in the users table (e.g. role_id): one group per user. N:N link table (e.g. user_roles): a user in several groups; then you set the table and the user ID and role ID columns.',
         'Columna directa en la tabla de usuarios (ej.: role_id): un grupo por usuario. Tabla intermedia N:N (ej.: user_roles): un usuario en varios grupos; entonces informa la tabla y las columnas de user ID y role ID.',
       ], { skipIfMissing: true, interactive: true }),
+      st('rel-fields', 'auth.legacy_rel_fields', ['Colunas da ligação', 'Link columns', 'Columnas del vínculo'], [
+        'Aqui você diz ONDE está a ligação. Com "coluna direta", escolha a coluna da tabela de usuários que guarda o grupo (ex.: role_id). Com "tabela intermediária N:N", escolha a tabela de ligação e, nela, a coluna do usuário (user ID) e a do grupo (role ID).',
+        'Here you say WHERE the link is. With "direct column", pick the users table column that holds the group (e.g. role_id). With "N:N link table", pick the link table and, in it, the user column (user ID) and the group column (role ID).',
+        'Aquí dice DÓNDE está el vínculo. Con "columna directa", elija la columna de la tabla de usuarios que guarda el grupo (ej.: role_id). Con "tabla intermedia N:N", elija la tabla de enlace y, en ella, la columna del usuario (user ID) y la del grupo (role ID).',
+      ], { skipIfMissing: true }),
       st('save', 'auth.save', ['Salvar', 'Save', 'Guardar'], [
         'Salve para valer. Depois, confira na aba Gestão de Usuários se a lista carrega: ela depende do Agente CLI online e do mapeamento correto das colunas.',
         'Save to apply. Then check in the User Management tab that the list loads: it depends on the CLI Agent being online and the columns being mapped correctly.',
@@ -216,6 +225,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-estrategia-ldap',
     route: AUTH,
+    freeClicks: true,
     title: h(['Estratégia: LDAP / Active Directory', 'Strategy: LDAP / Active Directory', 'Estrategia: LDAP / Active Directory']),
     summary: h(['Login validado no Active Directory do cliente. A configuração fica no arquivo do Agente CLI, não nesta tela.', 'Sign-in validated against the customer Active Directory. The setup lives in the CLI Agent file, not on this screen.', 'Acceso validado en el Active Directory del cliente. La configuración está en el archivo del Agente CLI, no en esta pantalla.']),
     steps: [
@@ -229,6 +239,11 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'For security, the AD URL, Base DN and credentials are NOT asked on this screen. You set up the "ldap" block in the metabuilder.config.json file of the CLI Agent, on the machine that reaches the AD.',
         'Por seguridad, la URL, el Base DN y las credenciales del AD NO se piden en esta pantalla. Usted configura el bloque "ldap" en el archivo metabuilder.config.json del Agente CLI, en la máquina que alcanza el AD.',
       ]),
+      st('signup', 'auth.signup', ['Permitir auto-cadastro', 'Allow self sign-up', 'Permitir autorregistro'], [
+        "O interruptor \"Permitir Auto-cadastro\" mostra o link \"Criar conta\" no portal de login, para a pessoa criar a própria conta. Com LDAP/AD os usuários costumam já existir no diretório do cliente, então em geral fica desligado. Você pode testar o interruptor: nada vale até salvar.",
+        "The \"Allow Self Sign-up\" switch shows the \"Create account\" link on the sign-in portal, so people can create their own account. With LDAP/AD users usually already exist in the customer directory, so it is normally off. You can try the switch: nothing applies until you save.",
+        "El interruptor \"Permitir Autorregistro\" muestra el enlace \"Crear cuenta\" en el portal de acceso, para que la persona cree su propia cuenta. Con LDAP/AD los usuarios suelen existir ya en el directorio del cliente, así que en general queda apagado. Puede probar el interruptor: nada vale hasta guardar.",
+      ]),
       st('save', 'auth.save', ['Salvar', 'Save', 'Guardar'], [
         'Salvar grava só a escolha da estratégia. O login por LDAP funciona quando o bloco "ldap" do Agente estiver configurado e o Agente estiver online.',
         'Saving stores only the strategy choice. LDAP sign-in works once the Agent "ldap" block is set up and the Agent is online.',
@@ -241,6 +256,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-estrategia-sem-login',
     route: AUTH,
+    freeClicks: true,
     title: h(['Estratégia: sem autenticação', 'Strategy: no authentication', 'Estrategia: sin autenticación']),
     summary: h(['Acesso livre às telas, só para enquanto o app ainda não foi ao ar.', 'Free access to the screens, only while the app is not live yet.', 'Acceso libre a las pantallas, solo mientras la app aún no salió al aire.']),
     steps: [
@@ -254,6 +270,11 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'With this strategy access to all screens, folders and panels is public and direct. In an exported app the protection middlewares are removed. Never leave it like this in production.',
         'Con esta estrategia el acceso a todas las pantallas, carpetas y paneles es público y directo. En una app exportada se quitan los middlewares de protección. Nunca lo deje así en producción.',
       ]),
+      st('signup', 'auth.signup', ['Permitir auto-cadastro', 'Allow self sign-up', 'Permitir autorregistro'], [
+        "O interruptor \"Permitir Auto-cadastro\" mostra o link \"Criar conta\" no portal de login. Sem autenticação não há login, então o link não tem uso e costuma ficar desligado. Você pode testar o interruptor: nada vale até salvar.",
+        "The \"Allow Self Sign-up\" switch shows the \"Create account\" link on the sign-in portal. With no authentication there is no sign-in, so the link has no use and is normally off. You can try the switch: nothing applies until you save.",
+        "El interruptor \"Permitir Autorregistro\" muestra el enlace \"Crear cuenta\" en el portal de acceso. Sin autenticación no hay acceso, así que el enlace no tiene uso y suele quedar apagado. Puede probar el interruptor: nada vale hasta guardar.",
+      ]),
       st('save', 'auth.save', ['Salvar', 'Save', 'Guardar'], [
         'Só vale depois de salvar. Antes de publicar para usuários reais, volte aqui e escolha uma das outras estratégias.',
         'It only applies after saving. Before publishing to real users, come back here and pick one of the other strategies.',
@@ -266,6 +287,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-personalizacao-visual',
     route: AUTH,
+    freeClicks: true,
     title: h(['Personalização visual do login', 'Sign-in visual customization', 'Personalización visual del acceso']),
     summary: h(['Logotipo, cores, tema, textos, rótulos e botão da tela de login, com prévia ao vivo.', 'Logo, colors, theme, texts, labels and button of the sign-in screen, with a live preview.', 'Logotipo, colores, tema, textos, etiquetas y botón de la pantalla de acceso, con vista previa en vivo.']),
     steps: [
@@ -306,6 +328,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-usuarios',
     route: AUTH,
+    freeClicks: true,
     title: h(['Gestão de usuários: a lista', 'User management: the list', 'Gestión de usuarios: la lista']),
     summary: h(['Ver, criar, editar e excluir usuários da sua tabela, e escolher o grupo de cada um.', 'View, create, edit and delete users of your table, and pick each user group.', 'Ver, crear, editar y eliminar usuarios de su tabla, y elegir el grupo de cada uno.']),
     steps: [
@@ -315,30 +338,40 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'La pestaña tiene tres vistas: Lista de Usuarios, Grupos de Acceso y Permisos de Pantallas. Este recorrido muestra la lista; las otras dos tienen recorridos propios.',
       ], { enterClick: 'auth.tab_users' }),
       st('table', 'auth.users_table', ['Os usuários', 'The users', 'Los usuarios'], [
-        'Cada linha é um usuário da sua tabela de usuários: nome, e-mail e o grupo de acesso, que você troca no seletor da própria linha. Passe o mouse sobre a linha para ver o lápis (editar) e a lixeira (excluir). Se a lista vier vazia, confira se o Agente CLI está online e se a estratégia é a de banco legado.',
-        'Each row is a user of your users table: name, e-mail and the access group, which you change in the selector on the row itself. Hover a row to see the pencil (edit) and the trash (delete). If the list comes back empty, check that the CLI Agent is online and that the strategy is the legacy database.',
-        'Cada fila es un usuario de su tabla de usuarios: nombre, correo y el grupo de acceso, que se cambia en el selector de la propia fila. Pase el mouse por la fila para ver el lápiz (editar) y la papelera (eliminar). Si la lista llega vacía, compruebe que el Agente CLI esté en línea y que la estrategia sea la de base heredada.',
+        'Cada linha é um usuário da sua tabela de usuários: nome, e-mail, grupo de acesso e as ações. Se a lista vier vazia, confira se o Agente CLI está online e se a estratégia é a de banco legado.',
+        'Each row is a user of your users table: name, e-mail, access group and actions. If the list comes back empty, check that the CLI Agent is online and that the strategy is the legacy database.',
+        'Cada fila es un usuario de su tabla de usuarios: nombre, correo, grupo de acceso y acciones. Si la lista llega vacía, compruebe que el Agente CLI esté en línea y que la estrategia sea la de base heredada.',
       ], { enterClick: 'auth.users_sub_list' }),
+      st('group', 'auth.user_group', ['Trocar o grupo de um usuário', 'Change a user group', 'Cambiar el grupo de un usuario'], [
+        'O seletor da linha troca o grupo do usuário. A troca é gravada na hora, sem botão de salvar, e vale para o próximo acesso dele. Pode escolher um grupo, mas lembre de voltar ao que estava se for só teste.',
+        'The row selector changes the user group. The change is saved right away, with no save button, and applies on that user next sign-in. You can pick a group, but remember to put it back if it was only a test.',
+        'El selector de la fila cambia el grupo del usuario. El cambio se guarda al instante, sin botón de guardar, y vale en el próximo acceso de ese usuario. Puede elegir un grupo, pero recuerde volver al anterior si era solo una prueba.',
+      ], { skipIfMissing: true }),
       st('search', 'auth.users_search', ['Buscar', 'Search', 'Buscar'], [
-        'Campo de busca da lista de usuários.',
-        'Search box of the user list.',
-        'Campo de búsqueda de la lista de usuarios.',
-      ], { interactive: true }),
+        'Digite parte do nome, do e-mail ou de qualquer coluna da lista para filtrar as linhas. Apague o texto para ver todos de novo.',
+        'Type part of the name, e-mail or any column of the list to filter the rows. Clear the text to see everyone again.',
+        'Escriba parte del nombre, del correo o de cualquier columna de la lista para filtrar las filas. Borre el texto para ver a todos de nuevo.',
+      ]),
       st('create', 'auth.user_create', ['Criar usuário', 'Create user', 'Crear usuario'], [
-        'Abre um formulário com as colunas da sua tabela de usuários (sem a chave, os campos com valor padrão e as colunas de auditoria). A coluna de senha é digitada como senha e, ao editar, deixar em branco mantém a atual. O registro é gravado no SEU banco, pelo Agente CLI.',
-        'Opens a form with the columns of your users table (without the key, the fields with a default value and the audit columns). The password column is typed as a password and, when editing, leaving it blank keeps the current one. The record is written to YOUR database, through the CLI Agent.',
-        'Abre un formulario con las columnas de su tabla de usuarios (sin la clave, los campos con valor por defecto y las columnas de auditoría). La columna de contraseña se escribe como contraseña y, al editar, dejarla en blanco mantiene la actual. El registro se escribe en SU base, por el Agente CLI.',
+        'Abre um formulário com as colunas da sua tabela de usuários (sem a chave, os campos com valor padrão e as colunas de auditoria). A coluna de senha é digitada como senha. O registro é gravado no SEU banco, pelo Agente CLI. Pode abrir para conhecer e fechar sem salvar.',
+        'Opens a form with the columns of your users table (without the key, the fields with a default value and the audit columns). The password column is typed as a password. The record is written to YOUR database, through the CLI Agent. You can open it to take a look and close it without saving.',
+        'Abre un formulario con las columnas de su tabla de usuarios (sin la clave, los campos con valor por defecto y las columnas de auditoría). La columna de contraseña se escribe como contraseña. El registro se escribe en SU base, por el Agente CLI. Puede abrirlo para conocerlo y cerrarlo sin guardar.',
       ]),
       st('refresh', 'auth.users_refresh', ['Atualizar', 'Refresh', 'Actualizar'], [
         'Recarrega usuários, grupos e permissões. Use depois de mudar algo direto no seu banco.',
         'Reloads users, groups and permissions. Use it after changing something directly in your database.',
         'Recarga usuarios, grupos y permisos. Úselo después de cambiar algo directamente en su base.',
       ]),
-      st('warn', undefined, ['Excluir é definitivo', 'Deleting is final', 'Eliminar es definitivo'], [
-        'Excluir um usuário pede uma confirmação e apaga o registro da SUA tabela, via Agente CLI. Não dá para desfazer.',
-        'Deleting a user asks for confirmation and erases the record from YOUR table, through the CLI Agent. It cannot be undone.',
-        'Eliminar un usuario pide una confirmación y borra el registro de SU tabla, por el Agente CLI. No se puede deshacer.',
-      ]),
+      st('edit', 'auth.user_edit', ['Editar o usuário', 'Edit the user', 'Editar el usuario'], [
+        'O lápis abre o mesmo formulário, já preenchido. Na coluna da senha, deixar em branco mantém a atual. Os ícones de ação só aparecem ao passar o mouse na linha; durante o tour eles ficam visíveis.',
+        'The pencil opens the same form, already filled in. In the password column, leaving it blank keeps the current one. The action icons only show when you hover a row; during the tour they stay visible.',
+        'El lápiz abre el mismo formulario, ya completado. En la columna de contraseña, dejarla en blanco mantiene la actual. Los íconos de acción solo aparecen al pasar el mouse por la fila; durante el recorrido quedan visibles.',
+      ], { skipIfMissing: true }),
+      st('delete', 'auth.user_delete', ['Excluir o usuário', 'Delete the user', 'Eliminar el usuario'], [
+        'A lixeira abre uma confirmação e, se você confirmar, apaga o registro da SUA tabela, via Agente CLI. Não dá para desfazer. Pode clicar para ver a confirmação e escolher Cancelar.',
+        'The trash opens a confirmation and, if you confirm, erases the record from YOUR table, through the CLI Agent. It cannot be undone. You can click to see the confirmation and choose Cancel.',
+        'La papelera abre una confirmación y, si usted confirma, borra el registro de SU tabla, por el Agente CLI. No se puede deshacer. Puede hacer clic para ver la confirmación y elegir Cancelar.',
+      ], { skipIfMissing: true }),
     ],
   },
 
@@ -346,6 +379,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-grupos',
     route: AUTH,
+    freeClicks: true,
     title: h(['Grupos de acesso', 'Access groups', 'Grupos de acceso']),
     summary: h(['Criar, renomear e excluir os grupos (papéis) que recebem permissões de telas.', 'Create, rename and delete the groups (roles) that receive screen permissions.', 'Crear, renombrar y eliminar los grupos (roles) que reciben permisos de pantallas.']),
     steps: [
@@ -360,9 +394,19 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
         'Haga clic en "Crear Grupo", póngale un nombre (ej.: Vendedores, Gerentes, Administradores) y guarde. El grupo nace sin restricciones: después define lo que ve cada grupo en la vista Permisos de Pantallas.',
       ], { enterClick: 'auth.users_sub_groups' }),
       st('table', 'auth.groups_table', ['A lista de grupos', 'The group list', 'La lista de grupos'], [
-        'Mostra o identificador e o nome de cada grupo. Passe o mouse sobre a linha: o lápis renomeia (Enter confirma, Esc cancela) e a lixeira exclui. Excluir um grupo é irreversível: os usuários dele perdem na hora os acessos associados.',
-        'Shows the identifier and name of each group. Hover a row: the pencil renames (Enter confirms, Esc cancels) and the trash deletes. Deleting a group is irreversible: its users instantly lose the associated access.',
-        'Muestra el identificador y el nombre de cada grupo. Pase el mouse por la fila: el lápiz renombra (Enter confirma, Esc cancela) y la papelera elimina. Eliminar un grupo es irreversible: sus usuarios pierden al instante los accesos asociados.',
+        'Mostra o identificador e o nome de cada grupo.',
+        'Shows the identifier and name of each group.',
+        'Muestra el identificador y el nombre de cada grupo.',
+      ], { skipIfMissing: true }),
+      st('edit', 'auth.group_edit', ['Renomear o grupo', 'Rename the group', 'Renombrar el grupo'], [
+        'O lápis troca o nome na própria linha: Enter confirma e Esc cancela. Os ícones só aparecem ao passar o mouse na linha; durante o tour eles ficam visíveis.',
+        'The pencil renames in the row itself: Enter confirms and Esc cancels. The icons only show when you hover a row; during the tour they stay visible.',
+        'El lápiz cambia el nombre en la propia fila: Enter confirma y Esc cancela. Los íconos solo aparecen al pasar el mouse por la fila; durante el recorrido quedan visibles.',
+      ], { skipIfMissing: true }),
+      st('delete', 'auth.group_delete', ['Excluir o grupo', 'Delete the group', 'Eliminar el grupo'], [
+        'A lixeira pede confirmação. Excluir um grupo é irreversível: os usuários dele perdem na hora os acessos associados. Pode clicar para ver a confirmação e escolher Cancelar.',
+        'The trash asks for confirmation. Deleting a group is irreversible: its users instantly lose the associated access. You can click to see the confirmation and choose Cancel.',
+        'La papelera pide confirmación. Eliminar un grupo es irreversible: sus usuarios pierden al instante los accesos asociados. Puede hacer clic para ver la confirmación y elegir Cancelar.',
       ], { skipIfMissing: true }),
       st('next', undefined, ['Próximo passo', 'Next step', 'Siguiente paso'], [
         'Com os grupos criados, atribua o grupo de cada usuário na Lista de Usuários e defina o que cada grupo acessa em Permissões de Telas. Há um tour para cada um.',
@@ -376,6 +420,7 @@ export const AUTH_TOURS: readonly PlatformTour[] = [
   {
     id: 'auth-permissoes-telas',
     route: AUTH,
+    freeClicks: true,
     title: h(['Permissões de telas por grupo', 'Screen permissions per group', 'Permisos de pantallas por grupo']),
     summary: h(['A matriz que diz o que cada grupo pode ver e fazer em cada tela do app.', 'The matrix that says what each group can see and do on each app screen.', 'La matriz que dice qué puede ver y hacer cada grupo en cada pantalla de la app.']),
     steps: [

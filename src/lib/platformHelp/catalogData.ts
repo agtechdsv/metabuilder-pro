@@ -38,6 +38,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
   {
     id: 'studio-dados',
     route: DATA,
+    freeClicks: true,
     title: h(['Dados & Schemas: visão geral', 'Data & Schemas: overview', 'Datos y Esquemas: visión general']),
     summary: h(['As duas visões da tela e para que serve cada uma. Cada assunto tem um tour próprio neste menu.', 'The two views of the screen and what each is for. Each topic has its own tour in this menu.', 'Las dos vistas de la pantalla y para qué sirve cada una. Cada tema tiene su propio recorrido en este menú.']),
     steps: [
@@ -66,7 +67,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
         'Takes you back to the Studio dashboard, where the use cases are.',
         'Lleva de vuelta al panel del Studio, donde están los casos de uso.',
       ]),
-      st('more', undefined, ['Para ir além', 'Going further', 'Para ir más allá'], [
+      st('more', 'platform.help_button', ['Para ir além', 'Going further', 'Para ir más allá'], [
         'Neste menu de ajuda há um tour para cada assunto: Tabela e campos, Auditoria, Acesso por linha e Relacionamentos.',
         'In this help menu there is one tour for each topic: Table and fields, Audit, Row access and Relationships.',
         'En este menú de ayuda hay un recorrido para cada tema: Tabla y campos, Auditoría, Acceso por fila y Relaciones.',
@@ -78,6 +79,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
   {
     id: 'dados-tabela-campos',
     route: DATA,
+    freeClicks: true,
     title: h(['Tabela e campos: nomes e regras', 'Table and fields: names and rules', 'Tabla y campos: nombres y reglas']),
     summary: h(['Nome amigável, permissões da tabela e as regras de cada coluna (rótulo, ordem, tipo de interface e visibilidade).', 'Friendly name, table permissions and each column rules (label, order, interface type and visibility).', 'Nombre amigable, permisos de la tabla y las reglas de cada columna (etiqueta, orden, tipo de interfaz y visibilidad).']),
     steps: [
@@ -93,9 +95,9 @@ export const DATA_TOURS: readonly PlatformTour[] = [
         'Muestra el nombre técnico y el esquema de la tabla, y reúne los botones de actualizar y guardar.',
       ]),
       st('migrate', 'data.schema_migrate', ['Migrar schema', 'Migrate schema', 'Migrar esquema'], [
-        'Cuidado: renomeia o schema de TODAS as tabelas do projeto que estão neste schema, não só desta. Serve quando o banco do cliente mudou de schema. Depois é preciso rodar o Agente CLI de novo. Este tour não clica aqui.',
-        'Careful: it renames the schema of ALL project tables that are in this schema, not only this one. It is for when the customer database moved to another schema. Afterwards the CLI Agent must run again. This tour does not click here.',
-        'Cuidado: renombra el esquema de TODAS las tablas del proyecto que están en este esquema, no solo esta. Sirve cuando la base del cliente cambió de esquema. Después hay que ejecutar el Agente CLI de nuevo. Este recorrido no hace clic aquí.',
+        'Cuidado: renomeia o schema de TODAS as tabelas do projeto que estão neste schema, não só desta. Serve quando o banco do cliente mudou de schema. Depois é preciso rodar o Agente CLI de novo. Ao clicar abre uma janela onde você digita o novo nome; pode fechar com Cancelar.',
+        'Careful: it renames the schema of ALL project tables that are in this schema, not only this one. It is for when the customer database moved to another schema. Afterwards the CLI Agent must run again. Clicking opens a window where you type the new name; you can close it with Cancel.',
+        'Cuidado: renombra el esquema de TODAS las tablas del proyecto que están en este esquema, no solo esta. Sirve cuando la base del cliente cambió de esquema. Después hay que ejecutar el Agente CLI de nuevo. Al hacer clic se abre una ventana donde escribe el nuevo nombre; puede cerrarla con Cancelar.',
       ]),
       st('refresh', 'data.refresh', ['Recarregar colunas', 'Reload columns', 'Recargar columnas'], [
         'Busca de novo as colunas desta tabela no MetaBuilder. Use depois de sincronizar o banco para ver colunas novas. Descarta as edições de colunas ainda não salvas.',
@@ -155,6 +157,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
   {
     id: 'dados-auditoria',
     route: DATA,
+    freeClicks: true,
     title: h(['Auditoria: quem criou e alterou', 'Audit: who created and changed', 'Auditoría: quién creó y modificó']),
     summary: h(['Colunas que guardam quando e por quem cada registro foi criado e alterado, preenchidas pelo servidor.', 'Columns that store when and by whom each record was created and changed, filled in by the server.', 'Columnas que guardan cuándo y por quién se creó y modificó cada registro, completadas por el servidor.']),
     steps: [
@@ -175,9 +178,9 @@ export const DATA_TOURS: readonly PlatformTour[] = [
         'Aparece cuando hay columna de "creado por" o "modificado por". Define qué va en ella: el identificador del usuario, el correo, el nombre o una columna de la tabla de usuarios del acceso. El identificador es el más estable, porque correo y nombre pueden cambiar.',
       ], { skipIfMissing: true }),
       st('sql', 'data.audit_sql', ['Gerar o SQL das colunas', 'Generate the columns SQL', 'Generar el SQL de las columnas'], [
-        'Se a tabela ainda não tem as colunas, este botão mostra o SQL pronto para criá-las. O MetaBuilder NÃO altera o banco do cliente: você copia, aplica no banco e sincroniza de novo. Este tour não abre o SQL.',
-        'If the table does not have the columns yet, this button shows ready SQL to create them. MetaBuilder does NOT change the customer database: you copy it, apply it to the database and sync again. This tour does not open the SQL.',
-        'Si la tabla aún no tiene las columnas, este botón muestra el SQL listo para crearlas. MetaBuilder NO modifica la base del cliente: usted lo copia, lo aplica en la base y sincroniza de nuevo. Este recorrido no abre el SQL.',
+        'Se a tabela ainda não tem as colunas, este botão mostra o SQL pronto para criá-las. O MetaBuilder NÃO altera o banco do cliente: você copia, aplica no banco e sincroniza de novo. Pode clicar para ver o SQL e fechar.',
+        'If the table does not have the columns yet, this button shows ready SQL to create them. MetaBuilder does NOT change the customer database: you copy it, apply it to the database and sync again. You can click to see the SQL and close it.',
+        'Si la tabla aún no tiene las columnas, este botón muestra el SQL listo para crearlas. MetaBuilder NO modifica la base del cliente: usted lo copia, lo aplica en la base y sincroniza de nuevo. Puede hacer clic para ver el SQL y cerrarlo.',
       ], { skipIfMissing: true }),
       st('toggle', 'data.audit_toggle', ['Desativar ou reativar', 'Turn off or on', 'Desactivar o reactivar'], [
         'Desativa a auditoria só desta tabela (ela deixa de ser preenchida). Reativar volta ao reconhecimento pelo nome. Útil para tabelas que não precisam de rastro.',
@@ -196,6 +199,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
   {
     id: 'dados-acesso-linha',
     route: DATA,
+    freeClicks: true,
     title: h(['Acesso por linha: quem vê o quê', 'Row access: who sees what', 'Acceso por fila: quién ve qué']),
     summary: h(['Limita as linhas da tabela que cada usuário do app enxerga e grava (ex.: cada vendedor vê só os próprios pedidos).', 'Limits the table rows each app user can see and write (e.g. each salesperson sees only their own orders).', 'Limita las filas de la tabla que cada usuario de la app ve y graba (ej.: cada vendedor ve solo sus pedidos).']),
     steps: [
@@ -251,6 +255,7 @@ export const DATA_TOURS: readonly PlatformTour[] = [
   {
     id: 'dados-relacionamentos',
     route: DATA,
+    freeClicks: true,
     title: h(['Relacionamentos entre tabelas', 'Relationships between tables', 'Relaciones entre tablas']),
     summary: h(['O mapa de ligações usado nos JOINs automáticos: as do banco, as manuais e como criar uma relação.', 'The links map used by automatic JOINs: the database ones, the manual ones and how to create a relationship.', 'El mapa de vínculos usado en los JOIN automáticos: las de la base, las manuales y cómo crear una relación.']),
     steps: [
@@ -319,9 +324,9 @@ export const DATA_TOURS: readonly PlatformTour[] = [
         'N → 1: muchos pedidos para un cliente (el caso más común). 1 → N: lo contrario. 1 → 1: uno a uno. N → N: muchos a muchos (por tabla de enlace). El tipo describe la cardinalidad del vínculo.',
       ]),
       st('save', 'rel.form_save', ['Salvar Relação', 'Save Relationship', 'Guardar Relación'], [
-        'Cria a relação manual. O botão só habilita com as quatro escolhas feitas. Este tour não clica aqui para não criar nada sem querer: se quiser criar, preencha o formulário e clique depois.',
-        'Creates the manual relationship. The button only enables with the four choices made. This tour does not click here so nothing is created by accident: if you want to create one, fill in the form and click afterwards.',
-        'Crea la relación manual. El botón solo se habilita con las cuatro elecciones hechas. Este recorrido no hace clic aquí para no crear nada sin querer: si quiere crear una, complete el formulario y haga clic después.',
+        'Cria a relação manual. O botão só habilita com as quatro escolhas feitas. Se estava só treinando, não clique aqui: siga para o próximo passo e cancele.',
+        'Creates the manual relationship. The button only enables with the four choices made. If you were only practicing, do not click here: go to the next step and cancel.',
+        'Crea la relación manual. El botón solo se habilita con las cuatro elecciones hechas. Si estaba solo practicando, no haga clic aquí: siga al próximo paso y cancele.',
       ]),
       st('cancel', 'rel.form_cancel', ['Cancelar', 'Cancel', 'Cancelar'], [
         'Clique em "Cancelar" para fechar o formulário sem criar nada.',

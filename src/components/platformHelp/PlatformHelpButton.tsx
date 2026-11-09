@@ -34,6 +34,7 @@ export function PlatformHelpButton() {
     <div ref={ref} className="relative">
       <button
         type="button"
+        data-help-id="platform.help_button"
         onClick={() => setOpen(o => !o)}
         aria-label={t('platform_help.button', 'Ajuda desta tela')}
         title={t('platform_help.button', 'Ajuda desta tela')}

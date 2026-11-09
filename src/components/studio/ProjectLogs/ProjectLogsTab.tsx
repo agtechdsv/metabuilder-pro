@@ -434,7 +434,7 @@ export default function ProjectLogsTab({ project, supabase: supabaseProp }: Proj
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           ) : (
-            <div className="flex items-center gap-1">
+            <div data-help-id="logs.clear" className="flex items-center gap-1">
               <span className="text-xs text-red-500 font-medium">Limpar tudo?</span>
               <button onClick={clearLogs} className="text-xs px-2 py-1 bg-red-500 text-white rounded-lg">Sim</button>
               <button onClick={() => setIsClearConfirm(false)} className="text-xs px-2 py-1 bg-neutral-200 dark:bg-neutral-700 rounded-lg">Não</button>

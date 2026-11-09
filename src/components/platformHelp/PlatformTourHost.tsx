@@ -54,6 +54,8 @@ export function PlatformTourHost() {
   const [mounted, setMounted] = useState(false)
   const [nonce, setNonce] = useState(0)
   const [ready, setReady] = useState(true)
+  // uma janela (confirmação, formulário) abriu por um clique da pessoa e o item do passo não está nela: o tour sai da frente
+  const [modalFree, setModalFree] = useState(false)
   const popRef = useRef<HTMLDivElement>(null)
   const [popH, setPopH] = useState(200)
   const recoveredRef = useRef<Set<string>>(new Set())
@@ -62,10 +64,18 @@ export function PlatformTourHost() {
   const posRef = useRef<{ left: number; top: number } | null>(null)
   const goneSinceRef = useRef(0)
   useEffect(() => setMounted(true), [])
+  // enquanto há um tour, itens que só aparecem ao passar o mouse (ícones de editar e excluir) ficam visíveis
+  useEffect(() => {
+    if (!active) return
+    document.body.setAttribute('data-tour-active', '')
+    return () => document.body.removeAttribute('data-tour-active')
+  }, [!!active]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const step = active ? active.tour.steps[active.index] : null
   const total = active ? active.tour.steps.length : 0
   const isLast = !!active && active.index === total - 1
+  // o item destacado aceita cliques: passos `interactive`, ou qualquer passo com alvo num tour de cliques livres (menos os `readOnly`)
+  const openStep = !!step && (!!step.interactive || (!!active?.tour.freeClicks && !step.readOnly && !!step.target))
   const key = active ? `${active.tour.id}:${active.index}` : ''
   const activeRef = useRef(active)
   activeRef.current = active
@@ -81,6 +91,7 @@ export function PlatformTourHost() {
   useEffect(() => {
     setRect(null)
     setRect2(null)
+    setModalFree(false)
     holdRef.current = false
     goneSinceRef.current = 0
     setMissing(false)
@@ -94,7 +105,7 @@ export function PlatformTourHost() {
         await sleep(300)
       }
       if (!s.target) return
-      let deadline = Date.now() + (s.skipIfMissing ? 1200 : (s.findWaitMs ?? 4000))
+      let deadline = Date.now() + (s.findWaitMs ?? (s.skipIfMissing ? 1200 : 4000))
       for (;;) {
         if (cancelled) return
         const el = findById(s.target)
@@ -158,6 +169,10 @@ export function PlatformTourHost() {
     if (!step?.target) return
     const target = step.target
     const id = setInterval(() => {
+      const modalEl = document.querySelector('[data-tour-modal]')
+      const tEl = findById(target)
+      const free = !!modalEl && !(tEl && modalEl.contains(tEl))
+      setModalFree(prev => (prev === free ? prev : free))
       if (holdRef.current) return
       const el = findById(target)
       if (el) {
@@ -217,10 +232,14 @@ export function PlatformTourHost() {
       const node = e.target as Node | null
       if (!node || !(node instanceof Node)) return
       if (popRef.current?.contains(node)) return
+      // janela aberta pela pessoa (e o item do passo não está nela): responde normalmente
+      const elNode = node instanceof Element ? node : node.parentElement
+      const modalEl = elNode?.closest('[data-tour-modal]')
+      if (modalEl && !(target && modalEl.querySelector(`[data-help-id="${esc(target)}"]`))) return
       if (target) {
         const els = Array.from(document.querySelectorAll(`[data-help-id="${esc(target)}"]`)) as HTMLElement[]
         // com o passo bloqueado (esperando condição ou só leitura) nada fora do balão responde; com o passo liberado, só o próprio item
-        const open = step.interactive || (step.advanceOnClick && ready)
+        const open = openStep || (step.advanceOnClick && ready)
         if (open && els.some(el => el.contains(node))) return
       }
       e.stopPropagation()
@@ -301,13 +320,14 @@ export function PlatformTourHost() {
   const waiting = !rect && !!step.target && !missing
   if (rect) posRef.current = { left, top }
   else if (waiting && posRef.current) { left = posRef.current.left; top = posRef.current.top }
+  if (modalFree) { left = Math.max(12, vw - POPOVER_W - 16); top = 16 }
 
   const title = resolveHelp(step.title, language)
   const body = resolveHelp(step.body, language)
 
   return createPortal(
     <div className="fixed inset-0 z-[1000020]" style={{ pointerEvents: 'none' }}>
-      {rect ? (
+      {modalFree ? null : rect ? (
         <>
           {rect2 ? (
             <>
@@ -332,7 +352,7 @@ export function PlatformTourHost() {
             />
           )}
           {/* a tela atrás do escurecimento não responde a cliques (senão a pessoa sai do tour sem querer); só o item destacado, e só nos passos que pedem o clique */}
-          {step.freeInteraction ? null : (step.advanceOnClick && ready) || step.interactive ? (
+          {step.freeInteraction ? null : (step.advanceOnClick && ready) || openStep ? (
             <>
               <div className="fixed left-0 right-0 top-0" style={{ height: Math.max(0, rect.top - PAD), pointerEvents: 'auto' }} />
               <div className="fixed bottom-0 left-0 right-0" style={{ top: rect.bottom + PAD, pointerEvents: 'auto' }} />

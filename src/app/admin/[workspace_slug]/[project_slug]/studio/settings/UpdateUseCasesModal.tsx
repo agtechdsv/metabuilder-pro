@@ -181,7 +181,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
         {/* Header */}
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-[#080808]/80 backdrop-blur-xl px-10 py-6 border-b border-neutral-200 dark:border-neutral-800 space-y-4 rounded-t-[2rem]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div data-help-id="settings.update_modal_header" className="flex items-center gap-4">
               <div className="w-12 h-12 bg-indigo-600/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
                 <RefreshCw className="w-6 h-6" />
               </div>
@@ -197,6 +197,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
 
             <div className="flex items-center gap-3">
               <button
+                data-help-id="settings.update_modal_confirm"
                 onClick={handleConfirm}
                 disabled={isSaving || selectedIds.size === 0}
                 className="flex items-center gap-2 px-6 h-12 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
@@ -206,6 +207,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
               </button>
               <div className="w-px h-8 bg-neutral-200 dark:bg-neutral-800 hidden sm:block"></div>
               <button
+                data-help-id="settings.update_modal_close"
                 onClick={onClose}
                 className="w-12 h-12 flex items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
               >
@@ -232,7 +234,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
+              <div data-help-id="settings.update_modal_all" className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
                 <h3 className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
                   Casos de Uso Encontrados ({useCases.length})
                 </h3>
@@ -248,7 +250,7 @@ export function UpdateUseCasesModal({ isOpen, onClose, field, models, project }:
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div data-help-id="settings.update_modal_list" className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {useCases.map((uc) => (
                   <div
                     key={uc.id}

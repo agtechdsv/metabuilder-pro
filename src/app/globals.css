@@ -58,6 +58,8 @@ body {
   }
 }
 
+body[data-tour-active] [data-help-reveal] { opacity: 1 !important; }
+
 /* Mapa escuro sem depender de provedor de tiles com chave: inverte os tiles padrão do OpenStreetMap */
 .metabuilder-dark-tiles {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);

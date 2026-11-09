@@ -18,6 +18,7 @@ export const LOGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'logs-configurar',
     route: LOGS,
+    freeClicks: true,
     title: h(['Configurar o registro de logs', 'Set up log recording', 'Configurar el registro de logs']),
     summary: h(['Ligar os logs, escolher onde gravar, o que registrar e por quanto tempo guardar.', 'Turn logs on, choose where to write, what to record and how long to keep it.', 'Activar los logs, elegir dónde grabar, qué registrar y por cuánto tiempo guardar.']),
     steps: [
@@ -48,6 +49,7 @@ export const LOGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'logs-filtrar',
     route: LOGS,
+    freeClicks: true,
     title: h(['Filtrar, buscar e atualizar', 'Filter, search and refresh', 'Filtrar, buscar y actualizar']),
     summary: h(['Achar o registro certo: busca, tipo, tabela, período, origem e atualização automática.', 'Find the right record: search, type, table, period, source and auto refresh.', 'Encontrar el registro correcto: búsqueda, tipo, tabla, período, origen y actualización automática.']),
     steps: [
@@ -118,6 +120,7 @@ export const LOGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'logs-ler-registro',
     route: LOGS,
+    freeClicks: true,
     title: h(['Ler um registro e investigar um erro', 'Read a record and investigate an error', 'Leer un registro e investigar un error']),
     summary: h(['O que cada coluna mostra e como abrir um registro para ver o SQL e o erro completos.', 'What each column shows and how to open a record to see the full SQL and error.', 'Qué muestra cada columna y cómo abrir un registro para ver el SQL y el error completos.']),
     steps: [

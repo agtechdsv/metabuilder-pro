@@ -112,6 +112,7 @@ export default function AuthSettingsPage() {
   const [userFormData, setUserFormData] = useState<any>({})
   const [editingUserId, setEditingUserId] = useState<any>(null)
   const [userToDelete, setUserToDelete] = useState<any>(null)
+  const [userSearch, setUserSearch] = useState('')
   const [isSavingUser, setIsSavingUser] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
@@ -1220,6 +1221,7 @@ export default function AuthSettingsPage() {
 
                     {authConfig.sync_legacy_groups && (
                       <div data-help-id="auth.legacy_sync_panel" className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-neutral-100 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                        <div data-help-id="auth.legacy_groups_fields" className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-3">
                           <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Grupos/Roles</label>
                           <select 
@@ -1248,6 +1250,7 @@ export default function AuthSettingsPage() {
                             ))}
                           </select>
                         </div>
+                        </div>
                         <div className="space-y-3 md:col-span-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tipo de Relacionamento (Com Usuário)</label>
                           <select 
@@ -1261,7 +1264,7 @@ export default function AuthSettingsPage() {
                         </div>
 
                         {authConfig.db_user_groups_type === '1_to_n' && (
-                          <div className="space-y-3 md:col-span-2">
+                          <div data-help-id="auth.legacy_rel_fields" className="space-y-3 md:col-span-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Coluna de Grupo na Tabela Usuários</label>
                             <select 
                               value={authConfig.db_user_role_column || ''}
@@ -1279,7 +1282,7 @@ export default function AuthSettingsPage() {
                         )}
 
                         {authConfig.db_user_groups_type === 'n_to_n' && (
-                          <>
+                          <div data-help-id="auth.legacy_rel_fields" className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3 md:col-span-2">
                               <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Tabela de Relacionamento (N:N)</label>
                               <select 
@@ -1323,7 +1326,7 @@ export default function AuthSettingsPage() {
                                 ))}
                               </select>
                             </div>
-                          </>
+                          </div>
                         )}
                       </div>
                     )}
@@ -1680,7 +1683,7 @@ export default function AuthSettingsPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input 
                       type="text" 
-                      data-help-id="auth.users_search" placeholder="Buscar..."
+                      data-help-id="auth.users_search" placeholder="Buscar..." value={userSearch} onChange={e => setUserSearch(e.target.value)}
                       className="w-full h-11 pl-12 pr-4 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 outline-none focus:border-indigo-500 text-sm font-medium transition-all"
                     />
                   </div>
@@ -1739,7 +1742,9 @@ export default function AuthSettingsPage() {
                         (() => {
                           const legacyUserModel = models.find(m => m.db_table_name === authConfig.db_table_name)
                           const legacyPkField = legacyUserModel?.fields?.find((f: any) => f.is_primary_key)?.db_column_name || 'id'
-                          return legacyUsers.map((u, i) => (
+                          const term = userSearch.trim().toLowerCase()
+                          const visibleUsers = term ? legacyUsers.filter(u => Object.entries(u || {}).some(([k, v]) => !/pass|senha|hash/i.test(k) && String(v ?? '').toLowerCase().includes(term))) : legacyUsers
+                          return visibleUsers.map((u, i) => (
                             <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -1759,6 +1764,7 @@ export default function AuthSettingsPage() {
                               </td>
                               <td className="px-6 py-4">
                                 <select 
+                                  data-help-id="auth.user_group"
                                   value={userRoles.find(ur => ur.external_user_id === u[legacyPkField]?.toString())?.role_id || ''}
                                   onChange={(e) => handleAssignRole(u[legacyPkField], e.target.value)}
                                   className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 outline-none w-36"
@@ -1770,14 +1776,16 @@ export default function AuthSettingsPage() {
                               </select>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div data-help-reveal="" className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
+                                  data-help-id="auth.user_edit"
                                   onClick={() => openEditUserModal(u)}
                                   className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                                 >
                                   <Pencil className="w-4 h-4" />
                                 </button>
                                 <button 
+                                  data-help-id="auth.user_delete"
                                   onClick={() => setUserToDelete(u)}
                                   className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                                 >
@@ -1844,8 +1852,9 @@ export default function AuthSettingsPage() {
                               )}
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div data-help-reveal="" className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
+                                  data-help-id="auth.group_edit"
                                   onClick={() => {
                                     setEditingRoleId(role.id)
                                     setEditingRoleName(role.name)
@@ -1855,6 +1864,7 @@ export default function AuthSettingsPage() {
                                   <Pencil className="w-4 h-4" />
                                 </button>
                                 <button 
+                                  data-help-id="auth.group_delete"
                                   onClick={() => handleDeleteRole(role.id, role.name)}
                                   className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                                 >

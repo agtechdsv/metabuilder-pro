@@ -21,6 +21,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'settings-visao-geral',
     route: SETTINGS,
+    freeClicks: true,
     title: h(['Configurações: visão geral', 'Settings: overview', 'Configuración: visión general']),
     summary: h(['Para que serve a tela e as duas abas: defaults dos campos e campos calculados.', 'What the screen is for and its two tabs: field defaults and calculated fields.', 'Para qué sirve la pantalla y sus dos pestañas: valores por defecto de los campos y campos calculados.']),
     steps: [
@@ -46,6 +47,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'settings-defaults-campos',
     route: SETTINGS,
+    freeClicks: true,
     title: h(['Defaults dos campos', 'Field defaults', 'Valores por defecto de los campos']),
     summary: h(['Escolha uma tabela, abra um campo e configure rótulo, máscara, componente, layout e estilos padrão.', 'Pick a table, open a field and set the default label, mask, component, layout and styles.', 'Elija una tabla, abra un campo y configure la etiqueta, la máscara, el componente, el diseño y los estilos por defecto.']),
     steps: [
@@ -126,6 +128,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'settings-propagar-defaults',
     route: SETTINGS,
+    freeClicks: true,
     title: h(['Levar os defaults aos casos de uso existentes', 'Carry defaults to existing use cases', 'Llevar los valores por defecto a los casos de uso existentes']),
     summary: h(['Como aplicar um default novo aos casos de uso que já foram criados.', 'How to apply a new default to use cases that were already created.', 'Cómo aplicar un valor por defecto nuevo a los casos de uso ya creados.']),
     steps: [
@@ -135,15 +138,40 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
         'Un valor por defecto nuevo solo vale para los casos de uso creados después. Para llevar el cambio a los que ya existen, el campo tiene un ícono de actualizar, que aparece cuando ya tiene valores suyos.',
       ], { enterClick: 'settings.tab_fields' }),
       st('icon', 'settings.field_refresh', ['O ícone de atualizar', 'The refresh icon', 'El ícono de actualizar'], [
-        'Está no cartão dos campos com o selo "Customizado" (aqui, o primeiro que aparece). Ele abre uma lista dos casos de uso que usam o campo, com todos marcados. Clique e confirme para atualizar apenas os RASCUNHOS selecionados; depois, publique cada caso de uso para a mudança chegar aos usuários.',
-        'It is on the cards of the fields with the "Custom" badge (here, the first one shown). It opens a list of the use cases that use the field, all checked. Click and confirm to update only the selected DRAFTS; then publish each use case for the change to reach users.',
-        'Está en las tarjetas de los campos con la insignia "Personalizado" (aquí, la primera que aparece). Abre una lista de los casos de uso que usan el campo, todos marcados. Haga clic y confirme para actualizar solo los BORRADORES seleccionados; después, publique cada caso de uso para que el cambio llegue a los usuarios.',
+        'Está no cartão dos campos com o selo "Customizado" (aqui, o primeiro que aparece). Clique nele para abrir a lista dos casos de uso que usam o campo. Abrir não altera nada.',
+        'It is on the cards of the fields with the "Custom" badge (here, the first one shown). Click it to open the list of use cases that use the field. Opening changes nothing.',
+        'Está en las tarjetas de los campos con la insignia "Personalizado" (aquí, la primera que aparece). Haga clic para abrir la lista de los casos de uso que usan el campo. Abrir no cambia nada.',
+      ], {
+        skipIfMissing: true,
+        interactive: true,
+        completeWhen: { id: 'settings.update_modal_header', check: 'attr', attr: 'data-help-id', equals: 'settings.update_modal_header' },
+        waitingHint: h(['Clique no ícone de atualizar para abrir a lista. Abrir não altera nada.', 'Click the refresh icon to open the list. Opening changes nothing.', 'Haga clic en el ícono de actualizar para abrir la lista. Abrir no cambia nada.']),
+      }),
+      st('modal', 'settings.update_modal_header', ['Atualizar casos de uso', 'Update use cases', 'Actualizar casos de uso'], [
+        'A janela diz qual campo será propagado. Só entram os RASCUNHOS de casos de uso que usam esse campo.',
+        'The window says which field will be propagated. Only the DRAFTS of use cases that use that field are included.',
+        'La ventana dice qué campo se propagará. Solo entran los BORRADORES de casos de uso que usan ese campo.',
       ], { skipIfMissing: true }),
-      st('tip', undefined, ['Antes de confirmar', 'Before confirming', 'Antes de confirmar'], [
-        'Desmarque os casos de uso que você NÃO quer mexer: a atualização substitui as propriedades do campo naquele rascunho pelos defaults atuais. Se não aparecer nenhum ícone, escolha uma tabela e salve defaults em algum campo primeiro.',
-        'Uncheck the use cases you do NOT want to touch: the update replaces the field properties in that draft with the current defaults. If no icon shows, pick a table and save defaults on some field first.',
-        'Desmarque los casos de uso que NO quiere tocar: la actualización reemplaza las propiedades del campo en ese borrador por los valores por defecto actuales. Si no aparece ningún ícono, elija una tabla y guarde valores en algún campo primero.',
-      ]),
+      st('list', 'settings.update_modal_list', ['Os casos de uso encontrados', 'The use cases found', 'Los casos de uso encontrados'], [
+        'Cada cartão é um caso de uso. Clique para marcar ou desmarcar; desmarque os que você NÃO quer mexer. A atualização substitui as propriedades do campo naquele rascunho pelos defaults atuais.',
+        'Each card is a use case. Click to check or uncheck; uncheck the ones you do NOT want to touch. The update replaces the field properties in that draft with the current defaults.',
+        'Cada tarjeta es un caso de uso. Haga clic para marcar o desmarcar; desmarque los que NO quiere tocar. La actualización reemplaza las propiedades del campo en ese borrador por los valores por defecto actuales.',
+      ], { skipIfMissing: true, findWaitMs: 3000 }),
+      st('all', 'settings.update_modal_all', ['Selecionar todos', 'Select all', 'Seleccionar todos'], [
+        'O atalho marca ou desmarca todos os casos de uso de uma vez.',
+        'The shortcut checks or unchecks all use cases at once.',
+        'El atajo marca o desmarca todos los casos de uso de una vez.',
+      ], { skipIfMissing: true, findWaitMs: 3000 }),
+      st('confirm', 'settings.update_modal_confirm', ['Confirmar Atualização', 'Confirm Update', 'Confirmar Actualización'], [
+        'Grava os defaults nos rascunhos marcados. Depois, publique cada caso de uso para a mudança chegar aos usuários. O botão fica desligado se nenhum estiver marcado. Se for só treino, não clique aqui: feche a janela no X.',
+        'Writes the defaults into the checked drafts. Then publish each use case for the change to reach users. The button is off when none is checked. If you are only practicing, do not click here: close the window with the X.',
+        'Graba los valores por defecto en los borradores marcados. Después, publique cada caso de uso para que el cambio llegue a los usuarios. El botón queda apagado si no hay ninguno marcado. Si es solo práctica, no haga clic aquí: cierre la ventana con la X.',
+      ], { skipIfMissing: true }),
+      st('close', 'settings.update_modal_close', ['Fechar a janela', 'Close the window', 'Cerrar la ventana'], [
+        'O X fecha a janela sem atualizar nada. Se nenhum ícone de atualizar apareceu, escolha uma tabela e salve defaults em algum campo primeiro.',
+        'The X closes the window without updating anything. If no refresh icon showed, pick a table and save defaults on some field first.',
+        'La X cierra la ventana sin actualizar nada. Si no apareció ningún ícono de actualizar, elija una tabla y guarde valores en algún campo primero.',
+      ], { skipIfMissing: true }),
     ],
   },
 
@@ -151,6 +179,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
   {
     id: 'settings-campos-calculados',
     route: SETTINGS,
+    freeClicks: true,
     title: h(['Campos calculados', 'Calculated fields', 'Campos calculados']),
     summary: h(['Crie fórmulas reutilizáveis (totais, médias, condições) e use em qualquer caso de uso.', 'Create reusable formulas (totals, averages, conditions) and use them in any use case.', 'Cree fórmulas reutilizables (totales, promedios, condiciones) y úselas en cualquier caso de uso.']),
     steps: [
@@ -189,7 +218,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
         'Arme la fórmula juntando piezas: operadores matemáticos y lógicos, funciones (SUMA, PROMEDIO, CONTEO, MÁXIMO, MÍNIMO, REDONDEAR, SI), campos de cualquier tabla u otros campos calculados (en "Insertar campo") y VALOR LIBRE, para un número o texto fijo como 100 o Cancelado. "Limpiar" vacía la fórmula. El constructor avisa si faltó cerrar un paréntesis o si el orden de los operadores es inválido.',
       ], { interactive: true }),
       st('save', 'settings.calc_save', ['Salvar o campo', 'Save the field', 'Guardar el campo'], [
-        '"Salvar Campo" grava a fórmula no projeto: ela fica disponível para todos os casos de uso.',
+        '"Salvar Campo" grava a fórmula no projeto: ela fica disponível para todos os casos de uso. Você pode clicar para gravar de verdade ou seguir para o próximo passo e cancelar.',
         '"Save Field" stores the formula in the project: it becomes available to every use case.',
         '"Guardar Campo" guarda la fórmula en el proyecto: queda disponible para todos los casos de uso.',
       ]),
@@ -197,7 +226,7 @@ export const SETTINGS_TOURS: readonly PlatformTour[] = [
         'Se estava só treinando, clique em Cancelar: o rascunho da fórmula é descartado sem gravar nada.',
         'If you were only practicing, click Cancel: the formula draft is discarded and nothing is stored.',
         'Si solo estaba practicando, haga clic en Cancelar: el borrador de la fórmula se descarta sin guardar nada.',
-      ], { interactive: true }),
+      ], { interactive: true, skipIfMissing: true }),
     ],
   },
 ]
