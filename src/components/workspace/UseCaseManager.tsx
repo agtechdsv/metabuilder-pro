@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { 
   Layout, 
   Plus, 
@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
 import { usePreview } from '@/contexts/PreviewContext'
+import { DEFAULT_TRASH_HOURS, getTrashRetentionHours, moveUseCaseToTrash } from '@/lib/trash/trash'
+import { formatDuration } from '@/lib/trash/format'
 
 interface View {
   id: string
@@ -40,6 +42,8 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   
   const supabase = createClient()
+  const [trashHours, setTrashHours] = useState(DEFAULT_TRASH_HOURS)
+  useEffect(() => { getTrashRetentionHours(supabase).then(setTrashHours) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const router = useRouter()
   const { t } = useI18n()
   const { openPreview } = usePreview()
@@ -54,12 +58,8 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
     setIsDeleting(true)
 
     try {
-      const { error } = await supabase
-        .from('ui_views')
-        .delete()
-        .eq('id', selectedView.id)
-
-      if (error) throw error
+      // vai para a lixeira (restaurável no Studio), em vez de apagar de vez
+      await moveUseCaseToTrash(supabase, { id: selectedView.id, slug: selectedView.slug }, projectId)
 
       setViews(views.filter(v => v.id !== selectedView.id))
       setIsDeleteModalOpen(false)
@@ -188,7 +188,7 @@ export function UseCaseManager({ initialViews, workspaceSlug, projectSlug, proje
             <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-red-500">{t('dashboard.projects.confirm_delete_view')}</p>
-              <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.delete_view_desc')}</p>
+              <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.trash.confirm_desc').replace('{name}', selectedView?.name || '').replace('{duration}', formatDuration(trashHours, t))}</p>
             </div>
           </div>
 

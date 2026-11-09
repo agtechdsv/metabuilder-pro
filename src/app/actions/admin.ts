@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { clampTrashHours, MIN_TRASH_HOURS, MAX_TRASH_HOURS } from '@/lib/trash/trash'
 
 // Helper to check if the current user is a super admin
 async function checkSuperAdmin() {
@@ -316,6 +317,33 @@ export async function getPricingRules() {
     }
     
     return { success: true, rules: data }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/** Prazo da lixeira (em horas), lido do ajuste global. Só o SuperAdmin lê por aqui; as demais pessoas usam a função mb_trash_retention_hours. */
+export async function getTrashRetention() {
+  try {
+    const { adminSupabase } = await checkSuperAdmin()
+    const { data } = await adminSupabase.from('platform_settings').select('value').eq('key', 'trash_retention_hours').maybeSingle()
+    return { success: true, hours: clampTrashHours((data?.value as any)?.hours) }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/** Muda o prazo da lixeira. Só o SuperAdmin do MetaBuilder: dono de workspace e desenvolvedor nunca chegam aqui. */
+export async function saveTrashRetention(hours: number) {
+  try {
+    const { adminSupabase, user } = await checkSuperAdmin()
+    const h = Math.round(Number(hours))
+    if (!Number.isFinite(h) || h < MIN_TRASH_HOURS || h > MAX_TRASH_HOURS) {
+      return { success: false, error: `O prazo deve ficar entre ${MIN_TRASH_HOURS} e ${MAX_TRASH_HOURS} horas.` }
+    }
+    const { error } = await adminSupabase.from('platform_settings').upsert({ key: 'trash_retention_hours', value: { hours: h }, updated_at: new Date().toISOString(), updated_by: user?.id ?? null })
+    if (error) return { success: false, error: error.message }
+    return { success: true, hours: h }
   } catch (err: any) {
     return { success: false, error: err.message }
   }

@@ -7,6 +7,9 @@ import { DownloadPathModal } from '@/components/studio/DownloadPathModal'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 import { WorkspaceSyncedDatabases } from '@/components/workspace/WorkspaceSyncedDatabases'
 import { HelpCenterStudio } from '@/components/studio/HelpCenterStudio'
+import { TrashModal } from '@/components/studio/TrashModal'
+import { DEFAULT_TRASH_HOURS, getTrashRetentionHours, moveUseCaseToTrash } from '@/lib/trash/trash'
+import { formatDuration } from '@/lib/trash/format'
 
 import {
   LayoutDashboard,
@@ -255,6 +258,11 @@ export function StudioDashboardClient({
   const [viewToEdit, setViewToEdit] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<any>(null)
+  // lixeira: o prazo é do SuperAdmin; aqui só se lê (as mensagens da exclusão e da lixeira citam esse prazo)
+  const [isTrashOpen, setIsTrashOpen] = useState(false)
+  const [trashHours, setTrashHours] = useState(DEFAULT_TRASH_HOURS)
+  const [isDeleting, setIsDeleting] = useState(false)
+  useEffect(() => { getTrashRetentionHours(supabase).then(setTrashHours) }, [isDeleteModalOpen, isTrashOpen]) // eslint-disable-line react-hooks/exhaustive-deps
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [viewToPublish, setViewToPublish] = useState<any>(null)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -435,41 +443,22 @@ export function StudioDashboardClient({
   }
 
   const handleDeleteView = async () => {
-    if (!viewToDelete) return
+    if (!viewToDelete || isDeleting) return
+    setIsDeleting(true)
     try {
-      const { error } = await supabase
-        .from('ui_views')
-        .delete()
-        .eq('id', viewToDelete.id)
+      // vai para a lixeira (cópia + exclusão numa transação) e os itens de menu que apontavam para ele saem do menu;
+      // restaurar devolve tudo. O prazo para restaurar é o que o SuperAdmin configurou.
+      await moveUseCaseToTrash(supabase, viewToDelete, project.id)
 
-      if (error) throw error
-
-      // Limpar menus que apontavam para este caso de uso
-      const currentMenu = project.navigation || []
-      const removeTargetFromMenu = (items: any[], targetSlug: string): any[] => {
-        return items
-          .filter(item => !(item.type === 'view' && item.target === targetSlug))
-          .map(item => ({
-            ...item,
-            children: item.children ? removeTargetFromMenu(item.children, targetSlug) : undefined
-          }))
-      }
-      
-      const newMenu = removeTargetFromMenu(currentMenu, viewToDelete.slug)
-      
-      if (JSON.stringify(currentMenu) !== JSON.stringify(newMenu)) {
-        await supabase
-          .from('projects')
-          .update({ navigation: newMenu })
-          .eq('id', project.id)
-      }
-
-      toast(t('dashboard.projects.studio.toasts.delete_success'), 'success')
+      toast(t('dashboard.projects.studio.trash.trashed').replace('{name}', viewToDelete.name || '').replace('{duration}', formatDuration(trashHours, t)), 'success')
       setIsDeleteModalOpen(false)
       setViewToDelete(null)
       router.refresh()
     } catch (err: any) {
-      toast(t('dashboard.projects.studio.toasts.error_delete') + err.message, 'error')
+      // sem a função da lixeira no banco o erro aparece e NADA é excluído: melhor avisar do que apagar sem volta
+      toast(t('dashboard.projects.studio.toasts.error_delete') + (err?.message || ''), 'error')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -1151,6 +1140,17 @@ export function StudioDashboardClient({
                 >
                   <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
                 </button>
+                {canCreate && (
+                  <button
+                    data-help-id="studio.trash"
+                    onClick={() => setIsTrashOpen(true)}
+                    className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                    title={t('dashboard.projects.studio.trash.open')}
+                    aria-label={t('dashboard.projects.studio.trash.open')}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
                 <div className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-[10px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest border border-neutral-200 dark:border-neutral-800">
                   {userViews.length} {t('dashboard.projects.studio.created_suffix')}
                 </div>
@@ -1596,18 +1596,19 @@ export function StudioDashboardClient({
             <div data-help-id="studio.delete_warning" className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
               <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-600">{t('dashboard.projects.studio.delete_confirm.warning')}</p>
-                <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.delete_confirm.desc').replace('{name}', viewToDelete?.name || '')}</p>
+                <p className="text-sm font-bold text-red-600">{t('dashboard.projects.studio.trash.confirm_warning')}</p>
+                <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.studio.trash.confirm_desc').replace('{name}', viewToDelete?.name || '').replace('{duration}', formatDuration(trashHours, t))}</p>
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-3">
               <button
                 data-help-id="studio.delete_yes"
+                disabled={isDeleting}
                 onClick={handleDeleteView}
-                className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
+                className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
               >
-                {t('dashboard.projects.studio.delete_confirm.yes_delete')}
+                {t('dashboard.projects.studio.trash.confirm_yes')}
               </button>
               <button
                 data-help-id="studio.delete_cancel"
@@ -1619,6 +1620,14 @@ export function StudioDashboardClient({
             </div>
           </div>
         </Modal>
+
+        <TrashModal
+          isOpen={isTrashOpen}
+          onClose={() => setIsTrashOpen(false)}
+          projectId={project.id}
+          hours={trashHours}
+          onRestored={() => router.refresh()}
+        />
 
         <Modal
           isOpen={isPublishModalOpen}

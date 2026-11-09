@@ -37,7 +37,7 @@ describe('tour de exclusão', () => {
     const fs = await import('node:fs')
     const src = fs.readFileSync('src/app/admin/[workspace_slug]/[project_slug]/studio/StudioDashboardClient.tsx', 'utf8')
     // o botão que exclui de verdade precisa ser o marcado
-    expect(/data-help-id="studio\.delete_yes"\s+onClick=\{handleDeleteView\}/.test(src.replace(/\r\n/g, '\n'))).toBe(true)
+    expect(/data-help-id="studio\.delete_yes"[^>]*onClick=\{handleDeleteView\}/.test(src.replace(/\r\n/g, '\n'))).toBe(true)
   })
 })
 

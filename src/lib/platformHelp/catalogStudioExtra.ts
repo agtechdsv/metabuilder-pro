@@ -47,20 +47,25 @@ export const STUDIO_EXTRA_TOURS: readonly PlatformTour[] = [
         waitingHint: h(['Clique na lixeira de um cartão para abrir a confirmação. Abrir não exclui nada.', 'Click the trash of a card to open the confirmation. Opening deletes nothing.', 'Haga clic en la papelera de una tarjeta para abrir la confirmación. Abrir no elimina nada.']),
       }),
       st('warning', 'studio.delete_warning', ['O aviso', 'The warning', 'El aviso'], [
-        'A janela cita o nome do caso de uso. Excluir apaga o caso de uso e tira dos menus do projeto os itens que apontavam para ele. Os usuários perdem a tela na hora e não dá para desfazer.',
-        'The window names the use case. Deleting erases the use case and removes from the project menus the items that pointed to it. Users lose the screen right away and it cannot be undone.',
-        'La ventana cita el nombre del caso de uso. Eliminar borra el caso de uso y quita de los menús del proyecto los elementos que apuntaban a él. Los usuarios pierden la pantalla al instante y no se puede deshacer.',
+        'A janela cita o nome do caso de uso e o prazo da lixeira. Excluir manda o caso de uso para a lixeira e tira dos menus do projeto os itens que apontavam para ele. Os usuários perdem a tela na hora. Dentro do prazo você restaura tudo (menus inclusive); depois dele, é apagado de vez.',
+        'The window names the use case and the trash period. Deleting sends the use case to the trash and removes from the project menus the items that pointed to it. Users lose the screen right away. Within the period you can restore everything (menus included); after it, it is permanently erased.',
+        'La ventana cita el nombre del caso de uso y el plazo de la papelera. Eliminar envía el caso de uso a la papelera y quita de los menús del proyecto los elementos que apuntaban a él. Los usuarios pierden la pantalla al instante. Dentro del plazo se restaura todo (menús incluidos); después se borra definitivamente.',
       ], { skipIfMissing: true, readOnly: true }),
-      st('yes', 'studio.delete_yes', ['Sim, excluir', 'Yes, delete', 'Sí, eliminar'], [
-        'Este é o botão que exclui de verdade. Neste tour ele não responde a clique, de propósito. Antes de usar fora do tour, confira o nome na janela e, se houver dúvida, publique ou exporte uma cópia antes.',
-        'This is the button that really deletes. In this tour it does not respond to clicks, on purpose. Before using it outside the tour, check the name in the window and, if in doubt, publish or export a copy first.',
-        'Este es el botón que elimina de verdad. En este recorrido no responde a clics, a propósito. Antes de usarlo fuera del recorrido, compruebe el nombre en la ventana y, si hay duda, publique o exporte una copia antes.',
+      st('yes', 'studio.delete_yes', ['Mover para a lixeira', 'Move to trash', 'Mover a la papelera'], [
+        'Este é o botão que exclui: ele manda o caso de uso para a lixeira. Neste tour ele não responde a clique, de propósito. Fora do tour, confira o nome na janela antes de confirmar.',
+        'This is the button that deletes: it sends the use case to the trash. In this tour it does not respond to clicks, on purpose. Outside the tour, check the name in the window before confirming.',
+        'Este es el botón que elimina: envía el caso de uso a la papelera. En este recorrido no responde a clics, a propósito. Fuera del recorrido, compruebe el nombre en la ventana antes de confirmar.',
       ], { skipIfMissing: true, readOnly: true }),
       st('cancel', 'studio.delete_cancel', ['Cancelar', 'Cancel', 'Cancelar'], [
         'Clique em "Cancelar" para fechar a janela sem excluir nada.',
         'Click "Cancel" to close the window without deleting anything.',
         'Haga clic en "Cancelar" para cerrar la ventana sin eliminar nada.',
       ], { skipIfMissing: true }),
+      st('bin', 'studio.trash', ['A lixeira', 'The trash', 'La papelera'], [
+        'Este botão abre a lixeira do projeto: lá ficam os casos de uso excluídos, com o tempo que falta para cada um. "Restaurar" traz de volta a tela, os componentes, as permissões por perfil e os itens de menu. O prazo é definido pela plataforma (não por você nem pelo dono do workspace).',
+        'This button opens the project trash: deleted use cases stay there, with the time left for each. "Restore" brings back the screen, components, permissions per role and menu items. The period is set by the platform (not by you or the workspace owner).',
+        'Este botón abre la papelera del proyecto: allí quedan los casos de uso eliminados, con el tiempo que falta para cada uno. "Restaurar" devuelve la pantalla, los componentes, los permisos por perfil y los elementos de menú. El plazo lo define la plataforma (no usted ni el dueño del workspace).',
+      ], { skipIfMissing: true, readOnly: true }),
       st('end', undefined, ['Dica final', 'Final tip', 'Consejo final'], [
         'Para testar a exclusão sem risco, crie um caso de uso de teste (tour "Criar: Pesquisa + Cadastro") e use ele aqui, fora do tour.',
         'To test deleting without risk, create a test use case (tour "Create: Search + Form") and use it here, outside the tour.',

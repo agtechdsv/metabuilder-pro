@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/cleanup-bpm-runs",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/empty-trash",
+      "schedule": "45 3 * * *"
     }
   ]
 }
