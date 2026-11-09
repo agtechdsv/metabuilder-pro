@@ -28,6 +28,12 @@ describe('tour de exclusão', () => {
   it('nunca deixa clicar em "Sim, excluir", em nenhum passo', async () => {
     const tour = PLATFORM_TOURS.find(t => t.id === 'studio-excluir-caso-de-uso')!
     expect(tour.neverClick).toContain('studio.delete_yes')
+    expect(tour.cleanupClick).toEqual(['studio.delete_cancel'])
+    // ao terminar, o tour clica em Cancelar para não deixar a janela de exclusão aberta
+    const { startPlatformTour, stopPlatformTour } = await import('../platformHelp/store')
+    let clicked = 0
+    ;(globalThis as any).document = { querySelector: (q: string) => (q.includes('studio.delete_cancel') ? { click: () => { clicked++ } } : null), querySelectorAll: () => [] }
+    try { startPlatformTour({ ...tour, needs: undefined }); stopPlatformTour('teste'); expect(clicked).toBe(1) } finally { delete (globalThis as any).document }
     const fs = await import('node:fs')
     const src = fs.readFileSync('src/app/admin/[workspace_slug]/[project_slug]/studio/StudioDashboardClient.tsx', 'utf8')
     // o botão que exclui de verdade precisa ser o marcado

@@ -84,6 +84,8 @@ export interface PlatformTour {
    * por mais que a pessoa navegue com Voltar/Próximo. Para ações destrutivas que o tour só mostra.
    */
   neverClick?: string[]
+  /** `data-help-id` de botões "seguros" (ex.: Cancelar) que o tour clica ao terminar, por qualquer motivo, para não deixar janelas abertas */
+  cleanupClick?: string[]
   /**
    * Onde começar quando a pessoa abre o tour com a tela já adiantada (ex.: já dentro do assistente, na etapa 3). Vale a primeira regra que
    * se cumpre na tela; sem nenhuma, o tour começa no primeiro passo.

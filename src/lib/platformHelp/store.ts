@@ -64,7 +64,12 @@ export const prevStep = () => { if (active) goToStep(active.index - 1) }
 export function stopPlatformTour(reason = 'fechado') {
   if (!active) return
   if (typeof console !== 'undefined') console.info(`[ajuda da plataforma] tour "${active.tour.id}" encerrado no passo ${active.index + 1}: ${reason}`)
+  const cleanup = active.tour.cleanupClick
   active = null
+  if (cleanup?.length && typeof document !== 'undefined') {
+    // fecha o que o tour deixou aberto (ex.: a janela de confirmação de exclusão), pelo botão seguro
+    for (const id of cleanup) (document.querySelector(`[data-help-id="${id.replace(/["\\]/g, '\\$&')}"]`) as HTMLElement | null)?.click()
+  }
   emit()
 }
 
