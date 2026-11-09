@@ -1,3 +1,5 @@
+'use client'
+
 import { PrivacyContent } from '@/components/legal/PrivacyContent'
 import { Layers } from 'lucide-react'
 import Link from 'next/link'

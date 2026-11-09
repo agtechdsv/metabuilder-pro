@@ -1,3 +1,5 @@
+'use client'
+
 import { AgTechContent } from '@/components/legal/AgTechContent'
 import { Layers, Cpu } from 'lucide-react'
 import Link from 'next/link'

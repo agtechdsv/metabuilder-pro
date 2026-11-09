@@ -1,3 +1,5 @@
+'use client'
+
 import { TermsContent } from '@/components/legal/TermsContent'
 import { Layers } from 'lucide-react'
 import Link from 'next/link'
