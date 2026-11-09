@@ -60,9 +60,9 @@ export const STUDIO_EXTRA_TOURS: readonly PlatformTour[] = [
         'Haga clic en "Cancelar" para cerrar la ventana sin eliminar nada.',
       ], { skipIfMissing: true }),
       st('end', undefined, ['Dica final', 'Final tip', 'Consejo final'], [
-        'Para testar a exclusão sem risco, crie um caso de uso de teste (tour "Criar um caso de uso") e use ele aqui, fora do tour.',
-        'To test deleting without risk, create a test use case (tour "Create a use case") and use it here, outside the tour.',
-        'Para probar la eliminación sin riesgo, cree un caso de uso de prueba (recorrido "Crear un caso de uso") y úselo aquí, fuera del recorrido.',
+        'Para testar a exclusão sem risco, crie um caso de uso de teste (tour "Criar: Pesquisa + Cadastro") e use ele aqui, fora do tour.',
+        'To test deleting without risk, create a test use case (tour "Create: Search + Form") and use it here, outside the tour.',
+        'Para probar la eliminación sin riesgo, cree un caso de uso de prueba (recorrido "Crear: Búsqueda + Registro") y úselo aquí, fuera del recorrido.',
       ]),
     ],
   },
