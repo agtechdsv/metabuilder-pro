@@ -18,6 +18,7 @@ export const STUDIO_EXTRA_TOURS: readonly PlatformTour[] = [
     id: 'studio-excluir-caso-de-uso',
     route: STUDIO,
     freeClicks: true,
+    neverClick: ['studio.delete_yes'],
     needs: 'studio.cards',
     needsHint: h(['Disponível na lista do Studio: saia do assistente (seta ao lado do título) para ver este tour.', 'Available on the Studio list: leave the wizard (arrow next to the title) to see this tour.', 'Disponible en la lista del Studio: salga del asistente (flecha junto al título) para ver este recorrido.']),
     recover: ['studio.tab_list', 'wizard.back', 'ai.back'],

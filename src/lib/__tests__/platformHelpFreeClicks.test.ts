@@ -24,6 +24,17 @@ describe('tours de cliques livres', () => {
   })
 })
 
+describe('tour de exclusão', () => {
+  it('nunca deixa clicar em "Sim, excluir", em nenhum passo', async () => {
+    const tour = PLATFORM_TOURS.find(t => t.id === 'studio-excluir-caso-de-uso')!
+    expect(tour.neverClick).toContain('studio.delete_yes')
+    const fs = await import('node:fs')
+    const src = fs.readFileSync('src/app/admin/[workspace_slug]/[project_slug]/studio/StudioDashboardClient.tsx', 'utf8')
+    // o botão que exclui de verdade precisa ser o marcado
+    expect(/data-help-id="studio\.delete_yes"\s+onClick=\{handleDeleteView\}/.test(src.replace(/\r\n/g, '\n'))).toBe(true)
+  })
+})
+
 describe('tours das lógicas', () => {
   it('toda lógica do assistente (menos Pesquisa/Cadastro, que é o tour de criar) tem o seu tour, que escolhe exatamente aquela lógica', async () => {
     const fs = await import('node:fs')

@@ -229,6 +229,22 @@ export function PlatformTourHost() {
     return () => el.removeEventListener('click', onClick)
   }, [key, hasRect, ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // botões que o tour nunca deixa clicar (ex.: "Sim, excluir"), em qualquer passo e dentro de janelas. Vale também para Enter/Espaço no botão focado.
+  useEffect(() => {
+    const never = active?.tour.neverClick
+    if (!never?.length) return
+    const guard = (e: Event) => {
+      const node = e.target as Node | null
+      const elNode = node instanceof Element ? node : node?.parentElement
+      if (!elNode) return
+      if (e instanceof KeyboardEvent && e.key !== 'Enter' && e.key !== ' ') return
+      if (never.some(id => elNode.closest(`[data-help-id="${esc(id)}"]`))) { e.stopPropagation(); e.preventDefault() }
+    }
+    const evs = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'dblclick', 'keydown', 'keyup']
+    for (const n of evs) window.addEventListener(n, guard, true)
+    return () => { for (const n of evs) window.removeEventListener(n, guard, true) }
+  }, [active?.tour])
+
   // trava de cliques: o buraco do destaque é um retângulo, e outros botões podem estar por cima dele (ex.: a barra flutuante "Próximo passo").
   // Enquanto o passo não é livre, só vale clique dentro do item do passo ou do balão do tour; o resto é descartado.
   useEffect(() => {
