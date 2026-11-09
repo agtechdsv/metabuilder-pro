@@ -6,6 +6,7 @@
 import type { HelpText } from '../helpText'
 import type { PlatformTour } from './types'
 import { DATA_TOURS } from './catalogData'
+import { STUDIO_EXTRA_TOURS } from './catalogStudioExtra'
 import { AUTH_TOURS } from './catalogAuth'
 import { SETTINGS_TOURS } from './catalogSettings'
 import { LOGS_TOURS } from './catalogLogs'
@@ -353,4 +354,4 @@ const BASE_TOURS: readonly PlatformTour[] = [
 ]
 
 /** Todos os tours: o Studio (aqui) mais Dados & Schemas, Login & Segurança, Configurações e Logs (um arquivo por área). */
-export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...STUDIO_EXTRA_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]

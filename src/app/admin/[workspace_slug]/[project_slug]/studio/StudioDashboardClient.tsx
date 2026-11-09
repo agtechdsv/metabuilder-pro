@@ -1467,6 +1467,7 @@ export function StudioDashboardClient({
                         )}
                         {canDelete && (
                           <button
+                            data-help-id="studio.card_delete"
                             onClick={() => {
                               setViewToDelete(view)
                               setIsDeleteModalOpen(true)
@@ -1499,6 +1500,7 @@ export function StudioDashboardClient({
                               
                               {view.draft_config && view.status !== 'draft' && (
                                 <button
+                                  data-help-id="studio.card_discard"
                                   onClick={() => handleDiscardDraft(view)}
                                   className="w-[42px] shrink-0 flex items-center justify-center bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-2xl border border-rose-200 dark:border-rose-500/30 transition-all text-rose-600 dark:text-rose-500 shadow-sm"
                                   title={t('dashboard.projects.studio.discard_draft_tooltip', 'Descartar Rascunho')}
@@ -1591,7 +1593,7 @@ export function StudioDashboardClient({
           title={t('dashboard.projects.studio.delete_confirm.title')}
         >
           <div className="space-y-6">
-            <div className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
+            <div data-help-id="studio.delete_warning" className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
               <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-red-600">{t('dashboard.projects.studio.delete_confirm.warning')}</p>
@@ -1601,12 +1603,14 @@ export function StudioDashboardClient({
             
             <div className="flex flex-col gap-3">
               <button
+                data-help-id="studio.delete_yes"
                 onClick={handleDeleteView}
                 className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
               >
                 {t('dashboard.projects.studio.delete_confirm.yes_delete')}
               </button>
               <button
+                data-help-id="studio.delete_cancel"
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
               >
