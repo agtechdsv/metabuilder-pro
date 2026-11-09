@@ -75,6 +75,11 @@ export interface PlatformTour {
   /** o que dizer no menu quando o tour não está disponível por falta de `needs` */
   needsHint?: HelpText
   /**
+   * Tour que ESCOLHE a lógica do caso de uso (os de "Criar: ..."): se o assistente está editando um caso de uso salvo, só vale quando a
+   * lógica dele é esta; senão o tour trocaria a lógica de uma tela existente. Em caso de uso novo, vale sempre.
+   */
+  onlyLogic?: string
+  /**
    * Onde começar quando a pessoa abre o tour com a tela já adiantada (ex.: já dentro do assistente, na etapa 3). Vale a primeira regra que
    * se cumpre na tela; sem nenhuma, o tour começa no primeiro passo.
    */

@@ -20,8 +20,22 @@ export function resolveStartIndex(tour: PlatformTour): number {
   return 0
 }
 
+/** O assistente está editando um caso de uso salvo de OUTRA lógica que a deste tour? (então o tour de criação não pode rodar) */
+export function tourWrongLogic(tour: PlatformTour): boolean {
+  if (!tour.onlyLogic || typeof document === 'undefined') return false
+  const mode = document.querySelector('[data-help-id="wizard.mode"]')
+  return mode?.getAttribute('data-help-state') === 'edit' && mode.getAttribute('data-help-logic') !== tour.onlyLogic
+}
+
+export const WRONG_LOGIC_HINT = {
+  pt: 'Este caso de uso é de outra lógica. Use um caso de uso novo, ou um desta mesma lógica.',
+  en: 'This use case has a different logic. Use a new use case, or one of this same logic.',
+  es: 'Este caso de uso es de otra lógica. Use un caso de uso nuevo, o uno de esta misma lógica.',
+}
+
 /** O tour pode começar nesta tela? (alguns só valem na lista do Studio, não dentro do assistente) */
 export function tourAvailable(tour: PlatformTour): boolean {
+  if (tourWrongLogic(tour)) return false
   if (!tour.needs || typeof document === 'undefined') return true
   const els = Array.from(document.querySelectorAll(`[data-help-id="${tour.needs}"]`)) as HTMLElement[]
   return els.some(el => el.getClientRects().length > 0)

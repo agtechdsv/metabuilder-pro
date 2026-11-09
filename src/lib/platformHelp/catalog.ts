@@ -117,6 +117,7 @@ const BASE_TOURS: readonly PlatformTour[] = [
   {
     id: 'studio-criar-caso-de-uso',
     route: STUDIO,
+    onlyLogic: 'pesquisa_cadastro',
     title: h('Criar: Pesquisa + Cadastro', 'Create: Search + Form', 'Crear: Búsqueda + Registro'),
     summary: h('Passo a passo do assistente, com ou sem tabelas de detalhe (mestre + detalhe): da lógica ao botão final.', 'Wizard walkthrough, with or without detail tables (master + detail): from logic to the final button.', 'Recorrido del asistente, con o sin tablas de detalle (maestro + detalle): de la lógica al botón final.'),
     recover: ['studio.tab_list', 'ai.back'],

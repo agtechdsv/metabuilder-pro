@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
-import { getActiveTour, markTourSeen, nextStep, prevStep, stopPlatformTour, subscribePlatformTour } from '@/lib/platformHelp/store'
+import { getActiveTour, markTourSeen, nextStep, prevStep, stopPlatformTour, subscribePlatformTour, tourWrongLogic } from '@/lib/platformHelp/store'
 
 const POPOVER_W = 340
 const PAD = 6
@@ -162,6 +162,14 @@ export function PlatformTourHost() {
     }, 300)
     return () => clearInterval(id)
   }, [active?.tour.id, active?.path])
+
+  // tour de criação de uma lógica e a pessoa entrou na edição de um caso de uso de OUTRA lógica: encerra, para não trocar a lógica dele
+  useEffect(() => {
+    const tour = active?.tour
+    if (!tour?.onlyLogic) return
+    const id = setInterval(() => { if (tourWrongLogic(tour)) stopPlatformTour('o caso de uso em edição é de outra lógica') }, 300)
+    return () => clearInterval(id)
+  }, [active?.tour])
 
   // acompanha o alvo (rolagem, redimensionar, a tela se rearrumando)
   const hasRect = !!rect

@@ -8,7 +8,7 @@ import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
 import { PLATFORM_TOURS } from '@/lib/platformHelp/catalog'
 import { toursForRoute } from '@/lib/platformHelp/routes'
-import { seenTours, startPlatformTour, tourAvailable } from '@/lib/platformHelp/store'
+import { seenTours, startPlatformTour, tourAvailable, tourWrongLogic, WRONG_LOGIC_HINT } from '@/lib/platformHelp/store'
 
 /** Ícone de ajuda do cabeçalho nas áreas do Studio: lista os tours que existem para a tela em que a pessoa está. */
 export function PlatformHelpButton() {
@@ -66,7 +66,7 @@ export function PlatformHelpButton() {
                       <span className="block text-xs font-black text-neutral-800 dark:text-neutral-100">{resolveHelp(tour.title, language)}</span>
                       <span className="block text-[11px] leading-snug text-neutral-500">{resolveHelp(tour.summary, language)}</span>
                       <span className="mt-0.5 block text-[10px] font-bold text-neutral-400">{tour.steps.length} {t('platform_help.steps', 'passos')}</span>
-                      {!avail && <span className="mt-0.5 block text-[10px] font-bold text-amber-600">{resolveHelp(tour.needsHint, language) || t('platform_help.unavailable', 'Indisponível nesta etapa.')}</span>}
+                      {!avail && <span className="mt-0.5 block text-[10px] font-bold text-amber-600">{resolveHelp(tourWrongLogic(tour) ? WRONG_LOGIC_HINT : tour.needsHint, language) || t('platform_help.unavailable', 'Indisponível nesta etapa.')}</span>}
                     </span>
                   </button>
                 </li>

@@ -36,6 +36,22 @@ describe('tours das lógicas', () => {
       const pick = tour!.steps.find(s => s.id === 'pick')
       expect(pick?.completeWhen?.equals, l).toBe(l)
       expect(tour!.steps.some(s => s.id === 'buttons'), l).toBe(true)
+      // em edição de um caso de uso salvo, o tour só vale para a mesma lógica (senão trocaria a lógica de uma tela existente)
+      expect(tour!.onlyLogic, l).toBe(l)
     }
+    expect(PLATFORM_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')?.onlyLogic).toBe('pesquisa_cadastro')
+  })
+
+  it('tour de criação fica indisponível ao editar um caso de uso de outra lógica', async () => {
+    const { tourAvailable, tourWrongLogic } = await import('../platformHelp/store')
+    const kanban = PLATFORM_TOURS.find(t => t.id === 'studio-logica-kanban')!
+    const mk = (state: string, logic: string) => ({ getAttribute: (a: string) => (a === 'data-help-state' ? state : logic) })
+    const doc = (el: unknown) => { (globalThis as any).document = { querySelector: () => el, querySelectorAll: () => [] } }
+    try {
+      doc(null); expect(tourWrongLogic(kanban)).toBe(false)
+      doc(mk('new', '')); expect(tourWrongLogic(kanban)).toBe(false)
+      doc(mk('edit', 'kanban')); expect(tourWrongLogic(kanban)).toBe(false)
+      doc(mk('edit', 'analytics')); expect(tourWrongLogic(kanban)).toBe(true); expect(tourAvailable(kanban)).toBe(false)
+    } finally { delete (globalThis as any).document }
   })
 })

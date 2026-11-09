@@ -121,6 +121,7 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
   return {
     id: `studio-logica-${s.logic.replace(/_/g, '-')}`,
     route: STUDIO,
+    onlyLogic: s.logic,
     freeClicks: true,
     title: h([`Criar: ${s.name[0]}`, `Create: ${s.name[1]}`, `Crear: ${s.name[2]}`]),
     summary: h(s.summary),
@@ -325,6 +326,7 @@ function buildPersonalizado(base: PlatformTour): PlatformTour {
   return {
     id: 'studio-logica-personalizado',
     route: STUDIO,
+    onlyLogic: 'personalizado',
     freeClicks: true,
     title: h(['Criar: Personalizado (Orquestrador)', 'Create: Custom (Orchestrator)', 'Crear: Personalizado (Orquestador)']),
     summary: h(['Unir casos de uso existentes em abas, subabas e quadros em torno de um mestre, do assistente à publicação.', 'Join existing use cases in tabs, subtabs and panels around a master, from the wizard to publishing.', 'Unir casos de uso existentes en pestañas, subpestañas y cuadros alrededor de un maestro, del asistente a la publicación.']),
