@@ -53,7 +53,7 @@ export function AnalyticsAccessPanel({ analytics, setAnalytics, models }: Props)
   const seconds = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback)
 
   return (
-    <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-white/70 dark:bg-neutral-950/40">
+    <div data-help-id="wizard.bi_access" className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-white/70 dark:bg-neutral-950/40">
       <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
         <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0" />
         <span className="text-[10px] font-black uppercase tracking-widest text-neutral-700 dark:text-neutral-200">{t('bi_access.title')}</span>

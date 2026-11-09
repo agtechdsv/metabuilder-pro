@@ -19,7 +19,7 @@ describe('rotas da ajuda da plataforma', () => {
 
   it('cada tela recebe só os tours dela', () => {
     const ids = (p: string) => toursForRoute(PLATFORM_TOURS, p).map(t => t.id)
-    expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso', 'studio-excluir-caso-de-uso'])
+    expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso', 'studio-logica-kanban', 'studio-logica-scheduler', 'studio-logica-timeline', 'studio-logica-gantt', 'studio-logica-blueprint', 'studio-logica-mapa-mental', 'studio-logica-map', 'studio-logica-analytics', 'studio-logica-galeria', 'studio-logica-personalizado', 'studio-excluir-caso-de-uso'])
     expect(ids('/admin/w/p/studio/data')).toEqual(['studio-dados', 'dados-tabela-campos', 'dados-auditoria', 'dados-acesso-linha', 'dados-relacionamentos'])
     expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
     expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
@@ -60,7 +60,7 @@ describe('catálogo da ajuda da plataforma', () => {
         const full = path.join(dir, e.name)
         if (e.isDirectory()) walk(full)
         else if (/\.(tsx|ts)$/.test(e.name) && !full.includes(`${path.sep}lib${path.sep}platformHelp${path.sep}`)) {
-          { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
+          { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/['"]((?:wizard|auth|settings|logs|data|rel|studio|platform|ai).[a-z_]+)['"]/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
         }
       }
     }
@@ -158,7 +158,7 @@ describe('passos com condição', () => {
         if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
         const full = path.join(dir, e.name)
         if (e.isDirectory()) walk(full)
-        else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
+        else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/['"]((?:wizard|auth|settings|logs|data|rel|studio|platform|ai).[a-z_]+)['"]/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
       }
     }
     walk(src)
@@ -186,7 +186,7 @@ describe('todos os tours (Studio, Login, Configurações, Logs)', () => {
       if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
       const full = path.join(dir, e.name)
       if (e.isDirectory()) walk(full)
-      else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
+      else if (/\.tsx$/.test(e.name)) { const text = fs.readFileSync(full, 'utf8'); for (const m of text.matchAll(/['"]((?:wizard|auth|settings|logs|data|rel|studio|platform|ai).[a-z_]+)['"]/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id="([^"]+)"/g)) found.add(m[1]); for (const m of text.matchAll(/data-help-id=\{[^}]*?'([^']+)'/g)) found.add(m[1]) }
     }
   }
   walk(path.join(process.cwd(), 'src'))

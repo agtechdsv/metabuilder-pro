@@ -11,7 +11,7 @@ export function SchedulerLayoutConfig({
   if (config.logic_type !== 'scheduler') return null
 
   return (
-    <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+    <div data-help-id="wizard.cfg_scheduler" className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
@@ -25,7 +25,7 @@ export function SchedulerLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo do Título</label>
           <select
-            value={config.layout_config.scheduler_config?.title_field || ''}
+            data-help-id="wizard.sched_title" value={config.layout_config.scheduler_config?.title_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -43,7 +43,7 @@ export function SchedulerLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Início</label>
           <select
-            value={config.layout_config.scheduler_config?.start_date_field || ''}
+            data-help-id="wizard.sched_start" value={config.layout_config.scheduler_config?.start_date_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -64,7 +64,7 @@ export function SchedulerLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Data de Fim (Opcional)</label>
           <select
-            value={config.layout_config.scheduler_config?.end_date_field || ''}
+            data-help-id="wizard.sched_end" value={config.layout_config.scheduler_config?.end_date_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -85,7 +85,7 @@ export function SchedulerLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Cor/Categoria (Opcional)</label>
           <select
-            value={config.layout_config.scheduler_config?.color_field || ''}
+            data-help-id="wizard.sched_color" value={config.layout_config.scheduler_config?.color_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {

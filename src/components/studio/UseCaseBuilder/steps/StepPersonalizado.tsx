@@ -395,7 +395,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
       }
     }
     return (
-              <div key={slot.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
+              <div key={slot.id} data-help-id="wizard.pers_slot" className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl flex flex-col gap-4">
                 {/* Slot header row */}
                 <div className="flex gap-4 items-start w-full">
                   {dragHandle && <div className="mt-6">{dragHandle}</div>}
@@ -431,7 +431,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                   <div className="space-y-2 flex-1">
                     <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.use_case_label', 'Caso de Uso')}</label>
                     <select
-                      value={slot.use_case_slug || ''}
+                      data-help-id="wizard.pers_slot_uc" value={slot.use_case_slug || ''}
                       onChange={e => {
                         const selectedUc = useCases?.find(uc => uc.slug === e.target.value)
                         upd(s => ({ ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }))
@@ -1021,7 +1021,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
       </div>
 
       {/* Master use case */}
-      <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+      <div data-help-id="wizard.pers_master_box" className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20"><Database className="w-4 h-4" /></div>
           <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.3em]">{t('wizard.personalizado.master_uc_title', 'Caso de Uso Mestre')}</h4>
@@ -1031,7 +1031,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 ml-1">{t('wizard.personalizado.select_master', 'Selecione o Mestre')}</label>
             <select
-              value={(config.layout_config as any).master_use_case_slug || ''}
+              data-help-id="wizard.pers_master" value={(config.layout_config as any).master_use_case_slug || ''}
               onChange={e => {
                 const selectedSlug = e.target.value
                 const selectedUc = useCases.find(uc => uc.slug === selectedSlug)
@@ -1097,7 +1097,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
 
       {/* Custom slots (tabs) */}
       {config.logic_type === 'personalizado' && (
-        <div className="p-6 bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-[2rem] space-y-6 shadow-sm overflow-hidden">
+        <div data-help-id="wizard.pers_tabs" className="p-6 bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-[2rem] space-y-6 shadow-sm overflow-hidden">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 flex items-center justify-center">
               <Layout className="w-4 h-4" />
@@ -1144,7 +1144,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
             })()}
 
             {/* Add tab button */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div data-help-id="wizard.pers_add" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => {
                   const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: t('wizard.personalizado.new_tab_title', 'Nova Aba'), type: 'form', model_id: config.selected_models[0] }]

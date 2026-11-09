@@ -23,3 +23,19 @@ describe('tours de cliques livres', () => {
     }
   })
 })
+
+describe('tours das lógicas', () => {
+  it('toda lógica do assistente (menos Pesquisa/Cadastro, que é o tour de criar) tem o seu tour, que escolhe exatamente aquela lógica', async () => {
+    const fs = await import('node:fs')
+    const src = fs.readFileSync('src/components/studio/UseCaseBuilder/steps/StepLogic.tsx', 'utf8')
+    const logics = [...src.matchAll(/id: '([a-z_]+)', +title: t\('wizard\.logic\.types\./g)].map(m => m[1]).filter(l => l !== 'pesquisa_cadastro')
+    expect(logics.length).toBe(10)
+    for (const l of logics) {
+      const tour = PLATFORM_TOURS.find(t => t.id === `studio-logica-${l.replace(/_/g, '-')}`)
+      expect(tour, l).toBeTruthy()
+      const pick = tour!.steps.find(s => s.id === 'pick')
+      expect(pick?.completeWhen?.equals, l).toBe(l)
+      expect(tour!.steps.some(s => s.id === 'buttons'), l).toBe(true)
+    }
+  })
+})

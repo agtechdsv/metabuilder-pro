@@ -12,7 +12,7 @@ export function TimelineLayoutConfig({
   if (config.logic_type !== 'timeline') return null
 
   return (
-    <div className="p-5 bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[1.5rem] space-y-5 shadow-sm">
+    <div data-help-id="wizard.cfg_timeline" className="p-5 bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[1.5rem] space-y-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
@@ -23,7 +23,7 @@ export function TimelineLayoutConfig({
       </div>
 
       {/* Subcard 1: Mapeamento de Dados */}
-      <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
+      <div data-help-id="wizard.tl_data" className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
         <div className="flex items-center gap-2.5">
           <Database className="w-4 h-4 text-indigo-500" />
           <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Mapeamento de Dados</span>
@@ -33,7 +33,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.title_field', 'Campo de Título')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.title_field || ''}
+              data-help-id="wizard.tl_title" value={(config.layout_config as any).timeline_config?.title_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -51,7 +51,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.date_field', 'Campo de Data')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.date_field || ''}
+              data-help-id="wizard.tl_date" value={(config.layout_config as any).timeline_config?.date_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -72,7 +72,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.desc_field', 'Campo de Descrição (Opcional)')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.desc_field || ''}
+              data-help-id="wizard.tl_desc" value={(config.layout_config as any).timeline_config?.desc_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -90,7 +90,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.icon_field', 'Campo de Ícone/Status (Opcional)')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.icon_field || ''}
+              data-help-id="wizard.tl_icon" value={(config.layout_config as any).timeline_config?.icon_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -108,7 +108,7 @@ export function TimelineLayoutConfig({
       </div>
 
       {/* Subcard 2: Estilo e Comportamento */}
-      <div className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
+      <div data-help-id="wizard.tl_style" className="p-4 bg-white dark:bg-neutral-900/70 border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl space-y-4 shadow-sm">
         <div className="flex items-center gap-2.5">
           <Settings2 className="w-4 h-4 text-indigo-500" />
           <span className="text-[10px] font-black uppercase text-neutral-700 dark:text-neutral-300 tracking-wider">Estilo e Comportamento</span>
@@ -118,7 +118,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.direction', 'Direção da Linha')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
+              data-help-id="wizard.tl_direction" value={(config.layout_config as any).timeline_config?.layout_direction || 'vertical'}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -136,7 +136,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.mode', 'Modo de Exibição')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
+              data-help-id="wizard.tl_mode" value={(config.layout_config as any).timeline_config?.layout_mode || 'alternating'}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -172,7 +172,7 @@ export function TimelineLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.timeline.style', 'Estilo Visual')}</label>
             <select
-              value={(config.layout_config as any).timeline_config?.layout_style || 'cards'}
+              data-help-id="wizard.tl_visual" value={(config.layout_config as any).timeline_config?.layout_style || 'cards'}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {

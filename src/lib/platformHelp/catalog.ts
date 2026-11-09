@@ -7,6 +7,7 @@ import type { HelpText } from '../helpText'
 import type { PlatformTour } from './types'
 import { DATA_TOURS } from './catalogData'
 import { STUDIO_EXTRA_TOURS } from './catalogStudioExtra'
+import { buildLogicTours } from './catalogLogic'
 import { AUTH_TOURS } from './catalogAuth'
 import { SETTINGS_TOURS } from './catalogSettings'
 import { LOGS_TOURS } from './catalogLogs'
@@ -354,4 +355,7 @@ const BASE_TOURS: readonly PlatformTour[] = [
 ]
 
 /** Todos os tours: o Studio (aqui) mais Dados & Schemas, Login & Segurança, Configurações e Logs (um arquivo por área). */
-export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...STUDIO_EXTRA_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]
+/** Os tours de cada lógica do assistente nascem do tour "Criar um caso de uso" (início e fim comuns). */
+const LOGIC_TOURS = buildLogicTours(BASE_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!)
+
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...LOGIC_TOURS, ...STUDIO_EXTRA_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]

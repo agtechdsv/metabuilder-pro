@@ -13,7 +13,7 @@ export function BlueprintLayoutConfig({
   return (
     <div className="space-y-6">
       {/* Card 1: Mapeamento de Dados */}
-      <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+      <div data-help-id="wizard.bp_data" className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
             <Database className="w-4 h-4" />
@@ -25,7 +25,7 @@ export function BlueprintLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Título do Nó (Obrigatório)</label>
             <select
-              value={(config.layout_config as any).blueprint_config?.title_field || ''}
+              data-help-id="wizard.bp_title" value={(config.layout_config as any).blueprint_config?.title_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -43,7 +43,7 @@ export function BlueprintLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo Nó Anterior / Predecessora (Obrigatório)</label>
             <select
-              value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
+              data-help-id="wizard.bp_pred" value={(config.layout_config as any).blueprint_config?.predecessor_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -61,7 +61,7 @@ export function BlueprintLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Status (Opcional)</label>
             <select
-              value={(config.layout_config as any).blueprint_config?.status_field || ''}
+              data-help-id="wizard.bp_status" value={(config.layout_config as any).blueprint_config?.status_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -79,7 +79,7 @@ export function BlueprintLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campo de Descrição (Opcional)</label>
             <select
-              value={(config.layout_config as any).blueprint_config?.desc_field || ''}
+              data-help-id="wizard.bp_desc" value={(config.layout_config as any).blueprint_config?.desc_field || ''}
               onChange={e => setConfig({
                 ...config,
                 layout_config: {
@@ -97,7 +97,7 @@ export function BlueprintLayoutConfig({
       </div>
 
       {/* Card 2: Estilo e Comportamento */}
-      <div className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
+      <div data-help-id="wizard.bp_style" className="p-6 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] space-y-6 shadow-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
             <SlidersHorizontal className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function BlueprintLayoutConfig({
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Direção da Linha</label>
             <select
-              value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
+              data-help-id="wizard.bp_direction" value={(config.layout_config as any).blueprint_config?.direction || 'TB'}
               onChange={e => setConfig({
                 ...config,
                 layout_config: { ...config.layout_config, blueprint_config: { ...(config.layout_config as any).blueprint_config, direction: e.target.value } }

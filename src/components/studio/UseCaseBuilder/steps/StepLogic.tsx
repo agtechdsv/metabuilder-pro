@@ -14,6 +14,9 @@ import type { StepBaseProps } from '../types'
 
 export function StepLogic({ config, setConfig }: StepBaseProps) {
   const { t } = useI18n()
+  // marcas da Ajuda da plataforma (literais, para o teste achar cada uma no código)
+  const catHelp: Record<string, string> = { dados: 'wizard.logic_cat_dados', projetos: 'wizard.logic_cat_projetos', mapas: 'wizard.logic_cat_mapas', outros: 'wizard.logic_cat_outros', avancado: 'wizard.logic_cat_avancado' }
+  const itemHelp: Record<string, string> = { kanban: 'wizard.logic_kanban', timeline: 'wizard.logic_timeline', gantt: 'wizard.logic_gantt', scheduler: 'wizard.logic_scheduler', blueprint: 'wizard.logic_blueprint', mapa_mental: 'wizard.logic_mapa_mental', map: 'wizard.logic_map', analytics: 'wizard.logic_analytics', galeria: 'wizard.logic_galeria', personalizado: 'wizard.logic_personalizado' }
 
   const categories = [
     {
@@ -130,7 +133,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
       </div>
 
       {/* Logic type selector */}
-      <div data-help-id="wizard.logic" data-help-state={config.logic_type ? 'ok' : 'empty'} className="space-y-4">
+      <div data-help-id="wizard.logic" data-help-logic={config.logic_type} data-help-state={config.logic_type ? 'ok' : 'empty'} className="space-y-4">
         {categories.map(cat => {
           const isExpanded = expandedCategory === cat.id
           const hasSelectedLogic = cat.items.some(i => i.id === config.logic_type)
@@ -144,6 +147,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
             )}>
               {/* Category header */}
               <div
+                data-help-id={catHelp[cat.id]}
                 className={cn("p-4 flex items-center justify-between", !isExpanded && "cursor-pointer")}
                 onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
               >
@@ -178,6 +182,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
                     {cat.items.map(item => (
                       <button
                         key={item.id}
+                        data-help-id={itemHelp[item.id]}
                         onClick={e => { e.stopPropagation(); setConfig({ ...config, logic_type: item.id }) }}
                         className={cn(
                           "p-4 rounded-[1.25rem] border-2 text-left transition-all group relative overflow-hidden",
@@ -209,6 +214,7 @@ export function StepLogic({ config, setConfig }: StepBaseProps) {
       {/* has_arguments toggle */}
       {(config.logic_type.includes('pesquisa') || config.logic_type === 'kanban') && (
         <div
+          data-help-id="wizard.has_args"
           className="flex items-center gap-4 p-6 bg-white dark:bg-neutral-950/50 rounded-2xl border border-neutral-200 dark:border-neutral-800 group cursor-pointer hover:border-indigo-500/30 transition-all"
           onClick={() => setConfig({ ...config, has_arguments: !config.has_arguments })}
         >

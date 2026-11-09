@@ -8,7 +8,7 @@ import { ScreenHelpField } from './ScreenHelpField'
 
 export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<SpecialLayoutProps, 'config' | 'setConfig' | 'models' | 't'>) {
   return (
-    <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+    <div data-help-id="wizard.cfg_general" className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
@@ -22,6 +22,7 @@ export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<Spec
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.records_per_page', 'Registros por Página (LIMIT)')}</label>
           <input
+            data-help-id="wizard.items_per_page"
             type="number"
             min="1"
             max="500"
@@ -41,7 +42,7 @@ export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<Spec
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ordem (Horizontal)</label>
               <select
-                value={(config.layout_config as any).timeline_config?.timeline_order_horizontal || 'asc'}
+                data-help-id="wizard.tl_order_h" value={(config.layout_config as any).timeline_config?.timeline_order_horizontal || 'asc'}
                 onChange={e => setConfig({
                   ...config,
                   layout_config: {
@@ -60,7 +61,7 @@ export function GeneralPatternConfig({ config, setConfig, models, t }: Pick<Spec
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Ordem (Vertical)</label>
               <select
-                value={(config.layout_config as any).timeline_config?.timeline_order_vertical || 'asc'}
+                data-help-id="wizard.tl_order_v" value={(config.layout_config as any).timeline_config?.timeline_order_vertical || 'asc'}
                 onChange={e => setConfig({
                   ...config,
                   layout_config: {

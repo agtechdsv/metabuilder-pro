@@ -113,7 +113,7 @@ export function AnalyticsSection({
   return (    <>
             {/* ZONA: ANALYTICS (BI) CONFIG */}
             {config.logic_type === 'analytics' && (
-              <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-[2rem] space-y-6 shadow-sm animate-in zoom-in-95 duration-500">
+              <div data-help-id="wizard.cfg_bi" className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-[2rem] space-y-6 shadow-sm animate-in zoom-in-95 duration-500">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
@@ -127,6 +127,7 @@ export function AnalyticsSection({
 
                   <div className="flex items-center gap-3 p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl">
                     <button
+                      data-help-id="wizard.bi_runtime"
                       onClick={() => setConfig({
                         ...config,
                         layout_config: {
@@ -152,7 +153,7 @@ export function AnalyticsSection({
                     {groups.length > 0 && (
                       <p className="text-[9px] font-black uppercase tracking-widest text-neutral-400 mb-2 ml-1">{t('bi_editor.ungrouped')}</p>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div data-help-id="wizard.bi_widgets" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <SortableContext items={sections[0].widgets.map((w: any) => `widget-${w.id}`)} strategy={rectSortingStrategy}>
                         {sections[0].widgets.map((widget: any) => (
                           <SortableWidgetCard
@@ -165,6 +166,7 @@ export function AnalyticsSection({
                         ))}
                       </SortableContext>
                       <button
+                        data-help-id="wizard.bi_add_widget"
                         onClick={() => handleAddWidget()}
                         className="p-8 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-indigo-600 hover:border-indigo-500 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group"
                       >
@@ -215,6 +217,7 @@ export function AnalyticsSection({
                   </SortableContext>
 
                   <button
+                    data-help-id="wizard.bi_new_group"
                     type="button"
                     onClick={() => setAnalytics({ groups: addGroup(groups, '') })}
                     className="w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
@@ -226,7 +229,7 @@ export function AnalyticsSection({
               </div>
             )}
             {config.logic_type === 'mapa_mental' && (
-              <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div data-help-id="wizard.cfg_mindmap" className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-[1.5rem] space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-500/20">
@@ -241,7 +244,7 @@ export function AnalyticsSection({
                     const levelModel = models.find((m: any) => m.id === level.model_id);
                     const isRoot = lIdx === 0;
                     return (
-                      <div key={level.id || lIdx} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
+                      <div key={level.id || lIdx} data-help-id={lIdx === 0 ? "wizard.mm_level" : undefined} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 space-y-3 relative">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] font-black uppercase text-neutral-400">Nível {lIdx + 1} {isRoot && '(Raiz)'}</span>
                           {!isRoot && (
@@ -558,7 +561,7 @@ export function AnalyticsSection({
                           return { ...prev, layout_config: { ...prev.layout_config, mindmap_levels: newLevels } };
                         });
                       }}
-                      className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
+                      data-help-id="wizard.mm_add_level" className="w-full py-3 border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-purple-300 dark:hover:border-purple-700/50 rounded-xl text-neutral-500 hover:text-purple-600 dark:hover:text-purple-400 text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
                       Adicionar Nível Abaixo
@@ -569,7 +572,7 @@ export function AnalyticsSection({
             )}
 
             {config.logic_type === 'galeria' && (
-              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
+              <div data-help-id="wizard.cfg_gallery" className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-[1.5rem] space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/20">
@@ -581,7 +584,7 @@ export function AnalyticsSection({
 
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Visualização de Imagem</label>
-                  <div className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
+                  <div data-help-id="wizard.gallery_click" className="flex p-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm">
                     <button
                       type="button"
                       onClick={() => setConfig({
@@ -615,7 +618,7 @@ export function AnalyticsSection({
                 </div>
 
                 {/* CAMPOS DO CARD DA GALERIA */}
-                <div className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
+                <div data-help-id="wizard.gallery_fields" className="space-y-3 border-t border-neutral-100 dark:border-neutral-800 pt-4 mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">Campos do Card da Galeria</label>
                     <p className="text-[10px] text-neutral-500 ml-1 mt-0.5">Selecione quais campos aparecerão no corpo do card (opcional). Deixe vazio para usar apenas Título e Arquivo.</p>

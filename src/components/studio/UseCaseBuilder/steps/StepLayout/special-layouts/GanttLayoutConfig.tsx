@@ -12,7 +12,7 @@ export function GanttLayoutConfig({
   if (config.logic_type !== 'gantt') return null
 
   return (
-    <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
+    <div data-help-id="wizard.cfg_gantt" className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-[2rem] space-y-6 shadow-sm">
       <div className="flex items-center gap-3 mb-2">
         <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
           <BarChartHorizontal className="w-4 h-4" />
@@ -24,7 +24,7 @@ export function GanttLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.title_field', 'Campo de Título (Obrigatório)')}</label>
           <select
-            value={(config.layout_config as any).gantt_config?.title_field || ''}
+            data-help-id="wizard.gantt_title" value={(config.layout_config as any).gantt_config?.title_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -42,7 +42,7 @@ export function GanttLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.start_date_field', 'Data Inicial (Obrigatório)')}</label>
           <select
-            value={(config.layout_config as any).gantt_config?.start_date_field || ''}
+            data-help-id="wizard.gantt_start" value={(config.layout_config as any).gantt_config?.start_date_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -63,7 +63,7 @@ export function GanttLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.end_date_field', 'Data Final (Obrigatório)')}</label>
           <select
-            value={(config.layout_config as any).gantt_config?.end_date_field || ''}
+            data-help-id="wizard.gantt_end" value={(config.layout_config as any).gantt_config?.end_date_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
@@ -84,7 +84,7 @@ export function GanttLayoutConfig({
         <div className="space-y-3">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.layout.gantt.progress_field', 'Progresso % (Opcional)')}</label>
           <select
-            value={(config.layout_config as any).gantt_config?.progress_field || ''}
+            data-help-id="wizard.gantt_progress" value={(config.layout_config as any).gantt_config?.progress_field || ''}
             onChange={e => setConfig({
               ...config,
               layout_config: {
