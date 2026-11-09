@@ -43,7 +43,7 @@ export function PlatformHelpButton() {
         <CircleHelp className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-[1000005] w-80 rounded-2xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+        <div className="absolute right-0 top-11 z-[1000005] w-80 max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
           <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
           {tours.length === 0 ? (
             <p className="px-1 py-3 text-xs text-neutral-500">{t('platform_help.none', 'Ainda não há tutoriais para esta tela. Eles estão sendo preparados.')}</p>
