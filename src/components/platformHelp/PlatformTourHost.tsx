@@ -192,6 +192,12 @@ export function PlatformTourHost() {
         setRect(prev => (sameRect(prev, r) ? prev : r))
         setMissing(false)
       } else {
+        // passo de clique cujo item sumiu porque a tela já mudou (o assistente abriu devagar e a espera do clique acabou antes): se o item do
+        // próximo passo já está na tela, o tour acompanha em vez de ficar parado num passo que já foi cumprido
+        const a = activeRef.current
+        const cur = a?.tour.steps[a.index]
+        const nt = a?.tour.steps[a.index + 1]?.target
+        if (a && cur?.advanceOnClick && nt && findById(nt)) { nextStep(); return }
         // o alvo sumiu (a tela mudou): tira a marcação; se não voltar em um tempo, avisa
         setRect(prev => (prev ? null : prev))
         setRect2(prev => (prev ? null : prev))
@@ -221,7 +227,7 @@ export function PlatformTourHost() {
       const a = activeRef.current
       const nextTarget = a ? a.tour.steps[a.index + 1]?.target : undefined
       if (!nextTarget) { nextStep(); return }
-      const until = Date.now() + (a?.tour.steps[a.index]?.advanceWaitMs ?? 1500)
+      const until = Date.now() + (a?.tour.steps[a.index]?.advanceWaitMs ?? 6000)
       while (Date.now() < until) {
         if (findById(nextTarget)) { nextStep(); return }
         await sleep(100)
