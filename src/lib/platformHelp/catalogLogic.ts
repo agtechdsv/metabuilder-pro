@@ -73,7 +73,8 @@ const zoneSteps = (s: Spec): PlatformStep[] => [
 function build(base: PlatformTour, s: Spec): PlatformTour {
   const tail = base.steps.slice(base.steps.findIndex(x => x.id === 'next3'))
   const byId = (id: string) => base.steps.find(x => x.id === id)!
-  const cfg = s.cfg.map((x, i) => (i === 0 ? { ...x, backClick: 'wizard.prev' } : x))
+  // ordem de leitura = ordem na tela, de cima para baixo: padrões da tela, configuração da lógica, painel de campos, zonas
+  const cfg = s.cfg
   const steps: PlatformStep[] = [
     byId('open'),
     st('name', 'wizard.name', ['Nome e endereço', 'Name and address', 'Nombre y dirección'], [
@@ -94,12 +95,12 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
       waitingHint: h(['Clique em uma tabela para continuar.', 'Click a table to continue.', 'Haga clic en una tabla para continuar.']),
     }),
     byId('next2'),
-    ...cfg,
     st('general', 'wizard.cfg_general', ['Padrões da tela', 'Screen defaults', 'Valores de la pantalla'], [
       'Registros por página (LIMIT) define quantos registros vêm de cada vez; em branco vale o padrão do sistema. Aqui também ficam o texto de ajuda da tela e a visão geral da ajuda dos campos.',
       'Records per page (LIMIT) sets how many records come at a time; blank uses the system default. The screen help text and the field help overview are also here.',
       'Registros por página (LIMIT) define cuántos registros vienen cada vez; en blanco vale el valor del sistema. Aquí también están el texto de ayuda de la pantalla y la visión general de la ayuda de los campos.',
-    ], { skipIfMissing: true }),
+    ], { skipIfMissing: true, backClick: 'wizard.prev' }),
+    ...cfg,
     st('fields-panel', 'wizard.fields_panel', ['De onde vêm os campos', 'Where fields come from', 'De dónde vienen los campos'], [
       'O painel lista os campos das tabelas escolhidas. Arraste um campo para uma zona (ou clique no + dele). Os seletores de configuração acima também mostram esses campos.',
       'The panel lists the fields of the chosen tables. Drag a field into a zone (or click its +). The configuration selectors above also list these fields.',
@@ -128,7 +129,7 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
     recover: ['studio.tab_list', 'ai.back'],
     entry: [
       { rule: stage('4'), step: 'buttons' },
-      { rule: stage('3'), step: s.cfg[0].id },
+      { rule: stage('3'), step: 'general' },
       { rule: stage('2'), step: 'tables' },
       { rule: stage('1'), step: 'name' },
     ],

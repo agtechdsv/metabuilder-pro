@@ -65,7 +65,7 @@ export const STUDIO_EXTRA_TOURS: readonly PlatformTour[] = [
         'Este botão abre a lixeira do projeto: lá ficam os casos de uso excluídos, com o tempo que falta para cada um. "Restaurar" traz de volta a tela, os componentes, as permissões por perfil e os itens de menu. O prazo é definido pela plataforma (não por você nem pelo dono do workspace).',
         'This button opens the project trash: deleted use cases stay there, with the time left for each. "Restore" brings back the screen, components, permissions per role and menu items. The period is set by the platform (not by you or the workspace owner).',
         'Este botón abre la papelera del proyecto: allí quedan los casos de uso eliminados, con el tiempo que falta para cada uno. "Restaurar" devuelve la pantalla, los componentes, los permisos por perfil y los elementos de menú. El plazo lo define la plataforma (no usted ni el dueño del workspace).',
-      ], { skipIfMissing: true, readOnly: true }),
+      ], { skipIfMissing: true, readOnly: true, enterClick: 'studio.delete_cancel' }),
       st('end', undefined, ['Dica final', 'Final tip', 'Consejo final'], [
         'Para testar a exclusão sem risco, crie um caso de uso de teste (tour "Criar: Pesquisa + Cadastro") e use ele aqui, fora do tour.',
         'To test deleting without risk, create a test use case (tour "Create: Search + Form") and use it here, outside the tour.',
