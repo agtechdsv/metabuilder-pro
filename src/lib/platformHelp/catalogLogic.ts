@@ -74,7 +74,8 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
   const tail = base.steps.slice(base.steps.findIndex(x => x.id === 'next3'))
   const byId = (id: string) => base.steps.find(x => x.id === id)!
   // ordem de leitura = ordem na tela, de cima para baixo: padrões da tela, configuração da lógica, painel de campos, zonas
-  const cfg = s.cfg
+  // a introdução só mostra a área (sem edição); a configuração é feita nos passos seguintes, campo a campo
+  const cfg = s.cfg.map(x => (x.id === 'cfg-intro' ? { ...x, readOnly: true } : x))
   const steps: PlatformStep[] = [
     byId('open'),
     st('name', 'wizard.name', ['Nome e endereço', 'Name and address', 'Nombre y dirección'], [
@@ -148,9 +149,9 @@ const SPECS: Spec[] = [
     tables: ['Escolha a tabela dos cartões (ex.: Tarefas ou Pedidos). Cada registro dela vira um cartão. As tabelas relacionadas ficam disponíveis na próxima etapa.', 'Pick the table of the cards (e.g. Tasks or Orders). Each record of it becomes a card. Related tables are available in the next step.', 'Elija la tabla de las tarjetas (ej.: Tareas o Pedidos). Cada registro suyo pasa a ser una tarjeta. Las tablas relacionadas quedan disponibles en la próxima etapa.'],
     cfg: [
       st('cfg-intro', 'wizard.cfg_kanban', ['Configuração do Kanban', 'Kanban configuration', 'Configuración del Kanban'], [
-        'Aqui você define em quais COLUNAS os cartões se dividem. O campo de agrupamento é obrigatório: sem ele o "Próximo passo" não habilita.',
-        'Here you define which COLUMNS the cards split into. The group field is required: without it "Next step" does not enable.',
-        'Aquí define en qué COLUMNAS se dividen las tarjetas. El campo de agrupamiento es obligatorio: sin él "Siguiente paso" no se habilita.',
+        'Aqui você define em quais COLUNAS os cartões se dividem. Vamos ver cada campo, de cima para baixo; o de agrupamento é obrigatório.',
+        'Here you define which COLUMNS the cards split into. We will go through each field, from top to bottom; the group field is required.',
+        'Aquí define en qué COLUMNAS se dividen las tarjetas. Veremos cada campo, de arriba abajo; el de agrupamiento es obligatorio.',
       ]),
       st('group-field', 'wizard.kanban_group', ['Campo de agrupamento', 'Group field', 'Campo de agrupamiento'], [
         'Escolha o campo cujo valor define a coluna (ex.: status, etapa, responsável). Cada valor diferente vira uma coluna.',
