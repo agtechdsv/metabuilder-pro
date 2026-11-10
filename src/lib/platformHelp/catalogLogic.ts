@@ -380,25 +380,60 @@ function buildPersonalizado(base: PlatformTour): PlatformTour {
         'Here you build the record tabs. The first tab is the master one; the following ones bring other use cases (details, histories, maps, dashboards...). You can drag tabs to reorder. We will go through each part, from top to bottom.',
         'Aquí arma las pestañas del registro. La primera pestaña es la del maestro; las siguientes traen otros casos de uso (detalles, historiales, mapas, paneles...). Puede arrastrar las pestañas para reordenar. Veremos cada parte, de arriba abajo.',
       ], { skipIfMissing: true, readOnly: true }),
+      st('pers-slot', 'wizard.pers_slot', ['A aba do mestre', 'The master tab', 'La pestaña del maestro'], [
+        'A primeira aba é a do mestre: ela mostra o caso de uso mestre e é o registro principal do painel. Cada aba tem ícone, título (o texto da aba) e o caso de uso que mostra; o tipo do widget vem do caso de uso escolhido. Esta aba não tem vínculo a configurar: são as outras abas que se ligam a ela.',
+        'The first tab is the master one: it shows the master use case and is the main record of the panel. Each tab has an icon, a title (the tab text) and the use case it shows; the widget type comes from the chosen use case. This tab has no link to set up: the other tabs are the ones linked to it.',
+        'La primera pestaña es la del maestro: muestra el caso de uso maestro y es el registro principal del panel. Cada pestaña tiene ícono, título (el texto de la pestaña) y el caso de uso que muestra; el tipo de widget viene del caso de uso elegido. Esta pestaña no tiene vínculo que configurar: las otras pestañas son las que se vinculan a ella.',
+      ], { skipIfMissing: true }),
+      st('pers-add-tab', 'wizard.pers_add_tab', ['Criar a primeira aba de detalhe', 'Create the first detail tab', 'Crear la primera pestaña de detalle'], [
+        'Agora vamos criar uma aba de detalhe, ligada ao mestre. Clique em "Adicionar Aba". Nada é gravado até concluir o assistente.',
+        'Now we will create a detail tab, linked to the master. Click "Add Tab". Nothing is saved until you finish the wizard.',
+        'Ahora crearemos una pestaña de detalle, vinculada al maestro. Haga clic en "Agregar Pestaña". No se guarda nada hasta terminar el asistente.',
+      ], { skipIfMissing: true, advanceOnClick: true }),
+      st('pers-detail-uc', 'wizard.pers_detail_uc', ['O caso de uso da aba', 'The tab use case', 'El caso de uso de la pestaña'], [
+        'Escolha o caso de uso desta aba (ex.: Pedidos, se o mestre for Clientes). Ele precisa ter alguma ligação com o caso de uso mestre: é essa ligação que vamos configurar nos próximos passos. Dá para repetir o mesmo caso de uso em abas diferentes, com filtros diferentes.',
+        'Pick the use case of this tab (e.g. Orders, if the master is Customers). It must have some link to the master use case: that link is what we set up in the next steps. You can repeat the same use case on different tabs, with different filters.',
+        'Elija el caso de uso de esta pestaña (ej.: Pedidos, si el maestro es Clientes). Debe tener alguna relación con el caso de uso maestro: esa relación es lo que configuraremos en los próximos pasos. Se puede repetir el mismo caso de uso en pestañas distintas, con filtros distintos.',
+      ], { skipIfMissing: true, interactive: true, completeWhen: { id: 'wizard.pers_detail_uc', check: 'filled' }, waitingHint: h(['Escolha o caso de uso da aba para continuar.', 'Pick the tab use case to continue.', 'Elija el caso de uso de la pestaña para continuar.']) }),
+      st('pers-expand', 'wizard.pers_expand', ['Abrir as opções da aba', 'Open the tab options', 'Abrir las opciones de la pestaña'], [
+        'Clique na seta para expandir as opções desta aba. É lá que fica o vínculo com o mestre, que decide quais registros a aba mostra.',
+        'Click the arrow to expand the options of this tab. That is where the link to the master lives, which decides which records the tab shows.',
+        'Haga clic en la flecha para expandir las opciones de esta pestaña. Allí está el vínculo con el maestro, que decide qué registros muestra la pestaña.',
+      ], { skipIfMissing: true, advanceOnClick: true }),
+      st('pers-perms', 'wizard.pers_perms', ['Permissões e modo de exibição', 'Permissions and display mode', 'Permisos y modo de visualización'], [
+        'Permissões de ação na aba (visualizar, novo, editar, excluir) e modo de exibição (aba, botão ou ambos). Valem só para esta aba.',
+        'Action permissions on the tab (view, new, edit, delete) and display mode (tab, button or both). They apply only to this tab.',
+        'Permisos de acción en la pestaña (ver, nuevo, editar, eliminar) y modo de visualización (pestaña, botón o ambos). Valen solo para esta pestaña.',
+      ], { skipIfMissing: true, readOnly: true }),
+      st('pers-link', 'wizard.pers_link_master', ['Vincular ao mestre', 'Link to the master', 'Vincular al maestro'], [
+        'Vincular ao mestre: SIM faz a aba mostrar só os registros ligados ao registro do mestre que está aberto (ex.: só os pedidos do cliente que está sendo editado). NÃO mostra todos os registros do caso de uso, sem filtrar pelo mestre.',
+        'Link to the master: YES makes the tab show only the records linked to the open master record (e.g. only the orders of the customer being edited). NO shows all records of the use case, without filtering by the master.',
+        'Vincular al maestro: SÍ hace que la pestaña muestre solo los registros vinculados al registro del maestro abierto (ej.: solo los pedidos del cliente que se está editando). NO muestra todos los registros del caso de uso, sin filtrar por el maestro.',
+      ], { skipIfMissing: true }),
+      st('pers-relpath', 'wizard.pers_relpath', ['Caminho de relacionamentos', 'Relationship path', 'Camino de relaciones'], [
+        'O caminho de relacionamentos diz como a tabela desta aba chega até a tabela do mestre. Cada linha é uma relação "De: tabela que tem a chave → Para: tabela apontada". Monte na ordem, começando pela tabela da aba e terminando na tabela do mestre. Com mestre Clientes: a aba Pedidos tem 1 relação (pedidos → clientes); a aba Entregas tem 2 (entregas → pedidos, pedidos → clientes). Se o caminho ficar vazio, o MetaBuilder só acha sozinho uma ligação DIRETA com o mestre; sem ela, a aba NÃO filtra e mostra todos os registros.',
+        'The relationship path says how the table of this tab reaches the master table. Each line is a relation "From: table that holds the key → To: table it points to". Build it in order, starting at the tab table and ending at the master table. With master Customers: the Orders tab has 1 relation (orders → customers); the Deliveries tab has 2 (deliveries → orders, orders → customers). If the path is empty, MetaBuilder only finds a DIRECT link to the master on its own; without one, the tab does NOT filter and shows all records.',
+        'El camino de relaciones dice cómo la tabla de esta pestaña llega hasta la tabla del maestro. Cada línea es una relación "De: tabla que tiene la clave → Para: tabla a la que apunta". Arme el camino en orden, empezando en la tabla de la pestaña y terminando en la tabla del maestro. Con maestro Clientes: la pestaña Pedidos tiene 1 relación (pedidos → clientes); la pestaña Entregas tiene 2 (entregas → pedidos, pedidos → clientes). Si el camino queda vacío, MetaBuilder solo encuentra solo una relación DIRECTA con el maestro; sin ella, la pestaña NO filtra y muestra todos los registros.',
+      ], { skipIfMissing: true }),
+      st('pers-static', 'wizard.pers_static', ['Filtros estáticos', 'Static filters', 'Filtros estáticos'], [
+        'Opcional: condições fixas que sempre valem nesta aba, além do vínculo com o mestre (ex.: status = Aberto).',
+        'Optional: fixed conditions that always apply to this tab, besides the link to the master (e.g. status = Open).',
+        'Opcional: condiciones fijas que siempre valen en esta pestaña, además del vínculo con el maestro (ej.: estado = Abierto).',
+      ], { skipIfMissing: true, readOnly: true }),
+      st('pers-screen-filters', 'wizard.pers_screen_filters', ['Filtros de tela', 'Screen filters', 'Filtros de pantalla'], [
+        'Opcional: campos que aparecem como barras de pesquisa acima da lista da aba, para o usuário final filtrar.',
+        'Optional: fields that show as search bars above the tab list, for the end user to filter.',
+        'Opcional: campos que aparecen como barras de búsqueda encima de la lista de la pestaña, para que el usuario final filtre.',
+      ], { skipIfMissing: true, readOnly: true }),
       st('pers-add', 'wizard.pers_add', ['Adicionar aba ou grupo', 'Add a tab or group', 'Agregar pestaña o grupo'], [
         '"Adicionar Aba" cria uma aba de primeiro nível. "Adicionar Grupo" cria uma aba que reúne vários casos de uso em blocos de Subabas (um por vez) ou de Quadros (vários visíveis ao mesmo tempo, com largura e altura). O grupo só habilita depois da aba do mestre. Neste passo os botões só são mostrados, para não criar abas sem querer; use-os depois, no passo livre.',
         '"Add Tab" creates a first-level tab. "Add Group" creates a tab that gathers several use cases in blocks of Subtabs (one at a time) or Panels (several visible at once, with width and height). The group only enables after the master tab. In this step the buttons are only shown, so you do not create tabs by accident; use them afterwards, in the free step.',
         '"Agregar Pestaña" crea una pestaña de primer nivel. "Agregar Grupo" crea una pestaña que reúne varios casos de uso en bloques de Subpestañas (uno a la vez) o de Cuadros (varios visibles a la vez, con ancho y alto). El grupo solo se habilita después de la pestaña del maestro. En este paso los botones solo se muestran, para no crear pestañas sin querer; úselos después, en el paso libre.',
       ], { skipIfMissing: true, readOnly: true }),
-      st('pers-slot', 'wizard.pers_slot', ['Uma aba', 'One tab', 'Una pestaña'], [
-        'Cada aba tem ícone, título e o caso de uso que ela mostra. O tipo do widget vem do caso de uso escolhido. O botão de expandir abre as opções: permissões de ação na aba (criar, editar, excluir), modo de exibição (aba ou botão) e recuperação de dados, com filtros estáticos e filtros de tela para o usuário.',
-        'Each tab has an icon, a title and the use case it shows. The widget type comes from the chosen use case. The expand button opens the options: action permissions on the tab (create, edit, delete), display mode (tab or button) and data retrieval, with static filters and screen filters for the user.',
-        'Cada pestaña tiene ícono, título y el caso de uso que muestra. El tipo de widget viene del caso de uso elegido. El botón de expandir abre las opciones: permisos de acción en la pestaña (crear, editar, eliminar), modo de visualización (pestaña o botón) y recuperación de datos, con filtros estáticos y filtros de pantalla para el usuario.',
-      ], { skipIfMissing: true }),
-      st('pers-uc', 'wizard.pers_slot_uc', ['O caso de uso da aba', 'The tab use case', 'El caso de uso de la pestaña'], [
-        'Escolha qual caso de uso a aba mostra. Dá para repetir o mesmo caso de uso em abas diferentes, com filtros diferentes.',
-        'Pick which use case the tab shows. You can repeat the same use case on different tabs, with different filters.',
-        'Elija qué caso de uso muestra la pestaña. Se puede repetir el mismo caso de uso en pestañas distintas, con filtros distintos.',
-      ], { skipIfMissing: true }),
       st('pers-fill', 'wizard.pers_tabs', ['Agora é com você', 'Now it is your turn', 'Ahora es su turno'], [
-        'Escolha o mestre e configure pelo menos uma aba. A tela está liberada nesta etapa.',
-        'Pick the master and set up at least one tab. The screen is free in this step.',
-        'Elija el maestro y configure al menos una pestaña. La pantalla está liberada en esta etapa.',
+        'Escolha o mestre e configure pelo menos uma aba. A tela está liberada nesta etapa. Em cada aba nova, confira o caminho de relacionamentos: sem ele (ou sem ligação direta com o mestre) a aba não filtra pelo registro aberto.',
+        'Pick the master and set up at least one tab. The screen is free in this step. On each new tab, check the relationship path: without it (or without a direct link to the master) the tab does not filter by the open record.',
+        'Elija el maestro y configure al menos una pestaña. La pantalla está liberada en esta etapa. En cada pestaña nueva, revise el camino de relaciones: sin él (o sin relación directa con el maestro) la pestaña no filtra por el registro abierto.',
       ], {
         freeInteraction: true,
         completeWhen: { id: 'wizard.next', check: 'attr', attr: 'data-help-state', equals: 'ready' },

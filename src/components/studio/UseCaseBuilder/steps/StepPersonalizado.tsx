@@ -120,9 +120,11 @@ interface RelationPathSelectorProps {
   onChange: (path: string[]) => void
   relations: any[]
   models: Model[]
+  /** marca `data-help-id` do tour guiado */
+  helpId?: string
 }
 
-export function RelationPathSelector({ path, onChange, relations, models }: RelationPathSelectorProps) {
+export function RelationPathSelector({ path, onChange, relations, models, helpId }: RelationPathSelectorProps) {
   const addHop = () => onChange([...path, ''])
   const removeHop = (index: number) => onChange(path.filter((_, i) => i !== index))
   const updateHop = (index: number, relationId: string) => {
@@ -144,7 +146,7 @@ export function RelationPathSelector({ path, onChange, relations, models }: Rela
   })
 
   return (
-    <div className="space-y-3 mt-4 border border-dashed border-indigo-200 dark:border-indigo-900 p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10">
+    <div data-help-id={helpId} className="space-y-3 mt-4 border border-dashed border-indigo-200 dark:border-indigo-900 p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10">
       <div className="flex items-center justify-between">
         <label className="text-[9px] font-black uppercase text-indigo-500 tracking-widest">Caminho de Relacionamentos (Joins Dinâmicos)</label>
         <button type="button" onClick={addHop} className="text-[9px] px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded uppercase font-bold hover:bg-indigo-100 transition-all flex items-center gap-1">
@@ -385,6 +387,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
   const renderSlotCard = (slot: any, idx: number, childPath?: { b: number; c: number }, dragHandle?: ReactNode) => {
     const isChild = !!childPath
     const cardKey = isChild ? `${idx}.${childPath!.b}.${childPath!.c}` : `${idx}`
+    // marcas do tour guiado: valem só para a primeira aba de detalhe (a de índice 1; a 0 é a do mestre)
+    const tourDetail = !isChild && idx === 1
     const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childPath!.b, childPath!.c, updater) : updateSlot(idx, updater))
     const removeCard = () => {
       if (isChild) {
@@ -431,7 +435,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                   <div className="space-y-2 flex-1">
                     <label className="text-[9px] font-black uppercase text-neutral-400">{t('wizard.personalizado.use_case_label', 'Caso de Uso')}</label>
                     <select
-                      data-help-id="wizard.pers_slot_uc" value={slot.use_case_slug || ''}
+                      data-help-id={tourDetail ? 'wizard.pers_detail_uc' : 'wizard.pers_slot_uc'} value={slot.use_case_slug || ''}
                       onChange={e => {
                         const selectedUc = useCases?.find(uc => uc.slug === e.target.value)
                         upd(s => ({ ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }))
@@ -470,6 +474,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
 
                   {/* Expand / Delete */}
                   <button
+                    data-help-id={tourDetail && expandedCustomSlot !== cardKey ? 'wizard.pers_expand' : undefined}
                     onClick={() => setExpandedCustomSlot(expandedCustomSlot === cardKey ? null : cardKey)}
                     className="mt-6 p-2.5 text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 rounded-lg transition-all"
                     title={expandedCustomSlot === cardKey ? t('wizard.personalizado.collapse_config', 'Recolher Configurações') : t('wizard.personalizado.expand_config', 'Expandir Configurações')}
@@ -500,7 +505,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 {expandedCustomSlot === cardKey && (
                   <div className="w-full space-y-4 animate-in slide-in-from-top-2 duration-200">
                     {(isChild || idx > 0) && (
-                      <div className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
+                      <div data-help-id={tourDetail ? 'wizard.pers_perms' : undefined} className="w-full p-4 mt-2 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl space-y-4">
                         {/* Permissions */}
                         <div className="flex flex-col gap-2">
                           <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Permissões de Ação na Aba</h5>
@@ -642,6 +647,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                           <p className="text-[10px] text-neutral-500 mt-0.5">Defina como os dados serão carregados nesta aba.</p>
                         </div>
                         <button
+                          data-help-id={tourDetail ? 'wizard.pers_link_master' : undefined}
                           onClick={() => upd(s => ({ ...s, use_master_id: s.use_master_id === false ? true : false }))}
                           className={cn(
                             "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
@@ -658,11 +664,12 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                           onChange={(newPath) => upd(s => ({ ...s, relation_path: newPath }))}
                           relations={relations}
                           models={models}
+                          helpId={tourDetail ? 'wizard.pers_relpath' : undefined}
                         />
                       )}
 
                       {/* Static filters */}
-                      <div className="space-y-3">
+                      <div data-help-id={tourDetail ? 'wizard.pers_static' : undefined} className="space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros Estáticos (Opcional)</label>
                           <button
@@ -715,7 +722,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                       </div>
 
                       {/* Dynamic filters */}
-                      <div className="space-y-3 pt-4 border-t border-rose-200/50 dark:border-rose-900/30">
+                      <div data-help-id={tourDetail ? 'wizard.pers_screen_filters' : undefined} className="space-y-3 pt-4 border-t border-rose-200/50 dark:border-rose-900/30">
                         <div className="flex items-center justify-between">
                           <div>
                             <label className="text-[9px] font-black uppercase text-neutral-500 tracking-wider">Filtros de Tela (Usuário Final)</label>
@@ -1147,6 +1154,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
             {/* Add tab button */}
             <div data-help-id="wizard.pers_add" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
+                data-help-id={(config.layout_config.custom_slots || []).length <= 1 ? 'wizard.pers_add_tab' : undefined}
                 onClick={() => {
                   const newSlots = [...(config.layout_config.custom_slots || []), { id: `tab-${Date.now()}`, title: t('wizard.personalizado.new_tab_title', 'Nova Aba'), type: 'form', model_id: config.selected_models[0] }]
                   setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: newSlots } })
