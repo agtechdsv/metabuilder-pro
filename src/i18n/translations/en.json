@@ -607,6 +607,8 @@
           "bulk_deleted": "{n} item(s) permanently deleted.",
           "bulk_deleted_partial": "{ok} of {total} permanently deleted.",
           "no_match": "No item matches the filter.",
+          "restore_yes": "Yes, restore",
+          "bulk_restore_confirm": "Restore {n}?",
           "err_slug": "Another use case already uses the address \"{slug}\". Rename or delete it and try again.",
           "err_expired": "The restore period for this item is over.",
           "err_limit": "The current plan does not allow more use cases in this project. Delete one or upgrade and try again.",

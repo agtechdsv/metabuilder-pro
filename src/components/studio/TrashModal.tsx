@@ -30,6 +30,9 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  // confirmação de restaurar (um card ou em massa): mesmo desenho da confirmação de excluir de vez
+  const [restoreConfirmId, setRestoreConfirmId] = useState<string | null>(null)
+  const [bulkRestoreConfirm, setBulkRestoreConfirm] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [query, setQuery] = useState('')
   const [logic, setLogic] = useState('')
@@ -45,7 +48,7 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
   }, [supabase, projectId, hours]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isOpen) { setConfirmId(null); setBulkConfirm(false); setSelected(new Set()); setQuery(''); setLogic(''); load() }
+    if (isOpen) { setConfirmId(null); setRestoreConfirmId(null); setBulkRestoreConfirm(false); setBulkConfirm(false); setSelected(new Set()); setQuery(''); setLogic(''); load() }
   }, [isOpen, load])
   // o "quanto falta" anda sozinho; o que vence enquanto a janela está aberta some da lista
   useEffect(() => {
@@ -70,6 +73,7 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
 
   const restore = async (item: TrashItem) => {
     setBusyId(item.id)
+    setRestoreConfirmId(null)
     try {
       const res = await restoreUseCaseFromTrash(supabase, item.id, projectId)
       const missing = res.components_total - res.components_restored
@@ -110,6 +114,7 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
   // em massa: um por vez (cada restauração é uma transação própria); o resumo diz quantos deram certo e por que os outros não
   const restoreMany = async () => {
     const list = [...scope]
+    setBulkRestoreConfirm(false)
     setBulkBusy(true)
     let ok = 0
     const failed: { item: TrashItem; code: string; msg: string }[] = []
@@ -187,7 +192,15 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={filtered.length === 0 || busyAny} className="h-3.5 w-3.5 accent-indigo-600" />
                 {hasSelection ? t(P + 'selected_count').replace('{n}', String(selectedInView.length)) : t(P + 'select_all')}
               </label>
-              {bulkConfirm ? (
+              {bulkRestoreConfirm ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-indigo-600">{t(P + 'bulk_restore_confirm').replace('{n}', String(scope.length))}</span>
+                  <button type="button" disabled={bulkBusy} onClick={restoreMany} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                    {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{t(P + 'restore_yes')}
+                  </button>
+                  <button type="button" disabled={bulkBusy} onClick={() => setBulkRestoreConfirm(false)} className="rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                </div>
+              ) : bulkConfirm ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] font-bold text-red-600">{t(P + 'bulk_confirm').replace('{n}', String(scope.length))}</span>
                   <button type="button" disabled={bulkBusy} onClick={deleteMany} className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">
@@ -197,11 +210,11 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
-                  <button type="button" disabled={busyAny || scope.length === 0} onClick={restoreMany} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                  <button type="button" disabled={busyAny || scope.length === 0} onClick={() => { setBulkConfirm(false); setBulkRestoreConfirm(true) }} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
                     {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                     {(hasSelection ? t(P + 'restore_selected') : t(P + 'restore_all')).replace('{n}', String(scope.length))}
                   </button>
-                  <button type="button" disabled={busyAny || scope.length === 0} onClick={() => setBulkConfirm(true)} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-[11px] font-black text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
+                  <button type="button" disabled={busyAny || scope.length === 0} onClick={() => { setBulkRestoreConfirm(false); setBulkConfirm(true) }} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-[11px] font-black text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
                     <Trash2 className="h-3.5 w-3.5" />
                     {(hasSelection ? t(P + 'delete_selected') : t(P + 'delete_all')).replace('{n}', String(scope.length))}
                   </button>
@@ -243,13 +256,20 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                           <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); forever(item) }} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
                           <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); setConfirmId(null) }} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
                         </div>
+                      ) : restoreConfirmId === item.id ? (
+                        <div className="flex items-center gap-2">
+                          <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); restore(item) }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                            {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{busy ? t(P + 'restoring') : t(P + 'restore_yes')}
+                          </button>
+                          <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); setRestoreConfirmId(null) }} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); restore(item) }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); setConfirmId(null); setRestoreConfirmId(item.id) }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
                             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                             {busy ? t(P + 'restoring') : t(P + 'restore')}
                           </button>
-                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); setConfirmId(item.id) }} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
+                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); setRestoreConfirmId(null); setConfirmId(item.id) }} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>

@@ -607,6 +607,8 @@
           "bulk_deleted": "{n} item(ns) excluído(s) de vez.",
           "bulk_deleted_partial": "{ok} de {total} excluído(s) de vez.",
           "no_match": "Nenhum item corresponde ao filtro.",
+          "restore_yes": "Sim, restaurar",
+          "bulk_restore_confirm": "Restaurar {n}?",
           "err_slug": "Já existe outro caso de uso com o endereço \"{slug}\". Renomeie ou exclua esse e tente de novo.",
           "err_expired": "O prazo de restauração deste item terminou.",
           "err_limit": "O plano atual não permite mais casos de uso neste projeto. Exclua um ou faça upgrade e tente de novo.",

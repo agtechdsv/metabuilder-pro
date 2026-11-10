@@ -694,6 +694,8 @@
           "bulk_deleted": "{n} elemento(s) eliminado(s) definitivamente.",
           "bulk_deleted_partial": "{ok} de {total} eliminado(s) definitivamente.",
           "no_match": "Ningún elemento coincide con el filtro.",
+          "restore_yes": "Sí, restaurar",
+          "bulk_restore_confirm": "¿Restaurar {n}?",
           "err_slug": "Ya existe otro caso de uso con la dirección \"{slug}\". Renómbrelo o elimínelo e intente de nuevo.",
           "err_expired": "El plazo de restauración de este elemento terminó.",
           "err_limit": "El plan actual no permite más casos de uso en este proyecto. Elimine uno o mejore el plan e intente de nuevo.",
