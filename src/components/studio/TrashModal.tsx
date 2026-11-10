@@ -162,6 +162,8 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
           <p className="rounded-2xl border border-dashed border-neutral-200 py-10 text-center text-sm text-neutral-400 dark:border-neutral-800">{t(P + 'empty')}</p>
         ) : (
           <>
+            {/* busca, filtro e ações em massa ficam fixos no alto enquanto a lista rola */}
+            <div className="sticky top-0 z-10 -mx-8 space-y-3 border-b border-neutral-100 bg-white px-8 pb-3 pt-1 dark:border-neutral-800 dark:bg-neutral-900">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative min-w-[200px] flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
@@ -205,6 +207,8 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                   </button>
                 </div>
               )}
+            </div>
+
             </div>
 
             {filtered.length === 0 ? (
