@@ -100,26 +100,25 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
         ) : visible.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-neutral-200 py-10 text-center text-sm text-neutral-400 dark:border-neutral-800">{t(P + 'empty')}</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map(item => {
               const busy = busyId === item.id
               return (
-                <li key={item.id} className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-neutral-900 dark:text-white">{item.name}</p>
+                <li key={item.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/40">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-neutral-900 dark:text-white" title={item.name}>{item.name}</p>
                     <p className="truncate font-mono text-[10px] text-neutral-400">/{item.slug}</p>
-                    <p className="mt-0.5 text-[11px] text-neutral-500">
-                      {t(P + 'deleted_on').replace('{date}', fmtDate(item.deleted_at))} · <span className="font-bold text-amber-600">{t(P + 'remaining').replace('{time}', formatSpan(trashRemainingMs(item.deleted_at, hours, now), t))}</span>
-                    </p>
+                    <p className="mt-2 text-[11px] text-neutral-500">{t(P + 'deleted_on').replace('{date}', fmtDate(item.deleted_at))}</p>
+                    <p className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">{t(P + 'remaining').replace('{time}', formatSpan(trashRemainingMs(item.deleted_at, hours, now), t))}</p>
                   </div>
                   {confirmId === item.id ? (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button type="button" disabled={busy} onClick={() => forever(item)} className="rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
-                      <button type="button" disabled={busy} onClick={() => setConfirmId(null)} className="rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" disabled={busy} onClick={() => forever(item)} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
+                      <button type="button" disabled={busy} onClick={() => setConfirmId(null)} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
                     </div>
                   ) : (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button type="button" disabled={busy} onClick={() => restore(item)} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                    <div className="flex items-center gap-2">
+                      <button type="button" disabled={busy} onClick={() => restore(item)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
                         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                         {busy ? t(P + 'restoring') : t(P + 'restore')}
                       </button>
