@@ -50,6 +50,8 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
   const { toast } = useToast()
 
   const [relations, setRelations] = useState<Relation[]>([])
+  // a página de dados entrega os modelos só com o id dos campos: os nomes das colunas das relações vêm daqui
+  const [fieldNames, setFieldNames] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -76,6 +78,15 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
       .order('name', { ascending: true })
 
     if (!error) setRelations(data || [])
+    if (!error && data?.length) {
+      const ids = Array.from(new Set(data.flatMap((r: any) => [r.from_field_id, r.to_field_id]).filter(Boolean))) as string[]
+      const map: Record<string, string> = {}
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data: fs } = await supabase.from('fields').select('id, db_column_name').in('id', ids.slice(i, i + 100))
+        for (const f of fs || []) map[String(f.id)] = String(f.db_column_name || '')
+      }
+      setFieldNames(map)
+    }
     setIsLoading(false)
     setIsRefreshing(false)
   }, [project.id])
@@ -98,7 +109,9 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
   }
 
   const getFieldById = (modelId: string, fieldId: string) => {
-    return getFieldsForModel(modelId).find((f: any) => f.id === fieldId)
+    const f = getFieldsForModel(modelId).find((f: any) => f.id === fieldId)
+    if (f?.db_column_name) return f
+    return fieldNames[fieldId] ? { id: fieldId, db_column_name: fieldNames[fieldId] } : f
   }
 
   const resetForm = () => {
