@@ -370,10 +370,10 @@ function buildPersonalizado(base: PlatformTour): PlatformTour {
         'Elija en la lista el caso de uso maestro. Solo aparecen los ya creados en el proyecto: si la lista está vacía, cree antes un caso de uso común.',
       ], { interactive: true }),
       st('pers-tabs', 'wizard.pers_tabs', ['O layout em abas', 'The tab layout', 'El diseño en pestañas'], [
-        'Aqui você monta as abas do registro. A primeira aba é a do mestre; as seguintes trazem outros casos de uso (detalhes, históricos, mapas, painéis...). Você pode arrastar as abas para reordenar.',
-        'Here you build the record tabs. The first tab is the master one; the following ones bring other use cases (details, histories, maps, dashboards...). You can drag tabs to reorder.',
-        'Aquí arma las pestañas del registro. La primera pestaña es la del maestro; las siguientes traen otros casos de uso (detalles, historiales, mapas, paneles...). Puede arrastrar las pestañas para reordenar.',
-      ]),
+        'Aqui você monta as abas do registro. A primeira aba é a do mestre; as seguintes trazem outros casos de uso (detalhes, históricos, mapas, painéis...). Você pode arrastar as abas para reordenar. Vamos ver cada parte, de cima para baixo.',
+        'Here you build the record tabs. The first tab is the master one; the following ones bring other use cases (details, histories, maps, dashboards...). You can drag tabs to reorder. We will go through each part, from top to bottom.',
+        'Aquí arma las pestañas del registro. La primera pestaña es la del maestro; las siguientes traen otros casos de uso (detalles, historiales, mapas, paneles...). Puede arrastrar las pestañas para reordenar. Veremos cada parte, de arriba abajo.',
+      ], { skipIfMissing: true, readOnly: true }),
       st('pers-add', 'wizard.pers_add', ['Adicionar aba ou grupo', 'Add a tab or group', 'Agregar pestaña o grupo'], [
         '"Adicionar Aba" cria uma aba de primeiro nível. "Adicionar Grupo" cria uma aba que reúne vários casos de uso em blocos de Subabas (um por vez) ou de Quadros (vários visíveis ao mesmo tempo, com largura e altura). O grupo só habilita depois da aba do mestre. Pode clicar: nada é gravado até concluir o assistente.',
         '"Add Tab" creates a first-level tab. "Add Group" creates a tab that gathers several use cases in blocks of Subtabs (one at a time) or Panels (several visible at once, with width and height). The group only enables after the master tab. You can click: nothing is saved until you finish the wizard.',
