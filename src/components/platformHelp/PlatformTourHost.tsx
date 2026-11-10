@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
-import { getActiveTour, markTourSeen, nextStep, prevStep, stopPlatformTour, subscribePlatformTour, tourWrongLogic } from '@/lib/platformHelp/store'
+import { getActiveTour, goToStep, markTourSeen, nextStep, prevStep, resolveStartIndex, stopPlatformTour, subscribePlatformTour, tourWrongLogic } from '@/lib/platformHelp/store'
 
 const POPOVER_W = 340
 const PAD = 6
@@ -228,6 +228,19 @@ export function PlatformTourHost() {
     el.addEventListener('click', onClick)
     return () => el.removeEventListener('click', onClick)
   }, [key, hasRect, ready]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // passo de tela livre: se a pessoa avança o assistente por conta própria (botão "Próximo passo" da tela, não o do balão), o tour acompanha
+  // para a etapa em que o assistente está agora, em vez de ficar parado num passo que já passou
+  useEffect(() => {
+    if (!step?.freeInteraction) return
+    const id = setInterval(() => {
+      const a = activeRef.current
+      if (!a) return
+      const idx = resolveStartIndex(a.tour)
+      if (idx > a.index) goToStep(idx)
+    }, 300)
+    return () => clearInterval(id)
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // botões que o tour nunca deixa clicar (ex.: "Sim, excluir"), em qualquer passo e dentro de janelas. Vale também para Enter/Espaço no botão focado.
   useEffect(() => {
