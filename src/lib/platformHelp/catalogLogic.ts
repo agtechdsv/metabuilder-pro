@@ -196,6 +196,7 @@ const SPECS: Spec[] = [
     ],
     grid: ['Os campos que aparecem na lista e no detalhe do evento. A Agenda exige pelo menos um.', 'The fields shown in the list and in the event detail. The Schedule requires at least one.', 'Los campos que aparecen en la lista y en el detalle del evento. La Agenda exige al menos uno.'],
     form: ['O formulário para criar e editar um evento.', 'The form to create and edit an event.', 'El formulario para crear y editar un evento.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os eventos antes de ver o resultado.', 'Optional: the fields users use to filter the events before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los eventos antes de ver el resultado.'],
     ready: ['Faltam o título, a data de início e pelo menos um campo na zona de exibição.', 'The title, the start date and at least one field in the display zone are missing.', 'Faltan el título, la fecha de inicio y al menos un campo en la zona de visualización.'],
   },
   // ───────── Linha do tempo
@@ -215,6 +216,7 @@ const SPECS: Spec[] = [
     ],
     defaultsNote: ['Aqui também ficam a ordem cronológica (mais antigo ou mais recente primeiro), separada para tela horizontal e vertical.', 'The chronological order (oldest or newest first) is also here, separate for horizontal and vertical screens.', 'Aquí también está el orden cronológico (más antiguo o más reciente primero), por separado para pantalla horizontal y vertical.'],
     form: ['O formulário para criar e editar um ponto da linha. A Linha do Tempo não tem zona de lista: o que aparece vem da configuração acima.', 'The form to create and edit a point on the line. The Timeline has no list zone: what shows comes from the configuration above.', 'El formulario para crear y editar un punto de la línea. La Línea de Tiempo no tiene zona de lista: lo que aparece viene de la configuración de arriba.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os pontos da linha antes de ver o resultado.', 'Optional: the fields users use to filter the points on the line before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los puntos de la línea antes de ver el resultado.'],
     ready: ['Faltam o campo de título e o campo de data.', 'The title field and the date field are missing.', 'Faltan el campo de título y el campo de fecha.'],
   },
   // ───────── Gantt
@@ -232,6 +234,7 @@ const SPECS: Spec[] = [
       st('progress', 'wizard.gantt_progress', ['Progresso % (opcional)', 'Progress % (optional)', 'Progreso % (opcional)'], ['Um campo numérico (0 a 100) que preenche a barra. Sem ele, o progresso não aparece.', 'A numeric field (0 to 100) that fills the bar. Without it, progress is not shown.', 'Un campo numérico (0 a 100) que llena la barra. Sin él, el progreso no aparece.'], { interactive: true }),
     ],
     form: ['O formulário para criar e editar uma tarefa. O Gantt não tem zona de lista: o que aparece vem da configuração acima.', 'The form to create and edit a task. The Gantt has no list zone: what shows comes from the configuration above.', 'El formulario para crear y editar una tarea. El Gantt no tiene zona de lista: lo que aparece viene de la configuración de arriba.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar as tarefas do Gantt antes de ver o resultado.', 'Optional: the fields users use to filter the Gantt tasks before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar las tareas del Gantt antes de ver el resultado.'],
     ready: ['Faltam o título, a data inicial ou a data final.', 'The title, the start date or the end date is missing.', 'Faltan el título, la fecha inicial o la fecha final.'],
   },
   // ───────── Fluxograma
@@ -251,6 +254,7 @@ const SPECS: Spec[] = [
     ],
     grid: ['Os campos que aparecem no detalhe do nó.', 'The fields shown in the node detail.', 'Los campos que aparecen en el detalle del nodo.'],
     form: ['O formulário para criar e editar um nó.', 'The form to create and edit a node.', 'El formulario para crear y editar un nodo.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os nós do fluxo antes de ver o resultado.', 'Optional: the fields users use to filter the flow nodes before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los nodos del flujo antes de ver el resultado.'],
     ready: ['Faltam o título do nó e o campo do nó anterior.', 'The node title and the previous node field are missing.', 'Faltan el título del nodo y el campo del nodo anterior.'],
   },
   // ───────── Mapa mental
@@ -267,6 +271,7 @@ const SPECS: Spec[] = [
     ],
     grid: ['Os campos que aparecem dentro de cada nó do mapa. O Mapa Mental exige pelo menos um.', 'The fields shown inside each map node. The Mind Map requires at least one.', 'Los campos que aparecen dentro de cada nodo del mapa. El Mapa Mental exige al menos uno.'],
     form: ['O formulário que abre ao criar ou editar um nó.', 'The form that opens when creating or editing a node.', 'El formulario que se abre al crear o editar un nodo.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os nós do mapa antes de ver o resultado.', 'Optional: the fields users use to filter the map nodes before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los nodos del mapa antes de ver el resultado.'],
     ready: ['Faltam pelo menos um nível na hierarquia e um campo nos nós.', 'At least one hierarchy level and one node field are missing.', 'Faltan al menos un nivel en la jerarquía y un campo en los nodos.'],
   },
   // ───────── Mapa
@@ -284,6 +289,7 @@ const SPECS: Spec[] = [
       st('lng', 'wizard.map_lng', ['Longitude (X)', 'Longitude (X)', 'Longitud (X)'], ['A coluna com a longitude (ex.: -46.63). Valores entre -180 e 180. Latitude e longitude invertidas jogam o marcador em outro lugar do mundo.', 'The column with the longitude (e.g. -46.63). Values between -180 and 180. Swapped latitude and longitude put the marker elsewhere in the world.', 'La columna con la longitud (ej.: -46.63). Valores entre -180 y 180. Latitud y longitud invertidas ponen el marcador en otro lugar del mundo.'], { interactive: true }),
     ],
     form: ['O formulário para criar e editar um ponto. O Mapa não tem zona de lista: o que aparece vem da configuração acima.', 'The form to create and edit a point. The Map has no list zone: what shows comes from the configuration above.', 'El formulario para crear y editar un punto. El Mapa no tiene zona de lista: lo que aparece viene de la configuración de arriba.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os marcadores do mapa antes de ver o resultado.', 'Optional: the fields users use to filter the map markers before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los marcadores del mapa antes de ver el resultado.'],
     ready: ['Faltam o título, a latitude ou a longitude.', 'The title, the latitude or the longitude is missing.', 'Faltan el título, la latitud o la longitud.'],
   },
   // ───────── BI
@@ -301,6 +307,7 @@ const SPECS: Spec[] = [
       st('add', 'wizard.bi_add_widget', ['Adicionar widget', 'Add a widget', 'Agregar widget'], ['Abre o editor de widget: tipo, tabela, campos, agregação e filtros. Pode abrir para conhecer e fechar sem salvar.', 'Opens the widget editor: type, table, fields, aggregation and filters. You can open it to take a look and close it without saving.', 'Abre el editor de widget: tipo, tabla, campos, agregación y filtros. Puede abrirlo para conocerlo y cerrarlo sin guardar.']),
       st('bi-group', 'wizard.bi_new_group', ['Novo grupo', 'New group', 'Nuevo grupo'], ['Cria um bloco recolhível com título para reunir widgets do mesmo assunto (ex.: Vendas, Estoque).', 'Creates a collapsible titled block to gather widgets on the same subject (e.g. Sales, Stock).', 'Crea un bloque plegable con título para reunir widgets del mismo tema (ej.: Ventas, Stock).']),
     ],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os dados do painel antes de ver o resultado.', 'Optional: the fields users use to filter the dashboard data before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los datos del panel antes de ver el resultado.'],
     ready: ['O painel ainda não está pronto para avançar.', 'The panel is not ready to continue yet.', 'El panel aún no está listo para avanzar.'],
   },
   // ───────── Galeria
@@ -317,6 +324,7 @@ const SPECS: Spec[] = [
     ],
     grid: ['Os campos principais do cartão: inclua o campo da imagem ou do arquivo.', 'The main card fields: include the image or file field.', 'Los campos principales de la tarjeta: incluya el campo de la imagen o del archivo.'],
     form: ['O formulário para enviar e editar um item da galeria.', 'The form to upload and edit a gallery item.', 'El formulario para enviar y editar un ítem de la galería.'],
+    filter: ['Opcional: os campos que o usuário usa para filtrar os itens da galeria antes de ver o resultado.', 'Optional: the fields users use to filter the gallery items before seeing the result.', 'Opcional: los campos que el usuario usa para filtrar los ítems de la galería antes de ver el resultado.'],
     ready: ['Faltam campos nas zonas da tela.', 'Fields are missing in the screen zones.', 'Faltan campos en las zonas de la pantalla.'],
   },
 ]
