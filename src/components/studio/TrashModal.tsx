@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
-import { Loader2, RotateCcw, Trash2 } from 'lucide-react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Loader2, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -21,7 +21,7 @@ interface Props {
   onRestored: () => void
 }
 
-/** Lixeira do projeto: casos de uso excluídos que ainda estão no prazo, com restaurar e excluir de vez. */
+/** Lixeira do projeto: casos de uso excluídos que ainda estão no prazo, com filtro, restaurar e excluir de vez (um, os selecionados ou todos). */
 export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Props) {
   const { t } = useI18n()
   const { toast } = useToast()
@@ -31,6 +31,11 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [query, setQuery] = useState('')
+  const [logic, setLogic] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -39,7 +44,9 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
     finally { setLoading(false) }
   }, [supabase, projectId, hours]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { if (isOpen) { setConfirmId(null); load() } }, [isOpen, load])
+  useEffect(() => {
+    if (isOpen) { setConfirmId(null); setBulkConfirm(false); setSelected(new Set()); setQuery(''); setLogic(''); load() }
+  }, [isOpen, load])
   // o "quanto falta" anda sozinho; o que vence enquanto a janela está aberta some da lista
   useEffect(() => {
     if (!isOpen) return
@@ -48,6 +55,18 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
   }, [isOpen])
 
   const visible = items.filter(i => trashRemainingMs(i.deleted_at, hours, now) > 0)
+  const logicLabel = (l: string | null) => (l ? t(`wizard.logic.types.${l}.title`, l.replace('_', ' + ')) : '')
+  const logics = useMemo(() => Array.from(new Set(visible.map(i => i.logic_type).filter(Boolean) as string[])), [visible]) // eslint-disable-line react-hooks/exhaustive-deps
+  const q = query.trim().toLowerCase()
+  const filtered = visible.filter(i => (!logic || i.logic_type === logic) && (!q || i.name.toLowerCase().includes(q) || i.slug.toLowerCase().includes(q)))
+  const selectedInView = filtered.filter(i => selected.has(i.id))
+  // com algo marcado, os botões em massa valem para o marcado; sem nada marcado, valem para tudo o que o filtro mostra
+  const hasSelection = selectedInView.length > 0
+  const scope = hasSelection ? selectedInView : filtered
+  const allSelected = filtered.length > 0 && selectedInView.length === filtered.length
+
+  const toggle = (id: string) => setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map(i => i.id)))
 
   const restore = async (item: TrashItem) => {
     setBusyId(item.id)
@@ -88,7 +107,49 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
     } finally { setBusyId(null) }
   }
 
+  // em massa: um por vez (cada restauração é uma transação própria); o resumo diz quantos deram certo e por que os outros não
+  const restoreMany = async () => {
+    const list = [...scope]
+    setBulkBusy(true)
+    let ok = 0
+    const failed: { item: TrashItem; code: string; msg: string }[] = []
+    for (const item of list) {
+      try { await restoreUseCaseFromTrash(supabase, item.id, projectId); ok++ }
+      catch (e: any) {
+        const code = trashErrorCode(e)
+        failed.push({ item, code, msg: String(e?.message || '') })
+        if (code === 'limit') break // o plano não comporta mais: tentar os próximos só repete o erro
+      }
+    }
+    setSelected(new Set())
+    if (ok > 0) onRestored()
+    await load()
+    setBulkBusy(false)
+    if (failed.length === 0) { toast(t(P + 'bulk_restored').replace('{n}', String(ok)), 'success'); return }
+    const first = failed[0]
+    const reason = first.code === 'slug_in_use' ? t(P + 'err_slug').replace('{slug}', first.item.slug)
+      : first.code === 'limit' ? t(P + 'err_limit')
+      : first.code === 'trash_expired' ? t(P + 'err_expired')
+      : t(P + 'err_generic') + first.msg
+    toast(t(P + 'bulk_restored_partial').replace('{ok}', String(ok)).replace('{failed}', String(failed.length)) + ' ' + reason, ok > 0 ? 'info' : 'error')
+  }
+
+  const deleteMany = async () => {
+    const list = [...scope]
+    setBulkBusy(true)
+    let ok = 0
+    for (const item of list) {
+      try { await deleteTrashForever(supabase, item.id); ok++ } catch { /* segue; o resumo mostra quantos saíram */ }
+    }
+    setBulkConfirm(false)
+    setSelected(new Set())
+    await load()
+    setBulkBusy(false)
+    toast(ok === list.length ? t(P + 'bulk_deleted').replace('{n}', String(ok)) : t(P + 'bulk_deleted_partial').replace('{ok}', String(ok)).replace('{total}', String(list.length)), ok > 0 ? 'success' : 'error')
+  }
+
   const fmtDate = (iso: string) => new Date(iso).toLocaleString()
+  const busyAny = bulkBusy || busyId !== null
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t(P + 'title')} size="2xl">
@@ -100,37 +161,93 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
         ) : visible.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-neutral-200 py-10 text-center text-sm text-neutral-400 dark:border-neutral-800">{t(P + 'empty')}</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map(item => {
-              const busy = busyId === item.id
-              return (
-                <li key={item.id} className="flex flex-col justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900/40">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-neutral-900 dark:text-white" title={item.name}>{item.name}</p>
-                    <p className="truncate font-mono text-[10px] text-neutral-400">/{item.slug}</p>
-                    <p className="mt-2 text-[11px] text-neutral-500">{t(P + 'deleted_on').replace('{date}', fmtDate(item.deleted_at))}</p>
-                    <p className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">{t(P + 'remaining').replace('{time}', formatSpan(trashRemainingMs(item.deleted_at, hours, now), t))}</p>
-                  </div>
-                  {confirmId === item.id ? (
-                    <div className="flex items-center gap-2">
-                      <button type="button" disabled={busy} onClick={() => forever(item)} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
-                      <button type="button" disabled={busy} onClick={() => setConfirmId(null)} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button type="button" disabled={busy} onClick={() => restore(item)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
-                        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                        {busy ? t(P + 'restoring') : t(P + 'restore')}
-                      </button>
-                      <button type="button" disabled={busy} onClick={() => setConfirmId(item.id)} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[200px] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder={t(P + 'search_ph')}
+                  className="w-full rounded-xl border border-neutral-200 bg-white py-2 pl-9 pr-3 text-xs font-medium outline-none focus:border-indigo-500 dark:border-neutral-800 dark:bg-neutral-950"
+                />
+              </div>
+              {logics.length > 1 && (
+                <select value={logic} onChange={e => setLogic(e.target.value)} className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-bold outline-none focus:border-indigo-500 dark:border-neutral-800 dark:bg-neutral-950">
+                  <option value="">{t(P + 'all_logics')}</option>
+                  {logics.map(l => <option key={l} value={l}>{logicLabel(l)}</option>)}
+                </select>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="flex cursor-pointer items-center gap-2 text-[11px] font-bold text-neutral-600 dark:text-neutral-300">
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={filtered.length === 0 || busyAny} className="h-3.5 w-3.5 accent-indigo-600" />
+                {hasSelection ? t(P + 'selected_count').replace('{n}', String(selectedInView.length)) : t(P + 'select_all')}
+              </label>
+              {bulkConfirm ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-red-600">{t(P + 'bulk_confirm').replace('{n}', String(scope.length))}</span>
+                  <button type="button" disabled={bulkBusy} onClick={deleteMany} className="flex items-center gap-1.5 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">
+                    {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{t(P + 'forever_yes')}
+                  </button>
+                  <button type="button" disabled={bulkBusy} onClick={() => setBulkConfirm(false)} className="rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" disabled={busyAny || scope.length === 0} onClick={restoreMany} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                    {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    {(hasSelection ? t(P + 'restore_selected') : t(P + 'restore_all')).replace('{n}', String(scope.length))}
+                  </button>
+                  <button type="button" disabled={busyAny || scope.length === 0} onClick={() => setBulkConfirm(true)} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-[11px] font-black text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {(hasSelection ? t(P + 'delete_selected') : t(P + 'delete_all')).replace('{n}', String(scope.length))}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {filtered.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-neutral-200 py-8 text-center text-sm text-neutral-400 dark:border-neutral-800">{t(P + 'no_match')}</p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map(item => {
+                  const busy = busyId === item.id
+                  const isSel = selected.has(item.id)
+                  return (
+                    <li key={item.id} className={`flex flex-col justify-between gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-neutral-900/40 ${isSel ? 'border-indigo-500 ring-1 ring-indigo-500/40' : 'border-neutral-200 dark:border-neutral-800'}`}>
+                      <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="truncate text-sm font-bold text-neutral-900 dark:text-white" title={item.name}>{item.name}</p>
+                          <input type="checkbox" checked={isSel} onChange={() => toggle(item.id)} disabled={busyAny} aria-label={item.name} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-indigo-600" />
+                        </div>
+                        <p className="truncate font-mono text-[10px] text-neutral-400">/{item.slug}</p>
+                        {item.logic_type && <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-indigo-500">{logicLabel(item.logic_type)}</p>}
+                        <p className="mt-2 text-[11px] text-neutral-500">{t(P + 'deleted_on').replace('{date}', fmtDate(item.deleted_at))}</p>
+                        <p className="mt-1 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:bg-amber-950/30">{t(P + 'remaining').replace('{time}', formatSpan(trashRemainingMs(item.deleted_at, hours, now), t))}</p>
+                      </div>
+                      {confirmId === item.id ? (
+                        <div className="flex items-center gap-2">
+                          <button type="button" disabled={busy} onClick={() => forever(item)} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
+                          <button type="button" disabled={busy} onClick={() => setConfirmId(null)} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button type="button" disabled={busyAny} onClick={() => restore(item)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                            {busy ? t(P + 'restoring') : t(P + 'restore')}
+                          </button>
+                          <button type="button" disabled={busyAny} onClick={() => setConfirmId(item.id)} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </>
         )}
 
         <div className="flex justify-end pt-1">
