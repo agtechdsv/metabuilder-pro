@@ -46,6 +46,8 @@ export interface PlatformStep {
   completeWhen?: StepRule
   /** o que dizer enquanto a condição não vale */
   waitingHint?: HelpText
+  /** o que dizer depois do clique que muda a tela (advanceOnClick), enquanto o próximo item não aparece (ex.: "Criando o caso de uso...") */
+  advancingHint?: HelpText
 }
 
 export interface StepRule {

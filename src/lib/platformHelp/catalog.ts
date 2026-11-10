@@ -304,6 +304,7 @@ const BASE_TOURS: readonly PlatformTour[] = [
         target: 'wizard.next',
         advanceOnClick: true,
         advanceWaitMs: 15000,
+        advancingHint: h('Aguardando a geração do caso de uso... Ele aparece na lista em instantes.', 'Waiting for the use case to be generated... It will show up in the list shortly.', 'Esperando la generación del caso de uso... Aparecerá en la lista en unos instantes.'),
         title: h('Finalizar: cria de verdade', 'Finish: it really creates it', 'Finalizar: lo crea de verdad'),
         body: h(
           'Clique em "Finalizar caso de uso". Ele é criado DE VERDADE, como rascunho: só vira tela do app quando você publicar, e dá para excluir pela lixeira do cartão. Se está só treinando, use um nome como "Teste" e apague depois. No plano gratuito ele conta no limite de casos de uso.',
@@ -315,6 +316,8 @@ const BASE_TOURS: readonly PlatformTour[] = [
         id: 'draft',
         target: 'studio.latest_card',
         noBack: true,
+        // só leitura: o cartão inteiro está destacado, e clicar em "Publicar" aí (fora de hora) desandaria o tour; o passo seguinte pede esse clique
+        readOnly: true,
         findWaitMs: 20000,
         title: h('Seu caso de uso, como rascunho', 'Your use case, as a draft', 'Su caso de uso, como borrador'),
         body: h(
@@ -337,6 +340,7 @@ const BASE_TOURS: readonly PlatformTour[] = [
         noBack: true,
         advanceOnClick: true,
         advanceWaitMs: 15000,
+        advancingHint: h('Publicando... Aguarde a tela atualizar.', 'Publishing... Wait for the screen to update.', 'Publicando... Espere a pantalla actualizarse.'),
         title: h('Confirme a publicação', 'Confirm publishing', 'Confirme la publicación'),
         body: h('O MetaBuilder pede uma confirmação porque a publicação passa a valer na hora para os usuários. Clique em "Sim, Publicar".', 'MetaBuilder asks for confirmation because publishing takes effect immediately for users. Click "Yes, Publish".', 'MetaBuilder pide confirmación porque la publicación vale de inmediato para los usuarios. Haga clic en "Sí, Publicar".'),
       },

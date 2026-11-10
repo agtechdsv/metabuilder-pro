@@ -56,6 +56,8 @@ export function PlatformTourHost() {
   const [ready, setReady] = useState(true)
   // uma janela (confirmação, formulário) abriu por um clique da pessoa e o item do passo não está nela: o tour sai da frente
   const [modalFree, setModalFree] = useState(false)
+  // a pessoa clicou no item do passo (Finalizar, Publicar) e o tour espera a tela mudar: o balão avisa a espera em vez de repetir o texto do passo
+  const [advancing, setAdvancing] = useState(false)
   const popRef = useRef<HTMLDivElement>(null)
   const [popH, setPopH] = useState(200)
   const recoveredRef = useRef<Set<string>>(new Set())
@@ -92,6 +94,7 @@ export function PlatformTourHost() {
     setRect(null)
     setRect2(null)
     setModalFree(false)
+    setAdvancing(false)
     holdRef.current = false
     goneSinceRef.current = 0
     setMissing(false)
@@ -211,6 +214,7 @@ export function PlatformTourHost() {
       if (busy) return
       busy = true
       holdRef.current = true
+      setAdvancing(true)
       setRect(null)
       setRect2(null)
       // o tour só acompanha a tela: avança quando o item do próximo passo aparece (se a tela recusou o clique, o tour fica)
@@ -224,6 +228,7 @@ export function PlatformTourHost() {
       }
       busy = false
       holdRef.current = false
+      setAdvancing(false)
     }
     el.addEventListener('click', onClick)
     return () => el.removeEventListener('click', onClick)
@@ -359,8 +364,8 @@ export function PlatformTourHost() {
   else if (waiting && posRef.current) { left = posRef.current.left; top = posRef.current.top }
   if (modalFree) { left = Math.max(12, vw - POPOVER_W - 16); top = 16 }
 
-  const title = resolveHelp(step.title, language)
-  const body = resolveHelp(step.body, language)
+  const title = advancing ? '' : resolveHelp(step.title, language)
+  const body = advancing ? (resolveHelp(step.advancingHint, language) || t('platform_help.advancing')) : resolveHelp(step.body, language)
 
   return createPortal(
     <div className="fixed inset-0 z-[1000020]" style={{ pointerEvents: 'none' }}>
@@ -423,7 +428,7 @@ export function PlatformTourHost() {
             {!!active.tour.recover?.length && <button type="button" onClick={recoverNow} className="text-[11px] font-bold text-indigo-600 hover:underline">{t('platform_help.recover', 'Voltar ao ponto do tour')}</button>}
           </div>
         )}
-        {!missing && (step.advanceOnClick || step.completeWhen) && (
+        {!missing && !advancing && (step.advanceOnClick || step.completeWhen) && (
           ready
             ? (step.advanceOnClick && <p className="mt-2 text-[11px] font-bold text-indigo-600">{t('platform_help.click_to_continue', 'Clique no item destacado para continuar.')}</p>)
             : <p className="mt-2 text-[11px] font-bold text-amber-600">{resolveHelp(step.waitingHint, language) || t('platform_help.complete_to_continue', 'Complete este passo para continuar.')}</p>

@@ -5630,6 +5630,7 @@
     "done": "Concluir",
     "step_of": "{n} de {total}",
     "click_to_continue": "Haga clic en el elemento resaltado para continuar.",
+    "advancing": "Esperando que la pantalla se actualice...",
     "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde.",
     "recover": "Volver al punto del tour",
     "complete_to_continue": "Complete este paso para continuar."
