@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { Check, Loader2, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -215,11 +215,19 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                   const busy = busyId === item.id
                   const isSel = selected.has(item.id)
                   return (
-                    <li key={item.id} className={`flex flex-col justify-between gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-neutral-900/40 ${isSel ? 'border-indigo-500 ring-1 ring-indigo-500/40' : 'border-neutral-200 dark:border-neutral-800'}`}>
+                    <li
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isSel}
+                      onClick={() => { if (!busyAny) toggle(item.id) }}
+                      onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && !busyAny) { e.preventDefault(); toggle(item.id) } }}
+                      className={`flex cursor-pointer select-none flex-col justify-between gap-3 rounded-2xl border p-4 shadow-sm outline-none transition-all hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500 ${isSel ? 'border-indigo-500 bg-indigo-50/70 ring-1 ring-indigo-500/40 dark:bg-indigo-950/30' : 'border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900/40'}`}
+                    >
                       <div className="min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <p className="truncate text-sm font-bold text-neutral-900 dark:text-white" title={item.name}>{item.name}</p>
-                          <input type="checkbox" checked={isSel} onChange={() => toggle(item.id)} disabled={busyAny} aria-label={item.name} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-indigo-600" />
+                          {isSel && <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white"><Check className="h-3 w-3" /></span>}
                         </div>
                         <p className="truncate font-mono text-[10px] text-neutral-400">/{item.slug}</p>
                         {item.logic_type && <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-indigo-500">{logicLabel(item.logic_type)}</p>}
@@ -228,16 +236,16 @@ export function TrashModal({ isOpen, onClose, projectId, hours, onRestored }: Pr
                       </div>
                       {confirmId === item.id ? (
                         <div className="flex items-center gap-2">
-                          <button type="button" disabled={busy} onClick={() => forever(item)} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
-                          <button type="button" disabled={busy} onClick={() => setConfirmId(null)} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
+                          <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); forever(item) }} className="flex-1 rounded-xl bg-red-600 px-3 py-2 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-50">{t(P + 'forever_yes')}</button>
+                          <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); setConfirmId(null) }} className="flex-1 rounded-xl bg-neutral-100 px-3 py-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200">{t('dashboard.projects.studio.delete_confirm.cancel')}</button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <button type="button" disabled={busyAny} onClick={() => restore(item)} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
+                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); restore(item) }} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-black text-white hover:bg-indigo-500 disabled:opacity-50">
                             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                             {busy ? t(P + 'restoring') : t(P + 'restore')}
                           </button>
-                          <button type="button" disabled={busyAny} onClick={() => setConfirmId(item.id)} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
+                          <button type="button" disabled={busyAny} onClick={e => { e.stopPropagation(); setConfirmId(item.id) }} title={t(P + 'delete_forever')} aria-label={t(P + 'delete_forever')} className="rounded-xl p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-950/30">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
