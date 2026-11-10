@@ -58,6 +58,11 @@ export function PlatformTourHost() {
   const [modalFree, setModalFree] = useState(false)
   // a pessoa clicou no item do passo (Finalizar, Publicar) e o tour espera a tela mudar: o balão avisa a espera em vez de repetir o texto do passo
   const [advancing, setAdvancing] = useState(false)
+  // passos opcionais que foram pulados porque não existem nesta tela: a contagem "n de total" não os conta e o Voltar passa por cima deles
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
+  const markSkipped = (...ids: string[]) => setSkippedIds(prev => { const n = new Set(prev); ids.forEach(i => n.add(i)); return n.size === prev.size ? prev : n })
+  const tourId = active?.tour.id
+  useEffect(() => { setSkippedIds(new Set()) }, [tourId])
   const popRef = useRef<HTMLDivElement>(null)
   const [popH, setPopH] = useState(200)
   const recoveredRef = useRef<Set<string>>(new Set())
@@ -125,6 +130,7 @@ export function PlatformTourHost() {
         }
         if (Date.now() > deadline && s.skipIfMissing) {
           // passo opcional sem alvo nesta tela: segue na direção em que a pessoa vinha (para trás, se ela clicou em Voltar)
+          markSkipped(s.id)
           if (cameFromAfterRef.current) prevStep(); else nextStep()
           return
         }
@@ -234,7 +240,11 @@ export function PlatformTourHost() {
         const from = activeRef.current?.index ?? 0
         for (let j = from + 1; j < steps.length; j++) {
           const sj = steps[j]
-          if (sj.target && findById(sj.target)) { if (j === from + 1) nextStep(); else goToStep(j); return }
+          if (sj.target && findById(sj.target)) {
+            if (j === from + 1) nextStep()
+            else { markSkipped(...steps.slice(from + 1, j).map(x => x.id)); goToStep(j) }
+            return
+          }
           if (!sj.skipIfMissing) break
         }
         await sleep(100)
@@ -343,7 +353,14 @@ export function PlatformTourHost() {
     const cur = a.tour.steps[a.index]
     if (cur?.noBack || a.index <= (a.from ?? 0)) return
     if (cur?.backClick) findById(cur.backClick)?.click()
-    prevStep()
+    // passos pulados no caminho de ida também são pulados na volta, e os botões "voltar" deles (ex.: voltar o assistente) valem
+    let t = a.index - 1
+    while (t > (a.from ?? 0) && skippedIds.has(a.tour.steps[t].id)) {
+      const bc = a.tour.steps[t].backClick
+      if (bc) findById(bc)?.click()
+      t--
+    }
+    goToStep(t)
   }
 
   const recoverNow = () => {
@@ -448,7 +465,7 @@ export function PlatformTourHost() {
         )}
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-neutral-400">{t('platform_help.step_of', '{n} de {total}').replace('{n}', String(active.index + 1)).replace('{total}', String(total))}</span>
+          <span className="text-[10px] font-bold text-neutral-400">{t('platform_help.step_of', '{n} de {total}').replace('{n}', String(active.index + 1 - active.tour.steps.slice(0, active.index).filter(x => skippedIds.has(x.id)).length)).replace('{total}', String(total - skippedIds.size))}</span>
           <div className="flex items-center gap-2">
             <button type="button" disabled={active.index <= (active.from ?? 0) || !!step.noBack} onClick={goBack} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-30 dark:hover:text-white">
               <ArrowLeft className="h-3 w-3" />{t('platform_help.back', 'Voltar')}
