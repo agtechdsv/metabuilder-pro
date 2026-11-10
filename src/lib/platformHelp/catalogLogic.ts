@@ -333,7 +333,8 @@ const SPECS: Spec[] = [
 
 /** Personalizado: orquestra casos de uso em abas (não tem tabelas nem zonas de campos). */
 function buildPersonalizado(base: PlatformTour): PlatformTour {
-  const tail = base.steps.slice(base.steps.findIndex(x => x.id === 'next3') + 1)
+  // no Orquestrador a etapa de ações não tem a seção "Botões da interface": o passo dela é pulado em vez de travar o tour
+  const tail = base.steps.slice(base.steps.findIndex(x => x.id === 'next3') + 1).map(x => (x.id === 'buttons' ? { ...x, skipIfMissing: true } : x))
   const byId = (id: string) => base.steps.find(x => x.id === id)!
   const s: Spec = SPECS[0]
   const pick = pickSteps({ ...s, logic: 'personalizado', card: 'wizard.logic_personalizado', cat: 'wizard.logic_cat_avancado', catName: ['Avançado e Híbrido', 'Advanced and Hybrid', 'Avanzado e Híbrido'], name: ['Personalizado (Orquestrador)', 'Custom (Orchestrator)', 'Personalizado (Orquestador)'], args: false, about: ['O Personalizado não cria dados novos: ele une casos de uso que você já tem em abas, subabas e quadros, em um painel único em volta de um caso de uso mestre.', 'Custom does not create new data: it joins use cases you already have in tabs, subtabs and panels, in a single panel around a master use case.', 'El Personalizado no crea datos nuevos: une casos de uso que usted ya tiene en pestañas, subpestañas y cuadros, en un panel único alrededor de un caso de uso maestro.'] })

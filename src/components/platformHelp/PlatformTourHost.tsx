@@ -229,7 +229,14 @@ export function PlatformTourHost() {
       if (!nextTarget) { nextStep(); return }
       const until = Date.now() + (a?.tour.steps[a.index]?.advanceWaitMs ?? 6000)
       while (Date.now() < until) {
-        if (findById(nextTarget)) { nextStep(); return }
+        // o próximo passo, ou o primeiro seguinte que está na tela quando os intermediários são opcionais e não existem nesta tela
+        const steps = activeRef.current?.tour.steps || []
+        const from = activeRef.current?.index ?? 0
+        for (let j = from + 1; j < steps.length; j++) {
+          const sj = steps[j]
+          if (sj.target && findById(sj.target)) { if (j === from + 1) nextStep(); else goToStep(j); return }
+          if (!sj.skipIfMissing) break
+        }
         await sleep(100)
       }
       busy = false
