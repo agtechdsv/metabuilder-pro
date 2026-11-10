@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
+import { isAuditColumnName } from '@/lib/orchestratorRelationPath'
 
 interface RelationsManagerProps {
   project: any
@@ -33,6 +34,7 @@ interface Relation {
   to_field_id: string
   relation_type: string
   source: 'cli' | 'manual'
+  audit_only?: boolean | null
 }
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
@@ -158,6 +160,17 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
     setIsSaving(false)
   }
 
+  // marca/desmarca a relação como só de auditoria (fica fora do caminho sugerido do Orquestrador)
+  const handleToggleAudit = async (rel: Relation, value: boolean) => {
+    const { error } = await supabase.from('relations').update({ audit_only: value }).eq('id', rel.id)
+    if (error) {
+      toast(t('wizard.personalizado.audit_error'), 'error')
+      return
+    }
+    setRelations(prev => prev.map(r => (r.id === rel.id ? { ...r, audit_only: value } : r)))
+    toast(value ? t('wizard.personalizado.audit_saved') : t('wizard.personalizado.audit_unsaved'), 'success')
+  }
+
   const handleDelete = async (rel: Relation) => {
     if (rel.source !== 'manual') return
     setDeletingId(rel.id)
@@ -214,6 +227,9 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
     const fromField = getFieldById(rel.from_model_id, rel.from_field_id)
     const toField = getFieldById(rel.to_model_id, rel.to_field_id)
     const isManual = rel.source === 'manual'
+    // auditoria: marcada à mão ou detectada pelo nome da coluna (created_by, criado_por...)
+    const autoAudit = isAuditColumnName(fromField?.db_column_name)
+    const isAudit = rel.audit_only === true || autoAudit
 
     return (
       <div className={cn(
@@ -254,6 +270,20 @@ export function RelationsManager({ project, models }: RelationsManagerProps) {
 
         {/* Badge + Action */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {isAudit && (
+            <span title={t('wizard.personalizado.audit_hint')} className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[8px] font-black rounded-lg uppercase tracking-wider">
+              {t('wizard.personalizado.audit_badge')}
+            </span>
+          )}
+          {!autoAudit && (
+            <button
+              onClick={() => handleToggleAudit(rel, !(rel.audit_only === true))}
+              title={t('wizard.personalizado.audit_hint')}
+              className="px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider text-neutral-400 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all opacity-0 group-hover:opacity-100"
+            >
+              {rel.audit_only === true ? t('wizard.personalizado.audit_unmark') : t('wizard.personalizado.audit_mark')}
+            </button>
+          )}
           {isManual ? (
             <>
               <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[8px] font-black rounded-lg uppercase tracking-wider">

@@ -10,12 +10,44 @@ export interface RawRelation {
   to_model_id?: string
   detail_model_id?: string
   master_model_id?: string
+  from_field_id?: string
+  /** marcada na tela de relacionamentos como relação só de auditoria (quem criou/alterou) */
+  audit_only?: boolean | null
   [k: string]: unknown
 }
 
 /** As duas pontas de uma relação (a tela e o runtime aceitam os dois nomes de campo). */
 export function relationEnds(rel: RawRelation): { a: string; b: string } {
   return { a: String(rel.from_model_id ?? rel.detail_model_id ?? ''), b: String(rel.to_model_id ?? rel.master_model_id ?? '') }
+}
+
+/**
+ * Nomes de coluna que guardam QUEM criou/alterou o registro (auditoria), sem sentido de negócio:
+ * created_by, updated_by, criado_por, usuario_criacao... Comparação sem maiúsculas, sublinhados e hifens.
+ */
+const AUDIT_COLUMN = /^(created|updated|deleted|modified|inserted|changed|criado|atualizado|alterado|excluido|deletado|cadastrado|incluido|modificado)(by|por)$|^(usuario|user|usr)(criacao|alteracao|atualizacao|exclusao|cadastro|inclusao|insercao|create|created|update|updated|delete|deleted|modify|modified)$|^(creator|criador|alterador)(id|user|usuario)?$/
+
+export function isAuditColumnName(name: string | undefined | null): boolean {
+  const n = String(name || '').toLowerCase().replace(/[\s_-]/g, '')
+  if (!n) return false
+  return AUDIT_COLUMN.test(n) || AUDIT_COLUMN.test(n.replace(/id$/, ''))
+}
+
+/** Ids das relações de auditoria: marcadas à mão (audit_only) ou cuja coluna de chave tem nome de auditoria. */
+export function auditRelationIds(
+  relations: RawRelation[],
+  models: { id: string; fields?: unknown }[] | undefined,
+): Set<string> {
+  const columnOf = new Map<string, string>()
+  for (const m of models || []) {
+    const list = Array.isArray(m.fields) ? m.fields : Object.values((m.fields as object) || {})
+    for (const f of list as { id?: string; db_column_name?: string }[]) if (f?.id) columnOf.set(String(f.id), String(f.db_column_name || ''))
+  }
+  const out = new Set<string>()
+  for (const r of relations || []) {
+    if (r.audit_only === true || isAuditColumnName(columnOf.get(String(r.from_field_id || '')))) out.add(String(r.id))
+  }
+  return out
 }
 
 /** Outra ponta da relação, partindo de `modelId`; null se a relação não toca nele. */
@@ -30,7 +62,7 @@ function otherEnd(rel: RawRelation, modelId: string): string | null {
  * Caminho mais curto (busca em largura) entre dois modelos, como lista de ids de relações em ordem de `fromModelId` até `toModelId`.
  * null se não há caminho dentro de `maxHops` relações; [] se são o mesmo modelo.
  */
-export function suggestRelationPath(relations: RawRelation[], fromModelId: string, toModelId: string, maxHops = 4): string[] | null {
+export function suggestRelationPath(relations: RawRelation[], fromModelId: string, toModelId: string, maxHops = 4, auditIds?: Set<string>): string[] | null {
   const from = String(fromModelId || ''); const to = String(toModelId || '')
   if (!from || !to) return null
   if (from === to) return []
@@ -40,6 +72,7 @@ export function suggestRelationPath(relations: RawRelation[], fromModelId: strin
     const { model, path } = queue.shift()!
     if (path.length >= maxHops) continue
     for (const rel of relations) {
+      if (auditIds?.has(String(rel.id))) continue // auditoria (criado_por...) não é vínculo de negócio
       const next = otherEnd(rel, model)
       if (!next || seen.has(next)) continue
       const newPath = [...path, rel.id]
@@ -71,7 +104,8 @@ export type LinkStatus =
   | { kind: 'ok' }                                // caminho guardado e válido
   | { kind: 'empty'; suggestion: string[] }       // sem caminho, mas há rota: dá para preencher
   | { kind: 'invalid'; suggestion: string[] }     // caminho guardado não chega ao mestre, mas há rota
-  | { kind: 'no_route'; hadPath: boolean }        // não há relação entre as tabelas: a aba mostraria tudo
+  | { kind: 'audit'; suggestion: string[] | null } // caminho guardado passa por relação de auditoria (criado_por...): não é vínculo de negócio
+  | { kind: 'no_route'; hadPath: boolean; onlyAudit: boolean } // não há relação de negócio entre as tabelas: a aba mostraria tudo
 
 export function checkTabLink(args: {
   relations: RawRelation[]
@@ -79,15 +113,22 @@ export function checkTabLink(args: {
   tabModelId: string | undefined
   masterModelId: string | undefined
   linkedToMaster: boolean
+  /** relações de auditoria (ver auditRelationIds): ficam fora da sugestão e fazem o caminho guardado ser avisado */
+  auditIds?: Set<string>
 }): LinkStatus {
-  const { relations, linkedToMaster } = args
+  const { relations, linkedToMaster, auditIds } = args
   const path = (args.path || []).filter(x => x !== undefined)
   const tab = String(args.tabModelId || ''); const master = String(args.masterModelId || '')
   if (!linkedToMaster || !tab || !master || tab === master) return { kind: 'skip' }
-  if (path.length > 0 && isPathValid(relations, path, tab, master)) return { kind: 'ok' }
-  const suggestion = suggestRelationPath(relations, tab, master)
-  if (suggestion && suggestion.length > 0) return path.length === 0 ? { kind: 'empty', suggestion } : { kind: 'invalid', suggestion }
-  return { kind: 'no_route', hadPath: path.length > 0 }
+  const suggestion = suggestRelationPath(relations, tab, master, 4, auditIds)
+  const hasSuggestion = !!suggestion && suggestion.length > 0
+  if (path.length > 0 && isPathValid(relations, path, tab, master)) {
+    if (auditIds && path.some(id => auditIds.has(String(id)))) return { kind: 'audit', suggestion: hasSuggestion ? suggestion : null }
+    return { kind: 'ok' }
+  }
+  if (hasSuggestion) return path.length === 0 ? { kind: 'empty', suggestion: suggestion! } : { kind: 'invalid', suggestion: suggestion! }
+  const onlyAudit = !!auditIds && auditIds.size > 0 && suggestRelationPath(relations, tab, master) !== null
+  return { kind: 'no_route', hadPath: path.length > 0, onlyAudit }
 }
 
 /** "entregas → pedidos → clientes": nomes das tabelas do caminho, a partir da tabela da aba. */

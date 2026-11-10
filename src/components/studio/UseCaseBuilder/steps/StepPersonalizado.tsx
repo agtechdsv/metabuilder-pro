@@ -15,7 +15,7 @@ import { IconPicker } from '../../IconPicker'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { getFormattedFieldName } from '../utils'
 import type { Model, UseCase, StepBaseProps, RelationHop } from '../types'
-import { checkTabLink, describePath, isPathValid, suggestRelationPath } from '@/lib/orchestratorRelationPath'
+import { auditRelationIds, checkTabLink, describePath, isPathValid, suggestRelationPath } from '@/lib/orchestratorRelationPath'
 
 // ─── MultiLevelPathBuilder ────────────────────────────────────────────────────
 
@@ -135,14 +135,16 @@ export function RelationPathSelector({ path, onChange, relations, models, helpId
   }
 
   // Pre-compute relation labels for the dropdown
+  const auditIds = auditRelationIds(relations, models)
   const relationOptions = relations.map(rel => {
     const fromModel = models.find(m => m.id === (rel.from_model_id || rel.detail_model_id))
     const toModel = models.find(m => m.id === (rel.to_model_id || rel.master_model_id))
     const fromName = fromModel?.display_name || fromModel?.db_table_name || 'Desconhecido'
     const toName = toModel?.display_name || toModel?.db_table_name || 'Desconhecido'
+    const fromCol = (fromModel?.fields || []).find((f: any) => f.id === rel.from_field_id)?.db_column_name
     return {
       id: rel.id,
-      label: `De: ${fromName} -> Para: ${toName} (Chave: ${rel.foreign_column_id || rel.from_field_id || 'N/A'})`
+      label: `De: ${fromName} -> Para: ${toName} (Chave: ${fromCol || rel.foreign_column_id || rel.from_field_id || 'N/A'})${auditIds.has(String(rel.id)) ? ' · AUDITORIA' : ''}`
     }
   })
 
@@ -390,6 +392,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const cardKey = isChild ? `${idx}.${childPath!.b}.${childPath!.c}` : `${idx}`
     // marcas do tour guiado: valem só para a primeira aba de detalhe (a de índice 1; a 0 é a do mestre)
     const tourDetail = !isChild && idx === 1
+    const auditIds = auditRelationIds(relations, models)
     // ligação da aba com o mestre: a aba do mestre (a 1ª) não tem; as outras precisam de um caminho de relações até ele
     const isMasterTab = !isChild && idx === 0
     const masterModelId = useCases.find(uc => uc.slug === (config.layout_config as any).master_use_case_slug)?.model_id || config.selected_models?.[0]
@@ -397,7 +400,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const slotPath: string[] = Array.isArray(slot.relation_path) ? slot.relation_path : []
     const linkStatus = isMasterTab
       ? ({ kind: 'skip' } as const)
-      : checkTabLink({ relations, path: slotPath, tabModelId, masterModelId, linkedToMaster: slot.use_master_id !== false })
+      : checkTabLink({ relations, path: slotPath, tabModelId, masterModelId, linkedToMaster: slot.use_master_id !== false, auditIds })
     const tabTableName = models.find(m => m.id === tabModelId)?.display_name || models.find(m => m.id === tabModelId)?.db_table_name || ''
     const pathText = (ids: string[]) => describePath(relations, models as any, ids, tabModelId || '')
     const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childPath!.b, childPath!.c, updater) : updateSlot(idx, updater))
@@ -454,8 +457,8 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                           // o caminho até o mestre é preenchido sozinho (o dev confere): sem ele a aba não filtra pelo registro aberto
                           if (!isMasterTab && s.use_master_id !== false && selectedUc?.model_id && masterModelId && selectedUc.model_id !== masterModelId) {
                             const current: string[] = Array.isArray(s.relation_path) ? s.relation_path : []
-                            if (!isPathValid(relations, current, selectedUc.model_id, masterModelId)) {
-                              const suggestion = suggestRelationPath(relations, selectedUc.model_id, masterModelId)
+                            if (!isPathValid(relations, current, selectedUc.model_id, masterModelId) || current.some(id => auditIds.has(String(id)))) {
+                              const suggestion = suggestRelationPath(relations, selectedUc.model_id, masterModelId, 4, auditIds)
                               if (suggestion && suggestion.length > 0) next.relation_path = suggestion
                             }
                           }
@@ -527,16 +530,19 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                 {linkStatus.kind === 'ok' && (
                   <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{t('wizard.personalizado.link_ok').replace('{path}', pathText(slotPath))}</p>
                 )}
-                {(linkStatus.kind === 'empty' || linkStatus.kind === 'invalid') && (
+                {(linkStatus.kind === 'empty' || linkStatus.kind === 'invalid' || (linkStatus.kind === 'audit' && linkStatus.suggestion)) && (
                   <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
                     <p className="flex-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                      {(linkStatus.kind === 'empty' ? t('wizard.personalizado.link_empty') : t('wizard.personalizado.link_invalid')).replace('{tab}', tabTableName).replace('{path}', pathText(linkStatus.suggestion))}
+                      {(linkStatus.kind === 'empty' ? t('wizard.personalizado.link_empty') : linkStatus.kind === 'audit' ? t('wizard.personalizado.link_audit') : t('wizard.personalizado.link_invalid')).replace('{tab}', tabTableName).replace('{path}', pathText(linkStatus.suggestion!))}
                     </p>
-                    <button type="button" onClick={() => upd(s => ({ ...s, relation_path: linkStatus.suggestion }))} className="rounded-lg bg-amber-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-amber-500">{t('wizard.personalizado.link_apply')}</button>
+                    <button type="button" onClick={() => upd(s => ({ ...s, relation_path: linkStatus.suggestion! }))} className="rounded-lg bg-amber-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-amber-500">{t('wizard.personalizado.link_apply')}</button>
                   </div>
                 )}
+                {linkStatus.kind === 'audit' && !linkStatus.suggestion && (
+                  <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">{t('wizard.personalizado.link_audit_only').replace('{tab}', tabTableName)}</p>
+                )}
                 {linkStatus.kind === 'no_route' && (
-                  <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{t('wizard.personalizado.link_no_route').replace('{tab}', tabTableName)}</p>
+                  <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{(linkStatus.onlyAudit ? t('wizard.personalizado.link_audit_only') : t('wizard.personalizado.link_no_route')).replace('{tab}', tabTableName)}</p>
                 )}
 
                 {/* Expanded slot config */}
