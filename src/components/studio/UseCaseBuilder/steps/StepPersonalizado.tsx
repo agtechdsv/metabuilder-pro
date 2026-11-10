@@ -1086,10 +1086,18 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               onChange={e => {
                 const selectedSlug = e.target.value
                 const selectedUc = useCases.find(uc => uc.slug === selectedSlug)
+                const prevSlug = (config.layout_config as any).master_use_case_slug
+                let slots: any[] = [...(config.layout_config.custom_slots || [])]
+                if (selectedUc) {
+                  const asMaster = (base: any = {}) => ({ ...base, id: base.id || `tab-${Date.now()}`, title: selectedUc.name, type: selectedUc.logic_type || 'cadastro', use_case_slug: selectedUc.slug, model_id: selectedUc.model_id })
+                  const first = slots[0]
+                  if (!first) slots = [asMaster()]
+                  else if (first.type !== 'group' && (!first.use_case_slug || first.use_case_slug === prevSlug)) slots[0] = asMaster(first)
+                }
                 setConfig({
                   ...config,
                   selected_models: selectedUc ? [selectedUc.model_id!] : config.selected_models,
-                  layout_config: { ...config.layout_config, master_use_case_slug: selectedSlug }
+                  layout_config: { ...config.layout_config, master_use_case_slug: selectedSlug, custom_slots: slots }
                 })
               }}
               className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
@@ -1161,6 +1169,23 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
           </div>
 
           <div className="space-y-4">
+            {(() => {
+              const slots0: any[] = config.layout_config.custom_slots || []
+              const masterUc0 = useCases.find(uc => uc.slug === (config.layout_config as any).master_use_case_slug)
+              const first0 = slots0[0]
+              const firstUc0 = useCases.find(uc => uc.slug === first0?.use_case_slug)
+              const firstIsMaster = !!first0 && first0.type !== 'group' && (!first0.use_case_slug || firstUc0?.model_id === masterUc0?.model_id)
+              if (!masterUc0 || !first0 || firstIsMaster) return null
+              return (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+                  <p className="flex-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">{t('wizard.personalizado.master_first_warn').replace('{master}', masterUc0.name)}</p>
+                  <button type="button" onClick={() => {
+                    const masterSlot = { id: `tab-${Date.now()}`, title: masterUc0.name, type: masterUc0.logic_type || 'cadastro', use_case_slug: masterUc0.slug, model_id: masterUc0.model_id }
+                    setConfig({ ...config, layout_config: { ...config.layout_config, custom_slots: [masterSlot, ...slots0] } })
+                  }} className="rounded-lg bg-amber-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-amber-500">{t('wizard.personalizado.master_first_btn')}</button>
+                </div>
+              )
+            })()}
             {(() => {
               const allSlots: any[] = config.layout_config.custom_slots || []
               const renderTop = (slot: any, idx: number, handle?: ReactNode) =>

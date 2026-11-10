@@ -366,9 +366,9 @@ function buildPersonalizado(base: PlatformTour): PlatformTour {
         'En esta lógica la etapa 2 se llama "Caso de Uso Maestro": en lugar de una tabla, elige un caso de uso que ya existe. Pasa a ser la primera pestaña y da la tabla de referencia del panel. No hay etapa de Campos y Diseño: el asistente salta directo a las Acciones.',
       ], { backClick: 'wizard.prev', readOnly: true }),
       st('pers-master', 'wizard.pers_master', ['Escolha o mestre', 'Pick the master', 'Elija el maestro'], [
-        'Escolha na lista o caso de uso mestre. Só aparecem os que já foram criados no projeto: se a lista estiver vazia, crie antes um caso de uso comum.',
-        'Pick the master use case from the list. Only those already created in the project show: if the list is empty, create a regular use case first.',
-        'Elija en la lista el caso de uso maestro. Solo aparecen los ya creados en el proyecto: si la lista está vacía, cree antes un caso de uso común.',
+        'Escolha na lista o caso de uso mestre. Só aparecem os que já foram criados no projeto: se a lista estiver vazia, crie antes um caso de uso comum. Ao escolher, o Studio já coloca o mestre como primeira aba: é ela que abre o registro; as demais abas se ligam a ele.',
+        'Pick the master use case from the list. Only those already created in the project show: if the list is empty, create a regular use case first. Once picked, Studio already puts the master as the first tab: it opens the record; the other tabs link to it.',
+        'Elija en la lista el caso de uso maestro. Solo aparecen los ya creados en el proyecto: si la lista está vacía, cree antes un caso de uso común. Al elegir, el Studio ya pone el maestro como primera pestaña: es la que abre el registro; las demás pestañas se vinculan a él.',
       ], { interactive: true }),
       st('pers-depth', 'wizard.pers_depth', ['Profundidade máxima', 'Maximum depth', 'Profundidad máxima'], [
         'O sistema detecta sozinho as tabelas ligadas à tabela raiz (você não escolhe os JOINs) e libera os campos delas para as abas. Aqui você define até quantos níveis ele alcança. O padrão, 2 níveis, serve na maioria dos casos.',

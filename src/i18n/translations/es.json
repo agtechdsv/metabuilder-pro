@@ -3026,6 +3026,8 @@
       "link_invalid": "El camino de relaciones de esta pestaña no lleva de {tab} hasta el maestro: puede mostrar registros que no son del maestro abierto. Sugerencia: {path}.",
       "link_no_route": "No hay relación entre {tab} y el maestro: esta pestaña mostrará TODOS los registros. Cree la relación en Datos y Schemas o desactive \"Vincular al maestro\".",
       "link_apply": "Aplicar camino sugerido",
+      "master_first_warn": "La primera pestaña es la del maestro: es la que abre el registro de {master}. Ahora la primera pestaña muestra otro caso de uso, así que el formulario del maestro no aparecerá al editar y esta pestaña no filtra por el registro abierto.",
+      "master_first_btn": "Poner el maestro como primera pestaña",
       "link_audit": "El camino de esta pestaña pasa por un campo de AUDITORÍA (quién creó/modificó), que no vincula los registros de {tab} con el maestro abierto. Sugerencia por el negocio: {path}.",
       "link_audit_only": "El único vínculo entre {tab} y el maestro es por campos de AUDITORÍA (quién creó/modificó), que no es un vínculo de negocio: esta pestaña mostrará TODOS los registros. Cree una relación de negocio en Datos y Schemas o desactive \"Vincular al maestro\".",
       "audit_badge": "Auditoría",

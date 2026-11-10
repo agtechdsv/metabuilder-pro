@@ -2939,6 +2939,8 @@
       "link_invalid": "The relationship path of this tab does not lead from {tab} to the master: it may show records that do not belong to the open master. Suggestion: {path}.",
       "link_no_route": "There is no relationship between {tab} and the master: this tab will show ALL records. Create the relation in Data & Schemas or turn off \"Link to master\".",
       "link_apply": "Apply suggested path",
+      "master_first_warn": "The first tab is the master one: it opens the {master} record. Right now the first tab shows another use case, so the master form will not show when editing and this tab does not filter by the open record.",
+      "master_first_btn": "Put the master as first tab",
       "link_audit": "The path of this tab goes through an AUDIT field (who created/changed), which does not link the records of {tab} to the open master. Business suggestion: {path}.",
       "link_audit_only": "The only link between {tab} and the master is through AUDIT fields (who created/changed), which is not a business link: this tab will show ALL records. Create a business relation in Data & Schemas or turn off \"Link to master\".",
       "audit_badge": "Audit",

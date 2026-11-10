@@ -2939,6 +2939,8 @@
       "link_invalid": "O caminho de relacionamentos desta aba não leva de {tab} até o mestre: ela pode mostrar registros que não são do mestre aberto. Sugestão: {path}.",
       "link_no_route": "Não há relacionamento entre {tab} e o mestre: esta aba mostrará TODOS os registros. Crie a relação em Dados & Schemas ou desligue \"Vincular ao mestre\".",
       "link_apply": "Aplicar caminho sugerido",
+      "master_first_warn": "A primeira aba é a do mestre: é ela que abre o registro de {master}. Hoje a primeira aba mostra outro caso de uso, então o cadastro do mestre não vai aparecer ao editar e esta aba não filtra pelo registro aberto.",
+      "master_first_btn": "Colocar o mestre como primeira aba",
       "link_audit": "O caminho desta aba passa por um campo de AUDITORIA (quem criou/alterou), que não liga os registros de {tab} ao mestre aberto. Sugestão pelo negócio: {path}.",
       "link_audit_only": "A única ligação entre {tab} e o mestre é por campos de AUDITORIA (quem criou/alterou), que não é vínculo de negócio: esta aba mostrará TODOS os registros. Crie uma relação de negócio em Dados & Schemas ou desligue \"Vincular ao mestre\".",
       "audit_badge": "Auditoria",
