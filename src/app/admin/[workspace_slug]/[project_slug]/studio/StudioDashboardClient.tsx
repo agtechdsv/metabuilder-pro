@@ -276,6 +276,10 @@ export function StudioDashboardClient({
   const builderBaselineRef = useRef<Map<string, string> | null>(null)
   const viewSignature = (v: any) => [v.updated_at || v.created_at || '', v.status || '', v.draft_config ? JSON.stringify(v.draft_config).length : 0].join('|')
   const prevViewModeRef = useRef<string>('')
+  // depois de achado, o caso de uso "mais recente" fica o mesmo até o assistente abrir de novo: publicar apaga o rascunho e a assinatura volta a ser
+  // a de antes da edição, o que o faria sumir no meio do tour
+  const latestStickyRef = useRef<string | undefined>(undefined)
+  if (viewMode === 'builder' && prevViewModeRef.current !== 'builder') latestStickyRef.current = undefined
   if (viewMode === 'builder' && prevViewModeRef.current !== 'builder') builderBaselineRef.current = new Map(userViews.map((v: any) => [v.id, viewSignature(v)] as [string, string]))
   prevViewModeRef.current = viewMode
   const latestViewId = (() => {
@@ -285,7 +289,8 @@ export function StudioDashboardClient({
       const stamp = String(v.updated_at || v.created_at || '')
       if (!best || stamp >= best.stamp) best = { id: v.id, stamp }
     }
-    return best?.id as string | undefined
+    if (best?.id) latestStickyRef.current = best.id
+    return (best?.id || (latestStickyRef.current && userViews.some((v: any) => v.id === latestStickyRef.current) ? latestStickyRef.current : undefined)) as string | undefined
   })()
   const downloadsView = views?.find(view => view.slug === 'downloads')
   const isDownloadsActive = downloadsView ? (downloadsView.layout_config?.is_active !== false) : true
