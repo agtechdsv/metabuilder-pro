@@ -75,7 +75,10 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
   const byId = (id: string) => base.steps.find(x => x.id === id)!
   // ordem de leitura = ordem na tela, de cima para baixo: padrões da tela, configuração da lógica, painel de campos, zonas
   // a introdução só mostra a área (sem edição); a configuração é feita nos passos seguintes, campo a campo
-  const cfg = s.cfg.map(x => (x.id === 'cfg-intro' ? { ...x, readOnly: true } : x))
+  // passos que explicam itens da caixa "Padrões da tela" (ex.: ordem cronológica) vêm junto dela, que fica ACIMA da configuração da lógica
+  const isDefaults = (x: PlatformStep) => x.id === 'order'
+  const defaultsExtra = s.cfg.filter(isDefaults)
+  const cfg = s.cfg.filter(x => !isDefaults(x)).map(x => (x.id === 'cfg-intro' ? { ...x, readOnly: true } : x))
   const steps: PlatformStep[] = [
     byId('open'),
     st('name', 'wizard.name', ['Nome e endereço', 'Name and address', 'Nombre y dirección'], [
@@ -101,6 +104,7 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
       'Records per page (LIMIT) sets how many records come at a time; blank uses the system default. The screen help text and the field help overview are also here.',
       'Registros por página (LIMIT) define cuántos registros vienen cada vez; en blanco vale el valor del sistema. Aquí también están el texto de ayuda de la pantalla y la visión general de la ayuda de los campos.',
     ], { skipIfMissing: true, backClick: 'wizard.prev' }),
+    ...defaultsExtra,
     ...cfg,
     st('fields-panel', 'wizard.fields_panel', ['De onde vêm os campos', 'Where fields come from', 'De dónde vienen los campos'], [
       'O painel lista os campos das tabelas escolhidas. Arraste um campo para uma zona (ou clique no + dele). Os seletores de configuração acima também mostram esses campos.',
