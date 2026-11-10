@@ -15,6 +15,7 @@ import { IconPicker } from '../../IconPicker'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { getFormattedFieldName } from '../utils'
 import type { Model, UseCase, StepBaseProps, RelationHop } from '../types'
+import { checkTabLink, describePath, isPathValid, suggestRelationPath } from '@/lib/orchestratorRelationPath'
 
 // ─── MultiLevelPathBuilder ────────────────────────────────────────────────────
 
@@ -389,6 +390,16 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
     const cardKey = isChild ? `${idx}.${childPath!.b}.${childPath!.c}` : `${idx}`
     // marcas do tour guiado: valem só para a primeira aba de detalhe (a de índice 1; a 0 é a do mestre)
     const tourDetail = !isChild && idx === 1
+    // ligação da aba com o mestre: a aba do mestre (a 1ª) não tem; as outras precisam de um caminho de relações até ele
+    const isMasterTab = !isChild && idx === 0
+    const masterModelId = useCases.find(uc => uc.slug === (config.layout_config as any).master_use_case_slug)?.model_id || config.selected_models?.[0]
+    const tabModelId = useCases.find(uc => uc.slug === slot.use_case_slug)?.model_id
+    const slotPath: string[] = Array.isArray(slot.relation_path) ? slot.relation_path : []
+    const linkStatus = isMasterTab
+      ? ({ kind: 'skip' } as const)
+      : checkTabLink({ relations, path: slotPath, tabModelId, masterModelId, linkedToMaster: slot.use_master_id !== false })
+    const tabTableName = models.find(m => m.id === tabModelId)?.display_name || models.find(m => m.id === tabModelId)?.db_table_name || ''
+    const pathText = (ids: string[]) => describePath(relations, models as any, ids, tabModelId || '')
     const upd = (updater: (s: any) => any) => (isChild ? updateChild(idx, childPath!.b, childPath!.c, updater) : updateSlot(idx, updater))
     const removeCard = () => {
       if (isChild) {
@@ -438,7 +449,18 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                       data-help-id={tourDetail ? 'wizard.pers_detail_uc' : 'wizard.pers_slot_uc'} value={slot.use_case_slug || ''}
                       onChange={e => {
                         const selectedUc = useCases?.find(uc => uc.slug === e.target.value)
-                        upd(s => ({ ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }))
+                        upd(s => {
+                          const next: any = { ...s, use_case_slug: e.target.value, type: selectedUc?.logic_type || 'personalizado' }
+                          // o caminho até o mestre é preenchido sozinho (o dev confere): sem ele a aba não filtra pelo registro aberto
+                          if (!isMasterTab && s.use_master_id !== false && selectedUc?.model_id && masterModelId && selectedUc.model_id !== masterModelId) {
+                            const current: string[] = Array.isArray(s.relation_path) ? s.relation_path : []
+                            if (!isPathValid(relations, current, selectedUc.model_id, masterModelId)) {
+                              const suggestion = suggestRelationPath(relations, selectedUc.model_id, masterModelId)
+                              if (suggestion && suggestion.length > 0) next.relation_path = suggestion
+                            }
+                          }
+                          return next
+                        })
                       }}
                       className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-sm font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:border-rose-500"
                     >
@@ -500,6 +522,22 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
                     </button>
                   )}
                 </div>
+
+                {/* Ligação com o mestre: aviso visível sem precisar expandir a aba */}
+                {linkStatus.kind === 'ok' && (
+                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{t('wizard.personalizado.link_ok').replace('{path}', pathText(slotPath))}</p>
+                )}
+                {(linkStatus.kind === 'empty' || linkStatus.kind === 'invalid') && (
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+                    <p className="flex-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                      {(linkStatus.kind === 'empty' ? t('wizard.personalizado.link_empty') : t('wizard.personalizado.link_invalid')).replace('{tab}', tabTableName).replace('{path}', pathText(linkStatus.suggestion))}
+                    </p>
+                    <button type="button" onClick={() => upd(s => ({ ...s, relation_path: linkStatus.suggestion }))} className="rounded-lg bg-amber-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-amber-500">{t('wizard.personalizado.link_apply')}</button>
+                  </div>
+                )}
+                {linkStatus.kind === 'no_route' && (
+                  <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">{t('wizard.personalizado.link_no_route').replace('{tab}', tabTableName)}</p>
+                )}
 
                 {/* Expanded slot config */}
                 {expandedCustomSlot === cardKey && (
