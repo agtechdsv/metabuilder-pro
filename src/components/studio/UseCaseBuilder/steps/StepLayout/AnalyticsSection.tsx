@@ -511,6 +511,7 @@ export function AnalyticsSection({
                     <div className="p-4 border-2 border-dashed border-purple-200 dark:border-purple-900/50 rounded-xl text-center bg-white dark:bg-neutral-900">
                       <p className="text-xs text-neutral-500">Nenhuma hierarquia definida. O mapa agrupará os dados base do modelo atual.</p>
                       <button
+                        data-help-id="wizard.mm_start"
                         onClick={() => {
                           setConfig((prev: any) => ({
                             ...prev,
