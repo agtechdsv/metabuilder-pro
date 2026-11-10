@@ -47,8 +47,15 @@ export function useViewDataFetch({
   const { t } = useI18n()
   const supabase = createClient()
 
-  const [data, setData] = useState<any[]>(() => getCachedData(`${projectId}:${modelName}`) || [])
-  const [isLoading, setIsLoading] = useState(!getCachedData(`${projectId}:${modelName}`))
+  // Resultado restrito (aba ligada ao mestre, filtro externo ou da tela): vale só para aquele recorte. O cache da tela é por tabela,
+  // então nem pode servir de ponto de partida (mostraria os dados de outro cliente ou a lista inteira por um instante) nem receber esse resultado.
+  const isScoped = (Array.isArray(advancedStaticFilters) && advancedStaticFilters.length > 0) || Object.keys(filterValues || {}).length > 0
+  const isScopedRef = useRef(isScoped)
+  isScopedRef.current = isScoped
+  const readCache = (key: string) => (isScopedRef.current ? null : getCachedData(key))
+
+  const [data, setData] = useState<any[]>(() => readCache(`${projectId}:${modelName}`) || [])
+  const [isLoading, setIsLoading] = useState(!readCache(`${projectId}:${modelName}`))
   const [isFetchingBackground, setIsFetchingBackground] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [totalServerRows, setTotalServerRows] = useState<number>(0)
@@ -68,7 +75,7 @@ export function useViewDataFetch({
   })
 
   useEffect(() => {
-    const cached = getCachedData(`${projectId}:${modelName}`)
+    const cached = readCache(`${projectId}:${modelName}`)
     if (cached && data.length === 0) {
       setData(cached)
       setIsLoading(false)
@@ -161,7 +168,7 @@ export function useViewDataFetch({
           }
 
           const cacheKey = `${projectId}:${modelName}`
-          if (!Object.keys(currentFiltersRef.current || {}).length) {
+          if (!isScopedRef.current && !Object.keys(currentFiltersRef.current || {}).length) {
             setCachedData(cacheKey, resultData)
           }
         }
@@ -203,7 +210,7 @@ export function useViewDataFetch({
     if (!tunnelChannel || !isTunnelReady) return
 
     const cacheKey = `${projectId}:${modelName}`
-    const cached = getCachedData(cacheKey)
+    const cached = readCache(cacheKey)
 
     if (!forceRefresh && !append && cached && !Object.keys(currentFilters).length) {
       const uniqueCached = cached.filter((row: any, index: number, self: any[]) =>
@@ -754,7 +761,7 @@ export function useViewDataFetch({
         return item
       })
       const cacheKey = `${projectId}:${modelName}`
-      setCachedData(cacheKey, newData)
+      if (!isScopedRef.current) setCachedData(cacheKey, newData)
       return newData
     })
 
