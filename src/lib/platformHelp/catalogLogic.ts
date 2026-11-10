@@ -363,12 +363,17 @@ function buildPersonalizado(base: PlatformTour): PlatformTour {
         'Nesta lógica a etapa 2 se chama "Caso de Uso Mestre": em vez de uma tabela, você escolhe um caso de uso que já existe. Ele vira a primeira aba e dá a tabela de referência do painel. Não há etapa de Campos & Layout: o assistente pula direto para as Ações.',
         'In this logic step 2 is called "Master Use Case": instead of a table, you pick a use case that already exists. It becomes the first tab and gives the reference table of the panel. There is no Fields & Layout step: the wizard jumps straight to Actions.',
         'En esta lógica la etapa 2 se llama "Caso de Uso Maestro": en lugar de una tabla, elige un caso de uso que ya existe. Pasa a ser la primera pestaña y da la tabla de referencia del panel. No hay etapa de Campos y Diseño: el asistente salta directo a las Acciones.',
-      ], { backClick: 'wizard.prev' }),
+      ], { backClick: 'wizard.prev', readOnly: true }),
       st('pers-master', 'wizard.pers_master', ['Escolha o mestre', 'Pick the master', 'Elija el maestro'], [
         'Escolha na lista o caso de uso mestre. Só aparecem os que já foram criados no projeto: se a lista estiver vazia, crie antes um caso de uso comum.',
         'Pick the master use case from the list. Only those already created in the project show: if the list is empty, create a regular use case first.',
         'Elija en la lista el caso de uso maestro. Solo aparecen los ya creados en el proyecto: si la lista está vacía, cree antes un caso de uso común.',
       ], { interactive: true }),
+      st('pers-depth', 'wizard.pers_depth', ['Profundidade máxima', 'Maximum depth', 'Profundidad máxima'], [
+        'O sistema detecta sozinho as tabelas ligadas à tabela raiz (você não escolhe os JOINs) e libera os campos delas para as abas. Aqui você define até quantos níveis ele alcança. O padrão, 2 níveis, serve na maioria dos casos.',
+        'The system detects on its own the tables linked to the root table (you do not pick the JOINs) and makes their fields available to the tabs. Here you set how many levels it reaches. The default, 2 levels, fits most cases.',
+        'El sistema detecta solo las tablas vinculadas a la tabla raíz (usted no elige los JOIN) y habilita sus campos para las pestañas. Aquí define hasta cuántos niveles alcanza. El valor predeterminado, 2 niveles, sirve en la mayoría de los casos.',
+      ], { interactive: true, skipIfMissing: true }),
       st('pers-tabs', 'wizard.pers_tabs', ['O layout em abas', 'The tab layout', 'El diseño en pestañas'], [
         'Aqui você monta as abas do registro. A primeira aba é a do mestre; as seguintes trazem outros casos de uso (detalhes, históricos, mapas, painéis...). Você pode arrastar as abas para reordenar. Vamos ver cada parte, de cima para baixo.',
         'Here you build the record tabs. The first tab is the master one; the following ones bring other use cases (details, histories, maps, dashboards...). You can drag tabs to reorder. We will go through each part, from top to bottom.',

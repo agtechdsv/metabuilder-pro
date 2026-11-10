@@ -1060,6 +1060,7 @@ export function StepPersonalizado({ config, setConfig, models, useCases = [], re
               <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50 w-fit">
                 <label className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">{t('wizard.tables.max_depth_label', 'Profundidade Máxima (Níveis)')}</label>
                 <select
+                  data-help-id="wizard.pers_depth"
                   value={config.layout_config?.max_relation_depth || 2}
                   onChange={e => setConfig({ ...config, layout_config: { ...config.layout_config, max_relation_depth: parseInt(e.target.value, 10) } })}
                   className="text-xs bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 outline-none text-indigo-900 dark:text-indigo-300 cursor-pointer"
