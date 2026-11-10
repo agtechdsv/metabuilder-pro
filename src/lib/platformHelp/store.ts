@@ -24,7 +24,9 @@ export function resolveStartIndex(tour: PlatformTour): number {
 export function tourWrongLogic(tour: PlatformTour): boolean {
   if (!tour.onlyLogic || typeof document === 'undefined') return false
   const mode = document.querySelector('[data-help-id="wizard.mode"]')
-  return mode?.getAttribute('data-help-state') === 'edit' && mode.getAttribute('data-help-logic') !== tour.onlyLogic
+  const logic = mode?.getAttribute('data-help-logic') || ''
+  // sem a lógica informada (caso de uso recém-salvo, ainda sem ela no estado do assistente) não dá para dizer que é outra: o tour segue
+  return mode?.getAttribute('data-help-state') === 'edit' && !!logic && logic !== tour.onlyLogic
 }
 
 export const WRONG_LOGIC_HINT = {
