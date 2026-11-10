@@ -288,7 +288,7 @@ export default function TunnelSettingsClient({
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       
-      <div className="flex items-center justify-between">
+      <div data-help-id="ide.json_header" className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
             <Network className="w-6 h-6 text-indigo-500" />
@@ -300,7 +300,7 @@ export default function TunnelSettingsClient({
 
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 space-y-8">
         
-        <div>
+        <div data-help-id="ide.json_auth">
           <h3 className="font-bold text-lg mb-1 flex items-center gap-2"><Shield className="w-5 h-5 text-indigo-500" /> Autenticação do Projeto</h3>
           <p className="text-sm text-neutral-500 mb-4">Credenciais capturadas automaticamente do sistema. Estas informações identificam qual projeto este túnel atende.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
@@ -325,7 +325,7 @@ export default function TunnelSettingsClient({
 
         <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
 
-        <div>
+        <div data-help-id="ide.json_conns">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-bold text-lg mb-1 flex items-center gap-2"><Database className="w-5 h-5 text-indigo-500" /> Conexões de Banco de Dados</h3>
@@ -448,7 +448,7 @@ export default function TunnelSettingsClient({
 
         <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
 
-        <div>
+        <div data-help-id="ide.json_ldap">
           <h3 className="font-bold text-lg mb-1 flex items-center gap-2"><Key className="w-5 h-5 text-indigo-500" /> Autenticação Corporativa (LDAP)</h3>
           <p className="text-sm text-neutral-500 mb-4">Integração com Active Directory para logins de usuários da empresa.</p>
           <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 rounded-xl space-y-4">
@@ -491,7 +491,7 @@ export default function TunnelSettingsClient({
 
         <div className="h-px bg-neutral-200 dark:bg-neutral-800 w-full" />
 
-        <div>
+        <div data-help-id="ide.json_dirs">
           <h3 className="font-bold text-lg mb-1 flex items-center gap-2"><HardDrive className="w-5 h-5 text-indigo-500" /> Diretórios do Sistema</h3>
           <p className="text-sm text-neutral-500 mb-4">Caminhos na máquina local usados pelo túnel.</p>
           <div>
@@ -508,6 +508,7 @@ export default function TunnelSettingsClient({
 
         <div className="flex justify-end pt-4">
           <button 
+            data-help-id="ide.json_save"
             onClick={handleSaveConfig}
             disabled={isSaving}
             className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-colors disabled:opacity-50"

@@ -19,11 +19,18 @@ describe('rotas da ajuda da plataforma', () => {
 
   it('cada tela recebe só os tours dela', () => {
     const ids = (p: string) => toursForRoute(PLATFORM_TOURS, p).map(t => t.id)
-    expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso', 'studio-logica-kanban', 'studio-logica-scheduler', 'studio-logica-timeline', 'studio-logica-gantt', 'studio-logica-blueprint', 'studio-logica-mapa-mental', 'studio-logica-map', 'studio-logica-analytics', 'studio-logica-galeria', 'studio-logica-personalizado', 'studio-excluir-caso-de-uso'])
+    expect(ids('/admin/w/p/studio')).toEqual(['studio-visao-geral', 'studio-criar-caso-de-uso', 'studio-logica-kanban', 'studio-logica-scheduler', 'studio-logica-timeline', 'studio-logica-gantt', 'studio-logica-blueprint', 'studio-logica-mapa-mental', 'studio-logica-map', 'studio-logica-analytics', 'studio-logica-galeria', 'studio-logica-personalizado', 'studio-excluir-caso-de-uso', 'studio-navegacao', 'studio-enums', 'studio-tunel', 'studio-bancos-sincronizados', 'studio-central-ajuda', 'studio-barra-lateral'])
     expect(ids('/admin/w/p/studio/data')).toEqual(['studio-dados', 'dados-tabela-campos', 'dados-auditoria', 'dados-acesso-linha', 'dados-relacionamentos'])
     expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
     expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
     expect(ids('/admin/w/p/studio/auth')).toEqual(['auth-visao-geral', 'auth-controle-acesso', 'auth-estrategia-managed', 'auth-estrategia-banco-legado', 'auth-estrategia-ldap', 'auth-estrategia-sem-login', 'auth-personalizacao-visual', 'auth-usuarios', 'auth-grupos', 'auth-permissoes-telas'])
+    expect(ids('/workspace')).toEqual(['portal-workspaces'])
+    expect(ids('/admin/w')).toEqual(['portal-projetos'])
+    expect(ids('/admin/w/p/studio/byoc')).toEqual(['ide-byoc'])
+    expect(ids('/admin/w/p/studio/tunnel')).toEqual(['ide-json'])
+    expect(ids('/admin/w/p/studio/terminal')).toEqual(['ide-terminal'])
+    expect(ids('/admin/w/p/studio/sql')).toEqual(['ide-sql'])
+    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar'])
     expect(ids('/outra/rota')).toEqual([])
   })
 })
@@ -223,5 +230,31 @@ describe('todos os tours (Studio, Login, Configurações, Logs)', () => {
       expect(first.completeWhen?.equals, id).toBe(kind)
       expect(first.interactive, id).toBe(true)
     }
+  })
+})
+
+describe('passos exclusivos da IDE', () => {
+  it('só mostram: nunca são interativos nem avançam por clique', () => {
+    const ideSteps = PLATFORM_TOURS.flatMap(t => t.steps.map(s => ({ tour: t.id, s }))).filter(x => x.s.ideOnly)
+    expect(ideSteps.length).toBeGreaterThan(5)
+    for (const { tour, s } of ideSteps) {
+      expect(s.interactive, `${tour}/${s.id}`).toBeFalsy()
+      expect(s.advanceOnClick, `${tour}/${s.id}`).toBeFalsy()
+    }
+  })
+
+  it('tours do portal e das abas do Studio com função da IDE têm o passo marcado', () => {
+    const marked = (tourId: string, stepId: string) => PLATFORM_TOURS.find(t => t.id === tourId)?.steps.find(s => s.id === stepId)?.ideOnly === true
+    expect(marked('portal-workspaces', 'act-desktop')).toBe(true)
+    expect(marked('portal-workspaces', 'act-ide')).toBe(true)
+    expect(marked('portal-projetos', 'act-desktop')).toBe(true)
+    expect(marked('portal-projetos', 'act-ide')).toBe(true)
+    expect(marked('studio-tunel', 'sync')).toBe(true)
+    expect(marked('studio-barra-lateral', 'sql')).toBe(true)
+  })
+
+  it('o catálogo usa a mesma rota virtual da IDE que o menu de ajuda da IDE', async () => {
+    const mod = await import('../../components/ide/IdeHelpMenu')
+    expect(mod.IDE_TOUR_ROUTE).toBe('/ide-local')
   })
 })

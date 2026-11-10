@@ -164,6 +164,7 @@ export function IDEConsolePanel({
             animate={{ height: consoleHeight, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
+            data-help-id="ide.console"
             className="border-t border-neutral-800 bg-[#0d0d0d] flex flex-col overflow-hidden shrink-0"
           >
             {/* Console toolbar */}
@@ -174,7 +175,7 @@ export function IDEConsolePanel({
                 </span>
 
                 {/* ── Toggle Resumido / Detalhado (DB) ── */}
-                <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded p-0.5 mr-2">
+                <div data-help-id="ide.console_mode" className="flex items-center bg-neutral-900 border border-neutral-800 rounded p-0.5 mr-2">
                   <button
                     type="button"
                     onClick={() => setDetailed(false)}

@@ -11,6 +11,10 @@ import { buildLogicTours } from './catalogLogic'
 import { AUTH_TOURS } from './catalogAuth'
 import { SETTINGS_TOURS } from './catalogSettings'
 import { LOGS_TOURS } from './catalogLogs'
+import { PORTAL_TOURS } from './catalogPortal'
+import { STUDIO_TABS_TOURS } from './catalogStudioTabs'
+import { IDE_TOOLS_TOURS } from './catalogIdeTools'
+import { IDE_TOURS } from './catalogIde'
 
 const h = (pt: string, en: string, es: string): HelpText => ({ pt, en, es })
 
@@ -363,4 +367,4 @@ const BASE_TOURS: readonly PlatformTour[] = [
 /** Os tours de cada lógica do assistente nascem do tour "Criar um caso de uso" (início e fim comuns). */
 const LOGIC_TOURS = buildLogicTours(BASE_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!)
 
-export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...LOGIC_TOURS, ...STUDIO_EXTRA_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS]
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...LOGIC_TOURS, ...STUDIO_EXTRA_TOURS, ...STUDIO_TABS_TOURS, ...IDE_TOOLS_TOURS, ...IDE_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS, ...PORTAL_TOURS]

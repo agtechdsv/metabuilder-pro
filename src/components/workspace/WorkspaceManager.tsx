@@ -265,7 +265,7 @@ export function WorkspaceManager({
     <div className="space-y-6">
 
       {/* Banner de Boas Vindas */}
-      <div className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
+      <div data-help-id="portal.ws_banner" className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-600/10 transition-all duration-700"></div>
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -285,6 +285,7 @@ export function WorkspaceManager({
             {/* Só exibe para owner ou convidado com Acesso Global */}
             {teamData && (!isGuest || initialGuestAccessLevel === 'global') && (
               <button
+                data-help-id="portal.ws_team"
                 onClick={() => setIsTeamDrawerOpen(true)}
                 className="flex items-center gap-2 px-7 py-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all shadow-sm text-sm border border-neutral-200 dark:border-neutral-700 whitespace-nowrap active:scale-95 cursor-pointer"
               >
@@ -293,6 +294,7 @@ export function WorkspaceManager({
             )}
             {canCreateWorkspace && (
               <button
+                data-help-id="portal.ws_new"
                 onClick={handleNewWorkspace}
                 className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm active:scale-95 cursor-pointer"
               >
@@ -304,7 +306,7 @@ export function WorkspaceManager({
       </div>
 
       {/* Stats Rápidos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div data-help-id="portal.ws_stats" className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
           { label: t('dashboard.stats.active_workspaces'), value: workspaces.length, icon: Building2, color: 'blue' },
           { label: t('dashboard.stats.total_projects'), value: workspaces.reduce((acc, w) => acc + (w.project_count ?? w.projects?.[0]?.count ?? 0), 0), icon: Activity, color: 'indigo' },
@@ -401,6 +403,7 @@ export function WorkspaceManager({
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group cursor-pointer"
+              data-help-id="portal.refresh"
               title={t('workspace_components.refresh_tooltip', 'Atualizar')}
             >
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
@@ -414,12 +417,13 @@ export function WorkspaceManager({
         <WorkspaceSyncedDatabases />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {workspaces.map((workspace) => {
+          <div data-help-id="portal.ws_grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {workspaces.map((workspace, wsIdx) => {
             const isNavigating = navigatingSlug === workspace.slug;
             return (
               <div
                 key={workspace.id}
+                data-help-id={wsIdx === 0 ? 'portal.ws_card' : undefined}
                 className={cn(
                   "group relative bg-white dark:bg-neutral-950 border rounded-[2.5rem] transition-all duration-500 overflow-hidden shadow-sm hover:shadow-xl dark:shadow-none",
                   isNavigating
@@ -457,7 +461,7 @@ export function WorkspaceManager({
 
                     {/* Exibe para quem tem permissão de editar, excluir, ou se houver projeto no portal (todos veem Acessar Portal se houver) */}
                     {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.has_portal_project) && (
-                      <div className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
+                      <div data-help-id={wsIdx === 0 ? 'portal.ws_actions' : undefined} data-help-reveal className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
                         {/* 1. Acessar Portal */}
                         {workspace.has_portal_project && (
                           <button
@@ -466,6 +470,7 @@ export function WorkspaceManager({
                               openPreview(`${window.location.origin}/${workspace.slug}`, `Portal: ${workspace.name}`)
                             }}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400 cursor-pointer"
+                            data-help-id={wsIdx === 0 ? 'portal.ws_act_open' : undefined}
                             title={t('workspace_components.project_card_tooltips.access_portal', 'Acessar Portal')}
                           >
                             <ArrowUpRight className="w-4 h-4" />
@@ -480,6 +485,7 @@ export function WorkspaceManager({
                               setShowDesktopModal(true);
                             }}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-emerald-500 hover:text-emerald-400 cursor-pointer"
+                            data-help-id={wsIdx === 0 ? 'portal.ws_act_desktop' : undefined}
                             title={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}
                           >
                             <Monitor className="w-4 h-4" />
@@ -491,6 +497,7 @@ export function WorkspaceManager({
                             <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}>
                               <button
                                 className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+                                data-help-id={wsIdx === 0 ? 'portal.ws_act_ide' : undefined}
                                 title={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
                                 onClick={(e) => {
                                   e.preventDefault()
@@ -509,6 +516,7 @@ export function WorkspaceManager({
                                 openDrawer(workspace)
                               }}
                               className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400 cursor-pointer"
+                              data-help-id={wsIdx === 0 ? 'portal.ws_act_edit' : undefined}
                               title={t('dashboard.edit_workspace')}
                             >
                               <Pencil className="w-4 h-4" />
@@ -520,6 +528,7 @@ export function WorkspaceManager({
                           <button
                             onClick={() => openDeleteModal(workspace)}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400 cursor-pointer"
+                            data-help-id={wsIdx === 0 ? 'portal.ws_act_delete' : undefined}
                             title={t('dashboard.delete_workspace')}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -534,6 +543,7 @@ export function WorkspaceManager({
                               setIsAIModalOpen(true);
                             }}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-violet-500 hover:text-violet-400 cursor-pointer"
+                            data-help-id={wsIdx === 0 ? 'portal.ws_act_ai' : undefined}
                             title={t('workspace_components.project_card_tooltips.ai_builder', 'Configurações AI Builder')}
                           >
                             <Bot className="w-4 h-4" />
@@ -546,6 +556,7 @@ export function WorkspaceManager({
                   <Link
                     href={`/admin/${workspace.slug}`}
                     onClick={() => setNavigatingSlug(workspace.slug)}
+                    data-help-id={wsIdx === 0 ? 'portal.ws_enter' : undefined}
                     className="flex items-center justify-between pt-4 border-t border-neutral-100 dark:border-neutral-800/50"
                   >
                     <span className="text-xs font-bold text-neutral-500 tracking-tighter">
@@ -573,6 +584,7 @@ export function WorkspaceManager({
           {/* Add New Card */}
           {canCreateWorkspace && (
             <button
+              data-help-id="portal.ws_add_card"
               onClick={handleNewWorkspace}
               className="group p-8 bg-neutral-50 dark:bg-neutral-950 border border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all min-h-[280px] shadow-inner dark:shadow-none cursor-pointer"
             >

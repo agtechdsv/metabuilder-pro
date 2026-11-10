@@ -343,12 +343,13 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[2rem] overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
+      <div data-help-id="studio.nav_header" className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
         <div>
           <h3 className="text-sm font-black uppercase tracking-[0.2em] text-neutral-900 dark:text-white">{t('dashboard.projects.studio.navigation_menu_generator')}</h3>
           <p className="text-[10px] text-neutral-400 font-medium mt-1 uppercase tracking-widest">{t('dashboard.projects.studio.navigation_menu_desc')}</p>
         </div>
         <button
+          data-help-id="studio.nav_save"
           onClick={handleSaveData}
           disabled={isSaving}
           className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50"
@@ -405,13 +406,15 @@ export function MenuBuilder({ project, views, isDownloadsActive = true, onSave }
 
         <div className="pt-6 flex gap-3">
           <button
-            onClick={() => handleAddItem(null, 'view')}
+            data-help-id="studio.nav_add_link"
+          onClick={() => handleAddItem(null, 'view')}
             className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group"
           >
             <LinkIcon className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('dashboard.projects.studio.add_link')}
           </button>
           <button
-            onClick={() => handleAddItem(null, 'folder')}
+            data-help-id="studio.nav_add_folder"
+          onClick={() => handleAddItem(null, 'folder')}
             className="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:border-emerald-500 hover:text-emerald-600 transition-all group"
           >
             <FolderPlus className="w-4 h-4 group-hover:scale-110 transition-transform" /> {t('dashboard.projects.studio.create_menu')}
@@ -472,6 +475,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
           : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800"
       )}>
         <div
+          data-help-id="studio.nav_drag"
           className="p-1 -ml-1 text-neutral-300 hover:text-indigo-500 cursor-grab active:cursor-grabbing shrink-0"
           {...dragAttributes}
           {...dragListeners}
@@ -481,6 +485,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
 
         <div className="flex items-center gap-3 shrink-0">
           <button
+            data-help-id="studio.nav_icon"
             onClick={() => onUpdate && setShowIconPicker(true)}
             disabled={isOverlay}
             className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-xl text-neutral-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group/icon disabled:opacity-50"
@@ -502,6 +507,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
           <div className="flex flex-col gap-1">
             <input
               ref={inputRef}
+              data-help-id="studio.nav_label"
               value={item.label}
               onChange={e => onUpdate?.(item.id, { label: e.target.value })}
               readOnly={isOverlay}
@@ -519,6 +525,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
 
           {item.type === 'view' && (
             <select
+              data-help-id="studio.nav_target"
               value={item.target}
               onChange={e => {
                 if (!onUpdate) return
@@ -591,7 +598,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
               </div>
             )}
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+            <div data-help-id="studio.nav_dash" className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
               <input
                 type="checkbox"
                 checked={item.show_dashboard !== false}
@@ -605,6 +612,7 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
 
             {onRemove && (
               <button
+                data-help-id="studio.nav_remove"
                 onClick={() => onRemove(item.id)}
                 disabled={isOverlay}
                 className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded-xl transition-all disabled:opacity-50"

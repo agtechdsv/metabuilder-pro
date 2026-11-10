@@ -121,7 +121,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
   return (
     <main className="w-full px-10 pt-4 pb-4 flex flex-col flex-grow h-full overflow-hidden">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-6 shrink-0">
+      <div data-help-id="ide.sql_header" className="flex items-center justify-between mb-6 shrink-0">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 rotate-3">
             <Database className="w-6 h-6" />
@@ -137,12 +137,14 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
         </div>
         <div className="flex items-center gap-4">
           <Link
+            data-help-id="ide.sql_back"
             href={`/admin/${workspaceSlug}/${projectSlug}/studio`}
             className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900/50 dark:hover:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-[10px] font-black tracking-widest transition-all uppercase text-neutral-600 dark:text-neutral-300"
           >
             <ArrowLeft className="w-4 h-4" /> {t('studio.sql.back_studio', 'Voltar ao Studio')}
           </Link>
           <button
+            data-help-id="ide.sql_run"
             onClick={handleExecute}
             disabled={loading}
             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -159,7 +161,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
 
       <div className="flex flex-col gap-4 flex-grow min-h-0">
         {/* Editor SQL */}
-        <div className="h-[40%] shrink-0 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-sm relative">
+        <div data-help-id="ide.sql_editor" className="h-[40%] shrink-0 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden shadow-sm relative">
           <ByocEditor
             value={query}
             onChange={(val) => setQuery(val || '')}
@@ -169,7 +171,7 @@ export function SqlStudioClient({ workspaceSlug, projectSlug, project }: SqlStud
         </div>
 
         {/* Resultados */}
-        <div className="flex-grow min-h-0 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+        <div data-help-id="ide.sql_results" className="flex-grow min-h-0 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex justify-between items-center">
             <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
               {t('studio.sql.results_title', 'Resultados')}

@@ -106,7 +106,7 @@ export function TerminalView() {
   return (
     <div className="flex flex-col h-full w-full bg-[#1e1e1e] rounded-xl overflow-hidden border border-neutral-800 shadow-xl relative">
       {/* Header */}
-      <div className="h-10 border-b border-neutral-800 bg-[#1e1e1e]/50 flex items-center px-4 shrink-0 justify-between">
+      <div data-help-id="ide.term_header" className="h-10 border-b border-neutral-800 bg-[#1e1e1e]/50 flex items-center px-4 shrink-0 justify-between">
         <div className="flex items-center gap-2 text-neutral-400">
           <TerminalIcon className="w-4 h-4" />
           <span className="text-sm font-medium">Terminal Integrado (PTY)</span>
@@ -121,7 +121,7 @@ export function TerminalView() {
       )}
 
       {/* Terminal Container */}
-      <div className="flex-1 w-full h-full p-2 overflow-hidden" ref={terminalRef} />
+      <div data-help-id="ide.term_area" className="flex-1 w-full h-full p-2 overflow-hidden" ref={terminalRef} />
     </div>
   )
 }

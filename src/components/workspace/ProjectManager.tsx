@@ -363,7 +363,7 @@ export function ProjectManager({
   return (
     <div className="space-y-6">
       {/* Banner de Boas Vindas */}
-      <div className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
+      <div data-help-id="portal.pj_banner" className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/5 blur-[100px] -mr-48 -mt-48 group-hover:bg-indigo-600/10 transition-all duration-700" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -394,6 +394,7 @@ export function ProjectManager({
             )}
             {canCreate && (
               <button
+                data-help-id="portal.pj_new"
                 onClick={handleNewProject}
                 className="flex items-center gap-2 px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] whitespace-nowrap text-sm"
               >
@@ -405,7 +406,7 @@ export function ProjectManager({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-6 border-b border-neutral-200 dark:border-neutral-800 px-2 pt-2">
+      <div data-help-id="portal.pj_tabs" className="flex items-center gap-6 border-b border-neutral-200 dark:border-neutral-800 px-2 pt-2">
         <button
           onClick={() => setActiveTab('projects')}
           className={cn(
@@ -466,6 +467,7 @@ export function ProjectManager({
               {canCreate && projects.some(p => p.theme_config?.show_in_portal) && (
                 <div className="flex items-center mr-4 border-r dark:border-neutral-800 pr-4">
                   <button
+                    data-help-id="portal.pj_customize"
                     onClick={() => setIsWorkspaceSettingsModalOpen(true)}
                     className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-neutral-500 hover:text-indigo-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg uppercase tracking-widest transition-colors"
                     title={t('workspace_components.portal_modal.title', 'Configurações do Portal')}
@@ -481,6 +483,7 @@ export function ProjectManager({
                 onClick={handleRefresh}
                 disabled={isRefreshing}
                 className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
+                data-help-id="portal.refresh"
                 title={t('workspace_components.refresh_tooltip', 'Atualizar')}
               >
                 <RefreshCw
@@ -496,10 +499,11 @@ export function ProjectManager({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {projects.map(project => (
+          <div data-help-id="portal.pj_grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {projects.map((project, pjIdx) => (
               <ProjectCard
                 key={project.id}
+                tourMarks={pjIdx === 0}
                 project={project}
                 workspaceSlug={workspaceSlug}
                 tier={tier}
@@ -522,6 +526,7 @@ export function ProjectManager({
             {/* Add New Card */}
             {canCreate && (
               <button
+                data-help-id="portal.pj_add_card"
                 onClick={handleNewProject}
                 className="p-8 bg-neutral-50 dark:bg-neutral-950 border-2 border-dashed border-neutral-300 dark:border-neutral-800 rounded-[2.5rem] flex flex-col items-center justify-center gap-4 hover:bg-white dark:hover:bg-neutral-800 hover:border-indigo-500/30 transition-all group min-h-[250px] shadow-inner dark:shadow-none"
               >

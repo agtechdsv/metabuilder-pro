@@ -96,7 +96,7 @@ export function IDEEditorArea({
   }, [activeFile, fileContents])
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div data-help-id="ide.editor" className="flex-1 flex flex-col min-w-0 overflow-hidden">
       <style>{`
         .monaco-editor.ide-ctrl-hover .view-lines,
         .monaco-editor.ide-ctrl-hover .view-lines span {

@@ -4,6 +4,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalSto
 import { createPortal } from 'react-dom'
 import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
+import { isTauri } from '@/utils/tauriUtils'
 import { useI18n } from '@/i18n/I18nContext'
 import { getActiveTour, goToStep, markTourSeen, nextStep, prevStep, resolveStartIndex, stopPlatformTour, subscribePlatformTour, tourWrongLogic } from '@/lib/platformHelp/store'
 
@@ -82,7 +83,7 @@ export function PlatformTourHost() {
   const total = active ? active.tour.steps.length : 0
   const isLast = !!active && active.index === total - 1
   // o item destacado aceita cliques: passos `interactive`, ou qualquer passo com alvo num tour de cliques livres (menos os `readOnly`)
-  const openStep = !!step && (!!step.interactive || (!!active?.tour.freeClicks && !step.readOnly && !!step.target))
+  const openStep = !!step && !step.ideOnly && (!!step.interactive || (!!active?.tour.freeClicks && !step.readOnly && !!step.target))
   const key = active ? `${active.tour.id}:${active.index}` : ''
   const activeRef = useRef(active)
   activeRef.current = active
@@ -395,7 +396,9 @@ export function PlatformTourHost() {
   if (modalFree) { left = Math.max(12, vw - POPOVER_W - 16); top = 16 }
 
   const title = advancing ? '' : resolveHelp(step.title, language)
-  const body = advancing ? (resolveHelp(step.advancingHint, language) || t('platform_help.advancing')) : resolveHelp(step.body, language)
+  const baseBody = advancing ? (resolveHelp(step.advancingHint, language) || t('platform_help.advancing')) : resolveHelp(step.body, language)
+  // função exclusiva da IDE vista no site: o texto explica e o aviso diz onde ela existe
+  const body = step.ideOnly && !advancing && !isTauri() ? `${baseBody}\n\n${t('platform_help.ide_only')}` : baseBody
 
   return createPortal(
     <div className="fixed inset-0 z-[1000020]" style={{ pointerEvents: 'none' }}>

@@ -132,7 +132,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
   const arrow = 'p-1 rounded text-neutral-400 hover:text-indigo-600 disabled:opacity-25 disabled:hover:text-neutral-400'
 
   return (
-    <div className="space-y-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
+    <div data-help-id="studio.help_interactive" className="space-y-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500"><PlayCircle className="w-4 h-4 text-indigo-600" />{t('help_center_studio.interactive.title', 'Ajuda interativa')}</span>
         <label className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-500 cursor-pointer">
@@ -142,7 +142,7 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
       </div>
       {recordUrl && (
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setRecording(true)} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
+          <button type="button" data-help-id="studio.help_record" onClick={() => setRecording(true)} className="flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30">
             <span className="h-2 w-2 rounded-full bg-red-600" />{t('help_center_studio.interactive.record_button', 'Gravar roteiro')}
           </button>
           {tourActionsFor(view.logic_type).length === 0 && <span className="text-[10px] text-neutral-400">{t('help_center_studio.interactive.record_unsupported', 'Este tipo de caso de uso não tem geração automática: grave o roteiro usando a tela.')}</span>}
@@ -162,10 +162,10 @@ function InteractiveHelpEditorBody({ config, setConfig, models, view, t, recordU
               <button type="button" onClick={markCurrent} className="font-bold text-indigo-600 hover:underline">{t('help_center_studio.interactive.mark_current', 'Marcar como em dia')}</button>
             </span>
           )}
-          <button type="button" onClick={regenerateAll} className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline">
+          <button type="button" data-help-id="studio.help_regen_all" onClick={regenerateAll} className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:underline">
             <RefreshCw className="h-3 w-3" />{t('help_center_studio.interactive.regenerate_all', 'Regenerar todos')}
           </button>
-          <button type="button" onClick={deleteAll} className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:underline">
+          <button type="button" data-help-id="studio.help_delete_all" onClick={deleteAll} className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:underline">
             <Trash2 className="h-3 w-3" />{t('help_center_studio.interactive.delete_all', 'Excluir todos')}
           </button>
         </div>

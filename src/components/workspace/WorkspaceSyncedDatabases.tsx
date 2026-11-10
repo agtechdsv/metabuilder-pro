@@ -169,7 +169,7 @@ export function WorkspaceSyncedDatabases({ workspaceId, projectId }: WorkspaceSy
 
   return (
     <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
+      <div data-help-id="studio.synced_header" className="p-6 border-b border-neutral-200 dark:border-neutral-800">
         <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
           <Database className="w-5 h-5 text-indigo-500" />
           {t('workspace_components.synced_dbs.title', 'Bancos Sincronizados (Schemas)')}
@@ -193,7 +193,7 @@ export function WorkspaceSyncedDatabases({ workspaceId, projectId }: WorkspaceSy
         ) : (
           <div className="space-y-6">
             {groupedData.map((group) => (
-              <div key={group.project.id} className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+              <div key={group.project.id} data-help-id="studio.synced_group" className="border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
                 <div className="bg-neutral-50 dark:bg-neutral-900/50 px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-neutral-900 dark:text-white">{group.project.name}</span>
@@ -214,6 +214,7 @@ export function WorkspaceSyncedDatabases({ workspaceId, projectId }: WorkspaceSy
                       </div>
                       <div className="flex items-center gap-2">
                         <button
+                          data-help-id="studio.synced_rename"
                           onClick={() => handleEditClick(group.project.id, group.project.name, schema)}
                           className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
                           title={t('workspace_components.synced_dbs.rename_schema_tooltip', 'Renomear Schema')}
@@ -221,6 +222,7 @@ export function WorkspaceSyncedDatabases({ workspaceId, projectId }: WorkspaceSy
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
+                          data-help-id="studio.synced_delete"
                           onClick={() => handleDeleteClick(group.project.id, group.project.name, schema)}
                           className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                           title={t('workspace_components.synced_dbs.delete_schema_tooltip', 'Excluir Schema e Tabelas Vinculadas')}

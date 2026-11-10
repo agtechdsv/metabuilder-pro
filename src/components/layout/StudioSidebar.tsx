@@ -40,6 +40,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
   const freeLinks = [
     {
       href: `${base}`,
+      helpId: 'studio.rail_dashboard',
       icon: LayoutDashboard,
       label: t('dashboard.projects.studio.sidebar.dashboard', 'Dashboard'),
       active: pathname === base,
@@ -47,6 +48,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/data`,
+      helpId: 'studio.rail_data',
       icon: Database,
       label: t('dashboard.projects.studio.sidebar.data', 'Dados & Schemas'),
       active: pathname.includes('/studio/data'),
@@ -54,6 +56,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/auth`,
+      helpId: 'studio.rail_auth',
       icon: ShieldCheck,
       label: t('dashboard.projects.studio.sidebar.auth', 'Autenticação'),
       active: pathname.includes('/studio/auth'),
@@ -61,6 +64,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/byoc`,
+      helpId: 'studio.rail_byoc',
       icon: Code2,
       label: t('dashboard.projects.studio.sidebar.byoc', 'BYOC'),
       active: pathname.includes('/studio/byoc'),
@@ -68,6 +72,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/settings`,
+      helpId: 'studio.rail_settings',
       icon: Settings2,
       label: t('dashboard.projects.studio.sidebar.settings', 'Configurações'),
       active: pathname.includes('/studio/settings'),
@@ -75,6 +80,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/tunnel`,
+      helpId: 'studio.rail_json',
       icon: Network,
       label: t('dashboard.projects.studio.sidebar.tunnel_db_config', 'Configurações de Bancos (JSON)'),
       active: pathname.includes('/studio/tunnel'),
@@ -82,6 +88,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/terminal`,
+      helpId: 'studio.rail_terminal',
       icon: Terminal,
       label: t('dashboard.projects.studio.sidebar.terminal', 'Terminal (PTY)'),
       active: pathname.includes('/studio/terminal'),
@@ -89,6 +96,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/logs`,
+      helpId: 'studio.rail_logs',
       icon: ScrollText,
       label: t('dashboard.projects.studio.sidebar.logs', 'Logs do Sistema'),
       active: pathname.includes('/studio/logs'),
@@ -96,6 +104,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
     },
     {
       href: `${base}/sql`,
+      helpId: 'studio.rail_sql',
       icon: Server,
       label: t('dashboard.projects.studio.sidebar.sql_studio', 'SQL Studio'),
       active: pathname.includes('/studio/sql'),
@@ -123,6 +132,7 @@ export function StudioSidebar({ workspaceSlug, projectSlug, tier }: StudioSideba
             <Link 
               key={idx}
               href={link.href}
+              data-help-id={link.helpId}
               className={`p-3 rounded-xl transition-all border group relative flex justify-center ${
                 isActive 
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 border-indigo-500' 

@@ -187,6 +187,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
           </p>
         </div>
         <a
+          data-help-id="studio.help_open"
           href={`/${workspaceSlug}/${projectSlug}/help`}
           target="_blank"
           rel="noreferrer"
@@ -199,6 +200,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
       <div className="space-y-2">
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('help_center_studio.use_case', 'Caso de uso')}</label>
         <select
+          data-help-id="studio.help_pick"
           value={selectedId}
           onChange={e => select(e.target.value)}
           className="w-full max-w-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:border-indigo-600"
@@ -216,7 +218,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
 
       {config && view && (
         <div className="space-y-4 rounded-[1.5rem] border border-neutral-200 dark:border-neutral-800 p-5 bg-white dark:bg-neutral-950/40">
-          <div className="flex items-center gap-1 rounded-2xl border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900/50 w-fit">
+          <div data-help-id="studio.help_tabs" className="flex items-center gap-1 rounded-2xl border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900/50 w-fit">
             {([
               { id: 'text', icon: <FileText className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_text', 'Ajuda textual'), count: null },
               { id: 'interactive', icon: <PlayCircle className="h-3.5 w-3.5" />, label: t('help_center_studio.tab_interactive', 'Ajuda interativa'), count: normalizeInteractiveHelp(config.layout_config?.interactive_help).tours.length },
@@ -225,6 +227,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
               <button
                 key={tab.id}
                 type="button"
+                data-help-id={tab.id === 'text' ? 'studio.help_tab_text' : tab.id === 'interactive' ? 'studio.help_tab_interactive' : 'studio.help_tab_feedback'}
                 onClick={() => setHelpTab(tab.id)}
                 className={cn(
                   'flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-black tracking-wide transition-all',
@@ -238,12 +241,12 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
           </div>
 
           {helpTab === 'text' ? (
-            <>
+            <div data-help-id="studio.help_text" className="space-y-4">
               <ScreenHelpField config={config} setConfig={setConfig} t={t} />
               <HelpOverview config={config} setConfig={setConfig} models={models} t={t} defaultOpen hideFeedback />
-            </>
+            </div>
           ) : helpTab === 'feedback' ? (
-            <FeedbackTab config={config} setConfig={setConfig} models={models} t={t} />
+            <div data-help-id="studio.help_feedback"><FeedbackTab config={config} setConfig={setConfig} models={models} t={t} /></div>
           ) : (
             <InteractiveHelpEditor config={config} setConfig={setConfig} models={tourModels} view={view} t={t} recordUrl={view?.slug ? `/${workspaceSlug}/${projectSlug}/${view.slug}?mb_demo=1` : undefined} />
           )}
@@ -252,6 +255,7 @@ export function HelpCenterStudio({ workspaceSlug, projectSlug, views: allViews, 
             {dirty && <span className="text-[11px] font-bold text-amber-600">{t('help_center_studio.unsaved', 'Alterações não salvas')}</span>}
             <button
               type="button"
+              data-help-id="studio.help_save"
               disabled={!dirty || saving}
               onClick={save}
               className={cn(

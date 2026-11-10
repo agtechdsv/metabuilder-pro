@@ -5575,6 +5575,7 @@
     "step_of": "{n} of {total}",
     "click_to_continue": "Click the highlighted item to continue.",
     "advancing": "Waiting for the screen to update...",
+    "ide_only": "Available only in the Desktop IDE: on this site the item shows as disabled.",
     "target_missing": "This item is not visible right now. Continue the tour or come back later.",
     "recover": "Back to the tour start",
     "complete_to_continue": "Complete this step to continue."

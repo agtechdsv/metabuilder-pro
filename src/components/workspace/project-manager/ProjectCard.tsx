@@ -41,6 +41,8 @@ interface ProjectCardProps {
   onToggleActive: (project: Project) => void
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
+  /** marcas `data-help-id` do tour guiado (só o 1º cartão da lista, para a marca não repetir) */
+  tourMarks?: boolean
 }
 
 export function ProjectCard({
@@ -56,7 +58,8 @@ export function ProjectCard({
   onTogglePortal,
   onToggleActive,
   onEdit,
-  onDelete
+  onDelete,
+  tourMarks = false
 }: ProjectCardProps) {
   const { t } = useI18n()
   // só depois de montar: o servidor não sabe se está no desktop, e decidir isso no render gera diferença de HTML (erro de hidratação)
@@ -73,6 +76,7 @@ export function ProjectCard({
 
   return (
     <div
+      data-help-id={tourMarks ? 'portal.pj_card' : undefined}
       className={cn(
         "group relative p-5 bg-white dark:bg-neutral-950 border rounded-[2rem] transition-all shadow-sm hover:shadow-xl dark:shadow-none",
         isNavigating
@@ -116,7 +120,7 @@ export function ProjectCard({
           </Link>
 
           <div className="absolute top-5 right-5 flex flex-col items-end gap-2 z-20 pointer-events-none">
-            <div className={`pointer-events-auto px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
+            <div data-help-id={tourMarks ? 'portal.pj_status' : undefined} className={`pointer-events-auto px-4 py-1.5 text-[10px] font-bold rounded-full border uppercase tracking-widest transition-all ${project.is_active
               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
               : 'bg-red-500/10 text-red-500 border-red-500/20'
               }`}>
@@ -136,9 +140,10 @@ export function ProjectCard({
             )}
 
             {!isNavigating && (
-              <div className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
+              <div data-help-id={tourMarks ? 'portal.pj_actions' : undefined} data-help-reveal className="pointer-events-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800">
                 {/* 1. Acessar versão publicada */}
                 <button
+                  data-help-id={tourMarks ? 'portal.pj_act_open' : undefined}
                   className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-indigo-500 hover:text-indigo-400"
                   title={t('workspace_components.project_card_tooltips.access_published', 'Acessar versão publicada')}
                   onClick={(e) => {
@@ -158,6 +163,7 @@ export function ProjectCard({
                       onOpenDesktopModal(project)
                     }}
                     className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                    data-help-id={tourMarks ? 'portal.pj_act_desktop' : undefined}
                     title={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}
                   >
                     <Monitor className="w-4 h-4" />
@@ -170,6 +176,7 @@ export function ProjectCard({
                     <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
                       <button
                         className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                        data-help-id={tourMarks ? 'portal.pj_act_ide' : undefined}
                         title={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
                         onClick={(e) => {
                           e.preventDefault()
@@ -184,6 +191,7 @@ export function ProjectCard({
                     {/* 4. Ambiente de Testes (roda na IDE Desktop) */}
                     {onOpenTests && desktop && (
                       <button
+                        data-help-id={tourMarks ? 'portal.pj_act_tests' : undefined}
                         disabled={!testFolder}
                         className="p-2 text-amber-500 hover:text-amber-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         title={testFolder ? t('ide_tests.open', 'Ambiente de Testes') : t('ide_tests.need_sync', 'Sincronize o projeto na IDE (pasta em AGTech\\MetaBuilderPRO) para liberar o Ambiente de Testes')}
@@ -202,6 +210,7 @@ export function ProjectCard({
 
                 {/* 5. Remover/Adicionar do Portal */}
                 <button
+                  data-help-id={tourMarks ? 'portal.pj_act_portal' : undefined}
                   onClick={(e) => { e.preventDefault(); onTogglePortal(project); }}
                   className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.theme_config?.show_in_portal ? 'text-indigo-500 hover:text-indigo-600' : 'text-neutral-400 hover:text-indigo-400'}`}
                   title={project.theme_config?.show_in_portal ? t('workspace_components.portal_modal.remove_from_portal', 'Remover do Portal') : t('workspace_components.portal_modal.add_to_portal', 'Adicionar ao Portal')}
@@ -212,6 +221,7 @@ export function ProjectCard({
                 {/* 6. Desativar/Ativar */}
                 {project.can_deactivate && (
                   <button
+                    data-help-id={tourMarks ? 'portal.pj_act_toggle' : undefined}
                     onClick={() => onToggleActive(project)}
                     className={`p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ${project.is_active ? 'text-neutral-500 hover:text-red-400' : 'text-neutral-500 hover:text-emerald-400'}`}
                     title={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
@@ -223,6 +233,7 @@ export function ProjectCard({
                 {/* 7. Editar Projeto */}
                 {project.can_edit && (
                   <button
+                    data-help-id={tourMarks ? 'portal.pj_act_edit' : undefined}
                     onClick={() => onEdit(project)}
                     className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-indigo-400"
                     title={t('dashboard.projects.edit_project')}
@@ -234,6 +245,7 @@ export function ProjectCard({
                 {/* 8. Excluir Projeto */}
                 {project.can_delete && (
                   <button
+                    data-help-id={tourMarks ? 'portal.pj_act_delete' : undefined}
                     onClick={() => onDelete(project)}
                     className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400"
                     title={t('dashboard.projects.delete_project')}
@@ -247,7 +259,7 @@ export function ProjectCard({
         </div>
 
         <div className="flex items-center justify-between pt-6 border-t border-neutral-100 dark:border-neutral-800/50">
-          <div className="flex items-center gap-6">
+          <div data-help-id={tourMarks ? 'portal.pj_stats' : undefined} className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-neutral-400" />
               <span className="text-xs font-bold text-neutral-400 tracking-tighter">
@@ -262,6 +274,7 @@ export function ProjectCard({
             </div>
           </div>
           <Link
+            data-help-id={tourMarks ? 'portal.pj_enter' : undefined}
             href={`/admin/${workspaceSlug}/${project.slug}/studio`}
             onClick={() => onNavigate(project.slug)}
             className={cn(

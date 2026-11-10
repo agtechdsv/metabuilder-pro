@@ -5575,6 +5575,7 @@
     "step_of": "{n} de {total}",
     "click_to_continue": "Clique no item destacado para continuar.",
     "advancing": "Aguardando a tela atualizar...",
+    "ide_only": "Disponível só na IDE Desktop: neste site o item aparece desativado.",
     "target_missing": "Este item não está visível agora. Continue o tour ou volte depois.",
     "recover": "Voltar ao ponto do tour",
     "complete_to_continue": "Complete este passo para continuar."

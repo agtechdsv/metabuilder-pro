@@ -825,6 +825,7 @@ export function StudioDashboardClient({
                {canCreate && (
                  <>
                    <button 
+                    data-help-id="studio.tab_nav"
                     onClick={() => setViewMode('navigation')}
                     className={cn(
                       "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center",
@@ -834,6 +835,7 @@ export function StudioDashboardClient({
                      {t('dashboard.projects.studio.tabs.navigation')}
                    </button>
                    <button 
+                     data-help-id="studio.tab_enums"
                      onClick={() => setViewMode('enumerations')}
                      className={cn(
                        "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
@@ -843,6 +845,7 @@ export function StudioDashboardClient({
                       <Database className="w-3.5 h-3.5" /> {t('dashboard.projects.studio.tabs.enums')}
                     </button>
                    <button
+                     data-help-id="studio.tab_tunnel"
                      onClick={() => setViewMode('tunnel')}
                      className={cn(
                        "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",
@@ -852,6 +855,7 @@ export function StudioDashboardClient({
                       <Network className="w-3.5 h-3.5" /> {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
                     </button>
                    <button
+                     data-help-id="studio.tab_synced"
                      onClick={() => setViewMode('synced-dbs')}
                      className={cn(
                        "px-5 py-2 rounded-xl text-xs font-black tracking-wide transition-all justify-center text-center flex items-center gap-1.5",

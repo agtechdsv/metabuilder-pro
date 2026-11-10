@@ -224,10 +224,11 @@ export function IDEFileExplorer({
             animate={{ width: explorerWidth, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
+            data-help-id="ide.explorer"
             className="border-r border-neutral-800 bg-[#181818] overflow-y-auto overflow-x-hidden shrink-0 flex flex-col"
           >
             {/* Explorer Header / Tabs */}
-            <div className="flex items-center justify-between border-b border-neutral-800/60 shrink-0">
+            <div data-help-id="ide.explorer_tabs" className="flex items-center justify-between border-b border-neutral-800/60 shrink-0">
               <div className="flex items-center h-full">
                 <button
                   onClick={() => setExplorerActiveTab('explorer')}

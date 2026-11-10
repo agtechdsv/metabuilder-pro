@@ -27,7 +27,7 @@ export function PlatformHelpButton() {
   }, [open])
 
   // só nas áreas administrativas (Studio, dados, autenticação, configurações, logs...)
-  if (!pathname.startsWith('/admin/')) return null
+  if (!pathname.startsWith('/admin/') && pathname !== '/workspace') return null
   const tours = toursForRoute(PLATFORM_TOURS, pathname)
 
   return (

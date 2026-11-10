@@ -37,7 +37,7 @@ export function WorkspacePortalModal({
     >
       <form onSubmit={onSave} className="space-y-6">
         <div className="space-y-4">
-          <div className="p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
+          <div data-help-id="portal.portal_info" className="p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-2xl mb-4">
             <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mb-1">
               {t('workspace_components.portal_modal.appearance_title', 'Aparência do Portal')}
             </h4>
@@ -51,6 +51,7 @@ export function WorkspacePortalModal({
               {t('workspace_components.portal_modal.logo_url', 'Logo do Portal (Opcional)')}
             </label>
             <input
+              data-help-id="portal.portal_logo"
               type="url"
               value={formData.portal_logo_url}
               onChange={e => setFormData({ ...formData, portal_logo_url: e.target.value })}
@@ -64,6 +65,7 @@ export function WorkspacePortalModal({
               {t('workspace_components.portal_modal.banner_url', 'Banner do Portal (Opcional)')}
             </label>
             <input
+              data-help-id="portal.portal_banner"
               type="url"
               value={formData.portal_banner_url}
               onChange={e => setFormData({ ...formData, portal_banner_url: e.target.value })}
@@ -75,6 +77,7 @@ export function WorkspacePortalModal({
 
         <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-neutral-200 dark:border-neutral-800">
           <button
+            data-help-id="portal.portal_save"
             type="submit"
             disabled={isSaving}
             className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-800 text-white rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
@@ -82,6 +85,7 @@ export function WorkspacePortalModal({
             {isSaving ? t('common.loading') : t('common.save')}
           </button>
           <button
+            data-help-id="portal.portal_cancel"
             type="button"
             onClick={onClose}
             className="w-full py-3.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-all"

@@ -37,6 +37,8 @@ export interface PlatformStep {
   skipIfMissing?: boolean
   /** só leitura: mesmo num tour de cliques livres (`freeClicks`), este passo não deixa clicar no item destacado */
   readOnly?: boolean
+  /** função exclusiva da IDE Desktop: o passo só mostra (nunca deixa clicar) e, no site, avisa que ela só existe na IDE */
+  ideOnly?: boolean
   /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */
   freeInteraction?: boolean
   /**

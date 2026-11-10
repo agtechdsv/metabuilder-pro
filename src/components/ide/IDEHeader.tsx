@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
+import { IdeHelpMenu } from './IdeHelpMenu'
 import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
 import { IdeThemeLanguage } from './IdeThemeLanguage'
@@ -887,7 +888,7 @@ export function IDEHeader({
 
   return (
     <div className="bg-[#1a1b1e] border-b border-neutral-800 flex items-center justify-between px-4 py-2 shrink-0 shadow-lg relative">
-      <div className="flex items-center gap-2">
+      <div data-help-id="ide.title" className="flex items-center gap-2">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400">
           <FolderGit2 className="w-4 h-4" />
         </div>
@@ -926,6 +927,7 @@ export function IDEHeader({
           ) : (
             <>
             <button
+              data-help-id="ide.btn_delivery"
               onClick={onDelivery}
               disabled={!deliveryReady || isSyncing}
               title={deliveryReady
@@ -937,6 +939,7 @@ export function IDEHeader({
               {t('delivery.title', 'Entrega')}
             </button>
             <button
+              data-help-id="ide.btn_sync"
               onClick={() => setIsSyncModalOpen(true)}
               disabled={isSyncing}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
@@ -947,9 +950,9 @@ export function IDEHeader({
             </>
           )}
 
-          <IDEFolderSwitcher target={target} onSwitch={onSwitchFolder} refreshKey={isSyncing} />
+          <div data-help-id="ide.folder"><IDEFolderSwitcher target={target} onSwitch={onSwitchFolder} refreshKey={isSyncing} /></div>
 
-          <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-8">
+          <div data-help-id="ide.branch" className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden h-8">
             <div className="px-2 bg-neutral-800 text-neutral-400 border-r border-neutral-700 flex items-center h-full">
               <FolderGit2 className="w-3.5 h-3.5" />
             </div>
@@ -972,6 +975,7 @@ export function IDEHeader({
           </div>
 
           <button
+            data-help-id="ide.btn_commit"
             onClick={() => handleOpenCommitModal('commit')}
             disabled={isCommitLoading || isCommitting}
             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
@@ -981,6 +985,7 @@ export function IDEHeader({
           </button>
 
           <button
+            data-help-id="ide.btn_push"
             onClick={handlePushToRemote}
             disabled={isPushing}
             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
@@ -990,6 +995,7 @@ export function IDEHeader({
           </button>
 
           <button
+            data-help-id="ide.btn_pull"
             onClick={handlePullFromRemote}
             disabled={isPulling}
             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
@@ -999,6 +1005,7 @@ export function IDEHeader({
           </button>
 
           <button
+            data-help-id="ide.btn_history"
             onClick={handleShowLogs}
             className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
             title={t('workspace_components.ide_local.history_tooltip', 'Ver Histórico (Git Log)')}
@@ -1007,6 +1014,7 @@ export function IDEHeader({
           </button>
 
           <button
+            data-help-id="ide.btn_gitsettings"
             onClick={() => setShowGitSettings(true)}
             className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg transition-colors border border-neutral-700"
             title={t('workspace_components.ide_local.git_settings_tooltip', 'Configurações Git (Remote & Pipeline)')}
@@ -1015,11 +1023,12 @@ export function IDEHeader({
           </button>
 
           {/* Tema e idioma (valem para todas as janelas do app) */}
-          <IdeThemeLanguage />
+          <div data-help-id="ide.theme"><IdeThemeLanguage /></div>
 
           {/* Ambiente de Testes */}
           {onOpenTests && (
             <button
+              data-help-id="ide.btn_tests"
               onClick={onOpenTests}
               disabled={!testsReady}
               className="flex items-center justify-center w-8 h-8 bg-neutral-800 hover:bg-neutral-700 text-amber-500 hover:text-amber-400 rounded-lg transition-colors border border-neutral-700 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1031,6 +1040,7 @@ export function IDEHeader({
 
           {/* Console toggle button */}
           <button
+            data-help-id="ide.btn_console"
             onClick={() => setShowConsole(v => !v)}
             className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${showConsole
                 ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
@@ -1043,6 +1053,7 @@ export function IDEHeader({
 
           {/* Sidebar toggle button */}
           <button
+            data-help-id="ide.btn_files"
             onClick={() => setShowSidebar(v => !v)}
             className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors border ${showSidebar
                 ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
@@ -1054,7 +1065,10 @@ export function IDEHeader({
           </button>
         </div>
 
+        <IdeHelpMenu />
+
         <button
+          data-help-id="ide.btn_minimize"
           onClick={() => setIsMinimized(true)}
           className="px-3 py-1.5 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all flex items-center gap-2 text-xs font-bold"
           title={t('workspace_components.ide_local.minimize_ide', 'Minimizar IDE')}
@@ -1063,6 +1077,7 @@ export function IDEHeader({
         </button>
 
         <button
+          data-help-id="ide.btn_close"
           onClick={closeIDE}
           className="w-8 h-8 flex items-center justify-center rounded-lg bg-neutral-800 hover:bg-red-500/80 text-neutral-300 hover:text-white transition-colors"
           title={t('workspace_components.ide_local.close_ide', 'Fechar IDE')}
@@ -1082,7 +1097,7 @@ export function IDEHeader({
               className="w-full max-w-4xl bg-[#1e1e1e] border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
             >
               {/* Header */}
-              <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between bg-[#151515] shrink-0">
+              <div data-help-id="ide.eject_header" className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between bg-[#151515] shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
                     <DownloadCloud className="w-5 h-5 text-indigo-400" />
@@ -1101,6 +1116,7 @@ export function IDEHeader({
                   <div className="relative" ref={genLangDropdownRef}>
                     <button
                       type="button"
+                      data-help-id="ide.eject_lang"
                       onClick={() => setIsGenLangOpen(!isGenLangOpen)}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-700 transition-all active:scale-95 shadow-sm"
                       title={t('workspace_components.eject_modal.target_lang_tooltip', 'Idioma do código gerado')}
@@ -1167,7 +1183,7 @@ export function IDEHeader({
               </div>
 
               {/* Tab Bar */}
-              <div className="flex px-6 pt-4 border-b border-neutral-800 gap-6 bg-[#151515] overflow-x-auto scrollbar-none shrink-0">
+              <div data-help-id="ide.eject_tabs" className="flex px-6 pt-4 border-b border-neutral-800 gap-6 bg-[#151515] overflow-x-auto scrollbar-none shrink-0">
                 {TABS.map(tab => {
                   const isActive = activeTab === tab.id
                   const isLocked = tab.status === 'roadmap'
@@ -1204,7 +1220,7 @@ export function IDEHeader({
               </div>
 
               {/* Content Area */}
-              <div className="p-6 bg-[#1a1a1a] flex-1 overflow-y-auto max-h-[65vh]">
+              <div data-help-id="ide.eject_content" className="p-6 bg-[#1a1a1a] flex-1 overflow-y-auto max-h-[65vh]">
                 {activeTab === 'nodejs' && <NodeJsPanel config={nodeConfig} onChange={setNodeConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} loginMode={loginMode} setLoginMode={setLoginMode} />}
                 {activeTab === 'java'   && <JavaPanel   config={javaConfig} onChange={setJavaConfig} detected={detected} accessAdmin={accessAdmin} setAccessAdmin={setAccessAdmin} workspace={target.type === 'workspace'} loginMode={loginMode} setLoginMode={setLoginMode} />}
                 {activeTab === 'nestjs' && (
@@ -1246,12 +1262,14 @@ export function IDEHeader({
                 </div>
                 <div className="flex items-center gap-3">
                   <button
+                    data-help-id="ide.eject_cancel"
                     onClick={() => setIsSyncModalOpen(false)}
                     className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
                   >
                     {t('workspace_components.ide_local.cancel', 'Cancelar')}
                   </button>
                   <button
+                    data-help-id="ide.eject_confirm"
                     onClick={confirmSync}
                     disabled={!canSync}
                     className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"

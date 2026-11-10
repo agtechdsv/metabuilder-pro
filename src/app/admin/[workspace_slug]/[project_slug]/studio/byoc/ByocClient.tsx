@@ -209,13 +209,13 @@ export default function MeuNovoComponente(props: any) {
           <h2 className="text-2xl font-black tracking-tight text-neutral-900">BYOC / Dev Manual</h2>
           <p className="text-neutral-500">Traga seu próprio componente React. Codifique livremente e nós injetamos na exportação final.</p>
         </div>
-        <button onClick={handleCreateNew} className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white">
+        <button data-help-id="ide.byoc_new" onClick={handleCreateNew} className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white">
           <Plus className="w-4 h-4 mr-2" />
           Novo Componente
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div data-help-id="ide.byoc_list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {components.length === 0 && (
           <div className="col-span-full py-12 text-center border-2 border-dashed rounded-xl bg-neutral-50">
             <Code2 className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
@@ -235,10 +235,10 @@ export default function MeuNovoComponente(props: any) {
               <p className="text-sm text-neutral-500 mb-4">{comp.description}</p>
             </div>
             <div className="flex items-center gap-2 pt-4 border-t border-neutral-100">
-              <button onClick={() => handleEdit(comp)} className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium flex-1 bg-neutral-900 text-white hover:bg-neutral-800">
+              <button data-help-id="ide.byoc_edit" onClick={() => handleEdit(comp)} className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium flex-1 bg-neutral-900 text-white hover:bg-neutral-800">
                 Editar Código
               </button>
-              <button onClick={() => handleDelete(comp.id)} className="inline-flex items-center justify-center w-10 h-10 rounded-md border text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200">
+              <button data-help-id="ide.byoc_delete" onClick={() => handleDelete(comp.id)} className="inline-flex items-center justify-center w-10 h-10 rounded-md border text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

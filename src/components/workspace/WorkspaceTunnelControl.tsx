@@ -397,7 +397,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
 
   if (isDesktopEnv === false && webNotice) {
     return (
-      <div className="mb-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+      <div data-help-id="studio.tunnel_notice" className="mb-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10"><Network className="h-5 w-5 text-indigo-500" /></div>
           <div className="space-y-2">
@@ -434,6 +434,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
           </div>
         </div>
         <button
+          data-help-id="studio.tunnel_config"
           onClick={handleOpenConfig}
           className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0"
         >
@@ -444,7 +445,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Status e Controles Base */}
-        <div className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 rounded-xl p-5">
+        <div data-help-id="studio.tunnel_status" className="bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 rounded-xl p-5">
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1">
               <p className="text-xs uppercase tracking-widest font-black text-neutral-400">
@@ -479,6 +480,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
 
           <div className="flex items-center gap-3">
             <button
+              data-help-id="studio.tunnel_start"
               disabled={tunnelStatus !== 'stopped'}
               onClick={() => handleProcessControl('start', 1)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${
@@ -490,6 +492,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
               <Play className="w-4 h-4" /> {t('workspace_components.tunnel_control.start_tunnel', 'Iniciar Túnel')}
             </button>
             <button
+              data-help-id="studio.tunnel_stop"
               disabled={tunnelStatus !== 'running'}
               onClick={() => handleProcessControl('stop')}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${
@@ -540,6 +543,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
                 }
               }}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 shrink-0"
+              data-help-id="studio.tunnel_logs"
               title={t('workspace_components.tunnel_control.view_tunnel_logs', 'Ver Logs do Túnel')}
             >
               {t('workspace_components.tunnel_control.logs_btn', 'Logs')}
@@ -570,6 +574,7 @@ export function WorkspaceTunnelControl({ workspaceSlug, projectSlug, webNotice =
             </p>
           </div>
           <button
+            data-help-id="studio.tunnel_sync"
             onClick={handleSync}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
           >

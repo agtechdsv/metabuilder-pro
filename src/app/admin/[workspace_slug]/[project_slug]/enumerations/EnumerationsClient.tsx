@@ -312,7 +312,7 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
     <div className="w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
+          <h3 data-help-id="studio.enum_header" className="text-xl font-black flex items-center gap-3 text-neutral-900 dark:text-white tracking-tight">
             <Database className="w-6 h-6 text-indigo-600 dark:text-indigo-500" />
             {t('dashboard.projects.studio.enums.title')}
           </h3>
@@ -320,12 +320,14 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
         </div>
         <div className="flex gap-3">
           <button 
+            data-help-id="studio.enum_import"
             onClick={openImportModal}
             className="flex items-center gap-2 px-6 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-full text-xs font-bold transition-all"
           >
             <Download className="w-4 h-4" /> {t('dashboard.projects.studio.enums.import')}
           </button>
           <button 
+            data-help-id="studio.enum_new"
             onClick={openNewModal}
             className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full text-xs font-bold transition-all shadow-[0_0_25px_rgba(79,70,229,0.4)]"
           >
@@ -355,17 +357,17 @@ export function EnumerationsClient({ workspace, project, workspace_slug, project
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {enumerations.map(e => (
-              <div key={e.id} className="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl hover:border-indigo-500 transition-colors flex flex-col">
+              <div key={e.id} data-help-id="studio.enum_card" className="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl hover:border-indigo-500 transition-colors flex flex-col">
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h4 className="font-black text-base">{e.name}</h4>
                     {e.description && <p className="text-xs text-neutral-500 mt-1">{e.description}</p>}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEditModal(e)} className="p-2 text-neutral-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
+                    <button data-help-id="studio.enum_edit" onClick={() => openEditModal(e)} className="p-2 text-neutral-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setEnumToDelete(e)} className="p-2 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                    <button data-help-id="studio.enum_delete" onClick={() => setEnumToDelete(e)} className="p-2 text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
