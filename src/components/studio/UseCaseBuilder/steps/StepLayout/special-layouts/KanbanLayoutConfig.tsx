@@ -58,8 +58,10 @@ export function KanbanLayoutConfig({
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">
           {t('wizard.layout.kanban.group_options', 'Campos alternativos de agrupamento (usuário final)')}
         </label>
+        {/* o passo do tour destaca a tabela E os campos marcáveis: o alvo é o conjunto */}
+        <div data-help-id="wizard.kanban_alt_table" className="space-y-3">
         <select
-          data-help-id="wizard.kanban_alt_table" value={tableId}
+          value={tableId}
           onChange={e => setTableId(e.target.value)}
           className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 focus:border-indigo-600 outline-none transition-all shadow-sm text-sm font-bold"
         >
@@ -88,6 +90,7 @@ export function KanbanLayoutConfig({
             })}
           </div>
         )}
+        </div>
 
         <div data-help-id="wizard.kanban_alt_selected" className="rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-800 p-3 space-y-2">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
