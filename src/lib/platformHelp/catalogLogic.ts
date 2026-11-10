@@ -36,6 +36,8 @@ interface Spec {
   grid?: T3
   form?: T3
   filter?: T3
+  /** frase a mais no passo "Padrões da tela" (itens dessa caixa próprios da lógica, ex.: a ordem da linha do tempo) */
+  defaultsNote?: T3
   /** o que falta para o "Próximo passo" habilitar */
   ready: T3
   /** a lógica pede o interruptor "argumentos" (filtros) */
@@ -75,10 +77,7 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
   const byId = (id: string) => base.steps.find(x => x.id === id)!
   // ordem de leitura = ordem na tela, de cima para baixo: padrões da tela, configuração da lógica, painel de campos, zonas
   // a introdução só mostra a área (sem edição); a configuração é feita nos passos seguintes, campo a campo
-  // passos que explicam itens da caixa "Padrões da tela" (ex.: ordem cronológica) vêm junto dela, que fica ACIMA da configuração da lógica
-  const isDefaults = (x: PlatformStep) => x.id === 'order'
-  const defaultsExtra = s.cfg.filter(isDefaults)
-  const cfg = s.cfg.filter(x => !isDefaults(x)).map(x => (x.id === 'cfg-intro' ? { ...x, readOnly: true } : x))
+  const cfg = s.cfg.map(x => (x.id === 'cfg-intro' ? { ...x, readOnly: true } : x))
   const steps: PlatformStep[] = [
     byId('open'),
     st('name', 'wizard.name', ['Nome e endereço', 'Name and address', 'Nombre y dirección'], [
@@ -103,8 +102,7 @@ function build(base: PlatformTour, s: Spec): PlatformTour {
       'Registros por página (LIMIT) define quantos registros vêm de cada vez; em branco vale o padrão do sistema. Aqui também ficam o texto de ajuda da tela e a visão geral da ajuda dos campos.',
       'Records per page (LIMIT) sets how many records come at a time; blank uses the system default. The screen help text and the field help overview are also here.',
       'Registros por página (LIMIT) define cuántos registros vienen cada vez; en blanco vale el valor del sistema. Aquí también están el texto de ayuda de la pantalla y la visión general de la ayuda de los campos.',
-    ], { skipIfMissing: true, backClick: 'wizard.prev' }),
-    ...defaultsExtra,
+    ].map((b, i) => (s.defaultsNote ? b + ' ' + s.defaultsNote[i] : b)) as unknown as T3, { skipIfMissing: true, backClick: 'wizard.prev' }),
     ...cfg,
     st('fields-panel', 'wizard.fields_panel', ['De onde vêm os campos', 'Where fields come from', 'De dónde vienen los campos'], [
       'O painel lista os campos das tabelas escolhidas. Arraste um campo para uma zona (ou clique no + dele). Os seletores de configuração acima também mostram esses campos.',
@@ -214,8 +212,8 @@ const SPECS: Spec[] = [
       st('desc', 'wizard.tl_desc', ['Descrição (opcional)', 'Description (optional)', 'Descripción (opcional)'], ['Um texto abaixo do título.', 'A text below the title.', 'Un texto debajo del título.'], { interactive: true }),
       st('icon', 'wizard.tl_icon', ['Ícone ou status (opcional)', 'Icon or status (optional)', 'Ícono o estado (opcional)'], ['Um campo que muda o ícone ou a marca de cada ponto.', 'A field that changes the icon or mark of each point.', 'Un campo que cambia el ícono o la marca de cada punto.'], { interactive: true }),
       st('style', 'wizard.tl_style', ['Estilo e comportamento', 'Style and behavior', 'Estilo y comportamiento'], ['Direção (vertical ou horizontal), modo (intercalado ou mesmo lado), animação do desenho, estilo visual (cards ou infográfico) e escala dos textos. A prévia final é no app publicado.', 'Direction (vertical or horizontal), mode (alternating or same side), draw animation, visual style (cards or infographic) and text scale. The final preview is in the published app.', 'Dirección (vertical u horizontal), modo (intercalado o mismo lado), animación del dibujo, estilo visual (tarjetas o infografía) y escala de los textos. La vista final es en la app publicada.']),
-      st('order', 'wizard.tl_order_h', ['Ordem cronológica', 'Chronological order', 'Orden cronológico'], ['Em "Padrões da tela", escolha se o mais antigo ou o mais recente vem primeiro, separado para tela horizontal e vertical.', 'Under "Screen defaults", choose whether the oldest or the newest comes first, separately for horizontal and vertical screens.', 'En "Valores de la pantalla", elija si el más antiguo o el más reciente va primero, por separado para pantalla horizontal y vertical.'], { skipIfMissing: true }),
     ],
+    defaultsNote: ['Aqui também ficam a ordem cronológica (mais antigo ou mais recente primeiro), separada para tela horizontal e vertical.', 'The chronological order (oldest or newest first) is also here, separate for horizontal and vertical screens.', 'Aquí también está el orden cronológico (más antiguo o más reciente primero), por separado para pantalla horizontal y vertical.'],
     form: ['O formulário para criar e editar um ponto da linha. A Linha do Tempo não tem zona de lista: o que aparece vem da configuração acima.', 'The form to create and edit a point on the line. The Timeline has no list zone: what shows comes from the configuration above.', 'El formulario para crear y editar un punto de la línea. La Línea de Tiempo no tiene zona de lista: lo que aparece viene de la configuración de arriba.'],
     ready: ['Faltam o campo de título e o campo de data.', 'The title field and the date field are missing.', 'Faltan el campo de título y el campo de fecha.'],
   },
