@@ -18,7 +18,7 @@ Precisa do projeto já sincronizado e sem merge pendente (senão o botão Entreg
 - [x] Feito · ☑ Testado · 🖥 O botão Entrega e a abertura da janela (sozinha, sem gerar nada)
 - [x] Feito · ☑ Testado · 🖥 "De onde vem o código" e "O que gerar" (pode marcar e desmarcar Código-fonte, Pacote Docker e Pacote compilado: nada é gerado)
 - [x] Feito · ☑ Testado · 🖥 Formato (Pasta ou ZIP) e "Segredos e limpeza da pasta" (pode clicar nas opções)
-- [x] Feito · ☐ Testado · 🖥 Novo (2026-11-11): os dois últimos passos são "Cancelar" (7) e "Gerar entrega" (8), nessa ordem, e respondem ao clique. Clicar em Cancelar fecha a janela e encerra o tour; clicar em Gerar entrega começa a gerar de verdade (escolhe destino, mostra o andamento) e o tour sai da frente. Sem clicar: Concluir fecha a janela sem gerar
+- [x] Feito · ☑ Testado · 🖥 Novo (2026-11-11): os dois últimos passos são "Cancelar" (7) e "Gerar entrega" (8), nessa ordem, e respondem ao clique. Clicar em Cancelar fecha a janela e encerra o tour; clicar em Gerar entrega começa a gerar de verdade (escolhe destino, mostra o andamento) e o tour sai da frente. Sem clicar: Concluir fecha a janela sem gerar
 - ⚠ A opção "Pacote Docker" aparece desativada se a pasta não tem o pacote de produção (precisa Sincronizar de novo): o passo continua igual.
 
 ## B. Commit 🖥 (grupo "Git" › "Commit: revisar e confirmar as alterações")
