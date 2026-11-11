@@ -119,11 +119,11 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 
 ### E2. Ejetar na prática (novo, 2026-11-11)
 Tour que GERA o código de verdade (menu **?** da IDE Local, "Ejetar na prática (gera o código)"). O código vai para um sandbox; nada entra na pasta até o "Efetivar Merge". Só aparece habilitado sem sincronização pendente.
-- [x] Feito · ☐ Testado · 🖥 Abrir a janela: clicar em Sincronizar, escolher idioma, stack (Node.js ou Java) e configuração com cliques livres
+- [x] Feito · ☑ Testado · 🖥 Abrir a janela: clicar em Sincronizar, escolher idioma, stack (Node.js ou Java) e configuração com cliques livres
 - [x] Feito · ☑ Testado · 🖥 Gerar: "Sincronizar Repositório" gera no sandbox (o balão espera; se a IDE pedir nome de pasta, responder na tela)
-- [x] Feito · ☐ Testado · 🖥 Sandbox: botões Descartar (só destacado) e Confirmar Merge; revisão dos arquivos gerados
-- [x] Feito · ☐ Testado · 🖥 Efetivar o merge: o fonte aparece no explorador; passos finais (Sincronizar de novo, explorador, Commit)
-- ⚠ Ajustes feitos após o 1º teste (idioma não selecionava; revisão e explorador agora deixam clicar em arquivos e pastas; o passo final espera o merge terminar): retestar os itens acima ainda em ☐.
+- [x] Feito · ☑ Testado · 🖥 Sandbox: botões Descartar (só destacado) e Confirmar Merge; revisão dos arquivos gerados
+- [x] Feito · ☑ Testado · 🖥 Efetivar o merge: o fonte aparece no explorador; passos finais (Sincronizar de novo, explorador, Commit)
+- ⚠ Ajustes feitos após o 1º teste (idioma não selecionava; revisão e explorador agora deixam clicar em arquivos e pastas; o passo final espera o merge terminar): retestados em 2026-11-11 e aprovados.
 - ⚠ Não testado por mim: a geração real e o merge dependem da IDE e da nuvem. Caminhos a observar: pasta vazia (a IDE renomeia a pasta para projeto-pilha e continua), pilha trocada, e "Nenhuma alteração para o merge" (o tour fica no passo de gerar: feche com o X).
 
 ---
