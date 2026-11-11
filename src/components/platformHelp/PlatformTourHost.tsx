@@ -132,7 +132,10 @@ export function PlatformTourHost() {
         if (Date.now() > deadline && s.skipIfMissing) {
           // passo opcional sem alvo nesta tela: segue na direção em que a pessoa vinha (para trás, se ela clicou em Voltar)
           markSkipped(s.id)
-          if (cameFromAfterRef.current) prevStep(); else nextStep()
+          const cur = activeRef.current
+          // último passo opcional que não existe nesta tela: o tour acabou (antes ficava parado com "3 de 2" e o aviso de item invisível)
+          if (!cameFromAfterRef.current && cur && cur.index >= cur.tour.steps.length - 1) { markTourSeen(cur.tour.id); stopPlatformTour('concluído') }
+          else if (cameFromAfterRef.current) prevStep(); else nextStep()
           return
         }
         if (Date.now() > deadline) {

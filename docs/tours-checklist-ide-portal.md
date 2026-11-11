@@ -77,11 +77,11 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - [x] Feito · ☑ Testado · Central de Ajuda, salvar
 
 ## C. Barra lateral (ferramentas)
-- [x] Feito · ☐ Testado · Tour "Barra lateral: cada área do Studio" (os 9 ícones, com os 🖥 marcados)
-- [x] Feito · ☐ Testado · 🖥 BYOC (página: novo componente, lista, editar código, excluir)
-- [x] Feito · ☐ Testado · 🖥 Configurações de Bancos (JSON) (página: arquivo, autenticação do projeto, conexões, LDAP, diretórios, salvar)
-- [x] Feito · ☐ Testado · 🖥 Terminal (PTY)
-- [x] Feito · ☐ Testado · 🖥 SQL Studio (cabeçalho, editor, executar, resultados)
+- [x] Feito · ☑ Testado · Tour "Barra lateral: cada área do Studio" (os 9 ícones, com os 🖥 marcados)
+- [x] Feito · ☑ Testado · 🖥 BYOC (página: novo componente, lista, editar código, excluir) — ⚠ editar e excluir só aparecem com 1 componente criado; o excluir ficou sem teste
+- [x] Feito · ☑ Testado · 🖥 Configurações de Bancos (JSON) (página: arquivo, autenticação do projeto, conexões, LDAP, diretórios, salvar)
+- [x] Feito · ☑ Testado · 🖥 Terminal (PTY)
+- [x] Feito · ☑ Testado · 🖥 SQL Studio (cabeçalho, editor, executar, resultados)
 - (Dados & Schemas, Autenticação, Configurações e Logs já tinham tours)
 
 ## D. IDE Local
