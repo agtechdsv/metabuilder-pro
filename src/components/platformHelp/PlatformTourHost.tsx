@@ -59,6 +59,8 @@ export function PlatformTourHost() {
   const [modalFree, setModalFree] = useState(false)
   // a pessoa clicou no item do passo (Finalizar, Publicar) e o tour espera a tela mudar: o balão avisa a espera em vez de repetir o texto do passo
   const [advancing, setAdvancing] = useState(false)
+  // há uma lista flutuante aberta (ex.: o seletor de idioma) dentro do item destacado: o escurecimento não pode cobri-la
+  const [popupOpen, setPopupOpen] = useState(false)
   // passos opcionais que foram pulados porque não existem nesta tela: a contagem "n de total" não os conta e o Voltar passa por cima deles
   const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
   const markSkipped = (...ids: string[]) => setSkippedIds(prev => { const n = new Set(prev); ids.forEach(i => n.add(i)); return n.size === prev.size ? prev : n })
@@ -194,6 +196,8 @@ export function PlatformTourHost() {
       const tEl = findById(target)
       const free = !!modalEl && !(tEl && modalEl.contains(tEl))
       setModalFree(prev => (prev === free ? prev : free))
+      const pop = !!document.querySelector('[data-tour-popup]')
+      setPopupOpen(prev => (prev === pop ? prev : pop))
       if (holdRef.current) return
       const el = findById(target)
       if (el) {
@@ -430,7 +434,7 @@ export function PlatformTourHost() {
             />
           )}
           {/* a tela atrás do escurecimento não responde a cliques (senão a pessoa sai do tour sem querer); só o item destacado, e só nos passos que pedem o clique */}
-          {step.freeInteraction ? null : (step.advanceOnClick && ready) || openStep ? (
+          {step.freeInteraction || (popupOpen && openStep) ? null : (step.advanceOnClick && ready) || openStep ? (
             <>
               <div className="fixed left-0 right-0 top-0" style={{ height: Math.max(0, rect.top - PAD), pointerEvents: 'auto' }} />
               <div className="fixed bottom-0 left-0 right-0" style={{ top: rect.bottom + PAD, pointerEvents: 'auto' }} />

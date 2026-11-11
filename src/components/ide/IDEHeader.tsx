@@ -1138,6 +1138,7 @@ export function IDEHeader({
                     <AnimatePresence>
                       {isGenLangOpen && (
                         <motion.div
+                          data-tour-popup=""
                           initial={{ opacity: 0, y: 6, scale: 0.96 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 6, scale: 0.96 }}

@@ -426,3 +426,13 @@ describe('tour prático "Ejetar na prática"', () => {
     for (const s of tour.steps) { for (const l of ['pt', 'en', 'es'] as const) expect((s.body as any)[l], `${s.id}/${l}`).toBeTruthy() }
   })
 })
+
+describe('listas flutuantes dentro do item destacado', () => {
+  it('o seletor de idioma da ejeção é marcado como lista flutuante e o motor não a cobre com o escurecimento', () => {
+    const header = fs.readFileSync(path.join(process.cwd(), 'src/components/ide/IDEHeader.tsx'), 'utf8')
+    const host = fs.readFileSync(path.join(process.cwd(), 'src/components/platformHelp/PlatformTourHost.tsx'), 'utf8')
+    expect(header).toMatch(/data-tour-popup=""/)
+    expect(host).toMatch(/\[data-tour-popup\]/)
+    expect(host).toMatch(/popupOpen && openStep/)
+  })
+})
