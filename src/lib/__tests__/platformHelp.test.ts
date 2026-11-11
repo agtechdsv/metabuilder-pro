@@ -414,6 +414,14 @@ describe('tour prático "Ejetar na prática"', () => {
     expect(tour.freeClicks).toBeFalsy()
   })
 
+  it('espera o merge terminar antes do explorador e deixa explorar a lista e o explorador', () => {
+    const by = (id: string) => tour.steps.find(s => s.id === id)!
+    expect(by('done').skipIfMissing).toBeFalsy()
+    expect(by('review').interactive).toBe(true)
+    expect(by('explorer').interactive).toBe(true)
+    expect(by('explorer').alsoTarget).toBe('ide.editor')
+  })
+
   it('tem os textos nos 3 idiomas', () => {
     for (const s of tour.steps) { for (const l of ['pt', 'en', 'es'] as const) expect((s.body as any)[l], `${s.id}/${l}`).toBeTruthy() }
   })

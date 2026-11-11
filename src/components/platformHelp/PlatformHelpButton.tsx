@@ -19,11 +19,11 @@ export function PlatformHelpButton() {
   const [seen, setSeen] = useState<string[]>([])
   // grupos recolhidos do menu (lembrados neste navegador; só conveniência, o menu funciona sem isso)
   const [collapsed, setCollapsed] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('mb.tourMenu.collapsed') || '[]') } catch { return [] } })
-  const toggleGroup = (key: string) => setCollapsed(prev => {
-    const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+  const saveCollapsed = (next: string[]) => {
+    setCollapsed(next)
     try { localStorage.setItem('mb.tourMenu.collapsed', JSON.stringify(next)) } catch { /* sem armazenamento: vale só nesta sessão */ }
-    return next
-  })
+  }
+  const toggleGroup = (key: string) => saveCollapsed(collapsed.includes(key) ? collapsed.filter(k => k !== key) : [...collapsed, key])
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => { if (open) setSeen(seenTours()) }, [open])
@@ -38,6 +38,7 @@ export function PlatformHelpButton() {
   if (!pathname.startsWith('/admin/') && pathname !== '/workspace') return null
   const tours = toursForRoute(PLATFORM_TOURS, pathname)
   const sections = menuSections(tours)
+  const groupKeys = sections.map(sec => sec.title?.pt || '').filter(Boolean)
 
   return (
     <div ref={ref} className="relative">
@@ -53,7 +54,16 @@ export function PlatformHelpButton() {
       </button>
       {open && (
         <div className="absolute right-0 top-11 z-[1000005] w-80 max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-3 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
-          <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
+          <div className="flex items-center justify-between px-1 pb-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
+            {groupKeys.length > 1 && (
+              <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                <button type="button" onClick={() => saveCollapsed([])} disabled={collapsed.every(k => !groupKeys.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.expand_all', 'Expandir tudo')}</button>
+                <span className="text-neutral-300">·</span>
+                <button type="button" onClick={() => saveCollapsed(groupKeys)} disabled={groupKeys.every(k => collapsed.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.collapse_all', 'Recolher tudo')}</button>
+              </div>
+            )}
+          </div>
           {tours.length === 0 ? (
             <p className="px-1 py-3 text-xs text-neutral-500">{t('platform_help.none', 'Ainda não há tutoriais para esta tela. Eles estão sendo preparados.')}</p>
           ) : (

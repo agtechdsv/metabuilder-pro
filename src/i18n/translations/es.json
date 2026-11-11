@@ -5667,6 +5667,8 @@
   "platform_help": {
     "button": "Ayuda de esta pantalla",
     "menu_title": "Ayuda de esta pantalla",
+    "expand_all": "Expandir todo",
+    "collapse_all": "Contraer todo",
     "none": "Todavía no hay tutoriales para esta pantalla. Se están preparando.",
     "steps": "pasos",
     "close": "Cerrar",

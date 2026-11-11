@@ -1115,10 +1115,9 @@ export function IDEHeader({
                 </div>
                 <div className="flex items-center gap-3">
                   {/* Seletor de Idioma de Destino da Geração */}
-                  <div className="relative" ref={genLangDropdownRef}>
+                  <div className="relative" ref={genLangDropdownRef} data-help-id="ide.eject_lang">
                     <button
                       type="button"
-                      data-help-id="ide.eject_lang"
                       onClick={() => setIsGenLangOpen(!isGenLangOpen)}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-700 transition-all active:scale-95 shadow-sm"
                       title={t('workspace_components.eject_modal.target_lang_tooltip', 'Idioma do código gerado')}

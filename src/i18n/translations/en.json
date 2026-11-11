@@ -5579,6 +5579,8 @@
   "platform_help": {
     "button": "Help for this screen",
     "menu_title": "Help for this screen",
+    "expand_all": "Expand all",
+    "collapse_all": "Collapse all",
     "none": "There are no tutorials for this screen yet. They are being prepared.",
     "steps": "steps",
     "close": "Close",

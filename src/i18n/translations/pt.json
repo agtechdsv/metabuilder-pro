@@ -5579,6 +5579,8 @@
   "platform_help": {
     "button": "Ajuda desta tela",
     "menu_title": "Ajuda desta tela",
+    "expand_all": "Expandir tudo",
+    "collapse_all": "Recolher tudo",
     "none": "Ainda não há tutoriais para esta tela. Eles estão sendo preparados.",
     "steps": "passos",
     "close": "Fechar",

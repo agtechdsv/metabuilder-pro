@@ -72,10 +72,10 @@ export const IDE_PRACTICE_TOURS: readonly PlatformTour[] = [
         'Listo: la app se generó y está separada de su carpeta. "Descartar" deshace todo; "Confirmar Merge" abre la revisión. Haga clic en Confirmar Merge para ver lo que se generó.',
       ], { alsoTarget: 'ide.btn_discard', advanceOnClick: true, advanceWaitMs: 20000 }),
       st('review', 'ide.merge_files', ['Arquivos gerados', 'Generated files', 'Archivos generados'], [
-        'A lista mostra cada arquivo novo ou alterado em relação à sua pasta. Ao selecionar um, o painel ao lado mostra a diferença. Se você já tinha mexido nos arquivos, é aqui que você vê o que muda.',
-        'The list shows each new or changed file compared to your folder. Selecting one shows the difference in the side panel. If you had already edited the files, this is where you see what changes.',
-        'La lista muestra cada archivo nuevo o cambiado respecto a su carpeta. Al seleccionar uno, el panel lateral muestra la diferencia. Si ya había editado los archivos, aquí ve lo que cambia.',
-      ], { ...OPT }),
+        'A lista mostra cada arquivo novo ou alterado em relação à sua pasta. Clique no nome de um arquivo para ver o conteúdo e a diferença no painel ao lado. Não mexa nas caixas marcadas: elas definem o que entra no merge.',
+        'The list shows each new or changed file compared to your folder. Click a file name to see its content and the difference in the side panel. Do not touch the checked boxes: they define what goes into the merge.',
+        'La lista muestra cada archivo nuevo o cambiado respecto a su carpeta. Haga clic en el nombre de un archivo para ver su contenido y la diferencia en el panel lateral. No toque las casillas marcadas: definen lo que entra en el merge.',
+      ], { ...OPT, interactive: true }),
       st('apply', 'ide.merge_apply', ['Efetive o merge', 'Apply the merge', 'Efectúe el merge'], [
         'Este clique grava os arquivos na sua pasta local: é o passo que coloca o fonte na IDE. Se preferir não gravar, feche o tour e use Cancelar (o sandbox continua, e você descarta ou confirma depois).',
         'This click writes the files to your local folder: it is the step that puts the source in the IDE. If you prefer not to write, close the tour and use Cancel (the sandbox stays, and you discard or confirm later).',
@@ -85,12 +85,12 @@ export const IDE_PRACTICE_TOURS: readonly PlatformTour[] = [
         'O código foi aplicado na sua pasta. Sempre que o projeto mudar no Studio, use este botão de novo: ele gera outra vez e mostra só o que mudou, no mesmo fluxo de sandbox e revisão.',
         'The code was applied to your folder. Whenever the project changes in the Studio, use this button again: it generates again and shows only what changed, in the same sandbox and review flow.',
         'El código se aplicó en su carpeta. Siempre que el proyecto cambie en el Studio, use este botón de nuevo: genera otra vez y muestra solo lo que cambió, en el mismo flujo de sandbox y revisión.',
-      ], OPT),
+      ]),
       st('explorer', 'ide.explorer', ['Os arquivos gerados', 'The generated files', 'Los archivos generados'], [
-        'O explorador já mostra o app gerado. Abra um arquivo para ver o código no editor.',
-        'The explorer already shows the generated app. Open a file to see the code in the editor.',
-        'El explorador ya muestra la app generada. Abra un archivo para ver el código en el editor.',
-      ], OPT),
+        'O explorador já mostra o app gerado. Abra as pastas e clique em um arquivo para ver o código no editor, à direita. Só clique: não renomeie nem apague nada agora.',
+        'The explorer already shows the generated app. Open the folders and click a file to see the code in the editor, on the right. Just click: do not rename or delete anything now.',
+        'El explorador ya muestra la app generada. Abra las carpetas y haga clic en un archivo para ver el código en el editor, a la derecha. Solo haga clic: no renombre ni borre nada ahora.',
+      ], { ...OPT, interactive: true, alsoTarget: 'ide.editor' }),
       st('commit', 'ide.btn_commit', ['Versionar no Git', 'Version in Git', 'Versionar en Git'], [
         'O merge fica na sua branch. Para guardar esta versão no histórico do Git, use Commit. O tour "IDE Local: Git" explica cada botão do Git.',
         'The merge stays in your branch. To keep this version in the Git history, use Commit. The "Local IDE: Git" tour explains each Git button.',
