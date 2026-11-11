@@ -93,14 +93,14 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - (Dados & Schemas, Autenticação, Configurações e Logs já tinham tours)
 
 ## D. IDE Local
-- [x] Feito · ☐ Testado · 🖥 Visão geral e cabeçalho (título, pasta, branch, entrega, sincronizar, testes, tema, console, arquivos, minimizar, fechar)
-- [x] Feito · ☐ Testado · 🖥 Explorador de arquivos (árvore, lixeira da IDE)
-- [x] Feito · ☐ Testado · 🖥 Área do editor
-- [x] Feito · ☐ Testado · 🖥 Console (Resumido x Detalhado)
-- [x] Feito · ☐ Testado · 🖥 Git: branch, commit, push, pull, histórico, configurações (os botões do cabeçalho)
+- [x] Feito · ☑ Testado · 🖥 Visão geral e cabeçalho (título, pasta, branch, entrega, sincronizar, testes, tema, console, arquivos, minimizar, fechar)
+- [x] Feito · ☑ Testado · 🖥 Explorador de arquivos (árvore, lixeira da IDE)
+- [x] Feito · ☑ Testado · 🖥 Área do editor
+- [x] Feito · ☑ Testado · 🖥 Console (Resumido x Detalhado)
+- [x] Feito · ☑ Testado · 🖥 Git: branch, commit, push, pull, histórico, configurações (os botões do cabeçalho)
 - [ ] ⏳ Git: o que há DENTRO das janelas de commit, histórico e configurações Git (precisa de marcas nessas janelas)
-- [x] Feito · ☐ Testado · 🖥 Trocar de pasta e barra minimizada (o botão da pasta e o Minimizar; o interior do seletor de pasta não)
-- [x] Feito · ☐ Testado · 🖥 Tema e idioma
+- [x] Feito · ☑ Testado · 🖥 Trocar de pasta e barra minimizada (o botão da pasta e o Minimizar; o interior do seletor de pasta não)
+- [x] Feito · ☑ Testado · 🖥 Tema e idioma
 - [ ] ⏳ Testes: só o botão do cabeçalho está coberto; o interior do Ambiente de Testes (`IdeTest*`: banco, histórico, comparar, status) ainda não
 - [ ] ⏳ Entrega: só o botão do cabeçalho está coberto; o interior da janela `IdeDeliveryModal` ainda não
 
