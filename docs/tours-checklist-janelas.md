@@ -23,31 +23,31 @@ Precisa do projeto já sincronizado e sem merge pendente (senão o botão Entreg
 
 ## B. Commit 🖥 (grupo "Git" › "Commit: revisar e confirmar as alterações")
 A janela de Commit só abre se houver alteração local pendente. Para testar: edite qualquer arquivo no editor da IDE e salve, antes de abrir o tour.
-- [x] Feito · ☐ Testado · 🖥 O botão Commit e a abertura da janela
-- [x] Feito · ☐ Testado · 🖥 Mensagem do commit (pode digitar) e lista de arquivos (pode marcar e clicar no nome; o botão direito não é explicado de propósito)
-- [x] Feito · ☐ Testado · 🖥 Comparador de diferenças só leitura (clicar nele não faz nada) e "Confirmar Commit" só destacado
-- [x] Feito · ☐ Testado · 🖥 Cancelar fecha a janela sem commitar
+- [x] Feito · ☑ Testado · 🖥 O botão Commit e a abertura da janela
+- [x] Feito · ☑ Testado · 🖥 Mensagem do commit (pode digitar) e lista de arquivos (pode marcar e clicar no nome; o botão direito não é explicado de propósito)
+- [x] Feito · ☑ Testado · 🖥 Comparador de diferenças só leitura (clicar nele não faz nada) e "Confirmar Commit" só destacado
+- [x] Feito · ☑ Testado · 🖥 Cancelar fecha a janela sem commitar
 - ⚠ Sem alteração pendente a IDE mostra o aviso "Nenhuma alteração local pendente" e o tour fica só no primeiro passo (esperado).
 
 ## C. Histórico do Git 🖥 (grupo "Git" › "Histórico do Git")
-- [x] Feito · ☐ Testado · 🖥 O botão Histórico e a abertura da janela
-- [x] Feito · ☐ Testado · 🖥 Escolher a branch (só troca a lista de commits mostrada; a branch do projeto não muda) e a lista de commits
-- [x] Feito · ☐ Testado · 🖥 "Reverter para esta versão" nunca é clicado (a lista é só leitura) e a janela fecha no fim
-- [x] Feito · ☐ Testado · 🖥 Textos da janela de Histórico traduzidos (título, "Branch", "Nenhum commit encontrado", "Reverter para esta versão"): trocar o idioma da IDE e conferir pt, en, es. Os avisos de reverter e de nova branch continuam em português (fora deste escopo)
+- [x] Feito · ☑ Testado · 🖥 O botão Histórico e a abertura da janela
+- [x] Feito · ☑ Testado · 🖥 Escolher a branch (só troca a lista de commits mostrada; a branch do projeto não muda) e a lista de commits
+- [x] Feito · ☑ Testado · 🖥 "Reverter para esta versão" nunca é clicado (a lista é só leitura) e a janela fecha no fim
+- [x] Feito · ☑ Testado · 🖥 Textos da janela de Histórico traduzidos (título, "Branch", "Nenhum commit encontrado", "Reverter para esta versão"): trocar o idioma da IDE e conferir pt, en, es. Os avisos de reverter e de nova branch continuam em português (fora deste escopo)
 
 ## D. Ambiente de Testes 🖥 (grupo "Testes" › "Ambiente de Testes")
-- [x] Feito · ☐ Testado · 🖥 O botão e a abertura da janela; durante o tour só abas, Recolher/Expandir e o X respondem
-- [x] Feito · ☐ Testado · 🖥 Abas Executar e Histórico e o aviso de segurança dos dados
-- [x] Feito · ☐ Testado · 🖥 Seções 1 Tipo de teste, 2 Casos de uso, 3 Onde rodar (motor, banco de teste, pasta do app), 4 Como acompanhar
-- [x] Feito · ☐ Testado · 🖥 Rodapé (Executar testes só destacado, relatório) e aba Histórico (o tour troca de aba e volta; abrir, comparar e excluir ficam desativados)
-- [x] Feito · ☐ Testado · 🖥 O X fecha a janela ao terminar o tour
+- [x] Feito · ☑ Testado · 🖥 O botão e a abertura da janela; durante o tour só abas, Recolher/Expandir e o X respondem
+- [x] Feito · ☑ Testado · 🖥 Abas Executar e Histórico e o aviso de segurança dos dados
+- [x] Feito · ☑ Testado · 🖥 Seções 1 Tipo de teste, 2 Casos de uso, 3 Onde rodar (motor, banco de teste, pasta do app), 4 Como acompanhar
+- [x] Feito · ☑ Testado · 🖥 Rodapé (Executar testes só destacado, relatório) e aba Histórico (o tour troca de aba e volta; abrir, comparar e excluir ficam desativados)
+- [x] Feito · ☑ Testado · 🖥 O X fecha a janela ao terminar o tour
 - ⚠ Não coberto por tour: o relatório (janela interna com Imprimir/Download) e a comparação de duas execuções, porque só existem depois de executar testes de verdade.
 
 ## E. Instalador Desktop 🖥 (portal: "Instalador Desktop do projeto" em /admin/:workspace e "Instalador Desktop do workspace" em /workspace)
-- [x] Feito · ☐ Testado · 🖥 Projeto: ícone "Gerar App Desktop Nativo" do cartão, abertura da janela e campos (nome, descrição, versão, ícone, connection string, URL da aplicação web, notas da versão)
-- [x] Feito · ☐ Testado · 🖥 Workspace: o mesmo tour, aberto pelo cartão do workspace (texto diz "Portal de Aplicações")
-- [x] Feito · ☐ Testado · 🖥 "Gerar Instalador (.msi)" só destacado, ícone só leitura (não abre o seletor de arquivos) e a janela fecha no fim
-- [x] Feito · ☐ Testado · 🖥 Textos "Versão do App", "O que há de novo nesta versão?", "Opcional", exemplo e dica das notas agora traduzidos: trocar o idioma e conferir pt, en, es
+- [x] Feito · ☑ Testado · 🖥 Projeto: ícone "Gerar App Desktop Nativo" do cartão, abertura da janela e campos (nome, descrição, versão, ícone, connection string, URL da aplicação web, notas da versão)
+- [x] Feito · ☑ Testado · 🖥 Workspace: o mesmo tour, aberto pelo cartão do workspace (texto diz "Portal de Aplicações")
+- [x] Feito · ☑ Testado · 🖥 "Gerar Instalador (.msi)" só destacado, ícone só leitura (não abre o seletor de arquivos) e a janela fecha no fim
+- [x] Feito · ☑ Testado · 🖥 Textos "Versão do App", "O que há de novo nesta versão?", "Opcional", exemplo e dica das notas agora traduzidos: trocar o idioma e conferir pt, en, es
 - ⚠ No site o ícone existe mas a janela é da IDE: o tour mostra o passo do botão e pula o resto (esperado).
 
 ## F. Sincronização pendente (tela de revisão) (menu ? da própria tela: "Sincronização pendente: resolver as diferenças")
@@ -62,7 +62,7 @@ A tela só existe quando o projeto está com "Sincronização pendente" (tabela 
 - ⚠ É só texto, de propósito: o console de sincronização só abre depois de sincronizar de verdade (lê o banco do cliente) e os Logs abrem em outra janela do sistema, que o tour não alcança.
 
 ## H. Menu ? da IDE com os grupos novos
-- [x] Feito · ☐ Testado · 🖥 Git agora tem 4 tours (comandos, Configurações, Commit, Histórico); Ejetar & Sincronizar tem 3 (teoria, prática, Entrega); grupo novo "Testes"; recolher/expandir e os ícones de expandir/recolher tudo continuam funcionando
+- [x] Feito · ☑ Testado · 🖥 Git agora tem 4 tours (comandos, Configurações, Commit, Histórico); Ejetar & Sincronizar tem 3 (teoria, prática, Entrega); grupo novo "Testes"; recolher/expandir e os ícones de expandir/recolher tudo continuam funcionando
 
 ## I. Limpeza (sem tela para testar)
 - [x] Feito · Textos do e2e (`e2e/README.md`, `guard.ts`, configs e scripts) não mandam mais usar "IDE > Ejetar para uma pasta": agora dizem "Sincronizar (ou Entrega > Código-fonte limpo, em pasta)"
