@@ -66,10 +66,10 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - ⚠ Ainda fora do tour livre: o botão "Salvar" do portal é bloqueado de propósito; o "Salvar" dos painéis Novo/Editar não é (se você salvar, grava de verdade).
 
 ### A4. Ajustes pedidos após o teste do A3 (novo, 2026-11-11)
-- [x] Feito · ☐ Testado · Tour dos projetos: ao clicar em "Personalizar portal" (passo 4), os passos da janela (Configurações, Logo, Banner, Salvar/Cancelar) vêm na sequência; ao avançar a janela fecha sozinha e, ao voltar, reabre. Sem clique seu, o tour abre a janela por você
-- [x] Feito · ☐ Testado · 🖥 Na IDE, o ícone "Gerar App Desktop Nativo" (workspace e projeto) abre a janela ao clicar; "Gerar Instalador" nunca responde e a janela fecha ao terminar o tour. No site continua só mostrando
-- [x] Feito · ☐ Testado · 🖥 Workspaces: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (abrem a aba sozinhos; só no menu da IDE)
-- [x] Feito · ☐ Testado · 🖥 Projetos do workspace: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (idem)
+- [x] Feito · ☑ Testado · Tour dos projetos: ao clicar em "Personalizar portal" (passo 4), os passos da janela (Configurações, Logo, Banner, Salvar/Cancelar) vêm na sequência; ao avançar a janela fecha sozinha e, ao voltar, reabre. Sem clique seu, o tour abre a janela por você
+- [x] Feito · ☑ Testado · 🖥 Na IDE, o ícone "Gerar App Desktop Nativo" (workspace e projeto) abre a janela ao clicar; "Gerar Instalador" nunca responde e a janela fecha ao terminar o tour. No site continua só mostrando
+- [x] Feito · ☑ Testado · 🖥 Workspaces: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (abrem a aba sozinhos; só no menu da IDE)
+- [x] Feito · ☑ Testado · 🖥 Projetos do workspace: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (idem)
 - ⚠ IDE Local (🖥) e Ambiente de Testes (🖥) continuam só mostrando: abrem telas grandes que o tour não controla (o Ambiente de Testes executa testes de verdade).
 
 ## B. Abas do Studio
