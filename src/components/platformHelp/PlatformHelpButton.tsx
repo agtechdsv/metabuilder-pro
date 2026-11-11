@@ -8,6 +8,7 @@ import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
 import { PLATFORM_TOURS } from '@/lib/platformHelp/catalog'
 import { toursForRoute } from '@/lib/platformHelp/routes'
+import { menuSections } from '@/lib/platformHelp/menuGroups'
 import { seenTours, startPlatformTour, tourAvailable, tourWrongLogic, WRONG_LOGIC_HINT } from '@/lib/platformHelp/store'
 
 /** Ícone de ajuda do cabeçalho nas áreas do Studio: lista os tours que existem para a tela em que a pessoa está. */
@@ -29,6 +30,7 @@ export function PlatformHelpButton() {
   // só nas áreas administrativas (Studio, dados, autenticação, configurações, logs...)
   if (!pathname.startsWith('/admin/') && pathname !== '/workspace') return null
   const tours = toursForRoute(PLATFORM_TOURS, pathname)
+  const sections = menuSections(tours)
 
   return (
     <div ref={ref} className="relative">
@@ -48,8 +50,16 @@ export function PlatformHelpButton() {
           {tours.length === 0 ? (
             <p className="px-1 py-3 text-xs text-neutral-500">{t('platform_help.none', 'Ainda não há tutoriais para esta tela. Eles estão sendo preparados.')}</p>
           ) : (
+            sections.map((sec, si) => (
+            <div key={si}>
+            {sec.title && (
+              <div className="flex items-center gap-2 px-1 pb-1 pt-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{resolveHelp(sec.title, language)}</span>
+                <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
+              </div>
+            )}
             <ul className="space-y-1">
-              {tours.map(tour => {
+              {sec.tours.map(tour => {
                 const avail = tourAvailable(tour)
                 return (
                 <li key={tour.id}>
@@ -73,6 +83,8 @@ export function PlatformHelpButton() {
                 )
               })}
             </ul>
+            </div>
+            ))
           )}
         </div>
       )}

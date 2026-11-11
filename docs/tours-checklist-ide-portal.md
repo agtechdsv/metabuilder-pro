@@ -1,7 +1,7 @@
 # Checklist dos tours que faltam (portal, abas do Studio, barra lateral, IDE Local e Ejetar)
 
 Como usar:
-- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1360 testes).
+- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1366 testes).
 - **Testado** `☑`: você marca depois de testar no navegador ou na IDE. Começa em `☐`.
 - 🖥 = função exclusiva da IDE Desktop. No site o passo aparece com o aviso "Disponível só na IDE Desktop" (decisão confirmada: mostrar com aviso) e o ícone nunca é clicável pelo tour.
 - Itens com ⏳ ficaram para depois (motivo na linha).
@@ -66,15 +66,15 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - ⚠ Ainda fora do tour livre: o botão "Salvar" do portal é bloqueado de propósito; o "Salvar" dos painéis Novo/Editar não é (se você salvar, grava de verdade).
 
 ## B. Abas do Studio
-- [x] Feito · ☐ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)
-- [x] Feito · ☐ Testado · Enums: Importar, Novo Enum, cartão, editar, excluir
-- [x] Feito · ☐ Testado · 🖥 Gerenciador do Túnel (no site: aviso e botão de baixar; na IDE: configurar, estado, iniciar, parar, logs, sincronizar)
-- [x] Feito · ☐ Testado · Bancos Sincronizados: schemas, renomear, excluir (destrutivo)
-- [x] Feito · ☐ Testado · Central de Ajuda: escolher o caso de uso, ver a Central do app
-- [x] Feito · ☐ Testado · Central de Ajuda, Ajuda textual
-- [x] Feito · ☐ Testado · Central de Ajuda, Ajuda interativa (gravar, regenerar, excluir, ordem)
-- [x] Feito · ☐ Testado · Central de Ajuda, Feedback
-- [x] Feito · ☐ Testado · Central de Ajuda, salvar
+- [x] Feito · ☑ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)
+- [x] Feito · ☑ Testado · Enums: Importar, Novo Enum, cartão, editar, excluir
+- [x] Feito · ☑ Testado · 🖥 Gerenciador do Túnel (no site: aviso e botão de baixar; na IDE: configurar, estado, iniciar, parar, logs, sincronizar)
+- [x] Feito · ☑ Testado · Bancos Sincronizados: schemas, renomear, excluir (destrutivo)
+- [x] Feito · ☑ Testado · Central de Ajuda: escolher o caso de uso, ver a Central do app
+- [x] Feito · ☑ Testado · Central de Ajuda, Ajuda textual
+- [x] Feito · ☑ Testado · Central de Ajuda, Ajuda interativa (gravar, regenerar, excluir, ordem)
+- [x] Feito · ☑ Testado · Central de Ajuda, Feedback
+- [x] Feito · ☑ Testado · Central de Ajuda, salvar
 
 ## C. Barra lateral (ferramentas)
 - [x] Feito · ☐ Testado · Tour "Barra lateral: cada área do Studio" (os 9 ícones, com os 🖥 marcados)
