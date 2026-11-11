@@ -69,7 +69,7 @@ A tela só existe quando o projeto está com "Sincronização pendente" (tabela 
 
 ## J. O que NÃO vira tour (decisão)
 - "Ejetar para uma pasta": a ação foi substituída por **Sincronizar** + **Entrega** em 2026-10-20 (ver `tours-checklist-ide-portal.md`, E).
-- "Exportar projeto" e "Exportar workspace": o ícone saiu dos cartões em 2026-10-14 (exportar é só na IDE Desktop) e `ProjectExportModal` e `WorkspaceExportModal` não são abertos por nenhuma tela. São código órfão: não há o que explicar. Posso remover esses arquivos se você quiser.
+- "Exportar projeto" e "Exportar workspace": o ícone saiu dos cartões em 2026-10-14 (exportar é só na IDE Desktop) e `ProjectExportModal` e `WorkspaceExportModal` não são abertos por nenhuma tela. Eram código órfão e foram removidos em 2026-11-11 (junto com o hook `useProjectExport`).
 
 ---
 
