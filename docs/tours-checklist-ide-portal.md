@@ -98,11 +98,11 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - [x] Feito · ☑ Testado · 🖥 Área do editor
 - [x] Feito · ☑ Testado · 🖥 Console (Resumido x Detalhado)
 - [x] Feito · ☑ Testado · 🖥 Git: branch, commit, push, pull, histórico, configurações (os botões do cabeçalho)
-- [x] Feito · ☐ Testado · Git: interior das janelas de commit e histórico (configurações Git já estava em D2): ver **tours-checklist-janelas.md**, seções B e C
+- [x] Feito · ☑ Testado · Git: interior das janelas de commit e histórico (configurações Git já estava em D2): ver **tours-checklist-janelas.md**, seções B e C
 - [x] Feito · ☑ Testado · 🖥 Trocar de pasta e barra minimizada (o botão da pasta e o Minimizar; o interior do seletor de pasta não)
 - [x] Feito · ☑ Testado · 🖥 Tema e idioma
-- [x] Feito · ☐ Testado · Testes: interior do Ambiente de Testes: ver **tours-checklist-janelas.md**, seção D (o relatório e a comparação de duas execuções só existem depois de rodar testes e não têm tour)
-- [x] Feito · ☐ Testado · Entrega: interior da janela: ver **tours-checklist-janelas.md**, seção A
+- [x] Feito · ☑ Testado · Testes: interior do Ambiente de Testes: ver **tours-checklist-janelas.md**, seção D (o relatório e a comparação de duas execuções só existem depois de rodar testes e não têm tour)
+- [x] Feito · ☑ Testado · Entrega: interior da janela: ver **tours-checklist-janelas.md**, seção A
 
 ### D2. Configurações Git e menu agrupado da IDE (novo, 2026-11-11)
 - [x] Feito · ☑ Testado · 🖥 Tour "Configurações Git (remoto, branches e reset)" (17 passos): engrenagem, 3 abas (abrem sozinhas), URL, token, 3 branches, Salvar, Zona de Perigo, reset e confirmação. Nunca clica em "Salvar" nem em "Sim, Apagar Tudo e Reiniciar"; fecha a janela e o aviso ao terminar
@@ -111,11 +111,11 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 
 ## E. Ejetar
 - [x] Feito · ☑ Testado · 🖥 Tour "Ejetar & Sincronizar": botão, janela, idioma do código, stacks (Node.js, Java, "em breve"), configuração da stack, confirmar
-- [x] Feito · ☐ Testado · Ação "Ejetar para uma pasta": não existe mais (decisão de 2026-10-20: o botão foi substituído por **Sincronizar** + **Entrega**); nada a cobrir. Os tours "Ejetar & Sincronizar" e "Ejetar na prática" cobrem o Sincronizar
-- [x] Feito · ☐ Testado · Sincronizar e conflitos (tela "Sincronização pendente"): ver **tours-checklist-janelas.md**, seção F
-- [x] Feito · ☐ Testado · Console de sincronização e de logs do túnel (passo de texto no tour do Túnel): ver **tours-checklist-janelas.md**, seção G
+- [x] Feito · ☑ Testado · Ação "Ejetar para uma pasta": não existe mais (decisão de 2026-10-20: o botão foi substituído por **Sincronizar** + **Entrega**); nada a cobrir. Os tours "Ejetar & Sincronizar" e "Ejetar na prática" cobrem o Sincronizar
+- [x] Feito · ☑ Testado · Sincronizar e conflitos (tela "Sincronização pendente"): ver **tours-checklist-janelas.md**, seção F
+- [x] Feito · ☑ Testado · Console de sincronização e de logs do túnel (passo de texto no tour do Túnel): ver **tours-checklist-janelas.md**, seção G
 - [x] Feito · Exportar projeto e exportar workspace: não existe mais na tela (ícone removido em 2026-10-14; os dois modais são código órfão), então não há tour
-- [x] Feito · ☐ Testado · Gerar App Desktop Nativo (interior da janela): ver **tours-checklist-janelas.md**, seção E
+- [x] Feito · ☑ Testado · Gerar App Desktop Nativo (interior da janela): ver **tours-checklist-janelas.md**, seção E
 
 ### E2. Ejetar na prática (novo, 2026-11-11)
 Tour que GERA o código de verdade (menu **?** da IDE Local, "Ejetar na prática (gera o código)"). O código vai para um sandbox; nada entra na pasta até o "Efetivar Merge". Só aparece habilitado sem sincronização pendente.

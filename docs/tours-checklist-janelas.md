@@ -52,13 +52,12 @@ A janela de Commit só abre se houver alteração local pendente. Para testar: e
 
 ## F. Sincronização pendente (tela de revisão) (menu ? da própria tela: "Sincronização pendente: resolver as diferenças")
 A tela só existe quando o projeto está com "Sincronização pendente" (tabela ou coluna sumiu do banco). Para provocar: renomeie uma tabela no banco do cliente e sincronize pelo Gerenciador do Túnel; clique no selo âmbar "Sincronização pendente" do cartão do projeto.
-- [x] Feito · ☐ Testado · Por que a tela apareceu (explicação)
-- [x] Feito · ☐ Testado · Tabelas ausentes e Colunas ausentes (pode escolher nas listas: nada vale antes de aplicar)
-- [x] Feito · ☐ Testado · "Aplicar Resoluções e Sincronizar" só destacado (o tour nunca clica)
-- ⚠ Não consegui abrir essa tela no navegador (depende de um projeto nesse estado): testada só por tipos e testes de catálogo.
+- [x] Feito · ☑ Testado · Por que a tela apareceu (explicação)
+- [x] Feito · ☑ Testado · Tabelas ausentes e Colunas ausentes (pode escolher nas listas: nada vale antes de aplicar)
+- [x] Feito · ☑ Testado · "Aplicar Resoluções e Sincronizar" só destacado (o tour nunca clica)
 
 ## G. Console de sincronização e logs do túnel 🖥 (passo novo no fim do tour "Gerenciador do Túnel", no Studio e nos dois do portal)
-- [x] Feito · ☐ Testado · 🖥 Passo "O que aparece ao sincronizar e nos logs": explica o console ao vivo, o Fechar desativado enquanto roda, o resultado e a janela separada de Logs
+- [x] Feito · ☑ Testado · 🖥 Passo "O que aparece ao sincronizar e nos logs": explica o console ao vivo, o Fechar desativado enquanto roda, o resultado e a janela separada de Logs
 - ⚠ É só texto, de propósito: o console de sincronização só abre depois de sincronizar de verdade (lê o banco do cliente) e os Logs abrem em outra janela do sistema, que o tour não alcança.
 
 ## H. Menu ? da IDE com os grupos novos
