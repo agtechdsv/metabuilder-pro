@@ -61,10 +61,10 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Muestra el nombre, la dirección (/slug) y cuántos proyectos tiene. Hacer clic en la tarjeta, o en el botón redondo, abre los proyectos del workspace.',
       ], { ...OPT, readOnly: true }),
       st('actions', 'portal.ws_actions', ['Ícones do cartão', 'Card icons', 'Íconos de la tarjeta'], [
-        'Ao passar o mouse sobre o cartão aparecem os ícones de ação. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um: você pode clicar no ícone destacado para experimentar.',
-        'When you hover the card, the action icons show up. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one: you can click the highlighted icon to try it.',
-        'Al pasar el mouse sobre la tarjeta aparecen los íconos de acción. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno: puede hacer clic en el ícono resaltado para probar.',
-      ], OPT),
+        'Ao passar o mouse sobre o cartão aparecem os ícones de ação. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um nos próximos passos.',
+        'When you hover the card, the action icons show up. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one in the next steps.',
+        'Al pasar el mouse sobre la tarjeta aparecen los íconos de acción. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno en los próximos pasos.',
+      ], { ...OPT, readOnly: true }),
       st('act-open', 'portal.ws_act_open', ['Acessar Portal', 'Open Portal', 'Acceder al Portal'], [
         'Abre o portal do workspace, a vitrine com os projetos marcados para aparecer nele. Fica desativado enquanto nenhum projeto do workspace estiver no portal.',
         'Opens the workspace portal, the showcase with the projects marked to show in it. It stays disabled while no project of the workspace is in the portal.',
@@ -185,10 +185,10 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'El botón redondo abre el Studio del proyecto, donde crea y edita los casos de uso.',
       ], { ...OPT, readOnly: true }),
       st('actions', 'portal.pj_actions', ['Ícones do cartão', 'Card icons', 'Íconos de la tarjeta'], [
-        'Passe o mouse sobre o cartão para ver as ações. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um: você pode clicar no ícone destacado para experimentar.',
-        'Hover the card to see the actions. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one: you can click the highlighted icon to try it.',
-        'Pase el mouse sobre la tarjeta para ver las acciones. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno: puede hacer clic en el ícono resaltado para probar.',
-      ], OPT),
+        'Passe o mouse sobre o cartão para ver as ações. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um nos próximos passos.',
+        'Hover the card to see the actions. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one in the next steps.',
+        'Pase el mouse sobre la tarjeta para ver las acciones. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno en los próximos pasos.',
+      ], { ...OPT, readOnly: true }),
       st('act-open', 'portal.pj_act_open', ['Acessar versão publicada', 'Open published version', 'Acceder a la versión publicada'], [
         'Abre o app do projeto como o usuário final o vê, no endereço publicado.',
         'Opens the project app as the end user sees it, at the published address.',

@@ -288,8 +288,8 @@ describe('tours do portal: cliques livres e ícones desativados', () => {
 
   it('passos que navegam ou gravam na hora são só leitura', () => {
     const only = (tourId: string, stepId: string) => PLATFORM_TOURS.find(t => t.id === tourId)?.steps.find(s => s.id === stepId)?.readOnly === true
-    for (const id of ['card', 'enter']) expect(only('portal-workspaces', id), `ws/${id}`).toBe(true)
-    for (const id of ['card', 'enter', 'act-portal', 'act-toggle']) expect(only('portal-projetos', id), `pj/${id}`).toBe(true)
+    for (const id of ['card', 'actions', 'enter']) expect(only('portal-workspaces', id), `ws/${id}`).toBe(true)
+    for (const id of ['card', 'actions', 'enter', 'act-portal', 'act-toggle']) expect(only('portal-projetos', id), `pj/${id}`).toBe(true)
   })
 
   it('ícones por papel não são mais opcionais: aparecem desativados em vez de sumir', () => {
