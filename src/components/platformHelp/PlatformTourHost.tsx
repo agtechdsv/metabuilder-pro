@@ -447,7 +447,7 @@ export function PlatformTourHost() {
         role="dialog"
         aria-label={title || resolveHelp(active.tour.title, language)}
         className="fixed rounded-2xl border border-neutral-200 bg-white p-4 text-neutral-800 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-        style={{ top, left, width: POPOVER_W, pointerEvents: 'auto' }}
+        style={{ top, left, width: POPOVER_W, pointerEvents: 'auto', ...(waiting && step.skipIfMissing ? { visibility: 'hidden' as const } : null) }}
       >
         <div className="mb-1 flex items-start justify-between gap-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">{resolveHelp(active.tour.title, language)}</span>
