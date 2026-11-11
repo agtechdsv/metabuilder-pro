@@ -908,6 +908,7 @@ export function IDEHeader({
           {sandboxMode ? (
             <>
               <button
+                data-help-id="ide.btn_discard"
                 onClick={() => setShowDiscardConfirm(true)}
                 disabled={isDiscarding || isConfirming}
                 className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
@@ -916,6 +917,7 @@ export function IDEHeader({
                 {isDiscarding ? t('workspace_components.ide_local.discarding', 'Descartando...') : t('workspace_components.ide_local.discard', 'Descartar')}
               </button>
               <button
+                data-help-id="ide.btn_merge"
                 onClick={() => handleOpenCommitModal('merge')}
                 disabled={isDiscarding || isConfirming}
                 className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50"

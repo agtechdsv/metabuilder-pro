@@ -30,7 +30,7 @@ describe('rotas da ajuda da plataforma', () => {
     expect(ids('/admin/w/p/studio/tunnel')).toEqual(['ide-json'])
     expect(ids('/admin/w/p/studio/terminal')).toEqual(['ide-terminal'])
     expect(ids('/admin/w/p/studio/sql')).toEqual(['ide-sql'])
-    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar'])
+    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar', 'ide-ejetar-pratica'])
     expect(ids('/outra/rota')).toEqual([])
   })
 })
@@ -385,5 +385,36 @@ describe('portal: janela do portal no passo 4, ícones 🖥 clicáveis na IDE e 
       expect(src.includes(`"${tab}"`), tab).toBe(true)
       expect(t.steps.length, id).toBeGreaterThan(3)
     }
+  })
+})
+
+describe('tour prático "Ejetar na prática"', () => {
+  const tour = PLATFORM_TOURS.find(t => t.id === 'ide-ejetar-pratica')!
+
+  it('existe na IDE Local e só vale sem sincronização pendente', () => {
+    expect(tour.route).toBe('/ide-local')
+    expect(tour.needs).toBe('ide.btn_sync')
+    expect(tour.needsHint).toBeTruthy()
+  })
+
+  it('os cliques que geram e gravam de verdade são passos de clique, na ordem sincronizar > gerar > merge > efetivar', () => {
+    const clicks = tour.steps.filter(s => s.advanceOnClick).map(s => s.target)
+    expect(clicks).toEqual(['ide.btn_sync', 'ide.eject_confirm', 'ide.btn_merge', 'ide.merge_apply'])
+    // gerar espera o sandbox (pode demorar) e o tour fecha a janela de ejetar se a pessoa sair dele
+    expect(tour.steps.find(s => s.id === 'confirm')!.advanceWaitMs).toBeGreaterThanOrEqual(120000)
+    expect(tour.cleanupClick).toContain('ide.eject_cancel')
+    // o tour de leitura continua bloqueando o botão de gerar
+    expect(PLATFORM_TOURS.find(t => t.id === 'ide-ejetar')!.neverClick).toContain('ide.eject_confirm')
+  })
+
+  it('nenhum botão do sandbox/merge fica sem passo: Descartar é destacado junto, mas só o Confirmar Merge responde', () => {
+    const s = tour.steps.find(x => x.id === 'sandbox')!
+    expect(s.target).toBe('ide.btn_merge')
+    expect(s.alsoTarget).toBe('ide.btn_discard')
+    expect(tour.freeClicks).toBeFalsy()
+  })
+
+  it('tem os textos nos 3 idiomas', () => {
+    for (const s of tour.steps) { for (const l of ['pt', 'en', 'es'] as const) expect((s.body as any)[l], `${s.id}/${l}`).toBeTruthy() }
   })
 })

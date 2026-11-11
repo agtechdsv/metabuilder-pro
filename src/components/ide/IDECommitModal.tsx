@@ -268,6 +268,7 @@ export function IDECommitModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          data-tour-modal=""
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -381,7 +382,7 @@ export function IDECommitModal({
                       ></textarea>
                     </>
                   ) : (
-                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm text-indigo-200">
+                    <div data-help-id="ide.merge_desc" className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 text-sm text-indigo-200">
                       {t(
                         'ide_commit_local.merge_review_desc',
                         'Revise as alterações geradas pelo Studio antes de efetivar o merge na sua branch local. Você pode reverter arquivos inteiros ou descartar trechos usando o visualizador de Diff ao lado.'
@@ -391,7 +392,7 @@ export function IDECommitModal({
                 </div>
 
                 {/* File List */}
-                <div className="flex-1 overflow-y-auto p-2">
+                <div data-help-id="ide.merge_files" className="flex-1 overflow-y-auto p-2">
                   <div className="flex items-center justify-between px-2 mb-2">
                     <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                       {t('ide_commit_local.changed_files', 'Arquivos Alterados')} ({changedFiles.length})
@@ -583,6 +584,7 @@ export function IDECommitModal({
                 {t('ide_commit_local.cancel', 'Cancelar')}
               </button>
               <button
+                data-help-id="ide.merge_apply"
                 onClick={modalMode === 'commit' ? handleCommitAdvanced : runMerge}
                 disabled={busy || (modalMode === 'commit' && selectedCommitFiles.size === 0)}
                 className="flex items-center gap-2 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"

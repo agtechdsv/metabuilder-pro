@@ -1,7 +1,7 @@
 # Checklist dos tours que faltam (portal, abas do Studio, barra lateral, IDE Local e Ejetar)
 
 Como usar:
-- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1369 testes).
+- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1373 testes).
 - **Testado** `☑`: você marca depois de testar no navegador ou na IDE. Começa em `☐`.
 - 🖥 = função exclusiva da IDE Desktop. No site o passo aparece com o aviso "Disponível só na IDE Desktop" (decisão confirmada: mostrar com aviso) e o ícone nunca é clicável pelo tour.
 - Itens com ⏳ ficaram para depois (motivo na linha).
@@ -111,6 +111,14 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - [ ] ⏳ Console de sincronização e de logs do túnel
 - [ ] ⏳ Exportar projeto e exportar workspace (portal + apps)
 - [ ] ⏳ Gerar App Desktop Nativo (janela `DesktopAppGeneratorModal`; no portal só o ícone está coberto)
+
+### E2. Ejetar na prática (novo, 2026-11-11)
+Tour que GERA o código de verdade (menu **?** da IDE Local, "Ejetar na prática (gera o código)"). O código vai para um sandbox; nada entra na pasta até o "Efetivar Merge". Só aparece habilitado sem sincronização pendente.
+- [x] Feito · ☐ Testado · 🖥 Abrir a janela: clicar em Sincronizar, escolher idioma, stack (Node.js ou Java) e configuração com cliques livres
+- [x] Feito · ☐ Testado · 🖥 Gerar: "Sincronizar Repositório" gera no sandbox (o balão espera; se a IDE pedir nome de pasta, responder na tela)
+- [x] Feito · ☐ Testado · 🖥 Sandbox: botões Descartar (só destacado) e Confirmar Merge; revisão dos arquivos gerados
+- [x] Feito · ☐ Testado · 🖥 Efetivar o merge: o fonte aparece no explorador; passos finais (Sincronizar de novo, explorador, Commit)
+- ⚠ Não testado por mim: a geração real e o merge dependem da IDE e da nuvem. Caminhos a observar: pasta vazia (a IDE renomeia a pasta para projeto-pilha e continua), pilha trocada, e "Nenhuma alteração para o merge" (o tour fica no passo de gerar: feche com o X).
 
 ---
 
