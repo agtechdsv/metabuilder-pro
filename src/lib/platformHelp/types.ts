@@ -29,6 +29,8 @@ export interface PlatformStep {
   enterClick?: string
   /** o passo só avança quando a pessoa clica no próprio elemento destacado (ex.: "Próximo passo" do assistente) */
   advanceOnClick?: boolean
+  /** o item destacado responde ao clique de verdade e esse clique ENCERRA o tour (ex.: Cancelar fecha a janela; Gerar começa o trabalho e o tour sai da frente) */
+  endOnClick?: boolean
   /** quanto esperar (ms) o item do próximo passo aparecer depois do clique; padrão 1500. Ações que gravam (criar, publicar) levam mais */
   advanceWaitMs?: number
   /** deixa a pessoa usar o item destacado sem avançar (preencher o nome, escolher a lógica). Os outros passos bloqueiam a tela */

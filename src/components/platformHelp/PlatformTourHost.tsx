@@ -226,13 +226,18 @@ export function PlatformTourHost() {
 
   // passo que só avança quando a pessoa clica no elemento destacado
   useEffect(() => {
-    if (!step?.advanceOnClick || !step.target || !hasRect || !ready) return
+    if (!(step?.advanceOnClick || step?.endOnClick) || !step.target || !hasRect || !ready) return
     const el = findById(step.target)
     if (!el) return
     let busy = false
     const onClick = async () => {
       if (busy) return
       busy = true
+      if (step.endOnClick) {
+        // o clique é do app (esta escuta roda antes do botão): o tour só sai de cena um instante depois, sem fechar nada por cima do que o clique começou
+        setTimeout(() => { const cur = activeRef.current; if (cur) { markTourSeen(cur.tour.id); stopPlatformTour('concluído') } }, 600)
+        return
+      }
       holdRef.current = true
       setAdvancing(true)
       setRect(null)
@@ -312,7 +317,7 @@ export function PlatformTourHost() {
       if (target) {
         const els = Array.from(document.querySelectorAll(`[data-help-id="${esc(target)}"]`)) as HTMLElement[]
         // com o passo bloqueado (esperando condição ou só leitura) nada fora do balão responde; com o passo liberado, só o próprio item
-        const open = openStep || (step.advanceOnClick && ready)
+        const open = openStep || ((step.advanceOnClick || step.endOnClick) && ready)
         if (open && els.some(el => el.contains(node))) return
       }
       e.stopPropagation()
@@ -434,7 +439,7 @@ export function PlatformTourHost() {
             />
           )}
           {/* a tela atrás do escurecimento não responde a cliques (senão a pessoa sai do tour sem querer); só o item destacado, e só nos passos que pedem o clique */}
-          {step.freeInteraction || (popupOpen && openStep) ? null : (step.advanceOnClick && ready) || openStep ? (
+          {step.freeInteraction || (popupOpen && openStep) ? null : ((step.advanceOnClick || step.endOnClick) && ready) || openStep ? (
             <>
               <div className="fixed left-0 right-0 top-0" style={{ height: Math.max(0, rect.top - PAD), pointerEvents: 'auto' }} />
               <div className="fixed bottom-0 left-0 right-0" style={{ top: rect.bottom + PAD, pointerEvents: 'auto' }} />

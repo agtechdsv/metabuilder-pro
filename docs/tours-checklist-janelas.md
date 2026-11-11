@@ -6,7 +6,7 @@ Como usar:
 - **Feito** `[x]`: marcado por mim quando o tour está codado e passou em `tsc` e nos testes (1388 testes, todos verdes).
 - **Testado** `☑`: você marca depois de testar na IDE ou no navegador. Começa em `☐`.
 - 🖥 = só na IDE Desktop (o site não tem a janela).
-- Todos os tours abrem a janela sozinhos, só explicam e fecham a janela no fim. Nenhum clica no botão que grava, gera, executa ou apaga.
+- Todos os tours abrem a janela sozinhos, só explicam e fecham a janela no fim. O tour nunca clica sozinho no botão que grava, gera, executa ou apaga; só a Entrega deixa VOCÊ clicar em "Gerar entrega" no último passo.
 - Onde achar os tours: menu **?** da IDE Local (grupos Git, Ejetar & Sincronizar e Testes) e menu **?** do portal.
 
 Legenda de cada linha: `- [ ] Feito · ☐ Testado · item`
@@ -15,10 +15,10 @@ Legenda de cada linha: `- [ ] Feito · ☐ Testado · item`
 
 ## A. Entrega 🖥 (menu ? da IDE: grupo "Ejetar & Sincronizar" › "Entrega")
 Precisa do projeto já sincronizado e sem merge pendente (senão o botão Entrega fica desativado e o tour só mostra o primeiro passo).
-- [x] Feito · ☐ Testado · 🖥 O botão Entrega e a abertura da janela (sozinha, sem gerar nada)
-- [x] Feito · ☐ Testado · 🖥 "De onde vem o código" e "O que gerar" (pode marcar e desmarcar Código-fonte, Pacote Docker e Pacote compilado: nada é gerado)
-- [x] Feito · ☐ Testado · 🖥 Formato (Pasta ou ZIP) e "Segredos e limpeza da pasta" (pode clicar nas opções)
-- [x] Feito · ☐ Testado · 🖥 "Gerar entrega" só destacado (o tour nunca clica) e a janela fecha ao terminar o tour ou ao sair no meio
+- [x] Feito · ☑ Testado · 🖥 O botão Entrega e a abertura da janela (sozinha, sem gerar nada)
+- [x] Feito · ☑ Testado · 🖥 "De onde vem o código" e "O que gerar" (pode marcar e desmarcar Código-fonte, Pacote Docker e Pacote compilado: nada é gerado)
+- [x] Feito · ☑ Testado · 🖥 Formato (Pasta ou ZIP) e "Segredos e limpeza da pasta" (pode clicar nas opções)
+- [x] Feito · ☐ Testado · 🖥 Novo (2026-11-11): os dois últimos passos são "Cancelar" (7) e "Gerar entrega" (8), nessa ordem, e respondem ao clique. Clicar em Cancelar fecha a janela e encerra o tour; clicar em Gerar entrega começa a gerar de verdade (escolhe destino, mostra o andamento) e o tour sai da frente. Sem clicar: Concluir fecha a janela sem gerar
 - ⚠ A opção "Pacote Docker" aparece desativada se a pasta não tem o pacote de produção (precisa Sincronizar de novo): o passo continua igual.
 
 ## B. Commit 🖥 (grupo "Git" › "Commit: revisar e confirmar as alterações")

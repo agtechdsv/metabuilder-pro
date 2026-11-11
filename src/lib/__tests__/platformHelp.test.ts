@@ -484,12 +484,15 @@ describe('tours das janelas da IDE e do portal (Entrega, Commit, Histórico, Tes
   const tour = (id: string) => PLATFORM_TOURS.find(t => t.id === id)!
   const step = (tid: string, sid: string) => tour(tid).steps.find(s => s.id === sid)!
 
-  it('Entrega: abre a janela sozinho, nunca gera e fecha no fim', () => {
+  it('Entrega: abre a janela sozinho, fecha no fim, e Cancelar e Gerar respondem ao clique e encerram o tour (Cancelar vem antes de Gerar)', () => {
     const t = tour('ide-entrega')
-    expect(t.neverClick).toContain('ide.deliv_generate')
     expect(t.cleanupClick).toContain('ide.deliv_cancel')
     expect(step('ide-entrega', 'header').enterClick).toBe('ide.btn_delivery')
-    expect(step('ide-entrega', 'generate').readOnly).toBe(true)
+    expect(t.steps.map(s => s.id).slice(-2)).toEqual(['close', 'generate'])
+    for (const id of ['close', 'generate']) {
+      expect(step('ide-entrega', id).endOnClick, id).toBe(true)
+      expect(step('ide-entrega', id).readOnly, id).toBeFalsy()
+    }
   })
 
   it('Commit: nunca confirma o commit e o comparador de diferenças é só leitura (editar salva o arquivo)', () => {

@@ -1,7 +1,7 @@
 /**
  * Tours das janelas da IDE Local que ainda não tinham tour próprio: Entrega, Commit (revisão das alterações), Histórico do Git e Ambiente de Testes.
- * Só explicam: cada um abre a janela por você (`enterClick`), passa pelas partes e fecha no fim (`cleanupClick`). Nunca clicam em "Gerar entrega",
- * "Confirmar Commit" nem em "Executar testes"; as áreas que alterariam algo (editor de diferenças, troca de branch, reverter) ficam só para leitura.
+ * Só explicam: cada um abre a janela por você (`enterClick`), passa pelas partes e fecha no fim (`cleanupClick`). Nunca clicam em "Confirmar Commit"
+ * nem em "Executar testes". Na Entrega, Cancelar e Gerar entrega respondem ao clique (`endOnClick`: o clique encerra o tour); as áreas que alterariam algo (editor de diferenças, troca de branch, reverter) ficam só para leitura.
  * Alvos: `data-help-id` ide.deliv_*, ide.commit_*, ide.merge_*, ide.hist_*, ide.test_* e portal.test_close.
  */
 
@@ -22,7 +22,6 @@ export const IDE_WINDOWS_TOURS: readonly PlatformTour[] = [
     id: 'ide-entrega',
     route: IDE,
     needs: 'ide.btn_delivery',
-    neverClick: ['ide.deliv_generate'],
     cleanupClick: ['ide.deliv_cancel'],
     title: h(['Entrega (cópia limpa para publicar)', 'Delivery (clean copy to publish)', 'Entrega (copia limpia para publicar)']),
     summary: h(['A janela que gera uma cópia limpa do app, sem Git e sem segredos: código-fonte, pacote Docker ou pacote compilado.', 'The window that generates a clean copy of the app, with no Git and no secrets: source code, Docker package or compiled package.', 'La ventana que genera una copia limpia de la app, sin Git y sin secretos: código fuente, paquete Docker o paquete compilado.']),
@@ -57,16 +56,16 @@ export const IDE_WINDOWS_TOURS: readonly PlatformTour[] = [
         'By default secrets stay out: .env.local becomes a .env.example with names only and, in Java, passwords and keys become environment variables. Only tick "Also include secrets" if the delivery is for yourself. "Clean the folder before exporting" erases what is already in the destination (keeps node_modules, .git, .next and target) and always asks for your confirmation first, showing what will be erased.',
         'Por defecto los secretos quedan fuera: el .env.local pasa a ser un .env.example solo con los nombres y, en Java, contraseñas y claves pasan a variables de entorno. Solo marque "Llevar también los secretos" si la entrega es para usted mismo. "Limpiar la carpeta antes de exportar" borra lo que ya está en el destino (mantiene node_modules, .git, .next y target) y siempre pide su confirmación antes, mostrando lo que se borrará.',
       ], { ...OPT, interactive: true }),
+      st('close', 'ide.deliv_cancel', ['Cancelar: fecha sem gerar', 'Cancel: closes without generating', 'Cancelar: cierra sin generar'], [
+        'Cancelar fecha a janela sem gerar nada. Pode clicar nele para sair agora: o tour termina. Se preferir ver o último botão, use Próximo.',
+        'Cancel closes the window without generating anything. You can click it to leave now: the tour ends. If you would rather see the last button, use Next.',
+        'Cancelar cierra la ventana sin generar nada. Puede hacer clic para salir ahora: el tour termina. Si prefiere ver el último botón, use Siguiente.',
+      ], { ...OPT, endOnClick: true }),
       st('generate', 'ide.deliv_generate', ['Gerar entrega', 'Generate delivery', 'Generar entrega'], [
-        'Este botão escolhe o destino e gera a entrega, mostrando o andamento na própria janela e, no fim, um atalho para abrir a pasta. O tour nunca clica nele.',
-        'This button picks the destination and generates the delivery, showing progress in the window itself and, at the end, a shortcut to open the folder. The tour never clicks it.',
-        'Este botón elige el destino y genera la entrega, mostrando el avance en la propia ventana y, al final, un acceso directo para abrir la carpeta. El tour nunca hace clic en él.',
-      ], { ...OPT, readOnly: true }),
-      st('close', 'ide.deliv_cancel', ['Fechar sem gerar', 'Close without generating', 'Cerrar sin generar'], [
-        'Cancelar fecha a janela sem gerar nada. Ao terminar o tour, fechamos a janela por você.',
-        'Cancel closes the window without generating anything. When the tour ends, we close the window for you.',
-        'Cancelar cierra la ventana sin generar nada. Al terminar el tour, cerramos la ventana por usted.',
-      ], { ...OPT, readOnly: true }),
+        'Este botão gera a entrega de verdade: escolhe o destino (pasta ou ZIP), mostra o andamento na própria janela e, no fim, oferece abrir a pasta. O pacote compilado leva alguns minutos. Se não quiser gerar agora, use Concluir: a janela fecha sem gerar. Se clicar aqui, o tour termina e a geração segue na janela.',
+        'This button really generates the delivery: it picks the destination (folder or ZIP), shows progress in the window itself and, at the end, offers to open the folder. The compiled package takes a few minutes. If you do not want to generate now, use Finish: the window closes without generating. If you click here, the tour ends and the generation continues in the window.',
+        'Este botón genera la entrega de verdad: elige el destino (carpeta o ZIP), muestra el avance en la propia ventana y, al final, ofrece abrir la carpeta. El paquete compilado tarda unos minutos. Si no quiere generar ahora, use Concluir: la ventana se cierra sin generar. Si hace clic aquí, el tour termina y la generación sigue en la ventana.',
+      ], { ...OPT, endOnClick: true }),
     ],
   },
 
