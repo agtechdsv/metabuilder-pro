@@ -424,6 +424,7 @@ export function ProjectManager({
         {desktop && (
           <>
             <button
+              data-help-id="portal.pj_tab_tunnel"
               onClick={() => setActiveTab('tunnel')}
               className={cn(
                 'pb-3 text-sm font-bold transition-all relative',
@@ -438,6 +439,7 @@ export function ProjectManager({
               )}
             </button>
             <button
+              data-help-id="portal.pj_tab_synced"
               onClick={() => setActiveTab('synced-dbs')}
               className={cn(
                 'pb-3 text-sm font-bold transition-all relative',

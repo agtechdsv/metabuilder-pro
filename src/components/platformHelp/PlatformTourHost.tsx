@@ -83,7 +83,7 @@ export function PlatformTourHost() {
   const total = active ? active.tour.steps.length : 0
   const isLast = !!active && active.index === total - 1
   // o item destacado aceita cliques: passos `interactive`, ou qualquer passo com alvo num tour de cliques livres (menos os `readOnly`)
-  const openStep = !!step && !step.ideOnly && (!!step.interactive || (!!active?.tour.freeClicks && !step.readOnly && !!step.target))
+  const openStep = !!step && (!step.ideOnly || (!!step.ideClick && isTauri())) && (!!step.interactive || (!!active?.tour.freeClicks && !step.readOnly && !!step.target))
   const key = active ? `${active.tour.id}:${active.index}` : ''
   const activeRef = useRef(active)
   activeRef.current = active

@@ -1,7 +1,7 @@
 # Checklist dos tours que faltam (portal, abas do Studio, barra lateral, IDE Local e Ejetar)
 
 Como usar:
-- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1366 testes).
+- **Feito** `[x]`: marcado por mim quando o tour/passo está codado e passou em `tsc` e nos testes (1369 testes).
 - **Testado** `☑`: você marca depois de testar no navegador ou na IDE. Começa em `☐`.
 - 🖥 = função exclusiva da IDE Desktop. No site o passo aparece com o aviso "Disponível só na IDE Desktop" (decisão confirmada: mostrar com aviso) e o ícone nunca é clicável pelo tour.
 - Itens com ⏳ ficaram para depois (motivo na linha).
@@ -55,15 +55,22 @@ Os ícones só aparecem ao passar o mouse sobre o cartão; durante o tour eles f
 
 ### A3. Ícones desativados por papel e cliques livres no portal (novo, 2026-11-11)
 Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os mesmos ícones**; para o dev, o que ele não pode fazer aparece apagado, com o motivo no tooltip. Nenhum passo é pulado por falta de permissão.
-- [x] Feito · ☐ Testado · Cartão do workspace, dev: ícones IDE Local, Editar, Excluir e IA aparecem desativados (tooltip diz o motivo)
-- [x] Feito · ☐ Testado · Cartão do workspace: "Acessar Portal" aparece desativado enquanto nenhum projeto do workspace está no portal
-- [x] Feito · ☐ Testado · Cartão do projeto, dev: IDE Local, Ambiente de Testes (só na IDE), Ativar/Desativar, Editar e Excluir desativados
-- [x] Feito · ☐ Testado · Tour dos workspaces com o dev: percorre os 14 passos sem pular o da IA (destaca o ícone desativado)
-- [x] Feito · ☐ Testado · Cliques livres nos dois tours: dá para clicar no ícone destacado (Novo, Editar, Excluir, Acessar, IA, Personalizar portal...) e a janela abre; o balão vai para o canto
-- [x] Feito · ☐ Testado · "Sim, excluir" do workspace e do projeto nunca respondem durante o tour, e a janela de exclusão é fechada ao terminar
-- [x] Feito · ☐ Testado · Passos só de leitura (não deixam clicar): entrar no cartão/Studio, Ativar/Desativar, Adicionar/Remover do Portal, 🖥 ícones da IDE
-- [x] Feito · ☐ Testado · Painéis laterais (Novo/Editar workspace e projeto) contam como janela do tour: dá para preencher e fechar sem o tour atrapalhar
+- [x] Feito · ☑ Testado · Cartão do workspace, dev: ícones IDE Local, Editar, Excluir e IA aparecem desativados (tooltip diz o motivo)
+- [x] Feito · ☑ Testado · Cartão do workspace: "Acessar Portal" aparece desativado enquanto nenhum projeto do workspace está no portal
+- [x] Feito · ☑ Testado · Cartão do projeto, dev: IDE Local, Ambiente de Testes (só na IDE), Ativar/Desativar, Editar e Excluir desativados
+- [x] Feito · ☑ Testado · Tour dos workspaces com o dev: percorre os 14 passos sem pular o da IA (destaca o ícone desativado)
+- [x] Feito · ☑ Testado · Cliques livres nos dois tours: dá para clicar no ícone destacado (Novo, Editar, Excluir, Acessar, IA, Personalizar portal...) e a janela abre; o balão vai para o canto
+- [x] Feito · ☑ Testado · "Sim, excluir" do workspace e do projeto nunca respondem durante o tour, e a janela de exclusão é fechada ao terminar
+- [x] Feito · ☑ Testado · Passos só de leitura (não deixam clicar): entrar no cartão/Studio, Ativar/Desativar, Adicionar/Remover do Portal, 🖥 ícones da IDE
+- [x] Feito · ☑ Testado · Painéis laterais (Novo/Editar workspace e projeto) contam como janela do tour: dá para preencher e fechar sem o tour atrapalhar
 - ⚠ Ainda fora do tour livre: o botão "Salvar" do portal é bloqueado de propósito; o "Salvar" dos painéis Novo/Editar não é (se você salvar, grava de verdade).
+
+### A4. Ajustes pedidos após o teste do A3 (novo, 2026-11-11)
+- [x] Feito · ☐ Testado · Tour dos projetos: ao clicar em "Personalizar portal" (passo 4), os passos da janela (Configurações, Logo, Banner, Salvar/Cancelar) vêm na sequência; ao avançar a janela fecha sozinha e, ao voltar, reabre. Sem clique seu, o tour abre a janela por você
+- [x] Feito · ☐ Testado · 🖥 Na IDE, o ícone "Gerar App Desktop Nativo" (workspace e projeto) abre a janela ao clicar; "Gerar Instalador" nunca responde e a janela fecha ao terminar o tour. No site continua só mostrando
+- [x] Feito · ☐ Testado · 🖥 Workspaces: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (abrem a aba sozinhos; só no menu da IDE)
+- [x] Feito · ☐ Testado · 🖥 Projetos do workspace: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (idem)
+- ⚠ IDE Local (🖥) e Ambiente de Testes (🖥) continuam só mostrando: abrem telas grandes que o tour não controla (o Ambiente de Testes executa testes de verdade).
 
 ## B. Abas do Studio
 - [x] Feito · ☑ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)

@@ -171,7 +171,7 @@ export function DesktopAppGeneratorModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div data-tour-modal="" className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -349,6 +349,7 @@ export function DesktopAppGeneratorModal({
                 )}
                 <div className="flex items-center justify-end gap-3">
                 <button
+                  data-help-id="portal.desktop_cancel"
                   onClick={onClose}
                   disabled={isGenerating}
                   className="px-6 py-2 text-sm font-bold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
@@ -356,6 +357,7 @@ export function DesktopAppGeneratorModal({
                   {t('workspace_components.desktop_generator.cancel', 'Cancelar')}
                 </button>
                 <button
+                  data-help-id="portal.desktop_generate"
                   onClick={handleGenerate}
                   disabled={isGenerating || !appName}
                   className="flex items-center gap-2 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all"

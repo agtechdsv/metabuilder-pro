@@ -39,6 +39,8 @@ export interface PlatformStep {
   readOnly?: boolean
   /** função exclusiva da IDE Desktop: o passo só mostra (nunca deixa clicar) e, no site, avisa que ela só existe na IDE */
   ideOnly?: boolean
+  /** junto com `ideOnly`: na IDE Desktop o item destacado aceita clique (abre uma janela segura, com os botões que gravam em `neverClick`); no site continua só mostrando */
+  ideClick?: boolean
   /** a tela inteira fica livre (sem bloqueio) para uma tarefa que usa mais de um lugar, como arrastar de um painel para outro */
   freeInteraction?: boolean
   /**

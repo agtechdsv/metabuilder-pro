@@ -8,6 +8,7 @@
 
 import type { HelpText } from '../helpText'
 import type { PlatformStep, PlatformTour } from './types'
+import { STUDIO_TABS_TOURS } from './catalogStudioTabs'
 
 type T3 = readonly [string, string, string]
 const h = (t: T3): HelpText => ({ pt: t[0], en: t[1], es: t[2] })
@@ -18,14 +19,14 @@ const WS = '/workspace'
 const PJ = '/admin/:workspace'
 const OPT = { skipIfMissing: true }
 
-export const PORTAL_TOURS: readonly PlatformTour[] = [
+const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
   // ───────────────────────── workspaces ─────────────────────────
   {
     id: 'portal-workspaces',
     route: WS,
     freeClicks: true,
-    neverClick: ['portal.ws_delete_yes'],
-    cleanupClick: ['portal.ws_delete_cancel'],
+    neverClick: ['portal.ws_delete_yes', 'portal.desktop_generate'],
+    cleanupClick: ['portal.ws_delete_cancel', 'portal.desktop_cancel'],
     title: h(['Workspaces: visão geral', 'Workspaces: overview', 'Workspaces: visión general']),
     summary: h(['Para que serve um workspace, os contadores, o cartão e cada ícone que aparece ao passar o mouse.', 'What a workspace is for, the counters, the card and each icon that shows on hover.', 'Para qué sirve un workspace, los contadores, la tarjeta y cada ícono que aparece al pasar el mouse.']),
     steps: [
@@ -73,7 +74,7 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Empacota o workspace como um aplicativo de desktop instalável. Exclusivo da IDE Desktop.',
         'Packages the workspace as an installable desktop application. Exclusive to the Desktop IDE.',
         'Empaqueta el workspace como una aplicación de escritorio instalable. Exclusivo de la IDE Desktop.',
-      ], { ...OPT, ideOnly: true }),
+      ], { ...OPT, ideOnly: true, ideClick: true }),
       st('act-ide', 'portal.ws_act_ide', ['IDE Local (Sincronizar)', 'Local IDE (Sync)', 'IDE Local (Sincronizar)'], [
         'Abre a IDE Local do workspace: traz os apps para uma pasta do seu computador, edita o código e sincroniza de volta. É onde ficam também o ejetar e o Git. Exclusivo da IDE Desktop.',
         'Opens the Local IDE of the workspace: brings the apps to a folder on your computer, edits the code and syncs back. It is also where eject and Git live. Exclusive to the Desktop IDE.',
@@ -114,8 +115,8 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
     title: h(['Projetos do workspace: visão geral', 'Workspace projects: overview', 'Proyectos del workspace: visión general']),
     summary: h(['Criar projeto, o cartão, cada ícone de ação e como personalizar o portal do workspace.', 'Create a project, the card, each action icon and how to customize the workspace portal.', 'Crear un proyecto, la tarjeta, cada ícono de acción y cómo personalizar el portal del workspace.']),
     freeClicks: true,
-    neverClick: ['portal.portal_save', 'portal.pj_delete_yes'],
-    cleanupClick: ['portal.portal_cancel', 'portal.pj_delete_cancel'],
+    neverClick: ['portal.portal_save', 'portal.pj_delete_yes', 'portal.desktop_generate'],
+    cleanupClick: ['portal.portal_cancel', 'portal.pj_delete_cancel', 'portal.desktop_cancel'],
     steps: [
       st('banner', 'portal.pj_banner', ['Projetos do workspace', 'Workspace projects', 'Proyectos del workspace'], [
         'Aqui ficam os projetos do workspace. Um projeto é um sistema: tem as tabelas do banco do cliente, os casos de uso (as telas) e o app publicado.',
@@ -133,15 +134,36 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         '"Sus Proyectos" es la lista. En la IDE Desktop aparecen también las pestañas Gestor del Túnel y Bases Sincronizadas del workspace.',
       ]),
       st('customize', 'portal.pj_customize', ['Personalizar o portal', 'Customize the portal', 'Personalizar el portal'], [
-        'Abre a janela com o logo e o banner da tela de login do portal. Aparece quando há projetos no portal e você pode criar projetos.',
-        'Opens the window with the logo and banner of the portal login screen. It shows when there are projects in the portal and you can create projects.',
-        'Abre la ventana con el logo y el banner de la pantalla de login del portal. Aparece cuando hay proyectos en el portal y usted puede crear proyectos.',
+        'Abre a janela com o logo e o banner da tela de login do portal. Aparece quando há projetos no portal e você pode criar projetos. Clique no botão para ver a janela: os próximos passos explicam cada campo (nada é gravado).',
+        'Opens the window with the logo and banner of the portal login screen. It shows when there are projects in the portal and you can create projects. Click the button to see the window: the next steps explain each field (nothing is saved).',
+        'Abre la ventana con el logo y el banner de la pantalla de login del portal. Aparece cuando hay proyectos en el portal y usted puede crear proyectos. Haga clic en el botón para ver la ventana: los próximos pasos explican cada campo (no se guarda nada).',
+      ], OPT),
+      // a janela do portal abre pelo clique da pessoa no passo anterior (ou por este passo, se ela não clicou); só navega, nada é gravado. O passo depois dela a fecha
+      st('portal-info', 'portal.portal_info', ['Configurações do portal', 'Portal settings', 'Configuraciones del portal'], [
+        'Esta janela personaliza a tela de login global do portal de aplicações do workspace. Se você não clicou, abrimos a janela por você: nada é gravado.',
+        'This window customizes the global login screen of the workspace applications portal. If you did not click, we opened the window for you: nothing is saved.',
+        'Esta ventana personaliza la pantalla de login global del portal de aplicaciones del workspace. Si no hizo clic, abrimos la ventana por usted: no se guarda nada.',
+      ], { ...OPT, enterClick: 'portal.pj_customize', backClick: 'portal.portal_cancel' }),
+      st('portal-logo', 'portal.portal_logo', ['Logo do portal', 'Portal logo', 'Logo del portal'], [
+        'Endereço (URL) de uma imagem para o logo. Opcional: sem ele vale o logo padrão.',
+        'Address (URL) of an image for the logo. Optional: without it the default logo is used.',
+        'Dirección (URL) de una imagen para el logo. Opcional: sin ella vale el logo estándar.',
+      ], OPT),
+      st('portal-banner', 'portal.portal_banner', ['Banner do portal', 'Portal banner', 'Banner del portal'], [
+        'Endereço (URL) da imagem de fundo ou banner. Também opcional.',
+        'Address (URL) of the background or banner image. Also optional.',
+        'Dirección (URL) de la imagen de fondo o banner. También opcional.',
+      ], OPT),
+      st('portal-save', 'portal.portal_save', ['Salvar ou cancelar', 'Save or cancel', 'Guardar o cancelar'], [
+        '"Salvar" grava o logo e o banner do portal; "Cancelar" fecha sem gravar. Ao avançar, o tour fecha a janela sozinho, sem gravar.',
+        '"Save" stores the portal logo and banner; "Cancel" closes without saving. When you move on, the tour closes the window by itself, without saving.',
+        '"Guardar" graba el logo y el banner del portal; "Cancelar" cierra sin grabar. Al avanzar, el tour cierra la ventana solo, sin grabar.',
       ], OPT),
       st('refresh', 'portal.refresh', ['Atualizar a lista', 'Refresh the list', 'Actualizar la lista'], [
         'Recarrega os projetos, com o total ao lado.',
         'Reloads the projects, with the total next to it.',
         'Recarga los proyectos, con el total al lado.',
-      ], OPT),
+      ], { ...OPT, enterClick: 'portal.portal_cancel', backClick: 'portal.pj_customize' }),
       st('card', 'portal.pj_card', ['O cartão do projeto', 'The project card', 'La tarjeta del proyecto'], [
         'Nome, endereço (/slug) e descrição do projeto. Clicar no cartão abre o Studio dele.',
         'Name, address (/slug) and description of the project. Clicking the card opens its Studio.',
@@ -176,7 +198,7 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Empacota o projeto como um aplicativo de desktop instalável. Exclusivo da IDE Desktop.',
         'Packages the project as an installable desktop application. Exclusive to the Desktop IDE.',
         'Empaqueta el proyecto como una aplicación de escritorio instalable. Exclusivo de la IDE Desktop.',
-      ], { ...OPT, ideOnly: true }),
+      ], { ...OPT, ideOnly: true, ideClick: true }),
       st('act-ide', 'portal.pj_act_ide', ['IDE Local (Ejetar & Sincronizar)', 'Local IDE (Eject & Sync)', 'IDE Local (Eyectar y Sincronizar)'], [
         'Abre a IDE Local do projeto: ejeta o app (Node ou Java) para uma pasta, edita o código, usa o Git e sincroniza de volta. Exclusivo da IDE Desktop.',
         'Opens the Local IDE of the project: ejects the app (Node or Java) to a folder, edits the code, uses Git and syncs back. Exclusive to the Desktop IDE.',
@@ -212,27 +234,56 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'The dotted card does the same as the "New project" button at the top.',
         'La tarjeta punteada hace lo mismo que el botón "Nuevo proyecto" de arriba.',
       ], OPT),
-      // a janela do portal abre por este passo (só navega, nada é gravado) e é fechada no fim
-      st('portal-info', 'portal.portal_info', ['Configurações do portal', 'Portal settings', 'Configuraciones del portal'], [
-        'Esta janela personaliza a tela de login global do portal de aplicações do workspace. Para ver como fica, abrimos a janela por você: nada é gravado.',
-        'This window customizes the global login screen of the workspace applications portal. To show it, we opened the window for you: nothing is saved.',
-        'Esta ventana personaliza la pantalla de login global del portal de aplicaciones del workspace. Para mostrarla, abrimos la ventana por usted: no se guarda nada.',
-      ], { ...OPT, enterClick: 'portal.pj_customize', backClick: 'portal.portal_cancel' }),
-      st('portal-logo', 'portal.portal_logo', ['Logo do portal', 'Portal logo', 'Logo del portal'], [
-        'Endereço (URL) de uma imagem para o logo. Opcional: sem ele vale o logo padrão.',
-        'Address (URL) of an image for the logo. Optional: without it the default logo is used.',
-        'Dirección (URL) de una imagen para el logo. Opcional: sin ella vale el logo estándar.',
-      ], OPT),
-      st('portal-banner', 'portal.portal_banner', ['Banner do portal', 'Portal banner', 'Banner del portal'], [
-        'Endereço (URL) da imagem de fundo ou banner. Também opcional.',
-        'Address (URL) of the background or banner image. Also optional.',
-        'Dirección (URL) de la imagen de fondo o banner. También opcional.',
-      ], OPT),
-      st('portal-save', 'portal.portal_save', ['Salvar ou cancelar', 'Save or cancel', 'Guardar o cancelar'], [
-        '"Salvar" grava o logo e o banner do portal; "Cancelar" fecha sem gravar. O tour fecha a janela sozinho ao terminar.',
-        '"Save" stores the portal logo and banner; "Cancel" closes without saving. The tour closes the window by itself when it ends.',
-        '"Guardar" graba el logo y el banner del portal; "Cancelar" cierra sin grabar. El tour cierra la ventana solo al terminar.',
-      ], OPT),
     ],
   },
+]
+
+// ───────────────────────── abas do portal (só na IDE Desktop) ─────────────────────────
+// São os mesmos componentes das abas do Studio (Gerenciador do Túnel e Bancos Sincronizados): os passos vêm dos tours do Studio,
+// trocando só a aba de entrada e o texto do botão de sincronizar, que aqui sincroniza o workspace inteiro.
+const IDE_ONLY_HINT = h(['Disponível só na IDE Desktop: estas abas não existem no site.', 'Only in the Desktop IDE: these tabs do not exist on the site.', 'Disponible solo en la IDE Desktop: estas pestañas no existen en el sitio.'])
+
+const SYNC_TEXT = {
+  ws: {
+    title: ['Sincronização global', 'Global sync', 'Sincronización global'] as T3,
+    body: [
+      'Lê a estrutura de todos os bancos configurados no metabuilder.config.json (tabelas, colunas, relacionamentos) e atualiza os projetos. Não mexe nos dados nem para o túnel. Se houver mudanças estruturais, o projeto fica com "Sincronização pendente" para você revisar.',
+      'Reads the structure of all databases set in metabuilder.config.json (tables, columns, relationships) and updates the projects. It does not touch the data nor stop the tunnel. If there are structural changes, the project is flagged "Pending sync" for you to review.',
+      'Lee la estructura de todas las bases configuradas en metabuilder.config.json (tablas, columnas, relaciones) y actualiza los proyectos. No toca los datos ni detiene el túnel. Si hay cambios estructurales, el proyecto queda con "Sincronización pendiente" para que los revise.',
+    ] as T3,
+  },
+  pj: {
+    title: ['Sincronizar o workspace', 'Sync the workspace', 'Sincronizar el workspace'] as T3,
+    body: [
+      'Lê a estrutura dos bancos dos projetos deste workspace (tabelas, colunas, relacionamentos) e atualiza os projetos. Não mexe nos dados nem para o túnel. Se houver mudanças estruturais, o projeto fica com "Sincronização pendente" para você revisar.',
+      'Reads the structure of the databases of the projects in this workspace (tables, columns, relationships) and updates the projects. It does not touch the data nor stop the tunnel. If there are structural changes, the project is flagged "Pending sync" for you to review.',
+      'Lee la estructura de las bases de los proyectos de este workspace (tablas, columnas, relaciones) y actualiza los proyectos. No toca los datos ni detiene el túnel. Si hay cambios estructurales, el proyecto queda con "Sincronización pendiente" para que los revise.',
+    ] as T3,
+  },
+}
+
+function fromStudioTab(srcId: string, id: string, route: string, tab: string, scope: 'ws' | 'pj'): PlatformTour {
+  const src = STUDIO_TABS_TOURS.find(t => t.id === srcId)
+  if (!src) throw new Error('tour do Studio não encontrado: ' + srcId)
+  return {
+    ...src,
+    id,
+    route,
+    needs: tab,
+    needsHint: IDE_ONLY_HINT,
+    recover: [tab],
+    steps: src.steps.map((s, i) => {
+      if (i === 0) return { ...s, target: tab, enterClick: tab }
+      if (s.id === 'sync') return { ...s, title: h(SYNC_TEXT[scope].title), body: h(SYNC_TEXT[scope].body) }
+      return s
+    }),
+  }
+}
+
+export const PORTAL_TOURS: readonly PlatformTour[] = [
+  ...BASE_PORTAL_TOURS,
+  fromStudioTab('studio-tunel', 'portal-ws-tunel', WS, 'portal.ws_tab_tunnel', 'ws'),
+  fromStudioTab('studio-bancos-sincronizados', 'portal-ws-bancos', WS, 'portal.ws_tab_synced', 'ws'),
+  fromStudioTab('studio-tunel', 'portal-pj-tunel', PJ, 'portal.pj_tab_tunnel', 'pj'),
+  fromStudioTab('studio-bancos-sincronizados', 'portal-pj-bancos', PJ, 'portal.pj_tab_synced', 'pj'),
 ]

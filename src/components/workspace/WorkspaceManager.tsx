@@ -356,6 +356,7 @@ export function WorkspaceManager({
               {t('workspace_components.tabs_your_workspaces', 'Seus Workspaces')}
             </button>
             <button
+              data-help-id="portal.ws_tab_tunnel"
               onClick={() => setActiveTab('tunnel')}
               className={cn(
                 "px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer",
@@ -367,6 +368,7 @@ export function WorkspaceManager({
               {t('workspace_components.tabs_tunnel_manager', 'Gerenciador do Túnel')}
             </button>
             <button
+              data-help-id="portal.ws_tab_synced"
               onClick={() => setActiveTab('synced-dbs')}
               className={cn(
                 "px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer",

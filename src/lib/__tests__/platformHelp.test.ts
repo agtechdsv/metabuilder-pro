@@ -24,8 +24,8 @@ describe('rotas da ajuda da plataforma', () => {
     expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
     expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
     expect(ids('/admin/w/p/studio/auth')).toEqual(['auth-visao-geral', 'auth-controle-acesso', 'auth-estrategia-managed', 'auth-estrategia-banco-legado', 'auth-estrategia-ldap', 'auth-estrategia-sem-login', 'auth-personalizacao-visual', 'auth-usuarios', 'auth-grupos', 'auth-permissoes-telas'])
-    expect(ids('/workspace')).toEqual(['portal-workspaces'])
-    expect(ids('/admin/w')).toEqual(['portal-projetos'])
+    expect(ids('/workspace')).toEqual(['portal-workspaces', 'portal-ws-tunel', 'portal-ws-bancos'])
+    expect(ids('/admin/w')).toEqual(['portal-projetos', 'portal-pj-tunel', 'portal-pj-bancos'])
     expect(ids('/admin/w/p/studio/byoc')).toEqual(['ide-byoc'])
     expect(ids('/admin/w/p/studio/tunnel')).toEqual(['ide-json'])
     expect(ids('/admin/w/p/studio/terminal')).toEqual(['ide-terminal'])
@@ -328,5 +328,60 @@ describe('menu de tours do Studio: ordem e separadores', () => {
     expect(sections.length).toBe(1)
     expect(sections[0].title).toBeUndefined()
     expect(sections[0].tours.length).toBe(tours.length)
+  })
+})
+
+describe('portal: janela do portal no passo 4, ícones 🖥 clicáveis na IDE e tours das abas', () => {
+  const tour = (id: string) => PLATFORM_TOURS.find(t => t.id === id)!
+  const sources = () => {
+    const out: string[] = []
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) walk(full)
+        else if (/\.tsx$/.test(e.name)) out.push(fs.readFileSync(full, 'utf8'))
+      }
+    }
+    walk(path.join(process.cwd(), 'src'))
+    return out.join('\n')
+  }
+
+  it('os passos da janela do portal vêm logo depois de "Personalizar o portal" e o passo seguinte fecha a janela', () => {
+    const ids = tour('portal-projetos').steps.map(s => s.id)
+    const i = ids.indexOf('customize')
+    expect(ids.slice(i + 1, i + 5)).toEqual(['portal-info', 'portal-logo', 'portal-banner', 'portal-save'])
+    const after = tour('portal-projetos').steps[i + 5]
+    expect(after.enterClick).toBe('portal.portal_cancel')
+    expect(after.backClick).toBe('portal.pj_customize')
+  })
+
+  it('Gerar App Desktop é clicável só na IDE e o botão de gerar nunca responde', () => {
+    for (const [tourId, stepId] of [['portal-workspaces', 'act-desktop'], ['portal-projetos', 'act-desktop']]) {
+      const s = tour(tourId).steps.find(x => x.id === stepId)!
+      expect(s.ideOnly && s.ideClick, tourId).toBe(true)
+      expect(tour(tourId).neverClick).toContain('portal.desktop_generate')
+      expect(tour(tourId).cleanupClick).toContain('portal.desktop_cancel')
+    }
+    // IDE Local e Ambiente de Testes continuam só mostrando (abrem telas que o tour não controla)
+    for (const [tourId, stepId] of [['portal-workspaces', 'act-ide'], ['portal-projetos', 'act-ide'], ['portal-projetos', 'act-tests']]) {
+      expect(tour(tourId).steps.find(x => x.id === stepId)!.ideClick, `${tourId}/${stepId}`).toBeFalsy()
+    }
+  })
+
+  it('tours das abas Túnel e Bancos Sincronizados existem nos dois lugares, abrem a própria aba e só valem na IDE', () => {
+    const src = sources()
+    for (const [id, route, tab] of [
+      ['portal-ws-tunel', '/workspace', 'portal.ws_tab_tunnel'], ['portal-ws-bancos', '/workspace', 'portal.ws_tab_synced'],
+      ['portal-pj-tunel', '/admin/:workspace', 'portal.pj_tab_tunnel'], ['portal-pj-bancos', '/admin/:workspace', 'portal.pj_tab_synced'],
+    ]) {
+      const t = tour(id)
+      expect(t.route, id).toBe(route)
+      expect(t.needs, id).toBe(tab)
+      expect(t.steps[0].target, id).toBe(tab)
+      expect(t.steps[0].enterClick, id).toBe(tab)
+      expect(src.includes(`"${tab}"`), tab).toBe(true)
+      expect(t.steps.length, id).toBeGreaterThan(3)
+    }
   })
 })
