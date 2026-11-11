@@ -9,6 +9,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { PLATFORM_TOURS } from '@/lib/platformHelp/catalog'
 import { toursForRoute } from '@/lib/platformHelp/routes'
 import { menuSections } from '@/lib/platformHelp/menuGroups'
+import { useCollapsedGroups } from '@/lib/platformHelp/useCollapsedGroups'
 import { seenTours, startPlatformTour, tourAvailable, tourWrongLogic, WRONG_LOGIC_HINT } from '@/lib/platformHelp/store'
 
 /** Ícone de ajuda do cabeçalho nas áreas do Studio: lista os tours que existem para a tela em que a pessoa está. */
@@ -17,13 +18,7 @@ export function PlatformHelpButton() {
   const pathname = usePathname() || ''
   const [open, setOpen] = useState(false)
   const [seen, setSeen] = useState<string[]>([])
-  // grupos recolhidos do menu (lembrados neste navegador; só conveniência, o menu funciona sem isso)
-  const [collapsed, setCollapsed] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('mb.tourMenu.collapsed') || '[]') } catch { return [] } })
-  const saveCollapsed = (next: string[]) => {
-    setCollapsed(next)
-    try { localStorage.setItem('mb.tourMenu.collapsed', JSON.stringify(next)) } catch { /* sem armazenamento: vale só nesta sessão */ }
-  }
-  const toggleGroup = (key: string) => saveCollapsed(collapsed.includes(key) ? collapsed.filter(k => k !== key) : [...collapsed, key])
+  const { collapsed, save: saveCollapsed, toggle: toggleGroup } = useCollapsedGroups()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => { if (open) setSeen(seenTours()) }, [open])

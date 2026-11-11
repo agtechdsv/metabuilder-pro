@@ -30,7 +30,7 @@ describe('rotas da ajuda da plataforma', () => {
     expect(ids('/admin/w/p/studio/tunnel')).toEqual(['ide-json'])
     expect(ids('/admin/w/p/studio/terminal')).toEqual(['ide-terminal'])
     expect(ids('/admin/w/p/studio/sql')).toEqual(['ide-sql'])
-    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar', 'ide-ejetar-pratica'])
+    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar', 'ide-git-config', 'ide-ejetar-pratica'])
     expect(ids('/outra/rota')).toEqual([])
   })
 })
@@ -434,5 +434,47 @@ describe('listas flutuantes dentro do item destacado', () => {
     expect(header).toMatch(/data-tour-popup=""/)
     expect(host).toMatch(/\[data-tour-popup\]/)
     expect(host).toMatch(/popupOpen && openStep/)
+  })
+})
+
+describe('tour das Configurações Git e menu agrupado da IDE', () => {
+  const tour = PLATFORM_TOURS.find(t => t.id === 'ide-git-config')!
+
+  it('nunca clica em Salvar nem em "Sim, Apagar Tudo", e fecha a janela e o aviso ao terminar', () => {
+    expect(tour.route).toBe('/ide-local')
+    expect(tour.neverClick).toEqual(expect.arrayContaining(['ide.gitcfg_save', 'ide.gitcfg_confirm_yes']))
+    expect(tour.cleanupClick).toEqual(['ide.gitcfg_confirm_cancel', 'ide.gitcfg_cancel'])
+    expect(tour.freeClicks).toBeFalsy()
+  })
+
+  it('cada aba abre sozinha na ida e volta à aba anterior no Voltar', () => {
+    const by = (id: string) => tour.steps.find(s => s.id === id)!
+    expect(by('header').enterClick).toBe('ide.btn_gitsettings')
+    expect(by('tab-pipeline').enterClick).toBe('ide.gitcfg_tab_pipeline')
+    expect(by('tab-pipeline').backClick).toBe('ide.gitcfg_tab_auth')
+    expect(by('tab-danger').enterClick).toBe('ide.gitcfg_tab_danger')
+    expect(by('tab-danger').backClick).toBe('ide.gitcfg_tab_pipeline')
+    expect(by('reset').readOnly).toBe(true)
+    expect(by('confirm').enterClick).toBe('ide.gitcfg_reset')
+    expect(by('confirm').backClick).toBe('ide.gitcfg_confirm_cancel')
+  })
+
+  it('o menu da IDE agrupa: IDE Local, Git e Ejetar & Sincronizar, sem perder nenhum tour', async () => {
+    const { menuSections } = await import('../platformHelp/menuGroups')
+    const tours = toursForRoute(PLATFORM_TOURS, '/ide-local')
+    const sections = menuSections(tours)
+    expect(sections.map(s => s.title?.pt)).toEqual(['IDE Local', 'Git', 'Ejetar & Sincronizar'])
+    expect(sections[1].tours.map(t => t.id)).toEqual(['ide-local-git', 'ide-git-config'])
+    expect(sections[2].tours.map(t => t.id)).toEqual(['ide-ejetar', 'ide-ejetar-pratica'])
+    expect(sections.flatMap(s => s.tours).length).toBe(tours.length)
+  })
+
+  it('a janela de Configurações Git não tem mais texto fixo em português', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'src/components/ide/IDEGitSettingsModal.tsx'), 'utf8')
+    for (const frase of ['Zero-Trust Architecture:', 'URL do Repositório (Origin)</label>', 'Ao renomear as branches abaixo, você altera']) {
+      expect(src.includes(`>${frase}`) || src.includes(`<p>${frase}`), frase).toBe(false)
+    }
+    expect(src).toContain("t('ide_git_settings.pipeline_note'")
+    expect(src).not.toMatch(/ide_git_settings\.cancel', 'Fechar'/)
   })
 })

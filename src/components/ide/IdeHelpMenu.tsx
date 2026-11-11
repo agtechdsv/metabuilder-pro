@@ -1,11 +1,13 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { CircleHelp, Play } from 'lucide-react'
+import { ChevronDown, CircleHelp, Play } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
 import { PLATFORM_TOURS } from '@/lib/platformHelp/catalog'
 import { startPlatformTour, tourAvailable } from '@/lib/platformHelp/store'
+import { menuSections } from '@/lib/platformHelp/menuGroups'
+import { useCollapsedGroups } from '@/lib/platformHelp/useCollapsedGroups'
 
 /** Rota "virtual" dos tours da IDE Local: a janela da IDE não tem as páginas do Studio, então estes tours têm o próprio menu. */
 export const IDE_TOUR_ROUTE = '/ide-local'
@@ -24,6 +26,9 @@ export function IdeHelpMenu() {
   }, [open])
 
   const tours = PLATFORM_TOURS.filter(x => x.route === IDE_TOUR_ROUTE)
+  const sections = menuSections(tours)
+  const groupKeys = sections.map(sec => sec.title?.pt || '').filter(Boolean)
+  const { collapsed, save: saveCollapsed, toggle: toggleGroup } = useCollapsedGroups()
 
   return (
     <div ref={ref} className="relative">
@@ -39,26 +44,57 @@ export function IdeHelpMenu() {
       </button>
       {open && (
         <div className="absolute right-0 top-10 z-[1000010] w-80 max-h-[70vh] overflow-y-auto rounded-2xl border border-neutral-700 bg-neutral-900 p-3 shadow-2xl">
-          <p className="px-1 pb-2 text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
-          <ul className="space-y-1">
-            {tours.map(tour => (
-              <li key={tour.id}>
-                <button
-                  type="button"
-                  disabled={!tourAvailable(tour)}
-                  onClick={() => { setOpen(false); startPlatformTour(tour) }}
-                  className="flex w-full items-start gap-3 rounded-xl p-2 text-left hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300"><Play className="h-3 w-3" /></span>
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-neutral-100">{resolveHelp(tour.title, language)}</span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-neutral-400">{resolveHelp(tour.summary, language)}</span>
-                    <span className="mt-0.5 block text-[10px] font-semibold text-neutral-500">{tour.steps.length} {t('platform_help.steps', 'passos')}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="flex items-center justify-between px-1 pb-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
+            {groupKeys.length > 1 && (
+              <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-400">
+                <button type="button" onClick={() => saveCollapsed([])} disabled={collapsed.every(k => !groupKeys.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.expand_all', 'Expandir tudo')}</button>
+                <span className="text-neutral-600">·</span>
+                <button type="button" onClick={() => saveCollapsed(groupKeys)} disabled={groupKeys.every(k => collapsed.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.collapse_all', 'Recolher tudo')}</button>
+              </div>
+            )}
+          </div>
+          {sections.map((sec, si) => {
+            const gk = sec.title?.pt || ''
+            const closed = !!gk && collapsed.includes(gk)
+            return (
+              <div key={si}>
+                {sec.title && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(gk)}
+                    aria-expanded={!closed}
+                    className="mt-2 flex w-full items-center gap-2 rounded-lg px-1 pb-1 pt-1 text-left hover:bg-neutral-800"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{resolveHelp(sec.title, language)}</span>
+                    <span className="h-px flex-1 bg-neutral-700" />
+                    <span className="text-[10px] font-bold text-neutral-500">{sec.tours.length}</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-neutral-500 transition-transform ${closed ? '-rotate-90' : ''}`} />
+                  </button>
+                )}
+                <ul className={closed ? 'hidden' : 'space-y-1'}>
+                  {sec.tours.map(tour => (
+                    <li key={tour.id}>
+                      <button
+                        type="button"
+                        disabled={!tourAvailable(tour)}
+                        onClick={() => { setOpen(false); startPlatformTour(tour) }}
+                        className="flex w-full items-start gap-3 rounded-xl p-2 text-left hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300"><Play className="h-3 w-3" /></span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-bold text-neutral-100">{resolveHelp(tour.title, language)}</span>
+                          <span className="mt-0.5 block text-[11px] leading-snug text-neutral-400">{resolveHelp(tour.summary, language)}</span>
+                          <span className="mt-0.5 block text-[10px] font-semibold text-neutral-500">{tour.steps.length} {t('platform_help.steps', 'passos')}</span>
+                          {!tourAvailable(tour) && tour.needsHint && <span className="mt-0.5 block text-[10px] font-bold text-amber-500">{resolveHelp(tour.needsHint, language)}</span>}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

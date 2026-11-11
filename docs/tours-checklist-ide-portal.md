@@ -104,6 +104,11 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - [ ] ⏳ Testes: só o botão do cabeçalho está coberto; o interior do Ambiente de Testes (`IdeTest*`: banco, histórico, comparar, status) ainda não
 - [ ] ⏳ Entrega: só o botão do cabeçalho está coberto; o interior da janela `IdeDeliveryModal` ainda não
 
+### D2. Configurações Git e menu agrupado da IDE (novo, 2026-11-11)
+- [x] Feito · ☐ Testado · 🖥 Tour "Configurações Git (remoto, branches e reset)" (17 passos): engrenagem, 3 abas (abrem sozinhas), URL, token, 3 branches, Salvar, Zona de Perigo, reset e confirmação. Nunca clica em "Salvar" nem em "Sim, Apagar Tudo e Reiniciar"; fecha a janela e o aviso ao terminar
+- [x] Feito · ☐ Testado · 🖥 Menu **?** da IDE agrupado (IDE Local, Git, Ejetar & Sincronizar), com recolher/expandir e "Expandir tudo · Recolher tudo"
+- [x] Feito · ☐ Testado · Janela de Configurações Git traduzida (antes tinha texto fixo em português nas abas Autenticação e Pipeline): trocar o idioma da IDE e conferir pt, en, es
+
 ## E. Ejetar
 - [x] Feito · ☑ Testado · 🖥 Tour "Ejetar & Sincronizar": botão, janela, idioma do código, stacks (Node.js, Java, "em breve"), configuração da stack, confirmar
 - [ ] ⏳ Ação "Ejetar para uma pasta": não achei esta ação como tela separada na IDE; me mostre onde ela fica para eu cobrir

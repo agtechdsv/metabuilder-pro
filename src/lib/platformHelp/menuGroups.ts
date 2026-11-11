@@ -1,5 +1,5 @@
 /**
- * Ordem e separadores do menu de tours. Só o Studio tem grupos; as outras telas mostram a lista direta, na ordem do catálogo.
+ * Ordem e separadores do menu de tours. O Studio e a IDE Local têm grupos; as outras telas mostram a lista direta, na ordem do catálogo.
  * Um tour fora de qualquer grupo vai para o fim, sem separador (assim um tour novo nunca some do menu).
  */
 
@@ -27,12 +27,19 @@ const STUDIO_SECTIONS: { title: HelpText; ids: string[] }[] = [
   { title: h('Central de Ajuda', 'Help Center', 'Centro de Ayuda'), ids: ['studio-central-ajuda'] },
 ]
 
+// IDE Local: o menu ? da IDE tem os tours dela, agrupados do mesmo jeito
+const IDE_SECTIONS: { title: HelpText; ids: string[] }[] = [
+  { title: h('IDE Local', 'Local IDE', 'IDE Local'), ids: ['ide-local-visao-geral'] },
+  { title: h('Git', 'Git', 'Git'), ids: ['ide-local-git', 'ide-git-config'] },
+  { title: h('Ejetar & Sincronizar', 'Eject & Sync', 'Eyectar y Sincronizar'), ids: ['ide-ejetar', 'ide-ejetar-pratica'] },
+]
+
 /** Divide os tours da tela em seções com título; sem nenhum tour agrupado, devolve uma seção só, sem título. */
 export function menuSections(tours: readonly PlatformTour[]): MenuSection[] {
   const byId = new Map(tours.map(t => [t.id, t]))
   const used = new Set<string>()
   const sections: MenuSection[] = []
-  for (const g of STUDIO_SECTIONS) {
+  for (const g of [...STUDIO_SECTIONS, ...IDE_SECTIONS]) {
     const list = g.ids.map(id => byId.get(id)).filter((t): t is PlatformTour => !!t)
     if (!list.length) continue
     list.forEach(t => used.add(t.id))
