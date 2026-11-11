@@ -280,10 +280,94 @@ function fromStudioTab(srcId: string, id: string, route: string, tab: string, sc
   }
 }
 
+// ───────────────────────── gerador de instalador desktop (só na IDE Desktop) ─────────────────────────
+// A mesma janela abre pelo cartão do projeto (/admin/:workspace) e pelo do workspace (/workspace). O tour abre a janela, mostra os campos e nunca gera.
+function desktopTour(id: string, route: string, icon: string, scope: 'ws' | 'pj'): PlatformTour {
+  const what: T3 = scope === 'ws'
+    ? ['o Portal de Aplicações do workspace', 'the workspace Applications Portal', 'el Portal de Aplicaciones del workspace']
+    : ['este projeto', 'this project', 'este proyecto']
+  return {
+    id,
+    route,
+    needs: icon,
+    needsHint: IDE_ONLY_HINT,
+    neverClick: ['portal.desktop_generate'],
+    cleanupClick: ['portal.desktop_cancel'],
+    title: h(scope === 'ws'
+      ? ['Instalador Desktop do workspace', 'Workspace Desktop installer', 'Instalador de escritorio del workspace']
+      : ['Instalador Desktop do projeto', 'Project Desktop installer', 'Instalador de escritorio del proyecto']),
+    summary: h(['A janela que transforma em um aplicativo Windows (.msi) com a sua marca: nome, versão, ícone, banco e notas da versão.', 'The window that turns it into a Windows application (.msi) with your brand: name, version, icon, database and release notes.', 'La ventana que lo convierte en una aplicación de Windows (.msi) con su marca: nombre, versión, ícono, base y notas de la versión.']),
+    steps: [
+      st('button', icon, ['Gerar App Desktop Nativo', 'Generate Native Desktop App', 'Generar App de Escritorio Nativo'], [
+        `Empacota ${what[0]} como um aplicativo de desktop instalável. Exclusivo da IDE Desktop. Abrimos a janela por você no próximo passo; nada é gerado.`,
+        `Packages ${what[1]} as an installable desktop application. Exclusive to the Desktop IDE. We open the window for you in the next step; nothing is generated.`,
+        `Empaqueta ${what[2]} como una aplicación de escritorio instalable. Exclusivo de la IDE Desktop. Abrimos la ventana por usted en el próximo paso; no se genera nada.`,
+      ], { ...OPT, ideOnly: true, readOnly: true }),
+      st('header', 'portal.desktop_header', ['O Gerador de Instalador Desktop', 'The Desktop Installer Generator', 'El Generador de Instalador de Escritorio'], [
+        'Gera um instalador do Windows (.msi). Preencha os campos e clique em Gerar; fechar a janela não gera nada.',
+        'Generates a Windows installer (.msi). Fill in the fields and click Generate; closing the window generates nothing.',
+        'Genera un instalador de Windows (.msi). Complete los campos y haga clic en Generar; cerrar la ventana no genera nada.',
+      ], { ...OPT, ideOnly: true, enterClick: icon, backClick: 'portal.desktop_cancel' }),
+      st('info', 'portal.desktop_info', ['Aplicativo White-Label', 'White-Label application', 'Aplicación White-Label'], [
+        'O instalador empacota o código atual e sai com a sua marca (nome, ícone e versão), com a conexão de banco nativa quando você informar uma.',
+        'The installer packages the current code and comes out with your brand (name, icon and version), with the native database connection when you provide one.',
+        'El instalador empaqueta el código actual y sale con su marca (nombre, ícono y versión), con la conexión de base nativa cuando usted informe una.',
+      ], { ...OPT, ideOnly: true }),
+      st('name', 'portal.desktop_name', ['Nome do software', 'Software name', 'Nombre del software'], [
+        'O nome do aplicativo instalado. É obrigatório: sem ele o botão Gerar fica desativado. Pode digitar para experimentar; nada é gerado.',
+        'The name of the installed application. It is required: without it the Generate button is disabled. You can type to try it; nothing is generated.',
+        'El nombre de la aplicación instalada. Es obligatorio: sin él el botón Generar queda desactivado. Puede escribir para probar; no se genera nada.',
+      ], { ...OPT, interactive: true }),
+      st('desc', 'portal.desktop_desc', ['Descrição curta', 'Short description', 'Descripción corta'], [
+        'Uma linha que descreve o sistema, mostrada no instalador.',
+        'A line describing the system, shown in the installer.',
+        'Una línea que describe el sistema, mostrada en el instalador.',
+      ], { ...OPT, interactive: true }),
+      st('version', 'portal.desktop_version', ['Versão do app', 'App version', 'Versión de la app'], [
+        'O número da versão do instalador, por exemplo 1.0.0. Suba a versão a cada novo instalador.',
+        'The installer version number, for example 1.0.0. Raise the version with each new installer.',
+        'El número de versión del instalador, por ejemplo 1.0.0. Suba la versión con cada nuevo instalador.',
+      ], { ...OPT, interactive: true }),
+      st('icon', 'portal.desktop_icon', ['Ícone do app', 'App icon', 'Ícono de la app'], [
+        'Um PNG quadrado (por exemplo 512x512) que vira o ícone do aplicativo. O envio abre o seletor de arquivos do sistema; durante o tour esta área fica só para leitura.',
+        'A square PNG (for example 512x512) that becomes the application icon. Uploading opens the system file picker; during the tour this area is read-only.',
+        'Un PNG cuadrado (por ejemplo 512x512) que pasa a ser el ícono de la aplicación. El envío abre el selector de archivos del sistema; durante el tour esta área queda solo de lectura.',
+      ], { ...OPT, ideOnly: true, readOnly: true }),
+      st('db', 'portal.desktop_db', ['Connection string do banco', 'Database connection string', 'Connection string de la base'], [
+        'Opcional. Se preenchida, a string é embutida no instalador para o aplicativo falar direto com o banco. Cuidado: ela vai dentro do arquivo instalável e carrega a senha do banco. Não digite uma real durante o tour.',
+        'Optional. If filled in, the string is embedded in the installer so the application talks directly to the database. Careful: it goes inside the installable file and carries the database password. Do not type a real one during the tour.',
+        'Opcional. Si se completa, la cadena se incrusta en el instalador para que la aplicación hable directo con la base. Cuidado: va dentro del archivo instalable y lleva la contraseña de la base. No escriba una real durante el tour.',
+      ], { ...OPT, interactive: true }),
+      st('url', 'portal.desktop_url', ['URL da aplicação web', 'Web application URL', 'URL de la aplicación web'], [
+        'Para o modo Wrapper: o endereço do backend central quando o aplicativo funciona como cliente do app publicado.',
+        'For Wrapper mode: the address of the central backend when the application works as a client of the published app.',
+        'Para el modo Wrapper: la dirección del backend central cuando la aplicación funciona como cliente de la app publicada.',
+      ], { ...OPT, interactive: true }),
+      st('notes', 'portal.desktop_notes', ['Notas da versão', 'Release notes', 'Notas de la versión'], [
+        'Opcional. O que há de novo nesta versão: aparece no histórico de atualizações para os usuários do aplicativo.',
+        'Optional. What is new in this version: it shows in the update history for the application users.',
+        'Opcional. Qué hay de nuevo en esta versión: aparece en el historial de actualizaciones para los usuarios de la aplicación.',
+      ], { ...OPT, interactive: true }),
+      st('generate', 'portal.desktop_generate', ['Gerar Instalador (.msi)', 'Generate Installer (.msi)', 'Generar Instalador (.msi)'], [
+        'Inicia a geração do instalador, que leva alguns minutos. O tour nunca clica neste botão.',
+        'Starts generating the installer, which takes a few minutes. The tour never clicks this button.',
+        'Inicia la generación del instalador, que tarda unos minutos. El tour nunca hace clic en este botón.',
+      ], { ...OPT, ideOnly: true, readOnly: true }),
+      st('close', 'portal.desktop_cancel', ['Cancelar', 'Cancel', 'Cancelar'], [
+        'Fecha a janela sem gerar. Ao terminar o tour, fechamos a janela por você.',
+        'Closes the window without generating. When the tour ends, we close the window for you.',
+        'Cierra la ventana sin generar. Al terminar el tour, cerramos la ventana por usted.',
+      ], { ...OPT, ideOnly: true, readOnly: true }),
+    ],
+  }
+}
+
 export const PORTAL_TOURS: readonly PlatformTour[] = [
   ...BASE_PORTAL_TOURS,
   fromStudioTab('studio-tunel', 'portal-ws-tunel', WS, 'portal.ws_tab_tunnel', 'ws'),
   fromStudioTab('studio-bancos-sincronizados', 'portal-ws-bancos', WS, 'portal.ws_tab_synced', 'ws'),
   fromStudioTab('studio-tunel', 'portal-pj-tunel', PJ, 'portal.pj_tab_tunnel', 'pj'),
   fromStudioTab('studio-bancos-sincronizados', 'portal-pj-bancos', PJ, 'portal.pj_tab_synced', 'pj'),
+  desktopTour('portal-ws-desktop', WS, 'portal.ws_act_desktop', 'ws'),
+  desktopTour('portal-pj-desktop', PJ, 'portal.pj_act_desktop', 'pj'),
 ]

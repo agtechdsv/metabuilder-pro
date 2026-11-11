@@ -1,6 +1,6 @@
 // Prepara o app EXPORTADO com backend Java (ejetado pela IDE) para os testes no banco real: instala as dependências do frontend,
 // compila o backend (Maven Wrapper + JDK 21 portátil da IDE) e compila o frontend apontando para o backend dos testes.
-// Uso: npm run java:prepare   (antes: IDE > Ejetar para uma pasta > Vendas PG > Java Spring Boot)
+// Uso: npm run java:prepare   (antes: IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta) > Vendas PG > Java Spring Boot)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'

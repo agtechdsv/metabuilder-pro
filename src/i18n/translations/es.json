@@ -123,7 +123,6 @@
   },
   "access_admin": {
     "workspace_note": "Aplicada a los proyectos del workspace que usan inicio de sesión por base de datos. ",
-    "eject_to_folder": "Ejectar a una carpeta…",
     "login_mode": "Inicio de sesión de la app generada",
     "login_project": "El del proyecto",
     "login_none": "Sin autenticación",
@@ -4652,6 +4651,11 @@
       "app_icon": "Ícono de la App (.png)",
       "upload_icon": "Subir Ícono",
       "icon_hint": "PNG Cuadrado (ej: 512x512)",
+      "version_label": "Versión de la app",
+      "release_notes_label": "¿Qué hay de nuevo en esta versión? (Release Notes)",
+      "optional": "Opcional",
+      "release_notes_placeholder": "Ej: Nuevo módulo de informes, correcciones en finanzas y mejoras de rendimiento...",
+      "release_notes_hint": "Estas notas se mostrarán en el historial de actualizaciones para los usuarios de la aplicación.",
       "db_conn_string": "Connection String de DB (Opcional)",
       "db_conn_placeholder": "postgresql://user:pass@host:5432/db",
       "db_conn_hint": "Si se completa, esta cadena se incrustará en el instalador para la conexión directa del Desktop Client.",
@@ -5122,6 +5126,13 @@
     "commit_message_placeholder": "Ej.: Actualización de variables de entorno...",
     "merging": "Aplicando el merge...",
     "merging_hint": "Aplicando {n} archivo(s) en la carpeta local. Puede tardar unos segundos; no cierre la ventana."
+  },
+  "ide_git_history": {
+    "title": "Historial",
+    "branch": "Rama",
+    "empty": "No se encontraron commits.",
+    "revert_btn": "Volver a esta versión",
+    "hash_title": "Código hash (identificador único del commit)"
   },
   "ide_git_settings": {
     "modal_title": "Configuración Git Enterprise",

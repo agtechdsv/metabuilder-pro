@@ -14,6 +14,8 @@ import { LOGS_TOURS } from './catalogLogs'
 import { PORTAL_TOURS } from './catalogPortal'
 import { IDE_PRACTICE_TOURS } from './catalogIdePractice'
 import { IDE_GIT_TOURS } from './catalogIdeGit'
+import { IDE_WINDOWS_TOURS } from './catalogIdeWindows'
+import { SYNC_RESOLUTION_TOURS } from './catalogSyncResolution'
 import { STUDIO_TABS_TOURS } from './catalogStudioTabs'
 import { IDE_TOOLS_TOURS } from './catalogIdeTools'
 import { IDE_TOURS } from './catalogIde'
@@ -369,4 +371,4 @@ const BASE_TOURS: readonly PlatformTour[] = [
 /** Os tours de cada lógica do assistente nascem do tour "Criar um caso de uso" (início e fim comuns). */
 const LOGIC_TOURS = buildLogicTours(BASE_TOURS.find(t => t.id === 'studio-criar-caso-de-uso')!)
 
-export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...LOGIC_TOURS, ...STUDIO_EXTRA_TOURS, ...STUDIO_TABS_TOURS, ...IDE_TOOLS_TOURS, ...IDE_TOURS, ...IDE_GIT_TOURS, ...IDE_PRACTICE_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS, ...PORTAL_TOURS]
+export const PLATFORM_TOURS: readonly PlatformTour[] = [...BASE_TOURS, ...LOGIC_TOURS, ...STUDIO_EXTRA_TOURS, ...STUDIO_TABS_TOURS, ...IDE_TOOLS_TOURS, ...IDE_TOURS, ...IDE_GIT_TOURS, ...IDE_WINDOWS_TOURS, ...IDE_PRACTICE_TOURS, ...SYNC_RESOLUTION_TOURS, ...DATA_TOURS, ...AUTH_TOURS, ...SETTINGS_TOURS, ...LOGS_TOURS, ...PORTAL_TOURS]

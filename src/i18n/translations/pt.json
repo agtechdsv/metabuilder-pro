@@ -123,7 +123,6 @@
   },
   "access_admin": {
     "workspace_note": "Aplicada aos projetos do workspace que usam o login por banco de dados. ",
-    "eject_to_folder": "Ejetar para uma pasta…",
     "login_mode": "Login do app gerado",
     "login_project": "O do projeto",
     "login_none": "Sem autenticação",
@@ -4564,6 +4563,11 @@
       "app_icon": "Ícone do App (.png)",
       "upload_icon": "Upload de Ícone",
       "icon_hint": "PNG Quadrado (ex: 512x512)",
+      "version_label": "Versão do App",
+      "release_notes_label": "O que há de novo nesta versão? (Release Notes)",
+      "optional": "Opcional",
+      "release_notes_placeholder": "Ex: Novo módulo de relatórios, correções no financeiro e melhorias de desempenho...",
+      "release_notes_hint": "Estas notas serão exibidas no histórico de atualizações para os usuários do aplicativo.",
       "db_conn_string": "Connection String do DB (Opcional)",
       "db_conn_placeholder": "postgresql://user:pass@host:5432/db",
       "db_conn_hint": "Se preenchido, esta string será embutida no instalador para conexão direta do Desktop Client.",
@@ -5034,6 +5038,13 @@
     "commit_message_placeholder": "Ex. Atualização de variáveis de ambiente...",
     "merging": "Efetivando o merge...",
     "merging_hint": "Aplicando {n} arquivo(s) na pasta local. Pode levar alguns segundos; não feche a janela."
+  },
+  "ide_git_history": {
+    "title": "Histórico",
+    "branch": "Branch",
+    "empty": "Nenhum commit encontrado.",
+    "revert_btn": "Reverter para esta versão",
+    "hash_title": "Código de Hash (Identificador Único do Commit)"
   },
   "ide_git_settings": {
     "modal_title": "Configurações Git Enterprise",

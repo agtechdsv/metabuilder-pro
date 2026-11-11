@@ -41,7 +41,7 @@ Roda no app que a **IDE ejetou** (Vendas PG) apontando para o banco real, logand
 ```bash
 cd e2e
 npm run real:robot      # 1x: cria o usuário robô no crm e grava a senha em e2e/.env.real (fora do git)
-# IDE > Ejetar para uma pasta > C:\AgTech\Apps\e2e-vendas-pg  (Vendas PG, Node + Postgres crm, login via banco, gestão de acesso)
+# IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta) > C:\AgTech\Apps\e2e-vendas-pg  (Vendas PG, Node + Postgres crm, login via banco, gestão de acesso)
 npm run real:prepare    # instala e compila o app ejetado (de novo a cada nova ejeção)
 npm run real:test       # roda os testes (npm run real:ui para ver ao vivo)
 ```

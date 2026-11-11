@@ -30,8 +30,9 @@ const STUDIO_SECTIONS: { title: HelpText; ids: string[] }[] = [
 // IDE Local: o menu ? da IDE tem os tours dela, agrupados do mesmo jeito
 const IDE_SECTIONS: { title: HelpText; ids: string[] }[] = [
   { title: h('IDE Local', 'Local IDE', 'IDE Local'), ids: ['ide-local-visao-geral'] },
-  { title: h('Git', 'Git', 'Git'), ids: ['ide-local-git', 'ide-git-config'] },
-  { title: h('Ejetar & Sincronizar', 'Eject & Sync', 'Eyectar y Sincronizar'), ids: ['ide-ejetar', 'ide-ejetar-pratica'] },
+  { title: h('Git', 'Git', 'Git'), ids: ['ide-local-git', 'ide-git-config', 'ide-git-commit', 'ide-git-historico'] },
+  { title: h('Ejetar & Sincronizar', 'Eject & Sync', 'Eyectar y Sincronizar'), ids: ['ide-ejetar', 'ide-ejetar-pratica', 'ide-entrega'] },
+  { title: h('Testes', 'Tests', 'Pruebas'), ids: ['ide-testes'] },
 ]
 
 /** Divide os tours da tela em seções com título; sem nenhum tour agrupado, devolve uma seção só, sem título. */

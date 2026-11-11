@@ -1,5 +1,5 @@
 // Prepara o app EXPORTADO de verdade (ejetado pela IDE) para os testes no banco real: confere a pasta, instala as dependências e compila.
-// Uso: npm run real:prepare   (antes: IDE > Ejetar para uma pasta > Vendas PG > Node + Postgres (crm) > login via banco > gestão de acesso)
+// Uso: npm run real:prepare   (antes: IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta) > Vendas PG > Node + Postgres (crm) > login via banco > gestão de acesso)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -14,7 +14,7 @@ const appDir = oracle
   : (process.env.E2E_REAL_APP_DIR || env.E2E_REAL_APP_DIR || 'C:\\AgTech\\Apps\\e2e-vendas-pg')
 
 if (!fs.existsSync(path.join(appDir, 'package.json'))) {
-  console.error(`Não achei o app exportado em ${appDir}.\nEjete o projeto ${oracle ? 'Vendas ORA' : 'Vendas PG'} para essa pasta (IDE > Ejetar para uma pasta) ou defina ${oracle ? 'E2E_ORA_APP_DIR em e2e/.env.oracle' : 'E2E_REAL_APP_DIR em e2e/.env.real'}.`)
+  console.error(`Não achei o app exportado em ${appDir}.\nEjete o projeto ${oracle ? 'Vendas ORA' : 'Vendas PG'} para essa pasta (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) ou defina ${oracle ? 'E2E_ORA_APP_DIR em e2e/.env.oracle' : 'E2E_REAL_APP_DIR em e2e/.env.real'}.`)
   process.exit(1)
 }
 const run = (cmd, args) => {

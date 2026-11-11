@@ -8,7 +8,7 @@ import { REAL } from './real/guard'
  * Regras de segurança em real/guard.ts. Rodar: npm run real:test (antes: npm run real:robot e npm run real:prepare).
  */
 if (!fs.existsSync(path.join(REAL.appDir, 'package.json'))) {
-  throw new Error(`Não achei o app exportado em ${REAL.appDir}. Ejete o projeto Vendas PG para essa pasta (IDE > Ejetar para uma pasta) e rode: npm run real:prepare (ou defina E2E_REAL_APP_DIR em e2e/.env.real).`)
+  throw new Error(`Não achei o app exportado em ${REAL.appDir}. Ejete o projeto Vendas PG para essa pasta (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) e rode: npm run real:prepare (ou defina E2E_REAL_APP_DIR em e2e/.env.real).`)
 }
 
 export default defineConfig({

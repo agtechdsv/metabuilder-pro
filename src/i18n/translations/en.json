@@ -123,7 +123,6 @@
   },
   "access_admin": {
     "workspace_note": "Applied to the workspace projects that use database sign-in. ",
-    "eject_to_folder": "Eject to a folder…",
     "login_mode": "Generated app sign-in",
     "login_project": "The project one",
     "login_none": "No authentication",
@@ -4564,6 +4563,11 @@
       "app_icon": "App Icon (.png)",
       "upload_icon": "Upload Icon",
       "icon_hint": "Square PNG (e.g.: 512x512)",
+      "version_label": "App version",
+      "release_notes_label": "What's new in this version? (Release Notes)",
+      "optional": "Optional",
+      "release_notes_placeholder": "E.g. New reports module, finance fixes and performance improvements...",
+      "release_notes_hint": "These notes will be shown in the update history for the app users.",
       "db_conn_string": "DB Connection String (Optional)",
       "db_conn_placeholder": "postgresql://user:pass@host:5432/db",
       "db_conn_hint": "If provided, this string will be embedded into installer for direct Desktop Client connection.",
@@ -5034,6 +5038,13 @@
     "commit_message_placeholder": "E.g. Update environment variables...",
     "merging": "Applying the merge...",
     "merging_hint": "Applying {n} file(s) to the local folder. This may take a few seconds; do not close the window."
+  },
+  "ide_git_history": {
+    "title": "History",
+    "branch": "Branch",
+    "empty": "No commits found.",
+    "revert_btn": "Revert to this version",
+    "hash_title": "Hash code (unique commit identifier)"
   },
   "ide_git_settings": {
     "modal_title": "Enterprise Git Settings",

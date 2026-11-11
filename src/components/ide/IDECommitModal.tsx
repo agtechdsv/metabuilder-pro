@@ -342,7 +342,7 @@ export function IDECommitModal({
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-indigo-500" />
 
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
+            <div data-help-id="ide.commit_header" className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 <h2 className="text-xl font-bold text-white">
@@ -372,6 +372,7 @@ export function IDECommitModal({
                         {t('ide_commit_local.commit_message', 'Mensagem do Commit')}
                       </span>
                       <textarea
+                        data-help-id="ide.commit_msg"
                         value={commitMessage}
                         onChange={e => setCommitMessage(e.target.value)}
                         placeholder={t(
@@ -481,7 +482,7 @@ export function IDECommitModal({
               </div>
 
               {/* Right Content - Diff Editor */}
-              <div className="flex-1 bg-[#1e1e1e] flex flex-col min-w-0">
+              <div data-help-id="ide.commit_diff" className="flex-1 bg-[#1e1e1e] flex flex-col min-w-0">
                 {diffActiveFile ? (
                   <>
                     <div className="p-3 border-b border-neutral-800 bg-[#181818] shrink-0 flex items-center justify-between">
@@ -577,6 +578,7 @@ export function IDECommitModal({
             )}
             <div className="p-4 border-t border-neutral-800 flex justify-end gap-3 shrink-0 bg-[#0f0f0f]">
               <button
+                data-help-id="ide.commit_cancel"
                 onClick={onClose}
                 disabled={busy}
                 className="px-4 py-2 bg-transparent hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg text-sm font-semibold transition-colors"

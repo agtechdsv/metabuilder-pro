@@ -628,6 +628,8 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     </span>
   ) : null
 
+  const tabCls = (id: 'run' | 'history') => `flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === id ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`
+
   // durante um tour da plataforma a janela só se explora: abas, recolher/expandir e fechar respondem; qualquer outro botão (executar, criar cópia, apagar...) é ignorado
   const tourGuard = (e: { target: EventTarget | null; stopPropagation(): void; preventDefault(): void }) => {
     if (!document.body.hasAttribute('data-tour-active')) return
@@ -640,7 +642,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     <div data-tour-modal="" onClickCapture={tourGuard} className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
       <div className="w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl bg-neutral-900 border border-neutral-700 text-neutral-200 shadow-2xl">
         {/* Cabeçalho */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-800">
+        <div data-help-id="ide.test_header" className="flex items-center gap-3 px-6 py-4 border-b border-neutral-800">
           <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center"><FlaskConical className="w-5 h-5 text-indigo-400" /></div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-bold text-white">{t('ide_tests.title', 'Ambiente de Testes')} <span className="text-neutral-500 font-medium">· {target.name}</span></h2>
@@ -650,10 +652,9 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
         </div>
 
         {/* Abas */}
-        <div className="flex gap-1 px-6 pt-3 border-b border-neutral-800">
-          {([['run', FlaskConical, t('ide_tests.tab_run', 'Executar')], ['history', HistoryIcon, t('ide_tests.tab_history', 'Histórico')]] as const).map(([id, Icon, label]) => (
-            <button key={id} data-tour-ok="" onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === id ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}><Icon className="w-3.5 h-3.5" /> {label}{id === 'history' && history.length > 0 ? ` (${history.length})` : ''}</button>
-          ))}
+        <div data-help-id="ide.test_tabs" className="flex gap-1 px-6 pt-3 border-b border-neutral-800">
+          <button data-tour-ok="" data-help-id="ide.test_tab_run" onClick={() => setTab('run')} className={tabCls('run')}><FlaskConical className="w-3.5 h-3.5" /> {t('ide_tests.tab_run', 'Executar')}</button>
+          <button data-tour-ok="" data-help-id="ide.test_tab_history" onClick={() => setTab('history')} className={tabCls('history')}><HistoryIcon className="w-3.5 h-3.5" /> {t('ide_tests.tab_history', 'Histórico')}{history.length > 0 ? ` (${history.length})` : ''}</button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
@@ -664,7 +665,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
           {tab === 'run' && (<>
             {/* Segurança */}
-            <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 [html:not(.light)_&]:text-amber-400">
+            <div data-help-id="ide.test_safety" className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-700 [html:not(.light)_&]:text-amber-400">
               <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
               <p>{t('ide_tests.safety', 'Os testes rodam em um banco de teste: por padrão, uma cópia do banco, informada por você. Rodar no banco original só com o seu consentimento. O motor confere, no fim, que nenhum dado existente foi alterado.')}</p>
             </div>
@@ -744,7 +745,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               </section>
             ) : (<>
               {/* 1. Tipo de teste */}
-              <section>
+              <section data-help-id="ide.test_type">
                 <div className="flex items-center gap-3"><h3 className={`${lblSection} mr-auto`}>1 · {t('ide_tests.type', 'Tipo de teste')}</h3>{secToggle('type')}</div>
                 {secOpen.type && <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -791,7 +792,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               </section>
 
               {/* 2. Casos de uso */}
-              <section>
+              <section data-help-id="ide.test_scope">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mr-auto">2 · {t('ide_tests.scope', 'Casos de uso')}</h3>
                   <button onClick={() => setAll(true)} disabled={running || selectable.length === 0} className="text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40">{t('ide_tests.select_all', 'Marcar todos')}</button>
@@ -844,7 +845,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               </section>
 
               {/* 3. Onde rodar */}
-              <section>
+              <section data-help-id="ide.test_where">
                 <div className="flex items-center gap-3"><h3 className={`${lblSection} mr-auto`}>3 · {t('ide_tests.where', 'Onde rodar')}</h3>{secToggle('where')}</div>
                 {secOpen.where && <>
                 {desktop && (
@@ -904,7 +905,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
               </section>
 
               {/* 4. Modo */}
-              <section>
+              <section data-help-id="ide.test_mode">
                 <h3 className={lblSection}>4 · {t('ide_tests.mode', 'Como acompanhar')}</h3>
                 <div className="flex flex-wrap items-center gap-2">
                   {([
@@ -954,7 +955,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
 
         {/* Rodapé */}
         {tab === 'run' && (
-          <div className="flex items-center gap-3 px-6 py-4 border-t border-neutral-800">
+          <div data-help-id="ide.test_footer" className="flex items-center gap-3 px-6 py-4 border-t border-neutral-800">
             <div className="flex-1 text-xs text-neutral-400">
               {summary
                 ? <span><b className="text-emerald-400">{summary.passed}</b> {t('ide_tests.passed', 'passaram')} · <b className="text-red-400">{summary.failed}</b> {t('ide_tests.failed', 'falharam')}{summary.skipped ? <> · {summary.skipped} {t('ide_tests.skipped', 'ignorados')}</> : null}</span>

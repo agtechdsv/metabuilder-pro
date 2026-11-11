@@ -105,9 +105,9 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
   ]
 
   return (
-    <div className="fixed inset-0 z-[1000002] flex items-center justify-center bg-black/70 p-4">
+    <div data-tour-modal="" className="fixed inset-0 z-[1000002] flex items-center justify-center bg-black/70 p-4">
       <div className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl bg-neutral-900 border border-neutral-700 shadow-2xl">
-        <div className="flex items-start gap-3 px-5 pt-5">
+        <div data-help-id="ide.deliv_header" className="flex items-start gap-3 px-5 pt-5">
           <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400"><Package className="w-5 h-5" /></div>
           <div className="flex-1">
             <h3 className="text-base font-bold text-white">{t('delivery.title', 'Entrega')} <span className="text-neutral-500 font-normal">· {target.name}</span></h3>
@@ -117,7 +117,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          <section>
+          <section data-help-id="ide.deliv_source">
             <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2">{t('delivery.source', 'De onde vem o código')}</p>
             <div className="rounded-xl border border-neutral-700 bg-neutral-800/40 px-3 py-3">
               <span className="block text-sm font-semibold text-white">{t('delivery.source_folder', 'Da pasta do projeto (com as minhas edições)')}</span>
@@ -126,7 +126,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
             </div>
           </section>
 
-          <section>
+          <section data-help-id="ide.deliv_kinds">
             <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2">{t('delivery.what', 'O que gerar (escolha um ou mais)')}</p>
             <div className="grid gap-2">
               {kinds.map(k => {
@@ -145,7 +145,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
             </div>
           </section>
 
-          <section>
+          <section data-help-id="ide.deliv_format">
             <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2">{t('delivery.format', 'Formato')}</p>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" disabled={running} onClick={() => setFormat('folder')} className={radio(opts.format === 'folder')}>
@@ -164,7 +164,7 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
             </p>
           </section>
 
-          <section className="space-y-2">
+          <section data-help-id="ide.deliv_options" className="space-y-2">
             <label className={`flex items-start gap-3 rounded-xl border border-neutral-700 bg-neutral-800/30 px-3 py-2.5 ${onlyCompiled ? 'opacity-50' : 'cursor-pointer'}`}>
               <input type="checkbox" checked={opts.includeSecrets && !onlyCompiled} disabled={running || onlyCompiled} onChange={e => setOpts(o => ({ ...o, includeSecrets: e.target.checked }))} className="mt-0.5 h-4 w-4 accent-amber-500" />
               <span className="text-xs">
@@ -206,8 +206,8 @@ export function IdeDeliveryModal({ isOpen, onClose, target }: Props) {
         </div>
 
         <div className="flex items-center justify-end gap-3 px-5 pb-5">
-          <button onClick={onClose} disabled={running} className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white disabled:opacity-40">{phase === 'done' ? t('delivery.close', 'Fechar') : t('delivery.cancel', 'Cancelar')}</button>
-          <button onClick={generate} disabled={running || !folder?.hasApp || opts.kinds.length === 0} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
+          <button data-help-id="ide.deliv_cancel" onClick={onClose} disabled={running} className="px-4 py-2 text-sm font-semibold text-neutral-400 hover:text-white disabled:opacity-40">{phase === 'done' ? t('delivery.close', 'Fechar') : t('delivery.cancel', 'Cancelar')}</button>
+          <button data-help-id="ide.deliv_generate" onClick={generate} disabled={running || !folder?.hasApp || opts.kinds.length === 0} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-all disabled:opacity-50">
             <Package className="w-4 h-4" />{t('delivery.generate', 'Gerar entrega')}
           </button>
         </div>

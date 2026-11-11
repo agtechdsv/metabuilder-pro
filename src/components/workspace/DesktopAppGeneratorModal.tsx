@@ -179,7 +179,7 @@ export function DesktopAppGeneratorModal({
             className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-black/20">
+            <div data-help-id="portal.desktop_header" className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-black/20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center overflow-hidden text-indigo-600 dark:text-indigo-400">
                   <Monitor className="w-5 h-5" />
@@ -207,14 +207,14 @@ export function DesktopAppGeneratorModal({
             <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="space-y-6">
                   {/* Info Box */}
-                  <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/30 bg-indigo-50 dark:bg-indigo-500/5 text-sm text-indigo-800 dark:text-indigo-300">
+                  <div data-help-id="portal.desktop_info" className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/30 bg-indigo-50 dark:bg-indigo-500/5 text-sm text-indigo-800 dark:text-indigo-300">
                     {t('workspace_components.desktop_generator.white_label_box', 'Aplicativo White-Label: Esta ferramenta irá empacotar todo o código fonte atual e gerar um executável seguro, com a sua marca e conexão de banco de dados nativa.')}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Left Column */}
                     <div className="space-y-4">
-                      <div>
+                      <div data-help-id="portal.desktop_name">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
                           {t('workspace_components.desktop_generator.software_name', 'Nome do Software')}
                         </label>
@@ -227,7 +227,7 @@ export function DesktopAppGeneratorModal({
                         />
                       </div>
                       
-                      <div>
+                      <div data-help-id="portal.desktop_desc">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
                           {t('workspace_components.desktop_generator.short_desc', 'Descrição Curta')}
                         </label>
@@ -240,9 +240,9 @@ export function DesktopAppGeneratorModal({
                         />
                       </div>
 
-                      <div>
+                      <div data-help-id="portal.desktop_version">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
-                          Versão do App
+                          {t('workspace_components.desktop_generator.version_label', 'Versão do App')}
                         </label>
                         <input
                           type="text"
@@ -253,7 +253,7 @@ export function DesktopAppGeneratorModal({
                         />
                       </div>
 
-                      <div>
+                      <div data-help-id="portal.desktop_icon">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2">
                           {t('workspace_components.desktop_generator.app_icon', 'Ícone do App (.png)')}
                         </label>
@@ -286,7 +286,7 @@ export function DesktopAppGeneratorModal({
 
                     {/* Right Column */}
                     <div className="space-y-4">
-                      <div>
+                      <div data-help-id="portal.desktop_db">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1">
                           <Key className="w-3 h-3" /> {t('workspace_components.desktop_generator.db_conn_string', 'Connection String do DB (Opcional)')}
                         </label>
@@ -302,7 +302,7 @@ export function DesktopAppGeneratorModal({
                         </p>
                       </div>
 
-                      <div>
+                      <div data-help-id="portal.desktop_url">
                         <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1">
                           <Link2 className="w-3 h-3" /> {t('workspace_components.desktop_generator.web_app_url', 'URL da Aplicação Web (Para Modo Wrapper)')}
                         </label>
@@ -321,20 +321,20 @@ export function DesktopAppGeneratorModal({
                   </div>
 
                   {/* Release Notes Input */}
-                  <div>
+                  <div data-help-id="portal.desktop_notes">
                     <label className="block text-xs font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center justify-between">
-                      <span>O que há de novo nesta versão? (Release Notes)</span>
-                      <span className="text-[10px] font-normal text-neutral-400">Opcional</span>
+                      <span>{t('workspace_components.desktop_generator.release_notes_label', 'O que há de novo nesta versão? (Release Notes)')}</span>
+                      <span className="text-[10px] font-normal text-neutral-400">{t('workspace_components.desktop_generator.optional', 'Opcional')}</span>
                     </label>
                     <textarea
                       value={releaseNotes}
                       onChange={e => setReleaseNotes(e.target.value)}
-                      placeholder="Ex: Novo módulo de relatórios, correções no financeiro e melhorias de desempenho..."
+                      placeholder={t('workspace_components.desktop_generator.release_notes_placeholder', 'Ex: Novo módulo de relatórios, correções no financeiro e melhorias de desempenho...')}
                       rows={3}
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg px-4 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none custom-scrollbar"
                     />
                     <p className="text-[10px] text-neutral-500 mt-1">
-                      Estas notas serão exibidas no histórico de atualizações para os usuários do aplicativo.
+                      {t('workspace_components.desktop_generator.release_notes_hint', 'Estas notas serão exibidas no histórico de atualizações para os usuários do aplicativo.')}
                     </p>
                   </div>
                 </div>

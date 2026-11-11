@@ -95,7 +95,7 @@ export default function SyncResolutionClient({
   return (
     <div className="space-y-8">
       {/* Header and description */}
-      <div className="mb-8 mt-2">
+      <div data-help-id="sync.header" className="mb-8 mt-2">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {t('sync_resolution.title', 'Aviso de Sincronização')}
         </h1>
@@ -113,7 +113,7 @@ export default function SyncResolutionClient({
 
       {/* Tabe Mappings */}
       {missingModels.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div data-help-id="sync.tables" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-xl font-semibold mb-4 border-b pb-2">
             {t('sync_resolution.missing_tables', 'Tabelas Ausentes (Models)')}
           </h2>
@@ -147,7 +147,7 @@ export default function SyncResolutionClient({
 
       {/* Field Mappings */}
       {missingFields.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div data-help-id="sync.fields" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 className="text-xl font-semibold mb-4 border-b pb-2">
             {t('sync_resolution.missing_columns', 'Colunas Ausentes (Fields)')}
           </h2>
@@ -244,6 +244,7 @@ export default function SyncResolutionClient({
       {/* Resumo e Botão */}
       <div className="flex justify-end pt-4">
         <button
+          data-help-id="sync.apply"
           onClick={handleSubmit}
           disabled={loading || 
             // Bloqueia se ainda houver dropdown sem selecionar

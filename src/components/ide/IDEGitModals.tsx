@@ -61,16 +61,16 @@ export function IDEGitModals({
     <>
       {/* Git Log Modal */}
       {isLogModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+        <div data-tour-modal="" className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0 bg-neutral-900/50">
+            <div data-help-id="ide.hist_header" className="flex items-center justify-between p-4 border-b border-neutral-800 shrink-0 bg-neutral-900/50">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <History className="w-5 h-5 text-indigo-400" /> Histórico
+                  <History className="w-5 h-5 text-indigo-400" /> {t('ide_git_history.title', 'Histórico')}
                 </h2>
                 <div className="h-6 w-px bg-neutral-700 mx-2"></div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">Branch:</span>
+                <div data-help-id="ide.hist_branch" className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider">{t('ide_git_history.branch', 'Branch')}:</span>
                   <select
                     value={selectedBranch}
                     onChange={(e) => handleBranchChange(e.target.value)}
@@ -83,6 +83,7 @@ export function IDEGitModals({
                 </div>
               </div>
               <button
+                data-help-id="ide.hist_close"
                 onClick={() => setIsLogModalOpen(false)}
                 className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
               >
@@ -90,9 +91,9 @@ export function IDEGitModals({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div data-help-id="ide.hist_list" className="flex-1 overflow-y-auto p-4 space-y-4">
               {gitLogs.length === 0 ? (
-                <div className="text-center text-neutral-500 py-8">Nenhum commit encontrado.</div>
+                <div className="text-center text-neutral-500 py-8">{t('ide_git_history.empty', 'Nenhum commit encontrado.')}</div>
               ) : (
                 gitLogs.map(log => (
                   <div key={log.oid} className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 group">
@@ -103,11 +104,11 @@ export function IDEGitModals({
                           onClick={() => setRevertConfirmOid(log.oid)}
                           className="opacity-0 group-hover:opacity-100 px-3 py-1 bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 rounded text-xs font-bold transition-all"
                         >
-                          Reverter para esta versão
+                          {t('ide_git_history.revert_btn', 'Reverter para esta versão')}
                         </button>
                         <div
                           className="flex items-center gap-1.5 text-xs text-neutral-500 font-mono bg-neutral-950 px-2 py-1 rounded border border-neutral-800/50"
-                          title="Código de Hash (Identificador Único do Commit)"
+                          title={t('ide_git_history.hash_title', 'Código de Hash (Identificador Único do Commit)')}
                         >
                           <span className="text-neutral-600">ID:</span> {log.oid.substring(0, 7)}
                         </div>

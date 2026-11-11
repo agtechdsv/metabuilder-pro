@@ -39,7 +39,7 @@ export function IdeTestHistory({ runs, loading, error, dir, selected, setSelecte
   }
 
   return (
-    <div className="space-y-3">
+    <div data-help-id="ide.test_history" className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 text-xs text-neutral-300 cursor-pointer">
           <input type="checkbox" className="accent-indigo-500" checked={all} disabled={runs.length === 0}

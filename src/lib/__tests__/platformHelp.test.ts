@@ -24,13 +24,13 @@ describe('rotas da ajuda da plataforma', () => {
     expect(ids('/admin/w/p/studio/logs')).toEqual(['logs-configurar', 'logs-filtrar', 'logs-ler-registro'])
     expect(ids('/admin/w/p/studio/settings')).toEqual(['settings-visao-geral', 'settings-defaults-campos', 'settings-propagar-defaults', 'settings-campos-calculados'])
     expect(ids('/admin/w/p/studio/auth')).toEqual(['auth-visao-geral', 'auth-controle-acesso', 'auth-estrategia-managed', 'auth-estrategia-banco-legado', 'auth-estrategia-ldap', 'auth-estrategia-sem-login', 'auth-personalizacao-visual', 'auth-usuarios', 'auth-grupos', 'auth-permissoes-telas'])
-    expect(ids('/workspace')).toEqual(['portal-workspaces', 'portal-ws-tunel', 'portal-ws-bancos'])
-    expect(ids('/admin/w')).toEqual(['portal-projetos', 'portal-pj-tunel', 'portal-pj-bancos'])
+    expect(ids('/workspace')).toEqual(['portal-workspaces', 'portal-ws-tunel', 'portal-ws-bancos', 'portal-ws-desktop'])
+    expect(ids('/admin/w')).toEqual(['portal-projetos', 'portal-pj-tunel', 'portal-pj-bancos', 'portal-pj-desktop'])
     expect(ids('/admin/w/p/studio/byoc')).toEqual(['ide-byoc'])
     expect(ids('/admin/w/p/studio/tunnel')).toEqual(['ide-json'])
     expect(ids('/admin/w/p/studio/terminal')).toEqual(['ide-terminal'])
     expect(ids('/admin/w/p/studio/sql')).toEqual(['ide-sql'])
-    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar', 'ide-git-config', 'ide-ejetar-pratica'])
+    expect(ids('/ide-local')).toEqual(['ide-local-visao-geral', 'ide-local-git', 'ide-ejetar', 'ide-git-config', 'ide-entrega', 'ide-git-commit', 'ide-git-historico', 'ide-testes', 'ide-ejetar-pratica'])
     expect(ids('/outra/rota')).toEqual([])
   })
 })
@@ -459,13 +459,14 @@ describe('tour das Configurações Git e menu agrupado da IDE', () => {
     expect(by('confirm').backClick).toBe('ide.gitcfg_confirm_cancel')
   })
 
-  it('o menu da IDE agrupa: IDE Local, Git e Ejetar & Sincronizar, sem perder nenhum tour', async () => {
+  it('o menu da IDE agrupa: IDE Local, Git, Ejetar & Sincronizar e Testes, sem perder nenhum tour', async () => {
     const { menuSections } = await import('../platformHelp/menuGroups')
     const tours = toursForRoute(PLATFORM_TOURS, '/ide-local')
     const sections = menuSections(tours)
-    expect(sections.map(s => s.title?.pt)).toEqual(['IDE Local', 'Git', 'Ejetar & Sincronizar'])
-    expect(sections[1].tours.map(t => t.id)).toEqual(['ide-local-git', 'ide-git-config'])
-    expect(sections[2].tours.map(t => t.id)).toEqual(['ide-ejetar', 'ide-ejetar-pratica'])
+    expect(sections.map(s => s.title?.pt)).toEqual(['IDE Local', 'Git', 'Ejetar & Sincronizar', 'Testes'])
+    expect(sections[1].tours.map(t => t.id)).toEqual(['ide-local-git', 'ide-git-config', 'ide-git-commit', 'ide-git-historico'])
+    expect(sections[2].tours.map(t => t.id)).toEqual(['ide-ejetar', 'ide-ejetar-pratica', 'ide-entrega'])
+    expect(sections[3].tours.map(t => t.id)).toEqual(['ide-testes'])
     expect(sections.flatMap(s => s.tours).length).toBe(tours.length)
   })
 
@@ -476,5 +477,85 @@ describe('tour das Configurações Git e menu agrupado da IDE', () => {
     }
     expect(src).toContain("t('ide_git_settings.pipeline_note'")
     expect(src).not.toMatch(/ide_git_settings\.cancel', 'Fechar'/)
+  })
+})
+
+describe('tours das janelas da IDE e do portal (Entrega, Commit, Histórico, Testes, Instalador Desktop, Sincronização pendente)', () => {
+  const tour = (id: string) => PLATFORM_TOURS.find(t => t.id === id)!
+  const step = (tid: string, sid: string) => tour(tid).steps.find(s => s.id === sid)!
+
+  it('Entrega: abre a janela sozinho, nunca gera e fecha no fim', () => {
+    const t = tour('ide-entrega')
+    expect(t.neverClick).toContain('ide.deliv_generate')
+    expect(t.cleanupClick).toContain('ide.deliv_cancel')
+    expect(step('ide-entrega', 'header').enterClick).toBe('ide.btn_delivery')
+    expect(step('ide-entrega', 'generate').readOnly).toBe(true)
+  })
+
+  it('Commit: nunca confirma o commit e o comparador de diferenças é só leitura (editar salva o arquivo)', () => {
+    const t = tour('ide-git-commit')
+    expect(t.neverClick).toContain('ide.merge_apply')
+    expect(t.cleanupClick).toContain('ide.commit_cancel')
+    expect(step('ide-git-commit', 'diff').readOnly).toBe(true)
+    expect(step('ide-git-commit', 'header').enterClick).toBe('ide.btn_commit')
+  })
+
+  it('Histórico: a lista (com o botão de reverter) é só leitura e a janela fecha no fim', () => {
+    expect(step('ide-git-historico', 'list').readOnly).toBe(true)
+    expect(tour('ide-git-historico').cleanupClick).toContain('ide.hist_close')
+    expect(step('ide-git-historico', 'header').enterClick).toBe('ide.btn_history')
+  })
+
+  it('Ambiente de Testes: abre, troca para o Histórico e volta, e fecha no fim', () => {
+    const t = tour('ide-testes')
+    expect(t.cleanupClick).toContain('portal.test_close')
+    expect(step('ide-testes', 'header').enterClick).toBe('ide.btn_tests')
+    expect(step('ide-testes', 'history').enterClick).toBe('ide.test_tab_history')
+    expect(step('ide-testes', 'history').backClick).toBe('ide.test_tab_run')
+  })
+
+  it('Instalador Desktop: um tour no workspace e outro no projeto, que nunca geram', () => {
+    expect(tour('portal-ws-desktop').route).toBe('/workspace')
+    expect(tour('portal-pj-desktop').route).toBe('/admin/:workspace')
+    for (const id of ['portal-ws-desktop', 'portal-pj-desktop']) {
+      expect(tour(id).neverClick, id).toContain('portal.desktop_generate')
+      expect(tour(id).cleanupClick, id).toContain('portal.desktop_cancel')
+      expect(step(id, 'icon').readOnly, id).toBe(true)
+    }
+    expect(step('portal-ws-desktop', 'button').target).toBe('portal.ws_act_desktop')
+    expect(step('portal-pj-desktop', 'button').target).toBe('portal.pj_act_desktop')
+  })
+
+  it('Sincronização pendente: tela própria, nunca aplica as resoluções', () => {
+    const t = tour('studio-sync-resolucao')
+    expect(t.route).toBe('/admin/:workspace/:project/sync-resolution')
+    expect(t.neverClick).toContain('sync.apply')
+    expect(toursForRoute(PLATFORM_TOURS, '/admin/w/p/sync-resolution').map(x => x.id)).toEqual(['studio-sync-resolucao'])
+  })
+
+  it('o Gerenciador do Túnel (Studio e portal) explica o console de sincronização e os logs', () => {
+    for (const id of ['studio-tunel', 'portal-ws-tunel', 'portal-pj-tunel']) expect(step(id, 'consoles'), id).toBeTruthy()
+  })
+
+  it('as janelas novas não têm mais texto fixo em português nos pontos traduzidos', () => {
+    const hist = fs.readFileSync(path.join(process.cwd(), 'src/components/ide/IDEGitModals.tsx'), 'utf8')
+    expect(hist).toContain("t('ide_git_history.title'")
+    expect(hist.includes('/> Histórico')).toBe(false)
+    const desk = fs.readFileSync(path.join(process.cwd(), 'src/components/workspace/DesktopAppGeneratorModal.tsx'), 'utf8')
+    expect(desk).toContain("desktop_generator.version_label")
+    expect(desk.includes('>Opcional<')).toBe(false)
+  })
+
+  it('nenhum texto do projeto manda usar a ação "Ejetar para uma pasta", que não existe mais (hoje é Sincronizar)', () => {
+    const hits: string[] = []
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) { if (!['node_modules', '.next', 'playwright-report', 'test-results'].includes(e.name)) walk(full) }
+        else if (/\.(ts|tsx|mjs|md)$/.test(e.name) && fs.readFileSync(full, 'utf8').includes('Ejetar para uma pasta')) hits.push(full)
+      }
+    }
+    walk(path.join(process.cwd(), 'e2e'))
+    expect(hits).toEqual([])
   })
 })

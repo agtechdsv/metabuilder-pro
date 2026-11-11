@@ -52,7 +52,7 @@ export const PERFIL_FUNC_ID = '33333333-3333-4333-8333-333333333333'
 /** Conexão do app ejetado (.env.local). */
 export function appConexao() {
   const f = path.join(ORA.appDir, '.env.local')
-  if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas ORA para ${ORA.appDir} (IDE > Ejetar para uma pasta) e rode: npm run ora:prepare`)
+  if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas ORA para ${ORA.appDir} (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) e rode: npm run ora:prepare`)
   const env: Record<string, string> = {}
   for (const l of fs.readFileSync(f, 'utf8').split(/\r?\n/)) {
     const m = /^([A-Z_]+)=(.*)$/.exec(l)

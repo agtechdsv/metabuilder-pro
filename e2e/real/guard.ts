@@ -55,7 +55,7 @@ function appDatabaseUrl(): string {
     return m[1]
   }
   const f = path.join(REAL.appDir, '.env.local')
-  if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas PG para ${REAL.appDir} (IDE > Ejetar para uma pasta) e rode: npm run real:prepare`)
+  if (!fs.existsSync(f)) throw new Error(`Não achei ${f}. Ejete o projeto Vendas PG para ${REAL.appDir} (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) e rode: npm run real:prepare`)
   const m = /^DATABASE_URL\s*=\s*"?([^"\r\n]+)"?/m.exec(fs.readFileSync(f, 'utf8'))
   if (!m) throw new Error('DATABASE_URL não encontrado no .env.local do app exportado.')
   return m[1]

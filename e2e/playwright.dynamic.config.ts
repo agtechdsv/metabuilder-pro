@@ -12,7 +12,7 @@ import { envParaApp, tipoDoBanco } from './dynamic/lib/banco.mjs'
  */
 const app = detectarApp(CONFIG.appDir)
 if (!CONFIG.appDir || !fs.existsSync(path.join(app.frontendDir, 'package.json'))) {
-  throw new Error(`Não achei o app exportado em "${CONFIG.appDir}". Ejete o projeto (IDE > Ejetar para uma pasta) e escolha essa pasta no Ambiente de Testes.`)
+  throw new Error(`Não achei o app exportado em "${CONFIG.appDir}". Ejete o projeto (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) e escolha essa pasta no Ambiente de Testes.`)
 }
 
 // com a configuração da IDE (E2E_CONFIG) o app sobe apontando para o banco de TESTE: a variável de ambiente vale mais que o .env.local (Node) e que o application.properties (Spring)

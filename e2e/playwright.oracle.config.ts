@@ -8,7 +8,7 @@ import { ORA } from './oracle/guard'
  * Regras de segurança em oracle/guard.ts. Rodar: npm run ora:run (antes: npm run ora:robot, ora:robot:func e ora:robot:leitura).
  */
 if (!fs.existsSync(path.join(ORA.appDir, 'package.json'))) {
-  throw new Error(`Não achei o app exportado em ${ORA.appDir}. Ejete o projeto Vendas ORA para essa pasta (IDE > Ejetar para uma pasta) e rode: npm run ora:prepare (ou defina E2E_ORA_APP_DIR em e2e/.env.oracle).`)
+  throw new Error(`Não achei o app exportado em ${ORA.appDir}. Ejete o projeto Vendas ORA para essa pasta (IDE > Sincronizar (ou Entrega > Código-fonte limpo, em pasta)) e rode: npm run ora:prepare (ou defina E2E_ORA_APP_DIR em e2e/.env.oracle).`)
 }
 
 export default defineConfig({
