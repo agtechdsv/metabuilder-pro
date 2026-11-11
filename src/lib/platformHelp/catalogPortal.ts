@@ -116,7 +116,7 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
     summary: h(['Criar projeto, o cartão, cada ícone de ação e como personalizar o portal do workspace.', 'Create a project, the card, each action icon and how to customize the workspace portal.', 'Crear un proyecto, la tarjeta, cada ícono de acción y cómo personalizar el portal del workspace.']),
     freeClicks: true,
     neverClick: ['portal.portal_save', 'portal.pj_delete_yes', 'portal.desktop_generate'],
-    cleanupClick: ['portal.portal_cancel', 'portal.pj_delete_cancel', 'portal.desktop_cancel'],
+    cleanupClick: ['portal.portal_cancel', 'portal.pj_delete_cancel', 'portal.desktop_cancel', 'portal.test_close'],
     steps: [
       st('banner', 'portal.pj_banner', ['Projetos do workspace', 'Workspace projects', 'Proyectos del workspace'], [
         'Aqui ficam os projetos do workspace. Um projeto é um sistema: tem as tabelas do banco do cliente, os casos de uso (as telas) e o app publicado.',
@@ -205,10 +205,10 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Abre la IDE Local del proyecto: eyecta la app (Node o Java) a una carpeta, edita el código, usa Git y sincroniza de vuelta. Exclusivo de la IDE Desktop.',
       ], { ideOnly: true }),
       st('act-tests', 'portal.pj_act_tests', ['Ambiente de Testes', 'Test Environment', 'Entorno de Pruebas'], [
-        'Abre o Ambiente de Testes, o mesmo da IDE Local. Só vale depois de sincronizar o projeto na IDE (pasta em AGTech\\MetaBuilderPRO).',
-        'Opens the Test Environment, the same as in the Local IDE. It only works after the project is synced in the IDE (folder in AGTech\\MetaBuilderPRO).',
-        'Abre el Entorno de Pruebas, el mismo de la IDE Local. Solo vale después de sincronizar el proyecto en la IDE (carpeta en AGTech\\MetaBuilderPRO).',
-      ], { ...OPT, ideOnly: true }),
+        'Abre o Ambiente de Testes, o mesmo da IDE Local. Só vale depois de sincronizar o projeto na IDE (pasta em AGTech\\MetaBuilderPRO). Na IDE você pode clicar para abrir e conhecer a janela; durante o tour nada é executado.',
+        'Opens the Test Environment, the same as in the Local IDE. It only works after the project is synced in the IDE (folder in AGTech\\MetaBuilderPRO). In the IDE you can click to open and explore the window; nothing runs during the tour.',
+        'Abre el Entorno de Pruebas, el mismo de la IDE Local. Solo vale después de sincronizar el proyecto en la IDE (carpeta en AGTech\\MetaBuilderPRO). En la IDE puede hacer clic para abrir y conocer la ventana; durante el tour no se ejecuta nada.',
+      ], { ...OPT, ideOnly: true, ideClick: true }),
       st('act-portal', 'portal.pj_act_portal', ['Adicionar ou remover do Portal', 'Add to or remove from the Portal', 'Agregar o quitar del Portal'], [
         'Mostra ou esconde este projeto na vitrine do portal do workspace. Quando o ícone está destacado, o projeto está no portal. Vale na hora.',
         'Shows or hides this project in the workspace portal showcase. When the icon is highlighted, the project is in the portal. It applies right away.',

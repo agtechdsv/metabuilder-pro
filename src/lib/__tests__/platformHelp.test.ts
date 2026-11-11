@@ -363,8 +363,10 @@ describe('portal: janela do portal no passo 4, ícones 🖥 clicáveis na IDE e 
       expect(tour(tourId).neverClick).toContain('portal.desktop_generate')
       expect(tour(tourId).cleanupClick).toContain('portal.desktop_cancel')
     }
-    // IDE Local e Ambiente de Testes continuam só mostrando (abrem telas que o tour não controla)
-    for (const [tourId, stepId] of [['portal-workspaces', 'act-ide'], ['portal-projetos', 'act-ide'], ['portal-projetos', 'act-tests']]) {
+    // Ambiente de Testes abre na IDE (a janela ignora tudo que executa durante o tour); IDE Local continua só mostrando (tela inteira)
+    expect(tour('portal-projetos').steps.find(x => x.id === 'act-tests')!.ideClick).toBe(true)
+    expect(tour('portal-projetos').cleanupClick).toContain('portal.test_close')
+    for (const [tourId, stepId] of [['portal-workspaces', 'act-ide'], ['portal-projetos', 'act-ide']]) {
       expect(tour(tourId).steps.find(x => x.id === stepId)!.ideClick, `${tourId}/${stepId}`).toBeFalsy()
     }
   })

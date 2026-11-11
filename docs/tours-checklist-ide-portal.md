@@ -70,7 +70,8 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - [x] Feito · ☑ Testado · 🖥 Na IDE, o ícone "Gerar App Desktop Nativo" (workspace e projeto) abre a janela ao clicar; "Gerar Instalador" nunca responde e a janela fecha ao terminar o tour. No site continua só mostrando
 - [x] Feito · ☑ Testado · 🖥 Workspaces: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (abrem a aba sozinhos; só no menu da IDE)
 - [x] Feito · ☑ Testado · 🖥 Projetos do workspace: tours "Gerenciador do Túnel" e "Bancos Sincronizados" (idem)
-- ⚠ IDE Local (🖥) e Ambiente de Testes (🖥) continuam só mostrando: abrem telas grandes que o tour não controla (o Ambiente de Testes executa testes de verdade).
+- [x] Feito · ☐ Testado · 🖥 Ambiente de Testes (projetos): na IDE o ícone abre a janela; dentro dela só funcionam as abas, Recolher/Expandir e fechar (executar, criar cópia, apagar etc. são ignorados durante o tour); a janela fecha ao terminar o tour
+- ⚠ A IDE Local (🖥) continua só mostrando: abre uma tela inteira que o tour não controla.
 
 ## B. Abas do Studio
 - [x] Feito · ☑ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)

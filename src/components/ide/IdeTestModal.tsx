@@ -477,7 +477,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
   }
 
   const secToggle = (k: 'type' | 'scope' | 'where') => (
-    <button type="button" onClick={() => setSecOpen(o => ({ ...o, [k]: !o[k] }))} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200">
+    <button type="button" data-tour-ok="" onClick={() => setSecOpen(o => ({ ...o, [k]: !o[k] }))} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200">
       {secOpen[k] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} {secOpen[k] ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')}
     </button>
   )
@@ -628,8 +628,16 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
     </span>
   ) : null
 
+  // durante um tour da plataforma a janela só se explora: abas, recolher/expandir e fechar respondem; qualquer outro botão (executar, criar cópia, apagar...) é ignorado
+  const tourGuard = (e: { target: EventTarget | null; stopPropagation(): void; preventDefault(): void }) => {
+    if (!document.body.hasAttribute('data-tour-active')) return
+    const el = e.target instanceof Element ? e.target : null
+    if (!el || el.closest('[data-tour-ok]')) return
+    if (el.closest('button, a, input, select, textarea, label, [role="button"]')) { e.stopPropagation(); e.preventDefault() }
+  }
+
   return (
-    <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
+    <div data-tour-modal="" onClickCapture={tourGuard} className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget && !running) onClose() }}>
       <div className="w-full max-w-5xl max-h-[92vh] flex flex-col rounded-2xl bg-neutral-900 border border-neutral-700 text-neutral-200 shadow-2xl">
         {/* Cabeçalho */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-neutral-800">
@@ -638,13 +646,13 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
             <h2 className="text-base font-bold text-white">{t('ide_tests.title', 'Ambiente de Testes')} <span className="text-neutral-500 font-medium">· {target.name}</span></h2>
             <p className="text-xs text-neutral-400">{t('ide_tests.subtitle', 'Os testes nascem do que você configurou no Studio: um caso de uso novo ou alterado muda o plano, sem escrever teste.')}</p>
           </div>
-          <button onClick={onClose} disabled={running} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-40"><X className="w-4 h-4" /></button>
+          <button data-tour-ok="" data-help-id="portal.test_close" onClick={onClose} disabled={running} className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-40"><X className="w-4 h-4" /></button>
         </div>
 
         {/* Abas */}
         <div className="flex gap-1 px-6 pt-3 border-b border-neutral-800">
           {([['run', FlaskConical, t('ide_tests.tab_run', 'Executar')], ['history', HistoryIcon, t('ide_tests.tab_history', 'Histórico')]] as const).map(([id, Icon, label]) => (
-            <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === id ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}><Icon className="w-3.5 h-3.5" /> {label}{id === 'history' && history.length > 0 ? ` (${history.length})` : ''}</button>
+            <button key={id} data-tour-ok="" onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === id ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}><Icon className="w-3.5 h-3.5" /> {label}{id === 'history' && history.length > 0 ? ` (${history.length})` : ''}</button>
           ))}
         </div>
 
@@ -692,7 +700,7 @@ export function IdeTestModal({ isOpen, onClose, target }: Props) {
                       </span>
                       <div className="ml-auto flex items-center gap-1">
                         {!running && <button onClick={resetRun} title={t('ide_tests.reset_hint', 'Limpar resultados e voltar ao estado original')} className="flex items-center gap-1.5 rounded-lg border border-neutral-600 px-2.5 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700"><Eraser className="w-3.5 h-3.5" /> {t('ide_tests.reset', 'Limpar')}</button>}
-                        <button onClick={() => setLiveOpen(o => !o)} title={liveOpen ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')} className="flex items-center gap-1 rounded-lg border border-neutral-600 px-2.5 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700">
+                        <button data-tour-ok="" onClick={() => setLiveOpen(o => !o)} title={liveOpen ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')} className="flex items-center gap-1 rounded-lg border border-neutral-600 px-2.5 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700">
                           {liveOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} {liveOpen ? t('ide_tests.live_collapse', 'Recolher') : t('ide_tests.live_expand', 'Expandir')}
                         </button>
                       </div>
