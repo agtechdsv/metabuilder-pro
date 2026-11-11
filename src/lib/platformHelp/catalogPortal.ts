@@ -1,6 +1,8 @@
 /**
  * Tours do portal: a tela de workspaces (/workspace) e a de projetos de um workspace (/admin/:workspace).
- * Só explicam: nada é clicado nem gravado. Funções exclusivas da IDE Desktop levam `ideOnly` (no site o balão avisa que o ícone fica desativado).
+ * Cliques livres (`freeClicks`): a pessoa pode clicar no ícone destacado para experimentar. São só leitura os passos que navegam ou gravam na hora
+ * (entrar, ativar/desativar, portal); os botões de confirmar exclusão e de salvar o portal nunca respondem (`neverClick`) e o tour fecha o que ficou aberto.
+ * Os ícones sem permissão aparecem desativados (LockedAction), então o passo existe para todos os papéis. Funções exclusivas da IDE Desktop levam `ideOnly`.
  * Cada alvo é um `data-help-id` de WorkspaceManager, ProjectManager, ProjectCard e WorkspacePortalModal.
  */
 
@@ -21,6 +23,9 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
   {
     id: 'portal-workspaces',
     route: WS,
+    freeClicks: true,
+    neverClick: ['portal.ws_delete_yes'],
+    cleanupClick: ['portal.ws_delete_cancel'],
     title: h(['Workspaces: visão geral', 'Workspaces: overview', 'Workspaces: visión general']),
     summary: h(['Para que serve um workspace, os contadores, o cartão e cada ícone que aparece ao passar o mouse.', 'What a workspace is for, the counters, the card and each icon that shows on hover.', 'Para qué sirve un workspace, los contadores, la tarjeta y cada ícono que aparece al pasar el mouse.']),
     steps: [
@@ -53,17 +58,17 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Mostra o nome, o endereço (/slug) e quantos projetos ele tem. Clicar no cartão, ou no botão redondo, abre os projetos do workspace.',
         'Shows the name, the address (/slug) and how many projects it has. Clicking the card, or the round button, opens the projects of the workspace.',
         'Muestra el nombre, la dirección (/slug) y cuántos proyectos tiene. Hacer clic en la tarjeta, o en el botón redondo, abre los proyectos del workspace.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('actions', 'portal.ws_actions', ['Ícones do cartão', 'Card icons', 'Íconos de la tarjeta'], [
-        'Ao passar o mouse sobre o cartão aparecem os ícones de ação. Quais aparecem depende do seu papel e do plano. Vamos ver um a um.',
-        'When you hover the card, the action icons show up. Which ones show depends on your role and plan. Let us see them one by one.',
-        'Al pasar el mouse sobre la tarjeta aparecen los íconos de acción. Cuáles aparecen depende de su rol y plan. Los veremos uno por uno.',
+        'Ao passar o mouse sobre o cartão aparecem os ícones de ação. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um: você pode clicar no ícone destacado para experimentar.',
+        'When you hover the card, the action icons show up. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one: you can click the highlighted icon to try it.',
+        'Al pasar el mouse sobre la tarjeta aparecen los íconos de acción. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno: puede hacer clic en el ícono resaltado para probar.',
       ], OPT),
       st('act-open', 'portal.ws_act_open', ['Acessar Portal', 'Open Portal', 'Acceder al Portal'], [
-        'Abre o portal do workspace, a vitrine com os projetos marcados para aparecer nele. Só existe se algum projeto do workspace estiver no portal.',
-        'Opens the workspace portal, the showcase with the projects marked to show in it. It only exists if some project of the workspace is in the portal.',
-        'Abre el portal del workspace, la vitrina con los proyectos marcados para aparecer en él. Solo existe si algún proyecto del workspace está en el portal.',
-      ], OPT),
+        'Abre o portal do workspace, a vitrine com os projetos marcados para aparecer nele. Fica desativado enquanto nenhum projeto do workspace estiver no portal.',
+        'Opens the workspace portal, the showcase with the projects marked to show in it. It stays disabled while no project of the workspace is in the portal.',
+        'Abre el portal del workspace, la vitrina con los proyectos marcados para aparecer en él. Queda desactivado mientras ningún proyecto del workspace esté en el portal.',
+      ]),
       st('act-desktop', 'portal.ws_act_desktop', ['Gerar App Desktop Nativo', 'Generate Native Desktop App', 'Generar App de Escritorio Nativo'], [
         'Empacota o workspace como um aplicativo de desktop instalável. Exclusivo da IDE Desktop.',
         'Packages the workspace as an installable desktop application. Exclusive to the Desktop IDE.',
@@ -73,27 +78,27 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Abre a IDE Local do workspace: traz os apps para uma pasta do seu computador, edita o código e sincroniza de volta. É onde ficam também o ejetar e o Git. Exclusivo da IDE Desktop.',
         'Opens the Local IDE of the workspace: brings the apps to a folder on your computer, edits the code and syncs back. It is also where eject and Git live. Exclusive to the Desktop IDE.',
         'Abre la IDE Local del workspace: trae las apps a una carpeta de su computador, edita el código y sincroniza de vuelta. Allí también están eyectar y Git. Exclusivo de la IDE Desktop.',
-      ], { ...OPT, ideOnly: true }),
+      ], { ideOnly: true }),
       st('act-edit', 'portal.ws_act_edit', ['Editar workspace', 'Edit workspace', 'Editar workspace'], [
         'Abre o painel de edição para mudar os dados do workspace. As mudanças só valem ao salvar.',
         'Opens the edit panel to change the workspace data. Changes only apply on save.',
         'Abre el panel de edición para cambiar los datos del workspace. Los cambios solo valen al guardar.',
-      ], OPT),
+      ]),
       st('act-delete', 'portal.ws_act_delete', ['Excluir workspace', 'Delete workspace', 'Eliminar workspace'], [
         'Pede confirmação antes de excluir. Hoje a lixeira cobre só os casos de uso: a exclusão de um workspace não volta, então confira antes.',
         'Asks for confirmation before deleting. Today the trash covers only use cases: deleting a workspace cannot be undone, so double-check.',
         'Pide confirmación antes de eliminar. Hoy la papelera cubre solo los casos de uso: eliminar un workspace no se deshace, así que revise antes.',
-      ], OPT),
+      ]),
       st('act-ai', 'portal.ws_act_ai', ['Configurações de IA', 'AI settings', 'Configuraciones de IA'], [
-        'Define como o AI Builder trabalha neste workspace. Aparece só para o dono, no plano PRO.',
-        'Defines how the AI Builder works in this workspace. It only shows for the owner, on the PRO plan.',
-        'Define cómo trabaja el AI Builder en este workspace. Aparece solo para el dueño, en el plan PRO.',
-      ], OPT),
+        'Define como o AI Builder trabalha neste workspace. Só o dono, no plano PRO, pode usar; para os demais o ícone fica desativado.',
+        'Defines how the AI Builder works in this workspace. Only the owner, on the PRO plan, can use it; for everyone else the icon is disabled.',
+        'Define cómo trabaja el AI Builder en este workspace. Solo el dueño, en el plan PRO, puede usarlo; para los demás el ícono queda desactivado.',
+      ]),
       st('enter', 'portal.ws_enter', ['Entrar no workspace', 'Enter the workspace', 'Entrar al workspace'], [
         'Mostra o número de projetos e leva para a lista deles. É o caminho normal para começar a trabalhar.',
         'Shows the number of projects and takes you to their list. It is the normal way to start working.',
         'Muestra el número de proyectos y lleva a su lista. Es el camino normal para empezar a trabajar.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('add-card', 'portal.ws_add_card', ['Atalho para criar', 'Shortcut to create', 'Atajo para crear'], [
         'O cartão pontilhado faz o mesmo que o botão "Novo workspace" do topo.',
         'The dotted card does the same as the "New workspace" button at the top.',
@@ -108,8 +113,9 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
     route: PJ,
     title: h(['Projetos do workspace: visão geral', 'Workspace projects: overview', 'Proyectos del workspace: visión general']),
     summary: h(['Criar projeto, o cartão, cada ícone de ação e como personalizar o portal do workspace.', 'Create a project, the card, each action icon and how to customize the workspace portal.', 'Crear un proyecto, la tarjeta, cada ícono de acción y cómo personalizar el portal del workspace.']),
-    neverClick: ['portal.portal_save'],
-    cleanupClick: ['portal.portal_cancel'],
+    freeClicks: true,
+    neverClick: ['portal.portal_save', 'portal.pj_delete_yes'],
+    cleanupClick: ['portal.portal_cancel', 'portal.pj_delete_cancel'],
     steps: [
       st('banner', 'portal.pj_banner', ['Projetos do workspace', 'Workspace projects', 'Proyectos del workspace'], [
         'Aqui ficam os projetos do workspace. Um projeto é um sistema: tem as tabelas do banco do cliente, os casos de uso (as telas) e o app publicado.',
@@ -140,26 +146,26 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Nome, endereço (/slug) e descrição do projeto. Clicar no cartão abre o Studio dele.',
         'Name, address (/slug) and description of the project. Clicking the card opens its Studio.',
         'Nombre, dirección (/slug) y descripción del proyecto. Hacer clic en la tarjeta abre su Studio.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('status', 'portal.pj_status', ['Situação', 'Status', 'Estado'], [
         'Ativo ou Inativo. Se houver alterações estruturais do banco aguardando revisão, aparece também o selo "Sincronização pendente": clique nele para revisar.',
         'Active or Inactive. If structural database changes are waiting for review, the "Pending sync" badge also shows: click it to review.',
         'Activo o Inactivo. Si hay cambios estructurales de la base esperando revisión, aparece también la insignia "Sincronización pendiente": haga clic para revisar.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('stats', 'portal.pj_stats', ['Tabelas e casos de uso', 'Tables and use cases', 'Tablas y casos de uso'], [
         'Quantas tabelas o projeto já sincronizou do banco do cliente e o atalho para os casos de uso.',
         'How many tables the project has already synced from the customer database and the shortcut to the use cases.',
         'Cuántas tablas el proyecto ya sincronizó de la base del cliente y el atajo a los casos de uso.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('enter', 'portal.pj_enter', ['Entrar no Studio', 'Enter the Studio', 'Entrar al Studio'], [
         'O botão redondo abre o Studio do projeto, onde você cria e edita os casos de uso.',
         'The round button opens the project Studio, where you create and edit the use cases.',
         'El botón redondo abre el Studio del proyecto, donde crea y edita los casos de uso.',
-      ], OPT),
+      ], { ...OPT, readOnly: true }),
       st('actions', 'portal.pj_actions', ['Ícones do cartão', 'Card icons', 'Íconos de la tarjeta'], [
-        'Passe o mouse sobre o cartão para ver as ações. Quais aparecem depende do seu papel e do plano. Vamos ver um a um.',
-        'Hover the card to see the actions. Which ones show depends on your role and plan. Let us see them one by one.',
-        'Pase el mouse sobre la tarjeta para ver las acciones. Cuáles aparecen depende de su rol y plan. Los veremos uno por uno.',
+        'Passe o mouse sobre o cartão para ver as ações. O que o seu papel ou plano não permite fica desativado, com o motivo no balãozinho do ícone. Vamos ver um a um: você pode clicar no ícone destacado para experimentar.',
+        'Hover the card to see the actions. What your role or plan does not allow is disabled, with the reason in the icon tooltip. Let us see them one by one: you can click the highlighted icon to try it.',
+        'Pase el mouse sobre la tarjeta para ver las acciones. Lo que su rol o plan no permite queda desactivado, con el motivo en el tooltip del ícono. Los veremos uno por uno: puede hacer clic en el ícono resaltado para probar.',
       ], OPT),
       st('act-open', 'portal.pj_act_open', ['Acessar versão publicada', 'Open published version', 'Acceder a la versión publicada'], [
         'Abre o app do projeto como o usuário final o vê, no endereço publicado.',
@@ -175,7 +181,7 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Abre a IDE Local do projeto: ejeta o app (Node ou Java) para uma pasta, edita o código, usa o Git e sincroniza de volta. Exclusivo da IDE Desktop.',
         'Opens the Local IDE of the project: ejects the app (Node or Java) to a folder, edits the code, uses Git and syncs back. Exclusive to the Desktop IDE.',
         'Abre la IDE Local del proyecto: eyecta la app (Node o Java) a una carpeta, edita el código, usa Git y sincroniza de vuelta. Exclusivo de la IDE Desktop.',
-      ], { ...OPT, ideOnly: true }),
+      ], { ideOnly: true }),
       st('act-tests', 'portal.pj_act_tests', ['Ambiente de Testes', 'Test Environment', 'Entorno de Pruebas'], [
         'Abre o Ambiente de Testes, o mesmo da IDE Local. Só vale depois de sincronizar o projeto na IDE (pasta em AGTech\\MetaBuilderPRO).',
         'Opens the Test Environment, the same as in the Local IDE. It only works after the project is synced in the IDE (folder in AGTech\\MetaBuilderPRO).',
@@ -185,22 +191,22 @@ export const PORTAL_TOURS: readonly PlatformTour[] = [
         'Mostra ou esconde este projeto na vitrine do portal do workspace. Quando o ícone está destacado, o projeto está no portal. Vale na hora.',
         'Shows or hides this project in the workspace portal showcase. When the icon is highlighted, the project is in the portal. It applies right away.',
         'Muestra u oculta este proyecto en la vitrina del portal del workspace. Cuando el ícono está resaltado, el proyecto está en el portal. Vale al instante.',
-      ], OPT),
+      ], { readOnly: true }),
       st('act-toggle', 'portal.pj_act_toggle', ['Desativar ou ativar', 'Deactivate or activate', 'Desactivar o activar'], [
         'Muda a situação do projeto entre Ativo e Inativo, sem apagar nada. Dá para ativar de novo quando quiser.',
         'Switches the project between Active and Inactive, without deleting anything. You can activate it again whenever you want.',
         'Cambia el proyecto entre Activo e Inactivo, sin borrar nada. Se puede activar de nuevo cuando quiera.',
-      ], OPT),
+      ], { readOnly: true }),
       st('act-edit', 'portal.pj_act_edit', ['Editar projeto', 'Edit project', 'Editar proyecto'], [
         'Abre o mesmo painel do "Novo projeto", com os dados atuais. As mudanças só valem ao salvar.',
         'Opens the same panel as "New project", with the current data. Changes only apply on save.',
         'Abre el mismo panel de "Nuevo proyecto", con los datos actuales. Los cambios solo valen al guardar.',
-      ], OPT),
+      ]),
       st('act-delete', 'portal.pj_act_delete', ['Excluir projeto', 'Delete project', 'Eliminar proyecto'], [
         'Pede confirmação antes de excluir. Hoje a lixeira cobre só os casos de uso: a exclusão de um projeto não volta, então confira antes.',
         'Asks for confirmation before deleting. Today the trash covers only use cases: deleting a project cannot be undone, so double-check.',
         'Pide confirmación antes de eliminar. Hoy la papelera cubre solo los casos de uso: eliminar un proyecto no se deshace, así que revise antes.',
-      ], OPT),
+      ]),
       st('add-card', 'portal.pj_add_card', ['Atalho para criar', 'Shortcut to create', 'Atajo para crear'], [
         'O cartão pontilhado faz o mesmo que o botão "Novo projeto" do topo.',
         'The dotted card does the same as the "New project" button at the top.',

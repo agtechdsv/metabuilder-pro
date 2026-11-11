@@ -30,8 +30,8 @@ export function Drawer({ isOpen, onClose, title, children, zIndex = 100, hideHea
   if (!mounted) return null
 
   return (
-    <>
-      <div 
+    <div className="contents" data-tour-modal={isOpen ? '' : undefined}>
+      <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ zIndex }}
         onClick={onClose}
@@ -61,6 +61,6 @@ export function Drawer({ isOpen, onClose, title, children, zIndex = 100, hideHea
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

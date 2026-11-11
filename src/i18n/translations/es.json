@@ -4982,6 +4982,19 @@
       },
       "notify_me": "Quiero que me avisen cuando esté disponible",
       "notify_on": "✓ Interés registrado (haga clic para deshacer)"
+    },
+    "locked": {
+      "edit_workspace": "Su rol en este workspace no permite editar. Pida al dueño.",
+      "delete_workspace": "Su rol en este workspace no permite eliminar. Pida al dueño.",
+      "ide_workspace": "Su rol en este workspace no permite abrir la IDE Local. Pida al dueño.",
+      "ai_owner": "Solo el dueño del workspace configura la IA.",
+      "ai_pro": "La configuración de IA exige el plan PRO del dueño.",
+      "portal_none": "Ningún proyecto de este workspace está en el portal todavía.",
+      "edit_project": "Su rol en este proyecto no permite editar. Pida al dueño.",
+      "delete_project": "Su rol en este proyecto no permite eliminar. Pida al dueño.",
+      "deactivate_project": "Su rol en este proyecto no permite activar o desactivar. Pida al dueño.",
+      "ide_project": "Su rol en este proyecto no permite abrir la IDE Local. Pida al dueño.",
+      "tests_project": "Su rol en este proyecto no permite abrir el Entorno de Pruebas. Pida al dueño."
     }
   },
   "formula_builder": {

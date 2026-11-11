@@ -4894,6 +4894,19 @@
       },
       "notify_me": "Quero ser avisado quando sair",
       "notify_on": "✓ Interesse registrado (clique para desfazer)"
+    },
+    "locked": {
+      "edit_workspace": "Seu papel neste workspace não permite editar. Peça ao dono.",
+      "delete_workspace": "Seu papel neste workspace não permite excluir. Peça ao dono.",
+      "ide_workspace": "Seu papel neste workspace não permite abrir a IDE Local. Peça ao dono.",
+      "ai_owner": "Só o dono do workspace configura a IA.",
+      "ai_pro": "A configuração de IA exige o plano PRO do dono.",
+      "portal_none": "Nenhum projeto deste workspace está no portal ainda.",
+      "edit_project": "Seu papel neste projeto não permite editar. Peça ao dono.",
+      "delete_project": "Seu papel neste projeto não permite excluir. Peça ao dono.",
+      "deactivate_project": "Seu papel neste projeto não permite ativar ou desativar. Peça ao dono.",
+      "ide_project": "Seu papel neste projeto não permite abrir a IDE Local. Peça ao dono.",
+      "tests_project": "Seu papel neste projeto não permite abrir o Ambiente de Testes. Peça ao dono."
     }
   },
   "formula_builder": {

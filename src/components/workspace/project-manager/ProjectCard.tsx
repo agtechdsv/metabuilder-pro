@@ -23,6 +23,7 @@ import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { ProGate } from '@/components/ui/ProGate'
+import { LockedAction } from '@/components/ui/LockedAction'
 import { Project } from './types'
 import { isTauri } from '@/utils/tauriUtils'
 
@@ -170,7 +171,7 @@ export function ProjectCard({
                   </button>
                 </ProGate>
 
-                {project.can_edit && (
+                {project.can_edit ? (
                   <>
                     {/* 3. IDE Local */}
                     <ProGate gateType="desktop" tier={tier || 'free'} featureName="IDE Local (Ejetar & Sincronizar)">
@@ -206,6 +207,23 @@ export function ProjectCard({
                     )}
 
                   </>
+                ) : (
+                  <>
+                    <LockedAction
+                      icon={FolderGit2}
+                      helpId={tourMarks ? 'portal.pj_act_ide' : undefined}
+                      label={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
+                      reason={t('workspace_components.locked.ide_project', 'Seu papel neste projeto não permite abrir a IDE Local. Peça ao dono.')}
+                    />
+                    {onOpenTests && desktop && (
+                      <LockedAction
+                        icon={FlaskConical}
+                        helpId={tourMarks ? 'portal.pj_act_tests' : undefined}
+                        label={t('ide_tests.open', 'Ambiente de Testes')}
+                        reason={t('workspace_components.locked.tests_project', 'Seu papel neste projeto não permite abrir o Ambiente de Testes. Peça ao dono.')}
+                      />
+                    )}
+                  </>
                 )}
 
                 {/* 5. Remover/Adicionar do Portal */}
@@ -219,7 +237,7 @@ export function ProjectCard({
                 </button>
 
                 {/* 6. Desativar/Ativar */}
-                {project.can_deactivate && (
+                {project.can_deactivate ? (
                   <button
                     data-help-id={tourMarks ? 'portal.pj_act_toggle' : undefined}
                     onClick={() => onToggleActive(project)}
@@ -228,10 +246,17 @@ export function ProjectCard({
                   >
                     {project.is_active ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                   </button>
+                ) : (
+                  <LockedAction
+                    icon={project.is_active ? PowerOff : Power}
+                    helpId={tourMarks ? 'portal.pj_act_toggle' : undefined}
+                    label={project.is_active ? t('dashboard.projects.toggle_inactive') : t('dashboard.projects.toggle_active')}
+                    reason={t('workspace_components.locked.deactivate_project', 'Seu papel neste projeto não permite ativar ou desativar. Peça ao dono.')}
+                  />
                 )}
 
                 {/* 7. Editar Projeto */}
-                {project.can_edit && (
+                {project.can_edit ? (
                   <button
                     data-help-id={tourMarks ? 'portal.pj_act_edit' : undefined}
                     onClick={() => onEdit(project)}
@@ -240,10 +265,17 @@ export function ProjectCard({
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
+                ) : (
+                  <LockedAction
+                    icon={Pencil}
+                    helpId={tourMarks ? 'portal.pj_act_edit' : undefined}
+                    label={t('dashboard.projects.edit_project')}
+                    reason={t('workspace_components.locked.edit_project', 'Seu papel neste projeto não permite editar. Peça ao dono.')}
+                  />
                 )}
 
                 {/* 8. Excluir Projeto */}
-                {project.can_delete && (
+                {project.can_delete ? (
                   <button
                     data-help-id={tourMarks ? 'portal.pj_act_delete' : undefined}
                     onClick={() => onDelete(project)}
@@ -252,6 +284,13 @@ export function ProjectCard({
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                ) : (
+                  <LockedAction
+                    icon={Trash2}
+                    helpId={tourMarks ? 'portal.pj_act_delete' : undefined}
+                    label={t('dashboard.projects.delete_project')}
+                    reason={t('workspace_components.locked.delete_project', 'Seu papel neste projeto não permite excluir. Peça ao dono.')}
+                  />
                 )}
               </div>
             )}

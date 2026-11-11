@@ -38,6 +38,7 @@ export function ProjectDeleteModal({
         <div className="flex flex-col gap-3">
           <button
             onClick={onDelete}
+            data-help-id="portal.pj_delete_yes"
             disabled={isDeleting}
             className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
           >
@@ -45,6 +46,7 @@ export function ProjectDeleteModal({
           </button>
           <button
             onClick={onClose}
+            data-help-id="portal.pj_delete_cancel"
             className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all"
           >
             {t('common.cancel')}

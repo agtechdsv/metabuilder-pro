@@ -24,34 +24,46 @@ Os ícones só aparecem ao passar o mouse sobre o cartão; durante o tour eles f
 ---
 
 ## 0. Base do motor de tours
-- [x] Feito · ☐ Testado · Marca de passo "exclusivo da IDE" (`ideOnly`): no site mostra o aviso e não deixa clicar; na IDE também só mostra
-- [x] Feito · ☐ Testado · Teste unitário da marca e do aviso
-- [x] Feito · ☐ Testado · Texto padrão do aviso "Disponível só na IDE Desktop" nos 3 idiomas
-- [x] Feito · ☐ Testado · Ícone **?** na tela de workspaces (`/workspace`), que antes não tinha ajuda
+- [x] Feito · ☑ Testado · Marca de passo "exclusivo da IDE" (`ideOnly`): no site mostra o aviso e não deixa clicar; na IDE também só mostra
+- [x] Feito · ☑ Testado · Teste unitário da marca e do aviso
+- [x] Feito · ☑ Testado · Texto padrão do aviso "Disponível só na IDE Desktop" nos 3 idiomas
+- [x] Feito · ☑ Testado · Ícone **?** na tela de workspaces (`/workspace`), que antes não tinha ajuda
 
 ## A. Portal inicial (workspaces e projetos)
 ### A1. Workspaces (tour "Workspaces: visão geral")
-- [x] Feito · ☐ Testado · Tela "Seus Workspaces": o que é, equipe, novo workspace, contadores, atualizar
-- [x] Feito · ☐ Testado · Cartão do workspace: nome, slug, nº de projetos, botão de entrar (`>`)
-- [x] Feito · ☐ Testado · Ícone abrir / Acessar Portal (↗)
-- [x] Feito · ☐ Testado · 🖥 Ícone da tela = Gerar App Desktop Nativo
-- [x] Feito · ☐ Testado · 🖥 Ícone da pasta = IDE Local (Sincronizar)
-- [x] Feito · ☐ Testado · Ícone editar workspace
-- [x] Feito · ☐ Testado · Ícone excluir workspace (avisa que a exclusão não volta)
-- [x] Feito · ☐ Testado · Ícone Configurações de IA (só dono PRO) e cartão pontilhado de novo workspace
-- [x] Feito · ☐ Testado · Personalizar Portal: logo e banner do login global (passos da janela, no tour dos projetos; só aparece com projeto no portal)
+- [x] Feito · ☑ Testado · Tela "Seus Workspaces": o que é, equipe, novo workspace, contadores, atualizar
+- [x] Feito · ☑ Testado · Cartão do workspace: nome, slug, nº de projetos, botão de entrar (`>`)
+- [x] Feito · ☑ Testado · Ícone abrir / Acessar Portal (↗)
+- [x] Feito · ☑ Testado · 🖥 Ícone da tela = Gerar App Desktop Nativo
+- [x] Feito · ☑ Testado · 🖥 Ícone da pasta = IDE Local (Sincronizar)
+- [x] Feito · ☑ Testado · Ícone editar workspace
+- [x] Feito · ☑ Testado · Ícone excluir workspace (avisa que a exclusão não volta)
+- [x] Feito · ☑ Testado · Ícone Configurações de IA (só dono PRO) e cartão pontilhado de novo workspace
+- [x] Feito · ☑ Testado · Personalizar Portal: logo e banner do login global (passos da janela, no tour dos projetos; só aparece com projeto no portal)
 
 ### A2. Projetos (tour "Projetos do workspace: visão geral")
-- [x] Feito · ☐ Testado · Tela de projetos: banner, novo projeto, abas (Seus Projetos; Túnel e Bancos só na IDE)
-- [x] Feito · ☐ Testado · Cartão do projeto: selo Ativo/Inativo e "Sincronização pendente", nº de tabelas, casos de uso, botão de entrar
-- [x] Feito · ☐ Testado · Ícone "Acessar versão publicada"
-- [x] Feito · ☐ Testado · 🖥 Ícone "Gerar App Desktop Nativo"
-- [x] Feito · ☐ Testado · 🖥 Ícone "IDE Local (Ejetar & Sincronizar)"
-- [x] Feito · ☐ Testado · 🖥 Ícone Ambiente de Testes (só aparece na IDE, com app sincronizado)
-- [x] Feito · ☐ Testado · Ícone de banco de dados = Adicionar/Remover do Portal
-- [x] Feito · ☐ Testado · Ícone Desativar / Ativar projeto
-- [x] Feito · ☐ Testado · Ícone Editar projeto
-- [x] Feito · ☐ Testado · Ícone Excluir projeto (avisa que a exclusão não volta)
+- [x] Feito · ☑ Testado · Tela de projetos: banner, novo projeto, abas (Seus Projetos; Túnel e Bancos só na IDE)
+- [x] Feito · ☑ Testado · Cartão do projeto: selo Ativo/Inativo e "Sincronização pendente", nº de tabelas, casos de uso, botão de entrar
+- [x] Feito · ☑ Testado · Ícone "Acessar versão publicada"
+- [x] Feito · ☑ Testado · 🖥 Ícone "Gerar App Desktop Nativo"
+- [x] Feito · ☑ Testado · 🖥 Ícone "IDE Local (Ejetar & Sincronizar)"
+- [x] Feito · ☑ Testado · 🖥 Ícone Ambiente de Testes (só aparece na IDE, com app sincronizado)
+- [x] Feito · ☑ Testado · Ícone de banco de dados = Adicionar/Remover do Portal
+- [x] Feito · ☑ Testado · Ícone Desativar / Ativar projeto
+- [x] Feito · ☑ Testado · Ícone Editar projeto
+- [x] Feito · ☑ Testado · Ícone Excluir projeto (avisa que a exclusão não volta)
+
+### A3. Ícones desativados por papel e cliques livres no portal (novo, 2026-11-11)
+Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os mesmos ícones**; para o dev, o que ele não pode fazer aparece apagado, com o motivo no tooltip. Nenhum passo é pulado por falta de permissão.
+- [x] Feito · ☐ Testado · Cartão do workspace, dev: ícones IDE Local, Editar, Excluir e IA aparecem desativados (tooltip diz o motivo)
+- [x] Feito · ☐ Testado · Cartão do workspace: "Acessar Portal" aparece desativado enquanto nenhum projeto do workspace está no portal
+- [x] Feito · ☐ Testado · Cartão do projeto, dev: IDE Local, Ambiente de Testes (só na IDE), Ativar/Desativar, Editar e Excluir desativados
+- [x] Feito · ☐ Testado · Tour dos workspaces com o dev: percorre os 14 passos sem pular o da IA (destaca o ícone desativado)
+- [x] Feito · ☐ Testado · Cliques livres nos dois tours: dá para clicar no ícone destacado (Novo, Editar, Excluir, Acessar, IA, Personalizar portal...) e a janela abre; o balão vai para o canto
+- [x] Feito · ☐ Testado · "Sim, excluir" do workspace e do projeto nunca respondem durante o tour, e a janela de exclusão é fechada ao terminar
+- [x] Feito · ☐ Testado · Passos só de leitura (não deixam clicar): entrar no cartão/Studio, Ativar/Desativar, Adicionar/Remover do Portal, 🖥 ícones da IDE
+- [x] Feito · ☐ Testado · Painéis laterais (Novo/Editar workspace e projeto) contam como janela do tour: dá para preencher e fechar sem o tour atrapalhar
+- ⚠ Ainda fora do tour livre: o botão "Salvar" do portal é bloqueado de propósito; o "Salvar" dos painéis Novo/Editar não é (se você salvar, grava de verdade).
 
 ## B. Abas do Studio
 - [x] Feito · ☐ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)

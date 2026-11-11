@@ -4894,6 +4894,19 @@
       },
       "notify_me": "Notify me when it is available",
       "notify_on": "✓ Interest registered (click to undo)"
+    },
+    "locked": {
+      "edit_workspace": "Your role in this workspace does not allow editing. Ask the owner.",
+      "delete_workspace": "Your role in this workspace does not allow deleting. Ask the owner.",
+      "ide_workspace": "Your role in this workspace does not allow opening the Local IDE. Ask the owner.",
+      "ai_owner": "Only the workspace owner configures the AI.",
+      "ai_pro": "The AI configuration requires the owner PRO plan.",
+      "portal_none": "No project of this workspace is in the portal yet.",
+      "edit_project": "Your role in this project does not allow editing. Ask the owner.",
+      "delete_project": "Your role in this project does not allow deleting. Ask the owner.",
+      "deactivate_project": "Your role in this project does not allow activating or deactivating. Ask the owner.",
+      "ide_project": "Your role in this project does not allow opening the Local IDE. Ask the owner.",
+      "tests_project": "Your role in this project does not allow opening the Test Environment. Ask the owner."
     }
   },
   "formula_builder": {

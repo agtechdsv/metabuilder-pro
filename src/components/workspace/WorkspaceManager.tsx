@@ -41,6 +41,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Drawer } from '@/components/ui/Drawer'
 import { Modal } from '@/components/ui/Modal'
+import { LockedAction } from '@/components/ui/LockedAction'
 import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
@@ -460,10 +461,10 @@ export function WorkspaceManager({
                     </Link>
 
                     {/* Exibe para quem tem permissão de editar, excluir, ou se houver projeto no portal (todos veem Acessar Portal se houver) */}
-                    {!isNavigating && (workspace.can_edit || workspace.can_delete || workspace.has_portal_project) && (
+                    {!isNavigating && (
                       <div data-help-id={wsIdx === 0 ? 'portal.ws_actions' : undefined} data-help-reveal className="absolute top-6 right-6 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm p-1 rounded-xl z-20">
                         {/* 1. Acessar Portal */}
-                        {workspace.has_portal_project && (
+                        {workspace.has_portal_project ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -475,6 +476,13 @@ export function WorkspaceManager({
                           >
                             <ArrowUpRight className="w-4 h-4" />
                           </button>
+                        ) : (
+                          <LockedAction
+                            icon={ArrowUpRight}
+                            helpId={wsIdx === 0 ? 'portal.ws_act_open' : undefined}
+                            label={t('workspace_components.project_card_tooltips.access_portal', 'Acessar Portal')}
+                            reason={t('workspace_components.locked.portal_none', 'Nenhum projeto deste workspace está no portal ainda.')}
+                          />
                         )}
                         {/* 2. Gerar App Desktop Nativo */}
                         <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.generate_desktop', 'Gerar App Desktop Nativo')}>
@@ -491,7 +499,7 @@ export function WorkspaceManager({
                             <Monitor className="w-4 h-4" />
                           </button>
                         </ProGate>
-                        {workspace.can_edit && (
+                        {workspace.can_edit ? (
                           <>
                             {/* 3. IDE Local */}
                             <ProGate gateType="desktop" tier={tier} featureName={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}>
@@ -522,9 +530,24 @@ export function WorkspaceManager({
                               <Pencil className="w-4 h-4" />
                             </button>
                           </>
+                        ) : (
+                          <>
+                            <LockedAction
+                              icon={FolderGit2}
+                              helpId={wsIdx === 0 ? 'portal.ws_act_ide' : undefined}
+                              label={t('workspace_components.project_card_tooltips.ide_local', 'IDE Local (Ejetar & Sincronizar)')}
+                              reason={t('workspace_components.locked.ide_workspace', 'Seu papel neste workspace não permite abrir a IDE Local. Peça ao dono.')}
+                            />
+                            <LockedAction
+                              icon={Pencil}
+                              helpId={wsIdx === 0 ? 'portal.ws_act_edit' : undefined}
+                              label={t('dashboard.edit_workspace')}
+                              reason={t('workspace_components.locked.edit_workspace', 'Seu papel neste workspace não permite editar. Peça ao dono.')}
+                            />
+                          </>
                         )}
                         {/* 6. Excluir Workspace */}
-                        {workspace.can_delete && (
+                        {workspace.can_delete ? (
                           <button
                             onClick={() => openDeleteModal(workspace)}
                             className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-500 hover:text-red-400 cursor-pointer"
@@ -533,9 +556,16 @@ export function WorkspaceManager({
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                        ) : (
+                          <LockedAction
+                            icon={Trash2}
+                            helpId={wsIdx === 0 ? 'portal.ws_act_delete' : undefined}
+                            label={t('dashboard.delete_workspace')}
+                            reason={t('workspace_components.locked.delete_workspace', 'Seu papel neste workspace não permite excluir. Peça ao dono.')}
+                          />
                         )}
-                        {/* AI Builder (owner/pro only — posicionado ao final por ser feature avançada) */}
-                        {workspace.role === 'owner' && profile?.subscription_tier === 'pro' && (
+                        {/* AI Builder (só o dono, no plano PRO; para os demais o ícone aparece desativado com o motivo) */}
+                        {workspace.role === 'owner' && profile?.subscription_tier === 'pro' ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -548,6 +578,15 @@ export function WorkspaceManager({
                           >
                             <Bot className="w-4 h-4" />
                           </button>
+                        ) : (
+                          <LockedAction
+                            icon={Bot}
+                            helpId={wsIdx === 0 ? 'portal.ws_act_ai' : undefined}
+                            label={t('workspace_components.project_card_tooltips.ai_builder', 'Configurações AI Builder')}
+                            reason={workspace.role === 'owner'
+                              ? t('workspace_components.locked.ai_pro', 'A configuração de IA exige o plano PRO do dono.')
+                              : t('workspace_components.locked.ai_owner', 'Só o dono do workspace configura a IA.')}
+                          />
                         )}
                       </div>
                     )}
@@ -669,6 +708,7 @@ export function WorkspaceManager({
           <div className="flex flex-col gap-3">
             <button
               onClick={handleDelete}
+              data-help-id="portal.ws_delete_yes"
               disabled={isDeleting}
               className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)] cursor-pointer"
             >
@@ -676,6 +716,7 @@ export function WorkspaceManager({
             </button>
             <button
               onClick={() => setIsDeleteModalOpen(false)}
+              data-help-id="portal.ws_delete_cancel"
               className="w-full py-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all cursor-pointer"
             >
               {t('common.cancel')}

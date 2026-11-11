@@ -258,3 +258,52 @@ describe('passos exclusivos da IDE', () => {
     expect(mod.IDE_TOUR_ROUTE).toBe('/ide-local')
   })
 })
+
+describe('tours do portal: cliques livres e ícones desativados', () => {
+  const portal = () => PLATFORM_TOURS.filter(t => t.id === 'portal-workspaces' || t.id === 'portal-projetos')
+  const sources = () => {
+    const out: string[] = []
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === 'node_modules' || e.name === '__tests__' || e.name.startsWith('.')) continue
+        const full = path.join(dir, e.name)
+        if (e.isDirectory()) walk(full)
+        else if (/\.tsx$/.test(e.name)) out.push(fs.readFileSync(full, 'utf8'))
+      }
+    }
+    walk(path.join(process.cwd(), 'src'))
+    return out.join('\n')
+  }
+
+  it('os dois tours deixam clicar no ícone destacado e bloqueiam confirmar exclusão', () => {
+    const src = sources()
+    expect(portal().length).toBe(2)
+    for (const t of portal()) {
+      expect(t.freeClicks, t.id).toBe(true)
+      expect(t.neverClick?.some(id => /delete_yes$/.test(id)), t.id).toBe(true)
+      expect(t.cleanupClick?.some(id => /delete_cancel$/.test(id)), t.id).toBe(true)
+      for (const id of [...(t.neverClick || []), ...(t.cleanupClick || [])]) expect(src.includes(`"${id}"`), `${t.id}: ${id}`).toBe(true)
+    }
+  })
+
+  it('passos que navegam ou gravam na hora são só leitura', () => {
+    const only = (tourId: string, stepId: string) => PLATFORM_TOURS.find(t => t.id === tourId)?.steps.find(s => s.id === stepId)?.readOnly === true
+    for (const id of ['card', 'enter']) expect(only('portal-workspaces', id), `ws/${id}`).toBe(true)
+    for (const id of ['card', 'enter', 'act-portal', 'act-toggle']) expect(only('portal-projetos', id), `pj/${id}`).toBe(true)
+  })
+
+  it('ícones por papel não são mais opcionais: aparecem desativados em vez de sumir', () => {
+    const optional = (tourId: string, stepId: string) => PLATFORM_TOURS.find(t => t.id === tourId)?.steps.find(s => s.id === stepId)?.skipIfMissing === true
+    for (const id of ['act-open', 'act-ide', 'act-edit', 'act-delete', 'act-ai']) expect(optional('portal-workspaces', id), `ws/${id}`).toBe(false)
+    for (const id of ['act-ide', 'act-toggle', 'act-edit', 'act-delete']) expect(optional('portal-projetos', id), `pj/${id}`).toBe(false)
+  })
+
+  it('as mensagens do ícone desativado existem nos 3 idiomas', () => {
+    for (const lang of ['pt', 'en', 'es']) {
+      const json = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/i18n/translations', `${lang}.json`), 'utf8'))
+      for (const k of ['edit_workspace', 'delete_workspace', 'ide_workspace', 'ai_owner', 'ai_pro', 'portal_none', 'edit_project', 'delete_project', 'deactivate_project', 'ide_project', 'tests_project']) {
+        expect(json.workspace_components?.locked?.[k], `${lang}.${k}`).toBeTruthy()
+      }
+    }
+  })
+})
