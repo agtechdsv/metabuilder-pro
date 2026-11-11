@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Check, CircleHelp, Play } from 'lucide-react'
+import { Check, ChevronDown, CircleHelp, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
@@ -17,6 +17,13 @@ export function PlatformHelpButton() {
   const pathname = usePathname() || ''
   const [open, setOpen] = useState(false)
   const [seen, setSeen] = useState<string[]>([])
+  // grupos recolhidos do menu (lembrados neste navegador; só conveniência, o menu funciona sem isso)
+  const [collapsed, setCollapsed] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('mb.tourMenu.collapsed') || '[]') } catch { return [] } })
+  const toggleGroup = (key: string) => setCollapsed(prev => {
+    const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    try { localStorage.setItem('mb.tourMenu.collapsed', JSON.stringify(next)) } catch { /* sem armazenamento: vale só nesta sessão */ }
+    return next
+  })
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => { if (open) setSeen(seenTours()) }, [open])
@@ -50,15 +57,25 @@ export function PlatformHelpButton() {
           {tours.length === 0 ? (
             <p className="px-1 py-3 text-xs text-neutral-500">{t('platform_help.none', 'Ainda não há tutoriais para esta tela. Eles estão sendo preparados.')}</p>
           ) : (
-            sections.map((sec, si) => (
+            sections.map((sec, si) => {
+            const gk = sec.title?.pt || ''
+            const closed = !!gk && collapsed.includes(gk)
+            return (
             <div key={si}>
             {sec.title && (
-              <div className="flex items-center gap-2 px-1 pb-1 pt-3">
+              <button
+                type="button"
+                onClick={() => toggleGroup(gk)}
+                aria-expanded={!closed}
+                className="mt-2 flex w-full items-center gap-2 rounded-lg px-1 pb-1 pt-1 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800"
+              >
                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{resolveHelp(sec.title, language)}</span>
                 <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
-              </div>
+                <span className="text-[10px] font-bold text-neutral-400">{sec.tours.length}</span>
+                <ChevronDown className={cn('h-3.5 w-3.5 text-neutral-400 transition-transform', closed && '-rotate-90')} />
+              </button>
             )}
-            <ul className="space-y-1">
+            <ul className={cn('space-y-1', closed && 'hidden')}>
               {sec.tours.map(tour => {
                 const avail = tourAvailable(tour)
                 return (
@@ -84,7 +101,8 @@ export function PlatformHelpButton() {
               })}
             </ul>
             </div>
-            ))
+            )
+            })
           )}
         </div>
       )}

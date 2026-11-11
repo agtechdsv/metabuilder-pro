@@ -20,10 +20,11 @@ const STUDIO_SECTIONS: { title: HelpText; ids: string[] }[] = [
       'studio-logica-personalizado', 'studio-excluir-caso-de-uso',
     ],
   },
-  {
-    title: h('Navegação', 'Navigation', 'Navegación'),
-    ids: ['studio-navegacao', 'studio-enums', 'studio-tunel', 'studio-bancos-sincronizados', 'studio-central-ajuda'],
-  },
+  { title: h('Navegação', 'Navigation', 'Navegación'), ids: ['studio-navegacao'] },
+  { title: h('Enums', 'Enums', 'Enums'), ids: ['studio-enums'] },
+  { title: h('Gerenciador do Túnel', 'Tunnel Manager', 'Gestor del Túnel'), ids: ['studio-tunel'] },
+  { title: h('Bancos Sincronizados', 'Synced Databases', 'Bases Sincronizadas'), ids: ['studio-bancos-sincronizados'] },
+  { title: h('Central de Ajuda', 'Help Center', 'Centro de Ayuda'), ids: ['studio-central-ajuda'] },
 ]
 
 /** Divide os tours da tela em seções com título; sem nenhum tour agrupado, devolve uma seção só, sem título. */

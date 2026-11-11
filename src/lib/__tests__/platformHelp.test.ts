@@ -309,15 +309,15 @@ describe('tours do portal: cliques livres e ícones desativados', () => {
 })
 
 describe('menu de tours do Studio: ordem e separadores', () => {
-  it('três seções na ordem combinada e nenhum tour some do menu', async () => {
+  it('uma seção por aba, na ordem combinada, e nenhum tour some do menu', async () => {
     const { menuSections } = await import('../platformHelp/menuGroups')
     const tours = toursForRoute(PLATFORM_TOURS, '/admin/w/p/studio')
     const sections = menuSections(tours)
-    expect(sections.map(s => s.title?.pt)).toEqual(['Studio', 'Casos de Uso', 'Navegação'])
+    expect(sections.map(s => s.title?.pt)).toEqual(['Studio', 'Casos de Uso', 'Navegação', 'Enums', 'Gerenciador do Túnel', 'Bancos Sincronizados', 'Central de Ajuda'])
     expect(sections[0].tours.map(t => t.id)).toEqual(['studio-barra-lateral', 'studio-visao-geral'])
     expect(sections[1].tours[0].id).toBe('studio-criar-caso-de-uso')
     expect(sections[1].tours.at(-1)?.id).toBe('studio-excluir-caso-de-uso')
-    expect(sections[2].tours.map(t => t.id)).toEqual(['studio-navegacao', 'studio-enums', 'studio-tunel', 'studio-bancos-sincronizados', 'studio-central-ajuda'])
+    expect(sections.slice(2).map(s => s.tours.map(t => t.id))).toEqual([['studio-navegacao'], ['studio-enums'], ['studio-tunel'], ['studio-bancos-sincronizados'], ['studio-central-ajuda']])
     expect(sections.flatMap(s => s.tours).length).toBe(tours.length)
   })
 
