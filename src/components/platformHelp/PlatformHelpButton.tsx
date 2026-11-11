@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Check, ChevronDown, CircleHelp, Play } from 'lucide-react'
+import { Check, ChevronDown, CircleHelp, FoldVertical, Play, UnfoldVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
@@ -52,10 +52,9 @@ export function PlatformHelpButton() {
           <div className="flex items-center justify-between px-1 pb-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">{t('platform_help.menu_title', 'Ajuda desta tela')}</p>
             {groupKeys.length > 1 && (
-              <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-                <button type="button" onClick={() => saveCollapsed([])} disabled={collapsed.every(k => !groupKeys.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.expand_all', 'Expandir tudo')}</button>
-                <span className="text-neutral-300">·</span>
-                <button type="button" onClick={() => saveCollapsed(groupKeys)} disabled={groupKeys.every(k => collapsed.includes(k))} className="hover:underline disabled:opacity-40 disabled:no-underline">{t('platform_help.collapse_all', 'Recolher tudo')}</button>
+              <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                <button type="button" onClick={() => saveCollapsed([])} disabled={collapsed.every(k => !groupKeys.includes(k))} title={t('platform_help.expand_all', 'Expandir tudo')} aria-label={t('platform_help.expand_all', 'Expandir tudo')} className="p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-500/10 disabled:opacity-40 disabled:hover:bg-transparent"><UnfoldVertical className="w-3.5 h-3.5" /></button>
+                <button type="button" onClick={() => saveCollapsed(groupKeys)} disabled={groupKeys.every(k => collapsed.includes(k))} title={t('platform_help.collapse_all', 'Recolher tudo')} aria-label={t('platform_help.collapse_all', 'Recolher tudo')} className="p-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-500/10 disabled:opacity-40 disabled:hover:bg-transparent"><FoldVertical className="w-3.5 h-3.5" /></button>
               </div>
             )}
           </div>
