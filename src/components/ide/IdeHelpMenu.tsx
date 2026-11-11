@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { ChevronDown, CircleHelp, FoldVertical, Play, UnfoldVertical } from 'lucide-react'
+import { Check, ChevronDown, CircleHelp, FoldVertical, Play, UnfoldVertical } from 'lucide-react'
 import { resolveHelp } from '@/lib/helpText'
 import { useI18n } from '@/i18n/I18nContext'
 import { PLATFORM_TOURS } from '@/lib/platformHelp/catalog'
-import { startPlatformTour, tourAvailable } from '@/lib/platformHelp/store'
+import { seenTours, startPlatformTour, tourAvailable } from '@/lib/platformHelp/store'
 import { menuSections } from '@/lib/platformHelp/menuGroups'
 import { useCollapsedGroups } from '@/lib/platformHelp/useCollapsedGroups'
 
@@ -16,7 +16,10 @@ export const IDE_TOUR_ROUTE = '/ide-local'
 export function IdeHelpMenu() {
   const { t, language } = useI18n()
   const [open, setOpen] = useState(false)
+  const [seen, setSeen] = useState<string[]>([])
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { if (open) setSeen(seenTours()) }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -80,7 +83,7 @@ export function IdeHelpMenu() {
                         onClick={() => { setOpen(false); startPlatformTour(tour) }}
                         className="flex w-full items-start gap-3 rounded-xl p-2 text-left hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-300"><Play className="h-3 w-3" /></span>
+                        <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${seen.includes(tour.id) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-300'}`}>{seen.includes(tour.id) ? <Check className="h-3 w-3" /> : <Play className="h-3 w-3" />}</span>
                         <span className="min-w-0">
                           <span className="block text-xs font-bold text-neutral-100">{resolveHelp(tour.title, language)}</span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-neutral-400">{resolveHelp(tour.summary, language)}</span>
