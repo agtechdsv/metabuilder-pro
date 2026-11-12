@@ -4,19 +4,23 @@ import React from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { AlertCircle } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { formatDuration } from '@/lib/trash/format'
 
 interface ProjectDeleteModalProps {
   isOpen: boolean
   onClose: () => void
   onDelete: () => void
   isDeleting: boolean
+  /** prazo da lixeira em horas (para dizer por quanto tempo dá para restaurar) */
+  hours: number
 }
 
 export function ProjectDeleteModal({
   isOpen,
   onClose,
   onDelete,
-  isDeleting
+  isDeleting,
+  hours
 }: ProjectDeleteModalProps) {
   const { t } = useI18n()
 
@@ -30,8 +34,8 @@ export function ProjectDeleteModal({
         <div className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
           <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-red-500">{t('dashboard.projects.confirm_delete_project')}</p>
-            <p className="text-xs text-neutral-500 mt-1">{t('dashboard.projects.delete_project_desc')}</p>
+            <p className="text-sm font-bold text-red-500">{t('workspace_components.entity_trash.confirm_project_title')}</p>
+            <p className="text-xs text-neutral-500 mt-1">{t('workspace_components.entity_trash.confirm_project_desc').replace('{duration}', formatDuration(hours, t))}</p>
           </div>
         </div>
 
@@ -42,7 +46,7 @@ export function ProjectDeleteModal({
             disabled={isDeleting}
             className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)]"
           >
-            {isDeleting ? t('common.loading') : t('dashboard.projects.yes_delete')}
+            {isDeleting ? t('common.loading') : t('workspace_components.entity_trash.confirm_project_yes')}
           </button>
           <button
             onClick={onClose}

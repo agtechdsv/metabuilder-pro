@@ -46,6 +46,10 @@ import { useI18n } from '@/i18n/I18nContext'
 import { cn } from '@/lib/utils'
 import { useUpgradeModal } from '@/context/UpgradeModalContext'
 import { ProGate } from '@/components/ui/ProGate'
+import { EntityTrashModal } from './EntityTrashModal'
+import { moveWorkspaceToTrash, entityTrashErrorCode } from '@/lib/trash/entityTrash'
+import { DEFAULT_TRASH_HOURS, getTrashRetentionHours } from '@/lib/trash/trash'
+import { formatDuration } from '@/lib/trash/format'
 
 interface Workspace {
   id: string
@@ -101,6 +105,11 @@ export function WorkspaceManager({
   totalPendingMembers
 }: WorkspaceManagerProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
+  // depois de restaurar da lixeira (router.refresh) o servidor manda a lista nova
+  useEffect(() => { setWorkspaces(initialWorkspaces) }, [initialWorkspaces])
+  const [isTrashOpen, setIsTrashOpen] = useState(false)
+  // prazo da lixeira (ajuste do SuperAdmin): aparece na confirmação de excluir
+  const [trashHours, setTrashHours] = useState(DEFAULT_TRASH_HOURS)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null)
   const [formData, setFormData] = useState({ name: '', slug: '' })
@@ -128,6 +137,7 @@ export function WorkspaceManager({
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { t } = useI18n()
+  useEffect(() => { getTrashRetentionHours(supabase).then(setTrashHours) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const profileData = useMemo(() => {
     return teamData?.members?.find((m: any) => m.role === 'owner') || profile
@@ -244,17 +254,15 @@ export function WorkspaceManager({
     setIsDeleting(true)
 
     try {
-      const { error } = await supabase
-        .from('workspaces')
-        .delete()
-        .eq('id', selectedWorkspace.id)
+      // vai para a lixeira (cópia do workspace e de todos os projetos + exclusão numa transação); a função SQL confere a permissão
+      await moveWorkspaceToTrash(supabase, selectedWorkspace.id)
 
-      toast(t('dashboard.toasts.workspace_deleted'), 'success')
+      toast(t('workspace_components.entity_trash.trashed_workspace').replace('{name}', selectedWorkspace.name).replace('{duration}', formatDuration(trashHours, t)), 'success')
       setWorkspaces(workspaces.filter(w => w.id !== selectedWorkspace.id))
       setIsDeleteModalOpen(false)
       setSelectedWorkspace(null)
     } catch (err: any) {
-      toast(err.message || t('dashboard.toasts.delete_error'), 'error')
+      toast(entityTrashErrorCode(err) === 'delete_not_allowed' ? t('workspace_components.entity_trash.err_denied') : (err.message || t('dashboard.toasts.delete_error')), 'error')
     } finally {
       setIsDeleting(false)
     }
@@ -402,6 +410,15 @@ export function WorkspaceManager({
             )}
           </h3>
           {activeTab === 'workspaces' && (
+            <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsTrashOpen(true)}
+              className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+              title={t('workspace_components.entity_trash.open')}
+              aria-label={t('workspace_components.entity_trash.open')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -411,6 +428,7 @@ export function WorkspaceManager({
             >
               <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", isRefreshing ? "animate-spin" : "group-hover:rotate-180")} />
             </button>
+            </div>
           )}
         </div>
 
@@ -692,6 +710,13 @@ export function WorkspaceManager({
         </form>
       </Drawer>
 
+      <EntityTrashModal
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        type="workspace"
+        onRestored={() => router.refresh()}
+      />
+
       {/* Modal de Exclusão */}
       <Modal
         isOpen={isDeleteModalOpen}
@@ -702,8 +727,8 @@ export function WorkspaceManager({
           <div className="flex items-start gap-4 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl">
             <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-red-500">{t('dashboard.confirm_delete')}</p>
-              <p className="text-xs text-neutral-500 mt-1">{t('dashboard.delete_desc')}</p>
+              <p className="text-sm font-bold text-red-500">{t('workspace_components.entity_trash.confirm_workspace_title')}</p>
+              <p className="text-xs text-neutral-500 mt-1">{t('workspace_components.entity_trash.confirm_workspace_desc').replace('{duration}', formatDuration(trashHours, t))}</p>
             </div>
           </div>
 
@@ -714,7 +739,7 @@ export function WorkspaceManager({
               disabled={isDeleting}
               className="w-full py-4 bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white rounded-2xl font-bold transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)] cursor-pointer"
             >
-              {isDeleting ? t('common.loading') : t('dashboard.yes_delete')}
+              {isDeleting ? t('common.loading') : t('workspace_components.entity_trash.confirm_workspace_yes')}
             </button>
             <button
               onClick={() => setIsDeleteModalOpen(false)}

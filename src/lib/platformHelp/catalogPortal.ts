@@ -86,9 +86,9 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Abre el panel de edición para cambiar los datos del workspace. Los cambios solo valen al guardar.',
       ]),
       st('act-delete', 'portal.ws_act_delete', ['Excluir workspace', 'Delete workspace', 'Eliminar workspace'], [
-        'Pede confirmação antes de excluir. Hoje a lixeira cobre só os casos de uso: a exclusão de um workspace não volta, então confira antes.',
-        'Asks for confirmation before deleting. Today the trash covers only use cases: deleting a workspace cannot be undone, so double-check.',
-        'Pide confirmación antes de eliminar. Hoy la papelera cubre solo los casos de uso: eliminar un workspace no se deshace, así que revise antes.',
+        'Pede confirmação antes de excluir. O workspace e todos os projetos dele vão para a lixeira (ícone de lixeira ao lado de Atualizar) e podem ser restaurados dentro do prazo definido pela plataforma; depois disso são apagados de vez.',
+        'Asks for confirmation before deleting. The workspace and all its projects go to the trash (trash icon next to Refresh) and can be restored within the period set by the platform; after that they are erased for good.',
+        'Pide confirmación antes de eliminar. El workspace y todos sus proyectos van a la papelera (ícono de papelera junto a Actualizar) y pueden restaurarse dentro del plazo definido por la plataforma; después se borran definitivamente.',
       ]),
       st('act-ai', 'portal.ws_act_ai', ['Configurações de IA', 'AI settings', 'Configuraciones de IA'], [
         'Define como o AI Builder trabalha neste workspace. Só o dono, no plano PRO, pode usar; para os demais o ícone fica desativado.',
@@ -225,9 +225,9 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Abre el mismo panel de "Nuevo proyecto", con los datos actuales. Los cambios solo valen al guardar.',
       ]),
       st('act-delete', 'portal.pj_act_delete', ['Excluir projeto', 'Delete project', 'Eliminar proyecto'], [
-        'Pede confirmação antes de excluir. Hoje a lixeira cobre só os casos de uso: a exclusão de um projeto não volta, então confira antes.',
-        'Asks for confirmation before deleting. Today the trash covers only use cases: deleting a project cannot be undone, so double-check.',
-        'Pide confirmación antes de eliminar. Hoy la papelera cubre solo los casos de uso: eliminar un proyecto no se deshace, así que revise antes.',
+        'Pede confirmação antes de excluir. O projeto vai para a lixeira (ícone de lixeira ao lado de Atualizar) e pode ser restaurado dentro do prazo definido pela plataforma; depois disso é apagado de vez.',
+        'Asks for confirmation before deleting. The project goes to the trash (trash icon next to Refresh) and can be restored within the period set by the platform; after that it is erased for good.',
+        'Pide confirmación antes de eliminar. El proyecto va a la papelera (ícono de papelera junto a Actualizar) y puede restaurarse dentro del plazo definido por la plataforma; después se borra definitivamente.',
       ]),
       st('add-card', 'portal.pj_add_card', ['Atalho para criar', 'Shortcut to create', 'Atajo para crear'], [
         'O cartão pontilhado faz o mesmo que o botão "Novo projeto" do topo.',

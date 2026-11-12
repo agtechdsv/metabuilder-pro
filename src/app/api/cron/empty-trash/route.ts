@@ -28,7 +28,10 @@ export async function GET(req: Request) {
       console.error('[cron/empty-trash] falha ao esvaziar a lixeira:', error.message)
       return NextResponse.json({ error: 'Failed to empty trash' }, { status: 500 })
     }
-    return NextResponse.json({ success: true, hours, deleted: data?.length || 0 })
+    // lixeira de projetos e workspaces (Fase 2): mesmo prazo. Se a tabela ainda não existe no banco, só segue.
+    const { data: ent, error: entErr } = await supabase.from('mb_entity_trash').delete().lt('deleted_at', cutoff).select('id')
+    if (entErr) console.warn('[cron/empty-trash] lixeira de projetos/workspaces:', entErr.message)
+    return NextResponse.json({ success: true, hours, deleted: data?.length || 0, deletedEntities: ent?.length || 0 })
   } catch (e: any) {
     console.error('[cron/empty-trash] erro:', e)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

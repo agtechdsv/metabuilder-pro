@@ -6,7 +6,8 @@ import {
   Settings,
   RefreshCw,
   Layers,
-  Bot
+  Bot,
+  Trash2
 } from 'lucide-react'
 import { AIBuilderSettings } from './AIBuilderSettings'
 import { createClient } from '@/utils/supabase/client'
@@ -28,6 +29,10 @@ import { ProjectCard } from './project-manager/ProjectCard'
 import { IdeTestModal } from '@/components/ide/IdeTestModal'
 import { ProjectFormDrawer, ProjectFormData } from './project-manager/ProjectFormDrawer'
 import { ProjectDeleteModal } from './project-manager/ProjectDeleteModal'
+import { EntityTrashModal } from './EntityTrashModal'
+import { moveProjectToTrash, entityTrashErrorCode } from '@/lib/trash/entityTrash'
+import { DEFAULT_TRASH_HOURS, getTrashRetentionHours } from '@/lib/trash/trash'
+import { formatDuration } from '@/lib/trash/format'
 import { WorkspacePortalModal } from './project-manager/WorkspacePortalModal'
 
 interface ProjectManagerProps {
@@ -82,6 +87,9 @@ export function ProjectManager({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isTrashOpen, setIsTrashOpen] = useState(false)
+  // prazo da lixeira (ajuste do SuperAdmin): aparece na confirmação de excluir
+  const [trashHours, setTrashHours] = useState(DEFAULT_TRASH_HOURS)
   const [navigatingSlug, setNavigatingSlug] = useState<string | null>(null)
   const [isAIModalOpen, setIsAIModalOpen] = useState(false)
 
@@ -106,6 +114,7 @@ export function ProjectManager({
   // só depois de montar: o servidor não sabe se está no desktop, e decidir isso no render gera diferença de HTML (erro de hidratação, React #418)
   const [desktop, setDesktop] = useState(false)
   useEffect(() => { setDesktop(isTauri()) }, [])
+  useEffect(() => { getTrashRetentionHours(supabase).then(setTrashHours) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // Ambiente de Testes aberto direto pelo card do projeto
   const [testsTarget, setTestsTarget] = useState<{ type: 'project'; id: string; name: string; slug: string } | null>(null)
   const pathname = usePathname()
@@ -272,20 +281,17 @@ export function ProjectManager({
     setIsDeleting(true)
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', selectedProject.id)
+      // vai para a lixeira (cópia + exclusão numa transação); a função SQL confere se a pessoa pode excluir este projeto
+      await moveProjectToTrash(supabase, selectedProject.id)
 
-      if (error) throw error
-
+      toast(t('workspace_components.entity_trash.trashed_project').replace('{name}', selectedProject.name).replace('{duration}', formatDuration(trashHours, t)), 'success')
       setProjects(projects.filter(p => p.id !== selectedProject.id))
       setIsDeleteModalOpen(false)
       setSelectedProject(null)
       router.refresh()
     } catch (err: any) {
       console.error(err)
-      toast(err.message || 'Erro ao excluir o projeto', 'error')
+      toast(entityTrashErrorCode(err) === 'delete_not_allowed' ? t('workspace_components.entity_trash.err_denied') : (err.message || 'Erro ao excluir o projeto'), 'error')
     } finally {
       setIsDeleting(false)
     }
@@ -482,6 +488,14 @@ export function ProjectManager({
                 </div>
               )}
               <button
+                onClick={() => setIsTrashOpen(true)}
+                className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+                title={t('workspace_components.entity_trash.open')}
+                aria-label={t('workspace_components.entity_trash.open')}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
                 className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors group"
@@ -583,6 +597,15 @@ export function ProjectManager({
         onClose={() => setIsDeleteModalOpen(false)}
         onDelete={handleDelete}
         isDeleting={isDeleting}
+        hours={trashHours}
+      />
+
+      <EntityTrashModal
+        isOpen={isTrashOpen}
+        onClose={() => setIsTrashOpen(false)}
+        type="project"
+        workspaceId={workspaceId}
+        onRestored={() => router.refresh()}
       />
 
       {/* Modal de Configurações do Workspace (Portal e Domínio) */}
