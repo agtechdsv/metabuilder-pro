@@ -10,6 +10,7 @@ import { createClient } from '@/utils/supabase/client'
 import { BottomCta } from '@/components/landing/BottomCta'
 import { CampaignBanner } from '@/components/marketing/CampaignBanner'
 import { campaignOffPercent, fetchActiveCampaign, type PricingCampaign } from '@/lib/campaigns'
+import { salesWhatsappUrl } from '@/lib/contact'
 import { chargeBreakdown } from '../../../supabase/functions/_shared/pricing'
 
 export function MarketingSections() {
@@ -1309,7 +1310,7 @@ export function MarketingSections() {
 
                     {licenses >= 100 ? (
                       <Link
-                        href="https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro"
+                        href={salesWhatsappUrl('Olá, tenho interesse em um plano Enterprise do MetaBuilder Pro')}
                         target="_blank"
                         className="mt-8 w-full block py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-center font-black text-xs uppercase tracking-widest transition-all hover:scale-102 shadow-xl shadow-indigo-500/20"
                       >

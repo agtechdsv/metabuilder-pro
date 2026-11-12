@@ -484,6 +484,19 @@ describe('tours das janelas da IDE e do portal (Entrega, Commit, Histórico, Tes
   const tour = (id: string) => PLATFORM_TOURS.find(t => t.id === id)!
   const step = (tid: string, sid: string) => tour(tid).steps.find(s => s.id === sid)!
 
+  it('os tours do portal explicam a lixeira (ícone só destacado, logo depois de Atualizar) e não dizem mais que a exclusão não volta', () => {
+    for (const [tid, target] of [['portal-workspaces', 'portal.ws_trash'], ['portal-projetos', 'portal.pj_trash']] as const) {
+      const t = tour(tid)
+      const ids = t.steps.map(x => x.id)
+      expect(ids.indexOf('trash'), tid).toBe(ids.indexOf('refresh') + 1)
+      expect(step(tid, 'trash').target).toBe(target)
+      expect(step(tid, 'trash').readOnly).toBe(true)
+      const del = JSON.stringify(step(tid, 'act-delete').body)
+      expect(del).not.toMatch(/não volta|cannot be undone|no se deshace/)
+      expect(del).toMatch(/lixeira|trash|papelera/)
+    }
+  })
+
   it('Entrega: abre a janela sozinho, fecha no fim, e Cancelar e Gerar respondem ao clique e encerram o tour (Cancelar vem antes de Gerar)', () => {
     const t = tour('ide-entrega')
     expect(t.cleanupClick).toContain('ide.deliv_cancel')

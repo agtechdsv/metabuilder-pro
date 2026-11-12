@@ -55,6 +55,11 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Reloads the workspaces. Useful after someone else on the team created or changed something.',
         'Recarga los workspaces. Útil después de que otra persona del equipo creó o cambió algo.',
       ], OPT),
+      st('trash', 'portal.ws_trash', ['Lixeira de workspaces', 'Workspace trash', 'Papelera de workspaces'], [
+        'Guarda os workspaces excluídos, com todos os projetos deles, pelo prazo definido pela plataforma. Lá você busca pelo nome, restaura (tudo volta como estava, com os mesmos endereços) ou apaga de vez. Só aparece o que você tem permissão de excluir. Aqui o botão só é destacado.',
+        'Keeps deleted workspaces, with all their projects, for the period set by the platform. There you search by name, restore (everything comes back as it was, with the same addresses) or erase for good. You only see what you are allowed to delete. Here the button is only highlighted.',
+        'Guarda los workspaces eliminados, con todos sus proyectos, por el plazo definido por la plataforma. Allí busca por nombre, restaura (todo vuelve como estaba, con las mismas direcciones) o borra definitivamente. Solo aparece lo que usted puede eliminar. Aquí el botón solo se resalta.',
+      ], { ...OPT, readOnly: true }),
       st('card', 'portal.ws_card', ['O cartão do workspace', 'The workspace card', 'La tarjeta del workspace'], [
         'Mostra o nome, o endereço (/slug) e quantos projetos ele tem. Clicar no cartão, ou no botão redondo, abre os projetos do workspace.',
         'Shows the name, the address (/slug) and how many projects it has. Clicking the card, or the round button, opens the projects of the workspace.',
@@ -164,6 +169,11 @@ const BASE_PORTAL_TOURS: readonly PlatformTour[] = [
         'Reloads the projects, with the total next to it.',
         'Recarga los proyectos, con el total al lado.',
       ], { ...OPT, enterClick: 'portal.portal_cancel', backClick: 'portal.pj_customize' }),
+      st('trash', 'portal.pj_trash', ['Lixeira de projetos', 'Project trash', 'Papelera de proyectos'], [
+        'Guarda os projetos excluídos deste workspace pelo prazo definido pela plataforma. Restaurar traz o projeto de volta com os casos de uso, as tabelas, os perfis e os fluxos de antes, e o mesmo token do túnel. Depois do prazo ele é apagado de vez. O banco do cliente nunca é tocado. Aqui o botão só é destacado.',
+        'Keeps the projects deleted from this workspace for the period set by the platform. Restoring brings the project back with its use cases, tables, roles and flows, and the same tunnel token. After the period it is erased for good. The customer database is never touched. Here the button is only highlighted.',
+        'Guarda los proyectos eliminados de este workspace por el plazo definido por la plataforma. Restaurar trae el proyecto de vuelta con sus casos de uso, tablas, perfiles y flujos, y el mismo token del túnel. Pasado el plazo se borra definitivamente. La base del cliente nunca se toca. Aquí el botón solo se resalta.',
+      ], { ...OPT, readOnly: true }),
       st('card', 'portal.pj_card', ['O cartão do projeto', 'The project card', 'La tarjeta del proyecto'], [
         'Nome, endereço (/slug) e descrição do projeto. Clicar no cartão abre o Studio dele.',
         'Name, address (/slug) and description of the project. Clicking the card opens its Studio.',

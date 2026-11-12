@@ -413,6 +413,7 @@ export function WorkspaceManager({
             <div className="flex items-center gap-1">
             <button
               onClick={() => setIsTrashOpen(true)}
+              data-help-id="portal.ws_trash"
               className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
               title={t('workspace_components.entity_trash.open')}
               aria-label={t('workspace_components.entity_trash.open')}

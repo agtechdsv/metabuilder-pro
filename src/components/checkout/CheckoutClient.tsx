@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { salesWhatsappUrl } from '@/lib/contact'
 import { CreditCard, FileText, Loader2, Lock, X, HelpCircle, QrCode, CheckCircle2, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
@@ -87,7 +88,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                 {t('checkout.enterprise_desc', 'Para volumes de 50 ou mais licenças, oferecemos condições exclusivas, SLA dedicado e suporte prioritário.')}
               </p>
               <a 
-                href={`https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20um%20plano%20Enterprise%20do%20MetaBuilder%20Pro%20para%20${licenses}%20licen%C3%A7as`} 
+                href={salesWhatsappUrl(`Olá, tenho interesse em um plano Enterprise do MetaBuilder Pro para ${licenses} licenças`)} 
                 target="_blank" 
                 rel="noreferrer"
                 className="mt-4 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/25"

@@ -489,6 +489,7 @@ export function ProjectManager({
               )}
               <button
                 onClick={() => setIsTrashOpen(true)}
+                data-help-id="portal.pj_trash"
                 className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                 title={t('workspace_components.entity_trash.open')}
                 aria-label={t('workspace_components.entity_trash.open')}

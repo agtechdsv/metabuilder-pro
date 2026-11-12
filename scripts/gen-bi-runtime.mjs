@@ -1,7 +1,7 @@
 // Embute o motor de BI (src/lib/bi + resolvedores de relação) e o acesso a dados por tabela em
 // src/lib/generator/biRuntimeFiles.generated.ts para o gerador copiá-los, sem alterações, para dentro do app exportado.
 // Rode `npm run gen:bi` depois de mexer em qualquer arquivo das listas abaixo (o teste biRuntimeFiles falha se esquecer).
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -61,6 +61,10 @@ ${accessEntries.join('\n')}
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  writeFileSync(join(root, 'src', 'lib', 'generator', 'biRuntimeFiles.generated.ts'), render())
-  console.log(`biRuntimeFiles.generated.ts: ${BI_RUNTIME_FILES.length} + ${ACCESS_RUNTIME_FILES.length} arquivos`)
+  // só grava se o conteúdo mudou: regravar o mesmo texto a cada build mexe na data do arquivo e o Git passa a reavaliá-lo (aviso de CRLF), sem diferença real
+  const out = join(root, 'src', 'lib', 'generator', 'biRuntimeFiles.generated.ts')
+  const next = render()
+  const changed = !existsSync(out) || readFileSync(out, 'utf8') !== next
+  if (changed) writeFileSync(out, next)
+  console.log(`biRuntimeFiles.generated.ts: ${BI_RUNTIME_FILES.length} + ${ACCESS_RUNTIME_FILES.length} arquivos (${changed ? 'atualizado' : 'já estava em dia'})`)
 }
