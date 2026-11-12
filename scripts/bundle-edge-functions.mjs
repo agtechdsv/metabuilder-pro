@@ -3,14 +3,14 @@
 //   node scripts/bundle-edge-functions.mjs
 //
 // Saída: supabase/functions-dashboard/<nome>/index.ts (ignorado pelo git; é só para copiar e colar). Pela CLI não precisa disto:
-//   supabase functions deploy asaas-checkout asaas-update-subscription asaas-webhook iclub-release
+//   supabase functions deploy asaas-checkout asaas-update-subscription asaas-webhook iclub-release partner-payout partner-transfer-validation
 import fs from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..')
 const fnDir = path.join(root, 'supabase', 'functions')
 const outDir = path.join(root, 'supabase', 'functions-dashboard')
-const FUNCTIONS = ['asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release']
+const FUNCTIONS = ['asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation']
 
 const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')
 const sharedImport = /^import [^;]*?from ["']\.\.\/_shared\/([\w-]+)\.ts["'];?\s*$/gm
@@ -21,6 +21,7 @@ for (const name of FUNCTIONS) {
   const src = read(path.join(fnDir, name, 'index.ts'))
   const used = new Set([...src.matchAll(sharedImport)].map(m => m[1]))
   if (used.has('iclub')) used.add('pricing') // iclub.ts usa o pricing.ts
+  if (used.has('partners')) used.add('partnerCommission') // partners.ts usa o partnerCommission.ts
   const body = src.replace(sharedImport, '').replace(/^\n+/, '')
 
   const parts = []
@@ -30,7 +31,7 @@ for (const name of FUNCTIONS) {
   for (const imp of urlImports) rest = rest.replace(imp, '')
   parts.push(`// ARQUIVO GERADO por scripts/bundle-edge-functions.mjs (inclui supabase/functions/_shared). Não edite aqui: edite o original e gere de novo.\n`)
   parts.push(urlImports.join(''))
-  for (const shared of ['pricing', 'iclub']) {
+  for (const shared of ['pricing', 'iclub', 'partnerCommission', 'partners']) {
     if (!used.has(shared)) continue
     const code = read(path.join(fnDir, '_shared', shared + '.ts')).replace(anyImport, '')
     parts.push(`\n// ===== _shared/${shared}.ts =====\n${code}`)

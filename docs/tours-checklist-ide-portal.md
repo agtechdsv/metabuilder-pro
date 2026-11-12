@@ -74,9 +74,9 @@ Teste com **dois usuários**: o dono e um dev do dono. Os dois devem ver **os me
 - ⚠ A IDE Local (🖥) continua só mostrando: abre uma tela inteira que o tour não controla.
 
 ### A4. Lixeira de projetos e workspaces (novo, 2026-11-11)
-- [x] Feito · ☐ Testado · Workspaces (`/workspace`): passo "Lixeira de workspaces" logo depois de "Atualizar a lista"; o ícone de lixeira fica destacado e não responde ao clique durante o tour
-- [x] Feito · ☐ Testado · Projetos (`/admin/<workspace>`): passo "Lixeira de projetos" logo depois de "Atualizar a lista", com o mesmo comportamento
-- [x] Feito · ☐ Testado · Textos de "Excluir workspace" e "Excluir projeto" agora falam em lixeira (restaura dentro do prazo), em vez de dizer que a exclusão não volta
+- [x] Feito · ☑ Testado · Workspaces (`/workspace`): passo "Lixeira de workspaces" logo depois de "Atualizar a lista"; o ícone de lixeira fica destacado e não responde ao clique durante o tour
+- [x] Feito · ☑ Testado · Projetos (`/admin/<workspace>`): passo "Lixeira de projetos" logo depois de "Atualizar a lista", com o mesmo comportamento
+- [x] Feito · ☑ Testado · Textos de "Excluir workspace" e "Excluir projeto" agora falam em lixeira (restaura dentro do prazo), em vez de dizer que a exclusão não volta
 
 ## B. Abas do Studio
 - [x] Feito · ☑ Testado · Navegação: gerador de menu (arrastar, ícone, nome, o que abre, dashboard, remover, adicionar link/pasta, salvar)

@@ -215,6 +215,46 @@ export async function deleteIClubAdminRule(ruleId: string) {
   }
 }
 
+/**
+ * Indicação por código de PARCEIRO (tabela partners). Devolve null se o código não for de nenhum parceiro ativo (aí vale o iClub).
+ * Um e-mail só tem um parceiro; o parceiro não pode indicar a si mesmo.
+ */
+async function registerPartnerReferral(
+  adminSupabase: ReturnType<typeof createAdminClient>,
+  refCode: string,
+  referredEmail: string,
+  referredId?: string
+): Promise<{ success: boolean; error?: string; message?: string } | null> {
+  const { data: partner } = await adminSupabase.from('partners').select('id, user_id, status').eq('code', refCode.trim().toUpperCase()).maybeSingle()
+  if (!partner || partner.status !== 'active') return null
+
+  const email = referredEmail.trim().toLowerCase()
+  const { data: partnerProfile } = await adminSupabase.from('profiles').select('email').eq('id', partner.user_id).maybeSingle()
+  if ((referredId && partner.user_id === referredId) || (partnerProfile?.email && partnerProfile.email.toLowerCase() === email)) {
+    return { success: false, error: 'Auto-indicação não permitida.' }
+  }
+
+  const { data: existing } = await adminSupabase.from('partner_referrals').select('id').ilike('referred_email', email).maybeSingle()
+  if (existing) return { success: true, message: 'Indicação já existia.' }
+
+  let validReferredId: string | null = null
+  if (referredId) {
+    const { data: p } = await adminSupabase.from('profiles').select('id').eq('id', referredId).maybeSingle()
+    if (p) validReferredId = referredId
+  }
+  if (!validReferredId) {
+    const { data: p } = await adminSupabase.from('profiles').select('id').ilike('email', email).maybeSingle()
+    if (p) validReferredId = p.id
+  }
+
+  const { error } = await adminSupabase.from('partner_referrals').insert({ partner_id: partner.id, referred_id: validReferredId, referred_email: email, status: 'registered' })
+  if (error) {
+    console.error('Erro ao registrar indicação de parceiro:', error)
+    return { success: false, error: error.message }
+  }
+  return { success: true }
+}
+
 // 5. Register Referral from Cookie
 export async function registerReferral(referredEmail: string, referredId?: string) {
   try {
@@ -226,6 +266,13 @@ export async function registerReferral(referredEmail: string, referredId?: strin
     }
 
     const adminSupabase = createAdminClient()
+
+    // o código pode ser de um PARCEIRO (programa de comissão): tem prioridade, e o cliente indicado continua livre para indicar pelo iClub depois
+    const partnerResult = await registerPartnerReferral(adminSupabase, refCode, referredEmail, referredId)
+    if (partnerResult) {
+      cookieStore.set('iclub_ref_code', '', { maxAge: 0 })
+      return partnerResult
+    }
 
     // Buscar o padrinho (referrer) pelo referral_code
     const { data: referrer, error: refError } = await adminSupabase

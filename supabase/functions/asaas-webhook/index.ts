@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { grantVolumeLicenses, processReferralConversion, revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
+import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -285,6 +286,13 @@ serve(async (req) => {
       } catch (iclubErr) {
         console.error("[campanha/iClub] erro ao processar o pagamento:", iclubErr);
       }
+
+      // programa de parceiros: o indicado de um parceiro pagou, gera a comissão (% sobre o valor líquido, disponível após a carência)
+      try {
+        await recordPartnerCommission(supabase, ctx.userId, { id: payment?.id, value: payment?.value, netValue: payment?.netValue });
+      } catch (partnerErr) {
+        console.error("[parceiros] erro ao gerar a comissão:", partnerErr);
+      }
     }
 
     else if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {
@@ -299,6 +307,7 @@ serve(async (req) => {
         try {
           for (const referrerId of await revokeReferralRewards(supabase, ctx.userId)) await syncNextCharge(supabase, referrerId);
         } catch (e) { console.error("[iClub] erro ao revogar recompensas:", e); }
+        try { await cancelPartnerReferral(supabase, ctx.userId); } catch (e) { console.error("[parceiros] erro ao cancelar a indicação:", e); }
       }
     }
 
@@ -315,7 +324,14 @@ serve(async (req) => {
           for (const referrerId of await revokeReferralRewards(supabase, ctx.userId)) await syncNextCharge(supabase, referrerId);
         } catch (e) { console.error("[iClub] erro ao revogar recompensas:", e); }
       }
+      // a comissão desse pagamento deixa de valer (ou é descontada do próximo lote, se já saiu)
+      try { if (payment?.id) await revokePartnerCommissionForPayment(supabase, payment.id, event); } catch (e) { console.error("[parceiros] erro ao revogar a comissão:", e); }
       console.log(`[${event}] payment ${payment?.id} user ${ctx?.userId}`);
+    }
+
+    // transferências Pix dos lotes de parceiros (o webhook do Asaas precisa assinar os eventos TRANSFER_*)
+    else if (typeof event === "string" && event.startsWith("TRANSFER_")) {
+      try { await applyTransferEvent(supabase, event, body.transfer); } catch (e) { console.error("[parceiros] erro ao aplicar o evento de transferência:", e); }
     }
 
     else if (event === "PAYMENT_OVERDUE") {
