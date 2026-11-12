@@ -20,9 +20,9 @@ export function resolvePercent(partnerPercent: number | null | undefined, defaul
   return Math.max(0, Math.min(100, p))
 }
 
-/** Comissão em reais, sobre o valor LÍQUIDO (depois das taxas do Asaas), arredondada para BAIXO no centavo (nunca paga a mais). */
-export function commissionAmount(net: number, percent: number): number {
-  const cents = Math.round(Number(net) * 100)
+/** Comissão em reais, sobre o valor PAGO pelo cliente (bruto), arredondada para BAIXO no centavo (nunca paga a mais). */
+export function commissionAmount(base: number, percent: number): number {
+  const cents = Math.round(Number(base) * 100)
   if (!Number.isFinite(cents) || cents <= 0) return 0
   return Math.floor((cents * Math.max(0, Math.min(100, percent))) / 100) / 100
 }

@@ -4,7 +4,7 @@
 -- O que faz:
 --  1) partners: o cadastro do parceiro (uma pessoa/empresa que ja tem login no MetaBuilder). Codigo proprio, chave Pix e % de comissao opcional.
 --  2) partner_referrals: quem o parceiro indicou (pelo link/codigo). Um e-mail so tem UM parceiro.
---  3) partner_commissions: uma linha por pagamento confirmado do indicado (% sobre o valor LIQUIDO, depois das taxas do Asaas). Nasce "pending" e
+--  3) partner_commissions: uma linha por pagamento confirmado do indicado (% sobre o valor PAGO pelo cliente, o bruto). Nasce "pending" e
 --     so fica disponivel depois da carencia (release_at). Estorno revoga; se ja foi pago, vira "clawback" e e descontado do proximo lote.
 --  4) partner_payouts / partner_payout_items: lotes de pagamento por Pix, montados pelo SuperAdmin. Cada item vira uma transferencia no Asaas.
 --  5) funcoes mb_partner_*: criar o lote (atomico, trava as comissoes), concluir ou falhar um item. So o servidor (service_role) chama.
@@ -15,7 +15,7 @@
 
 -- 1) ajustes globais ---------------------------------------------------------------------------------------------------------------------
 insert into public.platform_settings (key, value) values
-  ('partner_default_percent', '{"percent": 20}'::jsonb),   -- % de comissao padrao (cada parceiro pode ter o seu)
+  ('partner_default_percent', '{"percent": 15}'::jsonb),   -- % de comissao padrao sobre o valor pago pelo cliente (cada parceiro pode ter o seu); o SuperAdmin muda na tela
   ('partner_grace_days',      '{"days": 7}'::jsonb),        -- carencia: dias entre o pagamento e a comissao ficar disponivel
   ('partner_min_payout',      '{"amount": 50}'::jsonb),     -- valor minimo para pagar um parceiro num lote (R$)
   ('partner_payout_cap',      '{"amount": 5000}'::jsonb)    -- teto de um lote inteiro (R$): trava de seguranca
@@ -88,8 +88,8 @@ create table if not exists public.partner_commissions (
   partner_id        uuid not null references public.partners(id) on delete restrict,
   referral_id       uuid not null references public.partner_referrals(id) on delete restrict,
   asaas_payment_id  text not null,
-  gross             numeric not null,                        -- valor cobrado do cliente
-  net               numeric not null,                        -- valor liquido (depois das taxas do Asaas): a base da comissao
+  gross             numeric not null,                        -- valor pago pelo cliente: a BASE da comissao
+  net               numeric not null,                        -- valor liquido (depois das taxas do Asaas): so para consulta
   percent           numeric not null,
   amount            numeric not null check (amount >= 0),
   status            text not null default 'pending' check (status in ('pending', 'in_payout', 'paid', 'revoked')),

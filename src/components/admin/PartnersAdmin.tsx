@@ -125,7 +125,7 @@ export function PartnersAdmin() {
         <label className="block"><span className={labelCls}>Teto do lote (R$)</span>
           <input type="number" min={1} className={inputCls} value={settings.payoutCap} onChange={e => setSettings({ ...settings, payoutCap: num(e.target.value) })} /></label>
         <div className="flex items-end"><button type="button" disabled={busy} onClick={saveSettings} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700"><Save className="h-3.5 w-3.5" />Salvar ajustes</button></div>
-        <p className="text-[10px] text-neutral-400 md:col-span-5">A comissão é calculada sobre o valor líquido (depois das taxas do Asaas) de cada pagamento do indicado, e só fica disponível depois da carência. Mudar o % padrão vale para as próximas comissões; as já geradas não mudam.</p>
+        <p className="text-[10px] text-neutral-400 md:col-span-5">A comissão é calculada sobre o valor que o cliente indicado pagou (bruto, sem descontar as taxas do Asaas) em cada pagamento, e só fica disponível depois da carência. Mudar o % padrão vale para as próximas comissões; as já geradas não mudam.</p>
       </div>
 
       {form && (

@@ -10,7 +10,7 @@ export interface PartnerSettings {
   payoutCap: number
 }
 
-export const DEFAULT_PARTNER_SETTINGS: PartnerSettings = { defaultPercent: 20, graceDays: 7, minPayout: 50, payoutCap: 5000 }
+export const DEFAULT_PARTNER_SETTINGS: PartnerSettings = { defaultPercent: 15, graceDays: 7, minPayout: 50, payoutCap: 5000 }
 
 export interface PartnerInput {
   id?: string

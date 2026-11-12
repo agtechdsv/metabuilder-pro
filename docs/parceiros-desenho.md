@@ -6,8 +6,8 @@ Decisões fechadas com o dono em 2026-11-12. Código escrito, **nada publicado e
 Um **parceiro** é uma pessoa ou empresa (que já tem login no MetaBuilder) que indica clientes com um link/código e **ganha comissão em dinheiro** enquanto o indicado for assinante. O cliente paga o MetaBuilder normalmente (Asaas) e **não ganha desconto** (decisão: opção A). Um cliente indicado por parceiro **pode também indicar pelo iClub** (benefícios independentes). O parceiro não precisa ser cliente.
 
 ## Regras
-- **Comissão** = % sobre o valor **líquido** (depois das taxas do Asaas) de **cada pagamento confirmado** do indicado, arredondada para baixo no centavo.
-  - % padrão global (SuperAdmin edita; começa em 20) e % próprio por parceiro (vazio = padrão).
+- **Comissão** = % sobre o valor **pago pelo cliente (bruto)** em **cada pagamento confirmado** do indicado, arredondada para baixo no centavo. O valor líquido (depois das taxas do Asaas) fica guardado só para consulta.
+  - % padrão global (SuperAdmin edita; começa em 15) e % próprio por parceiro (vazio = padrão).
 - **Carência**: a comissão nasce *pendente* e só fica **disponível** N dias depois do pagamento (padrão 7, SuperAdmin edita).
 - **Estorno/reembolso/chargeback** do pagamento: a comissão pendente é **revogada**; se já estava num lote ou foi paga, vira **clawback** e o valor é **descontado do próximo lote** do parceiro. Cancelar a assinatura só **para** as comissões futuras (as já geradas valem).
 - **Pagamento**: lote montado pelo SuperAdmin (filtra e seleciona parceiros), com **confirmação**, enviado por **Pix pela conta Asaas** do MetaBuilder. Valor mínimo por parceiro (padrão R$ 50) e **teto do lote** (padrão R$ 5.000, trava de segurança).
@@ -69,4 +69,3 @@ Use uma conta de parceiro de teste (outra conta sua) e um cliente de teste que *
 - O parceiro **não edita** a chave Pix (só o SuperAdmin), para ninguém desviar pagamentos com uma conta invadida.
 - O painel está em `/parceiro` e **ainda não tem atalho no menu** do site.
 - Impostos e nota fiscal da comissão são com o contador.
-- Não verificado: se o Asaas replica o `netValue` em todos os eventos de pagamento (a função usa o valor cobrado se o líquido faltar, o que paga um pouco a mais). Confira no 1º teste.

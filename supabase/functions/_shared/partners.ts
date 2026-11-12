@@ -11,7 +11,7 @@ async function setting(supabase: any, key: string, field: string, fallback: numb
 }
 
 /**
- * O indicado de um parceiro pagou: grava a comissão (% sobre o valor LÍQUIDO), disponível depois da carência. Idempotente por pagamento
+ * O indicado de um parceiro pagou: grava a comissão (% sobre o valor PAGO pelo cliente, o bruto), disponível depois da carência. Idempotente por pagamento
  * (o Asaas manda PAYMENT_CONFIRMED e PAYMENT_RECEIVED para o mesmo pagamento). Devolve true se gravou uma comissão nova.
  */
 export async function recordPartnerCommission(supabase: any, referredUserId: string, payment: { id?: string; value?: number; netValue?: number }): Promise<boolean> {
@@ -26,11 +26,12 @@ export async function recordPartnerCommission(supabase: any, referredUserId: str
   const { data: partner } = await supabase.from("partners").select("id, status, commission_percent").eq("id", ref.partner_id).maybeSingle();
   if (!partner || partner.status !== "active") return false;
 
+  // a base da comissão é o valor PAGO pelo cliente (bruto); o líquido (depois das taxas do Asaas) é só guardado, para consulta
   const gross = Number(payment.value) || 0;
   const net = Number(payment.netValue) > 0 ? Number(payment.netValue) : gross;
-  const defaultPercent = await setting(supabase, "partner_default_percent", "percent", 20);
+  const defaultPercent = await setting(supabase, "partner_default_percent", "percent", 15);
   const percent = resolvePercent(partner.commission_percent, defaultPercent);
-  const amount = commissionAmount(net, percent);
+  const amount = commissionAmount(gross, percent);
   if (amount <= 0) return false;
 
   const graceDays = await setting(supabase, "partner_grace_days", "days", 7);

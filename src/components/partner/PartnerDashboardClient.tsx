@@ -112,11 +112,10 @@ export default function PartnerDashboardClient({ dashboard }: { dashboard: Partn
 
         {tab === 'commissions' && (dashboard.commissions.length === 0 ? <p className="p-6 text-center text-sm text-neutral-400">{t(P + 'empty_commissions')}</p> : (
           <table className="w-full">
-            <thead><tr><th className={th}>{t(P + 'col_date')}</th><th className={th}>{t(P + 'col_client')}</th><th className={th}>{t(P + 'col_gross')}</th><th className={th}>{t(P + 'col_net')}</th><th className={th}>{t(P + 'col_rate')}</th><th className={th}>{t(P + 'col_commission')}</th><th className={th}>{t(P + 'col_status')}</th><th className={th}>{t(P + 'col_release')}</th></tr></thead>
+            <thead><tr><th className={th}>{t(P + 'col_date')}</th><th className={th}>{t(P + 'col_client')}</th><th className={th}>{t(P + 'col_gross')}</th><th className={th}>{t(P + 'col_rate')}</th><th className={th}>{t(P + 'col_commission')}</th><th className={th}>{t(P + 'col_status')}</th><th className={th}>{t(P + 'col_release')}</th></tr></thead>
             <tbody>{dashboard.commissions.map(c => (
               <tr key={c.id} className="border-t border-neutral-100 dark:border-neutral-800">
-                <td className={td}>{day(c.createdAt)}</td><td className={td + ' font-mono'}>{c.referredEmail}</td><td className={td}>{money(c.gross)}</td><td className={td}>{money(c.net)}</td>
-                <td className={td}>{c.percent}%</td><td className={td + ' font-bold'}>{money(c.amount)}</td><td className={td}>{comLabel(c)}</td><td className={td}>{day(c.releaseAt)}</td>
+                <td className={td}>{day(c.createdAt)}</td><td className={td + ' font-mono'}>{c.referredEmail}</td><td className={td}>{money(c.gross)}</td>                <td className={td}>{c.percent}%</td><td className={td + ' font-bold'}>{money(c.amount)}</td><td className={td}>{comLabel(c)}</td><td className={td}>{day(c.releaseAt)}</td>
               </tr>))}</tbody>
           </table>
         ))}

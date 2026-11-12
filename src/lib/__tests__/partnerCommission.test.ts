@@ -17,8 +17,9 @@ describe('comissão do parceiro', () => {
     expect(resolvePercent(-5, 20)).toBe(0)
   })
 
-  it('o exemplo combinado: R$ 97 líquidos a 20% = R$ 19,40', () => {
-    expect(commissionAmount(97, 20)).toBe(19.4)
+  it('o exemplo combinado: 15% sobre os R$ 100 que o cliente pagou (bruto) = R$ 15,00', () => {
+    expect(commissionAmount(100, 15)).toBe(15)
+    expect(commissionAmount(174.5, 15)).toBe(26.17) // 26,175 -> para baixo
   })
 
   it('arredonda para BAIXO no centavo (nunca paga a mais) e ignora valor sem sentido', () => {
@@ -175,6 +176,15 @@ describe('SQL do programa de parceiros (scripts/parceiros.sql)', () => {
 })
 
 describe('integração com o pagamento do Asaas e com as telas', () => {
+  it('a base da comissão é o valor PAGO pelo cliente (bruto), e o padrão é 15%', () => {
+    const p = read('supabase/functions/_shared/partners.ts')
+    expect(p).toContain('commissionAmount(gross, percent)')
+    expect(p).not.toContain('commissionAmount(net')
+    expect(p).toContain('"partner_default_percent", "percent", 15)')
+    expect(read('src/lib/partners.ts')).toContain('defaultPercent: 15')
+    expect(read('scripts/parceiros.sql')).toContain(`'{"percent": 15}'`)
+  })
+
   it('o webhook gera a comissão, revoga no estorno, cancela a indicação e aplica os eventos de transferência', () => {
     const w = read('supabase/functions/asaas-webhook/index.ts')
     for (const s of ['recordPartnerCommission(', 'revokePartnerCommissionForPayment(', 'cancelPartnerReferral(', 'applyTransferEvent(', 'startsWith("TRANSFER_")']) expect(w, s).toContain(s)
