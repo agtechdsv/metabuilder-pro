@@ -28,6 +28,13 @@ describe('SQL da lixeira de projetos e workspaces (scripts/lixeira-projetos-work
     expect(sql).not.toMatch(/create policy [^;]*mb_entity_trash/)
   })
 
+  it('cada função abre e fecha o bloco $$ (um $ sozinho quebra o script no SQL Editor)', () => {
+    const n = (sql.match(/\$\$/g) || []).length
+    expect(n % 2).toBe(0)
+    expect(n).toBe((sql.match(/create or replace function/g) || []).length * 2)
+    expect(sql).not.toMatch(/ as \$(?!\$)/)
+  })
+
   it('as funções que mexem na lixeira são security definer e conferem a permissão sozinhas', () => {
     for (const fn of ['mb_trash_project', 'mb_trash_workspace', 'mb_restore_entity', 'mb_delete_entity_trash']) {
       const i = sql.indexOf(`create or replace function public.${fn}(`)

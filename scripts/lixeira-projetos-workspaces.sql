@@ -89,7 +89,7 @@ revoke all on function public.mb_can_manage_entity_trash(public.mb_entity_trash,
 
 -- 3) o que entra na copia de um projeto (ordem = ordem de restauracao; filtro = linhas que ja nao fazem sentido sao descartadas) -----------
 create or replace function public.mb_project_trash_spec()
-returns table (seq integer, tbl text, cond text, flt text) language sql immutable set search_path = public as $
+returns table (seq integer, tbl text, cond text, flt text) language sql immutable set search_path = public as $$
   select * from (values
     (1,  'models',                    'project_id = $1', null::text),
     (2,  'fields',                    'model_id in (select id from public.models where project_id = $1)', null),
