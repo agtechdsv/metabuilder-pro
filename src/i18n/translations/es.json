@@ -206,7 +206,8 @@
     "terms": "Términos",
     "copyright": "© 2026 AG Tech Serviços de Informática Ltda. Todos los derechos reservados.",
     "trademark": "MetaBuilder PRO™ es una marca comercial de",
-    "rights_reserved": "Todos los derechos reservados."
+    "rights_reserved": "Todos los derechos reservados.",
+    "partners": "Socios"
   },
   "privacy": {
     "title": "Política de Privacidad",
@@ -1610,7 +1611,9 @@
       "git_architecture": "Arquitectura Git",
       "ai_studio": "AI Studio",
       "testing": "Entorno de Pruebas",
-      "help": "Ayuda interactiva"
+      "help": "Ayuda interactiva",
+      "tour": "Tour guiado",
+      "partners": "Socios"
     },
     "hero": {
       "badge": "El Motor de Software del Futuro",
@@ -1743,7 +1746,11 @@
       "eject_desc": "La mayoría de las plataformas generan un archivo gigante e incomprensible. MetaBuilder genera un proyecto completo, modular y organizado por feature, listo para producción — en el lenguaje y arquitectura que elijas. Cero lock-in, total libertad.",
       "eject_footer_hint": "Accede al IDE para experimentar el selector de backend en el flujo de Eject & Sync.",
       "eject_btn_view_arch": "Ver arquitectura del código →",
-      "eject_btn_know_ide": "Conocer el IDE"
+      "eject_btn_know_ide": "Conocer el IDE",
+      "partner_badge": "Programa de socios",
+      "partner_title": "Refiera y gane comisión recurrente",
+      "partner_desc": "Consultoras, freelancers, comunidades e integradores refieren MetaBuilder PRO y reciben una comisión por Pix sobre cada pago del cliente referido, con un panel para seguir todo.",
+      "partner_cta": "Conocer el programa"
     },
     "features": {
       "speed": {
@@ -2061,6 +2068,34 @@
         "item_fresh_desc": "La leyenda sigue la ayuda actual del campo, y Studio avisa cuando la configuración cambió y un recorrido puede estar desactualizado, con regeneración en un clic.",
         "types_title": "Sin código y sin manual extra",
         "types_desc": "La ayuda es parte del propio sistema: menos capacitación, menos tickets de soporte y usuarios productivos antes. Sigue el mismo cuidado de seguridad del resto de la plataforma: el modo demostración nunca escribe en la base de datos."
+      },
+      "tour": {
+        "card_desc": "Globos que enseñan, en la pantalla real, a usar el Studio, el portal y la IDE. Usted hace clic cuando es seguro y el tour nunca guarda, genera ni elimina por usted.",
+        "hero_title": "Quien construye también",
+        "hero_title_highlight": "es guiado.",
+        "hero_desc": "El ícono ? del encabezado abre el menú de tours: globos que muestran, paso a paso, dónde hacer clic en el Studio, en el portal de workspaces y proyectos y en la IDE Local. Usted aprende haciendo, en la propia pantalla, sin manual.",
+        "demo_title": "Aprender en la pantalla real",
+        "demo_desc": "El globo resalta el botón correcto y lo explica. Donde es seguro, usted hace clic; lo que guarda, genera o elimina nunca lo activa el tour.",
+        "badge_studio": "Studio",
+        "badge_portal": "Portal",
+        "badge_ide": "IDE Local",
+        "languages": "Portugués · Inglés · Español",
+        "items_title": "Un tour para cada área",
+        "items_desc": "Decenas de tours organizados por tema, para que el desarrollador nuevo del equipo sea productivo sin capacitación presencial.",
+        "item_areas_title": "Studio, portal e IDE",
+        "item_areas_desc": "Casos de uso, datos y schemas, relaciones, autenticación, túnel, logs y configuraciones en el Studio; workspaces y proyectos en el portal; Git, eyectar y sincronizar, entrega y pruebas en la IDE Local.",
+        "item_click_title": "Usted hace clic, el tour acompaña",
+        "item_click_desc": "En muchos pasos se puede hacer clic de verdad en los botones resaltados. El tour espera que la ventana abra, explica lo que hay dentro y sigue al próximo paso.",
+        "item_safe_title": "Seguro por defecto",
+        "item_safe_desc": "Los botones que guardan, generan, eliminan o publican solo se resaltan: el tour nunca los activa por sí solo. Las ventanas que abre se cierran al final.",
+        "item_practice_title": "Práctica guiada",
+        "item_practice_desc": "Además de la explicación, hay guiones para hacer de verdad con el tour al lado, como generar la app del proyecto, elegir el stack y completar el merge.",
+        "item_menu_title": "Menú organizado",
+        "item_menu_desc": "Los tours se agrupan por tema y pueden recogerse. Un ✓ marca los que ya vio, para saber qué falta.",
+        "item_roles_title": "Respeta su rol",
+        "item_roles_desc": "Los íconos que su rol no permite aparecen desactivados, y el tour explica el motivo. Las partes exclusivas de la app de escritorio se avisan como tales.",
+        "types_title": "Onboarding sin capacitación",
+        "types_desc": "Complementa la ayuda al usuario final: mientras esa enseña a quien usa el sistema, el tour enseña a quien lo construye. Cada pantalla nueva del Studio ya nace explicada, en tres idiomas."
       }
     },
     "use_cases_page": {
@@ -4674,7 +4709,8 @@
     "empty_commissions": "Aún no hay comisiones. Aparecen cuando un cliente referido pague.",
     "empty_payouts": "Aún no recibió pagos.",
     "privacy": "Los e-mails de los clientes aparecen parcialmente, para proteger su privacidad.",
-    "error": "No se pudo cargar el panel."
+    "error": "No se pudo cargar el panel.",
+    "menu": "Panel del socio"
   },
   "workspace_components": {
     "entity_trash": {
@@ -5797,5 +5833,47 @@
     "target_missing": "Este elemento no está visible ahora. Continúe el tour o vuelva más tarde.",
     "recover": "Volver al punto del tour",
     "complete_to_continue": "Complete este paso para continuar."
+  },
+  "partners_page": {
+    "badge": "Programa de socios",
+    "hero_title": "Refiera MetaBuilder PRO.",
+    "hero_title_highlight": "Gane comisión recurrente.",
+    "hero_desc": "Consultoras, freelancers, comunidades e integradores refieren MetaBuilder PRO y reciben una comisión sobre cada pago del cliente referido, mientras sea suscriptor. Sin inventario y sin reventa: el cliente se suscribe directamente con nosotros.",
+    "cta_whatsapp": "Quiero ser socio",
+    "cta_panel": "Ya soy socio: abrir el panel",
+    "wa_message": "Hola, quiero ser socio de MetaBuilder PRO",
+    "how_title": "Cómo funciona",
+    "step1_title": "Hable con nosotros",
+    "step1_desc": "Cuéntenos un poco sobre usted o su empresa. Lo registramos como socio y le entregamos su código y su enlace de referencia.",
+    "step2_title": "Refiera",
+    "step2_desc": "Comparta su enlace. Quien se registre por él queda vinculado a usted.",
+    "step3_title": "El cliente se suscribe",
+    "step3_desc": "Por cada pago confirmado del cliente referido, usted gana una comisión.",
+    "step4_title": "Reciba por Pix",
+    "step4_desc": "Pasada la carencia, el saldo disponible se paga por Pix, a su clave, en lotes.",
+    "terms_title": "Las condiciones",
+    "term_percent": "Comisión de {percent}% sobre el valor pagado por el cliente referido, en cada pago, mientras sea suscriptor.",
+    "term_grace": "Cada comisión queda disponible {days} días después del pago.",
+    "term_min": "El pago por Pix se realiza cuando el saldo disponible llega a R$ {min}.",
+    "term_refund": "Un reembolso o contracargo cancela la comisión del pago correspondiente.",
+    "term_custom": "Se pueden acordar condiciones especiales con quien trae volumen.",
+    "panel_title": "Un panel solo suyo",
+    "panel_desc": "Siga a quién refirió, lo que ya se volvió suscripción, cada comisión (en carencia, disponible o pagada), lo que se canceló y los comprobantes de los pagos. Los e-mails de los clientes aparecen parcialmente, para proteger su privacidad.",
+    "who_title": "Para quién es",
+    "who_1": "Consultoras y software houses que atienden empresas con sistemas heredados",
+    "who_2": "Desarrolladores y freelancers que arman sistemas para clientes",
+    "who_3": "Comunidades, creadores de contenido e instructores",
+    "who_4": "Integradores y profesionales de TI que recomiendan herramientas",
+    "faq_title": "Preguntas frecuentes",
+    "faq1_q": "¿Necesito ser cliente de MetaBuilder PRO?",
+    "faq1_a": "No. Cualquier persona o empresa puede ser socia, siempre que tenga una cuenta en MetaBuilder PRO para acceder al panel.",
+    "faq2_q": "¿El cliente que refiero obtiene descuento?",
+    "faq2_a": "El cliente paga el precio vigente de la tabla. La comisión es un beneficio del socio.",
+    "faq3_q": "¿Hasta cuándo cobro?",
+    "faq3_a": "Mientras el cliente referido siga siendo suscriptor. Si cancela, las comisiones futuras se detienen; las ya generadas siguen valiendo.",
+    "faq4_q": "¿Cómo cobro?",
+    "faq4_a": "Por Pix, a la clave registrada, en lotes hechos por nuestro equipo después de la carencia.",
+    "cta_title": "¿Conversamos?",
+    "cta_desc": "Envíenos un mensaje y acordamos los próximos pasos."
   }
 }

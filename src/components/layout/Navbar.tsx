@@ -463,6 +463,20 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                       {isItemActive('/features/help') && <ActiveIndicator />}
                     </Link>
 
+                    {/* Tour guiado de quem constrói (Studio, portal e IDE) */}
+                    <Link
+                      href="/features/tour"
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
+                        isItemActive('/features/tour')
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black text-indigo-600 dark:text-indigo-400"
+                          : "font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      )}
+                    >
+                      <span>{t('marketing_v2.navbar.tour')}</span>
+                      {isItemActive('/features/tour') && <ActiveIndicator />}
+                    </Link>
+
                     {/* Compilador Desktop */}
                     <Link 
                       href="/features/desktop" 
@@ -483,6 +497,20 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                       className="px-3.5 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-between"
                     >
                       <span>{t('marketing_v2.navbar.pricing')}</span>
+                    </Link>
+
+                    {/* Programa de parceiros */}
+                    <Link
+                      href="/parceiros"
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
+                        isItemActive('/parceiros')
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black text-indigo-600 dark:text-indigo-400"
+                          : "font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      )}
+                    >
+                      <span>{t('marketing_v2.navbar.partners')}</span>
+                      {isItemActive('/parceiros') && <ActiveIndicator />}
                     </Link>
                   </div>
                 </div>

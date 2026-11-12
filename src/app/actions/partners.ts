@@ -284,6 +284,17 @@ export async function releaseStuckPayoutItem(itemId: string): Promise<Ok | Fail>
 // painel do próprio parceiro (quem é o parceiro vem da sessão)
 // ---------------------------------------------------------------------------------------------------------------------------------
 
+/** Só diz se a pessoa logada é parceira (para mostrar o atalho do painel no menu). Quem é vem da sessão. */
+export async function isCurrentUserPartner(): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const { data } = await createAdminClient().from('partners').select('id').eq('user_id', user.id).maybeSingle()
+    return !!data
+  } catch { return false }
+}
+
 export async function getMyPartnerDashboard(): Promise<Ok<{ dashboard: PartnerDashboard }> | Fail> {
   try {
     const supabase = await createClient()

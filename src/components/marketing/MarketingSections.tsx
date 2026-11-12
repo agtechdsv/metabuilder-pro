@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
-import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical , PlayCircle } from 'lucide-react'
+import { ShieldCheck, Zap, Database, Palette, Layout, Globe, Search, ArrowRight, CheckCircle2, Layers, Loader2, Activity, BarChart3, CreditCard, Users, Lightbulb, Trophy, Fingerprint, FileCode2, ScrollText, Network, Terminal, Sparkles, Bot, Code2, GitMerge, Download, Server, Cpu, FlaskConical , PlayCircle, Compass, Handshake } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -634,6 +634,21 @@ export function MarketingSections() {
                       {t('marketing_v2.features.help.card_desc')}
                    </p>
                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
+                   </div>
+                </div>
+             </Link>
+
+             <Link href="/features/tour" className="group lg:col-span-3 p-8 rounded-[2.5rem] bg-neutral-100/50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-500/50 transition-all duration-500 flex flex-col md:flex-row items-start gap-6">
+                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-neutral-950 flex items-center justify-center shrink-0 shadow-inner border border-neutral-200 dark:border-neutral-800 group-hover:scale-110 transition-transform duration-500">
+                   <Compass className="w-7 h-7 text-indigo-500" />
+                </div>
+                <div>
+                   <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.navbar.tour')}</h3>
+                   <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+                      {t('marketing_v2.features.tour.card_desc')}
+                   </p>
+                   <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
                       {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
                    </div>
                 </div>
@@ -1338,6 +1353,22 @@ export function MarketingSections() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* Programa de parceiros */}
+      <section className="max-w-7xl mx-auto py-16">
+        <div className="rounded-[3rem] border border-indigo-500/20 bg-indigo-900/5 p-10 md:p-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          <div className="space-y-3 max-w-3xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-1.5 text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              <Handshake className="w-3.5 h-3.5" />{t('marketing_v2.home.partner_badge')}
+            </span>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tighter dark:text-white">{t('marketing_v2.home.partner_title')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed">{t('marketing_v2.home.partner_desc')}</p>
+          </div>
+          <Link href="/parceiros" className="shrink-0 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-500/25 transition-all hover:bg-indigo-700">
+            {t('marketing_v2.home.partner_cta')} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </section>
 
       {/* Final CTA */}

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { User, LogOut, Camera, ChevronDown, LayoutDashboard, Loader2, RefreshCcw, ShieldCheck, Gauge, Lightbulb, CreditCard, Crown, Users } from 'lucide-react'
+import { User, LogOut, Camera, ChevronDown, LayoutDashboard, Loader2, RefreshCcw, ShieldCheck, Gauge, Lightbulb, CreditCard, Crown, Users, Handshake } from 'lucide-react'
 import { signOut, updateAvatar, resetAvatar } from '@/app/auth/actions'
+import { isCurrentUserPartner } from '@/app/actions/partners'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   const [imgError, setImgError] = useState(false)
   const [localProfile, setLocalProfile] = useState(initialProfile)
   const [isNavigatingWorkspace, setIsNavigatingWorkspace] = useState(false)
+  const [isPartner, setIsPartner] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
@@ -39,6 +41,13 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
   useEffect(() => {
     setIsNavigatingWorkspace(false)
   }, [pathname, searchParams])
+
+  // atalho do painel do parceiro: só aparece para quem é parceiro
+  useEffect(() => {
+    let alive = true
+    if (user?.id) isCurrentUserPartner().then(v => { if (alive) setIsPartner(v) })
+    return () => { alive = false }
+  }, [user?.id])
 
 
   const metadata = user?.user_metadata || {}
@@ -249,6 +258,19 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                 )}
 
 
+
+                {isPartner && (
+                  <Link
+                    href="/parceiro"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-indigo-500/5 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-white transition-all group"
+                  >
+                    <div className="p-2 bg-indigo-500/10 rounded-xl group-hover:bg-indigo-500/20 transition-all text-indigo-500">
+                      <Handshake className="w-4.5 h-4.5" />
+                    </div>
+                    <span className="text-sm font-bold">{t('partner_panel.menu')}</span>
+                  </Link>
+                )}
 
                 <button
                   onClick={() => {

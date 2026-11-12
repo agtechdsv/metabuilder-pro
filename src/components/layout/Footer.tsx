@@ -1,6 +1,7 @@
 'use client'
 
 import { Layers } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 import { useI18n } from '@/i18n/I18nContext'
 import { LegalModal } from '@/components/legal/LegalModal'
@@ -42,6 +43,12 @@ export function Footer() {
 
         {/* Lado Direito: Links Legais */}
         <div className="flex items-center gap-6">
+          <Link
+            href="/parceiros"
+            className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all"
+          >
+            {t('footer.partners')}
+          </Link>
           <button 
             onClick={() => setLegalType('privacy')}
             className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"

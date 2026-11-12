@@ -206,7 +206,8 @@
     "terms": "Terms",
     "copyright": "© 2026 AG Tech Serviços de Informática Ltda. All rights reserved.",
     "trademark": "MetaBuilder PRO™ is a trademark of",
-    "rights_reserved": "All rights reserved."
+    "rights_reserved": "All rights reserved.",
+    "partners": "Partners"
   },
   "privacy": {
     "title": "Privacy Policy",
@@ -1523,7 +1524,9 @@
       "git_architecture": "Git Architecture",
       "ai_studio": "AI Studio",
       "testing": "Test Environment",
-      "help": "Interactive help"
+      "help": "Interactive help",
+      "tour": "Guided tour",
+      "partners": "Partners"
     },
     "hero": {
       "badge": "The Software Engine of the Future",
@@ -1656,7 +1659,11 @@
       "eject_desc": "Most platforms generate a giant, messy god-file. MetaBuilder generates a complete, modular project organized by feature, production-ready — in the language and architecture of your choice. Zero lock-in, total freedom.",
       "eject_footer_hint": "Access the IDE to experience the backend selector in the Eject & Sync workflow.",
       "eject_btn_view_arch": "View code architecture →",
-      "eject_btn_know_ide": "Explore the IDE"
+      "eject_btn_know_ide": "Explore the IDE",
+      "partner_badge": "Partner program",
+      "partner_title": "Refer and earn recurring commission",
+      "partner_desc": "Consultancies, freelancers, communities and integrators refer MetaBuilder PRO and receive a Pix commission on every payment of the referred customer, with a dashboard to follow everything.",
+      "partner_cta": "Learn about the program"
     },
     "features": {
       "speed": {
@@ -1974,6 +1981,34 @@
         "item_fresh_desc": "Captions follow the field's current help, and Studio warns when the configuration changed and a tour may be outdated, with one-click regeneration.",
         "types_title": "No code and no extra manual",
         "types_desc": "Help is part of the system itself: less training, fewer support tickets and users productive sooner. It follows the same security care as the rest of the platform: demo mode never writes to the database."
+      },
+      "tour": {
+        "card_desc": "Balloons that teach, on the real screen, how to use the Studio, the portal and the IDE. You click when it is safe, and the tour never saves, generates or deletes for you.",
+        "hero_title": "Those who build",
+        "hero_title_highlight": "are guided too.",
+        "hero_desc": "The ? icon in the header opens the tours menu: balloons that show, step by step, where to click in the Studio, in the workspaces and projects portal and in the Local IDE. You learn by doing, on the screen itself, with no manual.",
+        "demo_title": "Learn on the real screen",
+        "demo_desc": "The balloon highlights the right button and explains it. Where it is safe, you do the clicking; anything that saves, generates or deletes is never triggered by the tour.",
+        "badge_studio": "Studio",
+        "badge_portal": "Portal",
+        "badge_ide": "Local IDE",
+        "languages": "Portuguese · English · Spanish",
+        "items_title": "A tour for every area",
+        "items_desc": "Dozens of tours organized by topic, so a new developer on the team becomes productive without in-person training.",
+        "item_areas_title": "Studio, portal and IDE",
+        "item_areas_desc": "Use cases, data and schemas, relationships, authentication, tunnel, logs and settings in the Studio; workspaces and projects in the portal; Git, eject and sync, delivery and tests in the Local IDE.",
+        "item_click_title": "You click, the tour follows",
+        "item_click_desc": "In many steps you can really click the highlighted buttons. The tour waits for the window to open, explains what is inside and moves to the next step.",
+        "item_safe_title": "Safe by default",
+        "item_safe_desc": "Buttons that save, generate, delete or publish are only highlighted: the tour never triggers them on its own. The windows it opens are closed at the end.",
+        "item_practice_title": "Guided practice",
+        "item_practice_desc": "Besides the explanations, there are walkthroughs to do for real with the tour beside you, such as generating the project app, choosing the stack and completing the merge.",
+        "item_menu_title": "Organized menu",
+        "item_menu_desc": "Tours are grouped by topic and can be collapsed. A ✓ marks the ones you have already seen, so you know what is left.",
+        "item_roles_title": "Respects your role",
+        "item_roles_desc": "Icons your role does not allow appear disabled, and the tour explains why. Parts exclusive to the desktop app are flagged as such.",
+        "types_title": "Onboarding without training",
+        "types_desc": "It complements the end-user help: while that teaches the people who use the system, the tour teaches the people who build it. Every new Studio screen is born explained, in three languages."
       }
     },
     "use_cases_page": {
@@ -4586,7 +4621,8 @@
     "empty_commissions": "No commissions yet. They show up when a referred customer pays.",
     "empty_payouts": "No payouts received yet.",
     "privacy": "Customer e-mails are partially hidden to protect their privacy.",
-    "error": "Could not load the dashboard."
+    "error": "Could not load the dashboard.",
+    "menu": "Partner dashboard"
   },
   "workspace_components": {
     "entity_trash": {
@@ -5709,5 +5745,47 @@
     "target_missing": "This item is not visible right now. Continue the tour or come back later.",
     "recover": "Back to the tour start",
     "complete_to_continue": "Complete this step to continue."
+  },
+  "partners_page": {
+    "badge": "Partner program",
+    "hero_title": "Refer MetaBuilder PRO.",
+    "hero_title_highlight": "Earn recurring commission.",
+    "hero_desc": "Consultancies, freelancers, communities and integrators refer MetaBuilder PRO and receive a commission on every payment of the referred customer, for as long as they stay subscribed. No inventory and no resale: the customer subscribes directly with us.",
+    "cta_whatsapp": "I want to be a partner",
+    "cta_panel": "Already a partner: open the dashboard",
+    "wa_message": "Hello, I want to become a MetaBuilder PRO partner",
+    "how_title": "How it works",
+    "step1_title": "Talk to us",
+    "step1_desc": "Tell us a little about you or your company. We register you as a partner and give you your code and referral link.",
+    "step2_title": "Refer",
+    "step2_desc": "Share your link. Anyone who signs up through it is linked to you.",
+    "step3_title": "The customer subscribes",
+    "step3_desc": "For every confirmed payment of the referred customer, you earn a commission.",
+    "step4_title": "Get paid by Pix",
+    "step4_desc": "After the waiting period, the available balance is paid by Pix, to your key, in batches.",
+    "terms_title": "The terms",
+    "term_percent": "{percent}% commission on the amount paid by the referred customer, on every payment, while they remain subscribed.",
+    "term_grace": "Each commission becomes available {days} days after the payment.",
+    "term_min": "Payment by Pix happens when the available balance reaches R$ {min}.",
+    "term_refund": "A refund or chargeback cancels the commission of the corresponding payment.",
+    "term_custom": "Special terms can be agreed with partners who bring volume.",
+    "panel_title": "A dashboard of your own",
+    "panel_desc": "Follow who you referred, what became a subscription, every commission (waiting, available or paid), what was canceled and the payment receipts. Customer e-mails are partially hidden to protect their privacy.",
+    "who_title": "Who it is for",
+    "who_1": "Consultancies and software houses serving companies with legacy systems",
+    "who_2": "Developers and freelancers who build systems for customers",
+    "who_3": "Communities, content creators and instructors",
+    "who_4": "Integrators and IT professionals who recommend tools",
+    "faq_title": "Frequently asked questions",
+    "faq1_q": "Do I need to be a MetaBuilder PRO customer?",
+    "faq1_a": "No. Any person or company can be a partner, as long as they have a MetaBuilder PRO account to access the dashboard.",
+    "faq2_q": "Does the customer I refer get a discount?",
+    "faq2_a": "The customer pays the current list price. The commission is a benefit for the partner.",
+    "faq3_q": "Until when do I get paid?",
+    "faq3_a": "For as long as the referred customer remains subscribed. If they cancel, future commissions stop; those already generated remain valid.",
+    "faq4_q": "How do I get paid?",
+    "faq4_a": "By Pix, to the registered key, in batches made by our team after the waiting period.",
+    "cta_title": "Shall we talk?",
+    "cta_desc": "Send us a message and we will agree on the next steps."
   }
 }
