@@ -4561,6 +4561,8 @@
       "err_owner_missing": "O dono deste item não existe mais, por isso ele não pode ser restaurado.",
       "err_exists": "Este item já foi restaurado.",
       "err_expired": "O prazo de restauração deste item terminou.",
+      "bulk_restored_project": "{n} projeto(s) restaurado(s).",
+      "bulk_restored_workspace": "{n} workspace(s) restaurado(s).",
       "err_generic": "Não foi possível concluir: "
     },
     "manage_team": "Gerenciar Equipe",

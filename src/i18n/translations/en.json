@@ -4561,6 +4561,8 @@
       "err_owner_missing": "The owner of this item no longer exists, so it cannot be restored.",
       "err_exists": "This item has already been restored.",
       "err_expired": "The restore period for this item has ended.",
+      "bulk_restored_project": "{n} project(s) restored.",
+      "bulk_restored_workspace": "{n} workspace(s) restored.",
       "err_generic": "Could not finish: "
     },
     "manage_team": "Manage Team",

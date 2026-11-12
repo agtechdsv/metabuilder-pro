@@ -4649,6 +4649,8 @@
       "err_owner_missing": "El dueño de este elemento ya no existe, por eso no se puede restaurar.",
       "err_exists": "Este elemento ya fue restaurado.",
       "err_expired": "El plazo de restauración de este elemento terminó.",
+      "bulk_restored_project": "{n} proyecto(s) restaurado(s).",
+      "bulk_restored_workspace": "{n} workspace(s) restaurado(s).",
       "err_generic": "No se pudo completar: "
     },
     "manage_team": "Gestionar Equipo",

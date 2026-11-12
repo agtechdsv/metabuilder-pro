@@ -98,6 +98,11 @@ describe('telas ligadas à lixeira de projetos e workspaces', () => {
     expect(wm).not.toMatch(/\.from\('workspaces'\)\s*\.delete\(/)
   })
 
+  it('a janela de projetos e workspaces tem restaurar e excluir em massa (selecionados ou todos), com confirmação, como a de casos de uso', () => {
+    const m = read('src/components/workspace/EntityTrashModal.tsx')
+    for (const s of ['restoreMany', 'deleteMany', 'bulkRestoreConfirm', 'bulkConfirm', 'toggleAll', 'restore_selected', 'delete_selected', 'bulk_restored_project', 'bulk_restored_workspace']) expect(m, s).toContain(s)
+  })
+
   it('o cron também limpa a lixeira de projetos e workspaces', () => {
     expect(read('src/app/api/cron/empty-trash/route.ts')).toContain("from('mb_entity_trash')")
   })
