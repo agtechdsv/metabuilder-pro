@@ -111,14 +111,15 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
     '/features/speed',
     '/features/integration',
     '/features/use-cases',
+    '/features/tour',
   ].includes(pathname || ''))
 
-  const isOwnersActive = Boolean(pathname?.startsWith('/features/')) && [
+  const isOwnersActive = pathname === '/parceiros' || (Boolean(pathname?.startsWith('/features/')) && [
     '/features/control-center',
     '/features/branding',
     '/features/desktop',
     '/features/help',
-  ].includes(pathname || '')
+  ].includes(pathname || ''))
 
   const isInfraActive = Boolean(pathname?.startsWith('/features/')) && [
     '/features/zero-trust',
@@ -185,7 +186,7 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
               </Link>
             )}
 
-            {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm')) && (
+            {(pathname === '/' || pathname?.startsWith('/features') || pathname?.startsWith('/bpm') || pathname === '/parceiros') && (
               <nav className="hidden md:flex items-center gap-4 xl:gap-6">
                 
                 {/* Dropdown Developers */}
@@ -391,6 +392,20 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                       <span>{t('marketing_v2.navbar.use_cases')}</span>
                       {isItemActive('/features/use-cases') && <ActiveIndicator />}
                     </Link>
+
+                    {/* Tour guiado de quem constrói (Studio, portal e IDE) */}
+                    <Link
+                      href="/features/tour"
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
+                        isItemActive('/features/tour')
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black text-indigo-600 dark:text-indigo-400"
+                          : "font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      )}
+                    >
+                      <span>{t('marketing_v2.navbar.tour')}</span>
+                      {isItemActive('/features/tour') && <ActiveIndicator />}
+                    </Link>
                   </div>
                 </div>
 
@@ -461,20 +476,6 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
                     >
                       <span>{t('marketing_v2.navbar.help')}</span>
                       {isItemActive('/features/help') && <ActiveIndicator />}
-                    </Link>
-
-                    {/* Tour guiado de quem constrói (Studio, portal e IDE) */}
-                    <Link
-                      href="/features/tour"
-                      className={cn(
-                        "px-3.5 py-2 rounded-xl text-xs transition-all flex items-center justify-between",
-                        isItemActive('/features/tour')
-                          ? "bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm font-black text-indigo-600 dark:text-indigo-400"
-                          : "font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                      )}
-                    >
-                      <span>{t('marketing_v2.navbar.tour')}</span>
-                      {isItemActive('/features/tour') && <ActiveIndicator />}
                     </Link>
 
                     {/* Compilador Desktop */}

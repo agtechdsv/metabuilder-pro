@@ -55,6 +55,16 @@ describe('divulgação do Tour guiado e do programa de parceiros (pt, en e es)',
     for (const l of LANGS) for (const key of labels) expect(get(json(l), key), `${l}: ${key}`).toBeTruthy()
   })
 
+  it('a página de parceiros mostra o mesmo cabeçalho das outras (barra de menus), com o Tour em Developers e Parceiros em Owners', () => {
+    const nav = read('src/components/layout/Navbar.tsx')
+    expect(nav).toContain("pathname === '/parceiros') && (")
+    const dev = nav.indexOf('Dropdown Developers'), owners = nav.indexOf('Dropdown Owners'), infra = nav.indexOf('Dropdown Infra')
+    expect(nav.indexOf('href="/features/tour"')).toBeGreaterThan(dev)
+    expect(nav.indexOf('href="/features/tour"')).toBeLessThan(owners)
+    expect(nav.indexOf('href="/parceiros"')).toBeGreaterThan(owners)
+    expect(nav.indexOf('href="/parceiros"')).toBeLessThan(infra)
+  })
+
   it('a página pública lê as condições dos ajustes do SuperAdmin (não promete um número escrito à mão)', () => {
     const page = read('src/app/parceiros/page.tsx')
     for (const k of ['partner_default_percent', 'partner_grace_days', 'partner_min_payout']) expect(page, k).toContain(k)
