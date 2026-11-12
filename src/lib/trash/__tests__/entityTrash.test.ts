@@ -43,10 +43,15 @@ describe('SQL da lixeira de projetos e workspaces (scripts/lixeira-projetos-work
     for (const fn of ['mb_trash_project(uuid)', 'mb_trash_workspace(uuid)', 'mb_restore_entity(uuid)', 'mb_list_entity_trash(text, uuid)', 'mb_delete_entity_trash(uuid)']) {
       expect(sql, fn).toContain(`grant execute on function public.${fn} to authenticated`)
     }
-    // as de apoio (copiar/recriar) nem são liberadas para authenticated
-    for (const fn of ['mb_snapshot_project(uuid)', 'mb_restore_project_payload(jsonb)']) {
-      expect(sql, fn).toContain(`revoke all on function public.${fn} from public`)
+    // o Supabase dá EXECUTE a anon e authenticated em toda função nova: as de apoio (copiar, recriar, conferir permissão) precisam revogar dos dois,
+    // senão qualquer pessoa leria a configuração de um projeto alheio ou inseriria linhas em projects
+    for (const fn of ['mb_snapshot_project(uuid)', 'mb_restore_project_payload(jsonb)', 'mb_can_delete_project(uuid, uuid)', 'mb_can_delete_workspace(uuid, uuid)', 'mb_can_manage_entity_trash(public.mb_entity_trash, uuid)']) {
+      expect(sql, fn).toContain(`revoke all on function public.${fn} from public, anon, authenticated`)
       expect(sql, fn).not.toContain(`grant execute on function public.${fn}`)
+    }
+    // as públicas revogam de anon (só quem está logado chama)
+    for (const fn of ['mb_trash_project(uuid)', 'mb_trash_workspace(uuid)', 'mb_restore_entity(uuid)', 'mb_list_entity_trash(text, uuid)', 'mb_delete_entity_trash(uuid)', 'mb_purge_expired_entity_trash()']) {
+      expect(sql, fn).toContain(`revoke all on function public.${fn} from public, anon;`)
     }
   })
 

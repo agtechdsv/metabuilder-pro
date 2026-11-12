@@ -35,6 +35,9 @@ alter table public.mb_entity_trash enable row level security;
 -- sem policy: ninguem le nem grava direto. So as funcoes abaixo (security definer) mexem na tabela, cada uma conferindo a permissao.
 revoke all on public.mb_entity_trash from anon, authenticated;
 
+-- ATENCAO (seguranca): o Supabase concede EXECUTE a anon e authenticated em toda funcao nova do schema public. Por isso cada funcao abaixo revoga
+-- explicitamente: as de apoio (copiar/recriar/conferir permissao) nao ficam chamaveis de fora; as demais so para quem esta logado.
+
 -- 2) permissoes --------------------------------------------------------------------------------------------------------------------------
 create or replace function public.mb_can_delete_workspace(p_workspace_id uuid, p_uid uuid default auth.uid())
 returns boolean language plpgsql stable security definer set search_path = public as $$
@@ -46,8 +49,7 @@ begin
   if exists (select 1 from public.owner_guests where owner_id = v_owner and user_id = p_uid and access_level = 'global') then return true; end if;
   return exists (select 1 from public.workspace_members where workspace_id = p_workspace_id and user_id = p_uid and can_delete is true);
 end $$;
-revoke all on function public.mb_can_delete_workspace(uuid, uuid) from public;
-grant execute on function public.mb_can_delete_workspace(uuid, uuid) to authenticated;
+revoke all on function public.mb_can_delete_workspace(uuid, uuid) from public, anon, authenticated; -- so as outras funcoes (security definer) chamam esta
 
 create or replace function public.mb_can_delete_project(p_project_id uuid, p_uid uuid default auth.uid())
 returns boolean language plpgsql stable security definer set search_path = public as $$
@@ -61,8 +63,7 @@ begin
   return public.mb_can_delete_workspace(v_ws, p_uid) and exists (
     select 1 from public.workspaces w where w.id = v_ws and (w.owner_id = p_uid or exists (select 1 from public.owner_guests g where g.owner_id = w.owner_id and g.user_id = p_uid and g.access_level = 'global')));
 end $$;
-revoke all on function public.mb_can_delete_project(uuid, uuid) from public;
-grant execute on function public.mb_can_delete_project(uuid, uuid) to authenticated;
+revoke all on function public.mb_can_delete_project(uuid, uuid) from public, anon, authenticated; -- so as outras funcoes (security definer) chamam esta
 
 -- quem pode restaurar/ver/apagar para sempre um item da lixeira
 create or replace function public.mb_can_manage_entity_trash(t public.mb_entity_trash, p_uid uuid default auth.uid())
@@ -84,12 +85,11 @@ begin
   return exists (select 1 from jsonb_array_elements(coalesce(t.payload->'workspace_tables'->'workspace_members', '[]'::jsonb)) m
                  where m->>'user_id' = p_uid::text and ((m->>'can_delete') = 'true' or (t.entity_type = 'project' and m->>'role' in ('admin', 'owner'))));
 end $$;
-revoke all on function public.mb_can_manage_entity_trash(public.mb_entity_trash, uuid) from public;
-grant execute on function public.mb_can_manage_entity_trash(public.mb_entity_trash, uuid) to authenticated;
+revoke all on function public.mb_can_manage_entity_trash(public.mb_entity_trash, uuid) from public, anon, authenticated; -- so as outras funcoes (security definer) chamam esta
 
 -- 3) o que entra na copia de um projeto (ordem = ordem de restauracao; filtro = linhas que ja nao fazem sentido sao descartadas) -----------
 create or replace function public.mb_project_trash_spec()
-returns table (seq integer, tbl text, cond text, flt text) language sql immutable as $$
+returns table (seq integer, tbl text, cond text, flt text) language sql immutable set search_path = public as $
   select * from (values
     (1,  'models',                    'project_id = $1', null::text),
     (2,  'fields',                    'model_id in (select id from public.models where project_id = $1)', null),
@@ -127,7 +127,7 @@ begin
   end loop;
   return jsonb_build_object('project', to_jsonb(p), 'tables', tables);
 end $$;
-revoke all on function public.mb_snapshot_project(uuid) from public;
+revoke all on function public.mb_snapshot_project(uuid) from public, anon, authenticated; -- so as outras funcoes (security definer) chamam esta
 
 create or replace function public.mb_restore_project_payload(p_payload jsonb)
 returns uuid language plpgsql security definer set search_path = public as $$
@@ -145,7 +145,7 @@ begin
   end loop;
   return p.id;
 end $$;
-revoke all on function public.mb_restore_project_payload(jsonb) from public;
+revoke all on function public.mb_restore_project_payload(jsonb) from public, anon, authenticated; -- so as outras funcoes (security definer) chamam esta
 
 -- 4) excluir (mover para a lixeira) ------------------------------------------------------------------------------------------------------
 create or replace function public.mb_trash_project(p_project_id uuid)
@@ -165,7 +165,7 @@ begin
   delete from public.projects where id = p.id;
   return tid;
 end $$;
-revoke all on function public.mb_trash_project(uuid) from public;
+revoke all on function public.mb_trash_project(uuid) from public, anon;
 grant execute on function public.mb_trash_project(uuid) to authenticated;
 
 create or replace function public.mb_trash_workspace(p_workspace_id uuid)
@@ -194,7 +194,7 @@ begin
   delete from public.workspaces where id = w.id;   -- projetos e o resto saem em cascata
   return tid;
 end $$;
-revoke all on function public.mb_trash_workspace(uuid) from public;
+revoke all on function public.mb_trash_workspace(uuid) from public, anon;
 grant execute on function public.mb_trash_workspace(uuid) to authenticated;
 
 -- 5) restaurar ---------------------------------------------------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ begin
   delete from public.mb_entity_trash where id = t.id;
   return jsonb_build_object('type', t.entity_type, 'id', t.entity_id, 'workspace_id', t.workspace_id, 'slug', t.slug, 'name', t.name, 'projects', n);
 end $$;
-revoke all on function public.mb_restore_entity(uuid) from public;
+revoke all on function public.mb_restore_entity(uuid) from public, anon;
 grant execute on function public.mb_restore_entity(uuid) to authenticated;
 
 -- 6) listar, apagar para sempre, limpar o que venceu -------------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ begin
       and public.mb_can_manage_entity_trash(t)
     order by t.deleted_at desc;
 end $$;
-revoke all on function public.mb_list_entity_trash(text, uuid) from public;
+revoke all on function public.mb_list_entity_trash(text, uuid) from public, anon;
 grant execute on function public.mb_list_entity_trash(text, uuid) to authenticated;
 
 create or replace function public.mb_delete_entity_trash(p_trash_id uuid)
@@ -275,7 +275,7 @@ begin
   if not public.mb_can_manage_entity_trash(t) then raise exception 'delete_not_allowed'; end if;
   delete from public.mb_entity_trash where id = t.id;
 end $$;
-revoke all on function public.mb_delete_entity_trash(uuid) from public;
+revoke all on function public.mb_delete_entity_trash(uuid) from public, anon;
 grant execute on function public.mb_delete_entity_trash(uuid) to authenticated;
 
 create or replace function public.mb_purge_expired_entity_trash()
@@ -286,5 +286,5 @@ begin
   get diagnostics n = row_count;
   return n;
 end $$;
-revoke all on function public.mb_purge_expired_entity_trash() from public;
+revoke all on function public.mb_purge_expired_entity_trash() from public, anon;
 grant execute on function public.mb_purge_expired_entity_trash() to authenticated;
