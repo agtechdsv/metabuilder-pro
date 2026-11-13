@@ -26,7 +26,7 @@ Um **parceiro** é uma pessoa ou empresa (que já tem login no MetaBuilder) que 
 | Valida o saque (Asaas pergunta antes de efetivar) | `supabase/functions/partner-transfer-validation/index.ts` |
 | Ações do SuperAdmin e do parceiro | `src/app/actions/partners.ts` |
 | Registro da indicação pelo código | `src/app/actions/iclub.ts` (`registerPartnerReferral`) |
-| Tela do SuperAdmin | `src/components/admin/PartnersAdmin.tsx` (aba **Planos** de `/admin/platform`) |
+| Tela do SuperAdmin | Regras da comissão: `PartnerSettingsAdmin.tsx` (aba **Regras de Preços** de `/admin/platform`, com link para a aba Parceiros). Gestão (interessados, parceiros, lotes): `PartnersAdmin.tsx` (aba **Parceiros**, com contador de candidaturas novas) |
 | Painel do parceiro | `/parceiro` (`src/app/parceiro/page.tsx`, `src/components/partner/PartnerDashboardClient.tsx`) |
 | Testes | `src/lib/__tests__/partnerCommission.test.ts` |
 
@@ -59,13 +59,13 @@ Quem quer ser parceiro preenche o formulário da página (nome, e-mail, perfil, 
 - **Tabela** `partner_applications` em `scripts/parceiros-interessados.sql` (RLS sem policy, sem acesso de `anon`/`authenticated`; o IP só como hash). **Rodar esse SQL antes de testar.**
 - **Anti-robô e abuso**: campo isca escondido, tempo mínimo de 3 s entre abrir e enviar, no máximo 5 envios por hora por IP (hash) e mesma pessoa em análise não duplica. A validação de verdade é no servidor (`src/lib/partnerApplications.ts`, `src/app/actions/partnerApplications.ts`).
 - **Aviso por e-mail** à equipe a cada candidatura, pelo mesmo SMTP do checkout. Destino: variável `PARTNER_NOTIFY_EMAIL` na Vercel; sem ela, a própria caixa do SMTP. Se o e-mail falhar, a candidatura continua salva.
-- **SuperAdmin**: em Planos > Parceiros aparece o quadro **Interessados em ser parceiro**: **Aprovar e cadastrar...** (abre o cadastro do parceiro já preenchido, com código sugerido; ao salvar, a candidatura vira Aprovada), **Recusar**, **Reabrir** e **Apagar** (LGPD). Para aprovar, a pessoa precisa já ter conta com o mesmo e-mail.
+- **SuperAdmin**: na aba Parceiros (com contador de novas na própria aba) aparece o quadro **Interessados em ser parceiro**: **Aprovar e cadastrar...** (abre o cadastro do parceiro já preenchido, com código sugerido; ao salvar, a candidatura vira Aprovada), **Recusar**, **Reabrir** e **Apagar** (LGPD). Para aprovar, a pessoa precisa já ter conta com o mesmo e-mail.
 - O WhatsApp continua na página como alternativa.
 
 ## Roteiro de teste em produção (com valores pequenos)
 Use uma conta de parceiro de teste (outra conta sua) e um cliente de teste que **nunca pagou**.
-0. **Candidatura**: depois do SQL e do deploy, abra `/parceiros` em janela anônima, preencha o formulário com o e-mail da conta de teste e envie. Conferir: mensagem de sucesso; e-mail de aviso na caixa; em Planos > Parceiros o quadro mostra a candidatura. Reenviar o mesmo e-mail não duplica. Enviar rápido demais (menos de 3 s) ou sem marcar o consentimento é recusado. Depois use **Aprovar e cadastrar...** e siga o passo 1.
-1. `/admin/platform` > **Planos** > **Parceiros**: ajuste **carência 0 dias** e **mínimo R$ 1** (só para o teste; volte depois). Cadastre a conta de teste como parceiro: código (ex.: `TESTE1`), chave Pix **sua**, % próprio (ex.: 10).
+0. **Candidatura**: depois do SQL e do deploy, abra `/parceiros` em janela anônima, preencha o formulário com o e-mail da conta de teste e envie. Conferir: mensagem de sucesso; e-mail de aviso na caixa; a aba **Parceiros** mostra o contador e o quadro com a candidatura. Reenviar o mesmo e-mail não duplica. Enviar rápido demais (menos de 3 s) ou sem marcar o consentimento é recusado. Depois use **Aprovar e cadastrar...** e siga o passo 1.
+1. `/admin/platform` > **Regras de Preços** > **Comissão dos parceiros**: ajuste **carência 0 dias** e **mínimo R$ 1** (só para o teste; volte depois) e salve. Na aba **Parceiros**, cadastre a conta de teste como parceiro: código (ex.: `TESTE1`), chave Pix **sua**, % próprio (ex.: 10).
 2. Abra uma janela anônima em `https://<site>/?ref=TESTE1`, cadastre o cliente de teste e pague a assinatura.
 3. Conferir: em `/parceiro` (logado como o parceiro) aparece o indicado (e-mail mascarado) como **Assinante** e uma comissão. Em `partner_commissions`: `net` e `amount` corretos (amount = net × %, para baixo) e `release_at` = agora (carência 0).
 4. Em **Parceiros** (SuperAdmin) o parceiro mostra o valor em **A pagar**. Marque-o, **Pagar por Pix...**, confira o resumo e confirme.

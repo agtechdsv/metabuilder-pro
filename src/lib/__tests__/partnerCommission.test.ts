@@ -214,8 +214,10 @@ describe('integração com o pagamento do Asaas e com as telas', () => {
     expect(a.slice(j)).toContain("eq('user_id', user.id)")
   })
 
-  it('o código de indicação de parceiro é tratado antes do iClub, e a tela do SuperAdmin está na aba de planos', () => {
+  it('o código de indicação de parceiro é tratado antes do iClub, e as telas do SuperAdmin estão nas abas Regras de Preços (ajustes) e Parceiros (gestão)', () => {
     expect(read('src/app/actions/iclub.ts')).toContain('registerPartnerReferral(')
-    expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<PartnersAdmin />')
+    const admin = read('src/components/admin/PlatformAdminClient.tsx')
+    expect(admin).toContain('<PartnersAdmin ')
+    expect(admin).toContain('<PartnerSettingsAdmin ')
   })
 })

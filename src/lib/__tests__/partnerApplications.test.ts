@@ -116,6 +116,24 @@ describe('candidatura de parceiro: ligação no sistema', () => {
     for (const l of LANGS) expect(get(json(l), 'partners_page.cta_apply'), l).toBeTruthy()
   })
 
+  it('o painel do SuperAdmin tem as abas Parceiros e Sistema, com cada cartão no lugar certo e o link do cartão de ajustes', () => {
+    const src = read('src/components/admin/PlatformAdminClient.tsx')
+    const block = (tab: string) => {
+      const i = src.indexOf(`activeTab === '${tab}' && (`)
+      const j = src.indexOf('\n        )}', i)
+      return src.slice(i, j)
+    }
+    const plans = block('plans'), partners = block('partners'), system = block('system')
+    for (const c of ['PricingRulesAdmin', 'CampaignsAdmin', 'IClubSettingsAdmin', 'PartnerSettingsAdmin']) expect(plans, c).toContain(`<${c}`)
+    for (const c of ['PartnersAdmin', 'DeviceSessionsAdmin', 'TrashSettingsAdmin']) expect(plans, c).not.toContain(`<${c} `)
+    expect(plans).not.toContain('<PartnersAdmin')
+    expect(plans).toContain("openTab('partners')")
+    expect(partners).toContain('<PartnersAdmin')
+    expect(system).toContain('<DeviceSessionsAdmin')
+    expect(system).toContain('<TrashSettingsAdmin')
+    for (const l of LANGS) { expect(get(json(l), 'admin.tabs.partners'), l).toBeTruthy(); expect(get(json(l), 'admin.tabs.system'), l).toBeTruthy() }
+  })
+
   it('a tela do SuperAdmin lista, aprova (abre o cadastro preenchido), recusa e apaga', () => {
     const src = read('src/components/admin/PartnersAdmin.tsx')
     for (const s of ['listPartnerApplications', 'decidePartnerApplication', 'deletePartnerApplication', 'suggestPartnerCode', 'Aprovar e cadastrar']) expect(src, s).toContain(s)

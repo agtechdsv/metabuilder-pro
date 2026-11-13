@@ -54,8 +54,8 @@ export async function submitPartnerApplication(input: ApplicationInput): Promise
     ]
     await sendTeamNotice(
       `Nova candidatura de parceiro: ${v.name}`,
-      lines.map(([k, val]) => `${k}: ${val}`).join('\n') + '\n\nAprove ou recuse em Planos > Parceiros.',
-      `<p><b>Nova candidatura de parceiro</b></p><ul>${lines.map(([k, val]) => `<li><b>${esc(k)}:</b> ${esc(String(val))}</li>`).join('')}</ul><p>Aprove ou recuse em Planos &gt; Parceiros.</p>`,
+      lines.map(([k, val]) => `${k}: ${val}`).join('\n') + '\n\nAprove ou recuse na aba Parceiros do painel.',
+      `<p><b>Nova candidatura de parceiro</b></p><ul>${lines.map(([k, val]) => `<li><b>${esc(k)}:</b> ${esc(String(val))}</li>`).join('')}</ul><p>Aprove ou recuse na aba Parceiros do painel.</p>`,
     )
     return { success: true }
   } catch (e) {

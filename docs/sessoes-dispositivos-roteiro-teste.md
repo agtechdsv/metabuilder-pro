@@ -22,7 +22,7 @@ Use janelas anônimas (ou perfis separados) quando precisar de "outro navegador"
 ### Antes de ligar
 - [ ] Rodei `scripts/sessoes-dispositivos.sql` no SQL Editor (a última linha do resultado não pode ter erro; pode rodar de novo, é idempotente).
 - [ ] Fiz o deploy do site com esta versão.
-- [ ] Em **/admin/platform > Regras de Preços > Sessões e dispositivos** a tela abre, mostra o modo **Desligado** e os valores 15, 3 e 60.
+- [ ] Em **/admin/platform > Sistema > Sessões e dispositivos** a tela abre, mostra o modo **Desligado** e os valores 15, 3 e 60.
 - [ ] (Opcional) criei `DEVICE_SLOT_SECRET` na Vercel (qualquer texto longo e aleatório). Sem ela, o site usa a chave de serviço do Supabase para assinar o cookie.
 
 ### Ajustes provisórios para testar mais rápido

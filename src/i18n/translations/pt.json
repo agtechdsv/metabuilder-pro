@@ -3806,7 +3806,9 @@
       "metavoice": "MetaVoice",
       "community": "MetaBuilders",
       "arquivos": "IDEs, CLI & Manuais",
-      "releases": "Releases (IDE)"
+      "releases": "Releases (IDE)",
+      "partners": "Parceiros",
+      "system": "Sistema"
     }
   },
   "client_dashboard": {

@@ -5,7 +5,7 @@ import { Handshake, Inbox, Loader2, Pencil, Plus, Save, Send, Trash2, X } from '
 import { decidePartnerApplication, deletePartnerApplication, listPartnerApplications } from '@/app/actions/partnerApplications'
 import { suggestPartnerCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
-  createPartnerPayout, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner, savePartnerSettings,
+  createPartnerPayout, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner,
 } from '@/app/actions/partners'
 import { useToast } from '@/components/ui/Toast'
 import { DEFAULT_PARTNER_SETTINGS, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow } from '@/lib/partners'
@@ -40,7 +40,7 @@ const SKIP_LABEL: Record<string, string> = { suspended: 'suspenso', no_pix_key: 
 
 const EMPTY: PartnerInput = { userEmail: '', name: '', document: '', pixKey: '', pixKeyType: 'CPF', code: '', commissionPercent: null, status: 'active', notes: '' }
 
-export function PartnersAdmin() {
+export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (count: number) => void } = {}) {
   const { toast } = useToast()
   const [settings, setSettings] = useState<PartnerSettings>(DEFAULT_PARTNER_SETTINGS)
   const [partners, setPartners] = useState<PartnerRow[]>([])
@@ -67,13 +67,6 @@ export function PartnersAdmin() {
     setLoading(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
-
-  const saveSettings = async () => {
-    setBusy(true)
-    const r = await savePartnerSettings(settings)
-    setBusy(false)
-    toast(r.success ? 'Ajustes dos parceiros salvos.' : errText(r), r.success ? 'success' : 'error')
-  }
 
   const savePartnerForm = async () => {
     if (!form) return
@@ -106,6 +99,8 @@ export function PartnersAdmin() {
     load()
   }
   const newApps = applications.filter(a => a.status === 'new')
+  // avisa a aba "Parceiros" quantas candidaturas novas existem (contador no rótulo da aba)
+  useEffect(() => { onNewApplications?.(newApps.length) }, [newApps.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const shownApps = showDecided ? applications : newApps
 
   const toggle = (id: string) => setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
@@ -136,8 +131,6 @@ export function PartnersAdmin() {
     load()
   }
 
-  const num = (v: string) => (v === '' ? ('' as unknown as number) : Number(v))
-
   return (
     <section className="rounded-[2rem] border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -145,18 +138,9 @@ export function PartnersAdmin() {
         <button type="button" onClick={() => { setApprovingId(null); setForm({ ...EMPTY }) }} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-500"><Plus className="h-3.5 w-3.5" />Novo parceiro</button>
       </div>
 
-      <div className="mb-5 grid gap-3 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950 md:grid-cols-5">
-        <label className="block"><span className={labelCls}>% padrão da comissão</span>
-          <input type="number" min={0} max={100} className={inputCls} value={settings.defaultPercent} onChange={e => setSettings({ ...settings, defaultPercent: num(e.target.value) })} /></label>
-        <label className="block"><span className={labelCls}>Carência (dias)</span>
-          <input type="number" min={0} max={90} className={inputCls} value={settings.graceDays} onChange={e => setSettings({ ...settings, graceDays: num(e.target.value) })} /></label>
-        <label className="block"><span className={labelCls}>Mínimo por parceiro (R$)</span>
-          <input type="number" min={1} className={inputCls} value={settings.minPayout} onChange={e => setSettings({ ...settings, minPayout: num(e.target.value) })} /></label>
-        <label className="block"><span className={labelCls}>Teto do lote (R$)</span>
-          <input type="number" min={1} className={inputCls} value={settings.payoutCap} onChange={e => setSettings({ ...settings, payoutCap: num(e.target.value) })} /></label>
-        <div className="flex items-end"><button type="button" disabled={busy} onClick={saveSettings} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700"><Save className="h-3.5 w-3.5" />Salvar ajustes</button></div>
-        <p className="text-[10px] text-neutral-400 md:col-span-5">A comissão é calculada sobre o valor que o cliente indicado pagou (bruto, sem descontar as taxas do Asaas) em cada pagamento, e só fica disponível depois da carência. Mudar o % padrão vale para as próximas comissões; as já geradas não mudam.</p>
-      </div>
+      <p className="mb-5 rounded-2xl bg-neutral-50 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-950">
+        Condições vigentes: <b>{settings.defaultPercent}%</b> de comissão · carência de <b>{settings.graceDays} dia(s)</b> · mínimo de <b>{money(settings.minPayout)}</b> por parceiro · teto do lote de <b>{money(settings.payoutCap)}</b>. Para mudar, use a aba <b>Regras de Preços</b>.
+      </p>
 
       {applications.length > 0 && (
         <div className="mb-5 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">

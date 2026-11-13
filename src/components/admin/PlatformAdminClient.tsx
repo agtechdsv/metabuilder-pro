@@ -11,8 +11,11 @@ import {
   BarChart3,
   RefreshCw,
   ShieldCheck,
-  Rocket
+  Rocket,
+  Handshake,
+  Settings2
 } from 'lucide-react'
+import { listPartnerApplications } from '@/app/actions/partnerApplications'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
@@ -23,6 +26,7 @@ import { PricingRulesAdmin } from './PricingRulesAdmin'
 import { TrashSettingsAdmin } from './TrashSettingsAdmin'
 import { CampaignsAdmin, IClubSettingsAdmin } from './CampaignsAdmin'
 import { PartnersAdmin } from './PartnersAdmin'
+import { PartnerSettingsAdmin } from './PartnerSettingsAdmin'
 import { DeviceSessionsAdmin } from './DeviceSessionsAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
 import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
@@ -86,6 +90,8 @@ const TAB_CONFIG = {
   community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
   arquivos: { label: 'IDEs, CLI & Manuais', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
   releases: { label: 'Releases (IDE)', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
+  partners: { label: 'Parceiros', icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  system: { label: 'Sistema', icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
 } as const
 
 interface PlatformAdminClientProps {
@@ -116,7 +122,13 @@ export default function PlatformAdminClient({
     setTimeout(() => setIsRefreshing(false), 800)
   }
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos' | 'releases'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos' | 'releases' | 'partners' | 'system'>('dashboard')
+  // candidaturas novas de parceiros: contador no rótulo da aba (lido ao abrir o painel; a aba Parceiros o mantém atualizado)
+  const [newPartnerApps, setNewPartnerApps] = useState(0)
+  useEffect(() => {
+    listPartnerApplications().then(r => { if (r.success) setNewPartnerApps(r.applications.filter(a => a.status === 'new').length) }).catch(() => {})
+  }, [])
+  const openTab = (tab: typeof activeTab) => { setActiveTab(tab); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces)
   const [clientProfiles, setClientProfiles] = useState<any[]>(profiles)
@@ -194,6 +206,8 @@ export default function PlatformAdminClient({
     community: { label: t('admin.tabs.community', 'MetaBuilders'), icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
     arquivos: { label: t('admin.tabs.arquivos', 'IDEs, CLI & Manuais'), icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
     releases: { label: t('admin.tabs.releases', 'Releases (IDE)'), icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
+    partners: { label: t('admin.tabs.partners', 'Parceiros'), icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    system: { label: t('admin.tabs.system', 'Sistema'), icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
   } as const
 
   return (
@@ -260,7 +274,7 @@ export default function PlatformAdminClient({
 
           {/* Right Tabs Group */}
           <div className="flex flex-wrap gap-1.5 bg-neutral-100 dark:bg-neutral-950 p-1.5 rounded-2xl border border-neutral-200/50 dark:border-neutral-850/80 w-fit">
-            {(['community', 'metavoice', 'iclub', 'arquivos', 'releases'] as const).map(tab => {
+            {(['community', 'metavoice', 'iclub', 'partners', 'arquivos', 'releases', 'system'] as const).map(tab => {
               const config = TAB_CONFIG[tab]
               const Icon = config.icon
               return (
@@ -276,6 +290,9 @@ export default function PlatformAdminClient({
                 >
                   <Icon className={cn("w-4 h-4", config.iconColor)} />
                   <span>{config.label}</span>
+                  {tab === 'partners' && newPartnerApps > 0 && (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white" title="Candidaturas novas">{newPartnerApps}</span>
+                  )}
                 </button>
               )
             })}
@@ -335,7 +352,32 @@ export default function PlatformAdminClient({
             <PricingRulesAdmin />
             <CampaignsAdmin />
             <IClubSettingsAdmin />
-            <PartnersAdmin />
+            <PartnerSettingsAdmin onOpenPartnersTab={() => openTab('partners')} />
+          </motion.div>
+        )}
+
+        {activeTab === 'partners' && (
+          <motion.div
+            key="partners"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            <PartnersAdmin onNewApplications={setNewPartnerApps} />
+          </motion.div>
+        )}
+
+        {activeTab === 'system' && (
+          <motion.div
+            key="system"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
             <DeviceSessionsAdmin />
             <TrashSettingsAdmin />
           </motion.div>

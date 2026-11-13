@@ -2,7 +2,7 @@
 -- Rodar no SQL Editor do Supabase de PRODUCAO (projeto main). Pode rodar de novo: tudo e "if not exists".
 --
 -- O que faz: cria partner_applications, onde cai cada candidatura enviada pelo formulario. O SuperAdmin ve a lista em
--- Planos > Parceiros, aprova (abre o cadastro do parceiro ja preenchido), recusa ou apaga.
+-- aba Parceiros do painel do SuperAdmin, aprova (abre o cadastro do parceiro ja preenchido), recusa ou apaga.
 --
 -- Seguranca: RLS ligada e SEM policy, e sem acesso para anon/authenticated. Quem grava e a server action do formulario
 -- (service_role), que valida os campos, barra robos (campo escondido, tempo minimo) e limita por IP. O IP so e guardado como hash.

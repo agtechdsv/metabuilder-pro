@@ -60,7 +60,7 @@ Nas áreas da plataforma chama `/api/session/heartbeat` a cada 60 s e ao voltar 
 | Ações (troca, código, meus dispositivos, SuperAdmin) | `src/app/actions/deviceSessions.ts` |
 | Logout local e libera a vaga | `signOut` em `src/app/auth/actions.ts` |
 | "Meus dispositivos" | `src/components/workspace/DeviceSessionsPanel.tsx` (aba Segurança do `/client/dashboard` e perfil) |
-| SuperAdmin | `src/components/admin/DeviceSessionsAdmin.tsx` (aba **Regras de Preços**, depois de Parceiros) |
+| SuperAdmin | `src/components/admin/DeviceSessionsAdmin.tsx` (aba **Sistema**, junto com a Lixeira) |
 | E-mails | `src/lib/security/securityMailText.ts` e `securityMail.ts` (mesmo SMTP do checkout) |
 | Termos e Privacidade | `terms.item5_*` e `privacy.item4_desc`, `privacy.item5_*` (pt, en, es) |
 | Testes | `src/lib/sessions/__tests__/*` |
@@ -78,6 +78,6 @@ Guardamos cidade, região e país (dos cabeçalhos da Vercel), tipo, navegador/s
 ## Publicação (ordem)
 1. Rodar `scripts/sessoes-dispositivos.sql` no SQL Editor (o modo começa `off`, nada muda).
 2. Deploy do site. (Opcional: `DEVICE_SLOT_SECRET` na Vercel; sem ela usa a chave de serviço.)
-3. Em Regras de Preços > Sessões e dispositivos: mudar para **Observar** e olhar por alguns dias quantos usuários bateriam na regra.
+3. Em Sistema > Sessões e dispositivos: mudar para **Observar** e olhar por alguns dias quantos usuários bateriam na regra.
 4. Revisar os Termos (item 5) e a Política de Privacidade com o advogado.
 5. Mudar para **Valer**. Se algo der errado, voltar para **Desligado**: em até 60 s ninguém mais é bloqueado, sem novo deploy.
