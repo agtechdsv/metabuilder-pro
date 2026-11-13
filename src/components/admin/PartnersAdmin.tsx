@@ -267,7 +267,7 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
             <tbody>{partners.map(p => (
               <tr key={p.id} className="border-t border-neutral-100 dark:border-neutral-800">
                 <td className="px-2 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={k('select_aria', { name: p.name })} /></td>
-                <td className="px-2 py-2"><p className="font-bold">{p.name}{p.status === 'suspended' && <span className="ml-2 rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">{k('suspended_badge')}</span>}</p><p className="text-[11px] text-neutral-400">{p.userEmail}</p></td>
+                <td className="px-2 py-2"><p className="font-bold">{p.name}{p.status === 'suspended' && <span className="ml-2 rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">{k('suspended_badge')}</span>}{p.pendingAccount && <span title={k('pending_account_hint')} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-700">{k('pending_account_badge')}</span>}</p><p className="text-[11px] text-neutral-400">{p.userEmail}</p></td>
                 <td className="px-2 py-2 font-mono text-xs">{p.code}</td>
                 <td className="px-2 py-2">{p.commissionPercent ?? settings.defaultPercent}%{p.commissionPercent == null && <span className="text-[10px] text-neutral-400"> {k('default_tag')}</span>}</td>
                 <td className="px-2 py-2">{p.subscribed}/{p.referrals}</td>

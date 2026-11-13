@@ -92,7 +92,7 @@ export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | F
       admin.from('partner_commissions').select('partner_id, status, amount, release_at, clawback, clawback_settled'),
       admin.from('partner_payout_items').select('partner_id'),
     ])
-    const userIds = (partners || []).map((p: any) => p.user_id)
+    const userIds = (partners || []).map((p: any) => p.user_id).filter(Boolean)
     const { data: profiles } = userIds.length ? await admin.from('profiles').select('id, email').in('id', userIds) : { data: [] as any[] }
     const emailOf = new Map((profiles || []).map((p: any) => [p.id as string, (p.email || '') as string]))
 
@@ -100,8 +100,9 @@ export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | F
       const refs = (referrals || []).filter((r: any) => r.partner_id === p.id)
       return {
         id: p.id,
-        userId: p.user_id,
-        userEmail: emailOf.get(p.user_id) || '',
+        userId: p.user_id ?? null,
+        pendingAccount: !p.user_id,
+        userEmail: emailOf.get(p.user_id) || p.email || '',
         name: p.name,
         document: p.document,
         pixKey: p.pix_key,
@@ -121,6 +122,7 @@ export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | F
 }
 
 const CODE_RE = /^[A-Z0-9][A-Z0-9_-]{2,31}$/
+const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/
 
 export async function savePartner(input: PartnerInput): Promise<Ok<{ id: string }> | Fail> {
   try {
@@ -176,13 +178,19 @@ export async function savePartner(input: PartnerInput): Promise<Ok<{ id: string 
       return { success: true, id: input.id }
     }
 
+    // a pessoa NÃO precisa ter conta ainda: sem conta, o parceiro fica "aguardando cadastro" (guarda só o e-mail) e o vínculo é feito
+    // sozinho quando ela entra com esse e-mail confirmado (ver findOrClaimPartner)
     const email = (input.userEmail || '').trim().toLowerCase()
-    const { data: profile } = email ? await admin.from('profiles').select('id').ilike('email', email).maybeSingle() : { data: null }
-    if (!profile) return fail('user_not_found')
-    const { data: existing } = await admin.from('partners').select('id').eq('user_id', profile.id).maybeSingle()
-    if (existing) return fail('already_partner')
+    if (!EMAIL_RE.test(email) || email.length > 200) return fail('email_invalid')
+    const { data: profile } = await admin.from('profiles').select('id').ilike('email', email).maybeSingle()
+    const { data: sameEmail } = await admin.from('partners').select('id').ilike('email', email).maybeSingle()
+    if (sameEmail) return fail('already_partner')
+    if (profile) {
+      const { data: existing } = await admin.from('partners').select('id').eq('user_id', profile.id).maybeSingle()
+      if (existing) return fail('already_partner')
+    }
 
-    const { data: created, error } = await admin.from('partners').insert({ ...base, user_id: profile.id }).select('id').single()
+    const { data: created, error } = await admin.from('partners').insert({ ...base, user_id: profile?.id ?? null, email }).select('id').single()
     if (error) return fail('unknown', error.message)
     revalidatePath('/admin/platform')
     return { success: true, id: created.id }
@@ -315,14 +323,33 @@ export async function releaseStuckPayoutItem(itemId: string): Promise<Ok | Fail>
 // painel do próprio parceiro (quem é o parceiro vem da sessão)
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-/** Só diz se a pessoa logada é parceira (para mostrar o atalho do painel no menu). Quem é vem da sessão. */
+/**
+ * O parceiro da pessoa logada. Se ainda não há vínculo mas existe um parceiro "aguardando cadastro" com o e-mail dela, liga a conta a ele
+ * agora. SÓ liga com o e-mail CONFIRMADO (confirmação do cadastro ou login do Google): sem isso, qualquer um criaria uma conta com o e-mail
+ * de outra pessoa e assumiria o parceiro. A condição `user_id is null` na gravação impede disputa entre duas contas.
+ */
+async function findOrClaimPartner(
+  admin: ReturnType<typeof createAdminClient>,
+  user: { id: string; email?: string | null; email_confirmed_at?: string | null },
+  columns: string
+): Promise<any | null> {
+  const { data: mine } = await admin.from('partners').select(columns).eq('user_id', user.id).maybeSingle()
+  if (mine) return mine
+  const email = (user.email || '').trim().toLowerCase()
+  if (!email || !user.email_confirmed_at) return null
+  const { data: waiting } = await admin.from('partners').select('id').is('user_id', null).ilike('email', email).maybeSingle()
+  if (!waiting) return null
+  const { data: claimed } = await admin.from('partners').update({ user_id: user.id, updated_at: new Date().toISOString() }).eq('id', (waiting as any).id).is('user_id', null).select(columns).maybeSingle()
+  return claimed || null
+}
+
+/** Só diz se a pessoa logada é parceira (para mostrar o atalho do painel no menu). Quem é vem da sessão; o primeiro acesso com o e-mail aprovado já vincula a conta. */
 export async function isCurrentUserPartner(): Promise<boolean> {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return false
-    const { data } = await createAdminClient().from('partners').select('id').eq('user_id', user.id).maybeSingle()
-    return !!data
+    return !!(await findOrClaimPartner(createAdminClient(), user, 'id'))
   } catch { return false }
 }
 
@@ -343,7 +370,7 @@ export async function getMyPartnerDashboard(): Promise<Ok<{ dashboard: PartnerDa
       payouts: [],
     }
 
-    const { data: partner } = await admin.from('partners').select('*').eq('user_id', user.id).maybeSingle()
+    const partner = await findOrClaimPartner(admin, user, '*')
     if (!partner) return { success: true, dashboard: empty }
 
     const [{ data: referrals }, { data: commissions }, { data: items }] = await Promise.all([

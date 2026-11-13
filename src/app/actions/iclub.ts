@@ -225,12 +225,14 @@ async function registerPartnerReferral(
   referredEmail: string,
   referredId?: string
 ): Promise<{ success: boolean; error?: string; message?: string } | null> {
-  const { data: partner } = await adminSupabase.from('partners').select('id, user_id, status').eq('code', refCode.trim().toUpperCase()).maybeSingle()
+  const { data: partner } = await adminSupabase.from('partners').select('id, user_id, email, status').eq('code', refCode.trim().toUpperCase()).maybeSingle()
   if (!partner || partner.status !== 'active') return null
 
   const email = referredEmail.trim().toLowerCase()
-  const { data: partnerProfile } = await adminSupabase.from('profiles').select('email').eq('id', partner.user_id).maybeSingle()
-  if ((referredId && partner.user_id === referredId) || (partnerProfile?.email && partnerProfile.email.toLowerCase() === email)) {
+  // parceiro aguardando cadastro tem user_id vazio: a auto-indicação também se confere pelo e-mail guardado no cadastro dele
+  const { data: partnerProfile } = partner.user_id ? await adminSupabase.from('profiles').select('email').eq('id', partner.user_id).maybeSingle() : { data: null }
+  const partnerEmail = (partnerProfile?.email || partner.email || '').toLowerCase()
+  if ((referredId && partner.user_id && partner.user_id === referredId) || (partnerEmail && partnerEmail === email)) {
     return { success: false, error: 'Auto-indicação não permitida.' }
   }
 

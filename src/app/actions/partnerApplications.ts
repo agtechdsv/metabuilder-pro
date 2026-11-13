@@ -138,16 +138,18 @@ const siteUrl = () => (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLI
 
 /**
  * Manda ao parceiro recém-cadastrado o e-mail de boas-vindas (código, link, condições e painel), no idioma da candidatura (ou português
- * se o cadastro não veio de uma). O endereço NUNCA vem da tela: é o e-mail da conta do parceiro. Chave Pix e documento não vão no e-mail.
+ * se o cadastro não veio de uma). O endereço NUNCA vem da tela: é o e-mail da conta do parceiro ou, se ele ainda não criou conta, o e-mail
+ * guardado no cadastro dele; nesse caso o e-mail inclui o passo de criar a conta. Chave Pix e documento não vão no e-mail.
  */
 export async function sendPartnerWelcome(partnerId: string, applicationId?: string | null): Promise<NoticeResult> {
   try {
     const admin = await requireSuperAdmin()
-    const { data: partner } = await admin.from('partners').select('id, user_id, name, code, commission_percent').eq('id', partnerId).maybeSingle()
+    const { data: partner } = await admin.from('partners').select('id, user_id, email, name, code, commission_percent').eq('id', partnerId).maybeSingle()
     if (!partner) return { success: false, code: 'not_found' }
-    const { data: profile } = await admin.from('profiles').select('email').eq('id', partner.user_id).maybeSingle()
-    const to = String(profile?.email || '').trim()
+    const { data: profile } = partner.user_id ? await admin.from('profiles').select('email').eq('id', partner.user_id).maybeSingle() : { data: null }
+    const to = String(profile?.email || partner.email || '').trim()
     if (!to) return { success: false, code: 'not_found' }
+    const hasAccount = !!partner.user_id
 
     let lang = 'pt'
     if (applicationId) {
@@ -164,6 +166,7 @@ export async function sendPartnerWelcome(partnerId: string, applicationId?: stri
     const base = siteUrl()
     const mail = partnerApprovedMail(resolveMailLang(lang), {
       name: partner.name, email: to, code: partner.code, linkUrl: `${base}/?ref=${encodeURIComponent(partner.code)}`, panelUrl: `${base}/parceiro`,
+      hasAccount, signupUrl: `${base}/login`,
       percent, graceDays: val('partner_grace_days', 'days', DEFAULT_PARTNER_SETTINGS.graceDays), minPayout: val('partner_min_payout', 'amount', DEFAULT_PARTNER_SETTINGS.minPayout),
     })
     return { success: true, mailed: await sendMailTo(to, mail) }

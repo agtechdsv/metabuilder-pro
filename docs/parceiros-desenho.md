@@ -3,7 +3,7 @@
 Decisões fechadas com o dono em 2026-11-12. Código escrito, **nada publicado e nada testado com o Asaas real**.
 
 ## O que é
-Um **parceiro** é uma pessoa ou empresa (que já tem login no MetaBuilder) que indica clientes com um link/código e **ganha comissão em dinheiro** enquanto o indicado for assinante. O cliente paga o MetaBuilder normalmente (Asaas) e **não ganha desconto** (decisão: opção A). Um cliente indicado por parceiro **pode também indicar pelo iClub** (benefícios independentes). O parceiro não precisa ser cliente.
+Um **parceiro** é uma pessoa ou empresa que indica clientes com um link/código e **ganha comissão em dinheiro** enquanto o indicado for assinante. O cliente paga o MetaBuilder normalmente (Asaas) e **não ganha desconto** (decisão: opção A). Um cliente indicado por parceiro **pode também indicar pelo iClub** (benefícios independentes). O parceiro não precisa ser cliente **nem ter conta no momento da aprovação**: sem conta, fica "aguardando cadastro" (guarda só o e-mail) e a conta é vinculada sozinha quando a pessoa entra com esse e-mail **confirmado** (`scripts/parceiros-vinculo-por-email.sql`).
 
 ## Regras
 - **Comissão** = % sobre o valor **pago pelo cliente (bruto)** em **cada pagamento confirmado** do indicado, arredondada para baixo no centavo. O valor líquido (depois das taxas do Asaas) fica guardado só para consulta.
@@ -56,10 +56,11 @@ Reverter: as versões anteriores estão no git. As tabelas novas não afetam o r
 
 ## Candidatura de parceiros (formulário em `/parceiros`)
 Quem quer ser parceiro preenche o formulário da página (nome, e-mail, perfil, como pretende divulgar, consentimento LGPD). Não há autocadastro: a candidatura só **cai numa fila** e o SuperAdmin decide.
+- **Ordem de publicação do vínculo por e-mail:** rodar `scripts/parceiros-vinculo-por-email.sql` **antes** do deploy (o código passa a gravar `partners.email`; sem o SQL, cadastrar parceiro dá erro).
 - **Tabela** `partner_applications` em `scripts/parceiros-interessados.sql` (RLS sem policy, sem acesso de `anon`/`authenticated`; o IP só como hash). **Rodar esse SQL antes de testar.**
 - **Anti-robô e abuso**: campo isca escondido, tempo mínimo de 3 s entre abrir e enviar, no máximo 5 envios por hora por IP (hash) e mesma pessoa em análise não duplica. A validação de verdade é no servidor (`src/lib/partnerApplications.ts`, `src/app/actions/partnerApplications.ts`).
 - **Aviso por e-mail** à equipe a cada candidatura, pelo mesmo SMTP do checkout. Destino: variável `PARTNER_NOTIFY_EMAIL` na Vercel; sem ela, a própria caixa do SMTP. Se o e-mail falhar, a candidatura continua salva.
-- **SuperAdmin**: na aba Parceiros (com contador de novas na própria aba) aparece o quadro **Interessados em ser parceiro**: **Aprovar e cadastrar...** (abre o cadastro do parceiro já preenchido, com código sugerido; ao salvar, a candidatura vira Aprovada), **Recusar**, **Reabrir** e **Apagar** (LGPD). Para aprovar, a pessoa precisa já ter conta com o mesmo e-mail.
+- **SuperAdmin**: na aba Parceiros (com contador de novas na própria aba) aparece o quadro **Interessados em ser parceiro**: **Aprovar e cadastrar...** (abre o cadastro do parceiro já preenchido, com código sugerido; ao salvar, a candidatura vira Aprovada), **Recusar**, **Reabrir** e **Apagar** (LGPD). Aprovar não exige conta: sem ela, o parceiro fica "aguardando cadastro" e o e-mail de boas-vindas pede para criar a conta com o mesmo e-mail.
 - O WhatsApp continua na página como alternativa.
 
 ## Roteiro de teste em produção (com valores pequenos)

@@ -29,7 +29,10 @@ export interface PartnerInput {
 
 export interface PartnerRow {
   id: string
-  userId: string
+  /** vazio enquanto a pessoa ainda não criou a conta (aguardando cadastro): o vínculo é feito sozinho quando ela entra com o e-mail confirmado */
+  userId: string | null
+  /** true = aprovado sem conta ainda */
+  pendingAccount: boolean
   userEmail: string
   name: string
   document: string | null
@@ -80,4 +83,4 @@ export interface PartnerDashboard {
 /** Erros que as server actions devolvem por código (a tela traduz). */
 export type PartnerErrorCode =
   | 'not_authorized' | 'user_not_found' | 'code_invalid' | 'code_in_use' | 'pix_invalid' | 'document_invalid' | 'percent_invalid'
-  | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'has_history' | 'unknown'
+  | 'email_invalid' | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'has_history' | 'unknown'

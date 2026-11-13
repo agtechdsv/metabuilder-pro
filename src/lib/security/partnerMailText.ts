@@ -15,6 +15,8 @@ const TEXTS = {
     login: (email: string) => `Para abrir o painel, entre no MetaBuilder PRO com o mesmo e-mail da candidatura: ${email}.`,
     pix: 'O pagamento é feito por Pix. Se você ainda não nos informou a sua chave Pix, responda a este e-mail.',
     button: 'Abrir meu painel',
+    noAccount: (email: string) => `Você ainda não tem conta no MetaBuilder PRO. Crie a sua com este e-mail (${email}) e confirme o e-mail: o painel abre automaticamente quando você entrar.`,
+    createButton: 'Criar minha conta',
     rejectedSubject: 'Sobre a sua candidatura ao programa de parceiros',
     rejectedTitle: 'Obrigado pelo interesse',
     rejectedBody: (name: string) => `Olá, ${name}. Analisamos a sua candidatura ao programa de parceiros do MetaBuilder PRO e, neste momento, não vamos seguir com ela.`,
@@ -31,6 +33,8 @@ const TEXTS = {
     login: (email: string) => `To open the dashboard, sign in to MetaBuilder PRO with the same e-mail as your application: ${email}.`,
     pix: 'Payment is made by Pix. If you have not given us your Pix key yet, reply to this e-mail.',
     button: 'Open my dashboard',
+    noAccount: (email: string) => `You do not have a MetaBuilder PRO account yet. Create one with this e-mail (${email}) and confirm the e-mail: the dashboard opens automatically when you sign in.`,
+    createButton: 'Create my account',
     rejectedSubject: 'About your partner program application',
     rejectedTitle: 'Thank you for your interest',
     rejectedBody: (name: string) => `Hello, ${name}. We reviewed your application to the MetaBuilder PRO partner program and, at this time, we will not move forward with it.`,
@@ -47,6 +51,8 @@ const TEXTS = {
     login: (email: string) => `Para abrir el panel, entra a MetaBuilder PRO con el mismo e-mail de tu candidatura: ${email}.`,
     pix: 'El pago se hace por Pix. Si aún no nos informaste tu clave Pix, responde a este e-mail.',
     button: 'Abrir mi panel',
+    noAccount: (email: string) => `Aún no tienes cuenta en MetaBuilder PRO. Crea la tuya con este e-mail (${email}) y confirma el e-mail: el panel se abre automáticamente cuando entres.`,
+    createButton: 'Crear mi cuenta',
     rejectedSubject: 'Sobre tu candidatura al programa de socios',
     rejectedTitle: 'Gracias por tu interés',
     rejectedBody: (name: string) => `Hola, ${name}. Analizamos tu candidatura al programa de socios de MetaBuilder PRO y, por ahora, no vamos a continuar con ella.`,
@@ -61,6 +67,9 @@ export interface PartnerApprovedMailData {
   code: string
   linkUrl: string
   panelUrl: string
+  /** o parceiro já tem conta? Se não, o e-mail traz o passo de criá-la (com este mesmo e-mail) e o botão leva ao cadastro */
+  hasAccount?: boolean
+  signupUrl?: string
   percent: number
   graceDays: number
   minPayout: number
@@ -75,11 +84,15 @@ export function partnerApprovedMail(lang: MailLang, d: PartnerApprovedMailData):
   const rows: [string, string][] = [
     [t.code, d.code], [t.link, d.linkUrl], [t.commission, t.commissionValue(d.percent)], [t.grace, t.graceValue(d.graceDays)], [t.min, min],
   ]
+  const needsAccount = d.hasAccount === false
+  const access = needsAccount ? t.noAccount(d.email) : t.login(d.email)
+  const label = needsAccount ? t.createButton : t.button
+  const url = needsAccount ? (d.signupUrl || d.panelUrl) : d.panelUrl
   const html = mailShell(t.approvedTitle,
     `<p style="margin:0 0 22px 0;">${esc(t.approvedIntro(d.name))}</p>` + infoBox(t.box, rows) +
-    `<p style="margin:0 0 14px 0;">${esc(t.login(d.email))}</p><p style="margin:0 0 18px 0;">${esc(t.pix)}</p>` + button(t.button, d.panelUrl),
+    `<p style="margin:0 0 14px 0;">${esc(access)}</p><p style="margin:0 0 18px 0;">${esc(t.pix)}</p>` + button(label, url),
     `© ${new Date().getFullYear()} METABUILDER PRO · ${t.footerWhy}`)
-  const text = [t.approvedTitle, '', t.approvedIntro(d.name), '', ...rows.map(([k, v]) => `${k}: ${v}`), '', t.login(d.email), t.pix, '', `${t.button}: ${d.panelUrl}`].join('\n')
+  const text = [t.approvedTitle, '', t.approvedIntro(d.name), '', ...rows.map(([k, v]) => `${k}: ${v}`), '', access, t.pix, '', `${label}: ${url}`].join('\n')
   return { subject: t.approvedSubject, html, text }
 }
 

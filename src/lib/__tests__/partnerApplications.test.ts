@@ -137,6 +137,63 @@ describe('e-mails ao candidato (aprovação e recusa)', () => {
   })
 })
 
+describe('parceiro aprovado antes de criar a conta (vínculo por e-mail)', () => {
+  const src = read('src/app/actions/partners.ts')
+
+  it('o SQL deixa user_id aceitar vazio, cria o e-mail único e exige conta ou e-mail, sem abrir a tabela', () => {
+    const sql = read('scripts/parceiros-vinculo-por-email.sql')
+    expect(sql).toMatch(/alter column user_id drop not null/)
+    expect(sql).toMatch(/add column if not exists email text/)
+    expect(sql).toMatch(/unique index if not exists partners_email_uidx on public\.partners \(lower\(email\)\)/)
+    expect(sql).toMatch(/check \(user_id is not null or email is not null\)/)
+    expect(sql).not.toMatch(/create policy|grant /i)
+  })
+
+  it('cadastrar parceiro não exige mais conta: sem conta guarda o e-mail; e-mail inválido ou repetido é recusado', () => {
+    const body = src.slice(src.indexOf('export async function savePartner'), src.indexOf('export async function deletePartner'))
+    expect(body).not.toContain("fail('user_not_found')")
+    expect(body).toContain("fail('email_invalid')")
+    expect(body).toContain("fail('already_partner')")
+    expect(body).toMatch(/user_id: profile\?\.id \?\? null, email/)
+  })
+
+  it('o vínculo só acontece com o e-mail CONFIRMADO e só para parceiro ainda sem conta (sem disputa entre contas)', () => {
+    const body = src.slice(src.indexOf('async function findOrClaimPartner'), src.indexOf('export async function isCurrentUserPartner'))
+    expect(body).toContain('email_confirmed_at')
+    expect(body).toMatch(/is\('user_id', null\)\.ilike\('email', email\)/)
+    expect(body).toMatch(/\.eq\('id', \(waiting as any\)\.id\)\.is\('user_id', null\)/)
+    // o menu e o painel usam o vínculo
+    expect(src).toMatch(/isCurrentUserPartner[\s\S]*findOrClaimPartner\(createAdminClient\(\), user, 'id'\)/)
+    expect(src).toMatch(/getMyPartnerDashboard[\s\S]*findOrClaimPartner\(admin, user, '\*'\)/)
+  })
+
+  it('a auto-indicação também vale para parceiro aguardando cadastro (compara pelo e-mail guardado)', () => {
+    const ic = read('src/app/actions/iclub.ts')
+    expect(ic).toContain("select('id, user_id, email, status')")
+    expect(ic).toContain('partner.email')
+  })
+
+  it('o e-mail de aprovação, sem conta, pede para criar a conta com o mesmo e-mail e o botão leva ao cadastro (nos três idiomas)', () => {
+    const d = { name: 'Ana', email: 'ana@x.com', code: 'ANA10', linkUrl: 'https://s/?ref=ANA10', panelUrl: 'https://s/parceiro', signupUrl: 'https://s/login', percent: 15, graceDays: 7, minPayout: 50 }
+    for (const lang of ['pt', 'en', 'es'] as const) {
+      const sem = partnerApprovedMail(lang, { ...d, hasAccount: false })
+      expect(sem.html, lang).toContain('href="https://s/login"')
+      expect(sem.html, lang).toContain('ana@x.com')
+      expect(sem.html, lang).not.toContain('href="https://s/parceiro"')
+      const com = partnerApprovedMail(lang, { ...d, hasAccount: true })
+      expect(com.html, lang).toContain('href="https://s/parceiro"')
+    }
+  })
+
+  it('a lista marca "aguardando cadastro" e os textos novos existem nos três idiomas', () => {
+    expect(src).toContain('pendingAccount: !p.user_id')
+    for (const l of LANGS) for (const key of ['pending_account_badge', 'pending_account_hint', 'err_email_invalid']) {
+      expect(get(json(l), `admin_partners.${key}`), `${l}: ${key}`).toBeTruthy()
+    }
+    expect(read('src/components/admin/PartnersAdmin.tsx')).toContain("k('pending_account_badge')")
+  })
+})
+
 describe('excluir parceiro', () => {
   const src = read('src/app/actions/partners.ts')
   const body = src.slice(src.indexOf('export async function deletePartner'), src.indexOf('lotes de pagamento (SuperAdmin)'))

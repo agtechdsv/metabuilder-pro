@@ -211,7 +211,9 @@ describe('integração com o pagamento do Asaas e com as telas', () => {
       expect(a.slice(i, i + 600), fn).toContain('requireSuperAdmin()')
     }
     const j = a.indexOf('export async function getMyPartnerDashboard')
-    expect(a.slice(j)).toContain("eq('user_id', user.id)")
+    // o parceiro vem do usuário da SESSÃO (o painel nunca recebe quem é pelo pedido)
+    expect(a.slice(j)).toContain("findOrClaimPartner(admin, user, '*')")
+    expect(a.slice(a.indexOf('async function findOrClaimPartner'), j)).toContain("eq('user_id', user.id)")
   })
 
   it('o código de indicação de parceiro é tratado antes do iClub, e as telas do SuperAdmin estão nas abas Regras de Preços (ajustes) e Parceiros (gestão)', () => {
