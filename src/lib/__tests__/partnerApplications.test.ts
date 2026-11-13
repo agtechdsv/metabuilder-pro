@@ -137,6 +137,34 @@ describe('e-mails ao candidato (aprovação e recusa)', () => {
   })
 })
 
+describe('excluir parceiro', () => {
+  const src = read('src/app/actions/partners.ts')
+  const body = src.slice(src.indexOf('export async function deletePartner'), src.indexOf('lotes de pagamento (SuperAdmin)'))
+
+  it('só o SuperAdmin exclui, e só quando não há indicados, comissões nem itens de lote (conferido no servidor, antes de apagar)', () => {
+    expect(body.slice(0, 300)).toContain('requireSuperAdmin()')
+    for (const t of ['partner_referrals', 'partner_commissions', 'partner_payout_items']) expect(body).toContain(t)
+    expect(body.indexOf("fail('has_history')")).toBeGreaterThan(-1)
+    expect(body.indexOf("fail('has_history')")).toBeLessThan(body.indexOf(".delete()"))
+    expect(body).not.toContain('auth.users')
+    expect(body).not.toMatch(/from\('profiles'\)\.delete/)
+  })
+
+  it('a candidatura de origem volta para "nova" e a lista informa se há histórico', () => {
+    expect(body).toMatch(/status: 'new', partner_id: null, decided_at: null/)
+    expect(src).toContain('hasHistory:')
+  })
+
+  it('a tela tem o botão (desativado com histórico), pede confirmação no diálogo do app e os textos existem nos três idiomas', () => {
+    const ui = read('src/components/admin/PartnersAdmin.tsx')
+    expect(ui).toContain('disabled={busy || current.hasHistory}')
+    expect(ui).toContain("askDialog(k('delete_partner_confirm'")
+    for (const l of LANGS) for (const key of ['delete_partner', 'delete_partner_disabled', 'delete_partner_confirm', 'partner_deleted', 'err_has_history']) {
+      expect(get(json(l), `admin_partners.${key}`), `${l}: ${key}`).toBeTruthy()
+    }
+  })
+})
+
 describe('sugestão de código do link', () => {
   it('usa a primeira palavra, sem acento, em maiúsculas, e sempre cabe no formato aceito', () => {
     expect(suggestPartnerCode('João da Silva')).toBe('JOAO')

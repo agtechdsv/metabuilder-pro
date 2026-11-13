@@ -7,7 +7,7 @@ import {
 } from '@/app/actions/partnerApplications'
 import { suggestPartnerCode, type ActionCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
-  createPartnerPayout, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner,
+  createPartnerPayout, deletePartner, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner,
 } from '@/app/actions/partners'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -103,6 +103,16 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
   const decide = async (id: string, status: 'new') => {
     const r = await decidePartnerApplication(id, status)
     toast(r.success ? k('app_reopened') : errText(r), r.success ? 'success' : 'error')
+    load()
+  }
+  const removePartner = async (p: PartnerRow) => {
+    if (!(await askDialog(k('delete_partner_confirm', { name: p.name }), { kind: 'warning', okLabel: k('delete'), cancelLabel: k('cancel') }))) return
+    setBusy(true)
+    const r = await deletePartner(p.id)
+    setBusy(false)
+    if (!r.success) { toast(errText(r), 'error'); load(); return }
+    toast(k('partner_deleted'), 'success')
+    setForm(null); setApprovingId(null)
     load()
   }
   const confirmReject = async (id: string) => {
@@ -232,6 +242,16 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
             {!form.id && <label className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 md:col-span-3"><input type="checkbox" checked={notifyPartner} onChange={e => setNotifyPartner(e.target.checked)} />{k('notify_candidate')}</label>}
           </div>
           <button type="button" disabled={busy} onClick={savePartnerForm} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white hover:bg-indigo-500 disabled:opacity-50">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}{k('save_partner')}</button>
+          {form.id && (() => {
+            const current = partners.find(x => x.id === form.id)
+            if (!current) return null
+            return (
+              <div className="mt-1 flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <button type="button" disabled={busy || current.hasHistory} onClick={() => removePartner(current)} className="flex items-center gap-1.5 rounded-xl border border-red-300 px-4 py-2 text-xs font-black text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/40 dark:hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" />{k('delete_partner')}</button>
+                {current.hasHistory && <span className="text-[11px] text-neutral-500">{k('delete_partner_disabled')}</span>}
+              </div>
+            )
+          })()}
         </div>
       )}
 

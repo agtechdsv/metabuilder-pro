@@ -28,7 +28,7 @@ async function requireSuperAdmin() {
 const fail = (code: PartnerErrorCode, error?: string): Fail => ({ success: false, code, error })
 const codeOf = (e: unknown): PartnerErrorCode => {
   const msg = String((e as { message?: string } | null)?.message || '')
-  for (const c of ['not_authorized', 'nothing_to_pay', 'payout_cap_exceeded', 'no_partners'] as const) if (msg.includes(c)) return c
+  for (const c of ['not_authorized', 'nothing_to_pay', 'payout_cap_exceeded', 'no_partners', 'has_history'] as const) if (msg.includes(c)) return c
   return 'unknown'
 }
 
@@ -86,10 +86,11 @@ export async function savePartnerSettings(input: PartnerSettings): Promise<Ok | 
 export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | Fail> {
   try {
     const { admin } = await requireSuperAdmin()
-    const [{ data: partners }, { data: referrals }, { data: commissions }] = await Promise.all([
+    const [{ data: partners }, { data: referrals }, { data: commissions }, { data: payoutItems }] = await Promise.all([
       admin.from('partners').select('*').order('created_at', { ascending: false }),
       admin.from('partner_referrals').select('partner_id, status'),
       admin.from('partner_commissions').select('partner_id, status, amount, release_at, clawback, clawback_settled'),
+      admin.from('partner_payout_items').select('partner_id'),
     ])
     const userIds = (partners || []).map((p: any) => p.user_id)
     const { data: profiles } = userIds.length ? await admin.from('profiles').select('id, email').in('id', userIds) : { data: [] as any[] }
@@ -112,6 +113,7 @@ export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | F
         referrals: refs.length,
         subscribed: refs.filter((r: any) => r.status === 'subscribed').length,
         summary: summarizeCommissions((commissions || []).filter((c: any) => c.partner_id === p.id)),
+        hasHistory: refs.length > 0 || (commissions || []).some((c: any) => c.partner_id === p.id) || (payoutItems || []).some((i: any) => i.partner_id === p.id),
       }
     })
     return { success: true, partners: rows }
@@ -184,6 +186,35 @@ export async function savePartner(input: PartnerInput): Promise<Ok<{ id: string 
     if (error) return fail('unknown', error.message)
     revalidatePath('/admin/platform')
     return { success: true, id: created.id }
+  } catch (e) { return fail(codeOf(e)) }
+}
+
+/**
+ * Exclui um parceiro SÓ se não houver nada atrelado a ele (nenhum indicado, comissão ou item de lote): cadastro feito por engano ou de teste.
+ * Quem tem histórico não pode ser excluído (os registros do dinheiro precisam existir): deve ser suspenso. A conferência é aqui, no servidor
+ * (e o banco também recusa: as tabelas do dinheiro apontam para o parceiro com "restrict"). A conta da pessoa NÃO é apagada. A candidatura
+ * de origem, se houver, volta a ser "nova".
+ */
+export async function deletePartner(partnerId: string): Promise<Ok | Fail> {
+  try {
+    const { admin } = await requireSuperAdmin()
+    const { data: partner } = await admin.from('partners').select('id').eq('id', partnerId).maybeSingle()
+    if (!partner) return fail('not_found')
+    const count = async (table: string) => {
+      const { count: n } = await admin.from(table).select('id', { count: 'exact', head: true }).eq('partner_id', partnerId)
+      return n ?? 0
+    }
+    const [refs, comms, items] = await Promise.all([count('partner_referrals'), count('partner_commissions'), count('partner_payout_items')])
+    if (refs + comms + items > 0) return fail('has_history')
+
+    // a candidatura aprovada que deu origem a ele volta para a fila: guarda quais são antes, porque o vínculo se desfaz ao apagar
+    const { data: apps } = await admin.from('partner_applications').select('id').eq('partner_id', partnerId)
+    const { error } = await admin.from('partners').delete().eq('id', partnerId)
+    if (error) return fail(/foreign key|violates/i.test(error.message) ? 'has_history' : 'unknown', error.message)
+    const appIds = (apps || []).map((a: any) => a.id as string)
+    if (appIds.length) await admin.from('partner_applications').update({ status: 'new', partner_id: null, decided_at: null }).in('id', appIds)
+    revalidatePath('/admin/platform')
+    return { success: true }
   } catch (e) { return fail(codeOf(e)) }
 }
 

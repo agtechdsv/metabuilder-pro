@@ -42,6 +42,8 @@ export interface PartnerRow {
   referrals: number
   subscribed: number
   summary: CommissionSummary
+  /** tem indicados, comissões ou itens de lote: então não pode ser excluído (só suspenso) */
+  hasHistory: boolean
 }
 
 export interface PayoutItemRow {
@@ -78,4 +80,4 @@ export interface PartnerDashboard {
 /** Erros que as server actions devolvem por código (a tela traduz). */
 export type PartnerErrorCode =
   | 'not_authorized' | 'user_not_found' | 'code_invalid' | 'code_in_use' | 'pix_invalid' | 'document_invalid' | 'percent_invalid'
-  | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'unknown'
+  | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'has_history' | 'unknown'
