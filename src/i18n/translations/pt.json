@@ -5855,6 +5855,8 @@
     "err_email_invalid": "Informe um e-mail válido para o parceiro.",
     "err_declaration_required": "A declaração do titular é obrigatória.",
     "pix_pending_badge": "CHAVE PIX PENDENTE",
+    "pix_queue_title": "Chaves Pix para conferir",
+    "tab_pending": "Esperando a sua ação: candidaturas novas e chaves Pix para conferir",
     "pix_pending_hint": "O parceiro enviou uma chave Pix. Abra o parceiro para conferir e aceitar ou recusar.",
     "pix_pending_title": "Chave Pix enviada pelo parceiro, aguardando a sua conferência",
     "pix_pending_new": "Chave nova",

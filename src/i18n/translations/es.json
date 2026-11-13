@@ -5943,6 +5943,8 @@
     "err_email_invalid": "Informe un e-mail válido para el socio.",
     "err_declaration_required": "La declaración del titular es obligatoria.",
     "pix_pending_badge": "CLAVE PIX PENDIENTE",
+    "pix_queue_title": "Claves Pix para revisar",
+    "tab_pending": "Esperando su acción: candidaturas nuevas y claves Pix para revisar",
     "pix_pending_hint": "El socio envió una clave Pix. Abra al socio para revisarla y aceptarla o rechazarla.",
     "pix_pending_title": "Clave Pix enviada por el socio, esperando su revisión",
     "pix_pending_new": "Clave nueva",

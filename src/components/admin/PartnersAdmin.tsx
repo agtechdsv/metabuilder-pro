@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Handshake, Inbox, Loader2, Pencil, Plus, Save, Send, Trash2, X } from 'lucide-react'
+import { Handshake, Inbox, KeyRound, Loader2, Pencil, Plus, Save, Send, Trash2, X } from 'lucide-react'
 import {
   decidePartnerApplication, deletePartnerApplication, getPartnerNotifyEmail, listPartnerApplications, rejectPartnerApplication, savePartnerNotifyEmail, sendPartnerWelcome,
 } from '@/app/actions/partnerApplications'
@@ -22,7 +22,7 @@ const labelCls = 'mb-1 block text-[10px] font-black uppercase tracking-widest te
 
 const EMPTY: PartnerInput = { userEmail: '', name: '', document: '', pixKey: '', pixKeyType: 'CPF', code: '', commissionPercent: null, status: 'active', notes: '' }
 
-export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewApplications?: (count: number) => void; refreshKey?: number } = {}) {
+export function PartnersAdmin({ onPendingCount, refreshKey = 0 }: { onPendingCount?: (count: number) => void; refreshKey?: number } = {}) {
   const { toast } = useToast()
   const { t, language } = useI18n()
   /** texto da tela; {chave} no texto é trocado pelos valores */
@@ -146,7 +146,10 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
   }
   const newApps = applications.filter(a => a.status === 'new')
   // avisa a aba "Parceiros" quantas candidaturas novas existem (contador no rótulo da aba)
-  useEffect(() => { onNewApplications?.(newApps.length) }, [newApps.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  // o que espera o SuperAdmin: chaves Pix para conferir (primeiro na lista) e candidaturas novas
+  const pixWaiting = partners.filter(p => p.pendingPix)
+  const orderedPartners = [...partners].sort((a, b) => Number(!!b.pendingPix) - Number(!!a.pendingPix))
+  useEffect(() => { onPendingCount?.(newApps.length + pixWaiting.length) }, [newApps.length, pixWaiting.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const shownApps = showDecided ? applications : newApps
 
   const toggle = (id: string) => setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
@@ -197,6 +200,26 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
         <button type="button" disabled={busy} onClick={saveNotify} className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700"><Save className="h-3.5 w-3.5" />{k('notify_save')}</button>
         <p className="w-full text-[10px] text-neutral-400">{k('notify_hint')}</p>
       </div>
+
+      {pixWaiting.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-sky-300 p-4 dark:border-sky-900">
+          <p className="mb-3 flex items-center gap-2 text-sm font-black"><KeyRound className="h-4 w-4 text-sky-500" />{k('pix_queue_title')}<span className="rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-black text-white">{pixWaiting.length}</span></p>
+          <ul className="space-y-3">{pixWaiting.map(p => {
+            const n = p.pendingPix!
+            return (
+              <li key={p.id} className="rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
+                <p className="font-black">{p.name} <span className="font-normal text-neutral-400">· {p.userEmail} · {when(n.at)}</span></p>
+                <p className="mt-1 text-neutral-600 dark:text-neutral-300"><b>{k('pix_pending_new')}:</b> <span className="font-mono">{n.type}: {n.key}</span> · <b>{k('pix_pending_doc')}:</b> <span className="font-mono">{n.document || '-'}</span></p>
+                <p className="mt-1 text-neutral-600 dark:text-neutral-300"><b>{k('pix_pending_current')}:</b> <span className="font-mono">{p.pixKey ? `${p.pixKeyType}: ${p.pixKey}` : k('pix_pending_none')}</span></p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" disabled={busy} onClick={() => resolvePix(p, true)} className="rounded-lg bg-emerald-600 px-3 py-1 font-black text-white hover:bg-emerald-500 disabled:opacity-50">{k('pix_accept')}</button>
+                  <button type="button" disabled={busy} onClick={() => resolvePix(p, false)} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">{k('pix_decline')}</button>
+                </div>
+              </li>
+            )
+          })}</ul>
+        </div>
+      )}
 
       {applications.length > 0 && (
         <div className="mb-5 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">
@@ -294,8 +317,8 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
               <th className={th} /><th className={th}>{k('th_partner')}</th><th className={th}>{k('th_code')}</th><th className={th}>%</th><th className={th}>{k('th_referred')}</th>
               <th className={th}>{k('th_payable')}</th><th className={th}>{k('th_waiting')}</th><th className={th}>{k('th_in_batch')}</th><th className={th}>{k('th_paid')}</th><th className={th}>{k('th_pix')}</th><th className={th} />
             </tr></thead>
-            <tbody>{partners.map(p => (
-              <tr key={p.id} className="border-t border-neutral-100 dark:border-neutral-800">
+            <tbody>{orderedPartners.map(p => (
+              <tr key={p.id} className={p.pendingPix ? 'border-t border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20' : 'border-t border-neutral-100 dark:border-neutral-800'}>
                 <td className="px-2 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={k('select_aria', { name: p.name })} /></td>
                 <td className="px-2 py-2"><p className="font-bold">{p.name}{p.status === 'suspended' && <span className="ml-2 rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">{k('suspended_badge')}</span>}{p.pendingPix && <span title={k('pix_pending_hint')} className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-black text-sky-700">{k('pix_pending_badge')}</span>}{p.pendingAccount && <span title={k('pending_account_hint')} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-700">{k('pending_account_badge')}</span>}</p><p className="text-[11px] text-neutral-400">{p.userEmail}</p></td>
                 <td className="px-2 py-2 font-mono text-xs">{p.code}</td>

@@ -94,6 +94,18 @@ export async function listPartnerApplications(): Promise<{ success: true; applic
   } catch (e) { return { success: false, code: (e as Error).message === 'not_authorized' ? 'not_authorized' : 'unknown' } }
 }
 
+/** Quantas coisas esperam o SuperAdmin na aba Parceiros: candidaturas novas + chaves Pix enviadas por parceiros (número no rótulo da aba). */
+export async function getPartnerPendingCount(): Promise<{ success: true; total: number; applications: number; pix: number } | { success: false }> {
+  try {
+    const admin = await requireSuperAdmin()
+    const [{ count: apps }, { count: pix }] = await Promise.all([
+      admin.from('partner_applications').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+      admin.from('partners').select('id', { count: 'exact', head: true }).not('pix_pending_key', 'is', null),
+    ])
+    return { success: true, total: (apps ?? 0) + (pix ?? 0), applications: apps ?? 0, pix: pix ?? 0 }
+  } catch { return { success: false } }
+}
+
 /** E-mail que recebe o aviso de candidatura nova ('' = o padrão do servidor). */
 export async function getPartnerNotifyEmail(): Promise<{ success: true; email: string } | { success: false }> {
   try {

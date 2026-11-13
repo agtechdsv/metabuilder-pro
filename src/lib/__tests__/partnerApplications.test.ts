@@ -216,12 +216,39 @@ describe('chave Pix enviada pelo parceiro (pendente até o SuperAdmin aceitar)',
   })
 })
 
+describe('o que espera o SuperAdmin fica visível (contador da aba, fila de chaves Pix e linha destacada)', () => {
+  it('o contador da aba soma candidaturas novas e chaves Pix pendentes, lido ao abrir o painel e mantido pela aba', () => {
+    const act = read('src/app/actions/partnerApplications.ts')
+    const body = act.slice(act.indexOf('export async function getPartnerPendingCount'), act.indexOf('export async function getPartnerNotifyEmail'))
+    expect(body).toContain('requireSuperAdmin()')
+    expect(body).toContain("'partner_applications'")
+    expect(body).toContain("not('pix_pending_key', 'is', null)")
+    expect(body).toMatch(/total: \(apps \?\? 0\) \+ \(pix \?\? 0\)/)
+    const panel = read('src/components/admin/PlatformAdminClient.tsx')
+    expect(panel).toContain('getPartnerPendingCount()')
+    expect(panel).toContain('onPendingCount={setPendingPartnerCount}')
+    const ui = read('src/components/admin/PartnersAdmin.tsx')
+    expect(ui).toContain('onPendingCount?.(newApps.length + pixWaiting.length)')
+  })
+
+  it('a aba Parceiros tem a fila de chaves Pix com aceitar e recusar direto, e põe quem espera conferência no topo, destacado', () => {
+    const ui = read('src/components/admin/PartnersAdmin.tsx')
+    expect(ui).toContain("k('pix_queue_title')")
+    expect(ui).toContain('orderedPartners.map(')
+    expect(ui).toMatch(/pendingPix\) - Number\(!!a\.pendingPix\)/)
+    expect(ui).toContain('bg-amber-50/60')
+    // aceitar e recusar na fila usam a mesma função (com confirmação) do formulário de edição
+    expect((ui.match(/resolvePix\(p, true\)/g) || []).length).toBeGreaterThanOrEqual(1)
+    for (const l of LANGS) for (const key of ['pix_queue_title', 'tab_pending']) expect(get(json(l), `admin_partners.${key}`), `${l}: ${key}`).toBeTruthy()
+  })
+})
+
 describe('botão de atualizar do painel do SuperAdmin', () => {
   it('recarrega também as telas que buscam os próprios dados (Parceiros, Comissão e Sessões) e o contador da aba', () => {
     const panel = read('src/components/admin/PlatformAdminClient.tsx')
     expect(panel).toContain('setRefreshCount(c => c + 1)')
     for (const c of ['PartnersAdmin', 'PartnerSettingsAdmin', 'DeviceSessionsAdmin']) expect(panel, c).toMatch(new RegExp(`<${c}[^\\n]*refreshKey=\\{refreshCount\\}`))
-    expect(panel.slice(panel.indexOf('const handleRefresh'), panel.indexOf('router.refresh()'))).toContain('listPartnerApplications()')
+    expect(panel.slice(panel.indexOf('const handleRefresh'), panel.indexOf('router.refresh()'))).toContain('getPartnerPendingCount()')
     for (const f of ['PartnersAdmin', 'PartnerSettingsAdmin', 'DeviceSessionsAdmin']) {
       const src = read(`src/components/admin/${f}.tsx`)
       expect(src, f).toContain('refreshKey')

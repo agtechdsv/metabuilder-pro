@@ -15,7 +15,7 @@ import {
   Handshake,
   Settings2
 } from 'lucide-react'
-import { listPartnerApplications } from '@/app/actions/partnerApplications'
+import { getPartnerPendingCount } from '@/app/actions/partnerApplications'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
@@ -122,16 +122,16 @@ export default function PlatformAdminClient({
   const handleRefresh = () => {
     setIsRefreshing(true)
     setRefreshCount(c => c + 1)
-    listPartnerApplications().then(r => { if (r.success) setNewPartnerApps(r.applications.filter(a => a.status === 'new').length) }).catch(() => {})
+    getPartnerPendingCount().then(r => { if (r.success) setPendingPartnerCount(r.total) }).catch(() => {})
     router.refresh()
     setTimeout(() => setIsRefreshing(false), 800)
   }
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'plans' | 'clients' | 'agenda' | 'iclub' | 'metavoice' | 'community' | 'arquivos' | 'releases' | 'partners' | 'system'>('dashboard')
   // candidaturas novas de parceiros: contador no rótulo da aba (lido ao abrir o painel; a aba Parceiros o mantém atualizado)
-  const [newPartnerApps, setNewPartnerApps] = useState(0)
+  const [pendingPartnerCount, setPendingPartnerCount] = useState(0)
   useEffect(() => {
-    listPartnerApplications().then(r => { if (r.success) setNewPartnerApps(r.applications.filter(a => a.status === 'new').length) }).catch(() => {})
+    getPartnerPendingCount().then(r => { if (r.success) setPendingPartnerCount(r.total) }).catch(() => {})
   }, [])
   const openTab = (tab: typeof activeTab) => { setActiveTab(tab); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
@@ -295,8 +295,8 @@ export default function PlatformAdminClient({
                 >
                   <Icon className={cn("w-4 h-4", config.iconColor)} />
                   <span>{config.label}</span>
-                  {tab === 'partners' && newPartnerApps > 0 && (
-                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white" title="Candidaturas novas">{newPartnerApps}</span>
+                  {tab === 'partners' && pendingPartnerCount > 0 && (
+                    <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white" title={t('admin_partners.tab_pending')}>{pendingPartnerCount}</span>
                   )}
                 </button>
               )
@@ -370,7 +370,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <PartnersAdmin onNewApplications={setNewPartnerApps} refreshKey={refreshCount} />
+            <PartnersAdmin onPendingCount={setPendingPartnerCount} refreshKey={refreshCount} />
           </motion.div>
         )}
 

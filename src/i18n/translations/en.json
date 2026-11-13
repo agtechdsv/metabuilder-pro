@@ -5855,6 +5855,8 @@
     "err_email_invalid": "Enter a valid e-mail for the partner.",
     "err_declaration_required": "The key holder declaration is required.",
     "pix_pending_badge": "PIX KEY PENDING",
+    "pix_queue_title": "Pix keys to review",
+    "tab_pending": "Waiting for your action: new applications and Pix keys to review",
     "pix_pending_hint": "The partner sent a Pix key. Open the partner to review and accept or decline it.",
     "pix_pending_title": "Pix key sent by the partner, waiting for your review",
     "pix_pending_new": "New key",
