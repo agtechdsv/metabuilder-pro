@@ -23,6 +23,10 @@ export function TermsContent() {
     {
       title: t('terms.item4_title'),
       content: t('terms.item4_desc')
+    },
+    {
+      title: t('terms.item5_title'),
+      content: t('terms.item5_desc')
     }
   ]
 

@@ -62,6 +62,7 @@ import type { IClubRule, IClubReferral, IClubReward } from '@/lib/iclub'
 import { CliFilesClientView } from './CliFilesClientView'
 import { TeamDrawer } from '@/components/workspace/TeamDrawer'
 import SecuritySettings from '@/components/workspace/SecuritySettings'
+import { DeviceSessionsPanel } from '@/components/workspace/DeviceSessionsPanel'
 import { useI18n } from '@/i18n/I18nContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -571,6 +572,7 @@ export default function ClientDashboardClient({
               {localProfile && (
                 <SecuritySettings profile={localProfile} isOwner={true} />
               )}
+              <DeviceSessionsPanel />
             </div>
           )}
 

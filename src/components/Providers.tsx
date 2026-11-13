@@ -9,6 +9,7 @@ import { PreviewProvider } from '@/contexts/PreviewContext'
 import { IDESyncProvider } from '@/contexts/IDESyncContext'
 import { AskDialogHost } from '@/components/ui/AskDialogHost'
 import { PlatformTourHost } from '@/components/platformHelp/PlatformTourHost'
+import { SessionGuard } from '@/components/auth/SessionGuard'
 
 export function Providers({ 
   children,
@@ -27,6 +28,7 @@ export function Providers({
                 <ProgressBarProvider />
                 <AutoUpdater />
                 <GlobalDesktopListener />
+                <SessionGuard />
                 <AskDialogHost />
                 <PlatformTourHost />
                 {children}

@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { updateSession } from '@/utils/supabase/middleware'
+import { updateSessionWithAuth } from '@/utils/supabase/middleware'
+import { applySlotGate } from '@/lib/sessions/gate'
 import { createClient } from '@supabase/supabase-js'
 
 export async function proxy(request: NextRequest) {
   // Update session cookies first to keep auth working
-  let response = await updateSession(request)
+  const auth = await updateSessionWithAuth(request)
+  let response = auth.response
 
   const url = request.nextUrl
   const hostHeader = request.headers.get('host') || ''
@@ -24,8 +26,12 @@ export async function proxy(request: NextRequest) {
 
   // If we don't have a hostname or it's one of our core domains, proceed normally
   if (!hostname || appDomains.includes(hostname)) {
-    return response
+    // Vagas de sessão (1 IDE + 1 navegador por usuário): só nas áreas da plataforma, nunca nos apps publicados dos clientes
+    return applySlotGate(request, response, auth)
   }
+
+  // As rotas de API só passam por aqui para o portão das vagas: domínios próprios dos clientes nunca reescrevem /api
+  if (url.pathname.startsWith('/api/')) return response
 
   // It's a custom domain! Query Supabase to find which project this belongs to
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -130,5 +136,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|ico|woff|woff2|ttf|eot)$).*)',
+    // rotas de API sensíveis que usam o login do navegador/IDE: também passam pelo portão das vagas de sessão (lista em slotCore.ts)
+    '/api/(admin|ai-builder|build-desktop|export-workspace|export-native|byoc|domains|workspace-source|project-source|metadata)/:path*',
   ],
 }

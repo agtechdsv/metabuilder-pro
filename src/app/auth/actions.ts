@@ -3,6 +3,9 @@
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { currentSessionId } from '@/lib/sessions/currentSlot'
+import { releaseSlot } from '@/lib/sessions/slotService'
+import { SLOT_COOKIE } from '@/lib/sessions/slotCore'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -373,9 +376,13 @@ export async function updateProfile(formData: FormData) {
 
 export async function signOut() {
   const supabase = await createClient()
-  await supabase.auth.signOut()
+  // libera a vaga de sessão (1 IDE + 1 navegador por usuário) antes de sair; nunca impede o logout
+  try { await releaseSlot(await currentSessionId(), 'logout') } catch { /* o logout segue */ }
+  // 'local': sai só deste dispositivo. O padrão do Supabase ('global') encerraria TAMBÉM a sessão da outra máquina (a que o usuário escolheu manter).
+  await supabase.auth.signOut({ scope: 'local' })
   const cookieStore = await cookies()
   cookieStore.delete('passkey_authenticated')
+  cookieStore.set(SLOT_COOKIE, '', { path: '/', maxAge: 0, domain: process.env.NODE_ENV === 'production' ? '.metabuilderpro.com' : undefined })
   return { success: true }
 }
 

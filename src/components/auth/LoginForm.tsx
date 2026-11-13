@@ -572,8 +572,8 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           {/* Escape hatch */}
           <button
             onClick={async () => {
-              const supabase = createClient()
-              await supabase.auth.signOut()
+              // pela ação do servidor: sai só deste dispositivo e libera a vaga de sessão
+              await signOut()
               setResumingSession(null)
             }}
             className="text-xs text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors underline underline-offset-2"

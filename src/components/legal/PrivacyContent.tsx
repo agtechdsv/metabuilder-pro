@@ -22,6 +22,10 @@ export function PrivacyContent() {
     {
       title: t('privacy.item4_title'),
       content: t('privacy.item4_desc')
+    },
+    {
+      title: t('privacy.item5_title'),
+      content: t('privacy.item5_desc')
     }
   ]
 

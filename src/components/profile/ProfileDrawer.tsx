@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/i18n/I18nContext'
 import SecuritySettings from '@/components/workspace/SecuritySettings'
+import { DeviceSessionsPanel } from '@/components/workspace/DeviceSessionsPanel'
 
 interface ProfileDrawerProps {
   isOpen: boolean
@@ -344,9 +345,10 @@ export function ProfileDrawer({ isOpen, onClose, profile, user, onUpdate }: Prof
                       <SecuritySettings 
                         profile={profile} 
                         isOwner={false} 
-                        isPersonalOnly={true} 
+                        isPersonalOnly={true}
                       />
                     )}
+                    <DeviceSessionsPanel />
                   </motion.div>
                 )}
               </AnimatePresence>

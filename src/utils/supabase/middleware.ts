@@ -1,16 +1,27 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function updateSession(request: NextRequest) {
+/** Domínio dos cookies de login: o mesmo para o site com e sem www. */
+export function cookieDomainFor(hostname: string): string | undefined {
+  return hostname.endsWith('metabuilderpro.com') ? '.metabuilderpro.com' : undefined
+}
+
+export interface AuthContext {
+  response: NextResponse
+  /** quem está logado (já validado no Supabase), ou null */
+  user: { id: string } | null
+  /** o token de acesso da sessão (dele sai o id da sessão para a regra de vagas) */
+  accessToken: string | null
+  cookieDomain: string | undefined
+}
+
+export async function updateSessionWithAuth(request: NextRequest): Promise<AuthContext> {
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  let cookieDomain: string | undefined = undefined
   const hostname = request.headers.get('host')?.split(':')[0] || ''
-  if (hostname.endsWith('metabuilderpro.com')) {
-    cookieDomain = '.metabuilderpro.com'
-  }
+  const cookieDomain = cookieDomainFor(hostname)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +53,18 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  return supabaseResponse
+  // O token só é lido (não o usuário dele): quem validou foi o getUser acima.
+  let accessToken: string | null = null
+  if (user) {
+    const { data: { session } } = await supabase.auth.getSession()
+    accessToken = session?.access_token ?? null
+  }
+
+  return { response: supabaseResponse, user: user ? { id: user.id } : null, accessToken, cookieDomain }
+}
+
+export async function updateSession(request: NextRequest) {
+  return (await updateSessionWithAuth(request)).response
 }

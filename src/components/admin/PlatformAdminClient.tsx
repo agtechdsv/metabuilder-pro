@@ -23,6 +23,7 @@ import { PricingRulesAdmin } from './PricingRulesAdmin'
 import { TrashSettingsAdmin } from './TrashSettingsAdmin'
 import { CampaignsAdmin, IClubSettingsAdmin } from './CampaignsAdmin'
 import { PartnersAdmin } from './PartnersAdmin'
+import { DeviceSessionsAdmin } from './DeviceSessionsAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
 import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
 
@@ -335,6 +336,7 @@ export default function PlatformAdminClient({
             <CampaignsAdmin />
             <IClubSettingsAdmin />
             <PartnersAdmin />
+            <DeviceSessionsAdmin />
             <TrashSettingsAdmin />
           </motion.div>
         )}
