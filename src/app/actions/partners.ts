@@ -8,8 +8,9 @@ import {
 import {
   DEFAULT_PARTNER_SETTINGS, type PartnerDashboard, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow, type PixSubmitInput,
 } from '@/lib/partners'
-import { sendTeamNotice } from '@/lib/security/securityMail'
-import { partnerPixPendingMail } from '@/lib/security/partnerMailText'
+import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
+import { resolveMailLang } from '@/lib/security/securityMailText'
+import { partnerPixAcceptedMail, partnerPixDeclinedMail, partnerPixPendingMail } from '@/lib/security/partnerMailText'
 
 type Ok<T = unknown> = { success: true } & T
 type Fail = { success: false; code: PartnerErrorCode; error?: string }
@@ -384,10 +385,10 @@ export async function submitMyPixKey(input: PixSubmitInput): Promise<Ok | Fail> 
 }
 
 /** SuperAdmin aceita (a chave pendente vira a ativa, junto com o documento do titular) ou recusa (o pedido é descartado) a chave enviada pelo parceiro. */
-export async function resolvePartnerPix(partnerId: string, accept: boolean): Promise<Ok | Fail> {
+export async function resolvePartnerPix(partnerId: string, accept: boolean): Promise<Ok<{ mailed: boolean }> | Fail> {
   try {
     const { admin } = await requireSuperAdmin()
-    const { data: p } = await admin.from('partners').select('id, pix_pending_key, pix_pending_type, pix_pending_document').eq('id', partnerId).maybeSingle()
+    const { data: p } = await admin.from('partners').select('id, user_id, email, name, pix_pending_key, pix_pending_type, pix_pending_document').eq('id', partnerId).maybeSingle()
     if (!p || !p.pix_pending_key) return fail('not_found')
     const clear = { pix_pending_key: null, pix_pending_type: null, pix_pending_document: null, pix_pending_at: null }
     if (accept) {
@@ -403,7 +404,25 @@ export async function resolvePartnerPix(partnerId: string, accept: boolean): Pro
     }
     revalidatePath('/admin/platform')
     revalidatePath('/parceiro')
-    return { success: true }
+
+    // avisa o parceiro (aceite ou recusa). O endereço NUNCA vem da tela: é o e-mail da conta dele (ou o do cadastro, se ainda não criou conta).
+    // Se o e-mail falhar, a decisão já valeu: a tela só avisa o SuperAdmin.
+    let mailed = false
+    try {
+      const { data: profile } = p.user_id ? await admin.from('profiles').select('email').eq('id', p.user_id).maybeSingle() : { data: null }
+      const to = String(profile?.email || p.email || '').trim()
+      if (to) {
+        // idioma da candidatura que deu origem a este parceiro; sem ela, português
+        const { data: app } = await admin.from('partner_applications').select('lang').eq('partner_id', partnerId).order('decided_at', { ascending: false }).limit(1).maybeSingle()
+        const lang = resolveMailLang(app?.lang)
+        const panelUrl = `${(process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')}/parceiro`
+        const mail = accept
+          ? partnerPixAcceptedMail(lang, { name: p.name, type: p.pix_pending_type, keyMasked: `•••${String(p.pix_pending_key).slice(-3)}`, panelUrl })
+          : partnerPixDeclinedMail(lang, { name: p.name, panelUrl })
+        mailed = await sendMailTo(to, mail)
+      }
+    } catch { /* o aviso é um extra: a decisão já está salva */ }
+    return { success: true, mailed }
   } catch (e) { return fail(codeOf(e)) }
 }
 

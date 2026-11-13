@@ -116,3 +116,67 @@ export function partnerPixPendingMail(d: { partnerName: string; partnerEmail: st
   const text = ['Chave Pix para conferir', '', intro, '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `Painel: ${adminUrl}`].join('\n')
   return { subject: `Chave Pix para conferir: ${d.partnerName}`.replace(/[\r\n]+/g, ' ').slice(0, 200), html, text }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------
+// Chave Pix aceita ou recusada pelo SuperAdmin: e-mail ao PARCEIRO, no idioma da candidatura (ou português)
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+const PIX_TEXTS = {
+  pt: {
+    acceptedSubject: 'Sua chave Pix foi aceita',
+    acceptedTitle: 'Chave Pix aceita',
+    acceptedIntro: (name: string) => `Olá, ${name}! Conferimos a sua chave Pix e ela foi aceita. A partir de agora, os pagamentos das suas comissões serão enviados para ela.`,
+    box: 'Sua chave Pix', type: 'Tipo', key: 'Chave (final)',
+    declinedSubject: 'Sua chave Pix não foi aceita',
+    declinedTitle: 'Chave Pix não aceita',
+    declinedIntro: (name: string) => `Olá, ${name}. Não conseguimos aceitar a chave Pix que você enviou. Confira os dados (tipo da chave, a chave e o CPF ou CNPJ do titular) e envie de novo pelo seu painel.`,
+    declinedKeep: 'Se você já tinha uma chave ativa, ela continua valendo.',
+    button: 'Abrir meu painel',
+    footerWhy: 'Você recebeu este e-mail por causa da chave Pix enviada no painel do parceiro.',
+  },
+  en: {
+    acceptedSubject: 'Your Pix key was accepted',
+    acceptedTitle: 'Pix key accepted',
+    acceptedIntro: (name: string) => `Hello, ${name}! We checked your Pix key and it was accepted. From now on, your commission payments will be sent to it.`,
+    box: 'Your Pix key', type: 'Type', key: 'Key (last characters)',
+    declinedSubject: 'Your Pix key was not accepted',
+    declinedTitle: 'Pix key not accepted',
+    declinedIntro: (name: string) => `Hello, ${name}. We could not accept the Pix key you sent. Check the data (key type, the key and the holder's CPF or CNPJ) and send it again from your dashboard.`,
+    declinedKeep: 'If you already had an active key, it stays valid.',
+    button: 'Open my dashboard',
+    footerWhy: 'You received this e-mail because of the Pix key sent in the partner dashboard.',
+  },
+  es: {
+    acceptedSubject: 'Tu clave Pix fue aceptada',
+    acceptedTitle: 'Clave Pix aceptada',
+    acceptedIntro: (name: string) => `¡Hola, ${name}! Verificamos tu clave Pix y fue aceptada. A partir de ahora, los pagos de tus comisiones se enviarán a ella.`,
+    box: 'Tu clave Pix', type: 'Tipo', key: 'Clave (final)',
+    declinedSubject: 'Tu clave Pix no fue aceptada',
+    declinedTitle: 'Clave Pix no aceptada',
+    declinedIntro: (name: string) => `Hola, ${name}. No pudimos aceptar la clave Pix que enviaste. Revisa los datos (tipo de clave, la clave y el CPF o CNPJ del titular) y envíala de nuevo desde tu panel.`,
+    declinedKeep: 'Si ya tenías una clave activa, sigue vigente.',
+    button: 'Abrir mi panel',
+    footerWhy: 'Recibiste este e-mail por la clave Pix enviada en el panel del socio.',
+  },
+} as const
+
+/** Chave aceita. Mostra só o final da chave (nunca a chave inteira por e-mail). */
+export function partnerPixAcceptedMail(lang: MailLang, d: { name: string; type: string; keyMasked: string; panelUrl: string }): MailContent {
+  const t = PIX_TEXTS[lang]
+  const rows: [string, string][] = [[t.type, d.type], [t.key, d.keyMasked]]
+  const html = mailShell(t.acceptedTitle,
+    `<p style="margin:0 0 22px 0;">${esc(t.acceptedIntro(d.name))}</p>` + infoBox(t.box, rows) + button(t.button, d.panelUrl),
+    `© ${new Date().getFullYear()} METABUILDER PRO · ${t.footerWhy}`)
+  const text = [t.acceptedTitle, '', t.acceptedIntro(d.name), '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `${t.button}: ${d.panelUrl}`].join('\n')
+  return { subject: t.acceptedSubject, html, text }
+}
+
+/** Chave recusada: pede para conferir e reenviar, e avisa que a chave anterior (se houver) continua valendo. */
+export function partnerPixDeclinedMail(lang: MailLang, d: { name: string; panelUrl: string }): MailContent {
+  const t = PIX_TEXTS[lang]
+  const html = mailShell(t.declinedTitle,
+    `<p style="margin:0 0 14px 0;">${esc(t.declinedIntro(d.name))}</p><p style="margin:0 0 18px 0;">${esc(t.declinedKeep)}</p>` + button(t.button, d.panelUrl),
+    `© ${new Date().getFullYear()} METABUILDER PRO · ${t.footerWhy}`)
+  const text = [t.declinedTitle, '', t.declinedIntro(d.name), t.declinedKeep, '', `${t.button}: ${d.panelUrl}`].join('\n')
+  return { subject: t.declinedSubject, html, text }
+}

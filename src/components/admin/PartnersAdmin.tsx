@@ -115,7 +115,7 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
     const r = await resolvePartnerPix(p.id, accept)
     setBusy(false)
     if (!r.success) { toast(errText(r), 'error'); load(); return }
-    toast(k(accept ? 'pix_accepted' : 'pix_declined'), 'success')
+    toast(k(accept ? (r.mailed ? 'pix_accepted' : 'pix_accepted_no_mail') : (r.mailed ? 'pix_declined' : 'pix_declined_no_mail')), r.mailed ? 'success' : 'info')
     setForm(null); setApprovingId(null)
     load()
   }

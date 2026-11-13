@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { partnerApplicationMail, slotCodeMail, slotKickedMail } from '../security/securityMailText'
-import { partnerApprovedMail, partnerPixPendingMail, partnerRejectedMail } from '../security/partnerMailText'
+import { partnerApprovedMail, partnerPixAcceptedMail, partnerPixDeclinedMail, partnerPixPendingMail, partnerRejectedMail } from '../security/partnerMailText'
 import { APPLICATION_CHANNELS, MIN_FILL_MS, looksLikeBot, suggestPartnerCode, validateApplication, type ApplicationInput } from '../partnerApplications'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -183,12 +183,34 @@ describe('chave Pix enviada pelo parceiro (pendente até o SuperAdmin aceitar)',
     for (const s of ['resolvePartnerPix', "k('pix_pending_badge')", "k('pix_accept')", "k('pix_decline')", "k('pix_pending_current')"]) expect(admin, s).toContain(s)
   })
 
+  it('aceitar e recusar avisam o parceiro por e-mail (nos três idiomas), com a chave só mascarada, e o endereço nunca vem da tela', () => {
+    for (const lang of ['pt', 'en', 'es'] as const) {
+      const ok = partnerPixAcceptedMail(lang, { name: 'Ana <b>', type: 'CPF', keyMasked: '•••789', panelUrl: 'https://s/parceiro' })
+      expect(ok.subject, lang).toBeTruthy()
+      expect(ok.html, lang).toContain('•••789')
+      expect(ok.html, lang).toContain('href="https://s/parceiro"')
+      expect(ok.html, lang).toContain('Ana &lt;b&gt;')
+      expect(ok.html, lang).not.toContain('Ana <b>')
+      const no = partnerPixDeclinedMail(lang, { name: 'Ana', panelUrl: 'https://s/parceiro' })
+      expect(no.subject, lang).toBeTruthy()
+      expect(no.subject, lang).not.toBe(ok.subject)
+      expect(no.html, lang).toContain('href="https://s/parceiro"')
+    }
+    expect(resolve).toContain('partnerPixAcceptedMail(lang')
+    expect(resolve).toContain('partnerPixDeclinedMail(lang')
+    expect(resolve).toMatch(/from\('profiles'\)\.select\('email'\)\.eq\('id', p\.user_id\)/)
+    expect(resolve).toContain('mailed')
+    expect(resolve).not.toMatch(/sendMailTo\(\w*[Ii]nput|resolvePartnerPix\(partnerId: string, to/)
+    // a chave inteira nunca vai por e-mail
+    expect(resolve).toMatch(/keyMasked: `•••\$\{String\(p\.pix_pending_key\)\.slice\(-3\)\}`/)
+  })
+
   it('os textos do formulário do parceiro e da conferência existem nos três idiomas', () => {
     const form = read('src/components/partner/PartnerPixForm.tsx')
     const keys = new Set<string>(['pix_err_pix_invalid', 'pix_err_document_invalid', 'pix_err_declaration_required', 'pix_err_unknown', 'pix_pending_title', 'pix_pending_desc', 'pix_change'])
     for (const m of form.matchAll(/P \+ '([a-z_]+)'/g)) if (!m[1].endsWith('_')) keys.add(m[1]) // 'pix_err_' + código é montado: está listado acima
     for (const l of LANGS) for (const key of keys) expect(get(json(l), `partner_panel.${key}`), `${l}: partner_panel.${key}`).toBeTruthy()
-    for (const l of LANGS) for (const key of ['pix_pending_badge', 'pix_pending_hint', 'pix_pending_title', 'pix_pending_new', 'pix_pending_doc', 'pix_pending_current', 'pix_pending_none', 'pix_accept', 'pix_decline', 'pix_accept_confirm', 'pix_accepted', 'pix_declined', 'err_declaration_required']) {
+    for (const l of LANGS) for (const key of ['pix_pending_badge', 'pix_pending_hint', 'pix_pending_title', 'pix_pending_new', 'pix_pending_doc', 'pix_pending_current', 'pix_pending_none', 'pix_accept', 'pix_decline', 'pix_accept_confirm', 'pix_accepted', 'pix_declined', 'pix_accepted_no_mail', 'pix_declined_no_mail', 'err_declaration_required']) {
       expect(get(json(l), `admin_partners.${key}`), `${l}: admin_partners.${key}`).toBeTruthy()
     }
   })
