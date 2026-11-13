@@ -143,6 +143,45 @@ describe('candidatura de parceiro: ligação no sistema', () => {
 
   it('a tela do SuperAdmin lista, aprova (abre o cadastro preenchido), recusa e apaga', () => {
     const src = read('src/components/admin/PartnersAdmin.tsx')
-    for (const s of ['listPartnerApplications', 'decidePartnerApplication', 'deletePartnerApplication', 'suggestPartnerCode', 'Aprovar e cadastrar']) expect(src, s).toContain(s)
+    for (const s of ['listPartnerApplications', 'decidePartnerApplication', 'deletePartnerApplication', 'suggestPartnerCode', "k('approve')"]) expect(src, s).toContain(s)
+  })
+
+  it('as telas de Parceiros e Sessões do SuperAdmin usam o diálogo do app (nunca alert/confirm do navegador) e textos em pt, en e es', () => {
+    const files: [string, string][] = [
+      ['src/components/admin/PartnersAdmin.tsx', 'admin_partners.'],
+      ['src/components/admin/PartnerSettingsAdmin.tsx', 'admin_partners.'],
+      ['src/components/admin/DeviceSessionsAdmin.tsx', 'admin_devices.'],
+    ]
+    for (const [file, prefix] of files) {
+      const src = read(file)
+      expect(src, file).not.toMatch(/window\.(confirm|alert)|[^.\w]alert\(|[^.\w]confirm\(/)
+      const keys = new Set<string>()
+      for (const m of src.matchAll(/\bk\('([a-z0-9_]+)'/g)) keys.add(m[1])
+      expect(keys.size, file).toBeGreaterThan(5)
+      for (const l of LANGS) for (const key of keys) {
+        const v = get(json(l), prefix + key)
+        expect(typeof v === 'string' && v.trim().length > 0, `${l}: ${prefix}${key}`).toBe(true)
+      }
+    }
+    // chaves montadas na hora (k(`x_${...}`) e t(`admin_partners.channel_${...}`)): todas as variações existem
+    const dynamic: [string, string[]][] = [
+      ['admin_partners.', [...APPLICATION_CHANNELS.map(c => `channel_${c}`), 'skip_suspended', 'skip_no_pix', 'skip_below_min', 'item_pending', 'item_sending', 'item_sent', 'item_done', 'item_failed',
+        'batch_done', 'batch_partial', 'batch_failed', 'batch_processing', 'approved', 'rejected', 'batch_failed_part',
+        'err_not_authorized', 'err_user_not_found', 'err_code_invalid', 'err_code_in_use', 'err_pix_invalid', 'err_document_invalid', 'err_percent_invalid', 'err_already_partner',
+        'err_nothing_to_pay', 'err_payout_cap_exceeded', 'err_no_partners', 'err_not_found', 'err_unknown', 'err_invalid_email', 'err_invalid_status']],
+      ['admin_devices.', ['mode_off', 'mode_observe', 'mode_enforce', 'mode_off_hint', 'mode_observe_hint', 'mode_enforce_hint', 'ev_takeover', 'ev_conflict', 'ev_cap_reached', 'ev_code_failed',
+        'ev_same_session', 'stat_active', 'stat_ide', 'stat_web', 'stat_takeovers', 'stat_conflicts', 'stat_caps', 'err_forbidden', 'err_invalid_settings', 'err_unknown', 'kind_ide', 'kind_web']],
+    ]
+    for (const [prefix, keys] of dynamic) for (const l of LANGS) for (const key of keys) {
+      const v = get(json(l), prefix + key)
+      expect(typeof v === 'string' && v.trim().length > 0, `${l}: ${prefix}${key}`).toBe(true)
+    }
+    // os marcadores de troca ({name}, {n}, {total}...) são os mesmos nos três idiomas
+    for (const ns of ['admin_partners', 'admin_devices']) {
+      const marks = (s: string) => (String(s).match(/\{[a-z]+\}/g) || []).sort().join(',')
+      for (const key of Object.keys(json('pt')[ns])) for (const l of ['en', 'es']) {
+        expect(marks(json(l)[ns][key]), `${l}: ${ns}.${key}`).toBe(marks(json('pt')[ns][key]))
+      }
+    }
   })
 })

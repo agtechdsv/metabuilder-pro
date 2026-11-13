@@ -30,6 +30,10 @@ export type ApplicationErrorCode =
   | 'name_invalid' | 'email_invalid' | 'phone_invalid' | 'channel_invalid' | 'text_too_long' | 'consent_required'
   | 'too_fast' | 'rate_limited' | 'unknown'
 
+/** Erros das ações do SuperAdmin sobre candidaturas: por código, a tela traduz (pt, en, es). */
+export type ActionCode = 'not_authorized' | 'invalid_email' | 'invalid_status' | 'unknown'
+export type ActionResult = { success: true } | { success: false; code: ActionCode; error?: string }
+
 export interface ApplicationRow {
   id: string
   name: string

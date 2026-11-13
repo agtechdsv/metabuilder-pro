@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Flame, Loader2, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import { deleteCampaign, getIClubSettings, listCampaigns, saveCampaign, saveIClubSettings, type CampaignInput } from '@/app/actions/admin'
 import { useToast } from '@/components/ui/Toast'
+import { askDialog } from '@/utils/askDialog'
 import { campaignOffPercent, localizedText } from '@/lib/campaigns'
 import { chargeBreakdown, type Cycle } from '../../../supabase/functions/_shared/pricing'
 import { getPricingRules } from '@/app/actions/admin'
@@ -65,7 +66,7 @@ export function CampaignsAdmin() {
   }
 
   const remove = async (c: any) => {
-    if (!window.confirm(`Excluir a campanha "${localizedText(c.name, 'pt')}"? Quem já comprou nela mantém o que contratou.`)) return
+    if (!(await askDialog(`Excluir a campanha "${localizedText(c.name, 'pt')}"? Quem já comprou nela mantém o que contratou.`, { kind: 'warning', okLabel: 'Excluir', cancelLabel: 'Cancelar' }))) return
     const res = await deleteCampaign(c.id)
     if (res.success) { toast('Campanha excluída.', 'success'); load() } else toast(res.error || 'Não foi possível excluir.', 'error')
   }

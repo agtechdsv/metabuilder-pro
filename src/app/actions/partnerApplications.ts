@@ -7,7 +7,7 @@ import { clientIp, hashIp } from '@/lib/sessions/slotCore'
 import { sendTeamNotice } from '@/lib/security/securityMail'
 import {
   MAX_PER_IP_PER_HOUR, looksLikeBot, validateApplication,
-  type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus,
+  type ActionCode, type ActionResult, type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus,
 } from '@/lib/partnerApplications'
 
 /** Chave em platform_settings com o e-mail que recebe o aviso de candidatura (o SuperAdmin escolhe na aba Parceiros). */
@@ -84,11 +84,11 @@ async function requireSuperAdmin() {
   return createAdminClient()
 }
 
-export async function listPartnerApplications(): Promise<{ success: true; applications: ApplicationRow[] } | { success: false; error: string }> {
+export async function listPartnerApplications(): Promise<{ success: true; applications: ApplicationRow[] } | { success: false; code: ActionCode; error?: string }> {
   try {
     const admin = await requireSuperAdmin()
     const { data, error } = await admin.from('partner_applications').select('*').order('created_at', { ascending: false }).limit(200)
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, code: 'unknown', error: error.message }
     return {
       success: true,
       applications: (data || []).map((r: any) => ({
@@ -96,7 +96,7 @@ export async function listPartnerApplications(): Promise<{ success: true; applic
         message: r.message, status: r.status, partnerId: r.partner_id, createdAt: r.created_at,
       })),
     }
-  } catch (e) { return { success: false, error: (e as Error).message === 'not_authorized' ? 'Só o SuperAdmin pode ver.' : 'Não foi possível carregar.' } }
+  } catch (e) { return { success: false, code: (e as Error).message === 'not_authorized' ? 'not_authorized' : 'unknown' } }
 }
 
 /** E-mail que recebe o aviso de candidatura nova ('' = o padrão do servidor). */
@@ -110,42 +110,42 @@ export async function getPartnerNotifyEmail(): Promise<{ success: true; email: s
 }
 
 /** Grava o e-mail do aviso. Vazio volta ao padrão (variável PARTNER_NOTIFY_EMAIL ou a caixa do SMTP). */
-export async function savePartnerNotifyEmail(email: string): Promise<{ success: boolean; error?: string }> {
+export async function savePartnerNotifyEmail(email: string): Promise<ActionResult> {
   try {
     const admin = await requireSuperAdmin()
     const v = (email || '').trim().toLowerCase()
-    if (v && (v.length > 200 || !EMAIL_OK.test(v))) return { success: false, error: 'E-mail inválido.' }
+    if (v && (v.length > 200 || !EMAIL_OK.test(v))) return { success: false, code: 'invalid_email' }
     const { data: { user } } = await (await createClient()).auth.getUser()
     const { error } = await admin.from('platform_settings').upsert(
       { key: NOTIFY_KEY, value: { email: v }, updated_at: new Date().toISOString(), updated_by: user?.id ?? null },
       { onConflict: 'key' },
     )
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, code: 'unknown', error: error.message }
     return { success: true }
-  } catch { return { success: false, error: 'Só o SuperAdmin pode fazer isso.' } }
+  } catch { return { success: false, code: 'not_authorized' } }
 }
 
 /** Marca como aprovada (com o parceiro criado) ou recusada, ou volta para "nova". */
-export async function decidePartnerApplication(id: string, status: ApplicationStatus, partnerId?: string | null): Promise<{ success: boolean; error?: string }> {
+export async function decidePartnerApplication(id: string, status: ApplicationStatus, partnerId?: string | null): Promise<ActionResult> {
   try {
     const admin = await requireSuperAdmin()
-    if (!['new', 'approved', 'rejected'].includes(status)) return { success: false, error: 'Situação inválida.' }
+    if (!['new', 'approved', 'rejected'].includes(status)) return { success: false, code: 'invalid_status' }
     const { error } = await admin.from('partner_applications').update({
       status, partner_id: status === 'approved' ? (partnerId || null) : null, decided_at: status === 'new' ? null : new Date().toISOString(),
     }).eq('id', id)
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, code: 'unknown', error: error.message }
     revalidatePath('/admin/platform')
     return { success: true }
-  } catch { return { success: false, error: 'Só o SuperAdmin pode fazer isso.' } }
+  } catch { return { success: false, code: 'not_authorized' } }
 }
 
 /** Apaga a candidatura (LGPD: a pessoa pode pedir a exclusão dos dados). */
-export async function deletePartnerApplication(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deletePartnerApplication(id: string): Promise<ActionResult> {
   try {
     const admin = await requireSuperAdmin()
     const { error } = await admin.from('partner_applications').delete().eq('id', id)
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, code: 'unknown', error: error.message }
     revalidatePath('/admin/platform')
     return { success: true }
-  } catch { return { success: false, error: 'Só o SuperAdmin pode fazer isso.' } }
+  } catch { return { success: false, code: 'not_authorized' } }
 }
