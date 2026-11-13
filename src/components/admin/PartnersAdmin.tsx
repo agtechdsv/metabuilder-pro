@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Handshake, Inbox, Loader2, Pencil, Plus, Save, Send, Trash2, X } from 'lucide-react'
-import { decidePartnerApplication, deletePartnerApplication, listPartnerApplications } from '@/app/actions/partnerApplications'
+import { decidePartnerApplication, deletePartnerApplication, getPartnerNotifyEmail, listPartnerApplications, savePartnerNotifyEmail } from '@/app/actions/partnerApplications'
 import { suggestPartnerCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
   createPartnerPayout, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner,
@@ -53,12 +53,20 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
   const [note, setNote] = useState('')
   const [applications, setApplications] = useState<ApplicationRow[]>([])
   const [showDecided, setShowDecided] = useState(false)
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const saveNotify = async () => {
+    setBusy(true)
+    const r = await savePartnerNotifyEmail(notifyEmail)
+    setBusy(false)
+    toast(r.success ? (notifyEmail.trim() ? 'E-mail dos avisos salvo.' : 'Voltou ao e-mail padrão do servidor.') : (r.error || 'Não foi possível salvar.'), r.success ? 'success' : 'error')
+  }
   /** candidatura que está sendo aprovada: ao salvar o parceiro, ela é marcada como aprovada */
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [s, p, o, a] = await Promise.all([getPartnerSettings(), listPartners(), listPartnerPayouts(), listPartnerApplications()])
+    const [s, p, o, a, n] = await Promise.all([getPartnerSettings(), listPartners(), listPartnerPayouts(), listPartnerApplications(), getPartnerNotifyEmail()])
+    if (n.success) setNotifyEmail(n.email)
     if (s.success) setSettings(s.settings)
     if (p.success) setPartners(p.partners)
     if (o.success) setPayouts(o.payouts)
@@ -141,6 +149,13 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
       <p className="mb-5 rounded-2xl bg-neutral-50 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-950">
         Condições vigentes: <b>{settings.defaultPercent}%</b> de comissão · carência de <b>{settings.graceDays} dia(s)</b> · mínimo de <b>{money(settings.minPayout)}</b> por parceiro · teto do lote de <b>{money(settings.payoutCap)}</b>. Para mudar, use a aba <b>Regras de Preços</b>.
       </p>
+
+      <div className="mb-5 flex flex-wrap items-end gap-3 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
+        <label className="block min-w-[260px] flex-1"><span className={labelCls}>E-mail que recebe o aviso de nova candidatura</span>
+          <input type="email" className={inputCls} value={notifyEmail} onChange={e => setNotifyEmail(e.target.value)} placeholder="vazio = padrão do servidor (caixa de envio do site)" /></label>
+        <button type="button" disabled={busy} onClick={saveNotify} className="flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700"><Save className="h-3.5 w-3.5" />Salvar e-mail</button>
+        <p className="w-full text-[10px] text-neutral-400">Sempre que alguém enviar o formulário em /parceiros, o aviso vai para este endereço. A candidatura aparece aqui na aba de qualquer forma.</p>
+      </div>
 
       {applications.length > 0 && (
         <div className="mb-5 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">

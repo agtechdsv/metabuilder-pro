@@ -10,6 +10,10 @@ import {
   type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus,
 } from '@/lib/partnerApplications'
 
+/** Chave em platform_settings com o e-mail que recebe o aviso de candidatura (o SuperAdmin escolhe na aba Parceiros). */
+const NOTIFY_KEY = 'partner_notify_email'
+const EMAIL_OK = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /**
@@ -52,10 +56,13 @@ export async function submitPartnerApplication(input: ApplicationInput): Promise
       ['Nome', v.name], ['E-mail', v.email], ['Telefone', v.phone || '-'], ['Empresa', v.company || '-'], ['Perfil', v.channel],
       ['Como pretende divulgar', v.audience || '-'], ['Mensagem', v.message || '-'], ['Idioma', v.lang],
     ]
+    const { data: notifyRow } = await admin.from('platform_settings').select('value').eq('key', NOTIFY_KEY).maybeSingle()
+    const notifyTo = typeof (notifyRow?.value as { email?: unknown } | null)?.email === 'string' ? String((notifyRow!.value as { email: string }).email) : null
     await sendTeamNotice(
       `Nova candidatura de parceiro: ${v.name}`,
       lines.map(([k, val]) => `${k}: ${val}`).join('\n') + '\n\nAprove ou recuse na aba Parceiros do painel.',
       `<p><b>Nova candidatura de parceiro</b></p><ul>${lines.map(([k, val]) => `<li><b>${esc(k)}:</b> ${esc(String(val))}</li>`).join('')}</ul><p>Aprove ou recuse na aba Parceiros do painel.</p>`,
+      notifyTo,
     )
     return { success: true }
   } catch (e) {
@@ -90,6 +97,32 @@ export async function listPartnerApplications(): Promise<{ success: true; applic
       })),
     }
   } catch (e) { return { success: false, error: (e as Error).message === 'not_authorized' ? 'Só o SuperAdmin pode ver.' : 'Não foi possível carregar.' } }
+}
+
+/** E-mail que recebe o aviso de candidatura nova ('' = o padrão do servidor). */
+export async function getPartnerNotifyEmail(): Promise<{ success: true; email: string } | { success: false }> {
+  try {
+    const admin = await requireSuperAdmin()
+    const { data } = await admin.from('platform_settings').select('value').eq('key', NOTIFY_KEY).maybeSingle()
+    const email = (data?.value as { email?: unknown } | null)?.email
+    return { success: true, email: typeof email === 'string' ? email : '' }
+  } catch { return { success: false } }
+}
+
+/** Grava o e-mail do aviso. Vazio volta ao padrão (variável PARTNER_NOTIFY_EMAIL ou a caixa do SMTP). */
+export async function savePartnerNotifyEmail(email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = await requireSuperAdmin()
+    const v = (email || '').trim().toLowerCase()
+    if (v && (v.length > 200 || !EMAIL_OK.test(v))) return { success: false, error: 'E-mail inválido.' }
+    const { data: { user } } = await (await createClient()).auth.getUser()
+    const { error } = await admin.from('platform_settings').upsert(
+      { key: NOTIFY_KEY, value: { email: v }, updated_at: new Date().toISOString(), updated_by: user?.id ?? null },
+      { onConflict: 'key' },
+    )
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch { return { success: false, error: 'Só o SuperAdmin pode fazer isso.' } }
 }
 
 /** Marca como aprovada (com o parceiro criado) ou recusada, ou volta para "nova". */

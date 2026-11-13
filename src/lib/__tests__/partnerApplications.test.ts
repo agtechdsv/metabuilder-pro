@@ -89,9 +89,16 @@ describe('candidatura de parceiro: ligação no sistema', () => {
     }
   })
 
-  it('o e-mail de aviso escapa o texto de quem se candidata', () => {
+  it('o e-mail de aviso escapa o texto de quem se candidata e o destino é o que o SuperAdmin escolhe (só ele muda)', () => {
     const src = read('src/app/actions/partnerApplications.ts')
     expect(src).toContain('esc(String(val))')
+    expect(src).toContain("'partner_notify_email'")
+    expect(src).toMatch(/notifyTo,\s*\)/)
+    for (const fn of ['getPartnerNotifyEmail', 'savePartnerNotifyEmail']) {
+      expect(src.slice(src.indexOf(`export async function ${fn}`)).slice(0, 300), fn).toContain('requireSuperAdmin()')
+    }
+    expect(read('src/lib/security/securityMail.ts')).toMatch(/to\?: string \| null/)
+    expect(read('src/components/admin/PartnersAdmin.tsx')).toContain('savePartnerNotifyEmail')
   })
 
   it('a página tem o formulário, o botão leva até ele e o WhatsApp continua como alternativa', () => {
