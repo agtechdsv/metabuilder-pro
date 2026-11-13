@@ -54,8 +54,17 @@ Um **parceiro** é uma pessoa ou empresa (que já tem login no MetaBuilder) que 
 
 Reverter: as versões anteriores estão no git. As tabelas novas não afetam o resto; desligar é parar de usar o link de parceiro e remover a assinatura de `TRANSFER_*` no webhook.
 
+## Candidatura de parceiros (formulário em `/parceiros`)
+Quem quer ser parceiro preenche o formulário da página (nome, e-mail, perfil, como pretende divulgar, consentimento LGPD). Não há autocadastro: a candidatura só **cai numa fila** e o SuperAdmin decide.
+- **Tabela** `partner_applications` em `scripts/parceiros-interessados.sql` (RLS sem policy, sem acesso de `anon`/`authenticated`; o IP só como hash). **Rodar esse SQL antes de testar.**
+- **Anti-robô e abuso**: campo isca escondido, tempo mínimo de 3 s entre abrir e enviar, no máximo 5 envios por hora por IP (hash) e mesma pessoa em análise não duplica. A validação de verdade é no servidor (`src/lib/partnerApplications.ts`, `src/app/actions/partnerApplications.ts`).
+- **Aviso por e-mail** à equipe a cada candidatura, pelo mesmo SMTP do checkout. Destino: variável `PARTNER_NOTIFY_EMAIL` na Vercel; sem ela, a própria caixa do SMTP. Se o e-mail falhar, a candidatura continua salva.
+- **SuperAdmin**: em Planos > Parceiros aparece o quadro **Interessados em ser parceiro**: **Aprovar e cadastrar...** (abre o cadastro do parceiro já preenchido, com código sugerido; ao salvar, a candidatura vira Aprovada), **Recusar**, **Reabrir** e **Apagar** (LGPD). Para aprovar, a pessoa precisa já ter conta com o mesmo e-mail.
+- O WhatsApp continua na página como alternativa.
+
 ## Roteiro de teste em produção (com valores pequenos)
 Use uma conta de parceiro de teste (outra conta sua) e um cliente de teste que **nunca pagou**.
+0. **Candidatura**: depois do SQL e do deploy, abra `/parceiros` em janela anônima, preencha o formulário com o e-mail da conta de teste e envie. Conferir: mensagem de sucesso; e-mail de aviso na caixa; em Planos > Parceiros o quadro mostra a candidatura. Reenviar o mesmo e-mail não duplica. Enviar rápido demais (menos de 3 s) ou sem marcar o consentimento é recusado. Depois use **Aprovar e cadastrar...** e siga o passo 1.
 1. `/admin/platform` > **Planos** > **Parceiros**: ajuste **carência 0 dias** e **mínimo R$ 1** (só para o teste; volte depois). Cadastre a conta de teste como parceiro: código (ex.: `TESTE1`), chave Pix **sua**, % próprio (ex.: 10).
 2. Abra uma janela anônima em `https://<site>/?ref=TESTE1`, cadastre o cliente de teste e pague a assinatura.
 3. Conferir: em `/parceiro` (logado como o parceiro) aparece o indicado (e-mail mascarado) como **Assinante** e uma comissão. Em `partner_commissions`: `net` e `amount` corretos (amount = net × %, para baixo) e `release_at` = agora (carência 0).

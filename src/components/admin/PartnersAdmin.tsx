@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Handshake, Loader2, Pencil, Plus, Save, Send, X } from 'lucide-react'
+import { Handshake, Inbox, Loader2, Pencil, Plus, Save, Send, Trash2, X } from 'lucide-react'
+import { decidePartnerApplication, deletePartnerApplication, listPartnerApplications } from '@/app/actions/partnerApplications'
+import { suggestPartnerCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
   createPartnerPayout, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner, savePartnerSettings,
 } from '@/app/actions/partners'
@@ -33,6 +35,7 @@ const ERRORS: Record<PartnerErrorCode, string> = {
 const errText = (r: { code: PartnerErrorCode; error?: string }) => ERRORS[r.code] + (r.code === 'unknown' && r.error ? ` (${r.error})` : '')
 
 const ITEM_LABEL: Record<string, string> = { pending: 'Preparando', sending: 'Enviando', sent: 'Em processamento no Asaas', done: 'Pago', failed: 'Falhou' }
+const CHANNEL_LABEL: Record<string, string> = { consulting: 'Consultoria ou software house', freelancer: 'Desenvolvedor ou freelancer', community: 'Comunidade, conteúdo ou instrutor', integrator: 'Integrador ou profissional de TI', other: 'Outro' }
 const SKIP_LABEL: Record<string, string> = { suspended: 'suspenso', no_pix_key: 'sem chave Pix', below_minimum: 'abaixo do mínimo' }
 
 const EMPTY: PartnerInput = { userEmail: '', name: '', document: '', pixKey: '', pixKeyType: 'CPF', code: '', commissionPercent: null, status: 'active', notes: '' }
@@ -48,13 +51,18 @@ export function PartnersAdmin() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [note, setNote] = useState('')
+  const [applications, setApplications] = useState<ApplicationRow[]>([])
+  const [showDecided, setShowDecided] = useState(false)
+  /** candidatura que está sendo aprovada: ao salvar o parceiro, ela é marcada como aprovada */
+  const [approvingId, setApprovingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [s, p, o] = await Promise.all([getPartnerSettings(), listPartners(), listPartnerPayouts()])
+    const [s, p, o, a] = await Promise.all([getPartnerSettings(), listPartners(), listPartnerPayouts(), listPartnerApplications()])
     if (s.success) setSettings(s.settings)
     if (p.success) setPartners(p.partners)
     if (o.success) setPayouts(o.payouts)
+    if (a.success) setApplications(a.applications)
     if (!s.success) toast(errText(s), 'error')
     setLoading(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -73,10 +81,32 @@ export function PartnersAdmin() {
     const r = await savePartner(form)
     setBusy(false)
     if (!r.success) { toast(errText(r), 'error'); return }
+    if (approvingId) await decidePartnerApplication(approvingId, 'approved', r.id)
     toast('Parceiro salvo.', 'success')
     setForm(null)
+    setApprovingId(null)
     load()
   }
+
+  // aprovar = abrir o cadastro do parceiro já preenchido com o que a pessoa informou (conferir, ajustar e salvar)
+  const approve = (a: ApplicationRow) => {
+    setApprovingId(a.id)
+    setForm({ ...EMPTY, userEmail: a.email, name: a.name, code: suggestPartnerCode(a.name), notes: [a.company, a.audience].filter(Boolean).join(' | ') })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const decide = async (id: string, status: 'rejected' | 'new') => {
+    const r = await decidePartnerApplication(id, status)
+    toast(r.success ? (status === 'rejected' ? 'Candidatura recusada.' : 'Candidatura reaberta.') : (r.error || 'Não foi possível concluir.'), r.success ? 'success' : 'error')
+    load()
+  }
+  const removeApplication = async (a: ApplicationRow) => {
+    if (!window.confirm(`Apagar de vez a candidatura de ${a.name}? Não dá para desfazer.`)) return
+    const r = await deletePartnerApplication(a.id)
+    toast(r.success ? 'Candidatura apagada.' : (r.error || 'Não foi possível concluir.'), r.success ? 'success' : 'error')
+    load()
+  }
+  const newApps = applications.filter(a => a.status === 'new')
+  const shownApps = showDecided ? applications : newApps
 
   const toggle = (id: string) => setSelected(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
@@ -112,7 +142,7 @@ export function PartnersAdmin() {
     <section className="rounded-[2rem] border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="flex items-center gap-2 text-lg font-black"><Handshake className="h-5 w-5 text-indigo-500" />Parceiros (indicadores com comissão)</h3>
-        <button type="button" onClick={() => setForm({ ...EMPTY })} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-500"><Plus className="h-3.5 w-3.5" />Novo parceiro</button>
+        <button type="button" onClick={() => { setApprovingId(null); setForm({ ...EMPTY }) }} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-500"><Plus className="h-3.5 w-3.5" />Novo parceiro</button>
       </div>
 
       <div className="mb-5 grid gap-3 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950 md:grid-cols-5">
@@ -128,9 +158,40 @@ export function PartnersAdmin() {
         <p className="text-[10px] text-neutral-400 md:col-span-5">A comissão é calculada sobre o valor que o cliente indicado pagou (bruto, sem descontar as taxas do Asaas) em cada pagamento, e só fica disponível depois da carência. Mudar o % padrão vale para as próximas comissões; as já geradas não mudam.</p>
       </div>
 
+      {applications.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-amber-200 p-4 dark:border-amber-900">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-sm font-black"><Inbox className="h-4 w-4 text-amber-500" />Interessados em ser parceiro{newApps.length > 0 && <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">{newApps.length} nova(s)</span>}</p>
+            <label className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500"><input type="checkbox" checked={showDecided} onChange={e => setShowDecided(e.target.checked)} />Mostrar também as já decididas</label>
+          </div>
+          {shownApps.length === 0 ? <p className="text-xs text-neutral-400">Nenhuma candidatura nova.</p> : (
+            <ul className="space-y-3">{shownApps.map(a => (
+              <li key={a.id} className="rounded-xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-black">{a.name} <span className="font-normal text-neutral-400">· {a.email}{a.phone ? ` · ${a.phone}` : ''}{a.company ? ` · ${a.company}` : ''}</span></p>
+                  <span className="text-[10px] text-neutral-400">{new Date(a.createdAt).toLocaleString()}</span>
+                </div>
+                <p className="mt-1 text-neutral-500"><b>Perfil:</b> {CHANNEL_LABEL[a.channel] || a.channel}{a.audience ? <> · <b>Divulgação:</b> {a.audience}</> : null}</p>
+                {a.message && <p className="mt-1 whitespace-pre-wrap text-neutral-500"><b>Mensagem:</b> {a.message}</p>}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {a.status === 'new' ? (<>
+                    <button type="button" onClick={() => approve(a)} className="rounded-lg bg-indigo-600 px-3 py-1 font-black text-white hover:bg-indigo-500">Aprovar e cadastrar...</button>
+                    <button type="button" onClick={() => decide(a.id, 'rejected')} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300">Recusar</button>
+                  </>) : (<>
+                    <span className={a.status === 'approved' ? 'font-black text-emerald-600' : 'font-black text-neutral-500'}>{a.status === 'approved' ? 'Aprovada' : 'Recusada'}</span>
+                    <button type="button" onClick={() => decide(a.id, 'new')} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300">Reabrir</button>
+                  </>)}
+                  <button type="button" onClick={() => removeApplication(a)} aria-label={`Apagar candidatura de ${a.name}`} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </li>))}</ul>
+          )}
+          <p className="mt-3 text-[10px] text-neutral-400">Para aprovar, a pessoa precisa já ter conta no MetaBuilder PRO com o mesmo e-mail da candidatura. Se ainda não tiver, o cadastro avisa; peça que ela crie a conta e tente de novo.</p>
+        </div>
+      )}
+
       {form && (
         <div className="mb-5 space-y-3 rounded-2xl border border-indigo-200 p-4 dark:border-indigo-900">
-          <div className="flex items-center justify-between"><p className="text-sm font-black">{form.id ? 'Editar parceiro' : 'Novo parceiro'}</p><button type="button" onClick={() => setForm(null)} aria-label="Fechar"><X className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between"><p className="text-sm font-black">{form.id ? 'Editar parceiro' : 'Novo parceiro'}</p><button type="button" onClick={() => { setForm(null); setApprovingId(null) }} aria-label="Fechar"><X className="h-4 w-4" /></button></div>
           <div className="grid gap-3 md:grid-cols-3">
             {!form.id && <label className="block md:col-span-3"><span className={labelCls}>E-mail da conta MetaBuilder do parceiro</span>
               <input className={inputCls} value={form.userEmail} onChange={e => setForm({ ...form, userEmail: e.target.value })} placeholder="parceiro@empresa.com" /></label>}

@@ -5,6 +5,7 @@ import { ArrowLeft, Banknote, CalendarClock, CircleDollarSign, Handshake, Layout
 import Link from 'next/link'
 import { useI18n } from '@/i18n/I18nContext'
 import { salesWhatsappUrl } from '@/lib/contact'
+import PartnerApplyForm from './PartnerApplyForm'
 
 interface Props {
   /** as condições vigentes (ajustes do SuperAdmin) */
@@ -52,8 +53,8 @@ export default function PartnersLanding({ terms }: Props) {
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">{k('hero_desc')}</p>
           <div className="flex flex-wrap gap-3">
-            <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-500/25 transition-all hover:bg-indigo-700">
-              <MessageCircle className="w-4 h-4" />{k('cta_whatsapp')}
+            <a href="#cadastro" className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-7 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-500/25 transition-all hover:bg-indigo-700">
+              <UserPlus className="w-4 h-4" />{k('cta_apply')}
             </a>
             <Link href="/parceiro" className="inline-flex items-center gap-2 rounded-2xl border border-neutral-200 px-7 py-4 text-xs font-black uppercase tracking-widest text-neutral-700 transition-all hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-800 dark:text-neutral-300">
               <LayoutDashboard className="w-4 h-4" />{k('cta_panel')}
@@ -124,6 +125,10 @@ export default function PartnersLanding({ terms }: Props) {
             </div>
           ))}
         </div>
+      </section>
+
+      <section id="cadastro" className="mx-auto max-w-3xl scroll-mt-24">
+        <PartnerApplyForm />
       </section>
 
       <section className="py-10 text-center space-y-6">

@@ -23,5 +23,11 @@ async function send(to: string, mail: MailContent): Promise<boolean> {
 /** Avisa o dono do login que uma sessão dele foi encerrada por um novo login. */
 export const sendSlotKickedEmail = (to: string, lang: MailLang, data: KickedMailData) => send(to, slotKickedMail(lang, data))
 
+/** Aviso interno para a equipe (ex.: nova candidatura de parceiro). Destino: PARTNER_NOTIFY_EMAIL, ou a própria caixa do SMTP. Texto sempre escapado por quem monta. */
+export function sendTeamNotice(subject: string, text: string, html: string) {
+  const to = process.env.PARTNER_NOTIFY_EMAIL || process.env.SMTP_USER || ''
+  return send(to, { subject: subject.replace(/[\r\n]+/g, ' ').slice(0, 200), text, html })
+}
+
 /** Envia o código de confirmação da troca de dispositivo. */
 export const sendSlotCodeEmail = (to: string, lang: MailLang, code: string, ttlMinutes: number) => send(to, slotCodeMail(lang, code, ttlMinutes))
