@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Handshake, Inbox, Loader2, Pencil, Plus, Save, Send, Trash2, X } from 'lucide-react'
 import {
-  decidePartnerApplication, deletePartnerApplication, getPartnerNotifyEmail, listPartnerApplications, savePartnerNotifyEmail,
+  decidePartnerApplication, deletePartnerApplication, getPartnerNotifyEmail, listPartnerApplications, rejectPartnerApplication, savePartnerNotifyEmail, sendPartnerWelcome,
 } from '@/app/actions/partnerApplications'
 import { suggestPartnerCode, type ActionCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
@@ -50,6 +50,11 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
   const [notifyEmail, setNotifyEmail] = useState('')
   /** candidatura que está sendo aprovada: ao salvar o parceiro, ela é marcada como aprovada */
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  /** avisar o parceiro novo por e-mail (marcada de início) */
+  const [notifyPartner, setNotifyPartner] = useState(true)
+  /** candidatura em recusa: mostra a confirmação com a caixa de avisar (desmarcada de início) */
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [notifyReject, setNotifyReject] = useState(false)
 
   const saveNotify = async () => {
     setBusy(true)
@@ -78,7 +83,11 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
     setBusy(false)
     if (!r.success) { toast(errText(r), 'error'); return }
     if (approvingId) await decidePartnerApplication(approvingId, 'approved', r.id)
-    toast(k('partner_saved'), 'success')
+    // parceiro novo: manda o e-mail de boas-vindas (se a caixa estiver marcada). Se o e-mail falhar, o parceiro já está salvo.
+    if (!form.id && notifyPartner) {
+      const w = await sendPartnerWelcome(r.id, approvingId)
+      toast(w.success && w.mailed ? k('partner_saved_mailed') : k('partner_saved_mail_failed'), w.success && w.mailed ? 'success' : 'info')
+    } else toast(k('partner_saved'), 'success')
     setForm(null)
     setApprovingId(null)
     load()
@@ -87,12 +96,22 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
   // aprovar = abrir o cadastro do parceiro já preenchido com o que a pessoa informou (conferir, ajustar e salvar)
   const approve = (a: ApplicationRow) => {
     setApprovingId(a.id)
+    setNotifyPartner(true)
     setForm({ ...EMPTY, userEmail: a.email, name: a.name, code: suggestPartnerCode(a.name), notes: [a.company, a.audience].filter(Boolean).join(' | ') })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const decide = async (id: string, status: 'rejected' | 'new') => {
+  const decide = async (id: string, status: 'new') => {
     const r = await decidePartnerApplication(id, status)
-    toast(r.success ? k(status === 'rejected' ? 'app_rejected' : 'app_reopened') : errText(r), r.success ? 'success' : 'error')
+    toast(r.success ? k('app_reopened') : errText(r), r.success ? 'success' : 'error')
+    load()
+  }
+  const confirmReject = async (id: string) => {
+    setBusy(true)
+    const r = await rejectPartnerApplication(id, notifyReject)
+    setBusy(false)
+    setRejectingId(null)
+    if (!r.success) { toast(errText(r), 'error'); return }
+    toast(!notifyReject ? k('app_rejected') : k(r.mailed ? 'app_rejected_mailed' : 'app_rejected_mail_failed'), notifyReject && !r.mailed ? 'info' : 'success')
     load()
   }
   const removeApplication = async (a: ApplicationRow) => {
@@ -141,7 +160,7 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
     <section className="rounded-[2rem] border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="flex items-center gap-2 text-lg font-black"><Handshake className="h-5 w-5 text-indigo-500" />{k('title')}</h3>
-        <button type="button" onClick={() => { setApprovingId(null); setForm({ ...EMPTY }) }} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-500"><Plus className="h-3.5 w-3.5" />{k('new_partner')}</button>
+        <button type="button" onClick={() => { setApprovingId(null); setNotifyPartner(true); setForm({ ...EMPTY }) }} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-500"><Plus className="h-3.5 w-3.5" />{k('new_partner')}</button>
       </div>
 
       <p className="mb-5 rounded-2xl bg-neutral-50 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-950">
@@ -173,13 +192,20 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {a.status === 'new' ? (<>
                     <button type="button" onClick={() => approve(a)} className="rounded-lg bg-indigo-600 px-3 py-1 font-black text-white hover:bg-indigo-500">{k('approve')}</button>
-                    <button type="button" onClick={() => decide(a.id, 'rejected')} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300">{k('reject')}</button>
+                    <button type="button" onClick={() => { setRejectingId(a.id); setNotifyReject(false) }} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300">{k('reject')}</button>
                   </>) : (<>
                     <span className={a.status === 'approved' ? 'font-black text-emerald-600' : 'font-black text-neutral-500'}>{k(a.status === 'approved' ? 'approved' : 'rejected')}</span>
                     <button type="button" onClick={() => decide(a.id, 'new')} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300">{k('reopen')}</button>
                   </>)}
                   <button type="button" onClick={() => removeApplication(a)} aria-label={k('delete_aria', { name: a.name })} className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
+                {rejectingId === a.id && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-200 p-2 dark:border-neutral-800">
+                    <label className="flex items-center gap-1.5 font-bold text-neutral-600 dark:text-neutral-300"><input type="checkbox" checked={notifyReject} onChange={e => setNotifyReject(e.target.checked)} />{k('notify_reject')}</label>
+                    <button type="button" disabled={busy} onClick={() => confirmReject(a.id)} className="rounded-lg bg-neutral-900 px-3 py-1 font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700">{k('reject_confirm')}</button>
+                    <button type="button" disabled={busy} onClick={() => setRejectingId(null)} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">{k('cancel')}</button>
+                  </div>
+                )}
               </li>))}</ul>
           )}
           <p className="mt-3 text-[10px] text-neutral-400">{k('apps_note')}</p>
@@ -203,6 +229,7 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
             <label className="block"><span className={labelCls}>{k('f_status')}</span>
               <select className={inputCls} value={form.status} onChange={e => setForm({ ...form, status: e.target.value as 'active' | 'suspended' })}><option value="active">{k('f_status_active')}</option><option value="suspended">{k('f_status_suspended')}</option></select></label>
             <label className="block md:col-span-2"><span className={labelCls}>{k('f_notes')}</span><input className={inputCls} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
+            {!form.id && <label className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 md:col-span-3"><input type="checkbox" checked={notifyPartner} onChange={e => setNotifyPartner(e.target.checked)} />{k('notify_candidate')}</label>}
           </div>
           <button type="button" disabled={busy} onClick={savePartnerForm} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white hover:bg-indigo-500 disabled:opacity-50">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}{k('save_partner')}</button>
         </div>

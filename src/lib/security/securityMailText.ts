@@ -10,7 +10,7 @@ export const MAIL_LANGS: MailLang[] = ['pt', 'en', 'es']
 
 export const resolveMailLang = (v: string | null | undefined): MailLang => (v === 'en' || v === 'es' ? v : 'pt')
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 const TEXTS = {
   pt: {
@@ -84,13 +84,13 @@ export const mailShell = (title: string, bodyHtml: string, footer: string) => `<
 const shell = mailShell
 
 /** Quadro de destaque (como "Acesso de segurança" no e-mail de senha): título pequeno em verde e, abaixo, as linhas rótulo/valor. Textos escapados aqui. */
-const infoBox = (label: string, rows: [string, string][]) =>
+export const infoBox = (label: string, rows: [string, string][]) =>
   `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;background:#f8fafc;border-radius:16px;text-align:left;"><tr><td style="padding:18px 22px;">` +
   `<div style="margin:0 0 10px 0;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#10b981;">${esc(label)}</div>` +
   rows.map(([k, v]) => `<div style="margin:0 0 8px 0;font-size:14px;line-height:20px;"><span style="color:#71717a;">${esc(k)}:</span> <b style="color:#18181b;">${esc(v)}</b></div>`).join('') +
   `</td></tr></table>`
 
-const button = (label: string, url: string) =>
+export const button = (label: string, url: string) =>
   `<table cellpadding="0" cellspacing="0" style="margin:6px auto 4px auto;"><tr><td align="center" bgcolor="#10b981" style="border-radius:12px;"><a href="${esc(url)}" style="display:inline-block;padding:14px 30px;font-size:13px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${esc(label)}</a></td></tr></table>`
 
 export interface PartnerApplicationMailData {

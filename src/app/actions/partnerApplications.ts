@@ -4,11 +4,14 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { clientIp, hashIp } from '@/lib/sessions/slotCore'
-import { sendTeamNotice } from '@/lib/security/securityMail'
-import { partnerApplicationMail } from '@/lib/security/securityMailText'
+import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
+import { partnerApplicationMail, resolveMailLang } from '@/lib/security/securityMailText'
+import { partnerApprovedMail, partnerRejectedMail } from '@/lib/security/partnerMailText'
+import { resolvePercent } from '../../../supabase/functions/_shared/partnerCommission'
+import { DEFAULT_PARTNER_SETTINGS } from '@/lib/partners'
 import {
   MAX_PER_IP_PER_HOUR, looksLikeBot, validateApplication,
-  type ActionCode, type ActionResult, type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus,
+  type ActionCode, type ActionResult, type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus, type NoticeResult,
 } from '@/lib/partnerApplications'
 
 /** Chave em platform_settings com o e-mail que recebe o aviso de candidatura (o SuperAdmin escolhe na aba Parceiros). */
@@ -85,7 +88,7 @@ export async function listPartnerApplications(): Promise<{ success: true; applic
       success: true,
       applications: (data || []).map((r: any) => ({
         id: r.id, name: r.name, email: r.email, phone: r.phone, company: r.company, channel: r.channel, audience: r.audience,
-        message: r.message, status: r.status, partnerId: r.partner_id, createdAt: r.created_at,
+        message: r.message, lang: r.lang || 'pt', status: r.status, partnerId: r.partner_id, createdAt: r.created_at,
       })),
     }
   } catch (e) { return { success: false, code: (e as Error).message === 'not_authorized' ? 'not_authorized' : 'unknown' } }
@@ -128,6 +131,56 @@ export async function decidePartnerApplication(id: string, status: ApplicationSt
     if (error) return { success: false, code: 'unknown', error: error.message }
     revalidatePath('/admin/platform')
     return { success: true }
+  } catch { return { success: false, code: 'not_authorized' } }
+}
+
+const siteUrl = () => (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+
+/**
+ * Manda ao parceiro recém-cadastrado o e-mail de boas-vindas (código, link, condições e painel), no idioma da candidatura (ou português
+ * se o cadastro não veio de uma). O endereço NUNCA vem da tela: é o e-mail da conta do parceiro. Chave Pix e documento não vão no e-mail.
+ */
+export async function sendPartnerWelcome(partnerId: string, applicationId?: string | null): Promise<NoticeResult> {
+  try {
+    const admin = await requireSuperAdmin()
+    const { data: partner } = await admin.from('partners').select('id, user_id, name, code, commission_percent').eq('id', partnerId).maybeSingle()
+    if (!partner) return { success: false, code: 'not_found' }
+    const { data: profile } = await admin.from('profiles').select('email').eq('id', partner.user_id).maybeSingle()
+    const to = String(profile?.email || '').trim()
+    if (!to) return { success: false, code: 'not_found' }
+
+    let lang = 'pt'
+    if (applicationId) {
+      const { data: app } = await admin.from('partner_applications').select('lang').eq('id', applicationId).maybeSingle()
+      lang = app?.lang || 'pt'
+    }
+
+    const { data: rows } = await admin.from('platform_settings').select('key, value').in('key', ['partner_default_percent', 'partner_grace_days', 'partner_min_payout'])
+    const val = (key: string, field: string, fallback: number) => {
+      const n = Number(((rows || []).find((r: any) => r.key === key)?.value as Record<string, unknown> | undefined)?.[field])
+      return Number.isFinite(n) ? n : fallback
+    }
+    const percent = resolvePercent(partner.commission_percent != null ? Number(partner.commission_percent) : null, val('partner_default_percent', 'percent', DEFAULT_PARTNER_SETTINGS.defaultPercent))
+    const base = siteUrl()
+    const mail = partnerApprovedMail(resolveMailLang(lang), {
+      name: partner.name, email: to, code: partner.code, linkUrl: `${base}/?ref=${encodeURIComponent(partner.code)}`, panelUrl: `${base}/parceiro`,
+      percent, graceDays: val('partner_grace_days', 'days', DEFAULT_PARTNER_SETTINGS.graceDays), minPayout: val('partner_min_payout', 'amount', DEFAULT_PARTNER_SETTINGS.minPayout),
+    })
+    return { success: true, mailed: await sendMailTo(to, mail) }
+  } catch { return { success: false, code: 'not_authorized' } }
+}
+
+/** Recusa a candidatura e, se o SuperAdmin marcou, avisa o candidato por e-mail (no idioma dele). O endereço vem da candidatura gravada. */
+export async function rejectPartnerApplication(id: string, notify: boolean): Promise<NoticeResult> {
+  try {
+    const admin = await requireSuperAdmin()
+    const { data: app } = await admin.from('partner_applications').select('name, email, lang').eq('id', id).maybeSingle()
+    if (!app) return { success: false, code: 'not_found' }
+    const { error } = await admin.from('partner_applications').update({ status: 'rejected', partner_id: null, decided_at: new Date().toISOString() }).eq('id', id)
+    if (error) return { success: false, code: 'unknown', error: error.message }
+    revalidatePath('/admin/platform')
+    if (!notify) return { success: true, mailed: false }
+    return { success: true, mailed: await sendMailTo(app.email, partnerRejectedMail(resolveMailLang(app.lang), { name: app.name })) }
   } catch { return { success: false, code: 'not_authorized' } }
 }
 

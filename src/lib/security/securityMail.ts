@@ -32,5 +32,8 @@ export function sendTeamNotice(subject: string, text: string, html: string, to?:
   return send(to, { subject: subject.replace(/[\r\n]+/g, ' ').slice(0, 200), text, html })
 }
 
+/** Envia um e-mail pronto (ex.: aprovação ou recusa de parceiro) ao endereço informado. Devolve false se faltar configuração ou falhar. */
+export const sendMailTo = (to: string, mail: MailContent) => send(to, mail)
+
 /** Envia o código de confirmação da troca de dispositivo. */
 export const sendSlotCodeEmail = (to: string, lang: MailLang, code: string, ttlMinutes: number) => send(to, slotCodeMail(lang, code, ttlMinutes))

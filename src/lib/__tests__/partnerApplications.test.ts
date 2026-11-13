@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { partnerApplicationMail, slotCodeMail, slotKickedMail } from '../security/securityMailText'
+import { partnerApprovedMail, partnerRejectedMail } from '../security/partnerMailText'
 import { APPLICATION_CHANNELS, MIN_FILL_MS, looksLikeBot, suggestPartnerCode, validateApplication, type ApplicationInput } from '../partnerApplications'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -83,6 +84,56 @@ describe('e-mails com o modelo da marca', () => {
   it('os e-mails de segurança das vagas usam o mesmo modelo', () => {
     expect(slotCodeMail('pt', '123456', 10).html).toContain('linear-gradient(135deg,#10b981')
     expect(slotKickedMail('en', { kicked: {}, by: {}, at: new Date().toISOString() }).html).toContain('linear-gradient(135deg,#10b981')
+  })
+})
+
+describe('e-mails ao candidato (aprovação e recusa)', () => {
+  const d = { name: 'Ana <i>Souza</i>', email: 'ana@x.com', code: 'ANA10', linkUrl: 'https://site.exemplo/?ref=ANA10', panelUrl: 'https://site.exemplo/parceiro', percent: 15, graceDays: 7, minPayout: 50 }
+
+  it('a aprovação existe nos três idiomas, traz código, link, condições e painel, e não vaza HTML nem dados financeiros', () => {
+    for (const lang of ['pt', 'en', 'es'] as const) {
+      const m = partnerApprovedMail(lang, d)
+      expect(m.subject, lang).toBeTruthy()
+      expect(m.html, lang).toContain('linear-gradient(135deg,#10b981')
+      expect(m.html, lang).toContain('ANA10')
+      expect(m.html, lang).toContain('href="https://site.exemplo/parceiro"')
+      expect(m.html, lang).toContain('https://site.exemplo/?ref=ANA10')
+      expect(m.html, lang).toContain('15%')
+      expect(m.html, lang).toContain('Ana &lt;i&gt;Souza&lt;/i&gt;')
+      expect(m.html, lang).not.toContain('<i>Souza</i>')
+      expect(m.text, lang).toContain('ana@x.com')
+      expect(m.html + m.text, lang).not.toMatch(/chave pix:|cpf:|cnpj:/i)
+    }
+    expect(partnerApprovedMail('en', d).subject).toBe('You are now a MetaBuilder PRO partner')
+    expect(partnerApprovedMail('es', d).html).toContain('R$')
+  })
+
+  it('a recusa existe nos três idiomas, é curta e não tem botão', () => {
+    for (const lang of ['pt', 'en', 'es'] as const) {
+      const m = partnerRejectedMail(lang, { name: 'Ana' })
+      expect(m.subject, lang).toBeTruthy()
+      expect(m.html, lang).toContain('Ana')
+      expect(m.html, lang).not.toContain('<a href')
+    }
+  })
+
+  it('o endereço do e-mail nunca vem da tela: boas-vindas usa o e-mail da conta do parceiro e a recusa o da candidatura gravada; só o SuperAdmin chama', () => {
+    const src = read('src/app/actions/partnerApplications.ts')
+    for (const fn of ['sendPartnerWelcome', 'rejectPartnerApplication']) {
+      const body = src.slice(src.indexOf(`export async function ${fn}`))
+      expect(body.slice(0, 300), fn).toContain('requireSuperAdmin()')
+    }
+    expect(src).toMatch(/from\('profiles'\)\.select\('email'\)\.eq\('id', partner\.user_id\)/)
+    expect(src).toMatch(/sendMailTo\(app\.email, partnerRejectedMail/)
+    expect(src).not.toMatch(/sendPartnerWelcome\(partnerId: string, to/)
+  })
+
+  it('a tela: caixa de avisar o parceiro marcada de início, caixa de avisar a recusa desmarcada de início', () => {
+    const ui = read('src/components/admin/PartnersAdmin.tsx')
+    expect(ui).toContain('const [notifyPartner, setNotifyPartner] = useState(true)')
+    expect(ui).toContain('const [notifyReject, setNotifyReject] = useState(false)')
+    expect(ui).toContain('sendPartnerWelcome(r.id, approvingId)')
+    expect(ui).toContain('rejectPartnerApplication(id, notifyReject)')
   })
 })
 

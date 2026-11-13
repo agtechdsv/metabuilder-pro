@@ -31,8 +31,10 @@ export type ApplicationErrorCode =
   | 'too_fast' | 'rate_limited' | 'unknown'
 
 /** Erros das ações do SuperAdmin sobre candidaturas: por código, a tela traduz (pt, en, es). */
-export type ActionCode = 'not_authorized' | 'invalid_email' | 'invalid_status' | 'unknown'
+export type ActionCode = 'not_authorized' | 'invalid_email' | 'invalid_status' | 'not_found' | 'mail_failed' | 'unknown'
 export type ActionResult = { success: true } | { success: false; code: ActionCode; error?: string }
+/** Ação que também manda e-mail ao candidato: `mailed` diz se o e-mail saiu (a ação em si já valeu, mesmo que ele falhe). */
+export type NoticeResult = { success: true; mailed: boolean } | { success: false; code: ActionCode; error?: string }
 
 export interface ApplicationRow {
   id: string
@@ -43,6 +45,8 @@ export interface ApplicationRow {
   channel: ApplicationChannel
   audience: string | null
   message: string | null
+  /** idioma da candidatura (pt, en ou es): os e-mails ao candidato saem nele */
+  lang: string
   status: ApplicationStatus
   partnerId: string | null
   createdAt: string
